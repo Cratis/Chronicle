@@ -33,7 +33,7 @@ public class IdentityStorage(
     {
         logger.Populating();
 
-        var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
+        using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allIdentities = await result.ToListAsync().ConfigureAwait(false);
         _identitiesByIdentityId = allIdentities.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
         _identityIdsBySubject = _identitiesByIdentityId
@@ -118,7 +118,7 @@ public class IdentityStorage(
     /// <inheritdoc/>
     public async Task<IEnumerable<Identity>> GetAll()
     {
-        var result = await GetCollection().FindAsync(_ => true);
+        using var result = await GetCollection().FindAsync(_ => true);
         return result.ToEnumerable().Select(_ => new Identity(_.Subject, _.Name, _.UserName));
     }
 

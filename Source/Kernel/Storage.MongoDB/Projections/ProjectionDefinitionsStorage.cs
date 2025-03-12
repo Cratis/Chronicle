@@ -29,7 +29,7 @@ public class ProjectionDefinitionsStorage(
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
+        using var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
         var definitionsAsBson = result.ToList();
         return definitionsAsBson.Select(_ =>
         {
@@ -46,7 +46,7 @@ public class ProjectionDefinitionsStorage(
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
-        var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
+        using var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
         var document = result.Single();
         return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
     }

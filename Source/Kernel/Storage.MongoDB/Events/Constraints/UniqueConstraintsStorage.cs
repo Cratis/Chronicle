@@ -20,7 +20,7 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, ConstraintName name, UniqueConstraintValue value)
     {
         var collection = GetCollectionFor(name);
-        var result = await collection.FindAsync(_ => _.Value == value);
+        using var result = await collection.FindAsync(_ => _.Value == value);
         var existing = result.FirstOrDefault();
         if (existing is not null)
         {

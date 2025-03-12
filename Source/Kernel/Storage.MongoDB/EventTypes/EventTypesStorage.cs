@@ -35,7 +35,7 @@ public class EventTypesStorage(
     {
         logger.Populating(eventStore);
 
-        var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
+        using var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var allSchemas = findResult.ToList();
 
         _schemasByTypeAndGeneration = new(
@@ -85,7 +85,7 @@ public class EventTypesStorage(
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
     {
-        var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
+        using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
         return schemas
             .GroupBy(_ => _.EventType)
@@ -97,7 +97,7 @@ public class EventTypesStorage(
     {
         var collection = GetCollection();
         var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
-        var result = await collection.FindAsync(filter).ConfigureAwait(false);
+        using var result = await collection.FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
         return schemas
             .OrderBy(_ => _.Generation)
@@ -114,7 +114,7 @@ public class EventTypesStorage(
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
         _schemasByTypeAndGeneration[type] = new ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>(schemas.ToDictionary(_ => (EventTypeGeneration)_.Generation, _ => _.ToEventSchema()));
 
@@ -139,7 +139,7 @@ public class EventTypesStorage(
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
         return schemas.Count == 1;
     }

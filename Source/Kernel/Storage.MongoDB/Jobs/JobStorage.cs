@@ -30,7 +30,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
     {
         try
         {
-            var cursor = await Collection.FindAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
+            using var cursor = await Collection.FindAsync(GetIdFilter<JobState>(jobId)).ConfigureAwait(false);
             var job = await cursor.SingleOrDefaultAsync();
 #pragma warning disable RCS1084 // This is more clear
             return job is not null ? job : JobError.NotFound;
@@ -100,7 +100,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
                 return error;
             }
 
-            var cursor = await GetTypedCollection<TJobState>().FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
+            using var cursor = await GetTypedCollection<TJobState>().FindAsync(GetIdFilter<TJobState>(jobId)).ConfigureAwait(false);
             var jobState = await cursor.FirstOrDefaultAsync();
             return jobState is not null ? jobState : JobError.NotFound;
         }
@@ -152,7 +152,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
                 jobTypeFilter :
                 Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));
             var filterAsBsonDocument = filter.ToBsonDocument();
-            var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
+            using var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
             var jobs = await cursor.ToListAsync().ConfigureAwait(false);
             return jobs.ToImmutableList();
         }
@@ -172,7 +172,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
 
         if (statuses.Length == 0)
         {
-            var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
+            using var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
             return await cursor.ToListAsync().ConfigureAwait(false);
         }
 

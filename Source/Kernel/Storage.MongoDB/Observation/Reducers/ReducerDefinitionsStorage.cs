@@ -28,7 +28,7 @@ public class ReducerDefinitionsStorage(
     /// <inheritdoc/>
     public async Task<IEnumerable<ReducerDefinition>> GetAll()
     {
-        var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
+        using var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
         var definitionsAsBson = result.ToList();
         return definitionsAsBson.Select(_ =>
         {
@@ -45,7 +45,7 @@ public class ReducerDefinitionsStorage(
     /// <inheritdoc/>
     public async Task<ReducerDefinition> Get(ReducerId id)
     {
-        var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
+        using var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
         var document = result.Single();
         return reducerDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
     }

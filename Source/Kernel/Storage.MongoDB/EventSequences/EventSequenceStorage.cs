@@ -56,7 +56,7 @@ public class EventSequenceStorage(
     {
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, string>("_id"), eventSequenceId);
-        var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+        using var cursor = await collection.FindAsync(filter).ConfigureAwait(false);
         var state = await cursor.FirstOrDefaultAsync();
         return state?.ToChronicle() ?? new Chronicle.Storage.EventSequences.EventSequenceState();
     }

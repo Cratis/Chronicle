@@ -72,7 +72,7 @@ public class EventSequences(
     {
         var eventSequence = GetEventSequenceStorage(request);
 
-        var cursor = await eventSequence.GetFromSequenceNumber(
+        using var cursor = await eventSequence.GetFromSequenceNumber(
             EventSequenceNumber.First,
             request.EventSourceId,
             request.EventStreamType,
@@ -134,6 +134,8 @@ public class EventSequences(
             var current = cursor.Current;
             events.AddRange(current.ToContract());
         }
+
+        cursor.Dispose();
         return new()
         {
             Events = events
