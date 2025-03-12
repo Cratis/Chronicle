@@ -99,6 +99,12 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public async Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    {
+        await collections.ResumeReplay(context);
+    }
+
+    /// <inheritdoc/>
     public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         await collections.EndReplay(context);

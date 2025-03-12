@@ -21,6 +21,13 @@ public interface IProjectionPipeline
     Task BeginReplay(ReplayContext context);
 
     /// <summary>
+    /// Notifies about the resuming of a replay.
+    /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ResumeReplay(ReplayContext context);
+
+    /// <summary>
     /// Notifies about the end of a replay.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>

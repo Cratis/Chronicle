@@ -31,6 +31,13 @@ public class SinkCollections(
     }
 
     /// <inheritdoc/>
+    public Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    {
+        _isReplaying = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         var rewindName = ReplayCollectionName;

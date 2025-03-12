@@ -21,10 +21,8 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
-    IObserver? _observer;
-
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         if (!AllStepsCompletedSuccessfully)
@@ -44,7 +42,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
+    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result);
         return Task.CompletedTask;
@@ -58,13 +56,6 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
-    }
-
-    /// <inheritdoc/>
-    protected override Task OnBeforePrepareSteps(CatchUpObserverRequest request)
-    {
-        _observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -82,6 +73,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
+                    request.ObserverType,
                     request.ObserverSubscription,
                     key,
                     request.FromEventSequenceNumber,
@@ -90,9 +82,8 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                     request.EventTypes)));
             keysForSteps.Add(key);
         }
-
-        await (_observer?.RegisterCatchingUpPartitions(keysForSteps) ?? Task.CompletedTask);
-
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        await observer.RegisterCatchingUpPartitions(keysForSteps);
         return steps.ToImmutableList();
     }
 }

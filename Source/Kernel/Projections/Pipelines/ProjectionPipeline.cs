@@ -33,6 +33,9 @@ public class ProjectionPipeline(
     public Task BeginReplay(ReplayContext context) => sink.BeginReplay(context);
 
     /// <inheritdoc/>
+    public Task ResumeReplay(ReplayContext context) => sink.ResumeReplay(context);
+
+    /// <inheritdoc/>
     public Task EndReplay(ReplayContext context) => sink.EndReplay(context);
 
     /// <inheritdoc/>

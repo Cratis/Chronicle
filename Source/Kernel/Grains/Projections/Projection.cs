@@ -29,7 +29,7 @@ public class Projection(
     IProjectionDefinitionComparer projectionDefinitionComparer,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
-    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.MaxValue, logger);
+    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
 
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
@@ -74,10 +74,11 @@ public class Projection(
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Projection definition has changed.",
-                new ReplayCandidateRequest
+                new()
                 {
                     ObserverId = key.ProjectionId,
-                    ObserverKey = new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
+                    ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
+                    ObserverType = ObserverType.Projection,
                     Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
                 });
         }

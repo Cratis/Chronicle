@@ -32,6 +32,7 @@ public class the_job_step : Specification
         var observerKey = new ObserverKey("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log);
         _request = new(
             new("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log),
+            ObserverType.Projection,
             new(observerKey.ObserverId, observerKey, [], typeof(ISomeObserverType), SiloAddress.Zero),
             "some-partition",
             EventSequenceNumber.First,

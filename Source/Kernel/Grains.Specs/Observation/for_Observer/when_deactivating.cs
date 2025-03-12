@@ -16,5 +16,5 @@ public class when_deactivating : given.an_observer
     async Task Because() => await _observer.OnDeactivateAsync(default, default);
 
     [Fact] void should_set_running_state_to_disconnected() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
-    [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

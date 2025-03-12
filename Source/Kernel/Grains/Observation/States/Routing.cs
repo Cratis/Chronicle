@@ -14,12 +14,10 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// Represents the subscribing state of an observer.
 /// </summary>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-/// <param name="replayEvaluator"><see cref="IReplayEvaluator"/> for evaluating replays.</param>
 /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Routing(
     ObserverKey observerKey,
-    IReplayEvaluator replayEvaluator,
     IEventSequence eventSequence,
     ILogger<Routing> logger) : BaseObserverState
 {
@@ -34,10 +32,22 @@ public class Routing(
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Disconnected),
-        typeof(ResumeReplay),
         typeof(Replay),
         typeof(Observing)
     }.ToImmutableList();
+
+    /// <inheritdoc/>
+    public override Task<ObserverState> OnLeave(ObserverState state)
+    {
+        if (_subscription.EventTypes.Any())
+        {
+            return Task.FromResult(state with
+            {
+                EventTypes = _subscription.EventTypes
+            });
+        }
+        return Task.FromResult(state);
+    }
 
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
@@ -60,17 +70,14 @@ public class Routing(
         return await EvaluateState(state);
     }
 
-    /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state)
-    {
-        return Task.FromResult(state with
-        {
-            EventTypes = _subscription.IsSubscribed ? _subscription.EventTypes : state.EventTypes
-        });
-    }
-
     async Task<ObserverState> EvaluateState(ObserverState state)
     {
+        if (state.IsReplaying)
+        {
+            await StateMachine.TransitionTo<Replay>();
+            return state;
+        }
+
         if (!_subscription.IsSubscribed)
         {
             logger.NotSubscribed();
@@ -78,23 +85,10 @@ public class Routing(
             return state;
         }
 
-        if (state.RunningState == ObserverRunningState.Replaying)
+        if (!_subscription.EventTypes.Any())
         {
-            logger.Replaying();
-            await StateMachine.TransitionTo<ResumeReplay>();
-            return state;
-        }
-
-        if (await replayEvaluator.Evaluate(new(
-            state.Id,
-            observerKey,
-            state,
-            _subscription,
-            _tailEventSequenceNumber,
-            _nextUnhandledEventSequenceNumber)))
-        {
-            logger.NeedsToReplay();
-            await StateMachine.TransitionTo<Replay>();
+            logger.NoEventTypes();
+            await StateMachine.TransitionTo<Disconnected>();
             return state;
         }
 

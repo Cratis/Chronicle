@@ -8,4 +8,4 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// The error when resuming a job.
 /// </summary>
 [GenerateOneOf]
-public partial class ResumeJobError : OneOfBase<JobError, FailedResumingJobSteps>;
+public partial class ResumeJobError : OneOfBase<CannotResumeJobError, FailedResumingJobSteps>;

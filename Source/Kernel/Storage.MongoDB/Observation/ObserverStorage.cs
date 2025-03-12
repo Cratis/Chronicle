@@ -73,7 +73,8 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             EventSequenceNumber.Unavailable,
             ObserverRunningState.Unknown,
             new HashSet<Key>(),
-            new HashSet<Key>());
+            new HashSet<Key>(),
+            false);
     }
 
     /// <inheritdoc/>

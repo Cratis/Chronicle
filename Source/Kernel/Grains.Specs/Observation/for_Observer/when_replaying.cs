@@ -10,7 +10,7 @@ public class when_replaying : given.an_observer_with_subscription
 {
     async Task Establish()
     {
-        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         _storageStats.ResetCounts();
     }
 

@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <summary>
 /// The type of error that occurred while performing start operation on <see cref="IJobStep"/>.
 /// </summary>
-public enum JobStepPrepareStartError
+public enum StartJobStepError
 {
     /// <summary>
     /// Unknown error occurred.
@@ -14,27 +14,22 @@ public enum JobStepPrepareStartError
     Unknown = 0,
 
     /// <summary>
-    /// The job step was not prepared before it started.
+    /// The request type was wrong.
     /// </summary>
     NotPrepared = 1,
 
     /// <summary>
-    /// The request type was wrong.
+    /// The job step is already started.
     /// </summary>
-    WrongRequestType = 2,
+    AlreadyStarted = 2,
 
     /// <summary>
-    /// Failed to persist internal state.
+    /// The job step is in a completed state.
     /// </summary>
-    FailedPersistingState = 3,
+    Completed = 3,
 
     /// <summary>
-    /// Could not prepare job step.
+    /// The job step is in an unrecoverable failed state.
     /// </summary>
-    CouldNotPrepare = 4,
-
-    /// <summary>
-    /// Failed while preparing job step.
-    /// </summary>
-    UnexpectedErrorPreparing = 5
+    UnrecoverableFailedState = 4,
 }

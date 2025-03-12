@@ -7,15 +7,18 @@ using Cratis.Chronicle.Concepts.Jobs;
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
+/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult, TState}"/>.
 /// </summary>
 public interface IJob : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Pause a running job.
+    /// Stop a running job.
+    /// <remarks>
+    /// Stop is different from Remove in that a stopped Job can be Resumed while a Removed Job cannot.
+    /// </remarks>
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> Pause();
+    Task<Result<StopJobError>> Stop();
 
     /// <summary>
     /// Resume a job, either its paused, stopped or didn't get to finish before the host stopped.
@@ -27,10 +30,11 @@ public interface IJob : IGrainWithGuidCompoundKey
     Task<Result<ResumeJobSuccess, ResumeJobError>> Resume();
 
     /// <summary>
-    /// Stop a running job.
+    /// Removed a running job.
+    /// Remove is different from Stop in that a removed Job cannot be Resumed while a Stopped Job can.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> Stop();
+    Task<Result<RemoveJobError>> Remove();
 
     /// <summary>
     /// Report a successful completion of a job step.
@@ -43,6 +47,9 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <summary>
     /// Report that a job step has been stopped.
     /// </summary>
+    /// <remarks>
+    /// This is different from succeeded and failed in that this signifies that a job step has been manually stopped or paused.
+    /// </remarks>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was stopped.</param>
     /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the stopped step.</param>
     /// <returns>Awaitable task.</returns>
@@ -55,55 +62,10 @@ public interface IJob : IGrainWithGuidCompoundKey
     /// <param name="jobStepResult">The <see cref="JobStepResult"/> for the failed step.</param>
     /// <returns>Awaitable task.</returns>
     Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult);
-
-    /// <summary>
-    /// Called when the job has completed.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task OnCompleted();
-
-    /// <summary>
-    /// Adds a status change to the job.
-    /// </summary>
-    /// <param name="status"><see cref="JobStatus"/> to add.</param>
-    /// <param name="exception">Optional <see cref="Exception"/> associated with the status.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// This is called internally. Do not call this from external code.
-    /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
-    /// update state.
-    /// </remarks>
-    Task<Result<JobError>> WriteStatusChanged(JobStatus status, Exception? exception = null);
-
-    /// <summary>
-    /// Set the total number of steps for the job.
-    /// </summary>
-    /// <param name="totalSteps">The total of steps for the job.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// This is called internally. Do not call this from external code.
-    /// Due to the intricacy of how jobs run from different task contexts outside of Orleans, this is needed to be able to
-    /// update state.
-    /// </remarks>
-    Task<Result<JobError>> SetTotalSteps(int totalSteps);
-
-    /// <summary>
-    /// Subscribe to job events.
-    /// </summary>
-    /// <param name="observer"><see cref="IJobObserver"/> that will be notified.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Subscribe(IJobObserver observer);
-
-    /// <summary>
-    /// Unsubscribe to job events.
-    /// </summary>
-    /// <param name="observer"><see cref="IJobObserver"/> that will be notified.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Unsubscribe(IJobObserver observer);
 }
 
 /// <summary>
-/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult}"/>.
+/// Represents a job that typically runs as long-running with <see cref="IJobStep{TRequest, TResult, TState}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
 public interface IJob<in TRequest> : IJob
@@ -112,7 +74,10 @@ public interface IJob<in TRequest> : IJob
     /// <summary>
     /// Start the job.
     /// </summary>
+    /// <remarks>
+    /// This is different from Resume in that it will prepare job steps before starting them and therefore is a method that cannot be called again after the job steps has been prepared.
+    /// </remarks>
     /// <param name="request">The request object for the job.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobError>> Start(TRequest request);
+    Task<Result<StartJobError>> Start(TRequest request);
 }

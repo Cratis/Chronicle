@@ -18,7 +18,6 @@ public class a_routing_state : Specification
 {
     protected IObserver _observer;
     protected IEventSequence _eventSequence;
-    protected IReplayEvaluator _replayEvaluator;
     protected Routing _state;
     protected ObserverState _storedState;
     protected ObserverState _resultingStoredState;
@@ -31,10 +30,9 @@ public class a_routing_state : Specification
         _observer = Substitute.For<IObserver>();
         _eventSequence = Substitute.For<IEventSequence>();
         _observerKey = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
-        _replayEvaluator = Substitute.For<IReplayEvaluator>();
         _state = new Routing(
             _observerKey,
-            _replayEvaluator,
+
             _eventSequence,
             Substitute.For<ILogger<Routing>>());
         _state.SetStateMachine(_observer);
@@ -46,7 +44,7 @@ public class a_routing_state : Specification
         _subscription = new ObserverSubscription(
             _observerKey.ObserverId,
             _observerKey,
-            [],
+            [EventType.Unknown],
             typeof(object),
             SiloAddress.Zero,
             string.Empty);

@@ -28,6 +28,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                         Id = JobId.New(),
                         Request = new ReplayObserverRequest(
                             _observerKey,
+                            ObserverType.Unknown,
                             _subscription,
                             [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =
@@ -47,5 +48,5 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
 
     async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
 
-    [Fact] void should_not_end_replay() => _observerServiceClient.DidNotReceive().BeginReplayFor(Arg.Any<ObserverDetails>());
+    [Fact] void should_not_do_anything() => _jobsManager.Received(0);
 }

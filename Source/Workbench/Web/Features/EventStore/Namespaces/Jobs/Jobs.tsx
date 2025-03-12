@@ -16,12 +16,10 @@ const jobStatus = (job: Job) => {
     switch (job.status) {
         case JobStatus.none:
             return strings.eventStore.namespaces.jobs.status.none;
-        case JobStatus.preparing:
-            return strings.eventStore.namespaces.jobs.status.preparing;
+        case JobStatus.preparingJob:
+            return strings.eventStore.namespaces.jobs.status.preparingJob;
         case JobStatus.preparingSteps:
             return strings.eventStore.namespaces.jobs.status.preparingSteps;
-        case JobStatus.preparingStepsForRunning:
-            return strings.eventStore.namespaces.jobs.status.preparingStepsForRunning;
         case JobStatus.startingSteps:
             return strings.eventStore.namespaces.jobs.status.startingSteps;
         case JobStatus.running:
@@ -30,12 +28,12 @@ const jobStatus = (job: Job) => {
             return strings.eventStore.namespaces.jobs.status.completedSuccessfully;
         case JobStatus.completedWithFailures:
             return strings.eventStore.namespaces.jobs.status.completedWithFailures;
-        case JobStatus.paused:
-            return strings.eventStore.namespaces.jobs.status.paused;
         case JobStatus.stopped:
             return strings.eventStore.namespaces.jobs.status.stopped;
         case JobStatus.failed:
             return strings.eventStore.namespaces.jobs.status.failed;
+        case JobStatus.removing:
+            return strings.eventStore.namespaces.jobs.status.removing;
     }
     return strings.eventStore.namespaces.jobs.status.none;
 };

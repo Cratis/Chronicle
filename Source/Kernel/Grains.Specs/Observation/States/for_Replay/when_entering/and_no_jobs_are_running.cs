@@ -11,7 +11,6 @@ namespace Cratis.Chronicle.Grains.Observation.States.for_Replay.when_entering;
 public class and_no_jobs_are_running : given.a_replay_state
 {
     ReplayObserverRequest _request;
-    ObserverDetails _observerDetails;
 
     void Establish()
     {
@@ -35,21 +34,15 @@ public class and_no_jobs_are_running : given.a_replay_state
         };
 
         _jobsManager
-            .When(_ => _.Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverRequest>()))
+            .When(_ => _.Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>()))
             .Do(callInfo => _request = callInfo.Arg<ReplayObserverRequest>());
-
-        _observerServiceClient
-            .When(_ => _.BeginReplayFor(Arg.Any<ObserverDetails>()))
-            .Do(callInfo => _observerDetails = callInfo.Arg<ObserverDetails>());
     }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_start_catch_up_job() => _jobsManager.Received(1).Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverRequest>());
+    [Fact] void should_start_catch_up_job() => _jobsManager.Received(1).Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
     [Fact] void should_start_catch_up_job_with_correct_observer_id() => _request.ObserverKey.ObserverId.ShouldEqual(_storedState.Id);
     [Fact] void should_start_catch_up_job_with_correct_observer_key() => _request.ObserverKey.ShouldEqual(_observerKey);
     [Fact] void should_start_catch_up_job_with_correct_subscription() => _request.ObserverSubscription.ShouldEqual(_subscription);
     [Fact] void should_start_catch_up_job_with_correct_event_types() => _request.EventTypes.ShouldEqual(_storedState.EventTypes);
-    [Fact] void should_begin_replay_only_one() => _observerServiceClient.Received(1).BeginReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_begin_replay_for_correct_observer() => _observerDetails.ShouldEqual(new ObserverDetails(_observerKey, ObserverType.Reactor));
 }

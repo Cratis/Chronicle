@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.States;
 
@@ -16,7 +14,7 @@ public class an_observer_with_subscription : an_observer
 
     void Establish()
     {
-        subscription = new ObserverSubscription(_observerId, _observerKey, [], typeof(ObserverSubscriber), SiloAddress.Zero, null);
+        subscription = new (_observerId, _observerKey, [EventType.Unknown], typeof(ObserverSubscriber), SiloAddress.Zero, null);
         _observer.SetSubscription(subscription);
         _observer.TransitionTo<Routing>();
 

@@ -88,6 +88,12 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Critical, "Observer failed for unknown reasons after handling events")]
     internal static partial void ObserverFailedForUnknownReasonsAfterHandlingEvents(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Information, "Observer is replaying. Transitioning to replay state.")]
+    internal static partial void Replaying(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Information, "Observer needs to replay. Transitioning to replay state.")]
+    internal static partial void NeedsToReplay(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes

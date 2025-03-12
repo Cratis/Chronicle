@@ -103,16 +103,15 @@
                 },
                 "status": {
                     "none": "None",
-                    "preparing": "Preparing",
+                    "preparingJob": "Preparing job",
                     "preparingSteps": "Preparing steps",
-                    "preparingStepsForRunning": "Preparing steps for running",
                     "startingSteps": "Starting steps",
                     "running": "Running",
                     "completedSuccessfully": "Completed successfully",
                     "completedWithFailures": "Completed with failures",
-                    "paused": "Paused",
                     "stopped": "Stopped",
-                    "failed": "Failed"
+                    "failed": "Failed",
+                    "removing": "Removing"
                 }
             },
             "sequences": {

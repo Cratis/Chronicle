@@ -47,7 +47,7 @@ public class JobStateConverter : JsonConverter<JobState>
         var jobStateResult = new JobState();
         var nodeAsObject = JsonObject.Create(node);
         jobStateResult.Type = new(nodeAsObject![nameof(JobState.Type).ToCamelCase()]!.ToString());
-        var jobRequestType = _jobTypes.Value.GetRequestClrTypeFor(jobStateResult.Type).Match(type => type, error => throw new UnknownClrTypeForJobType(jobStateResult.Type));
+        var jobRequestType = _jobTypes.Value.GetRequestClrTypeForOrThrow(jobStateResult.Type);
 
         foreach (var (field, value) in nodeAsObject)
         {

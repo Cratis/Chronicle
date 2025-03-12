@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
     /// <inheritdoc/>
-    public override async Task OnCompleted()
+    protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
@@ -34,7 +34,7 @@ public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : 
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompleted(JobStepId jobStepId, JobStepResult result)
+    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result);
         return Task.CompletedTask;
@@ -48,6 +48,7 @@ public class ReplayObserverPartition(ILogger<ReplayObserverPartition> logger) : 
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
+                    request.ObserverType,
                     request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,

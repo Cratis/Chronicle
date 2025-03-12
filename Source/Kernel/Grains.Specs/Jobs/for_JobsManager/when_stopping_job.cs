@@ -15,7 +15,7 @@ public class when_stopping_job : given.the_manager
     {
         _jobId = Guid.Parse("24ff9a76-a590-49b7-847d-28fcc9bf1024");
         _job = AddJob<INullJobWithSomeRequest>(_jobId);
-        _job.Setup(_ => _.Stop()).ReturnsAsync(Result.Success<JobError>());
+        _job.Setup(_ => _.Remove()).ReturnsAsync(Result.Success<RemoveJobError>());
     }
 
     Task Because() => _manager.Stop(_jobId);

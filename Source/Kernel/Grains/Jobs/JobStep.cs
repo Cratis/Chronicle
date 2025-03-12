@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// Represents an implementation of <see cref="IJobStep{TRequest, TResult}"/>.
+/// Represents an implementation of <see cref="IJobStep{TRequest, TResult, TState}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request for the step.</typeparam>
 /// <typeparam name="TResult">Type of result for the step.</typeparam>
@@ -24,31 +24,30 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public abstract class JobStep<TRequest, TResult, TState>(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TState> state,
-    ILogger<JobStep<TRequest, TResult, TState>> logger) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult>, IJobObserver, IDisposable
+    ILogger<JobStep<TRequest, TResult, TState>> logger) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult, TState>, IJobObserver, IDisposable
     where TState : JobStepState
 {
-    readonly CancellationTokenSource _cancellationTokenSource = new();
-    bool _running;
+    IJobStep<TRequest, TResult, TState> _thisJobStep = null!;
+    CancellationTokenSource? _cancellationTokenSource = new();
+    IJob _job = new NullJob();
+    bool _currentlyRunning;
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
     /// </summary>
-    public JobStepId JobStepId => this.GetPrimaryKey();
+    protected JobStepId JobStepId => this.GetPrimaryKey();
 
     /// <summary>
-    /// Gets the parent job.
+    /// Gets the parent job id.
     /// </summary>
-    protected IJob Job { get; private set; } = new NullJob();
-
-    /// <summary>
-    /// Gets the job step as a Grain reference.
-    /// </summary>
-    protected IJobStep<TRequest, TResult> ThisJobStep { get; private set; } = null!;
+    protected JobId JobId { get; private set; } = null!;
 
     /// <summary>
     /// Gets the state for the job step.
     /// </summary>
+#pragma warning disable CA1721
     protected TState State => state.State;
+#pragma warning restore CA1721
 
     /// <summary>
     /// Gets the <see cref="JobStepIdentifier"/>.
@@ -61,7 +60,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
     protected JobStepName Name { get; private set; } = null!;
 
     /// <inheritdoc/>
-    public void Dispose() => _cancellationTokenSource.Dispose();
+    public void Dispose()
+    {
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
+    }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -72,104 +75,110 @@ public abstract class JobStep<TRequest, TResult, TState>(
         var jobStepKey = (JobStepKey)key;
         var grainType = this.GetGrainType();
         Name = GetType().Name;
+        JobId = jobStepKey.JobId;
         Identifier = new(jobStepKey.JobId, JobStepId);
 
         state.State.Name = Name;
         state.State.Id = Identifier;
         state.State.Type = grainType;
+        _cancellationTokenSource = new();
     }
 
     /// <inheritdoc/>
-    public async Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, object request)
+    public async Task<Result<StartJobStepError>> Start(GrainId jobGrainId)
     {
         using var scope = logger.BeginJobStepScope(State);
-        var task = request switch
+        try
         {
-            TRequest tRequest => Start(jobId, tRequest),
-            _ => Task.FromResult<Result<JobStepPrepareStartError>>(JobStepPrepareStartError.WrongRequestType)
-        };
-        return await task;
+            if (!State.Prepared)
+            {
+                return StartJobStepError.NotPrepared;
+            }
+
+            switch (State.Status)
+            {
+                case JobStepStatus.Scheduled or JobStepStatus.Running:
+                    return StartJobStepError.AlreadyStarted;
+                case JobStepStatus.CompletedSuccessfully or JobStepStatus.CompletedWithFailure:
+                    return StartJobStepError.Completed;
+                case JobStepStatus.Failed:
+                    return StartJobStepError.UnrecoverableFailedState;
+            }
+            _thisJobStep = this.AsReference<IJobStep<TRequest, TResult, TState>>();
+            _job = GrainFactory.GetGrain<IJob>(jobGrainId);
+            var scheduledWork = await Start(_cancellationTokenSource!.Token);
+            if (scheduledWork)
+            {
+                _currentlyRunning = true;
+                _ = await WriteStatusChange(JobStepStatus.Scheduled);
+            }
+            return scheduledWork ? Result.Success<StartJobStepError>() : StartJobStepError.AlreadyStarted;
+        }
+        catch (Exception ex)
+        {
+            logger.FailedUnexpectedly(ex);
+            return StartJobStepError.Unknown;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task<Result<JobStepPrepareStartError>> Prepare(object request)
+    public async Task<Result<PrepareJobStepError>> Prepare(object request)
     {
         using var scope = logger.BeginJobStepScope(State);
-        var task = request switch
+        var prepareTask = request switch
         {
             TRequest tRequest => Prepare(tRequest),
-            _ => Task.FromResult<Result<JobStepPrepareStartError>>(JobStepPrepareStartError.WrongRequestType)
+            _ => Task.FromResult<Result<PrepareJobStepError>>(PrepareJobStepError.WrongRequestType)
         };
-        return await task;
+        var prepareResult = await prepareTask;
+        if (!prepareResult.IsSuccess)
+        {
+            return prepareResult;
+        }
+
+        State.Prepared = true;
+        _ = await WriteStateAsync();
+        return prepareResult;
     }
 
     /// <inheritdoc/>
-    public async Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, TRequest request)
+    public async Task<Result<JobStepError>> Stop(bool removing)
     {
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            _running = true;
-            Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
-            ThisJobStep = GetReferenceToSelf<IJobStep<TRequest, TResult>>();
+            if (!removing && State.Status is JobStepStatus.Stopped)
+            {
+                logger.AlreadyStopped();
+                DeactivateOnIdle();
+                return Result.Success<JobStepError>();
+            }
+            if (removing)
+            {
+                var wasStopped = State.Status == JobStepStatus.Stopped;
+                _ = await WriteStatusChange(JobStepStatus.Removing);
+                if (wasStopped)
+                {
+                    DeactivateOnIdle();
+                    return Result.Success<JobStepError>();
+                }
+            }
+            logger.Stopping();
+            var cancelTokenTask = _cancellationTokenSource?.CancelAsync() ?? Task.CompletedTask;
+            await cancelTokenTask;
+            _cancellationTokenSource = null;
+            if (_currentlyRunning)
+            {
+                return Result.Success<JobStepError>();
+            }
 
-            await Start(request, _cancellationTokenSource.Token);
-            var writeStateResult = await WriteStatusChange(JobStepStatus.Running);
-            return writeStateResult.Match(
-                _ => Result<JobStepPrepareStartError>.Success(),
-                _ => JobStepPrepareStartError.FailedPersistingState);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedUnexpectedly(ex);
-            return JobStepPrepareStartError.Unknown;
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<Result<JobStepError>> Pause()
-    {
-        using var scope = logger.BeginJobStepScope(State);
-        try
-        {
-            await _cancellationTokenSource.CancelAsync();
-            await Job.Unsubscribe(this.AsReference<IJobObserver>());
-            return await WriteStatusChange(JobStepStatus.Paused);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedUnexpectedly(ex);
-            return JobStepError.Unknown;
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task<Result<JobStepResumeSuccess, JobStepError>> Resume(GrainId grainId)
-    {
-        using var scope = logger.BeginJobStepScope(State);
-        try
-        {
-            var successType = _running
-                ? JobStepResumeSuccess.AlreadyRunning
-                : JobStepResumeSuccess.Success;
-            return Task.FromResult(Result<JobStepResumeSuccess, JobStepError>.Success(successType));
-        }
-        catch (Exception ex)
-        {
-            logger.FailedUnexpectedly(ex);
-            return Task.FromResult(Result<JobStepResumeSuccess, JobStepError>.Failed(JobStepError.Unknown));
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<Result<JobStepError>> Stop()
-    {
-        using var scope = logger.BeginJobStepScope(State);
-        try
-        {
-            await _cancellationTokenSource.CancelAsync();
-            await Job.Unsubscribe(this.AsReference<IJobObserver>());
-            return await WriteStatusChange(JobStepStatus.Stopped);
+            // Logic here is that if we stop a job step that is not currently running and maybe not even prepared we still want to go through the same job step completion process
+            // Therefore we want to try to create a job step result from whatever the current state is and use that in the completion process.
+            var result = await CreateCancelledResultFromCurrentState(State);
+            await ReportFailure(result is not null
+                ? PerformJobStepError.CancelledWithPartialResult(result)
+                : PerformJobStepError.CancelledWithNoResult());
+            return Result.Success<JobStepError>();
         }
         catch (Exception ex)
         {
@@ -191,9 +200,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            var onStepFailedResult = await Job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
-            return await onStepFailedResult.Match(
-                _ => WriteStatusChange(JobStepStatus.Failed, error.ErrorMessages, error.ExceptionStackTrace),
+            var result = error.Cancelled
+                ? await _job.OnStepStopped(JobStepId, JobStepResult.Failed(error))
+                : await _job.OnStepFailed(JobStepId, JobStepResult.Failed(error));
+            return await result.Match(
+                _ => WriteStatusChange(error.Cancelled ? JobStepStatus.Stopped : JobStepStatus.CompletedWithFailure, error.ErrorMessages, error.ExceptionStackTrace),
                 onStepFailedError =>
                 {
                     logger.FailedReportJobStepFailure(onStepFailedError);
@@ -212,43 +223,64 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// </summary>
     /// <param name="request">The request object for the step.</param>
     /// <returns>Awaitable task.</returns>
-    public virtual Task<Result<JobStepPrepareStartError>> Prepare(TRequest request) =>
-        Task.FromResult(Result.Success<JobStepPrepareStartError>());
-
-    /// <inheritdoc/>
-    public async Task OnJobStopped()
+    public async Task<Result<PrepareJobStepError>> Prepare(TRequest request)
     {
-        await _cancellationTokenSource.CancelAsync();
+        try
+        {
+            return await (await PrepareStep(request)).Match(
+                async none =>
+                {
+                    await InitializeState(request);
+                    _ = await WriteStateAsync();
+                    return Result<PrepareJobStepError>.Success();
+                },
+                error => Task.FromResult(Result.Failed(error)));
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPreparing(ex, Name);
+            return PrepareJobStepError.Unknown;
+        }
     }
 
     /// <inheritdoc/>
-    public async Task OnJobPaused()
-    {
-        await _cancellationTokenSource.CancelAsync();
-    }
+    public Task<TState> GetState() => Task.FromResult(State);
+
+    /// <inheritdoc/>
+    public Task OnJobStopped() => Stop(false);
+
+    /// <inheritdoc/>
+    public Task OnJobRemoved() => Stop(true);
+
+    /// <summary>
+    /// Prepare the step before it starts.
+    /// </summary>
+    /// <param name="request">The request object for the step.</param>
+    /// <returns>Awaitable task.</returns>
+    protected abstract Task<Result<PrepareJobStepError>> PrepareStep(TRequest request);
 
     /// <summary>
     /// The method that gets called when the step should do its work.
     /// </summary>
-    /// <param name="request">The request object for the step.</param>
+    /// <remarks>When this is executed it is not within the Activation Context. If context needs to be accessed then it needs to be referenced indirectly through a reference to itself.</remarks>
+    /// <param name="currentState">The current state of the job step.</param>
     /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>True if successful, false if not.</returns>
-    protected abstract Task<Catch<JobStepResult>> PerformStep(TRequest request, CancellationToken cancellationToken);
+    protected abstract Task<Catch<JobStepResult>> PerformStep(TState currentState, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets a grain reference to self.
+    /// Initialize the state from the initial request arguments.
     /// </summary>
-    /// <typeparam name="TGrain">The type of the grain.</typeparam>
-    /// <returns>The grain reference.</returns>
-    protected TGrain GetReferenceToSelf<TGrain>()
-        where TGrain : IJobStep<TRequest, TResult>
-        => GrainFactory.GetGrain(GrainReference.GrainId).AsReference<TGrain>();
+    /// <remarks>This method is invoked after <see cref="PrepareStep"/> successfully completed.</remarks>
+    /// <param name="request">The <typeparamref name="TRequest"/> initial request arguments.</param>
+    /// <returns>The <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    protected abstract ValueTask InitializeState(TRequest request);
 
     /// <inheritdoc/>
-    protected override async Task<PerformWorkResult<JobStepResult>> PerformWork(TRequest request)
+    protected override async Task<PerformWorkResult<JobStepResult>> PerformWork()
     {
         // Important! State cannot be accessed or persisted directly, we need do that through the grain reference...
-        if (_cancellationTokenSource.IsCancellationRequested)
+        if (_cancellationTokenSource?.IsCancellationRequested ?? true)
         {
             return new()
             {
@@ -258,11 +290,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
 
         // TODO: Should we do something here if it fails?
-        _ = await ThisJobStep.ReportStatusChange(JobStepStatus.Running);
-        var performStepResult = await PerformStep(request, _cancellationTokenSource.Token);
-        var result = await performStepResult.Match(HandleJobStepResult, HandleException);
-        DeactivateOnIdle();
-        return result;
+        _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
+        var currentState = await _thisJobStep.GetState();
+        var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
+        return await performStepResult.Match(HandleJobStepResult, HandleException);
 
         async Task<PerformWorkResult<JobStepResult>> HandleJobStepResult(JobStepResult jobStepResult)
         {
@@ -270,45 +301,60 @@ public abstract class JobStep<TRequest, TResult, TState>(
             {
                 Result = jobStepResult
             };
-            if (!jobStepResult.TryGetError(out var error))
+            try
             {
-                if ((await Job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
+                if (!jobStepResult.TryGetError(out var error))
                 {
-                    logger.FailedReportJobStepSuccess(errorReportingSuccess);
-                    performWorkResult = performWorkResult with
+                    if ((await _job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
                     {
-                        Error = PerformWorkError.WorkerError
-                    };
-                }
+                        logger.FailedReportJobStepSuccess(errorReportingSuccess);
+                        performWorkResult = performWorkResult with
+                        {
+                            Error = PerformWorkError.WorkerError
+                        };
+                        _ = await WriteStatusChange(JobStepStatus.Failed, ["Error reporting job step succeeded"]);
+                    }
 
-                if ((await ThisJobStep.ReportStatusChange(JobStepStatus.Succeeded)).TryGetError(out var errorChangingStatus))
+                    if ((await _thisJobStep.ReportStatusChange(JobStepStatus.CompletedSuccessfully)).TryGetError(out var errorChangingStatus))
+                    {
+                        logger.PerformingWorkFailedPersistState(errorChangingStatus);
+                        performWorkResult = performWorkResult with
+                        {
+                            Error = PerformWorkError.WorkerError
+                        };
+                        _ = await WriteStatusChange(JobStepStatus.Failed, ["Error reporting job step succeeded"]);
+                    }
+                }
+                else
                 {
-                    logger.PerformingWorkFailedPersistState(errorChangingStatus);
                     performWorkResult = performWorkResult with
                     {
-                        Error = PerformWorkError.WorkerError
+                        Error = error.Cancelled ? PerformWorkError.Cancelled : PerformWorkError.PerformingWorkError
                     };
+
+                    if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
+                    {
+                        logger.FailedReportingJobStepCancelled(errorReportingFailure);
+                        performWorkResult = performWorkResult with
+                        {
+                            Error = errorReportingFailure
+                        };
+                    }
                 }
+                return performWorkResult;
             }
-            else
+            catch (Exception ex)
             {
-                performWorkResult = performWorkResult with
+                logger.FailedUnexpectedly(ex);
+                return performWorkResult with
                 {
-                    Error = error.Cancelled ? PerformWorkError.Cancelled : PerformWorkError.PerformingWorkError
+                    Error = PerformWorkError.WorkerError
                 };
-
-                if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
-                {
-#pragma warning disable CA1848 // This will rarely happen.
-                    logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", errorReportingFailure);
-#pragma warning restore CA1848
-                    performWorkResult = performWorkResult with
-                    {
-                        Error = errorReportingFailure
-                    };
-                }
             }
-            return performWorkResult;
+            finally
+            {
+                DeactivateOnIdle();
+            }
         }
 
         async Task<PerformWorkResult<JobStepResult>> HandleException(Exception ex)
@@ -327,9 +373,18 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
         async Task<Result<PerformWorkError>> ReportError(PerformJobStepError error)
         {
-            logger.ReportFailurePerformingWork();
-            var reportFailureResult = await ThisJobStep.ReportFailure(error);
-            return reportFailureResult.Match(_ => Result<PerformWorkError>.Success(), _ => PerformWorkError.WorkerError);
+            try
+            {
+                logger.ReportFailurePerformingWork();
+                var reportFailureResult = await _thisJobStep.ReportFailure(error);
+                return reportFailureResult.Match(_ => Result<PerformWorkError>.Success(), _ => PerformWorkError.WorkerError);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedUnexpectedly(ex);
+                _ = await WriteStatusChange(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace);
+                return PerformWorkError.WorkerError;
+            }
         }
     }
 
@@ -351,11 +406,15 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
     }
 
-    JobStepError HandleFailedToWriteStatusChange(Exception ex, JobStepStatus status)
-    {
-        logger.FailedToWriteState(ex, status);
-        return JobStepError.FailedToPersistState;
-    }
+    /// <summary>
+    /// Create <typeparamref name="TResult"/> result when the job step is stopped without having the job step task running.
+    /// </summary>
+    /// <param name="currentState">The current state.</param>
+    /// <remarks>
+    /// If no kind of result can be derived from the current state null can be returned.
+    /// </remarks>
+    /// <returns>The result.</returns>
+    protected abstract ValueTask<TResult?> CreateCancelledResultFromCurrentState(TState currentState);
 
     async Task<Result<JobStepError>> WriteStatusChange(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
     {
@@ -366,12 +425,18 @@ public abstract class JobStep<TRequest, TResult, TState>(
             var writeResult = await WriteStateAsync();
             return writeResult.Match(
                 _ => Result<JobStepError>.Success(),
-                ex => HandleFailedToWriteStatusChange(ex, status));
+                ex => HandleFailedToWriteStatusChange(ex));
         }
         catch (Exception ex)
         {
             logger.FailedUnexpectedly(ex);
             return JobStepError.Unknown;
+        }
+
+        JobStepError HandleFailedToWriteStatusChange(Exception ex)
+        {
+            logger.FailedToWriteState(ex, status);
+            return JobStepError.FailedToPersistState;
         }
     }
 

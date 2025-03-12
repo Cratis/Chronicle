@@ -27,6 +27,9 @@ public class NullSink : ISink
     public Task BeginReplay(ReplayContext context) => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task ResumeReplay(ReplayContext context) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task EndReplay(ReplayContext context) => Task.CompletedTask;
 
     /// <inheritdoc/>

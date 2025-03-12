@@ -15,7 +15,7 @@ public class a_disconnected_reactor_observing_an_event(GlobalFixture globalFixtu
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        Reactor = new ReactorWithoutDelay();
+        Reactor = new();
         services.AddSingleton(Reactor);
     }
 }

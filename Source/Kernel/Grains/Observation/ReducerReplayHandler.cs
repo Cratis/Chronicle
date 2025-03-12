@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Grains.Observation;
@@ -14,17 +15,20 @@ namespace Cratis.Chronicle.Grains.Observation;
 public class ReducerReplayHandler : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
-    public Task<bool> CanHandle(ObserverDetails observerDetails) => Task.FromResult(observerDetails.Type == ObserverType.Reducer);
+    public async Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayFor(ObserverDetails observerDetails) => await PerformWork(observerDetails);
 
     /// <inheritdoc/>
-    public async Task BeginReplayFor(ObserverDetails observerDetails)
-    {
-        await Task.CompletedTask;
-    }
+    public async Task<Result<ICanHandleReplayForObserver.Error>> ResumeReplayFor(ObserverDetails observerDetails) => await PerformWork(observerDetails);
 
     /// <inheritdoc/>
-    public async Task EndReplayFor(ObserverDetails observerDetails)
+    public async Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails) => await PerformWork(observerDetails);
+
+    static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Reducer;
+
+    static Task<Result<ICanHandleReplayForObserver.Error>> PerformWork(ObserverDetails observerDetails)
     {
-        await Task.CompletedTask;
+        return CanHandle(observerDetails)
+            ? Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success())
+            : Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
     }
 }
