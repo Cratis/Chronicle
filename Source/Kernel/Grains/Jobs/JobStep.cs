@@ -243,7 +243,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
                     _ = await WriteStateAsync();
                     return Result<PrepareJobStepError>.Success();
                 },
-                error => Task.FromResult(Result.Failed(error)));
+                async error =>
+                {
+                    _ = await WriteStatusChange(JobStepStatus.Failed, [error.ToString()]);
+                    return Result.Failed(error);
+                });
         }
         catch (Exception ex)
         {
