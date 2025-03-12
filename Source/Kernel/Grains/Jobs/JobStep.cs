@@ -234,7 +234,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
                     _ = await WriteStateAsync();
                     return Result<PrepareJobStepError>.Success();
                 },
-                error => Task.FromResult(Result.Failed<PrepareJobStepError>(error)));
+                error => Task.FromResult(Result.Failed(error)));
         }
         catch (Exception ex)
         {
@@ -271,7 +271,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <summary>
     /// Initialize the state from the initial request arguments.
     /// </summary>
-    /// <remarks>This method is invoked after <see cref="PrepareStep"/> successfuly completed.</remarks>
+    /// <remarks>This method is invoked after <see cref="PrepareStep"/> successfully completed.</remarks>
     /// <param name="request">The <typeparamref name="TRequest"/> initial request arguments.</param>
     /// <returns>The <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     protected abstract ValueTask InitializeState(TRequest request);
