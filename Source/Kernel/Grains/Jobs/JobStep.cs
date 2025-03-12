@@ -334,9 +334,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
                     if ((await ReportError(error)).TryGetError(out var errorReportingFailure))
                     {
-#pragma warning disable CA1848 // This will rarely happen.
-                        logger.LogWarning("Failed to report that that the performing of job step was cancelled. Error: {ReportError}", errorReportingFailure);
-#pragma warning restore CA1848
+                        logger.FailedReportingJobStepCancelled(errorReportingFailure);
                         performWorkResult = performWorkResult with
                         {
                             Error = errorReportingFailure
