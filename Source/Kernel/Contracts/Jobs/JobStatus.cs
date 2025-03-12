@@ -14,22 +14,17 @@ public enum JobStatus
     None = 0,
 
     /// <summary>
-    /// The job has been started and is running.
+    /// The job has been started and is preparing itself.
     /// </summary>
-    Preparing = 1,
+    PreparingJob = 1,
 
     /// <summary>
-    /// The job has been started and is running.
+    /// The job has been started and is currently preparing and starting all job steps.
     /// </summary>
-    PreparingSteps = 2,
+    PreparingSteps = 3,
 
     /// <summary>
-    /// The job has been started and is running.
-    /// </summary>
-    PreparingStepsForRunning = 3,
-
-    /// <summary>
-    /// The job has been started and is running.
+    /// The job has been started and is currently trying to start all job steps.
     /// </summary>
     StartingSteps = 4,
 
@@ -49,17 +44,17 @@ public enum JobStatus
     CompletedWithFailures = 7,
 
     /// <summary>
-    /// The job has been paused.
+    /// The job has been stopped and can be resumed later.
     /// </summary>
-    Paused = 8,
-
-    /// <summary>
-    /// The job has been cancelled.
-    /// </summary>
-    Stopped = 9,
+    Stopped = 8,
 
     /// <summary>
     /// The job has failed and can't recover.
     /// </summary>
-    Failed = 10
+    Failed = 9,
+
+    /// <summary>
+    /// The job is scheduled to be removed.
+    /// </summary>
+    Removing = 10,
 }

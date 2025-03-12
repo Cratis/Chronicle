@@ -46,8 +46,6 @@ public class ProjectionReplayHandler(
         {
             await pipeline.ResumeReplay(context);
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-            await namespaceStorage.ReplayedModels.Replayed(observerDetails.Key.ObserverId, context);
-            await namespaceStorage.ReplayContexts.Evict(projection.Model.Name);
         });
 
     /// <inheritdoc/>
