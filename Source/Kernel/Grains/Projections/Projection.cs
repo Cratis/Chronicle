@@ -29,7 +29,7 @@ public class Projection(
     IProjectionDefinitionComparer projectionDefinitionComparer,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
-    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.MaxValue, logger);
+    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
 
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)

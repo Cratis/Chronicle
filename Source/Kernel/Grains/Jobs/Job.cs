@@ -86,7 +86,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
 
         _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
         _observers = new(
-            TimeSpan.MaxValue,
+            TimeSpan.FromDays(365 * 3),
             ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>());
 
         JobId = this.GetPrimaryKey(out var keyExtension);
