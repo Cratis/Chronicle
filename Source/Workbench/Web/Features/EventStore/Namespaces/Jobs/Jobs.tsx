@@ -18,10 +18,6 @@ const jobStatus = (job: Job) => {
             return strings.eventStore.namespaces.jobs.status.none;
         case JobStatus.preparingJob:
             return strings.eventStore.namespaces.jobs.status.preparingJob;
-        case JobStatus.preparingSteps:
-            return strings.eventStore.namespaces.jobs.status.preparingSteps;
-        case JobStatus.startingSteps:
-            return strings.eventStore.namespaces.jobs.status.startingSteps;
         case JobStatus.running:
             return strings.eventStore.namespaces.jobs.status.running;
         case JobStatus.completedSuccessfully:

@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public class NullJob : IJob
 {
     /// <inheritdoc/>
+    public Task<Result<JobError>> OnStepPrepared(JobStepId stepId) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<Result<JobError>> OnStepPreparationFailed(JobStepId stepId, PrepareJobStepError error) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
     public Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
 
     /// <inheritdoc/>

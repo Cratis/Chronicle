@@ -104,8 +104,6 @@
                 "status": {
                     "none": "None",
                     "preparingJob": "Preparing job",
-                    "preparingSteps": "Preparing steps",
-                    "startingSteps": "Starting steps",
                     "running": "Running",
                     "completedSuccessfully": "Completed successfully",
                     "completedWithFailures": "Completed with failures",

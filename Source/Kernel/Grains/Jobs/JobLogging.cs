@@ -45,6 +45,9 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);
 
+    [LoggerMessage(LogLevel.Trace, "Step {JobStepId} started")]
+    internal static partial void StepStarted(this ILogger<IJob> logger, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} stopped")]
     internal static partial void StepStopped(this ILogger<IJob> logger, JobStepId jobStepId);
 

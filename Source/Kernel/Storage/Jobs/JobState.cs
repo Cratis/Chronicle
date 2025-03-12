@@ -53,5 +53,5 @@ public class JobState
     /// <summary>
     /// Whether the job is preparing to be started or is in a running state.
     /// </summary>
-    public bool IsPreparingOrRunning => Status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
+    public bool IsPreparingOrRunning => Status is JobStatus.Running or JobStatus.PreparingJob;
 }

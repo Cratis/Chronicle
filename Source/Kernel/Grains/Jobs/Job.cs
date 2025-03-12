@@ -26,6 +26,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     Dictionary<JobStepId, IJobStep>? _jobStepGrains;
     ObserverManager<IJobObserver>? _observers;
     ILogger<IJob> _logger = null!;
+    GrainId _grainId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
@@ -96,6 +97,8 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         Storage = ServiceProvider.GetRequiredService<IStorage>()
             .GetEventStore(JobKey.EventStore)
             .GetNamespace(JobKey.Namespace);
+
+        _grainId = this.GetGrainId();
 
         if (JobIsPrepared())
         {
@@ -168,11 +171,10 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             State.Progress.StoppedSteps = 0;
             _ = await WriteStatusChanged(JobStatus.Running);
             await OnBeforeResumingJobSteps();
-            var grainId = this.GetGrainId();
 
             var tasks = _jobStepGrains!.Select(async jobStepIdAndGrain =>
             {
-                var result = await jobStepIdAndGrain.Value.Start(grainId);
+                var result = await jobStepIdAndGrain.Value.Start(_grainId);
                 return (jobStepIdAndGrain.Key, result, jobStepIdAndGrain.Value);
             });
             var startJobStepResults = await Task.WhenAll(tasks);
@@ -347,7 +349,17 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         {
             if (result.TryGetError(out var error))
             {
-                if (error is StartJobStepError.AlreadyStarted )
+                switch(error)
+                {
+                    case StartJobStepError.AlreadyStarted:
+                        await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
+                        return false;
+                    case StartJobStepError.NotPrepared:
+                        await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
+                        var prepareResult = await jobStepGrain.Prepare();
+                        return false;
+                }
+                if (error is StartJobStepError.AlreadyStarted)
                 {
                     await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
                     return true;

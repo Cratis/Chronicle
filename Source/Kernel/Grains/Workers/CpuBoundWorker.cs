@@ -50,6 +50,12 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <summary>
     /// The method that actually performs the long-running work.
     /// </summary>
+    /// <returns>The result of the work prepared.</returns>
+    protected abstract Task<PerformWorkResult<TResult>> PerformPrepare();
+
+    /// <summary>
+    /// The method that actually performs the long-running work.
+    /// </summary>
     /// <returns>The result of the work.</returns>
     protected abstract Task<PerformWorkResult<TResult>> PerformWork();
 
@@ -74,7 +80,27 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
 
         _logger?.StartingTask();
         _status = CpuBoundWorkerStatus.Running;
-        _task = CreateTask(cancellationToken);
+        _task = CreateTask(PerformWork, cancellationToken);
+
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// Start long-running work with the provided parameter.
+    /// </summary>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>true if work is started, false if it was already started.</returns>
+    protected Task<bool> Prepare(CancellationToken cancellationToken = default)
+    {
+        if (_task != null)
+        {
+            _logger?.TaskHasAlreadyBeenInitialized();
+            return Task.FromResult(false);
+        }
+
+        _logger?.PreparingTask();
+        _status = CpuBoundWorkerStatus.Preparing;
+        _task = CreateTask(PerformPrepare, cancellationToken);
 
         return Task.FromResult(true);
     }
@@ -82,10 +108,11 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
     /// <summary>
     /// The task creation that fires off the long-running work to the <see cref="LimitedConcurrencyLevelTaskScheduler"/>.
     /// </summary>
+    /// <param name="doWork">The work to be done.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>a <see cref="Task"/> representing the fact that the work has been dispatched.</returns>
 #pragma warning disable CA1859 // Use concrete types when possible for improved performance
-    Task CreateTask(CancellationToken cancellationToken = default)
+    Task CreateTask(Func<Task<PerformWorkResult<TResult>>> doWork, CancellationToken cancellationToken = default)
 #pragma warning restore CA1859 // Use concrete types when possible for improved performance
     {
         return Task.Factory.StartNew(
@@ -101,7 +128,7 @@ public abstract class CpuBoundWorker<TRequest, TResult> : Grain, ICpuBoundWorker
                 PerformWorkResult<TResult> performWorkResult;
                 try
                 {
-                    performWorkResult = await PerformWork();
+                    performWorkResult = await doWork();
                 }
                 catch (Exception e)
                 {

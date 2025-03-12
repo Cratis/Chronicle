@@ -4,9 +4,9 @@
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
-/// The type of error that occurred while performing prepare operation on <see cref="IJobStep"/>.
-/// </summary>
-public enum PrepareJobStepError
+/// The type of error that occurred while performing initialize state operation on <see cref="IJobStep"/>.
+/// /// </summary>
+public enum InitializeStateError
 {
     /// <summary>
     /// Unknown error occurred.
@@ -17,14 +17,4 @@ public enum PrepareJobStepError
     /// The request type was wrong.
     /// </summary>
     WrongRequestType = 1,
-
-    /// <summary>
-    /// The job step cannot be prepared for some reason.
-    /// </summary>
-    CannotPrepare = 2,
-
-    /// <summary>
-    /// An unexpected error while preparing job step.
-    /// </summary>
-    UnexpectedErrorPreparing = 3
 }

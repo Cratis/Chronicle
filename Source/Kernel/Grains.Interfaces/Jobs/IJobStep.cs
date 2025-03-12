@@ -14,11 +14,18 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public interface IJobStep : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Initialize the state of the job step.
+    /// </summary>
+    /// <param name="request">Request to initialize state with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<InitializeStateError>> InitializeState(object request);
+
+    /// <summary>
     /// Prepare the job step.
     /// </summary>
-    /// <param name="request">Request to prepare it with.</param>
+    /// <param name="jobGrainId">The <see cref="GrainId"/> for the parent job.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<PrepareJobStepError>> Prepare(object request);
+    Task<Result<PrepareJobStepError>> Prepare(GrainId jobGrainId);
 
     /// <summary>
     /// Start the job step.
@@ -60,13 +67,6 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// <typeparam name="TState">Type of the state.</typeparam>
 public interface IJobStep<in TRequest, TResult, TState> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
 {
-    /// <summary>
-    /// Prepare the job step.
-    /// </summary>
-    /// <param name="request">Request to prepare it with.</param>
-    /// <returns>Awaitable task.</returns>
-    Task<Result<PrepareJobStepError>> Prepare(TRequest request);
-
     /// <summary>
     /// Gets the <typeparamref name="TState"/>.
     /// </summary>

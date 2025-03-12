@@ -37,6 +37,21 @@ public interface IJob : IGrainWithGuidCompoundKey
     Task<Result<RemoveJobError>> Remove();
 
     /// <summary>
+    /// Report that a job set is finished preparing.
+    /// </summary>
+    /// <param name="stepId"><see cref="JobStepId"/> of the prepared job step.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<JobError>> OnStepPrepared(JobStepId stepId);
+
+    /// <summary>
+    /// Report that a job set has failed during preparation.
+    /// </summary>
+    /// <param name="stepId"><see cref="JobStepId"/> of the prepared job step.</param>
+    /// <param name="error"><see cref="PrepareJobStepError"/> error preparing job step.</param>
+    /// <returns>Awaitable task.</returns>
+    Task<Result<JobError>> OnStepPreparationFailed(JobStepId stepId, PrepareJobStepError error);
+
+    /// <summary>
     /// Report a successful completion of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>

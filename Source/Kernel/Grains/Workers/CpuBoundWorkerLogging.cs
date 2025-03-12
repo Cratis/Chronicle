@@ -30,6 +30,9 @@ internal static partial class CpuBoundWorkerLogMessages
     [LoggerMessage(LogLevel.Debug, "Task has already been initialized")]
     internal static partial void TaskHasAlreadyBeenInitialized(this ILogger<ICpuBoundWorker> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Preparing task")]
+    internal static partial void PreparingTask(this ILogger<ICpuBoundWorker> logger);
+
     [LoggerMessage(LogLevel.Debug, "Starting task")]
     internal static partial void StartingTask(this ILogger<ICpuBoundWorker> logger);
 

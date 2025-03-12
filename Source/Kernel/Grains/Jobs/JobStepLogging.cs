@@ -62,6 +62,9 @@ internal static partial class JobStepLogMessages
     [LoggerMessage(LogLevel.Warning, "Job step while after performing work failed while persisting state. {JobStepError}")]
     internal static partial void PerformingWorkFailedPersistState(this ILogger<IJobStep> logger, JobStepError jobStepError);
 
+    [LoggerMessage(LogLevel.Warning, "Job step '{JobStepName}' failed while initializing")]
+    internal static partial void FailedInitializingState(this ILogger<IJobStep> logger, Exception ex, string jobStepName);
+
     [LoggerMessage(LogLevel.Warning, "Job step '{JobStepName}' failed while preparing")]
     internal static partial void FailedPreparing(this ILogger<IJobStep> logger, Exception ex, string jobStepName);
 

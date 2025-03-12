@@ -14,22 +14,27 @@ public enum CpuBoundWorkerStatus
     NotStarted = 0,
 
     /// <summary>
+    /// Worker is preparing or is in queue to be run.
+    /// </summary>
+    Preparing = 1,
+
+    /// <summary>
     /// Worker is actively running or is in queue to be run.
     /// </summary>
-    Running = 1,
+    Running = 2,
 
     /// <summary>
     /// The worker has been completed.
     /// </summary>
-    Completed = 2,
+    Completed = 3,
 
     /// <summary>
     /// The worker has been completed with failure.
     /// </summary>
-    Failed = 3,
+    Failed = 4,
 
     /// <summary>
     /// The worker has been stopped.
     /// </summary>
-    Stopped = 4,
+    Stopped = 5,
 }

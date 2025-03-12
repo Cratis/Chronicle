@@ -19,12 +19,17 @@ public enum JobError
     UnknownError = 1,
 
     /// <summary>
-    /// A storrage related error occurred.
+    /// A storage related error occurred.
     /// </summary>
     StorageError = 2,
 
     /// <summary>
     /// Failed to persist state.
     /// </summary>
-    PersistStateError = 3
+    PersistStateError = 3,
+
+    /// <summary>
+    /// Unknown job step.
+    /// </summary>
+    UnknownJobStep = 4
 }

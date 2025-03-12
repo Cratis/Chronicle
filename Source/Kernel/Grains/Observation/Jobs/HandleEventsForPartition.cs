@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -59,14 +60,14 @@ public class HandleEventsForPartition(
     }
 
     /// <inheritdoc/>
-    protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
+    protected override Task InitializeState(HandleEventsForPartitionArguments request)
     {
         State.EventObservationState = request.EventObservationState;
         State.Partition = request.Partition;
         State.ObserverSubscription = request.ObserverSubscription;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
-        return ValueTask.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -74,28 +75,37 @@ public class HandleEventsForPartition(
         ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.LastSuccessfullyHandledEventSequenceNumber));
 
     /// <inheritdoc/>
-    protected override Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
+    protected override async Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
     {
         try
         {
-            logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
-            _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
-            _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
+            logger.Preparing(State.Partition, State.StartEventSequenceNumber, State.EndEventSequenceNumber);
+            _observer = GrainFactory.GetGrain<IObserver>(State.ObserverSubscription.ObserverKey);
+            _eventSourceId = State.Partition.ToString() ?? EventSourceId.Unspecified;
 
-            if (request.ObserverSubscription.IsSubscribed)
+            var subscription = await _observer.GetSubscription();
+            if (subscription.IsSubscribed)
             {
-                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ToObserverSubscriberKey()) as IObserverSubscriber)!;
-                logger.SuccessfullyPrepared(request.Partition);
-                return Task.FromResult(Result.Success<PrepareJobStepError>());
+                var key = new ObserverSubscriberKey(
+                    subscription.ObserverId,
+                    subscription.ObserverKey.EventStore,
+                    subscription.ObserverKey.Namespace,
+                    subscription.ObserverKey.EventSequenceId,
+                    currentState.Partition,
+                    subscription.SiloAddress.ToParsableString());
+
+                _subscriber = (GrainFactory.GetGrain(State.ObserverSubscription.SubscriberType, key) as IObserverSubscriber)!;
+                logger.SuccessfullyPrepared(State.Partition);
+                return Result.Success<PrepareJobStepError>();
             }
 
-            logger.PreparingStoppedUnsubscribed(request.Partition);
-            return Task.FromResult(Result.Failed(PrepareJobStepError.CannotPrepare));
+            logger.PreparingStoppedUnsubscribed(State.Partition);
+            return Result.Failed(PrepareJobStepError.CannotPrepare);
         }
         catch (Exception e)
         {
             logger.FailedPreparing(e, nameof(HandleEventsForPartition));
-            return Task.FromResult(Result.Failed(PrepareJobStepError.UnexpectedErrorPreparing));
+            return Result.Failed(PrepareJobStepError.UnexpectedErrorPreparing);
         }
     }
 

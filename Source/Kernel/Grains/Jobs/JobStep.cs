@@ -117,28 +117,74 @@ public abstract class JobStep<TRequest, TResult, TState>(
         catch (Exception ex)
         {
             logger.FailedUnexpectedly(ex);
+            _ = await WriteStatusChange(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace);
             return StartJobStepError.Unknown;
         }
     }
 
     /// <inheritdoc/>
-    public async Task<Result<PrepareJobStepError>> Prepare(object request)
+    public async Task<Result<InitializeStateError>> InitializeState(object request)
     {
         using var scope = logger.BeginJobStepScope(State);
-        var prepareTask = request switch
+        try
         {
-            TRequest tRequest => Prepare(tRequest),
-            _ => Task.FromResult<Result<PrepareJobStepError>>(PrepareJobStepError.WrongRequestType)
-        };
-        var prepareResult = await prepareTask;
-        if (!prepareResult.IsSuccess)
-        {
-            return prepareResult;
+            var prepareTask = request switch
+            {
+                TRequest tRequest => InitializeState(tRequest),
+                _ => Task.FromResult<Result<InitializeStateError>>(InitializeStateError.WrongRequestType)
+            };
+            _ = await WriteStateAsync();
+            return Result.Success<InitializeStateError>();
         }
+        catch (Exception ex)
+        {
+            logger.FailedInitializingState(ex, Name);
+            _ = await WriteStatusChange(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace);
+            return InitializeStateError.Unknown;
+        }
+    }
 
-        State.Prepared = true;
-        _ = await WriteStateAsync();
-        return prepareResult;
+    /// <inheritdoc/>
+    public async Task<Result<PrepareJobStepError>> Prepare(GrainId jobGrainId)
+    {
+        using var scope = logger.BeginJobStepScope(State);
+
+        _job = GrainFactory.GetGrain<IJob>(jobGrainId);
+        await Prepare(_cancellationTokenSource!.Token);
+
+        return null!;
+
+        // try
+        // {
+        //     var prepareResult = await _thisJobStep.PrepareStep();
+        //     if (prepareResult.TryGetError(out var error))
+        //     {
+
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     logger.FailedPreparing(ex, Name);
+        //     return PrepareJobStepError.Unknown;
+        // }
+        // var prepareTask = request switch
+        // {
+        //     TRequest tRequest => Prepare(tRequest),
+        //     _ => Task.FromResult<Result<PrepareJobStepError>>(PrepareJobStepError.WrongRequestType)
+        // };
+        // var prepareResult = await prepareTask;
+        // if (!prepareResult.IsSuccess)
+        // {
+        //     await _job.OnStepPreparationFailed(JobStepId, prepareResult.AsT1);
+        //     return prepareResult;
+        // }
+
+        // State.Prepared = true;
+        // _ = await WriteStateAsync();
+
+        // await _job.OnStepPrepared(JobStepId);
+
+        // return prepareResult;
     }
 
     /// <inheritdoc/>
@@ -218,31 +264,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
     }
 
-    /// <summary>
-    /// Prepare the step before it starts.
-    /// </summary>
-    /// <param name="request">The request object for the step.</param>
-    /// <returns>Awaitable task.</returns>
-    public async Task<Result<PrepareJobStepError>> Prepare(TRequest request)
-    {
-        try
-        {
-            return await (await PrepareStep(request)).Match(
-                async none =>
-                {
-                    await InitializeState(request);
-                    _ = await WriteStateAsync();
-                    return Result<PrepareJobStepError>.Success();
-                },
-                error => Task.FromResult(Result.Failed(error)));
-        }
-        catch (Exception ex)
-        {
-            logger.FailedPreparing(ex, Name);
-            return PrepareJobStepError.Unknown;
-        }
-    }
-
     /// <inheritdoc/>
     public Task<TState> GetState() => Task.FromResult(State);
 
@@ -255,9 +276,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <summary>
     /// Prepare the step before it starts.
     /// </summary>
-    /// <param name="request">The request object for the step.</param>
+    /// <param name="currentState">The current state of the job step.</param>
+    /// <param name="cancellationToken">Cancellation token that can cancel the step work.</param>
     /// <returns>Awaitable task.</returns>
-    protected abstract Task<Result<PrepareJobStepError>> PrepareStep(TRequest request);
+    protected abstract Task<Result<PrepareJobStepError>> PrepareStep(TState currentState, CancellationToken cancellationToken);
 
     /// <summary>
     /// The method that gets called when the step should do its work.
@@ -273,13 +295,12 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// </summary>
     /// <remarks>This method is invoked after <see cref="PrepareStep"/> successfully completed.</remarks>
     /// <param name="request">The <typeparamref name="TRequest"/> initial request arguments.</param>
-    /// <returns>The <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    protected abstract ValueTask InitializeState(TRequest request);
+    /// <returns>The <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected abstract Task InitializeState(TRequest request);
 
     /// <inheritdoc/>
-    protected override async Task<PerformWorkResult<JobStepResult>> PerformWork()
+    protected override async Task<PerformWorkResult<JobStepResult>> PerformPrepare()
     {
-        // Important! State cannot be accessed or persisted directly, we need do that through the grain reference...
         if (_cancellationTokenSource?.IsCancellationRequested ?? true)
         {
             return new()
@@ -289,8 +310,30 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
         using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
 
-        // TODO: Should we do something here if it fails?
         _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
+
+        // Important! State cannot be accessed or persisted directly, we need do that through the grain reference...
+        var currentState = await _thisJobStep.GetState();
+        await PrepareStep(currentState, _cancellationTokenSource.Token);
+
+        return null!;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task<PerformWorkResult<JobStepResult>> PerformWork()
+    {
+        if (_cancellationTokenSource?.IsCancellationRequested ?? true)
+        {
+            return new()
+            {
+                Error = PerformWorkError.Cancelled
+            };
+        }
+        using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
+
+        _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
+
+        // Important! State cannot be accessed or persisted directly, we need do that through the grain reference...
         var currentState = await _thisJobStep.GetState();
         var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
         return await performStepResult.Match(HandleJobStepResult, HandleException);
