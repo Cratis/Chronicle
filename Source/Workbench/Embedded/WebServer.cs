@@ -67,8 +67,8 @@ public class WebServer(
                             var content = await reader.ReadToEndAsync();
 
                             content = content
-                                .Replace("src=\"/", $"/{workbenchOptions.Value.BaseUrl}/")
-                                .Replace("href=\"/", $"/{workbenchOptions.Value.BaseUrl}/");
+                                .Replace("src=\"/", $"src=\"{workbenchOptions.Value.BaseUrl}/")
+                                .Replace("href=\"/", $"href=\"{workbenchOptions.Value.BaseUrl}/");
 
                             context.Response.ContentType = "text/html";
                             await context.Response.WriteAsync(content);
