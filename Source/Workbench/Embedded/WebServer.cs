@@ -91,6 +91,8 @@ public class WebServer(
                 _webApplication.UseStaticFiles(staticFileOptions);
                 _webApplication.MapFallbackToFile("index.html", staticFileOptions);
 
+                cancellationToken.Register(() => _webApplication?.StopAsync(CancellationToken.None));
+
                 await _webApplication.RunAsync();
             },
             cancellationToken);
