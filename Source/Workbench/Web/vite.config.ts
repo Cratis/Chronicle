@@ -9,7 +9,6 @@ import path from 'path';
 import { EmitMetadataPlugin } from '@cratis/applications.vite';
 
 export default defineConfig({
-    base: '',
     optimizeDeps: {
         exclude: ['tslib'],
     },
