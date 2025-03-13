@@ -83,6 +83,15 @@ public class ReplayObserver(
     protected override Task OnStopped() => base.OnStopped();
 
     /// <inheritdoc/>
+    protected override async Task OnFailedToPrepare()
+    {
+        using var scope = logger.BeginJobScope(JobId, JobKey);
+        await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        await observer.Replayed(EventSequenceNumber.Unavailable);
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
