@@ -5,6 +5,7 @@ using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -64,6 +65,30 @@ public class WebServer(
                 };
                 _webApplication.UseStaticFiles(staticFileOptions);
                 _webApplication.MapFallbackToFile("index.html", staticFileOptions);
+
+                _webApplication.Use(async (context, next) =>
+                {
+                    if (context.Request.Path == "/index.html")
+                    {
+                        var provider = new ManifestEmbeddedFileProvider(typeof(WebServer).Assembly);
+                        var file = provider.GetFileInfo("index.html");
+
+                        if (file.Exists)
+                        {
+                            await using var stream = file.CreateReadStream();
+                            using var reader = new StreamReader(stream);
+                            var content = await reader.ReadToEndAsync();
+
+                            content = content.Replace("<base href=\"/\">", $"<base href=\"{workbenchOptions.Value.BaseUrl}\">");
+
+                            context.Response.ContentType = "text/html";
+                            await context.Response.WriteAsync(content);
+                            return;
+                        }
+                    }
+
+                    await next();
+                });
 
                 await _webApplication.RunAsync();
             },
