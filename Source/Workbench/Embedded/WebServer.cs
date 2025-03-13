@@ -20,9 +20,11 @@ namespace Cratis.Chronicle.Workbench.Embedded;
 /// <param name="workbenchOptions">The <see cref="ChronicleWorkbenchOptions"/>.</param>
 public class WebServer(
     IServiceProvider serviceProvider,
-    IOptions<ChronicleWorkbenchOptions> workbenchOptions) : IHostedService
+    IOptions<ChronicleWorkbenchOptions> workbenchOptions) : IHostedService, IDisposable
 {
+    readonly CancellationTokenSource _cancellationTokenSource = new();
     WebApplication? _webApplication;
+    bool _disposed;
 
     /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
@@ -93,7 +95,7 @@ public class WebServer(
 
                 await _webApplication.RunAsync();
             },
-            cancellationToken);
+            _cancellationTokenSource.Token);
 
         return Task.CompletedTask;
     }
@@ -101,6 +103,18 @@ public class WebServer(
     /// <inheritdoc/>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        await _cancellationTokenSource.CancelAsync();
         await (_webApplication?.DisposeAsync() ?? ValueTask.CompletedTask);
+        _cancellationTokenSource.Dispose();
+        _disposed = true;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _cancellationTokenSource.Dispose();
+        }
     }
 }
