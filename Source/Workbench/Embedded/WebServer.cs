@@ -51,6 +51,15 @@ public class WebServer(
 
                 _webApplication = builder.Build();
 
+                var basePath = workbenchOptions.Value.BaseUrl;
+                _webApplication.UsePathBase(basePath);
+
+                _webApplication.Use(async (context, next) =>
+                {
+                    context.Request.PathBase = context.Request.Path.Value!.Replace(basePath, string.Empty);
+                    await next();
+                });
+
                 _webApplication.UseCratisChronicleApi();
 
                 var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
