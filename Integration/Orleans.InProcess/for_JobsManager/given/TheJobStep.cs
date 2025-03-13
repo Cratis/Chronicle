@@ -17,7 +17,6 @@ public class TheJobStep(
     ILogger<JobStep<TheJobStepRequest, TheJobStepResult, TheJobStepState>> logger)
     : JobStep<TheJobStepRequest, TheJobStepResult, TheJobStepState>(state, logger), ITheJobStep
 {
-
     ITheJobStep _selfGrainReference;
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)

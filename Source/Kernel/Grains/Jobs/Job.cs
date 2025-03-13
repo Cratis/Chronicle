@@ -82,7 +82,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
+        DelayDeactivation(TimeSpan.FromDays(365 * 5));
 
         _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
         _observers = new(
@@ -126,7 +126,12 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         State.Details = GetJobDetails();
 
         _ = await WriteStatusChanged(JobStatus.PreparingJob);
-        return await PrepareAndStartRunningAllSteps(request);
+        var prepareAndStartRunningAllStepsResult = await PrepareAndStartRunningAllSteps(request);
+        if (prepareAndStartRunningAllStepsResult.TryGetError(out var error) && error is StartJobError.CouldNotPrepareJobSteps)
+        {
+            await OnFailedToPrepare();
+        }
+        return prepareAndStartRunningAllStepsResult;
     }
 
     /// <inheritdoc/>
@@ -269,13 +274,13 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// What needs to be done by the Job implementation before starting all prepared job steps.
     /// </summary>
     /// <returns>A task representing the operation.</returns>
-    protected virtual Task OnBeforeStartingJobSteps() => Task.FromResult(Result.Success<JobError>());
+    protected virtual Task OnBeforeStartingJobSteps() => Task.CompletedTask;
 
     /// <summary>
     /// What needs to be done by the Job implementation before resuming all prepared and non-completed job steps.
     /// </summary>
     /// <returns>A task representing the operation.</returns>
-    protected virtual Task OnBeforeResumingJobSteps() => Task.FromResult(Result.Success<JobError>());
+    protected virtual Task OnBeforeResumingJobSteps() => Task.CompletedTask;
 
     /// <summary>
     /// What needs to be done by the Job implementation when all job steps are completed or job is being removed.
@@ -284,7 +289,13 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// Job step being completed means either successfully completed, failed or partially failed.
     /// </remarks>
     /// <returns>A task representing the operation.</returns>
-    protected virtual Task OnCompleted() => Task.FromResult(Result.Success<JobError>());
+    protected virtual Task OnCompleted() => Task.CompletedTask;
+
+    /// <summary>
+    /// What needs to be done by the Job implementation when one or more job steps failed to prepare.
+    /// </summary>
+    /// <returns>A task representing the operation.</returns>
+    protected virtual Task OnFailedToPrepare() => Task.CompletedTask;
 
     /// <summary>
     /// What needs to be done by the Job implementation when running job steps are stopped or removed manually.

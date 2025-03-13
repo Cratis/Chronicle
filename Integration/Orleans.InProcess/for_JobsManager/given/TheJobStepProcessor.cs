@@ -9,11 +9,8 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 [Singleton, IgnoreConvention]
 public class TheJobStepProcessor
 {
-    public class PreparedJobSteps : List<(JobStepId JobStepId, Type JobStepType)>
-    {
-        public PreparedJobSteps(IEnumerable<(JobStepId JobStepId, Type JobStepType)> list) : base(list)
-        { }
-    }
+    public class PreparedJobSteps(IEnumerable<(JobStepId JobStepId, Type JobStepType)> list) : List<(JobStepId JobStepId, Type JobStepType)>(list);
+
     public class PerformedJobStepCalls : Dictionary<JobStepId, IList<TheJobStepState>>;
     public class CompletedJobSteps : Dictionary<JobStepId, (TheJobStepState State, JobStepStatus Status)>;
 

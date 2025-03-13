@@ -86,12 +86,12 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
 
             if (ShouldBeStoredInFailedCollection(statuses) || includeAll)
             {
-                var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
+                using var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
                 failedJobSteps = failedCursor.ToList();
             }
             if (!statuses.All(ShouldBeStoredInFailedCollection) || includeAll)
             {
-                var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+                using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
                 jobSteps = cursor.ToList();
             }
 
@@ -157,7 +157,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
             }
 
             var filter = GetIdFilter<TJobStepState>(jobId, jobStepId);
-            var cursor = await GetTypedCollection<TJobStepState>().FindAsync(filter).ConfigureAwait(false);
+            using var cursor = await GetTypedCollection<TJobStepState>().FindAsync(filter).ConfigureAwait(false);
             var state = await cursor.FirstOrDefaultAsync();
             return state is not null ? state : JobStepError.NotFound;
         }

@@ -52,7 +52,7 @@ public class Storage(
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
         var collection = GetCollection();
-        var result = await collection.FindAsync(_ => true);
+        using var result = await collection.FindAsync(_ => true);
         return result.ToList().Select(_ => _.Name);
     }
 

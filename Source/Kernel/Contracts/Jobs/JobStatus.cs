@@ -21,40 +21,40 @@ public enum JobStatus
     /// <summary>
     /// The job has been started and is currently preparing and starting all job steps.
     /// </summary>
-    PreparingSteps = 3,
+    PreparingSteps = 2,
 
     /// <summary>
     /// The job has been started and is currently trying to start all job steps.
     /// </summary>
-    StartingSteps = 4,
+    StartingSteps = 3,
 
     /// <summary>
     /// The job has been started and is running.
     /// </summary>
-    Running = 5,
+    Running = 4,
 
     /// <summary>
     /// The job has been completed successfully.
     /// </summary>
-    CompletedSuccessfully = 6,
+    CompletedSuccessfully = 5,
 
     /// <summary>
     /// The job has completed with failures.
     /// </summary>
-    CompletedWithFailures = 7,
+    CompletedWithFailures = 6,
 
     /// <summary>
     /// The job has been stopped and can be resumed later.
     /// </summary>
-    Stopped = 8,
+    Stopped = 7,
 
     /// <summary>
     /// The job has failed and can't recover.
     /// </summary>
-    Failed = 9,
+    Failed = 8,
 
     /// <summary>
     /// The job is scheduled to be removed.
     /// </summary>
-    Removing = 10,
+    Removing = 9,
 }

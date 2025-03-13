@@ -153,21 +153,17 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 DeactivateOnIdle();
                 return Result.Success<JobStepError>();
             }
-            if (removing)
-            {
-                var wasStopped = State.Status == JobStepStatus.Stopped;
-                _ = await WriteStatusChange(JobStepStatus.Removing);
-                if (wasStopped)
-                {
-                    DeactivateOnIdle();
-                    return Result.Success<JobStepError>();
-                }
-            }
+
             logger.Stopping();
             var cancelTokenTask = _cancellationTokenSource?.CancelAsync() ?? Task.CompletedTask;
             await cancelTokenTask;
             _cancellationTokenSource = null;
             if (_currentlyRunning)
+            {
+                return Result.Success<JobStepError>();
+            }
+
+            if (!State.Prepared)
             {
                 return Result.Success<JobStepError>();
             }
@@ -183,7 +179,20 @@ public abstract class JobStep<TRequest, TResult, TState>(
         catch (Exception ex)
         {
             logger.FailedUnexpectedly(ex);
+            _ = await WriteStatusChange(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace);
             return JobStepError.Unknown;
+        }
+        finally
+        {
+            if (removing)
+            {
+                var wasStopped = State.Status == JobStepStatus.Stopped;
+                _ = await WriteStatusChange(JobStepStatus.Removing);
+                if (wasStopped)
+                {
+                    DeactivateOnIdle();
+                }
+            }
         }
     }
 
@@ -234,11 +243,16 @@ public abstract class JobStep<TRequest, TResult, TState>(
                     _ = await WriteStateAsync();
                     return Result<PrepareJobStepError>.Success();
                 },
-                error => Task.FromResult(Result.Failed(error)));
+                async error =>
+                {
+                    _ = await WriteStatusChange(JobStepStatus.Failed, [error.ToString()]);
+                    return Result.Failed(error);
+                });
         }
         catch (Exception ex)
         {
             logger.FailedPreparing(ex, Name);
+            _ = await WriteStatusChange(JobStepStatus.Failed, ex.GetAllMessages(), ex.StackTrace);
             return PrepareJobStepError.Unknown;
         }
     }
