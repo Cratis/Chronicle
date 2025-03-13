@@ -30,7 +30,7 @@ public class Namespaces(
     /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName @namespace)
     {
-        if (State.Namespaces.Any(_ => _.Name == @namespace)) return;
+        if (State.Namespaces.Any(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.InvariantCultureIgnoreCase))) return;
 
         logger.AddingNamespace(@namespace);
         State.NewNamespaces.Add(new NamespaceState(@namespace, DateTimeOffset.UtcNow));
