@@ -56,7 +56,7 @@ public class WebServer(
                 var fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
                 _webApplication.Use(async (context, next) =>
                 {
-                    if (context.Request.Path == "/index.html")
+                    if (context.Request.Path == "/index.html" || context.Request.Path == "/")
                     {
                         var file = fileProvider.GetFileInfo("index.html");
 
