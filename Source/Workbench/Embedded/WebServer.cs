@@ -54,6 +54,31 @@ public class WebServer(
                 var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
                 var rootResourceNamespace = $"{rootType.Namespace}.Files";
                 var fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
+                _webApplication.Use(async (context, next) =>
+                {
+                    if (context.Request.Path == "/index.html" || context.Request.Path == "/")
+                    {
+                        var file = fileProvider.GetFileInfo("index.html");
+
+                        if (file.Exists)
+                        {
+                            await using var stream = file.CreateReadStream();
+                            using var reader = new StreamReader(stream);
+                            var content = await reader.ReadToEndAsync();
+
+                            content = content
+                                .Replace("src=\"/", $"/{workbenchOptions.Value.BaseUrl}/")
+                                .Replace("href=\"/", $"/{workbenchOptions.Value.BaseUrl}/");
+
+                            context.Response.ContentType = "text/html";
+                            await context.Response.WriteAsync(content);
+                            return;
+                        }
+                    }
+
+                    await next();
+                });
+
                 _webApplication.UseDefaultFiles(new DefaultFilesOptions
                 {
                     FileProvider = fileProvider
@@ -65,30 +90,6 @@ public class WebServer(
                 };
                 _webApplication.UseStaticFiles(staticFileOptions);
                 _webApplication.MapFallbackToFile("index.html", staticFileOptions);
-
-                _webApplication.Use(async (context, next) =>
-                {
-                    if (context.Request.Path == "/index.html")
-                    {
-                        var provider = new ManifestEmbeddedFileProvider(typeof(WebServer).Assembly);
-                        var file = provider.GetFileInfo("index.html");
-
-                        if (file.Exists)
-                        {
-                            await using var stream = file.CreateReadStream();
-                            using var reader = new StreamReader(stream);
-                            var content = await reader.ReadToEndAsync();
-
-                            content = content.Replace("<base href=\"/\">", $"<base href=\"{workbenchOptions.Value.BaseUrl}\">");
-
-                            context.Response.ContentType = "text/html";
-                            await context.Response.WriteAsync(content);
-                            return;
-                        }
-                    }
-
-                    await next();
-                });
 
                 await _webApplication.RunAsync();
             },
