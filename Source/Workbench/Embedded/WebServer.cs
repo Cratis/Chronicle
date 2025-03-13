@@ -56,7 +56,7 @@ public class WebServer(
 
                 _webApplication.Use(async (context, next) =>
                 {
-                    context.Request.PathBase = context.Request.Path.Value!.Replace(basePath, string.Empty);
+                    context.Request.PathBase = context.Request.Path.Value!.Replace(basePath, "/");
                     await next();
                 });
 
