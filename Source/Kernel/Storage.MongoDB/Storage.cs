@@ -68,9 +68,13 @@ public class Storage(
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
-        if (_eventStores.TryGetValue(eventStore, out var storage))
+        var pair = _eventStores
+            .Select(kvp => new { kvp.Key, kvp.Value })
+            .FirstOrDefault(_ => _.Key.Value.Equals(eventStore.Value, StringComparison.InvariantCultureIgnoreCase));
+
+        if (pair is not null)
         {
-            return storage;
+            return pair.Value;
         }
 
         var collection = GetCollection();
