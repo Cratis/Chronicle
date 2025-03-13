@@ -82,7 +82,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
-        DelayDeactivation(TimeSpan.MaxValue);
+        DelayDeactivation(TimeSpan.FromDays(365 * 5));
 
         _logger = ServiceProvider.GetService<ILogger<Job<TRequest, TJobState>>>() ?? new NullLogger<Job<TRequest, TJobState>>();
         _observers = new(
