@@ -3,7 +3,7 @@
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <ApplicationModel>15.2.2</ApplicationModel>
-        <Fundamentals>6.1.9</Fundamentals>
+        <Fundamentals>6.1.10</Fundamentals>
         <Orleans>9.1.2</Orleans>
     </PropertyGroup>
     <ItemGroup>
