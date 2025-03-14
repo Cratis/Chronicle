@@ -151,6 +151,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// </summary>
     /// <param name="partitions">Collection of <see cref="Key">partitions</see>.</param>
     /// <returns>Awaitable task.</returns>
+    // TODO: Make no interleaved and take in a single key instead
     [AlwaysInterleave]
     Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions);
 

@@ -82,6 +82,8 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                     request.EventTypes)));
             keysForSteps.Add(key);
         }
+
+        // TODO: Move this to the job step so that it can register a single catch up.
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         await observer.RegisterCatchingUpPartitions(keysForSteps);
         return steps.ToImmutableList();

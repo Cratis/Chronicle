@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Grains.Jobs;
 
@@ -12,7 +13,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <param name="JobId">The job the step is for.</param>
 /// <param name="EventStore">The event store the job step is for.</param>
 /// <param name="Namespace">The namespace within the event store the job step is for.</param>
-public record JobStepKey(JobId JobId, EventStoreName EventStore, EventStoreNamespaceName Namespace)
+public record JobStepKey(JobId JobId, EventStoreName EventStore, EventStoreNamespaceName Namespace, string Key)
 {
     /// <summary>
     /// Implicitly convert from string to <see cref="JobKey"/>.
