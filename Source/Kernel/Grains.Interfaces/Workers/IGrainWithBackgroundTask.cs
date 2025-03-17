@@ -17,7 +17,7 @@ public interface IGrainWithBackgroundTask : IGrainWithGuidKey
     /// Gets the long-running work status.
     /// </summary>
     /// <returns>The status of the long-running work.</returns>
-    Task<CpuBoundWorkerStatus> GetWorkStatus();
+    Task<GrainWithBackgroundTaskStatus> GetWorkStatus();
 
     /// <summary>
     /// Gets the exception information when the long-running work faulted.

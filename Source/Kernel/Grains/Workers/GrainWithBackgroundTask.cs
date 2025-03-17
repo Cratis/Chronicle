@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Grains.Workers;
 public abstract class GrainWithBackgroundTask<TRequest, TResult> : Grain, IGrainWithBackgroundTask<TRequest, TResult>
 {
     ILogger<IGrainWithBackgroundTask> _logger = null!;
-    CpuBoundWorkerStatus _status = CpuBoundWorkerStatus.NotStarted;
+    GrainWithBackgroundTaskStatus _status = GrainWithBackgroundTaskStatus.NotStarted;
     Result<None, Exception> _exception = default(None);
     Task? _task;
     Result<PerformWorkResult<TResult>, WorkerGetResultError> _result = WorkerGetResultError.NotStarted;
@@ -30,7 +30,7 @@ public abstract class GrainWithBackgroundTask<TRequest, TResult> : Grain, IGrain
     }
 
     /// <inheritdoc />
-    public Task<CpuBoundWorkerStatus> GetWorkStatus() => Task.FromResult(_status);
+    public Task<GrainWithBackgroundTaskStatus> GetWorkStatus() => Task.FromResult(_status);
 
     /// <inheritdoc />
     public Task<Result<None, Exception>> GetException() => Task.FromResult(_exception);
@@ -64,7 +64,7 @@ public abstract class GrainWithBackgroundTask<TRequest, TResult> : Grain, IGrain
         }
 
         _logger?.StartingTask();
-        _status = CpuBoundWorkerStatus.Running;
+        _status = GrainWithBackgroundTaskStatus.Running;
         _task = CreateTask(cancellationToken);
 
         return Task.FromResult(true);
@@ -117,13 +117,13 @@ public abstract class GrainWithBackgroundTask<TRequest, TResult> : Grain, IGrain
                     return;
                 }
 
-                _status = CpuBoundWorkerStatus.Completed;
+                _status = GrainWithBackgroundTaskStatus.Completed;
                 _logger.TaskHasCompleted();
 
                 void HandleCancellation()
                 {
                     _logger.TaskHasBeenCancelled();
-                    _status = CpuBoundWorkerStatus.Stopped;
+                    _status = GrainWithBackgroundTaskStatus.Stopped;
                     _result = WorkerGetResultError.WorkCancelled;
                     _task = null;
                 }
@@ -132,7 +132,7 @@ public abstract class GrainWithBackgroundTask<TRequest, TResult> : Grain, IGrain
                 {
                     _logger?.TaskHasFailed(e);
                     _exception = e;
-                    _status = CpuBoundWorkerStatus.Failed;
+                    _status = GrainWithBackgroundTaskStatus.Failed;
                     _result = new PerformWorkResult<TResult>
                     {
                         Error = PerformWorkError.WorkerError,
@@ -143,7 +143,7 @@ public abstract class GrainWithBackgroundTask<TRequest, TResult> : Grain, IGrain
                 void HandleError(PerformWorkError e)
                 {
                     _logger?.TaskHasFailed(e);
-                    _status = CpuBoundWorkerStatus.Failed;
+                    _status = GrainWithBackgroundTaskStatus.Failed;
                     _task = null;
                 }
             });
