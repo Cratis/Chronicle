@@ -34,11 +34,6 @@ public static class WellKnownCollectionNames
     public const string Observers = "observers";
 
     /// <summary>
-    /// The collection that holds <see cref="ReminderEntry"/>.
-    /// </summary>
-    public const string Reminders = "reminders";
-
-    /// <summary>
     /// The collection that holds event sequences.
     /// </summary>
     public const string EventSequences = "event-sequences";
