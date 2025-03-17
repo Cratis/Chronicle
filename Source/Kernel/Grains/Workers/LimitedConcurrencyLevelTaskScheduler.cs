@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Metrics;
+
 namespace Cratis.Chronicle.Grains.Workers;
 
 /// <summary>
@@ -16,6 +18,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     static bool _currentThreadIsProcessingItems;
 
     readonly int _maxDegreeOfParallelism;
+    readonly IMeter<LimitedConcurrencyLevelTaskScheduler> _meter;
     readonly LinkedList<Task> _tasks = new();
     int _threadsQueuedOrRunning;
 
@@ -24,10 +27,12 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     /// specified degree of parallelism.
     /// </summary>
     /// <param name="maxDegreeOfParallelism">The maximum degree of parallelism provided by this scheduler.</param>
-    public LimitedConcurrencyLevelTaskScheduler(int maxDegreeOfParallelism)
+    /// <param name="meter"><see cref="IMeter{T}"/> for metrics.</param>
+    public LimitedConcurrencyLevelTaskScheduler(int maxDegreeOfParallelism, IMeter<LimitedConcurrencyLevelTaskScheduler> meter)
     {
         if (maxDegreeOfParallelism < 1) throw new InvalidMaximumConcurrencyLevel(maxDegreeOfParallelism);
         _maxDegreeOfParallelism = maxDegreeOfParallelism;
+        _meter = meter;
     }
 
     /// <summary>
@@ -58,6 +63,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
         lock (_tasks)
         {
             _tasks.AddLast(task);
+            _meter.QueuedTasks(_tasks.Count);
             if (_threadsQueuedOrRunning < _maxDegreeOfParallelism)
             {
                 NotifyThreadPoolOfPendingWork();
@@ -96,6 +102,9 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
     void NotifyThreadPoolOfPendingWork()
     {
         _threadsQueuedOrRunning++;
+
+        _meter.RunningTasks(_threadsQueuedOrRunning);
+
         ThreadPool.UnsafeQueueUserWorkItem(
             _ =>
             {
@@ -115,6 +124,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
                             if (_tasks.Count == 0)
                             {
                                 _threadsQueuedOrRunning--;
+                                _meter.RunningTasks(_threadsQueuedOrRunning);
                                 break;
                             }
 
@@ -123,6 +133,7 @@ public class LimitedConcurrencyLevelTaskScheduler : TaskScheduler
                             if (item is not null)
                             {
                                 _tasks.RemoveFirst();
+                                _meter.QueuedTasks(_tasks.Count);
                             }
                         }
 
