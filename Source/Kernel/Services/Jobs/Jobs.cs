@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
@@ -35,10 +36,14 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public IObservable<IEnumerable<Job>> ObserveJobs(GetJobsRequest request, CallContext context = default)
     {
-        var catchOrObserve = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Jobs.ObserveJobs();
+        var catchOrObserve = storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).Jobs
+            .ObserveJobs();
+
         if (catchOrObserve.IsSuccess)
         {
-            return catchOrObserve.AsT0.Select(_ => _.ToContract());
+            return catchOrObserve.AsT0.CompletedBy(context.CancellationToken).Select(_ => _.ToContract());
         }
 
         return Observable.Empty<IEnumerable<Job>>();
