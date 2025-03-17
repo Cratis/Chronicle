@@ -36,10 +36,6 @@ public class RecommendationQueries(IRecommendations recommendations) : Controlle
     [HttpGet("all-recommendations/observe")]
     public ISubject<IEnumerable<Recommendation>> AllRecommendations(
         [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
-    {
-        var subject = new Subject<IEnumerable<Recommendation>>();
-        recommendations.ObserveRecommendations(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
-        return subject;
-    }
+        [FromRoute] string @namespace) =>
+        recommendations.InvokeAndWrapWithSubject(token => recommendations.ObserveRecommendations(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }

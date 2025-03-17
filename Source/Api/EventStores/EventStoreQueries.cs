@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Reactive.Subjects;
+using System.Security.Cryptography.Xml;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Reactive;
 
@@ -26,10 +28,6 @@ public class EventStoreQueries(IEventStores eventStores) : ControllerBase
     /// </summary>
     /// <returns>An observable for observing a collection of event store names.</returns>
     [HttpGet("observe")]
-    public ISubject<IEnumerable<string>> AllEventStores()
-    {
-        var subject = new Subject<IEnumerable<string>>();
-        eventStores.ObserveEventStores().Subscribe(subject);
-        return subject;
-    }
+    public ISubject<IEnumerable<string>> AllEventStores() =>
+        eventStores.InvokeAndWrapWithSubject(token => eventStores.ObserveEventStores(token));
 }
