@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Grains.Workers;
 
 /// <summary>
-/// The status of the <see cref="ICpuBoundWorker{TRequest, TResult}"/> grain.
+/// The status of the <see cref="IGrainWithBackgroundTask{TRequest, TResult}"/> grain.
 /// </summary>
 public enum CpuBoundWorkerStatus
 {
