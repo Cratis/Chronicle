@@ -3,18 +3,25 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 30 days, 2:30:30 | 23:14:50 | 91 days, 20:12:48 |
-| Time to close | 238 days, 3:04:01 | 99 days, 23:34:46 | 769 days, 8:39:53 |
+| Time to close | 237 days, 15:19:54 | 99 days, 23:19:05 | 769 days, 1:44:26 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 314 |
-| Number of items closed | 486 |
+| Number of items that remain open | 320 |
+| Number of items closed | 487 |
 | Number of most active mentors | 0 |
-| Total number of items created | 800 |
+| Total number of items created | 807 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| HandleEventsForPartition does not work now when resumed (started without prepare call) and grain is newly activated | https://github.com/Cratis/Chronicle/issues/1787 | [woksin](https://github.com/woksin) | None | None | None |
+| Prepare job steps and starting them should run asyncronously | https://github.com/Cratis/Chronicle/issues/1786 | [woksin](https://github.com/woksin) | None | None | None |
+| We should not be able to start a job on an observer when there is a replay job | https://github.com/Cratis/Chronicle/issues/1779 | [woksin](https://github.com/woksin) | None | None | None |
+| During GitHub builds we want to build specs and integration specs with Debug but compile them with "treat warning as errors" | https://github.com/Cratis/Chronicle/issues/1773 | [einari](https://github.com/einari) | None | None | None |
+| Projections for Rules shouldn't end up as an observer | https://github.com/Cratis/Chronicle/issues/1766 | [einari](https://github.com/einari) | None | 0:06:00 | None |
+| Add support for observer Replays being cancelled | https://github.com/Cratis/Chronicle/issues/1764 | [einari](https://github.com/einari) | None | None | None |
+| Projections sometimes fail with concurrency issues related to cloning of the internal ExpandoObject | https://github.com/Cratis/Chronicle/issues/1763 | [einari](https://github.com/einari) | None | None | None |
 | Monthly issue metrics report | https://github.com/Cratis/Chronicle/issues/1755 | [github-actions[bot]](https://github.com/github-actions[bot]) | None | 0:05:28 | None |
 | Add programatic support for replaying from the .NET client (Reactors, Reducers, Projections) | https://github.com/Cratis/Chronicle/issues/1754 | [einari](https://github.com/einari) | None | None | None |
 | More efficient JobStorage queries | https://github.com/Cratis/Chronicle/issues/1753 | [woksin](https://github.com/woksin) | None | None | None |
@@ -365,11 +372,4 @@
 | Clean up and simplify storage provider and its concrete MongoDB implementation | https://github.com/Cratis/Chronicle/issues/911 | [einari](https://github.com/einari) | None | None | None |
 | Reorganize and clean up projects in Kernel | https://github.com/Cratis/Chronicle/issues/910 | [einari](https://github.com/einari) | None | 576 days, 1:14:12 | None |
 | Split observer state in shared and concrete | https://github.com/Cratis/Chronicle/issues/906 | [einari](https://github.com/einari) | None | None | None |
-| Consistently refer to read model rather than just model in APIs and documentation | https://github.com/Cratis/Chronicle/issues/905 | [einari](https://github.com/einari) | None | None | None |
-| Remove NU5104 NoWarn in Directory.Build.props when OpenTelemetry packages are not pre-release | https://github.com/Cratis/Chronicle/issues/904 | [einari](https://github.com/einari) | None | 434 days, 0:29:07 | None |
-| Add validation for TenantId for any API surface exposing TenantId | https://github.com/Cratis/Chronicle/issues/902 | [einari](https://github.com/einari) | None | 445 days, 2:30:36 | None |
-| Add validation for MicroserviceId for all APIs that takes MicroserviceId | https://github.com/Cratis/Chronicle/issues/901 | [einari](https://github.com/einari) | None | 591 days, 1:10:16 | None |
-| Improve AOT compilation for publishing | https://github.com/Cratis/Chronicle/issues/900 | [einari](https://github.com/einari) | None | None | None |
-| Move away from JSON serialization for grain communication | https://github.com/Cratis/Chronicle/issues/898 | [einari](https://github.com/einari) | None | None | None |
-| Add observability to projections (potentially observers) to be able to know the actual state they're in | https://github.com/Cratis/Chronicle/issues/897 | [einari](https://github.com/einari) | None | None | None |
-| Add tracing for operations in Client + Ker
+| Co
