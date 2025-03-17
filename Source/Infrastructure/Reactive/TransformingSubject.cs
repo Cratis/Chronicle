@@ -26,6 +26,7 @@ public class TransformingSubject<TSource, TResult> : ISubject<TResult>, IDisposa
         _sourceSubject = sourceSubject;
         _resultSubject = new Subject<TResult>();
         _sourceSubject.Select(transform).Subscribe(_resultSubject);
+        sourceSubject.Subscribe(_ => { }, _ => { }, Dispose);
     }
 
     /// <inheritdoc/>
