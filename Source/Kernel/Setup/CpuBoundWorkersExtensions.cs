@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Workers;
+using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable SA1600
@@ -25,7 +26,11 @@ public static class CpuBoundWorkersExtensions
             maxLevelOfParallelism = 1;
         }
 
-        builder.ConfigureServices((services) => services.AddSingleton(new LimitedConcurrencyLevelTaskScheduler(maxLevelOfParallelism)));
+        builder.ConfigureServices((services) => services.AddSingleton(sp =>
+        {
+            var meter = sp.GetRequiredService<IMeter<LimitedConcurrencyLevelTaskScheduler>>();
+            return new LimitedConcurrencyLevelTaskScheduler(maxLevelOfParallelism, meter);
+        }));
 
         return builder;
     }
