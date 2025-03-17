@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
@@ -36,5 +37,10 @@ public class Observers(IGrainFactory grainFactory, IStorage storage) : IObserver
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.ObserveAll().Select(_ => _.ToContract());
+        storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).Observers
+            .ObserveAll()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.ToContract());
 }
