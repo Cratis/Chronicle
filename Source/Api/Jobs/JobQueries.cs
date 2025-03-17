@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Jobs;
+using Cratis.Chronicle.Reactive;
 
 namespace Cratis.Chronicle.Api.Jobs;
 
@@ -22,10 +23,6 @@ public class JobQueries(IJobs jobs) : ControllerBase
     [HttpGet]
     public ISubject<IEnumerable<Job>> AllJobs(
         [FromRoute] string eventStore,
-        [FromRoute] string @namespace )
-    {
-        var subject = new Subject<IEnumerable<Job>>();
-        jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
-        return subject;
-    }
+        [FromRoute] string @namespace) =>
+        jobs.InvokeAndWrapWithSubject(token => jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }

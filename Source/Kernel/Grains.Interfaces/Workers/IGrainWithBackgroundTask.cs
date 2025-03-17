@@ -1,4 +1,4 @@
-﻿// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
@@ -11,13 +11,13 @@ namespace Cratis.Chronicle.Grains.Workers;
 /// <remarks>
 /// Based on the work done here: https://github.com/OrleansContrib/Orleans.SyncWork.
 /// </remarks>
-public interface ICpuBoundWorker : IGrainWithGuidKey
+public interface IGrainWithBackgroundTask : IGrainWithGuidKey
 {
     /// <summary>
     /// Gets the long-running work status.
     /// </summary>
     /// <returns>The status of the long-running work.</returns>
-    Task<CpuBoundWorkerStatus> GetWorkStatus();
+    Task<GrainWithBackgroundTaskStatus> GetWorkStatus();
 
     /// <summary>
     /// Gets the exception information when the long-running work faulted.
@@ -34,7 +34,7 @@ public interface ICpuBoundWorker : IGrainWithGuidKey
 /// <remarks>
 /// Based on the work done here: https://github.com/OrleansContrib/Orleans.SyncWork.
 /// </remarks>
-public interface ICpuBoundWorker<in TRequest, TResult> : ICpuBoundWorker
+public interface IGrainWithBackgroundTask<in TRequest, TResult> : IGrainWithBackgroundTask
 {
     /// <summary>
     /// The result of the long-running work.

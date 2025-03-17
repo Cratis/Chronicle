@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
@@ -23,7 +24,12 @@ public class FailedPartitions(IStorage storage) : IFailedPartitions
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<FailedPartition>> ObserveFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default) =>
-        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).FailedPartitions.ObserveAllFor(GetObserverId(request.ObserverId)).Select(_ => _.ToContract());
+        storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).FailedPartitions
+            .ObserveAllFor(GetObserverId(request.ObserverId))
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.ToContract());
 
     Concepts.Observation.ObserverId? GetObserverId(string? observerId) => observerId switch
     {

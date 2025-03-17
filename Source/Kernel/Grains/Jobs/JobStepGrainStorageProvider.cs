@@ -30,6 +30,12 @@ public class JobStepGrainStorageProvider(IStorage storage) : IGrainStorage
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var type = typeof(T);
+
+        if (!grainState.RecordExists)
+        {
+            return;
+        }
+
         const string methodName = nameof(WriteStateAsync);
         ThrowIfInvalidJobStateType(type, methodName);
 

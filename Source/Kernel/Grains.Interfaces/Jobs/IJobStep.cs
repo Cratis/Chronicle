@@ -58,7 +58,7 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// <typeparam name="TRequest">Type of the request for the job step.</typeparam>
 /// <typeparam name="TResult">Type of the result for the job step.</typeparam>
 /// <typeparam name="TState">Type of the state.</typeparam>
-public interface IJobStep<in TRequest, TResult, TState> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
+public interface IJobStep<in TRequest, TResult, TState> : IGrainWithBackgroundTask<TRequest, JobStepResult>, IJobStep
 {
     /// <summary>
     /// Prepare the job step.

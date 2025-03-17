@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public abstract class JobStep<TRequest, TResult, TState>(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TState> state,
-    ILogger<JobStep<TRequest, TResult, TState>> logger) : CpuBoundWorker<TRequest, JobStepResult>, IJobStep<TRequest, TResult, TState>, IJobObserver, IDisposable
+    ILogger<JobStep<TRequest, TResult, TState>> logger) : GrainWithBackgroundTask<TRequest, JobStepResult>, IJobStep<TRequest, TResult, TState>, IJobObserver, IDisposable
     where TState : JobStepState
 {
     IJobStep<TRequest, TResult, TState> _thisJobStep = null!;
@@ -240,7 +240,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 async none =>
                 {
                     await InitializeState(request);
-                    _ = await WriteStateAsync();
                     return Result<PrepareJobStepError>.Success();
                 },
                 async error =>

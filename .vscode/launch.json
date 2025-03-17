@@ -43,7 +43,8 @@
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
             "sourceFileMap": {
-                "/home/runner/work/orleans/orleans": "/Volumes/Code/Microsoft/dotnet/orleans"
+                "/home/runner/work/orleans/orleans": "/Volumes/Code/Microsoft/dotnet/orleans",
+                "/home/runner/work/applications/applications": "/Volumes/Code/Cratis/Applications"
             }
         },
         {

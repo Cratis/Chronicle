@@ -52,7 +52,6 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddStreaming()
             .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
-            .ConfigureCpuBoundWorkers()
             .ConfigureSerialization();
 
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();

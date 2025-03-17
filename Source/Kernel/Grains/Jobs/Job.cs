@@ -358,7 +358,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         {
             if (result.TryGetError(out var error))
             {
-                if (error is StartJobStepError.AlreadyStarted )
+                if (error is StartJobStepError.AlreadyStarted)
                 {
                     await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
                     return true;

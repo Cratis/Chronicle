@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Grains.Workers;
 
 /// <summary>
-/// The reason for not getting <see cref="ICpuBoundWorker{TRequest,TResult}"/> result.
+/// The reason for not getting <see cref="IGrainWithBackgroundTask{TRequest,TResult}"/> result.
 /// </summary>
 public enum WorkerGetResultError
 {

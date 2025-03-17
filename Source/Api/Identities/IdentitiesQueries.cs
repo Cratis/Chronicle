@@ -35,10 +35,6 @@ public class IdentitiesQueries(IIdentities identities) : ControllerBase
     [HttpGet("observe")]
     public ISubject<IEnumerable<Identity>> AllIdentities(
         [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
-    {
-        var subject = new Subject<IEnumerable<Identity>>();
-        identities.ObserveIdentities(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
-        return subject;
-    }
+        [FromRoute] string @namespace) =>
+        identities.InvokeAndWrapWithSubject(token => identities.ObserveIdentities(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }

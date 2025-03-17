@@ -3,7 +3,9 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services;
 
@@ -30,9 +32,12 @@ public class Namespaces(IGrainFactory grainFactory, IStorage storage) : INamespa
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request)
+    public IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request, CallContext context = default)
     {
         var eventStore = storage.GetEventStore(request.EventStore);
-        return eventStore.Namespaces.ObserveAll().Select(_ => _.Select(_ => _.Name.Value).ToArray());
+        return eventStore.Namespaces
+            .ObserveAll()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.Select(_ => _.Name.Value).ToArray());
     }
 }

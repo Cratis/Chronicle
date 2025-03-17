@@ -2,8 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>15.2.2</ApplicationModel>
-        <Fundamentals>6.1.10</Fundamentals>
+        <ApplicationModel>15.4.2</ApplicationModel>
+        <Fundamentals>6.3.1</Fundamentals>
         <Orleans>9.1.2</Orleans>
     </PropertyGroup>
     <ItemGroup>
@@ -12,9 +12,17 @@
         <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
         <PackageVersion Include="System.Reactive" Version="6.0.1" />
         <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
+        <PackageVersion Include="System.Text.Json" Version="9.0.3" />
         <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
         <!-- Microsoft -->
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.3.0" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="$(Fundamentals)" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="$(Fundamentals)" />
@@ -42,6 +50,14 @@
         <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
         <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.0.0" />
         <!-- Open Telemetry -->
+        <PackageVersion Include="OpenTelemetry" Version="1.11.2" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.1" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1" />
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.10.0-beta.1" />
+        <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.11.2" />
         <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.3.0" />
         <!-- Roslyn-->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
@@ -90,25 +106,11 @@
         <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.13.0" />
     </ItemGroup>
 
-    <Import Project="$(MSBuildThisFileDirectory)Directory.Packages.Net8.props" Condition=" '$(TargetFramework)' == 'net8.0' "/>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="[8.0.11]" />
+    </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.3.0" />
-        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
-        <PackageVersion Include="System.Text.Json" Version="9.0.3" />
-        <PackageVersion Include="OpenTelemetry" Version="1.11.2" />
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.1" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1" />
-        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.10.0-beta.1" />
-        <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.11.2" />
     </ItemGroup>
 </Project>

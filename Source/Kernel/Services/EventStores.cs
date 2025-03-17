@@ -3,7 +3,9 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services;
 
@@ -21,6 +23,9 @@ public class EventStores(IStorage storage) : IEventStores
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<string>> ObserveEventStores() =>
-        storage.ObserveEventStores().Select(_ => _.Select(e => e.Value));
+    public IObservable<IEnumerable<string>> ObserveEventStores(CallContext callContext = default) =>
+        storage
+            .ObserveEventStores()
+            .CompletedBy(callContext.CancellationToken)
+            .Select(_ => _.Select(e => e.Value));
 }

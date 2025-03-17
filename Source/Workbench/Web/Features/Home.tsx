@@ -3,18 +3,15 @@
 
 import { CardFooter } from 'Components/Common/CardFooter';
 import { StoreCard } from 'Components/Common/StoreCard';
-import { AllEventStores } from 'Api/EventStores/AllEventStores';
+import { HomeViewModel } from './HomeViewModel';
+import { withViewModel } from '@cratis/applications.react.mvvm';
 
-export const Home = () => {
-    const [eventStores] = AllEventStores.use();
-
-    console.log(eventStores.data);
-
+export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
     return (
         <div>
             <h1 className='text-4xl m-3'>Select Event Store</h1>
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 '>
-                {eventStores.data.map((eventStore) => {
+                {viewModel.eventStores.map((eventStore) => {
                     return (
                         <StoreCard
                             key={eventStore}
@@ -28,4 +25,4 @@ export const Home = () => {
             </div>
         </div >
     );
-};
+});

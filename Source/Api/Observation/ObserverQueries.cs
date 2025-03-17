@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Reactive;
 
 namespace Cratis.Chronicle.Api.Observation;
 
@@ -34,10 +35,6 @@ public class ObserverQueries(IObservers observers) : ControllerBase
     [HttpGet("all-observers/observe")]
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
         [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
-    {
-        var subject = new Subject<IEnumerable<ObserverInformation>>();
-        observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }).Subscribe(subject);
-        return subject;
-    }
+        [FromRoute] string @namespace) =>
+        observers.InvokeAndWrapWithSubject(token => observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }
