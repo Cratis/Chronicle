@@ -191,11 +191,12 @@ public abstract partial class Job<TRequest, TJobState>
     async Task<Concepts.Result<StartJobError>> PrepareAndStartAllJobSteps(GrainId grainId, IImmutableList<JobStepDetails> jobSteps)
     {
         using var scope = _logger.BeginJobScope(JobId, JobKey);
-        _logger.PrepareJobStepsForRunning();
         _ = await WriteStatusChanged(JobStatus.PreparingSteps);
+
         var jobStepGrainAndRequests = CreateGrainsFromJobSteps(jobSteps);
         _jobStepGrains = jobStepGrainAndRequests.ToDictionary(_ => _.Key, _ => _.Value.Grain);
         var prepareAllJobStepsResult = await TryPrepareAllJobSteps(jobStepGrainAndRequests);
+
         if (prepareAllJobStepsResult.TryGetResult(out var preparedAllJobSteps) && !preparedAllJobSteps)
         {
 #pragma warning disable CA2201
@@ -204,6 +205,7 @@ public abstract partial class Job<TRequest, TJobState>
             return StartJobError.CouldNotPrepareJobSteps;
         }
         _ = await WriteStatusChanged(JobStatus.StartingSteps);
+
         var startJobStepsResult = await StartAndSubscribeToAllJobSteps(grainId);
         if (startJobStepsResult.TryGetError(out var startJobStepsError))
         {
