@@ -2,19 +2,21 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 30 days, 2:30:30 | 23:14:50 | 91 days, 20:12:48 |
-| Time to close | 237 days, 15:19:54 | 99 days, 23:19:05 | 769 days, 1:44:26 |
+| Time to first response | 32 days, 14:07:08 | 1 day, 0:04:32 | 93 days, 21:44:22 |
+| Time to close | 232 days, 23:59:11 | 101 days, 7:31:27 | 765 days, 12:23:47 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 320 |
-| Number of items closed | 487 |
+| Number of items that remain open | 306 |
+| Number of items closed | 503 |
 | Number of most active mentors | 0 |
-| Total number of items created | 807 |
+| Total number of items created | 809 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Switched to keyed service registration for Meter that is scoped to Chronicle | https://github.com/Cratis/Chronicle/issues/1791 | [einari](https://github.com/einari) | None | None | None |
+| Optimize Job system | https://github.com/Cratis/Chronicle/issues/1789 | [einari](https://github.com/einari) | None | None | None |
 | HandleEventsForPartition does not work now when resumed (started without prepare call) and grain is newly activated | https://github.com/Cratis/Chronicle/issues/1787 | [woksin](https://github.com/woksin) | None | None | None |
 | Prepare job steps and starting them should run asyncronously | https://github.com/Cratis/Chronicle/issues/1786 | [woksin](https://github.com/woksin) | None | None | None |
 | We should not be able to start a job on an observer when there is a replay job | https://github.com/Cratis/Chronicle/issues/1779 | [woksin](https://github.com/woksin) | None | None | None |
@@ -35,13 +37,13 @@
 | Add contracts + .NET API surface for performing actions on constraint indexes | https://github.com/Cratis/Chronicle/issues/1725 | [einari](https://github.com/einari) | None | 1 day, 0:36:45 | None |
 | Add a constraint editor for seeing and updating values in things like the unique constraint index | https://github.com/Cratis/Chronicle/issues/1724 | [einari](https://github.com/einari) | None | None | None |
 | Allow for case insensitivity for constraints | https://github.com/Cratis/Chronicle/issues/1723 | [einari](https://github.com/einari) | 1:27:24 | None | None |
-| Change JobStepState.Type to be the same semantically as JobState.Type | https://github.com/Cratis/Chronicle/issues/1706 | [woksin](https://github.com/woksin) | None | None | None |
+| Change JobStepState.Type to be the same semantically as JobState.Type | https://github.com/Cratis/Chronicle/issues/1706 | [woksin](https://github.com/woksin) | None | 33 days, 3:37:40 | None |
 | When unsubscribing Observer it should also Pause all ongoing jobs for that observer so that they can be resumed later | https://github.com/Cratis/Chronicle/issues/1705 | [woksin](https://github.com/woksin) | None | None | None |
-| In Job implementations handle failures of steps | https://github.com/Cratis/Chronicle/issues/1703 | [woksin](https://github.com/woksin) | None | None | None |
+| In Job implementations handle failures of steps | https://github.com/Cratis/Chronicle/issues/1703 | [woksin](https://github.com/woksin) | None | 33 days, 8:56:56 | None |
 | ObserverManager Expiration time | https://github.com/Cratis/Chronicle/issues/1692 | [woksin](https://github.com/woksin) | 18 days, 20:18:08 | 18 days, 20:18:52 | None |
 | It should be possible to see catching up/replaying partitions for an observer and delete these in the workbench | https://github.com/Cratis/Chronicle/issues/1690 | [einari](https://github.com/einari) | None | None | None |
 | Self healing of partitions in catch up and replaying partitions | https://github.com/Cratis/Chronicle/issues/1688 | [einari](https://github.com/einari) | None | 24 days, 6:10:02 | None |
-| Ensure that resuming of jobs work as intended | https://github.com/Cratis/Chronicle/issues/1687 | [einari](https://github.com/einari) | None | None | None |
+| Ensure that resuming of jobs work as intended | https://github.com/Cratis/Chronicle/issues/1687 | [einari](https://github.com/einari) | None | 45 days, 9:12:03 | None |
 | Jobs RequestType discriminator seems to not work every | https://github.com/Cratis/Chronicle/issues/1686 | [einari](https://github.com/einari) | 4:38:34 | 11 days, 0:19:35 | None |
 | Job system should clean up jobs that are "dead in the water" | https://github.com/Cratis/Chronicle/issues/1685 | [einari](https://github.com/einari) | None | None | None |
 | Add the capability of changing name of an identity | https://github.com/Cratis/Chronicle/issues/1684 | [einari](https://github.com/einari) | None | None | None |
@@ -59,20 +61,20 @@
 | Adding a new projection is not considered new and never catches up | https://github.com/Cratis/Chronicle/issues/1631 | [einari](https://github.com/einari) | None | 24 days, 23:53:04 | None |
 | Support defining what is the Key - unique identifier on a model | https://github.com/Cratis/Chronicle/issues/1630 | [einari](https://github.com/einari) | None | None | None |
 | Constraints should be registered in the event store - maybe even as Grains?? | https://github.com/Cratis/Chronicle/issues/1615 | [einari](https://github.com/einari) | None | None | None |
-| When starting up Job System should make sure that all persisted jobs are resumed | https://github.com/Cratis/Chronicle/issues/1614 | [woksin](https://github.com/woksin) | None | None | None |
+| When starting up Job System should make sure that all persisted jobs are resumed | https://github.com/Cratis/Chronicle/issues/1614 | [woksin](https://github.com/woksin) | None | 91 days, 7:39:17 | None |
 | Constraints should support the ability to have support  multiple properties for unique constraints as a composite from an event | https://github.com/Cratis/Chronicle/issues/1612 | [einari](https://github.com/einari) | None | None | None |
-| Job OnStepFailed and OnStepSucceeded should be "recoverable" | https://github.com/Cratis/Chronicle/issues/1609 | [woksin](https://github.com/woksin) | None | None | None |
-| We have some (at least two, Job and JobStep) that need to call itself indirectly to avoid issues | https://github.com/Cratis/Chronicle/issues/1606 | [woksin](https://github.com/woksin) | None | None | None |
+| Job OnStepFailed and OnStepSucceeded should be "recoverable" | https://github.com/Cratis/Chronicle/issues/1609 | [woksin](https://github.com/woksin) | None | 97 days, 8:56:20 | None |
+| We have some (at least two, Job and JobStep) that need to call itself indirectly to avoid issues | https://github.com/Cratis/Chronicle/issues/1606 | [woksin](https://github.com/woksin) | None | 98 days, 6:49:49 | None |
 | Observer reminder for failed partition is removed twice | https://github.com/Cratis/Chronicle/issues/1605 | [woksin](https://github.com/woksin) | None | None | None |
 | Observer grain should have a failed partition count metric | https://github.com/Cratis/Chronicle/issues/1604 | [einari](https://github.com/einari) | None | None | None |
 | IObserver should not implement IStateMachine, it's an internal concern | https://github.com/Cratis/Chronicle/issues/1601 | [woksin](https://github.com/woksin) | None | None | None |
 | HandleEventsForPartition job step if it fails after successfully handling some events but not all | https://github.com/Cratis/Chronicle/issues/1600 | [woksin](https://github.com/woksin) | None | 10 days, 22:34:13 | None |
 | Add failed partition client API | https://github.com/Cratis/Chronicle/issues/1599 | [einari](https://github.com/einari) | None | 80 days, 8:23:05 | None |
-| Make resuming Jobs and JobSteps work | https://github.com/Cratis/Chronicle/issues/1598 | [woksin](https://github.com/woksin) | None | None | None |
-| Figure out what to do when Job starts without job steps and OnCompleted fails | https://github.com/Cratis/Chronicle/issues/1597 | [woksin](https://github.com/woksin) | None | None | None |
-| Parallelize PrepareAndStartJobSteps | https://github.com/Cratis/Chronicle/issues/1596 | [woksin](https://github.com/woksin) | None | None | None |
+| Make resuming Jobs and JobSteps work | https://github.com/Cratis/Chronicle/issues/1598 | [woksin](https://github.com/woksin) | None | 101 days, 7:39:14 | None |
+| Figure out what to do when Job starts without job steps and OnCompleted fails | https://github.com/Cratis/Chronicle/issues/1597 | [woksin](https://github.com/woksin) | None | 102 days, 0:48:27 | None |
+| Parallelize PrepareAndStartJobSteps | https://github.com/Cratis/Chronicle/issues/1596 | [woksin](https://github.com/woksin) | 102 days, 3:12:37 | 102 days, 3:12:37 | None |
 | Persisted JobStep state never seems to be cleared | https://github.com/Cratis/Chronicle/issues/1595 | [woksin](https://github.com/woksin) | None | 0:23:18 | None |
-| JobStep Pause unsubscribes job step from job, but Resume does not subscribe them again | https://github.com/Cratis/Chronicle/issues/1594 | [woksin](https://github.com/woksin) | None | None | None |
+| JobStep Pause unsubscribes job step from job, but Resume does not subscribe them again | https://github.com/Cratis/Chronicle/issues/1594 | [woksin](https://github.com/woksin) | None | 102 days, 4:23:54 | None |
 | Gracefully handle cancellation (especially pausing) of jobs and job steps | https://github.com/Cratis/Chronicle/issues/1593 | [woksin](https://github.com/woksin) | None | None | None |
 | JobStep PerformWork sends message to itself to ReportStatusChange | https://github.com/Cratis/Chronicle/issues/1592 | [woksin](https://github.com/woksin) | 4:38:20 | 23:38:41 | None |
 | JobsManager OnCompleted probably unncessary? | https://github.com/Cratis/Chronicle/issues/1591 | [woksin](https://github.com/woksin) | 5:31:35 | 11 days, 0:24:45 | None |
@@ -80,12 +82,12 @@
 | Namespace in Storage should make the namespace the ID | https://github.com/Cratis/Chronicle/issues/1589 | [einari](https://github.com/einari) | None | 12 days, 13:07:10 | None |
 | ConnectedClients does not dispose the grain timer | https://github.com/Cratis/Chronicle/issues/1585 | [woksin](https://github.com/woksin) | None | None | None |
 | Job Subscription Timer is disposed in Pause and Stop but not re-activated in Resume | https://github.com/Cratis/Chronicle/issues/1584 | [woksin](https://github.com/woksin) | None | 12 days, 0:03:38 | None |
-| Should Job run using the same TaskScheduler as the JobSteps? | https://github.com/Cratis/Chronicle/issues/1583 | [woksin](https://github.com/woksin) | None | None | None |
+| Should Job run using the same TaskScheduler as the JobSteps? | https://github.com/Cratis/Chronicle/issues/1583 | [woksin](https://github.com/woksin) | None | 103 days, 8:31:45 | None |
 | Create a resilient version of IGrainStorage | https://github.com/Cratis/Chronicle/issues/1582 | [woksin](https://github.com/woksin) | None | 12 days, 20:09:00 | None |
 | Look into splitting JobSteps from Job | https://github.com/Cratis/Chronicle/issues/1581 | [woksin](https://github.com/woksin) | None | 2 days, 20:29:20 | None |
 | Add specs for Observers involving Job System | https://github.com/Cratis/Chronicle/issues/1580 | [einari](https://github.com/einari) | None | 58 days, 21:52:48 | None |
-| CpuBoundWorker support pausing and resuming | https://github.com/Cratis/Chronicle/issues/1578 | [woksin](https://github.com/woksin) | None | None | None |
-| JobsManager ensure that Job is in correct state when performing operations on them | https://github.com/Cratis/Chronicle/issues/1576 | [woksin](https://github.com/woksin) | None | None | None |
+| CpuBoundWorker support pausing and resuming | https://github.com/Cratis/Chronicle/issues/1578 | [woksin](https://github.com/woksin) | None | 108 days, 5:21:47 | None |
+| JobsManager ensure that Job is in correct state when performing operations on them | https://github.com/Cratis/Chronicle/issues/1576 | [woksin](https://github.com/woksin) | None | 108 days, 19:00:25 | None |
 | Remove System.Private.Uri audit suppression from Directory.Build.Props when fixed in .NET 9.0.200 | https://github.com/Cratis/Chronicle/issues/1575 | [einari](https://github.com/einari) | None | 85 days, 16:18:18 | None |
 | In Observer Jobs figure out what to do when HandeEventsFOrPartition job handles no events | https://github.com/Cratis/Chronicle/issues/1571 | [woksin](https://github.com/woksin) | None | 19 days, 3:14:54 | None |
 | GetNextSequenceNumberGreaterOrEqualThan may cause problems | https://github.com/Cratis/Chronicle/issues/1570 | [woksin](https://github.com/woksin) | None | 17 days, 23:49:29 | None |
@@ -97,7 +99,7 @@
 | Client Reducers should register on reconnect | https://github.com/Cratis/Chronicle/issues/1561 | [einari](https://github.com/einari) | None | None | None |
 | It should be possible to configure number of queues each event sequence gets | https://github.com/Cratis/Chronicle/issues/1560 | [einari](https://github.com/einari) | None | 87 days, 21:09:52 | None |
 | Create a common JobStep for Observers extracting out common things | https://github.com/Cratis/Chronicle/issues/1559 | [woksin](https://github.com/woksin) | None | None | None |
-| JobStep Resume does not do anything | https://github.com/Cratis/Chronicle/issues/1558 | [woksin](https://github.com/woksin) | None | None | None |
+| JobStep Resume does not do anything | https://github.com/Cratis/Chronicle/issues/1558 | [woksin](https://github.com/woksin) | None | 111 days, 8:44:53 | None |
 | Show number of handled events for every observer | https://github.com/Cratis/Chronicle/issues/1557 | [einari](https://github.com/einari) | None | None | None |
 | JobStep.PerformStep should return a Catch<JobStepResult> | https://github.com/Cratis/Chronicle/issues/1554 | [woksin](https://github.com/woksin) | None | 20 days, 22:16:50 | None |
 | HandleEventsForPartition JobStep Perform is not reliable | https://github.com/Cratis/Chronicle/issues/1553 | [woksin](https://github.com/woksin) | None | 20 days, 22:22:14 | None |
@@ -108,11 +110,11 @@
 | AppendedEventsQueue unreliable AsyncManualResetEvent | https://github.com/Cratis/Chronicle/issues/1545 | [woksin](https://github.com/woksin) | None | 5 days, 18:10:58 | None |
 | Observer should have configurable handling of retrying failed partitions | https://github.com/Cratis/Chronicle/issues/1544 | [woksin](https://github.com/woksin) | 16:57:12 | 16:57:12 | None |
 | ReplayObserverPartition calls Observer.PartitionReplayed which throws exception | https://github.com/Cratis/Chronicle/issues/1543 | [woksin](https://github.com/woksin) | 1:14:25 | 6 days, 5:41:57 | None |
-| JobStep.PerformWork method cannot be right | https://github.com/Cratis/Chronicle/issues/1542 | [woksin](https://github.com/woksin) | 1 day, 17:46:30 | None | None |
+| JobStep.PerformWork method cannot be right | https://github.com/Cratis/Chronicle/issues/1542 | [woksin](https://github.com/woksin) | 1 day, 17:46:30 | 115 days, 3:40:17 | None |
 | JobSystem generally a bit hard and error prone | https://github.com/Cratis/Chronicle/issues/1541 | [woksin](https://github.com/woksin) | 91 days, 20:08:44 | 91 days, 20:08:44 | None |
 | JobStep Resume not implemented | https://github.com/Cratis/Chronicle/issues/1540 | [woksin](https://github.com/woksin) | 91 days, 18:00:19 | 91 days, 18:00:19 | None |
 | Magic code check in RetryFailedPartitionJob | https://github.com/Cratis/Chronicle/issues/1539 | [woksin](https://github.com/woksin) | None | 8 days, 2:22:15 | None |
-| Job-system should use the new Try-Catch monads | https://github.com/Cratis/Chronicle/issues/1538 | [woksin](https://github.com/woksin) | 91 days, 20:22:18 | None | None |
+| Job-system should use the new Try-Catch monads | https://github.com/Cratis/Chronicle/issues/1538 | [woksin](https://github.com/woksin) | 91 days, 20:22:18 | 115 days, 3:57:49 | None |
 | Kernel Concept classes that can probably be record | https://github.com/Cratis/Chronicle/issues/1537 | [woksin](https://github.com/woksin) | None | None | None |
 | Observer does not handle calling Subscribe multiple times | https://github.com/Cratis/Chronicle/issues/1536 | [woksin](https://github.com/woksin) | None | None | None |
 | Move away from projection building blocks (lamdbas) sitting as extension methods | https://github.com/Cratis/Chronicle/issues/1533 | [einari](https://github.com/einari) | None | None | None |
@@ -368,8 +370,4 @@
 | Add integration tests using Test Containers | https://github.com/Cratis/Chronicle/issues/916 | [einari](https://github.com/einari) | None | 475 days, 2:29:51 | None |
 | Creating learning paths in documentation | https://github.com/Cratis/Chronicle/issues/915 | [einari](https://github.com/einari) | None | None | None |
 | Add an explicit registration of immediate projections rather than creating them when getting an instance of a model | https://github.com/Cratis/Chronicle/issues/914 | [einari](https://github.com/einari) | None | 575 days, 14:17:21 | None |
-| Add result object from the Kernel for Append operations | https://github.com/Cratis/Chronicle/issues/913 | [einari](https://github.com/einari) | None | 378 days, 18:33:05 | None |
-| Clean up and simplify storage provider and its concrete MongoDB implementation | https://github.com/Cratis/Chronicle/issues/911 | [einari](https://github.com/einari) | None | None | None |
-| Reorganize and clean up projects in Kernel | https://github.com/Cratis/Chronicle/issues/910 | [einari](https://github.com/einari) | None | 576 days, 1:14:12 | None |
-| Split observer state in shared and concrete | https://github.com/Cratis/Chronicle/issues/906 | [einari](https://github.com/einari) | None | None | None |
-| Co
+| Add result object from the Kernel for Append operations | https://github.com/Cratis/Chronicle/issues/913 | [einari](https://github.com/einari) | None | 
