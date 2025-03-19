@@ -17,7 +17,8 @@ public record UniqueConstraintDefinition(
     ConstraintName Name,
     ConstraintViolationMessageProvider MessageCallback,
     IEnumerable<UniqueConstraintEventDefinition> EventsWithProperties,
-    EventTypeId? RemovedWith) : IConstraintDefinition
+    EventTypeId? RemovedWith,
+    bool IgnoreCasing) : IConstraintDefinition
 {
     /// <inheritdoc/>
     public Constraint ToContract() => new()
@@ -27,6 +28,7 @@ public record UniqueConstraintDefinition(
         RemovedWith = RemovedWith?.Value,
         Definition = new(new UniqueConstraintDefinitionContract
         {
+            IgnoreCasing = IgnoreCasing,
             EventDefinitions = EventsWithProperties.Select(_ => new Contracts.Events.Constraints.UniqueConstraintEventDefinition
             {
                 EventTypeId = _.EventTypeId,

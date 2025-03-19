@@ -37,6 +37,12 @@ public interface IUniqueConstraintBuilder
     IUniqueConstraintBuilder On(EventType eventType, string[] properties);
 
     /// <summary>
+    /// Ignore casing during comparison.
+    /// </summary>
+    /// <returns>Builder for continuation.</returns>
+    IUniqueConstraintBuilder IgnoreCasing();
+
+    /// <summary>
     /// Indicate an event that will remove the unique constraint.
     /// </summary>
     /// <typeparam name="TEventType">The <see cref="EventType"/> that removes the constraint.</typeparam>

@@ -21,6 +21,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
     EventTypeId? _removedWith;
+    bool _ignoreCasing;
 
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On<TEventType>(params Expression<Func<TEventType, object>>[] properties)
@@ -40,6 +41,13 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
 
         _eventTypesAndProperties.Add(new UniqueConstraintEventDefinition(eventType.Id, properties));
         _eventTypeSchemas[eventType.Id] = schema;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IUniqueConstraintBuilder IgnoreCasing()
+    {
+        _ignoreCasing = true;
         return this;
     }
 
@@ -85,7 +93,8 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
             name,
             messageProvider,
             [.. _eventTypesAndProperties],
-            _removedWith);
+            _removedWith,
+            _ignoreCasing);
     }
 
     void ThrowIfNoEventTypesAdded()
