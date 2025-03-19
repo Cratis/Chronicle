@@ -14,6 +14,6 @@ internal static partial class IdentityProviderLogging
     [LoggerMessage(LogLevel.Trace, "Identity not set")]
     internal static partial void IdentityNotSet(this ILogger<IdentityProvider> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Identity set to {Identity}")]
-    internal static partial void IdentitySet(this ILogger<IdentityProvider> logger, string identity);
+    [LoggerMessage(LogLevel.Trace, "Identity set to (Subject:'{subject}', Name:'{name}', Username:'{username}')")]
+    internal static partial void IdentitySet(this ILogger<IdentityProvider> logger, string subject, string name, string username);
 }

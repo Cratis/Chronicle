@@ -36,7 +36,7 @@ public class IdentityProvider(IHttpContextAccessor httpContextAccessor, ILogger<
             return Identity.NotSet;
         }
 
-        logger.IdentitySet(username);
+        logger.IdentitySet(subject, name, username);
         return new Identity(subject, name, username);
     }
 }
