@@ -24,7 +24,7 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
 
         if (definition.IgnoreCasing)
         {
-            options.Collation = new Collation("en", strength: CollationStrength.Secondary, caseLevel: false);
+            options.Collation = new Collation("en", caseLevel: false, strength: CollationStrength.Secondary);
         }
 
         using var result = await collection.FindAsync(_ => _.Value == value, options);
