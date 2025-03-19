@@ -38,7 +38,9 @@ public static class ChronicleClientServiceCollectionExtensions
                 SoftwareVersion = options.SoftwareVersion,
                 SoftwareCommit = options.SoftwareCommit,
                 ProgramIdentifier = options.ProgramIdentifier,
-                IdentityProvider = new IdentityProvider(sp.GetRequiredService<IHttpContextAccessor>()),
+                IdentityProvider = new IdentityProvider(
+                    sp.GetRequiredService<IHttpContextAccessor>(),
+                    sp.GetRequiredService<ILogger<IdentityProvider>>()),
                 LoggerFactory = sp.GetRequiredService<ILoggerFactory>(),
             };
             configureChronicleOptions?.Invoke(chronicleOptions);
