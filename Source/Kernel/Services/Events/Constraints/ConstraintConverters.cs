@@ -24,7 +24,8 @@ public static class ConstraintConverters
                 new UniqueConstraintDefinition(
                     constraint.Name,
                     constraint.Definition.Value0!.EventDefinitions.Select(e => e.ToChronicle()),
-                    constraint.RemovedWith is null ? null : (EventTypeId)constraint.RemovedWith),
+                    constraint.RemovedWith is null ? null : (EventTypeId)constraint.RemovedWith,
+                    constraint.Definition.Value0!.IgnoreCasing),
 
             Contracts.Events.Constraints.ConstraintType.UniqueEventType =>
                 new UniqueEventTypeConstraintDefinition(

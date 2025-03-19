@@ -13,7 +13,7 @@ public class and_value_is_not_allowed : given.a_unique_constraint_validator_with
     void Establish()
     {
         SetPropertyValue(42);
-        _storage.IsAllowed(Arg.Any<EventSourceId>(), Arg.Any<ConstraintName>(), Arg.Any<UniqueConstraintValue>()).Returns((false, 43U));
+        _storage.IsAllowed(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<UniqueConstraintValue>()).Returns((false, 43U));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);

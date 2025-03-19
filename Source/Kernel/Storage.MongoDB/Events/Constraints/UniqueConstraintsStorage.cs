@@ -17,10 +17,17 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNamespaceDatabase, EventSequenceId eventSequenceId) : IUniqueConstraintsStorage
 {
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, ConstraintName name, UniqueConstraintValue value)
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value)
     {
-        var collection = GetCollectionFor(name);
-        using var result = await collection.FindAsync(_ => _.Value == value);
+        var collection = GetCollectionFor(definition.Name);
+        var options = new FindOptions<UniqueConstraintIndex, UniqueConstraintIndex>();
+
+        if (definition.IgnoreCasing)
+        {
+            options.Collation = new Collation("en", caseLevel: false, strength: CollationStrength.Secondary);
+        }
+
+        using var result = await collection.FindAsync(_ => _.Value == value, options);
         var existing = result.FirstOrDefault();
         if (existing is not null)
         {

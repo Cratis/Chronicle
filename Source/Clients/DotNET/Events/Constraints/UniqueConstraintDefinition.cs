@@ -13,11 +13,13 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="MessageCallback">the callback that provides the <see cref="ConstraintViolationMessage"/> of the constraint.</param>
 /// <param name="EventsWithProperties">The <see cref="EventType"/> and properties the constraint is for.</param>
 /// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that removes the constraint.</param>
+/// <param name="IgnoreCasing">Whether this constraint should ignore casing.</param>
 public record UniqueConstraintDefinition(
     ConstraintName Name,
     ConstraintViolationMessageProvider MessageCallback,
     IEnumerable<UniqueConstraintEventDefinition> EventsWithProperties,
-    EventTypeId? RemovedWith) : IConstraintDefinition
+    EventTypeId? RemovedWith,
+    bool IgnoreCasing) : IConstraintDefinition
 {
     /// <inheritdoc/>
     public Constraint ToContract() => new()
@@ -27,6 +29,7 @@ public record UniqueConstraintDefinition(
         RemovedWith = RemovedWith?.Value,
         Definition = new(new UniqueConstraintDefinitionContract
         {
+            IgnoreCasing = IgnoreCasing,
             EventDefinitions = EventsWithProperties.Select(_ => new Contracts.Events.Constraints.UniqueConstraintEventDefinition
             {
                 EventTypeId = _.EventTypeId,
