@@ -118,7 +118,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
                 options.IdentityProvider = new IdentityProvider(
                     sp.GetRequiredService<IHttpContextAccessor>(),
-                    sp.GetRequiredService<ILogger<IdentityProvider>>()),
+                    sp.GetRequiredService<ILogger<IdentityProvider>>());
 
                 var grainFactory = sp.GetRequiredService<IGrainFactory>();
                 var services = sp.GetRequiredService<IServices>();
