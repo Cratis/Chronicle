@@ -25,8 +25,8 @@ public class IdentityProvider(IHttpContextAccessor httpContextAccessor, ILogger<
         if (context?.Request.Path.StartsWithSegments("/.cratis") ?? true) return base.GetCurrent();
 
         var subject = context.User.Claims.FirstOrDefault(_ => _.Type == "sub")?.Value ?? string.Empty;
-        var name = context.User.Claims.FirstOrDefault(_ => _.Type == "name")?.Value ?? string.Empty;
-        var username = context.User.Claims.FirstOrDefault(_ => _.Type == "preferred_username")?.Value ?? string.Empty;
+        var name = context.User.Claims.FirstOrDefault(_ => _.Type == "name")?.Value ?? context.User.Identity?.Name ?? string.Empty;
+        var username = context.User.Claims.FirstOrDefault(_ => _.Type == "preferred_username")?.Value ?? context.User.Identity?.Name ?? string.Empty;
 
         if (string.IsNullOrEmpty(subject) &&
             string.IsNullOrEmpty(name) &&
