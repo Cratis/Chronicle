@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Identities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore.Identities;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.AspNetCore.Identities;
 /// Initializes a new instance of the <see cref="IdentityProvider"/> class.
 /// </remarks>
 /// <param name="httpContextAccessor"><see cref="IHttpContextAccessor"/> for accessing the current <see cref="HttpContext"/>.</param>
-public class IdentityProvider(IHttpContextAccessor httpContextAccessor) : BaseIdentityProvider
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class IdentityProvider(IHttpContextAccessor httpContextAccessor, ILogger<IdentityProvider> logger) : BaseIdentityProvider
 {
     /// <inheritdoc/>
     protected override Identity GetCurrent()
@@ -30,9 +32,11 @@ public class IdentityProvider(IHttpContextAccessor httpContextAccessor) : BaseId
             string.IsNullOrEmpty(name) &&
             string.IsNullOrEmpty(username))
         {
+            logger.IdentityNotSet();
             return Identity.NotSet;
         }
 
+        logger.IdentitySet(username);
         return new Identity(subject, name, username);
     }
 }
