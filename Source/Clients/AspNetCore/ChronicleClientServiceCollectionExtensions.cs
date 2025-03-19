@@ -25,7 +25,7 @@ public static class ChronicleClientServiceCollectionExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="configureChronicleOptions">Optional <see cref="Action{T}"/> for configuring Chronicle options.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddChronicleClient(
+    public static IServiceCollection AddCratisChronicleClient(
         this IServiceCollection services,
         Action<ChronicleOptions>? configureChronicleOptions = default)
     {

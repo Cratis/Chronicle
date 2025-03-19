@@ -46,7 +46,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddAggregates()
             .AddCompliance()
             .AddCausation()
-            .AddChronicleClient(configureChronicleOptions)
+            .AddCratisChronicleClient(configureChronicleOptions)
             .AddHttpContextAccessor()
             .AddHostedService<ChronicleClientStartupTask>();
         builder.Host.AddCratisChronicle(loggerFactory);
