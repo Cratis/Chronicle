@@ -67,7 +67,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IIdentityProvider"/> to use.
     /// </summary>
-    public IIdentityProvider IdentityProvider { get; init; } = identityProvider ?? new BaseIdentityProvider();
+    public IIdentityProvider IdentityProvider { get; set; } = identityProvider ?? new BaseIdentityProvider();
 
     /// <summary>
     /// Gets the <see cref="JsonSerializerOptions"/> to use.
