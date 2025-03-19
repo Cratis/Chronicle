@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>15.4.3</ApplicationModel>
+        <ApplicationModel>15.4.5</ApplicationModel>
         <Fundamentals>6.3.1</Fundamentals>
         <Orleans>9.1.2</Orleans>
     </PropertyGroup>
@@ -89,7 +89,7 @@
         <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
         <PackageVersion Include="Grpc.Net.Client" Version="2.70.0" />
         <PackageVersion Include="mongodb.driver" Version="3.2.1" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.3.1" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.3.2" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="8.0.2" />
         <PackageVersion Include="automapper" Version="14.0.0" />
         <PackageVersion Include="FluentValidation" Version="11.11.0" />
