@@ -6,6 +6,7 @@ using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -44,9 +45,9 @@ public class WebServer(
                     });
 
                 builder.Services.AddCratisChronicleApi(chronicleServices);
-
                 builder.WebHost
-                    .UseKestrel()
+                    .UseKestrel(options =>
+                        options.ListenAnyIP(workbenchOptions.Value.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2))
                     .UseUrls($"http://*:{workbenchOptions.Value.Port}");
 
                 _webApplication = builder.Build();
