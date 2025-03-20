@@ -50,7 +50,7 @@ public class WebServer(
                     .UseKestrel(options =>
                     {
                         options.ConfigureEndpointDefaults(_ => { });
-                        options.ListenAnyIP(workbenchOptions.Value.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
+                        options.ListenAnyIP(workbenchOptions.Value.Port);
                     });
 
                 _webApplication = builder.Build();
