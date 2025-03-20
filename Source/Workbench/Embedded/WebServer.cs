@@ -44,6 +44,7 @@ public class WebServer(
                     });
 
                 builder.Services.AddCratisChronicleApi(chronicleServices);
+
                 builder.WebHost
                     .UseKestrel()
                     .UseUrls($"http://*:{workbenchOptions.Value.Port}");
