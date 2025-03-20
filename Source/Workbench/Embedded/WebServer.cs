@@ -34,6 +34,7 @@ public class WebServer(
             async () =>
             {
                 var builder = WebApplication.CreateBuilder();
+                builder.Configuration.Sources.Clear();
                 var chronicleServices = serviceProvider.GetService<IServices>();
 
                 builder.Host
@@ -50,8 +51,7 @@ public class WebServer(
                     {
                         options.ConfigureEndpointDefaults(_ => { });
                         options.ListenAnyIP(workbenchOptions.Value.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
-                    })
-                    .UseUrls($"http://*:{workbenchOptions.Value.Port}");
+                    });
 
                 _webApplication = builder.Build();
 
