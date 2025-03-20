@@ -33,7 +33,6 @@ public class WebServer(
             async () =>
             {
                 var builder = WebApplication.CreateBuilder();
-                builder.Configuration.Sources.Clear();
                 var chronicleServices = serviceProvider.GetService<IServices>();
 
                 builder.Host
