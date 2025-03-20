@@ -46,8 +46,11 @@ public class WebServer(
 
                 builder.Services.AddCratisChronicleApi(chronicleServices);
                 builder.WebHost
-                    .ConfigureKestrel(options =>
-                        options.ListenAnyIP(workbenchOptions.Value.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2))
+                    .UseKestrel(options =>
+                    {
+                        options.ConfigureEndpointDefaults(_ => { });
+                        options.ListenAnyIP(workbenchOptions.Value.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
+                    })
                     .UseUrls($"http://*:{workbenchOptions.Value.Port}");
 
                 _webApplication = builder.Build();
