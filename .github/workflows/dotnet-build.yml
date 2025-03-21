@@ -54,6 +54,7 @@ jobs:
           - 'Orleans.InProcess.for_Reactors'
           - 'Orleans.InProcess.for_Reducers'
           - 'Orleans.InProcess.Projections'
+          - 'Orleans.InProcess.AggregateRoots'
     env:
       NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
     steps:
