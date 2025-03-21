@@ -66,6 +66,7 @@ jobs:
     - name: Setup .Net
       uses: actions/setup-dotnet@v4
       with:
+        cache: true
         dotnet-version: |
           ${{ env.DOTNET8_VERSION }}
           ${{ env.DOTNET_VERSION }}
