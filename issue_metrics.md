@@ -3,18 +3,19 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 31 days, 15:11:12 | 1 day, 0:36:22 | 92 days, 21:03:20 |
-| Time to close | 232 days, 13:30:11 | 100 days, 15:40:58 | 764 days, 7:43:35 |
+| Time to close | 232 days, 3:47:00 | 99 days, 23:50:28 | 763 days, 3:03:22 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
 | Number of items that remain open | 306 |
-| Number of items closed | 504 |
+| Number of items closed | 505 |
 | Number of most active mentors | 0 |
-| Total number of items created | 810 |
+| Total number of items created | 811 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Fix publish builds from failing when coming from a PR from a forked repo outside Cratis org. | https://github.com/Cratis/Chronicle/issues/1802 | [einari](https://github.com/einari) | None | None | None |
 | Add support for grouping or hiding Chronicle APIs in OpenAPI definitions (swagger) when running InProcess | https://github.com/Cratis/Chronicle/issues/1793 | [einari](https://github.com/einari) | None | None | None |
 | Switch to keyed service registration for Meter that is scoped to Chronicle | https://github.com/Cratis/Chronicle/issues/1791 | [einari](https://github.com/einari) | None | None | None |
 | Optimize Job system | https://github.com/Cratis/Chronicle/issues/1789 | [einari](https://github.com/einari) | None | None | None |
@@ -37,7 +38,7 @@
 | Introduce a .NET InProcess client and reorganize clients | https://github.com/Cratis/Chronicle/issues/1740 | [einari](https://github.com/einari) | None | None | None |
 | Add contracts + .NET API surface for performing actions on constraint indexes | https://github.com/Cratis/Chronicle/issues/1725 | [einari](https://github.com/einari) | None | 1 day, 0:36:45 | None |
 | Add a constraint editor for seeing and updating values in things like the unique constraint index | https://github.com/Cratis/Chronicle/issues/1724 | [einari](https://github.com/einari) | None | None | None |
-| Allow for case insensitivity for constraints | https://github.com/Cratis/Chronicle/issues/1723 | [einari](https://github.com/einari) | 1:27:24 | None | None |
+| Allow for case insensitivity for constraints | https://github.com/Cratis/Chronicle/issues/1723 | [einari](https://github.com/einari) | 1:27:24 | 28 days, 1:06:33 | None |
 | Change JobStepState.Type to be the same semantically as JobState.Type | https://github.com/Cratis/Chronicle/issues/1706 | [woksin](https://github.com/woksin) | None | 33 days, 3:37:40 | None |
 | When unsubscribing Observer it should also Pause all ongoing jobs for that observer so that they can be resumed later | https://github.com/Cratis/Chronicle/issues/1705 | [woksin](https://github.com/woksin) | None | None | None |
 | In Job implementations handle failures of steps | https://github.com/Cratis/Chronicle/issues/1703 | [woksin](https://github.com/woksin) | None | 33 days, 8:56:56 | None |
@@ -369,5 +370,4 @@
 | Switch to Immutable collection types as contract | https://github.com/Cratis/Chronicle/issues/918 | [einari](https://github.com/einari) | None | None | None |
 | Refactor projections to be a specialized type of reducer | https://github.com/Cratis/Chronicle/issues/917 | [einari](https://github.com/einari) | None | None | None |
 | Add integration tests using Test Containers | https://github.com/Cratis/Chronicle/issues/916 | [einari](https://github.com/einari) | None | 475 days, 2:29:51 | None |
-| Creating learning paths in documentation | https://github.com/Cratis/Chronicle/issues/915 | [einari](https://github.com/einari) | None | None | None |
-| Add an explicit registration of immediate projections rather than creating them when getting an instance of a model | https://github.com/Cratis/Chronicl
+| Creating learning paths in documentation | https://github.com/Cratis/Chronicle/issues/915
