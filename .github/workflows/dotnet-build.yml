@@ -46,7 +46,16 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        namespace:
+          - 'Orleans.InProcess.for_EventSequence'
+          - 'Orleans.InProcess.for_JobsManager'
+          - 'Orleans.InProcess.for_Reactors'
+          - 'Orleans.InProcess.for_Reducers'
+          - 'Orleans.InProcess.Projections'
+    env:
+      NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,8 +64,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - name: Run integration tests for .Net 9
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release --framework net9.0 --settings integration.runsettings
+        run: dotnet test --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
