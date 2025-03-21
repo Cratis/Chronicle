@@ -54,7 +54,7 @@ public class WebServer(
 
                 _webApplication = builder.Build();
 
-                var basePath = workbenchOptions.Value.BaseUrl;
+                var basePath = workbenchOptions.Value.BasePath;
                 _webApplication.UsePathBase(basePath);
 
                 _webApplication.Use(async (context, next) =>
@@ -81,8 +81,9 @@ public class WebServer(
                             var content = await reader.ReadToEndAsync();
 
                             content = content
-                                .Replace("src=\"/", $"src=\"{workbenchOptions.Value.BaseUrl}/")
-                                .Replace("href=\"/", $"href=\"{workbenchOptions.Value.BaseUrl}/");
+                                .Replace("src=\"/", $"src=\"{workbenchOptions.Value.BasePath}/")
+                                .Replace("href=\"/", $"href=\"{workbenchOptions.Value.BasePath}/")
+                                .Replace("name=\"api-base-path\" content=\"\"", $"name=\"api-base-path\" content=\"{workbenchOptions.Value.BasePath}/api\"");
 
                             context.Response.ContentType = "text/html";
                             await context.Response.WriteAsync(content);
