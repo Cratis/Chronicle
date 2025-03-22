@@ -2,19 +2,23 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 31 days, 15:11:12 | 1 day, 0:36:22 | 92 days, 21:03:20 |
-| Time to close | 232 days, 3:47:00 | 99 days, 23:50:28 | 763 days, 3:03:22 |
+| Time to first response | 98 days, 5:07:09 | 1 day, 1:08:11 | 141 days, 2:45:01 |
+| Time to close | 235 days, 10:02:32 | 100 days, 15:40:58 | 768 days, 18:48:59 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 306 |
-| Number of items closed | 505 |
+| Number of items that remain open | 307 |
+| Number of items closed | 508 |
 | Number of most active mentors | 0 |
-| Total number of items created | 811 |
+| Total number of items created | 815 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Run MongoDB in-memory engine to improve run speed of integration specs | https://github.com/Cratis/Chronicle/issues/1811 | [einari](https://github.com/einari) | None | None | None |
+| Improve setup / teardown | https://github.com/Cratis/Chronicle/issues/1810 | [einari](https://github.com/einari) | None | None | None |
+| Parallelize running integration specs in GitHub workflow | https://github.com/Cratis/Chronicle/issues/1809 | [einari](https://github.com/einari) | 3:12:02 | 3:12:02 | None |
+| Improve performance of integration specs | https://github.com/Cratis/Chronicle/issues/1808 | [einari](https://github.com/einari) | None | None | None |
 | Fix publish builds from failing when coming from a PR from a forked repo outside Cratis org. | https://github.com/Cratis/Chronicle/issues/1802 | [einari](https://github.com/einari) | None | None | None |
 | Add support for grouping or hiding Chronicle APIs in OpenAPI definitions (swagger) when running InProcess | https://github.com/Cratis/Chronicle/issues/1793 | [einari](https://github.com/einari) | None | None | None |
 | Switch to keyed service registration for Meter that is scoped to Chronicle | https://github.com/Cratis/Chronicle/issues/1791 | [einari](https://github.com/einari) | None | None | None |
@@ -366,8 +370,4 @@
 | Introduce support for custom named event sequences | https://github.com/Cratis/Chronicle/issues/922 | [einari](https://github.com/einari) | None | 341 days, 21:35:28 | None |
 | Move away from Guid identifying event sequences | https://github.com/Cratis/Chronicle/issues/921 | [einari](https://github.com/einari) | None | 341 days, 21:37:33 | None |
 | Move away from Guid for identifying observers | https://github.com/Cratis/Chronicle/issues/920 | [einari](https://github.com/einari) | None | 341 days, 21:41:21 | None |
-| Move away from Guid to identify event types | https://github.com/Cratis/Chronicle/issues/919 | [einari](https://github.com/einari) | None | 341 days, 21:42:32 | None |
-| Switch to Immutable collection types as contract | https://github.com/Cratis/Chronicle/issues/918 | [einari](https://github.com/einari) | None | None | None |
-| Refactor projections to be a specialized type of reducer | https://github.com/Cratis/Chronicle/issues/917 | [einari](https://github.com/einari) | None | None | None |
-| Add integration tests using Test Containers | https://github.com/Cratis/Chronicle/issues/916 | [einari](https://github.com/einari) | None | 475 days, 2:29:51 | None |
-| Creating learning paths in documentation | https://github.com/Cratis/Chronicle/issues/915
+| Move away from Guid to identify event types | https://github.com/Cratis/Chronicle/issues/919 | [einari](
