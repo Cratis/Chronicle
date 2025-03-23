@@ -3,6 +3,7 @@ name: .NET Build
 env:
   DOTNET8_VERSION: "8.0.407"
   DOTNET_VERSION: "9.0.x"
+  DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
 
 on:
   workflow_dispatch:
@@ -38,8 +39,32 @@ jobs:
             ${{ env.DOTNET8_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./**/bin
+          key: ${{ env.DOTNET_CACHE }}
+
       - name: Build
         run: dotnet build --configuration Release --framework net9.0
+
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./**/bin
+          key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
         run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
@@ -67,5 +92,12 @@ jobs:
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./**/bin
+          key: ${{ env.DOTNET_CACHE }}
+
+
       - name: Run integration tests for .Net 9
-        run: dotnet test --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
