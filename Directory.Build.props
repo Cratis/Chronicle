@@ -25,6 +25,8 @@
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
 
         <NoWarn>NU1507</NoWarn>
+
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'==''">
