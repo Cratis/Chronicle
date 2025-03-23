@@ -22,7 +22,6 @@ public class GlobalFixture : IAsyncDisposable
     public GlobalFixture()
     {
         Directory.CreateDirectory("backups");
-
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
