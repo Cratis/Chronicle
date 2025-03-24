@@ -28,7 +28,6 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
         public ObserverState ReducerObserverState;
 
         public EventSequenceNumber LastEventSequenceNumberAppended;
-        public IImmutableList<AppendedEvent> AppendedEvents;
 
         async Task Establish()
         {
@@ -39,8 +38,6 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
 
         async Task Because()
         {
-            AppendedEvents = await EventStore.EventLog.GetFromSequenceNumber(0);
-
             await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             ReducerObserver = GetObserverForReducer<ReducerWithoutDelay>();
             await ReducerObserver.WaitTillSubscribed();

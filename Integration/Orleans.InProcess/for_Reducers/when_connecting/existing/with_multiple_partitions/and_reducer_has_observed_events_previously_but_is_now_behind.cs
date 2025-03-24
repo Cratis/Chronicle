@@ -28,7 +28,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
 
         async Task Establish()
         {
-            var reactor = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
+            var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             ReducerObserver = GetObserverForReducer<ReducerWithoutDelay>();
             await ReducerObserver.WaitTillSubscribed();
 
@@ -37,7 +37,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
             var lastHandled = result.SequenceNumbers.Last();
 
             await ReducerObserver.WaitTillReachesEventSequenceNumber(lastHandled);
-            reactor.Disconnect();
+            reducer.Disconnect();
 
             CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
             result = await EventStore.EventLog.AppendMany(CatchupEvents);
@@ -47,8 +47,8 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
         async Task Because()
         {
             await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
+            await ReducerObserver.WaitTillSubscribed();
             await ReducerObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
-            await ReducerObserver.WaitTillActive();
             ReducerObserverState = await ReducerObserver.GetState();
         }
     }
