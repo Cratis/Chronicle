@@ -2,20 +2,20 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 98 days, 5:07:09 | 1 day, 1:08:11 | 141 days, 2:45:01 |
-| Time to close | 235 days, 10:02:32 | 100 days, 15:40:58 | 768 days, 18:48:59 |
+| Time to first response | 129 days, 4:43:23 | 1 day, 9:27:20 | 279 days, 4:57:20 |
+| Time to close | 238 days, 20:32:15 | 101 days, 7:35:20 | 778 days, 0:25:47 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 307 |
-| Number of items closed | 508 |
+| Number of items that remain open | 301 |
+| Number of items closed | 512 |
 | Number of most active mentors | 0 |
-| Total number of items created | 815 |
+| Total number of items created | 813 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
-| Run MongoDB in-memory engine to improve run speed of integration specs | https://github.com/Cratis/Chronicle/issues/1811 | [einari](https://github.com/einari) | None | None | None |
+| Run MongoDB in-memory engine to improve run speed of integration specs | https://github.com/Cratis/Chronicle/issues/1811 | [einari](https://github.com/einari) | None | 2 days, 0:43:42 | None |
 | Improve setup / teardown | https://github.com/Cratis/Chronicle/issues/1810 | [einari](https://github.com/einari) | None | None | None |
 | Parallelize running integration specs in GitHub workflow | https://github.com/Cratis/Chronicle/issues/1809 | [einari](https://github.com/einari) | 3:12:02 | 3:12:02 | None |
 | Improve performance of integration specs | https://github.com/Cratis/Chronicle/issues/1808 | [einari](https://github.com/einari) | None | None | None |
@@ -288,7 +288,7 @@
 | Add global exception handler | https://github.com/Cratis/Chronicle/issues/1175 | [einari](https://github.com/einari) | None | None | None |
 | Optimize the Docker image sizes | https://github.com/Cratis/Chronicle/issues/1096 | [einari](https://github.com/einari) | None | None | None |
 | Leverage the Arm64 runner during build pipelines | https://github.com/Cratis/Chronicle/issues/1095 | [einari](https://github.com/einari) | None | None | None |
-| Add retry policies for client observers and reducers | https://github.com/Cratis/Chronicle/issues/1091 | [einari](https://github.com/einari) | None | None | None |
+| Add retry policies for client observers and reducers | https://github.com/Cratis/Chronicle/issues/1091 | [einari](https://github.com/einari) | None | 405 days, 1:23:38 | None |
 | Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | [einari](https://github.com/einari) | None | None | None |
 | Support unmanaged observers | https://github.com/Cratis/Chronicle/issues/1067 | [einari](https://github.com/einari) | None | None | None |
 | Identity is not resolved for reducer handlers | https://github.com/Cratis/Chronicle/issues/1066 | [einari](https://github.com/einari) | 334 days, 5:05:34 | 401 days, 1:11:14 | None |
@@ -370,4 +370,4 @@
 | Introduce support for custom named event sequences | https://github.com/Cratis/Chronicle/issues/922 | [einari](https://github.com/einari) | None | 341 days, 21:35:28 | None |
 | Move away from Guid identifying event sequences | https://github.com/Cratis/Chronicle/issues/921 | [einari](https://github.com/einari) | None | 341 days, 21:37:33 | None |
 | Move away from Guid for identifying observers | https://github.com/Cratis/Chronicle/issues/920 | [einari](https://github.com/einari) | None | 341 days, 21:41:21 | None |
-| Move away from Guid to identify event types | https://github.com/Cratis/Chronicle/issues/919 | [einari](
+| Move away from Guid to identify event types | https://github.com/Cratis/Chronicle

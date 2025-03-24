@@ -105,11 +105,6 @@ public class Reactors(
                     registration.Namespace,
                     registration.Reactor.EventSequenceId,
                     registration.ConnectionId);
-                using (Tracing.RegisterObserver(key, ObserverType.Reactor))
-                {
-                    clientObserver = grainFactory.GetGrain<IReactor>(key);
-                    await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
-                }
 
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,
@@ -120,6 +115,12 @@ public class Reactors(
                         var eventsToObserve = events.Select(_ => _.ToContract()).ToArray();
                         observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
                     });
+
+                using (Tracing.RegisterObserver(key, ObserverType.Reactor))
+                {
+                    clientObserver = grainFactory.GetGrain<IReactor>(key);
+                    await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
+                }
 
                 await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
