@@ -15,10 +15,10 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@cratis/applications": "15.5.2",
-        "@cratis/applications.react": "15.5.2",
-        "@cratis/applications.react.mvvm": "15.5.2",
-        "@cratis/applications.vite": "15.5.2",
+        "@cratis/applications": "15.5.4",
+        "@cratis/applications.react": "15.5.4",
+        "@cratis/applications.react.mvvm": "15.5.4",
+        "@cratis/applications.vite": "15.5.4",
         "allotment": "1.20.3",
         "echarts": "5.6.0",
         "mobx": "6.13.7",
