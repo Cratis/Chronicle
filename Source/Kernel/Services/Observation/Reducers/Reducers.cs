@@ -121,17 +121,6 @@ public class Reducers(
                         registration.Reducer.EventSequenceId,
                         registration.ConnectionId);
 
-                    using (Tracing.RegisterObserver(key, ObserverType.Reducer))
-                    {
-                        var reducerDefinition = registration.Reducer.ToChronicle();
-
-                        clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-
-                        var modelSchema = await JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema);
-                        model = new Model(reducerDefinition.Model.Name, modelSchema);
-                    }
-
                     reducerMediator.Subscribe(
                         registration.Reducer.ReducerId,
                         registration.ConnectionId,
@@ -148,6 +137,17 @@ public class Reducers(
 
                             observer.OnNext(message);
                         });
+
+                    using (Tracing.RegisterObserver(key, ObserverType.Reducer))
+                    {
+                        var reducerDefinition = registration.Reducer.ToChronicle();
+
+                        clientObserver = grainFactory.GetGrain<IReducer>(key);
+                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+
+                        var modelSchema = await JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema);
+                        model = new Model(reducerDefinition.Model.Name, modelSchema);
+                    }
 
                     await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 

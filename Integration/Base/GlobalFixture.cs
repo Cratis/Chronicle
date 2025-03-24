@@ -3,6 +3,7 @@
 
 using Docker.DotNet;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using MongoDB.Driver;
@@ -22,13 +23,13 @@ public class GlobalFixture : IAsyncDisposable
     public GlobalFixture()
     {
         Directory.CreateDirectory("backups");
-
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
 
         MongoDBContainer = new ContainerBuilder()
-            .WithImage("cratis/mongodb")
+            .WithImage("mongo")
+            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27018, 27017)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")

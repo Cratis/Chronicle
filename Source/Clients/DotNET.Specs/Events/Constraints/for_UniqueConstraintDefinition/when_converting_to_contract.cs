@@ -28,7 +28,8 @@ public class when_converting_to_contract : Specification
                 new(_firstEventType.Id, ["First event, first Property", "First event, second Property"]),
                 new(_secondEventType.Id, ["Second event, first Property", "Second event, second Property"])
             ],
-            _removedWithEventType);
+            _removedWithEventType,
+            false);
     }
 
     void Because()

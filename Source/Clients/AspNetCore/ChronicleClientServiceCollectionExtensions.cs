@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
+using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,9 +22,12 @@ public static class ChronicleClientServiceCollectionExtensions
     /// <summary>
     /// Add the <see cref="IChronicleClient"/> to the services.
     /// </summary>
-    /// /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="configureChronicleOptions">Optional <see cref="Action{T}"/> for configuring Chronicle options.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddChronicleClient(this IServiceCollection services)
+    public static IServiceCollection AddCratisChronicleClient(
+        this IServiceCollection services,
+        Action<ChronicleOptions>? configureChronicleOptions = default)
     {
         services.AddSingleton<IChronicleClient>(sp =>
         {
@@ -34,8 +38,12 @@ public static class ChronicleClientServiceCollectionExtensions
                 SoftwareVersion = options.SoftwareVersion,
                 SoftwareCommit = options.SoftwareCommit,
                 ProgramIdentifier = options.ProgramIdentifier,
+                IdentityProvider = new IdentityProvider(
+                    sp.GetRequiredService<IHttpContextAccessor>(),
+                    sp.GetRequiredService<ILogger<IdentityProvider>>()),
                 LoggerFactory = sp.GetRequiredService<ILoggerFactory>(),
             };
+            configureChronicleOptions?.Invoke(chronicleOptions);
             return new ChronicleClient(chronicleOptions);
         });
 

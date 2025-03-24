@@ -155,44 +155,23 @@ public static class BsonValueExtensions
     /// <returns>Converted value.</returns>
     public static object? ToTargetType(this BsonValue value, Type targetType)
     {
-        switch (Type.GetTypeCode(targetType))
+        if (value is BsonNull && TryConvertNullPrimitive(targetType, out var result))
         {
-            case TypeCode.Int16:
-                return (short)value.ToInt32();
+            return result;
+        }
 
-            case TypeCode.UInt16:
-                return (ushort)value.ToInt32();
-
-            case TypeCode.Int32:
-                return value.ToInt32();
-
-            case TypeCode.UInt32:
-                return (uint)value.ToInt32();
-
-            case TypeCode.Int64:
-                return value.ToInt64();
-
-            case TypeCode.UInt64:
-                return (ulong)value.ToInt64();
-
-            case TypeCode.Single:
-                return (float)value.ToDouble();
-
-            case TypeCode.Double:
-                return value.ToDouble();
-
-            case TypeCode.Decimal:
-                return value.ToDecimal();
-
-            case TypeCode.DateTime:
-                return value.ToUniversalTime();
-
-            case TypeCode.Byte:
-                return (byte)value.ToInt32();
+        if (TryConvertPrimitive(value, targetType, out result))
+        {
+            return result;
         }
 
         if (targetType == typeof(Guid))
         {
+            if (value is BsonNull)
+            {
+                return Guid.Empty;
+            }
+
             if (value is BsonString bsonString)
             {
                 return Guid.Parse(bsonString.ToString()!);
@@ -280,5 +259,113 @@ public static class BsonValueExtensions
         }
 
         return BsonNull.Value;
+    }
+
+    static bool TryConvertNullPrimitive(Type targetType, out object? result)
+    {
+        result = null;
+
+        switch (Type.GetTypeCode(targetType))
+        {
+            case TypeCode.Int16:
+                result = (short)0;
+                break;
+
+            case TypeCode.UInt16:
+                result = (ushort)0;
+                break;
+
+            case TypeCode.Int32:
+                result = 0;
+                break;
+
+            case TypeCode.UInt32:
+                result = 0U;
+                break;
+
+            case TypeCode.Int64:
+                result = 0L;
+                break;
+
+            case TypeCode.UInt64:
+                result = 0UL;
+                break;
+
+            case TypeCode.Single:
+                result = 0F;
+                break;
+
+            case TypeCode.Double:
+                result = 0D;
+                break;
+
+            case TypeCode.Decimal:
+                result = 0M;
+                break;
+
+            case TypeCode.DateTime:
+                result = DateTime.MinValue;
+                break;
+
+            case TypeCode.Byte:
+                result = (byte)0;
+                break;
+        }
+
+        return result is not null;
+    }
+
+    static bool TryConvertPrimitive(BsonValue value, Type targetType, out object? result)
+    {
+        result = null;
+
+        switch (Type.GetTypeCode(targetType))
+        {
+            case TypeCode.Int16:
+                result = (short)value.ToInt32();
+                break;
+
+            case TypeCode.UInt16:
+                result = (ushort)value.ToInt32();
+                break;
+
+            case TypeCode.Int32:
+                result = value.ToInt32();
+                break;
+
+            case TypeCode.UInt32:
+                result = (uint)value.ToInt32();
+                break;
+
+            case TypeCode.Int64:
+                result = value.ToInt64();
+                break;
+
+            case TypeCode.UInt64:
+                result = (ulong)value.ToInt64();
+                break;
+
+            case TypeCode.Single:
+                result = (float)value.ToDouble();
+                break;
+
+            case TypeCode.Double:
+                result = value.ToDouble();
+                break;
+
+            case TypeCode.Decimal:
+                result = value.ToDecimal();
+                break;
+
+            case TypeCode.DateTime:
+                result = value.ToUniversalTime();
+                break;
+
+            case TypeCode.Byte:
+                result = (byte)value.ToInt32();
+                break;
+        }
+
+        return result is not null;
     }
 }

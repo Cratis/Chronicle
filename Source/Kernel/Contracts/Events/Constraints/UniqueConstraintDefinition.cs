@@ -16,4 +16,10 @@ public class UniqueConstraintDefinition
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
     public IList<UniqueConstraintEventDefinition> EventDefinitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether to ignore casing.
+    /// </summary>
+    [ProtoMember(2)]
+    public bool IgnoreCasing { get; set; }
 }
