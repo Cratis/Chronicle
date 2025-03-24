@@ -75,7 +75,7 @@ jobs:
       - name: Run tests
         run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
 
-  integration:
+  integration-specs:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
     strategy:
