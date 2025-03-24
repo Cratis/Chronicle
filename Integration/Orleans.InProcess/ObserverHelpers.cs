@@ -39,7 +39,24 @@ public static class ObserverHelpers
     /// <param name="observer">Observer to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillActive(this IObserver observer, TimeSpan? timeout = default) => await observer.WaitForState(ObserverRunningState.Active, timeout ?? TimeSpan.FromSeconds(5));
+    public static async Task WaitTillActive(this IObserver observer, TimeSpan? timeout = default) =>
+        await observer.WaitForState(ObserverRunningState.Active, timeout ?? TimeSpan.FromSeconds(5));
+
+    /// <summary>
+    /// Wait till the observer has been subscribed, with an optional timeout.
+    /// </summary>
+    /// <param name="observer">Observer to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
+    public static async Task WaitTillSubscribed(this IObserver observer, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpan.FromSeconds(5);
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (!await observer.IsSubscribed())
+        {
+            await Task.Delay(100, cts.Token);
+        }
+    }
 
     /// <summary>
     /// Wait till the observer reaches a specific event sequence number, with an optional timeout.
