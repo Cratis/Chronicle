@@ -21,9 +21,9 @@ public class ChronicleWorkbenchOptions
     public int Port { get; set; } = DefaultPort;
 
     /// <summary>
-    /// Gets or sets the base URL for the Workbench. This URL will be the value that the <base href=""/> tag will be set to.
+    /// Gets or sets the base path the Workbench. This is the base path that will serve the workbench.
     /// </summary>
-    public string BaseUrl { get; set; } = "/";
+    public string BasePath { get; set; } = "/";
 
     /// <summary>
     /// Gets or sets the <see cref="ApplicationModelOptions"/> for the Workbench.

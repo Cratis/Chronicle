@@ -13,8 +13,7 @@ import { injectable } from 'tsyringe';
 export class EventStores implements IEventStores {
     private _eventStores: BehaviorSubject<string[]> = new BehaviorSubject<string[]>([]);
 
-    constructor() {
-        const allEventStores = new AllEventStores();
+    constructor(allEventStores: AllEventStores) {
         allEventStores.subscribe(result => {
             this.eventStores.next(result.data);
         });
