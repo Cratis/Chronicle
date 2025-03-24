@@ -30,7 +30,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
         {
             var reactor = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             ReducerObserver = GetObserverForReducer<ReducerWithoutDelay>();
-            await ReducerObserver.WaitTillActive();
+            await ReducerObserver.WaitTillSubscribed();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
