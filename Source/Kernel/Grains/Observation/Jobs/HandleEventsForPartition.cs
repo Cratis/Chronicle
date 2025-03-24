@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -42,6 +43,13 @@ public class HandleEventsForPartition(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _selfGrainReference = this.AsReference<IHandleEventsForPartition>();
+
+        if (State.Prepared)
+        {
+            _observer = GrainFactory.GetGrain<IObserver>(State.ObserverSubscription.ObserverKey);
+            _eventSourceId = State.Partition.ToString();
+            _subscriber = (GrainFactory.GetGrain(State.ObserverSubscription.SubscriberType, GetObserverSubscriberKey()) as IObserverSubscriber)!;
+        }
         return base.OnActivateAsync(cancellationToken);
     }
 
@@ -283,6 +291,14 @@ public class HandleEventsForPartition(
             logger.CancelledAfterHandlingEvents(partition, lastHandledSequenceNumber);
         }
     }
+
+    ObserverSubscriberKey GetObserverSubscriberKey() => new(
+        State.ObserverSubscription.ObserverKey.ObserverId,
+        State.ObserverSubscription.ObserverKey.EventStore,
+        State.ObserverSubscription.ObserverKey.Namespace,
+        State.ObserverSubscription.ObserverKey.EventSequenceId,
+        State.Partition,
+        State.ObserverSubscription.SiloAddress.ToParsableString());
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
