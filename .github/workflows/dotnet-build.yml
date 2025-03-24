@@ -46,7 +46,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Restore
-        run: dotnet restore --locked-mode --force-evaluate
+        run: dotnet restore --locked-mode --force-evaluate --framework net9.0
 
       - name: Build
         run: dotnet build --no-restore --configuration Release --framework net9.0
