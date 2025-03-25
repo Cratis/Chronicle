@@ -28,7 +28,7 @@ public static class MvcOptionsExtensions
     /// <param name="prefix">The prefix to use.</param>
     public static void UseRoutePrefix(this MvcOptions options, string prefix)
     {
-        if (prefix.StartsWith('/')) prefix = prefix.Substring(1);
+        if (prefix.StartsWith('/')) prefix = prefix[1..];
         if (!prefix.EndsWith('/')) prefix = $"{prefix}/";
         options.UseRoutePrefix(new RouteAttribute(prefix));
     }

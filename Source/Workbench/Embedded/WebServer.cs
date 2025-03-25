@@ -56,6 +56,9 @@ public class WebServer(
                 _webApplication = builder.Build();
 
                 var basePath = workbenchOptions.Value.BasePath;
+                if (!basePath.StartsWith('/')) basePath = $"/{basePath}";
+                if (basePath.EndsWith('/')) basePath = basePath[0..^1];
+
                 _webApplication.UseCratisChronicleApi();
 
                 var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
@@ -72,10 +75,10 @@ public class WebServer(
                     indexFile = await reader.ReadToEndAsync();
 
                     indexFile = indexFile
-                        .Replace("src=\"/", $"src=\"{workbenchOptions.Value.BasePath}/")
-                        .Replace("href=\"/", $"href=\"{workbenchOptions.Value.BasePath}/")
-                        .Replace("name=\"base-path\" content=\"\"", $"name=\"base-path\" content=\"{workbenchOptions.Value.BasePath}\"")
-                        .Replace("name=\"api-base-path\" content=\"\"", $"name=\"api-base-path\" content=\"{workbenchOptions.Value.BasePath}/api\"");
+                        .Replace("src=\"/", $"src=\"{basePath}/")
+                        .Replace("href=\"/", $"href=\"{basePath}/")
+                        .Replace("name=\"base-path\" content=\"\"", $"name=\"base-path\" content=\"{basePath}\"")
+                        .Replace("name=\"api-base-path\" content=\"\"", $"name=\"api-base-path\" content=\"{basePath}/api\"");
                 }
                 fileProvider = new StaticFilesFileProvider(fileProvider, basePath, indexFile);
 

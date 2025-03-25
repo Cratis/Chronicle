@@ -27,7 +27,7 @@ public class StaticFilesFileProvider(IFileProvider innerFileProvider, string bas
 
         if (subpath.StartsWith(basePath))
         {
-            subpath = subpath.Substring(basePath.Length);
+            subpath = subpath[1..];
         }
 
         return innerFileProvider.GetFileInfo(subpath);
