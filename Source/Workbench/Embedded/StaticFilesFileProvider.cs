@@ -25,9 +25,14 @@ public class StaticFilesFileProvider(IFileProvider innerFileProvider, string bas
             return new InMemoryFileInfo(subpath, indexFile);
         }
 
+        if (!subpath.StartsWith('/'))
+        {
+            subpath = $"/{subpath}";
+        }
+
         if (subpath.StartsWith(basePath))
         {
-            subpath = subpath[1..];
+            subpath = subpath.Substring(basePath.Length);
         }
 
         return innerFileProvider.GetFileInfo(subpath);
