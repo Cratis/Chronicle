@@ -36,7 +36,8 @@ on:
       - "**"
     paths:
       - "**"
-      - "!Docker/BaseDevelopment/**"
+    paths-ignore:
+      - "Docker/BaseDevelopment/**"
 
 jobs:
   dotnet-x64:
