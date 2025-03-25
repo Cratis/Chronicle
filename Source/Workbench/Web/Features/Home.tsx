@@ -5,8 +5,10 @@ import { CardFooter } from 'Components/Common/CardFooter';
 import { StoreCard } from 'Components/Common/StoreCard';
 import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/applications.react.mvvm';
+import { useRelativePath } from '../Utils/useRelativePath';
 
 export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
+    const basePath = useRelativePath('event-store');
     return (
         <div>
             <h1 className='text-4xl m-3'>Select Event Store</h1>
@@ -16,7 +18,7 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                         <StoreCard
                             key={eventStore}
                             title={eventStore}
-                            path={`/event-store/${eventStore}/Default`}
+                            path={`${basePath}/${eventStore}/Default`}
                             footer={<CardFooter />}
                             description=''
                         />
