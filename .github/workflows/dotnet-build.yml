@@ -2,21 +2,19 @@ name: .NET Build
 
 env:
   DOTNET_VERSION: "9.0.x"
-  DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
+  DOTNET_CACHE: "dotnet-cache-${{ github.ref }}"
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - "main"
+    branches: [ "main" ]
     paths:
       - "Source/**"
       - "Integration/**"
       - "!Source/Node/**"
       - "!Source/Workbench/**"
   pull_request:
-    branches:
-      - "**"
+    branches: [ "main" ]
     paths:
       - "Source/**"
       - "Integration/**"
