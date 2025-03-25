@@ -14,7 +14,8 @@ on:
       - "!Source/Node/**"
       - "!Source/Workbench/**"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "**"
     paths:
       - "Source/**"
       - "Integration/**"
