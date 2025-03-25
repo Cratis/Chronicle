@@ -15,11 +15,10 @@ import { MVVM } from '@cratis/applications.react.mvvm';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 function App() {
-    useTheme();
-
     const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
     const basePath = basePathElement?.content ?? '/';
 
+    useTheme(basePath);
     return (
         <ApplicationModel development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
             <MVVM>
