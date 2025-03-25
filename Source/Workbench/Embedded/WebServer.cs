@@ -77,8 +77,7 @@ public class WebServer(
                     indexFile = indexFile
                         .Replace("src=\"/", $"src=\"{basePath}/")
                         .Replace("href=\"/", $"href=\"{basePath}/")
-                        .Replace("name=\"base-path\" content=\"\"", $"name=\"base-path\" content=\"{basePath}\"")
-                        .Replace("name=\"api-base-path\" content=\"\"", $"name=\"api-base-path\" content=\"{basePath}/api\"");
+                        .Replace("name=\"base-path\" content=\"\"", $"name=\"base-path\" content=\"{basePath}\"");
                 }
                 fileProvider = new StaticFilesFileProvider(fileProvider, basePath, indexFile);
 
