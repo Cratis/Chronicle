@@ -38,6 +38,10 @@ on:
       - "**"
       - "!Docker/BaseDevelopment/**"
 
+permissions:
+  contents: write
+  deployments: write
+
 jobs:
   dotnet-x64:
     runs-on: ubuntu-latest
