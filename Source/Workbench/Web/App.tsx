@@ -17,14 +17,11 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 function App() {
     useTheme();
 
-    const apiBasePathElement = document.querySelector('meta[name="api-base-path"]') as HTMLMetaElement;
-    const apiBasePath = apiBasePathElement?.content ?? '';
-
     const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
     const basePath = basePathElement?.content ?? '/';
 
     return (
-        <ApplicationModel development={isDevelopment} apiBasePath={apiBasePath} microservice='Workbench'>
+        <ApplicationModel development={isDevelopment} apiBasePath={basePath} microservice='Workbench'>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog}>
