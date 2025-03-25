@@ -21,9 +21,8 @@ export class Namespaces implements INamespaces {
     constructor(
         private readonly _localStorage: ILocalStorage,
         private readonly _messenger: IMessenger,
-        @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
-
-        const namespacesQuery: AllNamespaces = new AllNamespaces();
+        @inject('params') private readonly _params: EventStoreAndNamespaceParams,
+        namespacesQuery: AllNamespaces) {
 
         namespacesQuery.subscribe(result => {
             this._namespaces.next(result.data);
