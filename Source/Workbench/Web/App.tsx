@@ -21,7 +21,7 @@ function App() {
     const basePath = basePathElement?.content ?? '/';
 
     return (
-        <ApplicationModel development={isDevelopment} apiBasePath={basePath}>
+        <ApplicationModel development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog}>
