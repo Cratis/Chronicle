@@ -3,18 +3,20 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 129 days, 4:43:23 | 1 day, 9:27:20 | 279 days, 4:57:20 |
-| Time to close | 238 days, 20:32:15 | 101 days, 7:35:20 | 778 days, 0:25:47 |
+| Time to close | 238 days, 3:49:23 | 101 days, 7:35:20 | 776 days, 9:57:11 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
 | Number of items that remain open | 301 |
-| Number of items closed | 512 |
+| Number of items closed | 514 |
 | Number of most active mentors | 0 |
-| Total number of items created | 813 |
+| Total number of items created | 815 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Build the namespaces for integration specs dynamically based on folders | https://github.com/Cratis/Chronicle/issues/1821 | [einari](https://github.com/einari) | None | None | None |
+| Attempted sequence number of a failed partition attempt seems to be wrong | https://github.com/Cratis/Chronicle/issues/1820 | [einari](https://github.com/einari) | None | None | None |
 | Run MongoDB in-memory engine to improve run speed of integration specs | https://github.com/Cratis/Chronicle/issues/1811 | [einari](https://github.com/einari) | None | 2 days, 0:43:42 | None |
 | Improve setup / teardown | https://github.com/Cratis/Chronicle/issues/1810 | [einari](https://github.com/einari) | None | None | None |
 | Parallelize running integration specs in GitHub workflow | https://github.com/Cratis/Chronicle/issues/1809 | [einari](https://github.com/einari) | 3:12:02 | 3:12:02 | None |
@@ -23,7 +25,7 @@
 | Add support for grouping or hiding Chronicle APIs in OpenAPI definitions (swagger) when running InProcess | https://github.com/Cratis/Chronicle/issues/1793 | [einari](https://github.com/einari) | None | None | None |
 | Switch to keyed service registration for Meter that is scoped to Chronicle | https://github.com/Cratis/Chronicle/issues/1791 | [einari](https://github.com/einari) | None | None | None |
 | Optimize Job system | https://github.com/Cratis/Chronicle/issues/1789 | [einari](https://github.com/einari) | None | None | None |
-| HandleEventsForPartition does not work now when resumed (started without prepare call) and grain is newly activated | https://github.com/Cratis/Chronicle/issues/1787 | [woksin](https://github.com/woksin) | None | None | None |
+| HandleEventsForPartition does not work now when resumed (started without prepare call) and grain is newly activated | https://github.com/Cratis/Chronicle/issues/1787 | [woksin](https://github.com/woksin) | None | 10 days, 8:28:55 | None |
 | Prepare job steps and starting them should run asyncronously | https://github.com/Cratis/Chronicle/issues/1786 | [woksin](https://github.com/woksin) | 3 days, 22:09:24 | None | None |
 | We should not be able to start a job on an observer when there is a replay job | https://github.com/Cratis/Chronicle/issues/1779 | [woksin](https://github.com/woksin) | None | None | None |
 | During GitHub builds we want to build specs and integration specs with Debug but compile them with "treat warning as errors" | https://github.com/Cratis/Chronicle/issues/1773 | [einari](https://github.com/einari) | None | None | None |
@@ -81,7 +83,7 @@
 | Parallelize PrepareAndStartJobSteps | https://github.com/Cratis/Chronicle/issues/1596 | [woksin](https://github.com/woksin) | 102 days, 3:12:37 | 102 days, 3:12:37 | None |
 | Persisted JobStep state never seems to be cleared | https://github.com/Cratis/Chronicle/issues/1595 | [woksin](https://github.com/woksin) | None | 0:23:18 | None |
 | JobStep Pause unsubscribes job step from job, but Resume does not subscribe them again | https://github.com/Cratis/Chronicle/issues/1594 | [woksin](https://github.com/woksin) | None | 102 days, 4:23:54 | None |
-| Gracefully handle cancellation (especially pausing) of jobs and job steps | https://github.com/Cratis/Chronicle/issues/1593 | [woksin](https://github.com/woksin) | None | None | None |
+| Gracefully handle cancellation (especially pausing) of jobs and job steps | https://github.com/Cratis/Chronicle/issues/1593 | [woksin](https://github.com/woksin) | None | 109 days, 9:22:17 | None |
 | JobStep PerformWork sends message to itself to ReportStatusChange | https://github.com/Cratis/Chronicle/issues/1592 | [woksin](https://github.com/woksin) | 4:38:20 | 23:38:41 | None |
 | JobsManager OnCompleted probably unncessary? | https://github.com/Cratis/Chronicle/issues/1591 | [woksin](https://github.com/woksin) | 5:31:35 | 11 days, 0:24:45 | None |
 | Job invokes OnComplete on itself when Pause is invoked | https://github.com/Cratis/Chronicle/issues/1590 | [woksin](https://github.com/woksin) | None | 12 days, 2:39:11 | None |
@@ -368,6 +370,4 @@
 | Remove Inbox in favor of custom event sequences | https://github.com/Cratis/Chronicle/issues/924 | [einari](https://github.com/einari) | None | 341 days, 21:34:18 | None |
 | Remove Outbox in favor of custom event sequences | https://github.com/Cratis/Chronicle/issues/923 | [einari](https://github.com/einari) | None | 341 days, 21:34:51 | None |
 | Introduce support for custom named event sequences | https://github.com/Cratis/Chronicle/issues/922 | [einari](https://github.com/einari) | None | 341 days, 21:35:28 | None |
-| Move away from Guid identifying event sequences | https://github.com/Cratis/Chronicle/issues/921 | [einari](https://github.com/einari) | None | 341 days, 21:37:33 | None |
-| Move away from Guid for identifying observers | https://github.com/Cratis/Chronicle/issues/920 | [einari](https://github.com/einari) | None | 341 days, 21:41:21 | None |
-| Move away from Guid to identify event types | https://github.com/Cratis/Chronicle
+| Move away from Guid identifying
