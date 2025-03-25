@@ -12,18 +12,16 @@ on:
     paths:
       - "Source/**"
       - "Integration/**"
-    paths-ignore:
-      - "Source/Node/**"
-      - "Source/Workbench/**"
+      - "!Source/Node/**"
+      - "!Source/Workbench/**"
   pull_request:
     branches:
       - "**"
     paths:
       - "Source/**"
       - "Integration/**"
-    paths-ignore:
-      - "Source/Node/**"
-      - "Source/Workbench/**"
+      - "!Source/Node/**"
+      - "!Source/Workbench/**"
 
 jobs:
   dotnet-build:
