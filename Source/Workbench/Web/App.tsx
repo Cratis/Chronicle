@@ -21,7 +21,7 @@ function App() {
     const basePath = basePathElement?.content ?? '/';
 
     return (
-        <ApplicationModel development={isDevelopment} apiBasePath={''} microservice='Workbench'>
+        <ApplicationModel development={isDevelopment} apiBasePath={basePath}>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog}>
