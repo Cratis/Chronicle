@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>15.5.4</ApplicationModel>
+        <ApplicationModel>15.6.0</ApplicationModel>
         <Fundamentals>6.3.1</Fundamentals>
         <Orleans>9.1.2</Orleans>
     </PropertyGroup>
@@ -48,7 +48,7 @@
         <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
         <PackageVersion Include="OrleansTestKit" Version="8.2.2" />
         <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
-        <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.0.0" />
+        <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.1.0" />
         <!-- Open Telemetry -->
         <PackageVersion Include="OpenTelemetry" Version="1.11.2" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />

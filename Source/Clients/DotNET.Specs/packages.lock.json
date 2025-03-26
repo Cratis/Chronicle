@@ -4,9 +4,9 @@
     "net9.0": {
       "Cratis.Applications": {
         "type": "Direct",
-        "requested": "[15.5.4, )",
-        "resolved": "15.5.4",
-        "contentHash": "dBmfOMZv9TRRGadMWOf2JQ2/TbVT0DAu66NhsjbbFFsYhx/wornG64OCZsHattjmPyRNhxSFVqOIMz/e33supg==",
+        "requested": "[15.6.0, )",
+        "resolved": "15.6.0",
+        "contentHash": "Gsr3ErEVr3786tqQ9RD87P4t1x02ZbLJymic9mQbpnwD80JR8+3/LxTxbpqc2iw3iNEG0/ZlIUXleaadECpgbQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.1",
           "FluentValidation": "11.11.0",

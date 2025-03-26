@@ -13,9 +13,9 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "Direct",
-        "requested": "[15.5.4, )",
-        "resolved": "15.5.4",
-        "contentHash": "G8t3uPPVaeDAfUdoXa7szxySxBgWcutJe7FdAu1bxciUz5+cSCsiNtTiY1hPDMnl0VYLfZXniD+dQsRf1rUQhw==",
+        "requested": "[15.6.0, )",
+        "resolved": "15.6.0",
+        "contentHash": "PoOXGpTTzG/a6OVPUp2YpqD0lUHbu1Hsx5vZ0M9/wsrFL/K84tGxT3ZLPNMXK++PaktZL/ReDr2fg/aI7Qztlw==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.1",
           "Microsoft.Extensions.Logging": "9.0.3",
@@ -1470,7 +1470,7 @@
       "Cratis.Chronicle.Grains": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.5.4, )",
+          "Cratis.Applications": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
@@ -1488,7 +1488,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.5.4, )",
+          "Cratis.Applications.Orleans": "[15.6.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1568,7 +1568,7 @@
       "Cratis.Chronicle.Storage.MongoDB": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.MongoDB": "[15.5.4, )",
+          "Cratis.Applications.MongoDB": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
@@ -1578,7 +1578,7 @@
           "Microsoft.Orleans.Serialization": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "MongoDB.Driver": "[3.2.1, )",
-          "Orleans.Providers.MongoDB": "[9.0.0, )",
+          "Orleans.Providers.MongoDB": "[9.1.0, )",
           "Polly.Core": "[8.5.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
@@ -1596,9 +1596,9 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.5.4, )",
-        "resolved": "15.5.4",
-        "contentHash": "dBmfOMZv9TRRGadMWOf2JQ2/TbVT0DAu66NhsjbbFFsYhx/wornG64OCZsHattjmPyRNhxSFVqOIMz/e33supg==",
+        "requested": "[15.6.0, )",
+        "resolved": "15.6.0",
+        "contentHash": "Gsr3ErEVr3786tqQ9RD87P4t1x02ZbLJymic9mQbpnwD80JR8+3/LxTxbpqc2iw3iNEG0/ZlIUXleaadECpgbQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.1",
           "FluentValidation": "11.11.0",
@@ -1610,11 +1610,11 @@
       },
       "Cratis.Applications.MongoDB": {
         "type": "CentralTransitive",
-        "requested": "[15.5.4, )",
-        "resolved": "15.5.4",
-        "contentHash": "SUaVAmQcYyOKZUZBbQaYv/OGyusNJjoXGj3am2Yv4oDOiT4BuBcKN2cy08G7tKPG2uyFTNDcL1YC0cJic/bUnA==",
+        "requested": "[15.6.0, )",
+        "resolved": "15.6.0",
+        "contentHash": "ssIWchAoIrSS7AYRy2F5bbESlNcIdwti2nqRP4YJeaG2pkhPgdLmf8ME5So2Sa0QmgiIqtlGkTiQNGpFI06jIQ==",
         "dependencies": {
-          "Cratis.Applications": "15.5.4",
+          "Cratis.Applications": "15.6.0",
           "Cratis.Fundamentals": "6.3.1",
           "Cratis.Metrics.Roslyn": "6.3.1",
           "Microsoft.Extensions.Hosting": "9.0.3",
@@ -1996,12 +1996,12 @@
       },
       "Orleans.Providers.MongoDB": {
         "type": "CentralTransitive",
-        "requested": "[9.0.0, )",
-        "resolved": "9.0.0",
-        "contentHash": "0QxwfNJ1J5vvH4pDuUSFN53KBtGH7FFAPLtc6GafMbWoHZaD4IrWR3KiiWX5mFCKchmEWQuX3YG9F8wN70lBXQ==",
+        "requested": "[9.1.0, )",
+        "resolved": "9.1.0",
+        "contentHash": "vUfoYx0LnFt7X9460zQxvERlG1Zf2l9CrlE+0xSaXdqxTKNP9YZROiHwJlAIUiGd6FUoEAgobMyV+Uekg+lidg==",
         "dependencies": {
-          "Microsoft.Orleans.Reminders": "9.0.1",
-          "MongoDB.Driver": "3.0.0"
+          "Microsoft.Orleans.Reminders": "9.1.2",
+          "MongoDB.Driver": "3.2.1"
         }
       },
       "Polly.Core": {
