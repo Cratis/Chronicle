@@ -1068,8 +1068,8 @@
       },
       "MongoDB.Bson": {
         "type": "Transitive",
-        "resolved": "3.2.1",
-        "contentHash": "45w3BJU3sVejUaOVLAxQiEdWkNH+iyxMs3lDh4l2lUFbOb/s4uB++UoQY/3TCQrupQyx1/y7yzC5I76o4h7fFw==",
+        "resolved": "3.3.0",
+        "contentHash": "6y1uFFmU3O7tIAOcWmOkFImar+VtSeaia3bzaZTDXc30CP1zsPaUNLhM8CzUCzEzGc02rQlEaWQwV/LzA0NlXA==",
         "dependencies": {
           "System.Memory": "4.5.5",
           "System.Runtime.CompilerServices.Unsafe": "5.0.0"
@@ -1519,7 +1519,7 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )",
           "Testcontainers": "[4.3.0, )",
-          "mongodb.driver": "[3.2.1, )",
+          "mongodb.driver": "[3.3.0, )",
           "xunit": "[2.9.3, )"
         }
       },
@@ -1618,7 +1618,7 @@
           "Microsoft.Orleans.Reminders": "[9.1.2, )",
           "Microsoft.Orleans.Serialization": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
-          "MongoDB.Driver": "[3.2.1, )",
+          "MongoDB.Driver": "[3.3.0, )",
           "Orleans.Providers.MongoDB": "[9.1.0, )",
           "Polly.Core": "[8.5.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -2099,13 +2099,13 @@
       },
       "MongoDB.Driver": {
         "type": "CentralTransitive",
-        "requested": "[3.2.1, )",
-        "resolved": "3.2.1",
-        "contentHash": "ynT4Mc0ilT+DSQBbobfORqCWqm5UdHIX3Nc59oQH3XbPi43jKiqf7SK8NLBmQsB6RJBJPR+WdIeNLtzyLj3U3g==",
+        "requested": "[3.3.0, )",
+        "resolved": "3.3.0",
+        "contentHash": "1EVdMMTsUllMJC+4BPQlcxGzn1pB43vAQ03VCx0QpfbhzaYTqnuHKBp3rAPG5aSo2az4JXKXwrQca7GhP/NhUQ==",
         "dependencies": {
           "DnsClient": "1.6.1",
           "Microsoft.Extensions.Logging.Abstractions": "2.0.0",
-          "MongoDB.Bson": "3.2.1",
+          "MongoDB.Bson": "3.3.0",
           "SharpCompress": "0.30.1",
           "Snappier": "1.0.0",
           "System.Buffers": "4.5.1",
