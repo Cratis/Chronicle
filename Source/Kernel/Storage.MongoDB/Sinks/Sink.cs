@@ -45,19 +45,12 @@ public class Sink(
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = Collection;
-        var ns = collection.CollectionNamespace;
 
         using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
             return expandoObjectConverter.ToExpandoObject(instance, model.Schema);
-        }
-        if (key.ToString() == "2a8e8ca6-4ca4-420e-8ec1-7a9d845f5704")
-        {
-            var all = collection.Find(_ => true).ToList();
-            Console.WriteLine(ns);
-            all = collection.Find(_ => true).ToList();
         }
 
         return default;
