@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
@@ -13,6 +14,21 @@ namespace Cratis.Chronicle.Projections.Pipelines;
 /// </summary>
 public static class ChangesetExtensions
 {
+    /// <summary>
+    /// Set the model instance as not initialized.
+    /// </summary>
+    /// <param name="changeset">Changeset to set to.</param>
+    /// <param name="isInitialized">Whether the model instance is initialized.</param>
+    public static void SetInitialized(this IChangeset<AppendedEvent, ExpandoObject> changeset, bool isInitialized)
+    {
+        changeset.Add(
+            new PropertiesChanged<ExpandoObject>(
+                changeset.CurrentState,
+                [
+                    new PropertyDifference(WellKnownProperties.ModelInstanceInitialized, null, isInitialized)
+                ]));
+    }
+
     /// <summary>
     /// Adds properties from a source type, any existing modifications to these properties will not be included.
     /// </summary>

@@ -144,7 +144,7 @@ public class Projection : IProjection, IDisposable
             var operation = child.GetOperationTypeFor(eventType);
             if (operation != ProjectionOperationType.None)
             {
-                return operation;
+                return operation | ProjectionOperationType.ChildrenAffected;
             }
         }
 

@@ -59,6 +59,7 @@ public class ProjectionPipelineManager(
         return _pipelines[key] = new ProjectionPipeline(
             projection,
             sink,
+            namespaceStorage.Changesets,
             objectComparer,
             steps,
             loggerFactory.CreateLogger<ProjectionPipeline>());

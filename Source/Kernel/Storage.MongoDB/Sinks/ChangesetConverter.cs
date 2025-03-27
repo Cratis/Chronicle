@@ -89,7 +89,8 @@ public class ChangesetConverter(
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
+                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
+                    joinTasks.Add(applyActualChangesTask);
                     break;
             }
         }
