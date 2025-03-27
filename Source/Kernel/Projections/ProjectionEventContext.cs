@@ -44,6 +44,11 @@ public record ProjectionEventContext(
     public bool IsRemove => OperationType.HasFlag(ProjectionOperationType.Remove);
 
     /// <summary>
+    /// Whether the operation type affects children.
+    /// </summary>
+    public bool ChildrenAffected => OperationType.HasFlag(ProjectionOperationType.ChildrenAffected);
+
+    /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
     /// <see cref="AppendedEvent"/>.
     /// </summary>
