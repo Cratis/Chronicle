@@ -3,7 +3,8 @@
     "port": 35000,
     "features": {
         "api": true,
-        "workbench": true
+        "workbench": true,
+        "changesetStorage": false
     },
     "storage": {
         "type": "MongoDB",
