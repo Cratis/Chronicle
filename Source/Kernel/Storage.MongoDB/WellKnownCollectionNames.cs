@@ -94,11 +94,6 @@ public static class WellKnownCollectionNames
     public const string ProjectionDefinitions = "projection-definitions";
 
     /// <summary>
-    /// The collection that holds projection definitions.
-    /// </summary>
-    public const string Changesets = "changesets";
-
-    /// <summary>
     /// The collection that holds the definitions of constraints.
     /// </summary>
     public const string Constraints = "constraints";
