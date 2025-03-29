@@ -1263,6 +1263,15 @@
           "System.Text.Json": "[9.0.3, )"
         }
       },
+      "Cratis.Chronicle.Configuration": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Fundamentals": "[6.3.1, )",
+          "Microsoft.Orleans.Sdk": "[9.1.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.3, )"
+        }
+      },
       "Cratis.Chronicle.Connections": {
         "type": "Project",
         "dependencies": {
@@ -1305,6 +1314,7 @@
         "dependencies": {
           "Cratis.Applications": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
+          "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",

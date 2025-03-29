@@ -2,15 +2,6 @@
   "version": 2,
   "dependencies": {
     "net9.0": {
-      "AutoMapper": {
-        "type": "Direct",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
-        }
-      },
       "Cratis.Applications.Orleans": {
         "type": "Direct",
         "requested": "[15.6.0, )",
@@ -38,6 +29,12 @@
           "System.Reactive": "6.0.1",
           "System.Text.Json": "9.0.3"
         }
+      },
+      "ILRepack.Lib.MSBuild.Task": {
+        "type": "Direct",
+        "requested": "[2.0.34.1, )",
+        "resolved": "2.0.34.1",
+        "contentHash": "QHqCm+bTalw4/Jl+k0l0llUJmsv7ftkxZN+CnXdbJ4Fy6Xr2I+OGq4qY5rma+vRAy1veGQCCBcUr+VFVNwBi5A=="
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
@@ -203,6 +200,42 @@
           "System.Memory.Data": "8.0.1"
         }
       },
+      "Microsoft.Orleans.Streaming": {
+        "type": "Direct",
+        "requested": "[9.1.2, )",
+        "resolved": "9.1.2",
+        "contentHash": "TtXstVruPTPjbPGXjwttHBtRZpUGARJfVnKXLyFqKZXw8J7QFmcOMHcq3dLm+8Mi/9Xu8X5AhPcMQASo8AlPdQ==",
+        "dependencies": {
+          "Microsoft.AspNetCore.Connections.Abstractions": "8.0.11",
+          "Microsoft.CodeAnalysis.Analyzers": "3.11.0",
+          "Microsoft.CodeAnalysis.Common": "4.5.0",
+          "Microsoft.CodeAnalysis.Workspaces.Common": "4.5.0",
+          "Microsoft.Extensions.Configuration": "8.0.0",
+          "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Configuration.Binder": "8.0.2",
+          "Microsoft.Extensions.Configuration.Json": "8.0.1",
+          "Microsoft.Extensions.DependencyInjection": "8.0.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+          "Microsoft.Extensions.DependencyModel": "8.0.2",
+          "Microsoft.Extensions.Hosting": "8.0.1",
+          "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
+          "Microsoft.Extensions.Logging": "8.0.1",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Logging.Console": "8.0.1",
+          "Microsoft.Extensions.Logging.Debug": "8.0.1",
+          "Microsoft.Extensions.ObjectPool": "8.0.11",
+          "Microsoft.Extensions.Options": "8.0.2",
+          "Microsoft.Extensions.Options.ConfigurationExtensions": "8.0.0",
+          "Microsoft.Orleans.Analyzers": "9.1.2",
+          "Microsoft.Orleans.CodeGenerator": "9.1.2",
+          "Microsoft.Orleans.Runtime": "9.1.2",
+          "Newtonsoft.Json": "13.0.3",
+          "System.Collections.Immutable": "8.0.0",
+          "System.IO.Hashing": "8.0.0",
+          "System.IO.Pipelines": "8.0.0",
+          "System.Memory.Data": "8.0.1"
+        }
+      },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
         "requested": "[8.0.0, )",
@@ -222,6 +255,22 @@
           "NJsonSchema.Annotations": "11.1.0",
           "Namotion.Reflection": "3.2.0",
           "Newtonsoft.Json": "13.0.3"
+        }
+      },
+      "OneOf": {
+        "type": "Direct",
+        "requested": "[3.0.271, )",
+        "resolved": "3.0.271",
+        "contentHash": "pqpqeK8xQGggExhr4tesVgJkjdn+9HQAO0QgrYV2hFjE3y90okzk1kQMntMiUOGfV7FrCUfKPaVvPBD4IANqKg=="
+      },
+      "Orleans.Providers.MongoDB": {
+        "type": "Direct",
+        "requested": "[9.1.0, )",
+        "resolved": "9.1.0",
+        "contentHash": "vUfoYx0LnFt7X9460zQxvERlG1Zf2l9CrlE+0xSaXdqxTKNP9YZROiHwJlAIUiGd6FUoEAgobMyV+Uekg+lidg==",
+        "dependencies": {
+          "Microsoft.Orleans.Reminders": "9.1.2",
+          "MongoDB.Driver": "3.2.1"
         }
       },
       "protobuf-net.Grpc": {
@@ -1385,9 +1434,6 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Connections": "[1.0.0, )",
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "FluentValidation": "[11.11.0, )",
           "Grpc.Net.Client": "[2.70.0, )",
@@ -1396,7 +1442,6 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )",
-          "automapper": "[14.0.0, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -1426,6 +1471,15 @@
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "OneOf": "[3.0.271, )",
           "OneOf.SourceGenerator": "[3.0.271, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.3, )"
+        }
+      },
+      "Cratis.Chronicle.Configuration": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Fundamentals": "[6.3.1, )",
+          "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )"
         }
@@ -1472,6 +1526,7 @@
         "dependencies": {
           "Cratis.Applications": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
+          "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
@@ -1570,6 +1625,7 @@
         "dependencies": {
           "Cratis.Applications.MongoDB": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
+          "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
@@ -1863,42 +1919,6 @@
           "System.IO.Pipelines": "8.0.0"
         }
       },
-      "Microsoft.Orleans.Streaming": {
-        "type": "CentralTransitive",
-        "requested": "[9.1.2, )",
-        "resolved": "9.1.2",
-        "contentHash": "TtXstVruPTPjbPGXjwttHBtRZpUGARJfVnKXLyFqKZXw8J7QFmcOMHcq3dLm+8Mi/9Xu8X5AhPcMQASo8AlPdQ==",
-        "dependencies": {
-          "Microsoft.AspNetCore.Connections.Abstractions": "8.0.11",
-          "Microsoft.CodeAnalysis.Analyzers": "3.11.0",
-          "Microsoft.CodeAnalysis.Common": "4.5.0",
-          "Microsoft.CodeAnalysis.Workspaces.Common": "4.5.0",
-          "Microsoft.Extensions.Configuration": "8.0.0",
-          "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
-          "Microsoft.Extensions.Configuration.Binder": "8.0.2",
-          "Microsoft.Extensions.Configuration.Json": "8.0.1",
-          "Microsoft.Extensions.DependencyInjection": "8.0.1",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
-          "Microsoft.Extensions.DependencyModel": "8.0.2",
-          "Microsoft.Extensions.Hosting": "8.0.1",
-          "Microsoft.Extensions.Hosting.Abstractions": "8.0.1",
-          "Microsoft.Extensions.Logging": "8.0.1",
-          "Microsoft.Extensions.Logging.Abstractions": "8.0.2",
-          "Microsoft.Extensions.Logging.Console": "8.0.1",
-          "Microsoft.Extensions.Logging.Debug": "8.0.1",
-          "Microsoft.Extensions.ObjectPool": "8.0.11",
-          "Microsoft.Extensions.Options": "8.0.2",
-          "Microsoft.Extensions.Options.ConfigurationExtensions": "8.0.0",
-          "Microsoft.Orleans.Analyzers": "9.1.2",
-          "Microsoft.Orleans.CodeGenerator": "9.1.2",
-          "Microsoft.Orleans.Runtime": "9.1.2",
-          "Newtonsoft.Json": "13.0.3",
-          "System.Collections.Immutable": "8.0.0",
-          "System.IO.Hashing": "8.0.0",
-          "System.IO.Pipelines": "8.0.0",
-          "System.Memory.Data": "8.0.1"
-        }
-      },
       "MongoDB.Driver": {
         "type": "CentralTransitive",
         "requested": "[3.3.0, )",
@@ -1913,12 +1933,6 @@
           "System.Buffers": "4.5.1",
           "ZstdSharp.Port": "0.7.3"
         }
-      },
-      "OneOf": {
-        "type": "CentralTransitive",
-        "requested": "[3.0.271, )",
-        "resolved": "3.0.271",
-        "contentHash": "pqpqeK8xQGggExhr4tesVgJkjdn+9HQAO0QgrYV2hFjE3y90okzk1kQMntMiUOGfV7FrCUfKPaVvPBD4IANqKg=="
       },
       "OneOf.SourceGenerator": {
         "type": "CentralTransitive",
@@ -1992,16 +2006,6 @@
           "Microsoft.Extensions.Configuration": "9.0.0",
           "Microsoft.Extensions.Options": "9.0.0",
           "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.11.2, 2.0.0)"
-        }
-      },
-      "Orleans.Providers.MongoDB": {
-        "type": "CentralTransitive",
-        "requested": "[9.1.0, )",
-        "resolved": "9.1.0",
-        "contentHash": "vUfoYx0LnFt7X9460zQxvERlG1Zf2l9CrlE+0xSaXdqxTKNP9YZROiHwJlAIUiGd6FUoEAgobMyV+Uekg+lidg==",
-        "dependencies": {
-          "Microsoft.Orleans.Reminders": "9.1.2",
-          "MongoDB.Driver": "3.2.1"
         }
       },
       "Polly.Core": {

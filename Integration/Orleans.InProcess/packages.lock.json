@@ -1383,9 +1383,6 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Connections": "[1.0.0, )",
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "FluentValidation": "[11.11.0, )",
           "Grpc.Net.Client": "[2.70.0, )",
@@ -1394,7 +1391,6 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )",
-          "automapper": "[14.0.0, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -1424,6 +1420,15 @@
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "OneOf": "[3.0.271, )",
           "OneOf.SourceGenerator": "[3.0.271, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.3, )"
+        }
+      },
+      "Cratis.Chronicle.Configuration": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Fundamentals": "[6.3.1, )",
+          "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )"
         }
@@ -1470,6 +1475,7 @@
         "dependencies": {
           "Cratis.Applications": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
+          "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
@@ -1536,27 +1542,19 @@
       "Cratis.Chronicle.Orleans.InProcess": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper": "[14.0.0, )",
           "Cratis.Applications.Orleans": "[15.6.0, )",
           "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
-          "Cratis.Chronicle.Compliance": "[1.0.0, )",
-          "Cratis.Chronicle.Concepts": "[1.0.0, )",
-          "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
-          "Cratis.Chronicle.Grains": "[1.0.0, )",
-          "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Orleans": "[1.0.0, )",
-          "Cratis.Chronicle.Services": "[1.0.0, )",
-          "Cratis.Chronicle.Setup": "[1.0.0, )",
-          "Cratis.Chronicle.Storage": "[1.0.0, )",
-          "Cratis.Chronicle.Storage.MongoDB": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
+          "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "NJsonSchema": "[11.1.0, )",
+          "OneOf": "[3.0.271, )",
+          "Orleans.Providers.MongoDB": "[9.1.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )",
           "protobuf-net.Grpc": "[1.2.2, )"
@@ -1567,20 +1565,6 @@
         "dependencies": {
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )"
-        }
-      },
-      "Cratis.Chronicle.Services": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
-          "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
-          "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
-          "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )"
@@ -1611,6 +1595,7 @@
         "dependencies": {
           "Cratis.Applications.MongoDB": "[15.6.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
+          "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
@@ -1624,15 +1609,6 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )"
-        }
-      },
-      "AutoMapper": {
-        "type": "CentralTransitive",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
         }
       },
       "Castle.Core": {
