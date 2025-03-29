@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Contracts;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -22,8 +21,8 @@ public interface IConstraintDefinition
     ConstraintViolationMessageProvider MessageCallback { get; }
 
     /// <summary>
-    /// Converts the definition to a <see cref="Contract"/> representation.
+    /// Converts the definition to a contract representation.
     /// </summary>
-    /// <returns>A new <see cref="Contract"/> representation.</returns>
+    /// <returns>A new contract representation.</returns>
     Constraint ToContract();
 }

@@ -29,9 +29,6 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
     public IEnumerable<Type> Projections => provider.Projections;
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Adapters => provider.Adapters;
-
-    /// <inheritdoc/>
     public IEnumerable<Type> Reactors => provider.Reactors;
 
     /// <inheritdoc/>

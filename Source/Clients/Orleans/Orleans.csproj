@@ -6,16 +6,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
         <PackageReference Include="Microsoft.Orleans.Sdk" />
     </ItemGroup>
 </Project>

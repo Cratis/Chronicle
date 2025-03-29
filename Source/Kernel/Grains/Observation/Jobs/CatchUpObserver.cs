@@ -33,7 +33,7 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
             }
             else
             {
-                logger.NoneEventsWereHandled(nameof(CatchUpObserver));
+                logger.NoEventsWereHandled(nameof(CatchUpObserver));
             }
         }
 

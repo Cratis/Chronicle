@@ -2,15 +2,6 @@
   "version": 2,
   "dependencies": {
     "net9.0": {
-      "AutoMapper": {
-        "type": "Direct",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
-        }
-      },
       "Cratis.Fundamentals": {
         "type": "Direct",
         "requested": "[6.3.1, )",
@@ -41,6 +32,12 @@
           "Grpc.Net.Common": "2.70.0",
           "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
         }
+      },
+      "ILRepack.Lib.MSBuild.Task": {
+        "type": "Direct",
+        "requested": "[2.0.34.1, )",
+        "resolved": "2.0.34.1",
+        "contentHash": "QHqCm+bTalw4/Jl+k0l0llUJmsv7ftkxZN+CnXdbJ4Fy6Xr2I+OGq4qY5rma+vRAy1veGQCCBcUr+VFVNwBi5A=="
       },
       "Meziantou.Analyzer": {
         "type": "Direct",

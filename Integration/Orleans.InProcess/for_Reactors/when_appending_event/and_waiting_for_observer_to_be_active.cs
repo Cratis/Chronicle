@@ -53,7 +53,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
             await ReactorObserver.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First, 5.Seconds());
             ReactorObserverState = await ReactorObserver.GetState();
 
-            FailedPartitions = await EventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+            FailedPartitions = await ServicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()
             {
                 EventStore = EventStore.Name.Value,
                 Namespace = Concepts.EventStoreNamespaceName.Default,

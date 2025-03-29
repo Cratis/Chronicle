@@ -1052,9 +1052,6 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Connections": "[1.0.0, )",
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "FluentValidation": "[11.11.0, )",
           "Grpc.Net.Client": "[2.70.0, )",
@@ -1062,29 +1059,6 @@
           "NJsonSchema": "[11.1.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )",
-          "automapper": "[14.0.0, )",
-          "protobuf-net.Grpc": "[1.2.2, )"
-        }
-      },
-      "Cratis.Chronicle.Connections": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
-          "Grpc.Net.Client": "[2.70.0, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )",
-          "protobuf-net.Grpc": "[1.2.2, )"
-        }
-      },
-      "Cratis.Chronicle.Contracts": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
-          "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
@@ -1102,15 +1076,6 @@
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )",
           "humanizer": "[2.14.1, )"
-        }
-      },
-      "AutoMapper": {
-        "type": "CentralTransitive",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
         }
       },
       "FluentValidation": {
