@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
@@ -15,14 +16,23 @@ public interface IProjectionPipeline
     /// <summary>
     /// Notifies about the beginning of a replay.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>Awaitable task.</returns>
-    Task BeginReplay();
+    Task BeginReplay(ReplayContext context);
+
+    /// <summary>
+    /// Notifies about the resuming of a replay.
+    /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ResumeReplay(ReplayContext context);
 
     /// <summary>
     /// Notifies about the end of a replay.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>Awaitable task.</returns>
-    Task EndReplay();
+    Task EndReplay(ReplayContext context);
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

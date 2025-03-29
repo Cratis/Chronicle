@@ -9,6 +9,8 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);SA1600;CA1034;CS8981;SA1201;ORLEANS0010</NoWarn>
         <NuGetAuditMode>all</NuGetAuditMode>
+
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>

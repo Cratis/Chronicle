@@ -34,8 +34,7 @@ public class ChangesetConverter(
     public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber,
-        bool isReplaying)
+        EventSequenceNumber eventSequenceNumber)
     {
         var hasChanges = false;
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
@@ -49,8 +48,7 @@ public class ChangesetConverter(
             ref updateBuilder,
             ref hasChanges,
             arrayFiltersForDocument,
-            eventSequenceNumber,
-            isReplaying);
+            eventSequenceNumber);
 
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
@@ -64,8 +62,7 @@ public class ChangesetConverter(
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
         ArrayFilters arrayFiltersForDocument,
-        EventSequenceNumber eventSequenceNumber,
-        bool isReplaying)
+        EventSequenceNumber eventSequenceNumber)
     {
         var joinTasks = new List<Task>();
 
@@ -88,11 +85,12 @@ public class ChangesetConverter(
                     break;
 
                 case Joined joined:
-                    PerformJoined(key, updateDefinitionBuilder, isReplaying, joinTasks, joined, eventSequenceNumber);
+                    PerformJoined(key, updateDefinitionBuilder, joinTasks, joined, eventSequenceNumber);
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, isReplaying);
+                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
+                    joinTasks.Add(applyActualChangesTask);
                     break;
             }
         }
@@ -197,20 +195,20 @@ public class ChangesetConverter(
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
     }
 
-    void PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined, EventSequenceNumber eventSequenceNumber)
+    void PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, List<Task> joinTasks, Joined joined, EventSequenceNumber eventSequenceNumber)
     {
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
         var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new ArrayFilters();
-        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber, isReplaying).Wait();
-        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
+        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber).Wait();
 
         if (!hasJoinChanges)
         {
             return;
         }
+        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
         var filter = CreateJoinedFilterDefinition(key, joined);
         joinTasks.Add(collection.UpdateManyAsync(
             filter,

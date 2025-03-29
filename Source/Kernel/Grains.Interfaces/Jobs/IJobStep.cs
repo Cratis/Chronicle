@@ -14,40 +14,28 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public interface IJobStep : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Start the job step.
-    /// </summary>
-    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
-    /// <param name="request">Request to start it with.</param>
-    /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, object request);
-
-    /// <summary>
     /// Prepare the job step.
     /// </summary>
     /// <param name="request">Request to prepare it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Prepare(object request);
+    Task<Result<PrepareJobStepError>> Prepare(object request);
 
     /// <summary>
-    /// Pause the job step.
+    /// Start the job step.
     /// </summary>
+    /// <param name="jobGrainId">The <see cref="GrainId"/> for the parent job.</param>
     /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
-    Task<Result<JobStepError>> Pause();
-
-    /// <summary>
-    /// Resume a job step.
-    /// </summary>
-    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
-    /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepResumeSuccess, JobStepError>> Resume(GrainId jobId);
+    Task<Result<StartJobStepError>> Start(GrainId jobGrainId);
 
     /// <summary>
     /// Stop the job step.
     /// </summary>
+    /// <param name="removing">Whether job step is being removed.</param>
+    /// <remarks>
+    /// A stopped job step can be started again later given it has been prepared.
+    /// </remarks>
     /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
-    Task<Result<JobStepError>> Stop();
+    Task<Result<JobStepError>> Stop(bool removing);
 
     /// <summary>
     /// Report a status change.
@@ -69,20 +57,20 @@ public interface IJobStep : IGrainWithGuidCompoundKey
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job step.</typeparam>
 /// <typeparam name="TResult">Type of the result for the job step.</typeparam>
-public interface IJobStep<in TRequest, TResult> : ICpuBoundWorker<TRequest, JobStepResult>, IJobStep
+/// <typeparam name="TState">Type of the state.</typeparam>
+public interface IJobStep<in TRequest, TResult, TState> : IGrainWithBackgroundTask<TRequest, JobStepResult>, IJobStep
 {
-    /// <summary>
-    /// Start the job step.
-    /// </summary>
-    /// <param name="jobId">The <see cref="GrainId"/> for the parent job.</param>
-    /// <param name="request">Request to start it with.</param>
-    /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Start(GrainId jobId, TRequest request);
-
     /// <summary>
     /// Prepare the job step.
     /// </summary>
     /// <param name="request">Request to prepare it with.</param>
     /// <returns>Awaitable task.</returns>
-    Task<Result<JobStepPrepareStartError>> Prepare(TRequest request);
+    Task<Result<PrepareJobStepError>> Prepare(TRequest request);
+
+    /// <summary>
+    /// Gets the <typeparamref name="TState"/>.
+    /// </summary>
+    /// <returns>The state.</returns>
+    [AlwaysInterleave]
+    Task<TState> GetState();
 }

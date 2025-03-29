@@ -16,7 +16,7 @@ public enum ResumeJobSuccess
     /// <summary>
     /// Job cannot be resumed.
     /// </summary>
-    JobCannotBeResumed = 1,
+    JobIsCompleted = 1,
 
     /// <summary>
     /// Job cannot be resumed because it is already running.

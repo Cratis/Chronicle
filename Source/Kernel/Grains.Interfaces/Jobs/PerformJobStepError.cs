@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// <param name="ExceptionStackTrace">The optional exception stack trace.</param>
 /// <param name="Cancelled">Whether the job step was cancelled.</param>
 [GenerateSerializer]
-public record PerformJobStepError(object? PartialResult, IEnumerable<string>? ErrorMessages, string? ExceptionStackTrace, bool Cancelled)
+public record PerformJobStepError(object? PartialResult, IList<string>? ErrorMessages, string? ExceptionStackTrace, bool Cancelled)
 {
-    static readonly IEnumerable<string> _cancelledErrorMessage = ["Job step task was cancelled"];
+    static readonly IList<string> _cancelledErrorMessage = ["Job step task was cancelled"];
 
     /// <summary>
     /// Gets whether there is a partial result.
@@ -28,7 +28,7 @@ public record PerformJobStepError(object? PartialResult, IEnumerable<string>? Er
     /// <param name="exceptionStackTrace">The optional exception stack trace.</param>
     /// <returns>The <see cref="PerformJobStepError"/>.</returns>
     public static PerformJobStepError Failed(IEnumerable<string> errorMessages, string? exceptionStackTrace) =>
-        new(default, errorMessages, exceptionStackTrace, false);
+        new(Enumerable.Empty<string>(), errorMessages.ToList(), exceptionStackTrace, false);
 
     /// <summary>
     /// Creates <see cref="PerformJobStepError"/> for a completely failed job step.
@@ -36,7 +36,7 @@ public record PerformJobStepError(object? PartialResult, IEnumerable<string>? Er
     /// <param name="exception">The exception that occurred.</param>
     /// <returns>The <see cref="PerformJobStepError"/>.</returns>
     public static PerformJobStepError Failed(Exception exception) =>
-        new(default, exception.GetAllMessages(), exception.StackTrace, false);
+        new(default, exception.GetAllMessages().ToList(), exception.StackTrace, false);
 
     /// <summary>
     /// Creates <see cref="PerformJobStepError"/> for a partially failed job step.
@@ -46,7 +46,7 @@ public record PerformJobStepError(object? PartialResult, IEnumerable<string>? Er
     /// <param name="exceptionStackTrace">The optional exception stack trace.</param>
     /// <returns>The <see cref="PerformJobStepError"/>.</returns>
     public static PerformJobStepError FailedWithPartialResult(object partialResult, IEnumerable<string> errorMessages, string? exceptionStackTrace) =>
-        new(partialResult, errorMessages, exceptionStackTrace, false);
+        new(partialResult, errorMessages.ToList(), exceptionStackTrace, false);
 
     /// <summary>
     /// Creates <see cref="PerformJobStepError"/> for a partially failed job step.

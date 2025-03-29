@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
@@ -14,6 +15,7 @@ using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -33,6 +35,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
+/// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
     IDatabase database,
@@ -44,6 +47,7 @@ public class Storage(
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
     IJobTypes jobTypes,
+    IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
@@ -52,7 +56,7 @@ public class Storage(
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
         var collection = GetCollection();
-        var result = await collection.FindAsync(_ => true);
+        using var result = await collection.FindAsync(_ => true);
         return result.ToList().Select(_ => _.Name);
     }
 
@@ -68,9 +72,13 @@ public class Storage(
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
-        if (_eventStores.TryGetValue(eventStore, out var storage))
+        var pair = _eventStores
+            .Select(kvp => new { kvp.Key, kvp.Value })
+            .FirstOrDefault(_ => _.Key.Value.Equals(eventStore.Value, StringComparison.InvariantCultureIgnoreCase));
+
+        if (pair is not null)
         {
-            return storage;
+            return pair.Value;
         }
 
         var collection = GetCollection();
@@ -87,6 +95,7 @@ public class Storage(
             jsonSerializerOptions,
             sinkFactories,
             jobTypes,
+            options,
             loggerFactory);
 
         return _eventStores[eventStore] = eventStoreStorage;

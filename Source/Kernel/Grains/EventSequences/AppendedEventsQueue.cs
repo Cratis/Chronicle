@@ -85,6 +85,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public Task Unsubscribe(ObserverKey observerKey)
     {
+        if (_isDisposed)
+        {
+            return Task.CompletedTask;
+        }
+
         var subscription = _subscriptions.SingleOrDefault(subscription => subscription.ObserverKey == observerKey);
         if (subscription != null)
         {

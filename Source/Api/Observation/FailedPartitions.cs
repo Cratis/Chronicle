@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Reactive;
 
 namespace Cratis.Chronicle.Api.Observation;
 
@@ -24,10 +25,6 @@ public class FailedPartitions(IFailedPartitions failedPartitions) : ControllerBa
     public ISubject<IEnumerable<FailedPartition>> AllFailedPartitions(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
-        [FromRoute] string? observerId = default)
-    {
-        var subject = new Subject<IEnumerable<FailedPartition>>();
-        failedPartitions.ObserveFailedPartitions(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId }).Subscribe(subject);
-        return subject;
-    }
+        [FromRoute] string? observerId = default) =>
+        failedPartitions.InvokeAndWrapWithSubject(token => failedPartitions.ObserveFailedPartitions(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId }, token));
 }

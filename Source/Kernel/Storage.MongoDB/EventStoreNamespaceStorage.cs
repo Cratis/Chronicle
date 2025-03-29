@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Changes;
@@ -22,11 +23,13 @@ using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Recommendations;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -59,6 +62,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
     /// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
+    /// <param name="options"><see cref="ChronicleOptions"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
         EventStoreName eventStore,
@@ -70,6 +74,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         JsonSerializerOptions jsonSerializerOptions,
         IInstancesOf<ISinkFactory> sinkFactories,
         IJobTypes jobTypes,
+        IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
         _eventStore = eventStore;
@@ -79,7 +84,10 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
         _loggerFactory = loggerFactory;
-        Changesets = new ChangesetStorage(eventStoreNamespaceDatabase);
+
+        Changesets = options.Value.Features.ChangesetStorage ?
+                        new ChangesetStorage(eventStoreNamespaceDatabase) :
+                        new NullChangesetStorage();
         Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
         Jobs = new JobStorage(eventStoreNamespaceDatabase, jobTypes);
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
@@ -88,6 +96,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, Observers);
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
+        ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
+        ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
 
         _converter = new EventConverter(
             eventStore,
@@ -124,6 +134,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public ISinks Sinks { get; }
+
+    /// <inheritdoc/>
+    public IReplayContexts ReplayContexts { get; }
+
+    /// <inheritdoc/>
+    public IReplayedModelsStorage ReplayedModels { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

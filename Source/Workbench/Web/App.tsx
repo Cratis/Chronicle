@@ -9,23 +9,36 @@ import { EventStore } from "./Features/EventStore/EventStore";
 import { LayoutProvider } from './Layout/Default/context/LayoutContext';
 import { DialogComponents } from '@cratis/applications.react.mvvm/dialogs';
 import { ConfirmationDialog } from 'Components/Dialogs';
+import { ApplicationModel } from '@cratis/applications.react';
+import { MVVM } from '@cratis/applications.react.mvvm';
+
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 function App() {
-    useTheme();
+    const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
+    const basePath = basePathElement?.content ?? '/';
+
+    useTheme(basePath);
     return (
-        <LayoutProvider>
-            <DialogComponents confirmation={ConfirmationDialog}>
-                <BrowserRouter>
-                    <Routes>
-                        <Route path='/' element={<Navigate to={'/home'} />} />
-                        <Route path='/home' element={<BlankLayout />}>
-                            <Route path={''} element={<Home />} />
-                        </Route>
-                        <Route path='/event-store/*' element={<EventStore />} />
-                    </Routes>
-                </BrowserRouter>
-            </DialogComponents>
-        </LayoutProvider>
+        <ApplicationModel development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
+            <MVVM>
+                <LayoutProvider>
+                    <DialogComponents confirmation={ConfirmationDialog}>
+                        <BrowserRouter>
+                            <Routes>
+                                <Route path={basePath}>
+                                    <Route path='' element={<Navigate to={'home'} />} />
+                                    <Route path='home' element={<BlankLayout />}>
+                                        <Route path={''} element={<Home />} />
+                                    </Route>
+                                    <Route path='event-store/*' element={<EventStore />} />
+                                </Route>
+                            </Routes>
+                        </BrowserRouter>
+                    </DialogComponents>
+                </LayoutProvider>
+            </MVVM>
+        </ApplicationModel>
     );
 }
 

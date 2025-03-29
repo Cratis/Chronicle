@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Grains.Recommendations;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
@@ -34,7 +35,12 @@ public class Recommendations(IGrainFactory grainFactory, IStorage storage) : IRe
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<Recommendation>> ObserveRecommendations(GetRecommendationsRequest request, CallContext context = default) =>
-        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Recommendations.ObserveRecommendations().Select(_ => _.ToContract());
+        storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).Recommendations
+            .ObserveRecommendations()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.ToContract());
 
     IRecommendationsManager GetRecommendationsManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Configuration;
 
 namespace Cratis.Chronicle.Contracts;
@@ -21,7 +22,8 @@ public interface IEventStores
     /// <summary>
     /// Observe all available event stores.
     /// </summary>
+    /// <param name="callContext">gRPC call context.</param>
     /// <returns>Observable of all event stores.</returns>
     [Operation]
-    IObservable<IEnumerable<string>> ObserveEventStores();
+    IObservable<IEnumerable<string>> ObserveEventStores(CallContext callContext = default);
 }

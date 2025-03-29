@@ -15,4 +15,9 @@ public interface IObserverJobRequest : IJobRequest
     /// Gets the <see cref="ObserverKey"/> for the request.
     /// </summary>
     ObserverKey ObserverKey { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ObserverKey"/> for the request.
+    /// </summary>
+    ObserverType ObserverType { get; }
 }

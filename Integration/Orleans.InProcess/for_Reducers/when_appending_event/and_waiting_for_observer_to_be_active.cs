@@ -8,6 +8,7 @@ using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Humanizer;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_appending_event.and_waiting_for_observer_to_be_active.context;
 using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
@@ -49,6 +50,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
             WaitingForObserverStateError = await Catch.Exception(async () => await ReducerObserver.WaitForState(ObserverRunningState.Active, TimeSpan.FromSeconds(5)));
+            await ReducerObserver.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First, 5.Seconds());
             ReducerObserverState = await ReducerObserver.GetState();
 
             FailedPartitions = await ServicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()

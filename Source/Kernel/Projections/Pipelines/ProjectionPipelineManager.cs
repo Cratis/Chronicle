@@ -46,7 +46,7 @@ public class ProjectionPipelineManager(
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
-        var sink = namespaceStorage.Sinks.GetFor(projection.Sink.TypeId, projection.Model);
+        var sink = namespaceStorage.Sinks.GetFor(projection.Sink.TypeId, projection.Sink.ConfigurationId, projection.Model);
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
@@ -59,6 +59,7 @@ public class ProjectionPipelineManager(
         return _pipelines[key] = new ProjectionPipeline(
             projection,
             sink,
+            namespaceStorage.Changesets,
             objectComparer,
             steps,
             loggerFactory.CreateLogger<ProjectionPipeline>());

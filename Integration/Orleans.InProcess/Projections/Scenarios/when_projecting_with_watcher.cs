@@ -21,23 +21,26 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         public ProjectionChangeset<Model> WatchResult;
 
         TaskCompletionSource _tcs;
+#pragma warning disable CA2213 // Disposable fields should be disposed
+        IDisposable _observable;
+#pragma warning restore CA2213 // Disposable fields should be disposed
 
         void Establish()
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
             EventsToAppend.Add(EventAppended);
-        }
-
-        async Task Because()
-        {
-            var observable = EventStore.Projections.Watch<Model>().Subscribe(result =>
+            _observable = EventStore.Projections.Watch<Model>().Subscribe(result =>
             {
                 WatchResult = result;
                 _tcs.SetResult();
             });
+        }
+
+        async Task Because()
+        {
             await _tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            observable.Dispose();
+            _observable.Dispose();
         }
     }
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
@@ -21,6 +22,16 @@ public class JobStateWithLastHandledEvent : JobState
     /// Gets or sets the value indicating whether all the events were handled or not.
     /// </summary>
     public bool HandledAllEvents { get; set; }
+
+    /// <summary>
+    /// The <see cref="ObserverKey"/>.
+    /// </summary>
+    public IObserverJobRequest ObserverRequest => (IObserverJobRequest)Request;
+
+    /// <summary>
+    /// The <see cref="ObserverDetails"/>.
+    /// </summary>
+    public ObserverDetails ObserverDetails => new (ObserverRequest.ObserverKey, ObserverRequest.ObserverType);
 
     /// <summary>
     /// Handles state based on <see cref="JobStepResult"/>.

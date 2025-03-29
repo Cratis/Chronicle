@@ -22,6 +22,7 @@ import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
+import { useRelativePath } from '../../Utils/useRelativePath';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -48,10 +49,13 @@ export const EventStore = () => {
             ]
         }
     ];
+
+    const basePath = useRelativePath('event-store');
+
     return (<>
         <Routes>
             <Route path=':eventStore'
-                element={<DefaultLayout menu={menuItems} basePath={'/event-store/:eventStore'} />}>
+                element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
                 <Route path={'types'} element={<Types />} />
                 <Route path={'namespaces'} element={<Namespaces />} />

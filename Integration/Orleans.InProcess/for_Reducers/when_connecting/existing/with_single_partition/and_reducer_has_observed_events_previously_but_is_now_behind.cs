@@ -10,6 +10,7 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.Observation;
 using Humanizer;
+using Xunit.Abstractions;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_connecting.existing.with_single_partition.and_reducer_has_observed_events_previously_but_is_now_behind.context;
 using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
@@ -25,14 +26,14 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
 
         public SomeReducer Reactor;
         public ObserverState ReducerObserverState;
-
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
+        public IEnumerable<Observation.FailedPartition> FailedPartitions;
 
         async Task Establish()
         {
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             ReducerObserver = GetObserverForReducer<ReducerWithoutDelay>();
-            await ReducerObserver.WaitTillActive();
+            await ReducerObserver.WaitTillSubscribed();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
@@ -49,9 +50,10 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
         async Task Because()
         {
             await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
+            await ReducerObserver.WaitTillSubscribed();
             await ReducerObserver.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
-            await ReducerObserver.WaitTillActive();
             ReducerObserverState = await ReducerObserver.GetState();
+            FailedPartitions = await EventStore.FailedPartitions.GetAllFailedPartitions();
         }
     }
 

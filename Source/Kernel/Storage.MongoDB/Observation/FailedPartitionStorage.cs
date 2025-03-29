@@ -17,13 +17,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
 public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFailedPartitionsStorage
 {
-    IMongoCollection<FailedPartition> Collection => database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
+    readonly IMongoCollection<FailedPartition> _collection = database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
     {
-        if (observerId == default) return Collection.Observe();
-        return Collection.Observe(_ => _.ObserverId == observerId);
+        if (observerId == default) return _collection.Observe();
+        return _collection.Observe(_ => _.ObserverId == observerId);
     }
 
     /// <inheritdoc/>
@@ -31,12 +31,12 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     {
         foreach (var failedPartition in failedPartitions.ResolvedPartitions)
         {
-            await Collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
+            await _collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
         }
 
         foreach (var failedPartition in failedPartitions.Partitions)
         {
-            await Collection.ReplaceOneAsync(
+            await _collection.ReplaceOneAsync(
                 _ => _.Id == failedPartition.Id,
                 failedPartition!,
                 new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
@@ -46,9 +46,9 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     /// <inheritdoc/>
     public async Task<FailedPartitions> GetFor(ObserverId? observerId)
     {
-        var cursor = observerId is null ?
-            await Collection.FindAsync(_ => true).ConfigureAwait(false) :
-            await Collection.FindAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
+        using var cursor = observerId is null ?
+            await _collection.FindAsync(_ => true).ConfigureAwait(false) :
+            await _collection.FindAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
 
         return new FailedPartitions
         {

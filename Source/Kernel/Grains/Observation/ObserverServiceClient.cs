@@ -18,22 +18,18 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     readonly IManagementGrain _managementGrain = grainFactory.GetGrain<IManagementGrain>(1);
 
     /// <inheritdoc/>
-    public async Task BeginReplayFor(ObserverDetails observerDetails)
-    {
-        var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
-        {
-            await GetGrainService(host).BeginReplayFor(observerDetails);
-        }
-    }
+    public async Task BeginReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.BeginReplayFor(observerDetails));
 
     /// <inheritdoc/>
-    public async Task EndReplayFor(ObserverDetails observerDetails)
+    public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.ResumeReplayFor(observerDetails));
+
+    /// <inheritdoc/>
+    public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndReplayFor(observerDetails));
+
+    async Task ForEachGrainService(Func<IObserverService, Task> callback)
     {
         var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
-        {
-            await GetGrainService(host).EndReplayFor(observerDetails);
-        }
+        var tasks = hosts.Keys.Select(host => callback(GetGrainService(host)));
+        await Task.WhenAll(tasks);
     }
 }

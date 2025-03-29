@@ -31,8 +31,22 @@ public static class ExpandoObjectExtensions
 
         var originalAsDictionary = original as IDictionary<string, object>;
         var cloneAsDictionary = clone as IDictionary<string, object>;
+        List<KeyValuePair<string, object>> safeCopy;
 
-        foreach (var (key, value) in originalAsDictionary)
+        // Note: Since our internals are not necessarily thread safe, we need to reduce the risk of conflicts
+        // when copying the key-value pairs. This is a best effort to avoid exceptions due to concurrent modifications.
+        try
+        {
+            // Attempt to copy key-value pairs safely
+            safeCopy = new List<KeyValuePair<string, object>>(originalAsDictionary);
+        }
+        catch (InvalidOperationException)
+        {
+            // Handle modification issue by retrying, could still fail - so this is a best effort fallback mechanism
+            safeCopy = originalAsDictionary.ToList();
+        }
+
+        foreach (var (key, value) in safeCopy)
         {
             if (value is null)
             {

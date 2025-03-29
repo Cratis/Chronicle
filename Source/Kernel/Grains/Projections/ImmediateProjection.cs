@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
-/// <param name="projectionManager"><see cref="IProjectionManager"/> for managing projections.</param>
+/// <param name="projectionManager"><see cref="Chronicle.Projections.IProjectionsManager"/> for managing projections.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
 /// <param name="logger">Logger for logging.</param>
@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ImmediateProjection(
     IStorage storage,
     IProjectionFactory projectionFactory,
-    IProjectionManager projectionManager,
+    Chronicle.Projections.IProjectionsManager projectionManager,
     IObjectComparer objectComparer,
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection
@@ -100,7 +100,7 @@ public class ImmediateProjection(
             var affectedProperties = new HashSet<PropertyPath>();
 
             var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
-            var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: _projection!.EventTypes);
+            using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: _projection!.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState();
             while (await cursor.MoveNext())

@@ -15,5 +15,5 @@ public class and_value_returned_for_property_is_null : given.a_unique_constraint
     async Task Because() => _result = await _validator.Validate(_context);
 
     [Fact] void should_be_valid() => _result.IsValid.ShouldBeTrue();
-    [Fact] void should_not_ask_storage_if_allowed() => _storage.DidNotReceive().IsAllowed(Arg.Any<EventSourceId>(), Arg.Any<ConstraintName>(), Arg.Any<UniqueConstraintValue>());
+    [Fact] void should_not_ask_storage_if_allowed() => _storage.DidNotReceive().IsAllowed(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<UniqueConstraintValue>());
 }

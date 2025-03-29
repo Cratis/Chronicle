@@ -18,7 +18,7 @@ public class ConstraintsStorage(IEventStoreDatabase eventStoreDatabase) : IConst
     /// <inheritdoc/>
     public async Task<IEnumerable<IConstraintDefinition>> GetDefinitions()
     {
-        var result = await _collection.FindAsync(_ => true);
+        using var result = await _collection.FindAsync(_ => true);
         return result.ToList();
     }
 

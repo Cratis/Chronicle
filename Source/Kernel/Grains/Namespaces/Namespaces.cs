@@ -30,7 +30,7 @@ public class Namespaces(
     /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName @namespace)
     {
-        if (State.Namespaces.Any(_ => _.Name == @namespace)) return;
+        if (State.Namespaces.Any(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.InvariantCultureIgnoreCase))) return;
 
         logger.AddingNamespace(@namespace);
         State.NewNamespaces.Add(new NamespaceState(@namespace, DateTimeOffset.UtcNow));
@@ -42,7 +42,8 @@ public class Namespaces(
         logger.BroadcastAddedNamespace(@namespace);
 
         var channelWriter = _namespaceAddedChannel.GetChannelWriter<NamespaceAdded>(channelId);
-        await channelWriter.Publish(new NamespaceAdded(@namespace));
+        var eventStore = this.GetPrimaryKeyString();
+        await channelWriter.Publish(new NamespaceAdded(eventStore, @namespace));
     }
 
     /// <inheritdoc/>

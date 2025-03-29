@@ -3,19 +3,25 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services;
 
 /// <summary>
 /// Represents an implementation of <see cref="INamespaces"/>.
 /// </summary>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
-public class Namespaces(IStorage storage) : INamespaces
+public class Namespaces(IGrainFactory grainFactory, IStorage storage) : INamespaces
 {
     /// <inheritdoc/>
-    public Task Ensure(EnsureNamespace command) =>
-        storage.GetEventStore(command.EventStore).Namespaces.Ensure(command.Name);
+    public async Task Ensure(EnsureNamespace command)
+    {
+        var namespaces = grainFactory.GetGrain<Grains.Namespaces.INamespaces>(command.EventStore);
+        await namespaces.Ensure(command.Name);
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetNamespaces(GetNamespacesRequest request)
@@ -26,9 +32,12 @@ public class Namespaces(IStorage storage) : INamespaces
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request)
+    public IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request, CallContext context = default)
     {
         var eventStore = storage.GetEventStore(request.EventStore);
-        return eventStore.Namespaces.ObserveAll().Select(_ => _.Select(_ => _.Name.Value).ToArray());
+        return eventStore.Namespaces
+            .ObserveAll()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.Select(_ => _.Name.Value).ToArray());
     }
 }

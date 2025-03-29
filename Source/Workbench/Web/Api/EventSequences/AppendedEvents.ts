@@ -9,7 +9,7 @@ import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPag
 import { AppendedEvent } from '../Events/AppendedEvent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}');
+const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}?eventSourceId={{eventSourceId}}');
 
 class AppendedEventsSortBy {
     private _metadata: SortingActionsForQuery<AppendedEvent[]>;
@@ -57,7 +57,7 @@ export interface AppendedEventsArguments {
 }
 
 export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsArguments> {
-    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}?eventSourceId={eventSourceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
     private readonly _sortBy: AppendedEventsSortBy;

@@ -46,12 +46,12 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
+            .AddProjectionsService()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStreaming()
             .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
-            .ConfigureCpuBoundWorkers()
             .ConfigureSerialization();
 
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
@@ -78,7 +78,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.EventStores(storage),
-                new Cratis.Chronicle.Services.Namespaces(storage),
+                new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
                 new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),

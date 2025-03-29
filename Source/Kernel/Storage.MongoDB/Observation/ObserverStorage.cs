@@ -64,7 +64,7 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
     public async Task<ObserverState> GetState(ObserverKey observerKey)
     {
         var filter = GetKeyFilter(observerKey.ObserverId);
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState(
             observerKey.ObserverId,
             [],
@@ -73,7 +73,8 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             EventSequenceNumber.Unavailable,
             ObserverRunningState.Unknown,
             new HashSet<Key>(),
-            new HashSet<Key>());
+            new HashSet<Key>(),
+            false);
     }
 
     /// <inheritdoc/>

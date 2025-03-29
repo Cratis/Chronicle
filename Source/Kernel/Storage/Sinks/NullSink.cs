@@ -24,10 +24,13 @@ public class NullSink : ISink
     public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task BeginReplay() => Task.CompletedTask;
+    public Task BeginReplay(ReplayContext context) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndReplay() => Task.CompletedTask;
+    public Task ResumeReplay(ReplayContext context) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndReplay(ReplayContext context) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult<ExpandoObject?>(null);

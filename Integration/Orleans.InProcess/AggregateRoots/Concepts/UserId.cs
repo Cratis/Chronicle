@@ -6,5 +6,6 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts
 public record UserId(Guid Value) : ConceptAs<Guid>(Value)
 {
     public static implicit operator Guid(UserId value) => value.Value;
+    public static implicit operator UserId(string value) => new(Guid.Parse(value));
     public static implicit operator UserId(Guid value) => new(value);
 }

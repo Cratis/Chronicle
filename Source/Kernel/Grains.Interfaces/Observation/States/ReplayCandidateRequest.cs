@@ -25,6 +25,11 @@ public class ReplayCandidateRequest : IRecommendationRequest
     public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;
 
     /// <summary>
+    /// Gets or sets the <see cref="ObserverType"/> for the observer.
+    /// </summary>
+    public ObserverType ObserverType { get; set; } = ObserverType.Unknown;
+
+    /// <summary>
     /// Gets or sets the reasons for why this is a replay candidate.
     /// </summary>
     public IEnumerable<ReplayCandidateReason> Reasons { get; set; } = [];

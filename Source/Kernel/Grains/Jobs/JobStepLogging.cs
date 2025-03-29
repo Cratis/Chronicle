@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Grains.Workers;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -27,6 +28,9 @@ internal static partial class JobStepLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Stopping job step")]
     internal static partial void Stopping(this ILogger<IJobStep> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Job step is already stopped")]
+    internal static partial void AlreadyStopped(this ILogger<IJobStep> logger);
 
     [LoggerMessage(LogLevel.Debug, "Job step changing status to {Status}")]
     internal static partial void ChangingStatus(this ILogger<IJobStep> logger, JobStepStatus status);
@@ -63,6 +67,9 @@ internal static partial class JobStepLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Job step '{JobStepName}' failed while performing job step")]
     internal static partial void FailedPerforming(this ILogger<IJobStep> logger, Exception ex, string jobStepName);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to report that that the performing of job step was cancelled. Error: {ReportError}")]
+    internal static partial void FailedReportingJobStepCancelled(this ILogger<IJobStep> logger, PerformWorkError reportError);
 }
 
 internal static class JobStepScopes

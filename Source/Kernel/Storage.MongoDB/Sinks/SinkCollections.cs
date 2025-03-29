@@ -21,45 +21,31 @@ public class SinkCollections(
     IMongoDatabase database) : ISinkCollections
 {
     bool _isReplaying;
-
     string ReplayCollectionName => $"replay-{model.Name}";
 
     /// <inheritdoc/>
-    public async Task BeginReplay()
+    public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         _isReplaying = true;
         await PrepareInitialRun();
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay()
+    public Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    {
+        _isReplaying = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         var rewindName = ReplayCollectionName;
-        var rewoundCollectionsPrefix = $"{model.Name}-";
-        var collectionNames = (await database.ListCollectionNamesAsync()).ToList();
-        var nextCollectionSequenceNumber = 1;
-        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
-        if (rewoundCollectionNames.Length > 0)
-        {
-            nextCollectionSequenceNumber = rewoundCollectionNames
-                .Select(_ =>
-                {
-                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
-                    if (int.TryParse(postfix, out var value))
-                    {
-                        return value;
-                    }
-                    return -1;
-                })
-                .Where(_ => _ >= 0)
-                .OrderDescending()
-                .First() + 1;
-        }
-        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
 
+        var collectionNames = (await database.ListCollectionNamesAsync()).ToList();
         if (collectionNames.Contains(model.Name))
         {
-            await database.RenameCollectionAsync(model.Name, oldCollectionName);
+            await database.RenameCollectionAsync(model.Name, context.RevertModel);
         }
 
         if (collectionNames.Contains(rewindName))

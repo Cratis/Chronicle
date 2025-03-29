@@ -18,4 +18,9 @@ public class Features
     /// Whether the Workbench is enabled. Default true.
     /// </summary>
     public bool Workbench { get; init; } = true;
+
+    /// <summary>
+    /// Whether the Changeset Storage is enabled. Default false.
+    /// </summary>
+    public bool ChangesetStorage { get; init; }
 }

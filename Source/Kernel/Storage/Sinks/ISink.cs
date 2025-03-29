@@ -43,14 +43,23 @@ public interface ISink
     /// <summary>
     /// Enter replay state.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task BeginReplay();
+    Task BeginReplay(ReplayContext context);
+
+    /// <summary>
+    /// Re-enter replay state.
+    /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeReplay(ReplayContext context);
 
     /// <summary>
     /// End replay state.
     /// </summary>
+    /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task EndReplay();
+    Task EndReplay(ReplayContext context);
 
     /// <summary>
     /// Prepare the sink for an initial run.

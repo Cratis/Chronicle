@@ -8,15 +8,15 @@ namespace Cratis.Chronicle.Grains.Jobs;
 public class NullJobWithSomeRequest : INullJobWithSomeRequest
 {
     public bool Started { get; private set; }
-    public Task<Result<JobError>> Start(SomeJobRequest request)
+    public Task<Result<StartJobError>> Start(SomeJobRequest request)
     {
         Started = true;
-        return Task.FromResult(Result.Success<JobError>());
+        return Task.FromResult(Result.Success<StartJobError>());
     }
 
-    public Task<Result<JobError>> Pause() => Task.FromResult(Result.Success<JobError>());
+    public Task<Result<StopJobError>> Stop() => Task.FromResult(Result.Success<StopJobError>());
     public Task<Result<ResumeJobSuccess, ResumeJobError>> Resume() => Task.FromResult(Result.Success<ResumeJobSuccess, ResumeJobError>(ResumeJobSuccess.Success));
-    public Task<Result<JobError>> Stop() => Task.FromResult(Result.Success<JobError>());
+    public Task<Result<RemoveJobError>> Remove() => Task.FromResult(Result.Success<RemoveJobError>());
     public Task<Result<JobError>> OnStepSucceeded(JobStepId stepId, JobStepResult result) => Task.FromResult(Result.Success<JobError>());
     public Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
     public Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());

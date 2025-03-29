@@ -51,10 +51,7 @@ public class JobState
     public IJobRequest Request { get; set; } = default!;
 
     /// <summary>
-    /// Gets whether the job is resumable.
+    /// Whether the job is preparing to be started or is in a running state.
     /// </summary>
-    public bool IsResumable =>
-        Status == JobStatus.None ||
-        Status == JobStatus.Paused ||
-        Status == JobStatus.Stopped;
+    public bool IsPreparingOrRunning => Status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
 }

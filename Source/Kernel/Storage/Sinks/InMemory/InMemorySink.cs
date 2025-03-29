@@ -84,14 +84,21 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task BeginReplay()
+    public Task BeginReplay(ReplayContext context)
     {
         _isReplaying = true;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task EndReplay()
+    public Task ResumeReplay(ReplayContext context)
+    {
+        _isReplaying = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task EndReplay(ReplayContext context)
     {
         _isReplaying = false;
         return Task.CompletedTask;

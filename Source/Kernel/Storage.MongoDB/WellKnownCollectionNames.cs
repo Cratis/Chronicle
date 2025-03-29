@@ -34,11 +34,6 @@ public static class WellKnownCollectionNames
     public const string Observers = "observers";
 
     /// <summary>
-    /// The collection that holds <see cref="ReminderEntry"/>.
-    /// </summary>
-    public const string Reminders = "reminders";
-
-    /// <summary>
     /// The collection that holds event sequences.
     /// </summary>
     public const string EventSequences = "event-sequences";
@@ -99,12 +94,17 @@ public static class WellKnownCollectionNames
     public const string ProjectionDefinitions = "projection-definitions";
 
     /// <summary>
-    /// The collection that holds projection definitions.
-    /// </summary>
-    public const string Changesets = "changesets";
-
-    /// <summary>
     /// The collection that holds the definitions of constraints.
     /// </summary>
     public const string Constraints = "constraints";
+
+    /// <summary>
+    /// The collection that holds replay contexts.
+    /// </summary>
+    public const string ReplayContexts = "replay-contexts";
+
+    /// <summary>
+    /// The collection that holds replayed models.
+    /// </summary>
+    public const string ReplayedModels = "replayed-models";
 }

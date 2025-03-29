@@ -22,7 +22,7 @@ public class NamespaceStorage(
     /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName name)
     {
-        var result = await GetCollection().FindAsync(Builders<MongoDBNamespace>.Filter.Eq(_ => _.Name, (string)name));
+        using var result = await GetCollection().FindAsync(Builders<MongoDBNamespace>.Filter.Eq(_ => _.Name, (string)name));
         if (!await result.AnyAsync())
         {
             await Create(name, DateTimeOffset.UtcNow);
@@ -57,7 +57,7 @@ public class NamespaceStorage(
     /// <inheritdoc/>
     public async Task<IEnumerable<NamespaceState>> GetAll()
     {
-        var result = await GetCollection().FindAsync(_ => true);
+        using var result = await GetCollection().FindAsync(_ => true);
         var namespaces = await result.ToListAsync();
         return namespaces.Select(_ => new NamespaceState(_.Name, _.Created));
     }

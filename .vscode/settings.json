@@ -127,5 +127,6 @@
         "wwwroot",
         "Xunit"
     ],
-    "dotnet.defaultSolution": "cratis.sln"
+    "dotnet.defaultSolution": "cratis.slnx",
+    "dotnet.automaticallyCreateSolutionInWorkspace": false
 }

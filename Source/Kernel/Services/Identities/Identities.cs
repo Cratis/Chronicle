@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Identities;
+using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
@@ -23,5 +24,10 @@ public class Identities(IStorage storage) : IIdentities
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<Identity>> ObserveIdentities(GetIdentitiesRequest request, CallContext context = default) =>
-        storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Identities.ObserveAll().Select(_ => _.ToContract());
+        storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).Identities
+            .ObserveAll()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.ToContract());
 }

@@ -15,13 +15,13 @@ public interface IUniqueConstraintsStorage
     /// Check if a constraint value exists.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
-    /// <param name="name"><see cref="ConstraintName"/> to check for.</param>
+    /// <param name="definition"><see cref="UniqueConstraintDefinition"/> to check for.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to check.</param>
     /// <returns>
     /// Tuple containing a boolean saying whether or not its allowed to perform and the <see cref="EventSequenceNumber"/> for the item it violates.
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
     /// </returns>
-    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, ConstraintName name, UniqueConstraintValue value);
+    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value);
 
     /// <summary>
     /// Save a constraint value.

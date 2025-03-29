@@ -23,7 +23,7 @@ public class ReactorWithoutDelay : IReactor
         using var cts = new CancellationTokenSource(timeout.Value);
         while (HandledEvents != count)
         {
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 }

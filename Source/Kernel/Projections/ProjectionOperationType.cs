@@ -27,5 +27,10 @@ public enum ProjectionOperationType
     /// <summary>
     /// Entity is removed.
     /// </summary>
-    Remove = 1 << 2
+    Remove = 1 << 2,
+
+    /// <summary>
+    /// Children are affected.
+    /// </summary>
+    ChildrenAffected = 1 << 3
 }

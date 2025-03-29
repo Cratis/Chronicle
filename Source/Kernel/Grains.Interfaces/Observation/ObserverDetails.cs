@@ -8,7 +8,6 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Represents observer details to be used when performing observer service operations.
 /// </summary>
-/// <param name="Identifier">The unique <see cref="ObserverId"/> for the observer.</param>
 /// <param name="Key">The <see cref="ObserverKey"/> for a specific instance.</param>
 /// <param name="Type">The <see cref="ObserverType"/> for the observer.</param>
-public record ObserverDetails(ObserverId Identifier, ObserverKey Key, ObserverType Type);
+public record ObserverDetails(ObserverKey Key, ObserverType Type);

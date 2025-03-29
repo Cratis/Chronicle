@@ -16,7 +16,8 @@ public class a_disconnected_reducer_observing_an_event(GlobalFixture globalFixtu
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        Reducer = new ReducerWithoutDelay();
+        Reducer = new();
+
         services.AddSingleton(Reducer);
     }
 }
