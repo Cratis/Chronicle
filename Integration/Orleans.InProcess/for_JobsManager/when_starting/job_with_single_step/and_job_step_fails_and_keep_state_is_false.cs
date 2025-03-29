@@ -21,6 +21,7 @@ public class and_job_step_fails_and_keep_state_is_false(context context) : Given
         public JobState CompletedJobState;
         public IImmutableList<JobStepState> JobStepStates;
         public JobId JobId;
+        public Catch<JobState, Storage.Jobs.JobError> GetJobResult;
 
         async Task Because()
         {
@@ -32,6 +33,8 @@ public class and_job_step_fails_and_keep_state_is_false(context context) : Given
             CompletedJobState = getJobState.AsT0;
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
+
+            GetJobResult = await JobStorage.GetJob(JobId);
         }
     }
 
@@ -39,7 +42,7 @@ public class and_job_step_fails_and_keep_state_is_false(context context) : Given
     public void should_start_job() => Context.StartJobResult.IsSuccess.ShouldBeTrue();
 
     [Fact]
-    public void should_keep_job_state() => Context.JobStorage.GetJob(Context.JobId).Result.IsSuccess.ShouldBeTrue();
+    public void should_keep_job_state() => Context.GetJobResult.IsSuccess.ShouldBeTrue();
 
     [Fact]
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
