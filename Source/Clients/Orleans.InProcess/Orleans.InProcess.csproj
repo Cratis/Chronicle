@@ -13,15 +13,18 @@
 
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj">
-            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
-            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../Orleans/Orleans.csproj">
-            <Properties>Repack=false</Properties>
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
@@ -97,13 +100,15 @@
 
     <ItemGroup>
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
-        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+        <!-- <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
-        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" /> -->
+        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.dll" />
+        <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Diagnostics.dll" />
-        <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.AspNetCore.dll" />
+        <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Grains.dll" />
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" />

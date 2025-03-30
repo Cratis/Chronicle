@@ -1543,9 +1543,6 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Applications.Orleans": "[15.6.0, )",
-          "Cratis.Chronicle": "[1.0.0, )",
-          "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
-          "Cratis.Chronicle.Orleans": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",

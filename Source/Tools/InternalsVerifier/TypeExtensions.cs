@@ -16,21 +16,16 @@ public static class TypeExtensions
     /// </summary>
     /// <param name="assembly">Assembly to get from.</param>
     /// <param name="internalType">The type that is supposed to be internal.</param>
-    /// <param name="internalNamespace">The internal namespace to ignore from.</param>
     /// <returns>Collection of internal types.</returns>
-    public static TypeDefinition[] GetTypesReferencingInternalType(this AssemblyDefinition assembly, TypeDefinition internalType, string internalNamespace)
+    public static TypeDefinition[] GetTypesReferencingInternalType(this AssemblyDefinition assembly, TypeDefinition internalType)
     {
-        var referencingTypes = assembly.MainModule.Types.Where(_ => _.IsReferencedBy(internalType) && _.FullName != internalType.FullName).ToArray();
-        var nonInternalTypes = referencingTypes.Where(_ => !_.Namespace.StartsWith(internalNamespace));
-        if (nonInternalTypes.Any())
-        {
-            return nonInternalTypes.ToArray();
-        }
-
+        var referencingTypes = assembly.MainModule.Types.Where(_ =>
+            _.IsReferencedBy(internalType) &&
+            _.FullName != internalType.FullName).ToArray();
         IEnumerable<TypeDefinition> result = [];
-        foreach (var type in referencingTypes.Where(_ => _.Namespace.StartsWith(internalNamespace)))
+        foreach (var type in referencingTypes)
         {
-            var types = GetTypesReferencingInternalType(assembly, type, internalNamespace);
+            var types = GetTypesReferencingInternalType(assembly, type);
             if (types.Length > 0)
             {
                 result = result.Concat(types);
