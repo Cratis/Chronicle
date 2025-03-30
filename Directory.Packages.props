@@ -106,9 +106,7 @@
         <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.13.0" />
     </ItemGroup>
 
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="[9.0.3]" />
-    </ItemGroup>
+    <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' "/>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.3" />
