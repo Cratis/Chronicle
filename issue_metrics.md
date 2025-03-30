@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 129 days, 4:43:23 | 1 day, 9:27:20 | 279 days, 4:57:20 |
-| Time to close | 238 days, 3:49:23 | 101 days, 7:35:20 | 776 days, 9:57:11 |
+| Time to close | 238 days, 22:29:18 | 101 days, 7:35:20 | 779 days, 17:31:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 301 |
-| Number of items closed | 514 |
+| Number of items that remain open | 299 |
+| Number of items closed | 516 |
 | Number of most active mentors | 0 |
 | Total number of items created | 815 |
 
@@ -28,7 +28,7 @@
 | HandleEventsForPartition does not work now when resumed (started without prepare call) and grain is newly activated | https://github.com/Cratis/Chronicle/issues/1787 | [woksin](https://github.com/woksin) | None | 10 days, 8:28:55 | None |
 | Prepare job steps and starting them should run asyncronously | https://github.com/Cratis/Chronicle/issues/1786 | [woksin](https://github.com/woksin) | 3 days, 22:09:24 | None | None |
 | We should not be able to start a job on an observer when there is a replay job | https://github.com/Cratis/Chronicle/issues/1779 | [woksin](https://github.com/woksin) | None | None | None |
-| During GitHub builds we want to build specs and integration specs with Debug but compile them with "treat warning as errors" | https://github.com/Cratis/Chronicle/issues/1773 | [einari](https://github.com/einari) | None | None | None |
+| During GitHub builds we want to build specs and integration specs with Debug but compile them with "treat warning as errors" | https://github.com/Cratis/Chronicle/issues/1773 | [einari](https://github.com/einari) | None | 16 days, 17:36:25 | None |
 | Projections for Rules shouldn't end up as an observer | https://github.com/Cratis/Chronicle/issues/1766 | [einari](https://github.com/einari) | None | 0:06:00 | None |
 | Add support for observer Replays being cancelled | https://github.com/Cratis/Chronicle/issues/1764 | [einari](https://github.com/einari) | None | None | None |
 | Projections sometimes fail with concurrency issues related to cloning of the internal ExpandoObject | https://github.com/Cratis/Chronicle/issues/1763 | [einari](https://github.com/einari) | None | None | None |
@@ -246,7 +246,7 @@
 | Fix API namespaces prefix | https://github.com/Cratis/Chronicle/issues/1279 | [einari](https://github.com/einari) | None | 157 days, 6:24:14 | None |
 | For our Orleans Clients it would be ideal to hide the of some of the referenced projects to avoid confusion on the consumer | https://github.com/Cratis/Chronicle/issues/1278 | [einari](https://github.com/einari) | None | 19:08:55 | None |
 | Add an overview on Docker hub for Chronicle images | https://github.com/Cratis/Chronicle/issues/1277 | [einari](https://github.com/einari) | None | None | None |
-| When publishing pre-release builds, Docker images should not point latest to the pre-release | https://github.com/Cratis/Chronicle/issues/1276 | [einari](https://github.com/einari) | None | None | None |
+| When publishing pre-release builds, Docker images should not have a latest tag version | https://github.com/Cratis/Chronicle/issues/1276 | [einari](https://github.com/einari) | None | None | None |
 | Upgrade build tasks for Node to latest versions | https://github.com/Cratis/Chronicle/issues/1275 | [einari](https://github.com/einari) | None | 208 days, 20:11:12 | None |
 | Remove disabled NoWarn warnings from the API.csproj file | https://github.com/Cratis/Chronicle/issues/1274 | [einari](https://github.com/einari) | None | 208 days, 20:44:13 | None |
 | Refactor how we create projection definition for the different types and use it in Projections | https://github.com/Cratis/Chronicle/issues/1273 | [einari](https://github.com/einari) | None | 208 days, 21:22:27 | None |
@@ -370,4 +370,4 @@
 | Remove Inbox in favor of custom event sequences | https://github.com/Cratis/Chronicle/issues/924 | [einari](https://github.com/einari) | None | 341 days, 21:34:18 | None |
 | Remove Outbox in favor of custom event sequences | https://github.com/Cratis/Chronicle/issues/923 | [einari](https://github.com/einari) | None | 341 days, 21:34:51 | None |
 | Introduce support for custom named event sequences | https://github.com/Cratis/Chronicle/issues/922 | [einari](https://github.com/einari) | None | 341 days, 21:35:28 | None |
-| Move away from Guid identifying
+| Move away from Guid id
