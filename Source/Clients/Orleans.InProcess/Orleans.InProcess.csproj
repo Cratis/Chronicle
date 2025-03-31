@@ -111,7 +111,6 @@
         <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Setup.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Json" />
         <DoNotInternalize Include="ChronicleOptions" />
         <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />
         <DoNotInternalize Include="Orleans.Hosting" />

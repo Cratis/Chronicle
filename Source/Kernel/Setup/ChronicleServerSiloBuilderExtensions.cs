@@ -11,6 +11,7 @@ using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
@@ -39,6 +40,8 @@ public static class ChronicleServerSiloBuilderExtensions
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
+        builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
+        builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
