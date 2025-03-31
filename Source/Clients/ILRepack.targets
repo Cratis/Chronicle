@@ -33,13 +33,17 @@
         <RemoveReferences>@(RemoveReference->'%(Identity)', ';')</RemoveReferences>
     </PropertyGroup>
 
+    <Message Importance="high" Text="Input @(InputAssemblies)" />
+    <Message Importance="high" Text="Internalize @(InternalAssemblies)" />
+    <Message Importance="high" Text="DoNotInternalize @(DoNotInternalize)" />
+
     <ILRepack
         AllowDuplicateResources="false"
         DebugInfo="true"
         CopyAttributes="false"
         ExcludeInternalizeSerializable="false"
         InputAssemblies="@(InputAssemblies)"
-        InternalizeAssembly="@(InternalizeAssemblies)"
+        InternalizeAssembly="@(InternalAssemblies)"
         Internalize="true"
         InternalizeExclude="@(DoNotInternalize)"
         OutputFile="$(TargetPath)"
