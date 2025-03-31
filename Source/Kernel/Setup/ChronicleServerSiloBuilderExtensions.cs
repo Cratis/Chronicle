@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Jobs;
@@ -11,6 +11,7 @@ using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
@@ -39,6 +40,8 @@ public static class ChronicleServerSiloBuilderExtensions
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
+        builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
+        builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
@@ -76,7 +79,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
-            return new Cratis.Chronicle.Connections.Services(
+            return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.EventStores(storage),
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),

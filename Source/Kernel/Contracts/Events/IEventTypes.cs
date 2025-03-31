@@ -24,6 +24,7 @@ public interface IEventTypes
     /// </summary>
     /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>
     /// <returns>A collection of <see cref="EventType"/> instances.</returns>
+    [Operation]
     Task<IEnumerable<EventType>> GetAll(GetAllEventTypesRequest request);
 
     /// <summary>
@@ -31,5 +32,6 @@ public interface IEventTypes
     /// </summary>
     /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>
     /// <returns>A collection of <see cref="EventTypeRegistration"/> instances.</returns>
+    [Operation]
     Task<IEnumerable<EventTypeRegistration>> GetAllRegistrations(GetAllEventTypesRequest request);
 }

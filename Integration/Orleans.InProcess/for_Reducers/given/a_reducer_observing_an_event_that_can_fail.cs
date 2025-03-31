@@ -31,7 +31,7 @@ public class a_reducer_observing_an_event_that_can_fail(GlobalFixture globalFixt
         ObserverId = reducerObserverState.Id;
     }
 
-    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => ServicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()
     {
         EventStore = EventStore.Name.Value,
         Namespace = Concepts.EventStoreNamespaceName.Default,

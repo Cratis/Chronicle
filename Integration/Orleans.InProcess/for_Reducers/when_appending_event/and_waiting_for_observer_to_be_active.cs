@@ -53,7 +53,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
             await ReducerObserver.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First, 5.Seconds());
             ReducerObserverState = await ReducerObserver.GetState();
 
-            FailedPartitions = await EventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+            FailedPartitions = await ServicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()
             {
                 EventStore = EventStore.Name.Value,
                 Namespace = Concepts.EventStoreNamespaceName.Default,

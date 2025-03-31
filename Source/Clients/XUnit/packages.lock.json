@@ -17,6 +17,12 @@
           "System.Text.Json": "9.0.3"
         }
       },
+      "ILRepack.Lib.MSBuild.Task": {
+        "type": "Direct",
+        "requested": "[2.0.34.1, )",
+        "resolved": "2.0.34.1",
+        "contentHash": "QHqCm+bTalw4/Jl+k0l0llUJmsv7ftkxZN+CnXdbJ4Fy6Xr2I+OGq4qY5rma+vRAy1veGQCCBcUr+VFVNwBi5A=="
+      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[2.0.189, )",
@@ -884,9 +890,6 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Connections": "[1.0.0, )",
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.1, )",
           "FluentValidation": "[11.11.0, )",
           "Grpc.Net.Client": "[2.70.0, )",
@@ -895,7 +898,6 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )",
-          "automapper": "[14.0.0, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -934,15 +936,6 @@
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )",
           "humanizer": "[2.14.1, )"
-        }
-      },
-      "AutoMapper": {
-        "type": "CentralTransitive",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
         }
       },
       "FluentValidation": {

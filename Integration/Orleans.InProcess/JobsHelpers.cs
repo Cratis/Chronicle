@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Storage.Jobs;
@@ -82,7 +83,7 @@ public static class JobsHelpers
     }
 
     static Task<IEnumerable<Job>> GetJobs(this IEventStore eventStore) =>
-         eventStore.Connection.Services.Jobs.GetJobs(new()
+         (eventStore.Connection as IChronicleServicesAccessor)!.Services.Jobs.GetJobs(new()
          {
              EventStore = eventStore.Name.Value,
              Namespace = Concepts.EventStoreNamespaceName.Default

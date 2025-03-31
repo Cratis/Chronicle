@@ -27,7 +27,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public class ChronicleConnection : IChronicleConnection
+public class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
 {
     readonly ChronicleUrl _url;
     readonly int _connectTimeout;
@@ -81,7 +81,7 @@ public class ChronicleConnection : IChronicleConnection
     public IConnectionLifecycle Lifecycle { get; }
 
     /// <inheritdoc/>
-    public IServices Services
+    IServices IChronicleServicesAccessor.Services
     {
         get
         {
@@ -112,7 +112,8 @@ public class ChronicleConnection : IChronicleConnection
         _keepAliveSubscription?.Dispose();
 
         _channel = CreateGrpcChannel();
-        _connectionService = _channel.CreateGrpcService<IConnectionService>();
+        var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
+        _connectionService = _channel.CreateGrpcService<IConnectionService>(clientFactory);
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -126,20 +127,20 @@ public class ChronicleConnection : IChronicleConnection
         try
         {
             _services = new Services(
-                _channel.CreateGrpcService<IEventStores>(),
-                _channel.CreateGrpcService<INamespaces>(),
-                _channel.CreateGrpcService<IRecommendations>(),
-                _channel.CreateGrpcService<IIdentities>(),
-                _channel.CreateGrpcService<IEventSequences>(),
-                _channel.CreateGrpcService<IEventTypes>(),
-                _channel.CreateGrpcService<IConstraints>(),
-                _channel.CreateGrpcService<IObservers>(),
-                _channel.CreateGrpcService<IFailedPartitions>(),
-                _channel.CreateGrpcService<IReactors>(),
-                _channel.CreateGrpcService<IReducers>(),
-                _channel.CreateGrpcService<IProjections>(),
-                _channel.CreateGrpcService<IJobs>(),
-                _channel.CreateGrpcService<IServer>());
+                _channel.CreateGrpcService<IEventStores>(clientFactory),
+                _channel.CreateGrpcService<INamespaces>(clientFactory),
+                _channel.CreateGrpcService<IRecommendations>(clientFactory),
+                _channel.CreateGrpcService<IIdentities>(clientFactory),
+                _channel.CreateGrpcService<IEventSequences>(clientFactory),
+                _channel.CreateGrpcService<IEventTypes>(clientFactory),
+                _channel.CreateGrpcService<IConstraints>(clientFactory),
+                _channel.CreateGrpcService<IObservers>(clientFactory),
+                _channel.CreateGrpcService<IFailedPartitions>(clientFactory),
+                _channel.CreateGrpcService<IReactors>(clientFactory),
+                _channel.CreateGrpcService<IReducers>(clientFactory),
+                _channel.CreateGrpcService<IProjections>(clientFactory),
+                _channel.CreateGrpcService<IJobs>(clientFactory),
+                _channel.CreateGrpcService<IServer>(clientFactory));
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));
             _logger.Connected();

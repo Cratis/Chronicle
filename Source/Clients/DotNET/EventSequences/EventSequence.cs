@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Identities;
@@ -37,6 +38,8 @@ public class EventSequence(
     ICausationManager causationManager,
     IIdentityProvider identityProvider) : IEventSequence
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
+
     /// <inheritdoc/>
     public EventSequenceId Id => eventSequenceId;
 
@@ -59,7 +62,7 @@ public class EventSequence(
         var content = await eventSerializer.Serialize(@event);
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
-        var response = await connection.Services.EventSequences.Append(new()
+        var response = await _servicesAccessor.Services.EventSequences.Append(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -130,7 +133,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
     {
-        var result = await connection.Services.EventSequences.HasEventsForEventSourceId(new()
+        var result = await _servicesAccessor.Services.EventSequences.HasEventsForEventSourceId(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -147,7 +150,7 @@ public class EventSequence(
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default)
     {
-        var result = await connection.Services.EventSequences.GetEventsFromEventSequenceNumber(new()
+        var result = await _servicesAccessor.Services.EventSequences.GetEventsFromEventSequenceNumber(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -168,7 +171,7 @@ public class EventSequence(
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default)
     {
-        var result = await connection.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
+        var result = await _servicesAccessor.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
         {
             EventStore = eventStoreName,
             EventStreamType = eventStreamType ?? EventStreamType.All,
@@ -210,7 +213,7 @@ public class EventSequence(
     {
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
-        var response = await connection.Services.EventSequences.AppendMany(new()
+        var response = await _servicesAccessor.Services.EventSequences.AppendMany(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
