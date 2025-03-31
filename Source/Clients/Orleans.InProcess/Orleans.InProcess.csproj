@@ -113,6 +113,7 @@
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
         <DoNotInternalize Include="ChronicleOptions" />
         <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />
+        <DoNotInternalize Include="Orleans.Hosting" />
     </ItemGroup>
 
     <ItemGroup>
