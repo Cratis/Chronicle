@@ -72,9 +72,9 @@
       },
       "Cratis.Fundamentals": {
         "type": "Direct",
-        "requested": "[6.3.1, )",
-        "resolved": "6.3.1",
-        "contentHash": "VFbNmbXdHcUXc+YJdSDw8Bat2gt53VTCkQSQHeK9GwqmpHYxCufwmyoP5w3NmC8BQMUYtoCOGp6KIgcHkLQv+g==",
+        "requested": "[6.3.2, )",
+        "resolved": "6.3.2",
+        "contentHash": "NbA1RXXw7cHkjE4KFB5EoZ7mqY1/dBCxIYKKix/O0MvO/uCh9d4ekNrNLi7X7/dC1dLrCeZzttcdEBqoXxaEjg==",
         "dependencies": {
           "Humanizer": "2.14.1",
           "Microsoft.Extensions.DependencyInjection": "9.0.3",
@@ -1549,7 +1549,7 @@
           "Cratis.Applications.Swagger": "[15.6.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "Swashbuckle.AspNetCore": "[8.1.0, )",
           "Swashbuckle.AspNetCore.Filters": "[8.0.2, )",
@@ -1561,7 +1561,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Storage": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )"
         }
@@ -1570,7 +1570,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "OneOf": "[3.0.271, )",
           "OneOf.SourceGenerator": "[3.0.271, )",
@@ -1583,7 +1583,7 @@
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
@@ -1594,7 +1594,7 @@
       "Cratis.Chronicle.Contracts": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )",
           "protobuf-net.Grpc": "[1.2.2, )"
@@ -1604,7 +1604,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Concepts": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "OpenTelemetry": "[1.11.2, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.11.2, )",
           "OpenTelemetry.Extensions.Hosting": "[1.11.2, )",
@@ -1623,8 +1623,8 @@
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
-          "Cratis.Metrics.Roslyn": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "Cratis.Metrics.Roslyn": "[6.3.2, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1638,7 +1638,7 @@
         "dependencies": {
           "Cratis.Applications.Orleans": "[15.6.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )"
@@ -1647,7 +1647,7 @@
       "Cratis.Chronicle.Infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
           "Microsoft.Extensions.DependencyInjection": "[9.0.3, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.3, )",
@@ -1663,7 +1663,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Storage": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.3, )"
@@ -1675,7 +1675,7 @@
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1686,7 +1686,7 @@
       "Cratis.Chronicle.Setup": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Extensions.Resilience": "[9.3.0, )",
           "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
@@ -1698,7 +1698,7 @@
       "Cratis.Chronicle.Storage": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )"
         }
@@ -1711,7 +1711,7 @@
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",
           "Microsoft.Orleans.Serialization": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
@@ -1757,9 +1757,9 @@
       },
       "Cratis.Metrics.Roslyn": {
         "type": "CentralTransitive",
-        "requested": "[6.3.1, )",
-        "resolved": "6.3.1",
-        "contentHash": "5QQEyikRxA/UScHAlrqLUhqPrw2cpe+StIsBLGekyYanXPEsKmmkjT23RLF8vmLJJ80o7BP95HJI2zr7HoiCXA=="
+        "requested": "[6.3.2, )",
+        "resolved": "6.3.2",
+        "contentHash": "KM2gpymN4JaiMcxKu9OciAZh8RNhL7cni2D7K8wJi3G6z1OjiVX6r3AGunHR5QGQ/jFNAvuNyojr7H0KdpJBGg=="
       },
       "FluentValidation": {
         "type": "CentralTransitive",

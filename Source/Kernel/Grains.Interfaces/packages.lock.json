@@ -17,9 +17,9 @@
       },
       "Cratis.Fundamentals": {
         "type": "Direct",
-        "requested": "[6.3.1, )",
-        "resolved": "6.3.1",
-        "contentHash": "VFbNmbXdHcUXc+YJdSDw8Bat2gt53VTCkQSQHeK9GwqmpHYxCufwmyoP5w3NmC8BQMUYtoCOGp6KIgcHkLQv+g==",
+        "requested": "[6.3.2, )",
+        "resolved": "6.3.2",
+        "contentHash": "NbA1RXXw7cHkjE4KFB5EoZ7mqY1/dBCxIYKKix/O0MvO/uCh9d4ekNrNLi7X7/dC1dLrCeZzttcdEBqoXxaEjg==",
         "dependencies": {
           "Humanizer": "2.14.1",
           "Microsoft.Extensions.DependencyInjection": "9.0.3",
@@ -1014,7 +1014,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "OneOf": "[3.0.271, )",
           "OneOf.SourceGenerator": "[3.0.271, )",
@@ -1025,7 +1025,7 @@
       "Cratis.Chronicle.Infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
           "Microsoft.Extensions.DependencyInjection": "[9.0.3, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.3, )",
@@ -1040,7 +1040,7 @@
       "Cratis.Chronicle.Storage": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )"
         }

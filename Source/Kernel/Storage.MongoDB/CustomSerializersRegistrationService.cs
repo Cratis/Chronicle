@@ -6,6 +6,7 @@ using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Bson.Serialization;
+
 namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
