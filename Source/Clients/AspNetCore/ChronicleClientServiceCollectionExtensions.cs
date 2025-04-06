@@ -29,6 +29,7 @@ public static class ChronicleClientServiceCollectionExtensions
         this IServiceCollection services,
         Action<ChronicleOptions>? configureChronicleOptions = default)
     {
+        services.AddHttpContextAccessor();
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
