@@ -4,9 +4,9 @@
     "net9.0": {
       "Cratis.Fundamentals": {
         "type": "Direct",
-        "requested": "[6.3.1, )",
-        "resolved": "6.3.1",
-        "contentHash": "VFbNmbXdHcUXc+YJdSDw8Bat2gt53VTCkQSQHeK9GwqmpHYxCufwmyoP5w3NmC8BQMUYtoCOGp6KIgcHkLQv+g==",
+        "requested": "[6.3.2, )",
+        "resolved": "6.3.2",
+        "contentHash": "NbA1RXXw7cHkjE4KFB5EoZ7mqY1/dBCxIYKKix/O0MvO/uCh9d4ekNrNLi7X7/dC1dLrCeZzttcdEBqoXxaEjg==",
         "dependencies": {
           "Humanizer": "2.14.1",
           "Microsoft.Extensions.DependencyInjection": "9.0.3",
@@ -932,7 +932,7 @@
           "Cratis.Applications.Swagger": "[15.6.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "Swashbuckle.AspNetCore": "[8.1.0, )",
           "Swashbuckle.AspNetCore.Filters": "[8.0.2, )",
@@ -945,7 +945,7 @@
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
@@ -956,7 +956,7 @@
       "Cratis.Chronicle.Contracts": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.3, )",
           "protobuf-net.Grpc": "[1.2.2, )"
@@ -965,7 +965,7 @@
       "Cratis.Chronicle.Infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Fundamentals": "[6.3.1, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
           "Microsoft.Extensions.DependencyInjection": "[9.0.3, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.3, )",
