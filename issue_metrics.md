@@ -8,13 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 299 |
+| Number of items that remain open | 300 |
 | Number of items closed | 516 |
 | Number of most active mentors | 0 |
-| Total number of items created | 815 |
+| Total number of items created | 816 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Add a way to wait for all observers affected by an append to an event sequence | https://github.com/Cratis/Chronicle/issues/1845 | [einari](https://github.com/einari) | None | None | None |
 | Build the namespaces for integration specs dynamically based on folders | https://github.com/Cratis/Chronicle/issues/1821 | [einari](https://github.com/einari) | None | None | None |
 | Attempted sequence number of a failed partition attempt seems to be wrong | https://github.com/Cratis/Chronicle/issues/1820 | [einari](https://github.com/einari) | None | None | None |
 | Run MongoDB in-memory engine to improve run speed of integration specs | https://github.com/Cratis/Chronicle/issues/1811 | [einari](https://github.com/einari) | None | 2 days, 0:43:42 | None |
@@ -369,5 +370,4 @@
 | Add support for retention policies on event sequences | https://github.com/Cratis/Chronicle/issues/925 | [einari](https://github.com/einari) | None | None | None |
 | Remove Inbox in favor of custom event sequences | https://github.com/Cratis/Chronicle/issues/924 | [einari](https://github.com/einari) | None | 341 days, 21:34:18 | None |
 | Remove Outbox in favor of custom event sequences | https://github.com/Cratis/Chronicle/issues/923 | [einari](https://github.com/einari) | None | 341 days, 21:34:51 | None |
-| Introduce support for custom named event sequences | https://github.com/Cratis/Chronicle/issues/922 | [einari](https://github.com/einari) | None | 341 days, 21:35:28 | None |
-| Move away from Guid id
+| Introdu
