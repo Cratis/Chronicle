@@ -1303,7 +1303,7 @@
       "Cratis.Chronicle.Grains": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.6.0, )",
+          "Cratis.Applications": "[15.8.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
@@ -1321,7 +1321,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.6.0, )",
+          "Cratis.Applications.Orleans": "[15.8.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1378,11 +1378,11 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.6.0, )",
-        "resolved": "15.6.0",
-        "contentHash": "Gsr3ErEVr3786tqQ9RD87P4t1x02ZbLJymic9mQbpnwD80JR8+3/LxTxbpqc2iw3iNEG0/ZlIUXleaadECpgbQ==",
+        "requested": "[15.8.0, )",
+        "resolved": "15.8.0",
+        "contentHash": "FyyQbJRv1SAk3Dh3tDFKhavvstps23QDb79Y8qswxYnMuvyOKtonBztdlX2Xk2Dwzw+Beojvm3Oc6UWmQAOdOQ==",
         "dependencies": {
-          "Cratis.Fundamentals": "6.3.1",
+          "Cratis.Fundamentals": "6.3.2",
           "FluentValidation": "11.11.0",
           "Microsoft.Extensions.Configuration.FileExtensions": "9.0.3",
           "Microsoft.Extensions.Hosting": "9.0.3",
@@ -1392,11 +1392,11 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.6.0, )",
-        "resolved": "15.6.0",
-        "contentHash": "PoOXGpTTzG/a6OVPUp2YpqD0lUHbu1Hsx5vZ0M9/wsrFL/K84tGxT3ZLPNMXK++PaktZL/ReDr2fg/aI7Qztlw==",
+        "requested": "[15.8.0, )",
+        "resolved": "15.8.0",
+        "contentHash": "FZ55mreNccZ0fPKVP7zxQDr7aj+SAAn9BBAMGO52LTEK2M1AnJ2Oe4j8snKzTIPayGg9MwFU1OtNs7Grs3VGyg==",
         "dependencies": {
-          "Cratis.Fundamentals": "6.3.1",
+          "Cratis.Fundamentals": "6.3.2",
           "Microsoft.Extensions.Logging": "9.0.3",
           "Microsoft.Orleans.Core.Abstractions": "9.1.2",
           "Microsoft.Orleans.Serialization": "9.1.2",

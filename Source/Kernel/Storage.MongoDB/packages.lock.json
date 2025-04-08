@@ -4,16 +4,16 @@
     "net9.0": {
       "Cratis.Applications.MongoDB": {
         "type": "Direct",
-        "requested": "[15.6.0, )",
-        "resolved": "15.6.0",
-        "contentHash": "ssIWchAoIrSS7AYRy2F5bbESlNcIdwti2nqRP4YJeaG2pkhPgdLmf8ME5So2Sa0QmgiIqtlGkTiQNGpFI06jIQ==",
+        "requested": "[15.8.0, )",
+        "resolved": "15.8.0",
+        "contentHash": "TZ0uR4FbT6AGONoCoWNWj3+ZtkorUNfLmSUVGKkiFhObhksQe1e2cGAYEWIfKEuydUWbiZiyZ3H4AVpdwkUg8w==",
         "dependencies": {
-          "Cratis.Applications": "15.6.0",
-          "Cratis.Fundamentals": "6.3.1",
-          "Cratis.Metrics.Roslyn": "6.3.1",
+          "Cratis.Applications": "15.8.0",
+          "Cratis.Fundamentals": "6.3.2",
+          "Cratis.Metrics.Roslyn": "6.3.2",
           "Microsoft.Extensions.Hosting": "9.0.3",
           "Microsoft.Extensions.Logging": "9.0.3",
-          "MongoDB.Driver": "3.2.1",
+          "MongoDB.Driver": "3.3.0",
           "System.Text.Json": "9.0.3",
           "castle.core": "5.2.1",
           "polly.core": "8.5.2"
@@ -1364,11 +1364,11 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.6.0, )",
-        "resolved": "15.6.0",
-        "contentHash": "Gsr3ErEVr3786tqQ9RD87P4t1x02ZbLJymic9mQbpnwD80JR8+3/LxTxbpqc2iw3iNEG0/ZlIUXleaadECpgbQ==",
+        "requested": "[15.8.0, )",
+        "resolved": "15.8.0",
+        "contentHash": "FyyQbJRv1SAk3Dh3tDFKhavvstps23QDb79Y8qswxYnMuvyOKtonBztdlX2Xk2Dwzw+Beojvm3Oc6UWmQAOdOQ==",
         "dependencies": {
-          "Cratis.Fundamentals": "6.3.1",
+          "Cratis.Fundamentals": "6.3.2",
           "FluentValidation": "11.11.0",
           "Microsoft.Extensions.Configuration.FileExtensions": "9.0.3",
           "Microsoft.Extensions.Hosting": "9.0.3",
@@ -1379,8 +1379,8 @@
       "Cratis.Metrics.Roslyn": {
         "type": "CentralTransitive",
         "requested": "[6.3.2, )",
-        "resolved": "6.3.1",
-        "contentHash": "5QQEyikRxA/UScHAlrqLUhqPrw2cpe+StIsBLGekyYanXPEsKmmkjT23RLF8vmLJJ80o7BP95HJI2zr7HoiCXA=="
+        "resolved": "6.3.2",
+        "contentHash": "KM2gpymN4JaiMcxKu9OciAZh8RNhL7cni2D7K8wJi3G6z1OjiVX6r3AGunHR5QGQ/jFNAvuNyojr7H0KdpJBGg=="
       },
       "FluentValidation": {
         "type": "CentralTransitive",
