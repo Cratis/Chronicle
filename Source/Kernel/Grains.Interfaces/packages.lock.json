@@ -4,11 +4,11 @@
     "net9.0": {
       "Cratis.Applications.Orleans": {
         "type": "Direct",
-        "requested": "[15.6.0, )",
-        "resolved": "15.6.0",
-        "contentHash": "PoOXGpTTzG/a6OVPUp2YpqD0lUHbu1Hsx5vZ0M9/wsrFL/K84tGxT3ZLPNMXK++PaktZL/ReDr2fg/aI7Qztlw==",
+        "requested": "[15.8.0, )",
+        "resolved": "15.8.0",
+        "contentHash": "FZ55mreNccZ0fPKVP7zxQDr7aj+SAAn9BBAMGO52LTEK2M1AnJ2Oe4j8snKzTIPayGg9MwFU1OtNs7Grs3VGyg==",
         "dependencies": {
-          "Cratis.Fundamentals": "6.3.1",
+          "Cratis.Fundamentals": "6.3.2",
           "Microsoft.Extensions.Logging": "9.0.3",
           "Microsoft.Orleans.Core.Abstractions": "9.1.2",
           "Microsoft.Orleans.Serialization": "9.1.2",
