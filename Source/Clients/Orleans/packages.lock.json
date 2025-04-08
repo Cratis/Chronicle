@@ -1095,7 +1095,7 @@
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
           "Microsoft.Extensions.DependencyInjection": "[9.0.3, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.3, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.4, )",
           "NJsonSchema": "[11.2.0, )",
           "OpenTelemetry.Exporter.InMemory": "[1.11.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1196,9 +1196,9 @@
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
-        "resolved": "9.0.3",
-        "contentHash": "TfaHPSe39NyL2wxkisRxXK7xvHGZYBZ+dy3r+mqGvnxKgAPdHkMu3QMQZI4pquP6W5FIQBqs8FJpWV8ffCgDqQ=="
+        "requested": "[9.0.4, )",
+        "resolved": "9.0.4",
+        "contentHash": "UI0TQPVkS78bFdjkTodmkH0Fe8lXv9LnhGFKgKrsgUJ5a5FVdFRcgjIkBVLbGgdRhxWirxH/8IXUtEyYJx6GQg=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "CentralTransitive",
