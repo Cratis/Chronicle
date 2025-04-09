@@ -19,9 +19,9 @@
         <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.3" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.3" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.3.0" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.4.0" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="$(Fundamentals)" />
