@@ -20,7 +20,7 @@
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.4" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.4.0" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
         <!-- Cratis -->
@@ -109,6 +109,6 @@
     <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' "/>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.3" />
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.4" />
     </ItemGroup>
 </Project>
