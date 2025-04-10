@@ -81,9 +81,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.194, )",
-        "resolved": "2.0.194",
-        "contentHash": "K5C9iByBkLSMng3HN+xPtol40kWRz5x0XH7G+QqNQLTR01FrJIPT5fKyxOazY/DYz2pI9WFtLTYJJU/wofE+OA=="
+        "requested": "[2.0.195, )",
+        "resolved": "2.0.195",
+        "contentHash": "rQJ/FWl4vBd79QtNXkjg4lKcSu4a/jGNuikUNH5iTqfnsdA1qv3nDrCX51T3i7DP5L6f9UoN4NoQMuezmEQeWQ=="
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
