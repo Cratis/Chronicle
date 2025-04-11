@@ -47,9 +47,9 @@
       },
       "protobuf-net.BuildTools": {
         "type": "Direct",
-        "requested": "[3.2.46, )",
-        "resolved": "3.2.46",
-        "contentHash": "GuXYqeB7VCXb0uLw5Ee1iZrmWE3Sn6Vx57KoEQU684yt2jEifi5Y1YKBzsqtem3YiH4WCytZcydSob7+08T8CQ=="
+        "requested": "[3.2.52, )",
+        "resolved": "3.2.52",
+        "contentHash": "Z5h8xCiAVCekjR1Nrw0LkbeR13q4EX94KHeZb1/U1ZYjy517gWvAJFzi50jKXCaa96Gxh4b2MwC7bjH0W7Cjhg=="
       },
       "protobuf-net.Grpc": {
         "type": "Direct",
