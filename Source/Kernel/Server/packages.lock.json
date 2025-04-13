@@ -57,6 +57,19 @@
           "System.Text.Json": "9.0.4"
         }
       },
+      "Cratis.Applications.Orleans.MongoDB": {
+        "type": "Direct",
+        "requested": "[15.8.1, )",
+        "resolved": "15.8.1",
+        "contentHash": "IY3qsgLzoI5zRitRvnHqYiDmJeQqgzLjo0YRGY0rMJdL9q/qsGQqb7iJ5Kj9IkB6G0v9/Jw8ZuO+ezODC9hkrA==",
+        "dependencies": {
+          "Cratis.Applications.MongoDB": "15.8.1",
+          "Cratis.Fundamentals": "6.3.2",
+          "Microsoft.Orleans.Runtime": "9.1.2",
+          "Microsoft.Orleans.Sdk": "9.1.2",
+          "System.Text.Json": "9.0.4"
+        }
+      },
       "Cratis.Fundamentals": {
         "type": "Direct",
         "requested": "[6.3.2, )",
@@ -710,10 +723,26 @@
         "resolved": "6.0.0",
         "contentHash": "UcSjPsst+DfAdJGVDsu346FX0ci0ah+lw3WRtn18NUwEqRt70HaOQ7lI72vy3+1LxtqI3T5GWwV39rQSrCzAeg=="
       },
+      "Microsoft.Build.Framework": {
+        "type": "Transitive",
+        "resolved": "17.13.9",
+        "contentHash": "Yc9R6+YdvB7KStBN2SiojR5bsFf+/xklQFhlgRog1wp+2V6rpfOyJftP6WdMwpvRAdy7kWSrvlrbllw62OgtlA=="
+      },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
+      },
+      "Microsoft.Build.Utilities.Core": {
+        "type": "Transitive",
+        "resolved": "17.13.9",
+        "contentHash": "8l/iUywD8ARu+9P5J2AUihLF2WAJRhZm3dbphKHBKZgwcJfHpfeVzIbh/4ZT7hnj5D0p6gVdoODs/X5b9aM9Qw==",
+        "dependencies": {
+          "Microsoft.Build.Framework": "17.13.9",
+          "Microsoft.NET.StringTools": "17.13.9",
+          "System.Collections.Immutable": "8.0.0",
+          "System.Configuration.ConfigurationManager": "8.0.0"
+        }
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Transitive",
@@ -1011,6 +1040,11 @@
           "Microsoft.Extensions.ObjectPool": "9.0.4",
           "Microsoft.Extensions.Options": "9.0.4"
         }
+      },
+      "Microsoft.NET.StringTools": {
+        "type": "Transitive",
+        "resolved": "17.13.9",
+        "contentHash": "GjB0YvVu4gamPBYr+iKokahqZIBWds5hVNSFAYUsxk1KZLI5oubs52xmG3sMDTKy1yR7MBxBhi/k9YY6/qw53A=="
       },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
@@ -1358,6 +1392,15 @@
           "System.Composition.Runtime": "6.0.0"
         }
       },
+      "System.Configuration.ConfigurationManager": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "JlYi9XVvIREURRUlGMr1F6vOFLk7YSY4p1vHo4kX3tQ0AGrjqlRWHDi66ImHhy6qwXBG3BJ6Y1QlYQ+Qz6Xgww==",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "8.0.0",
+          "System.Security.Cryptography.ProtectedData": "8.0.0"
+        }
+      },
       "System.Diagnostics.DiagnosticSource": {
         "type": "Transitive",
         "resolved": "9.0.0",
@@ -1446,6 +1489,11 @@
           "Microsoft.NETCore.Platforms": "5.0.0",
           "System.Security.Principal.Windows": "5.0.0"
         }
+      },
+      "System.Security.Cryptography.ProtectedData": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "+TUFINV2q2ifyXauQXRwy4CiBhqvDEDZeVJU7qfxya4aRYOKzVBpN+4acx25VcPB9ywUN6C0n8drWl110PhZEg=="
       },
       "System.Security.Principal.Windows": {
         "type": "Transitive",
@@ -1682,6 +1730,29 @@
         "contentHash": "wHARzQA695jwwKreOzNsq54KiGqKP38tv8hi8e2FXDEC/sA6BtrX90tVPDkOfVu13PbEzr00TCV8coikl+D1Iw==",
         "dependencies": {
           "System.Diagnostics.EventLog": "6.0.0"
+        }
+      },
+      "Cratis.Applications.ProxyGenerator.Build": {
+        "type": "CentralTransitive",
+        "requested": "[15.8.1, )",
+        "resolved": "15.8.1",
+        "contentHash": "apvzOMqueWtG1ogWbiA82vqm3EEnnpmbNLyQnj2t3mXTPvLVfirZpRlmKFANSiO/eW+/Pa4+EEP25wLT/wyRhg==",
+        "dependencies": {
+          "Microsoft.Build.Framework": "17.13.9",
+          "Microsoft.Build.Utilities.Core": "17.13.9",
+          "System.Text.Json": "9.0.4"
+        }
+      },
+      "Cratis.Applications.Swagger": {
+        "type": "CentralTransitive",
+        "requested": "[15.8.1, )",
+        "resolved": "15.8.1",
+        "contentHash": "7aQR0cvVmBZpV+Y0hQ0EF6yYGHbYW0OU5MsR5SLFIjkgvQf8BtRKS7jE39B+FPhevgL9vxFEy92Fid1k4WALyw==",
+        "dependencies": {
+          "Cratis.Applications": "15.8.1",
+          "Cratis.Fundamentals": "6.3.2",
+          "Swashbuckle.AspNetCore": "8.1.1",
+          "System.Text.Json": "9.0.4"
         }
       },
       "Cratis.Metrics.Roslyn": {

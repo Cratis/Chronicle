@@ -4,6 +4,7 @@
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Grains.Clients;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Metrics;
@@ -27,6 +28,7 @@ public static class ChronicleMetersExtensions
         services.AddMeter<EventSequence>();
         services.AddMeter<AppendedEventsQueue>();
         services.AddMeter<Observer>();
+        services.AddMeter<ConnectedClients>();
 
         return services;
     }
