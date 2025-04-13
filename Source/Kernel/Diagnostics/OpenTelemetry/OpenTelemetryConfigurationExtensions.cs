@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Metrics;
 using Microsoft.Extensions.Configuration;
@@ -19,8 +20,6 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 /// </summary>
 public static class OpenTelemetryConfigurationExtensions
 {
-    const string MeterName = "Cratis.Chronicle";
-
     /// <summary>
     /// Add Chronicle instrumentation to the <see cref="MeterProviderBuilder"/>.
     /// </summary>
@@ -29,7 +28,7 @@ public static class OpenTelemetryConfigurationExtensions
     public static MeterProviderBuilder AddChronicleInstrumentation(this MeterProviderBuilder builder)
     {
         builder
-            .AddMeter(MeterName)
+            .AddMeter(WellKnown.MeterName)
             .AddMeter("Microsoft.Orleans")
             .AddMeter("Grpc.AspNetCore.Server");
 
@@ -41,11 +40,13 @@ public static class OpenTelemetryConfigurationExtensions
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>.</param>
     /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddChronicleMeter(this IServiceCollection services) =>
-#pragma warning disable CA2000
-        services.AddSingleton(new Meter(MeterName))
-#pragma warning restore CA2000
-            .AddSingleton(typeof(Meter<>));
+    public static IServiceCollection AddChronicleMeter(this IServiceCollection services)
+    {
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        services.AddKeyedSingleton(WellKnown.MeterName, new Meter(WellKnown.MeterName));
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        return services;
+    }
 
     /// <summary>
     /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>.

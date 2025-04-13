@@ -3,12 +3,14 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Tasks;
 using Cratis.Metrics;
 using Cratis.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
@@ -41,7 +43,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
-        IMeter<AppendedEventsQueue> meter,
+        [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
         ILogger<AppendedEventsQueue> logger)
     {
         _taskFactory = taskFactory;

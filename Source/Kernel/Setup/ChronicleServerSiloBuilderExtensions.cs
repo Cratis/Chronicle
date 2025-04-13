@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Placement;
@@ -56,7 +55,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
-        builder.Services.AddChronicleMeter();
+        builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
         return builder;
