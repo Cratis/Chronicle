@@ -2,29 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Grains.Clients;
 
-/// <summary>
-/// Represents an implementation of <see cref="IConnectedClientsMetrics"/>.
-/// </summary>
-public class ConnectedClientsMetrics : IConnectedClientsMetrics
+#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable MA0048 // File name must match type name
+#pragma warning disable SA1402 // File may only contain a single type
+
+internal static partial class ConnectedClientsMetrics
 {
-#pragma warning disable IDE0052
-    readonly ObservableGauge<int> _connectedClients;
-#pragma warning restore IDE0052
-
-    int _connectedClientsCount;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectedClientsMetrics"/>.
-    /// </summary>
-    /// <param name="meter">Meter for the Kernel.</param>
-    public ConnectedClientsMetrics(Meter meter)
-    {
-        _connectedClients = meter.CreateObservableGauge("chronicle-connected-clients", () => _connectedClientsCount, description: "Number of connected clients");
-    }
-
-    /// <inheritdoc/>
-    public void SetConnectedClients(int count) => _connectedClientsCount = count;
+    [Gauge<int>("chronicle-connected-clients", "Number of connected clients")]
+    internal static partial void ConnectedClients(this IMeter<ConnectedClients> meter, int count);
 }

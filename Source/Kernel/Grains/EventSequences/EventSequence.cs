@@ -20,6 +20,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
@@ -40,7 +41,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 public class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
-    IMeter<EventSequence> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
