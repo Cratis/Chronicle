@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Concepts;
 
 /// <summary>
 /// Holds well-known constants for Chronicle.
-/// /// </summary>
+/// </summary>
 public static class WellKnown
 {
     /// <summary>
