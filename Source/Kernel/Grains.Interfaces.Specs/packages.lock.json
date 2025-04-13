@@ -29,9 +29,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.193, )",
-        "resolved": "2.0.193",
-        "contentHash": "+qAHYy0X7X6xcjolqGApobXTQ6KhfPcvE1x200Xt10o4LKA4DycJ0f+NgqSH7vUiEuOE6uJlwuhoiBU3mTFp3g=="
+        "requested": "[2.0.195, )",
+        "resolved": "2.0.195",
+        "contentHash": "rQJ/FWl4vBd79QtNXkjg4lKcSu4a/jGNuikUNH5iTqfnsdA1qv3nDrCX51T3i7DP5L6f9UoN4NoQMuezmEQeWQ=="
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
@@ -1084,7 +1084,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.6.0, )",
+          "Cratis.Applications.Orleans": "[15.8.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1097,8 +1097,8 @@
         "dependencies": {
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[9.0.3, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.3, )",
+          "Microsoft.Extensions.DependencyInjection": "[9.0.4, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.4, )",
           "NJsonSchema": "[11.2.0, )",
           "OpenTelemetry.Exporter.InMemory": "[1.11.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1126,11 +1126,11 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.6.0, )",
-        "resolved": "15.6.0",
-        "contentHash": "PoOXGpTTzG/a6OVPUp2YpqD0lUHbu1Hsx5vZ0M9/wsrFL/K84tGxT3ZLPNMXK++PaktZL/ReDr2fg/aI7Qztlw==",
+        "requested": "[15.8.0, )",
+        "resolved": "15.8.0",
+        "contentHash": "FZ55mreNccZ0fPKVP7zxQDr7aj+SAAn9BBAMGO52LTEK2M1AnJ2Oe4j8snKzTIPayGg9MwFU1OtNs7Grs3VGyg==",
         "dependencies": {
-          "Cratis.Fundamentals": "6.3.1",
+          "Cratis.Fundamentals": "6.3.2",
           "Microsoft.Extensions.Logging": "9.0.3",
           "Microsoft.Orleans.Core.Abstractions": "9.1.2",
           "Microsoft.Orleans.Serialization": "9.1.2",
@@ -1207,18 +1207,18 @@
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
-        "resolved": "9.0.3",
-        "contentHash": "lDbxJpkl6X8KZGpkAxgrrthQ42YeiR0xjPp7KPx+sCPc3ZbpaIbjzd0QQ+9kDdK2RU2DOl3pc6tQyAgEZY3V0A==",
+        "requested": "[9.0.4, )",
+        "resolved": "9.0.4",
+        "contentHash": "f2MTUaS2EQ3lX4325ytPAISZqgBfXmY0WvgD80ji6Z20AoDNiCESxsqo6mFRwHJD/jfVKRw9FsW6+86gNre3ug==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.3"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.4"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
-        "resolved": "9.0.3",
-        "contentHash": "TfaHPSe39NyL2wxkisRxXK7xvHGZYBZ+dy3r+mqGvnxKgAPdHkMu3QMQZI4pquP6W5FIQBqs8FJpWV8ffCgDqQ=="
+        "requested": "[9.0.4, )",
+        "resolved": "9.0.4",
+        "contentHash": "UI0TQPVkS78bFdjkTodmkH0Fe8lXv9LnhGFKgKrsgUJ5a5FVdFRcgjIkBVLbGgdRhxWirxH/8IXUtEyYJx6GQg=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "CentralTransitive",
@@ -1228,7 +1228,7 @@
       },
       "Microsoft.Extensions.Hosting": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
+        "requested": "[9.0.4, )",
         "resolved": "8.0.1",
         "contentHash": "bP9EEkHBEfjgYiG8nUaXqMk/ujwJrffOkNPP7onpRMO8R+OUSESSP4xHkCAXgYZ1COP2Q9lXlU5gkMFh20gRuw==",
         "dependencies": {
@@ -1258,7 +1258,7 @@
       },
       "Microsoft.Extensions.Logging.Console": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
+        "requested": "[9.0.4, )",
         "resolved": "8.0.1",
         "contentHash": "uzcg/5U2eLyn5LIKlERkdSxw6VPC1yydnOSQiRRWGBGN3kphq3iL4emORzrojScDmxRhv49gp5BI8U3Dz7y4iA==",
         "dependencies": {

@@ -19,9 +19,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.193, )",
-        "resolved": "2.0.193",
-        "contentHash": "+qAHYy0X7X6xcjolqGApobXTQ6KhfPcvE1x200Xt10o4LKA4DycJ0f+NgqSH7vUiEuOE6uJlwuhoiBU3mTFp3g=="
+        "requested": "[2.0.195, )",
+        "resolved": "2.0.195",
+        "contentHash": "rQJ/FWl4vBd79QtNXkjg4lKcSu4a/jGNuikUNH5iTqfnsdA1qv3nDrCX51T3i7DP5L6f9UoN4NoQMuezmEQeWQ=="
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
@@ -47,9 +47,9 @@
       },
       "protobuf-net.BuildTools": {
         "type": "Direct",
-        "requested": "[3.2.46, )",
-        "resolved": "3.2.46",
-        "contentHash": "GuXYqeB7VCXb0uLw5Ee1iZrmWE3Sn6Vx57KoEQU684yt2jEifi5Y1YKBzsqtem3YiH4WCytZcydSob7+08T8CQ=="
+        "requested": "[3.2.52, )",
+        "resolved": "3.2.52",
+        "contentHash": "Z5h8xCiAVCekjR1Nrw0LkbeR13q4EX94KHeZb1/U1ZYjy517gWvAJFzi50jKXCaa96Gxh4b2MwC7bjH0W7Cjhg=="
       },
       "protobuf-net.Grpc": {
         "type": "Direct",
@@ -746,7 +746,7 @@
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
+        "requested": "[9.0.4, )",
         "resolved": "9.0.3",
         "contentHash": "lDbxJpkl6X8KZGpkAxgrrthQ42YeiR0xjPp7KPx+sCPc3ZbpaIbjzd0QQ+9kDdK2RU2DOl3pc6tQyAgEZY3V0A==",
         "dependencies": {
@@ -755,13 +755,13 @@
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
+        "requested": "[9.0.4, )",
         "resolved": "9.0.3",
         "contentHash": "TfaHPSe39NyL2wxkisRxXK7xvHGZYBZ+dy3r+mqGvnxKgAPdHkMu3QMQZI4pquP6W5FIQBqs8FJpWV8ffCgDqQ=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "CentralTransitive",
-        "requested": "[9.0.3, )",
+        "requested": "[9.0.4, )",
         "resolved": "9.0.3",
         "contentHash": "194P+NOekDXrPHmM2R8678T4bRfZ2isQXDDAsXKE5qI0QLUnXbwB0upljAkyxk+Kkt1DV1tV+9tHOtHEEh3ksw=="
       },
