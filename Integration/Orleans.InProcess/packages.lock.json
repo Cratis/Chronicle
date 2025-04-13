@@ -4,17 +4,17 @@
     "net9.0": {
       "Cratis.Applications.MongoDB": {
         "type": "Direct",
-        "requested": "[15.8.0, )",
-        "resolved": "15.8.0",
-        "contentHash": "TZ0uR4FbT6AGONoCoWNWj3+ZtkorUNfLmSUVGKkiFhObhksQe1e2cGAYEWIfKEuydUWbiZiyZ3H4AVpdwkUg8w==",
+        "requested": "[15.8.1, )",
+        "resolved": "15.8.1",
+        "contentHash": "Fxd6pxUOx+zGNjRgMiIX+eSOrvkKq2gZeAD+17RrT44XmoeZ0dsDEccaRCIIAICm7+/llkQsvJofWCTpNlmU5w==",
         "dependencies": {
-          "Cratis.Applications": "15.8.0",
+          "Cratis.Applications": "15.8.1",
           "Cratis.Fundamentals": "6.3.2",
           "Cratis.Metrics.Roslyn": "6.3.2",
-          "Microsoft.Extensions.Hosting": "9.0.3",
-          "Microsoft.Extensions.Logging": "9.0.3",
+          "Microsoft.Extensions.Hosting": "9.0.4",
+          "Microsoft.Extensions.Logging": "9.0.4",
           "MongoDB.Driver": "3.3.0",
-          "System.Text.Json": "9.0.3",
+          "System.Text.Json": "9.0.4",
           "castle.core": "5.2.1",
           "polly.core": "8.5.2"
         }
@@ -46,9 +46,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.195, )",
-        "resolved": "2.0.195",
-        "contentHash": "rQJ/FWl4vBd79QtNXkjg4lKcSu4a/jGNuikUNH5iTqfnsdA1qv3nDrCX51T3i7DP5L6f9UoN4NoQMuezmEQeWQ=="
+        "requested": "[2.0.196, )",
+        "resolved": "2.0.196",
+        "contentHash": "2vqL2iokFYGGezJF/bdP7SW6bnwFSzSeQjwD5wjuZvoPnu8ZcWf4gzIF5Uk/30axvunOImqK6DIRsJmI5LgWUw=="
       },
       "Microsoft.AspNetCore.Mvc.Testing": {
         "type": "Direct",
@@ -155,9 +155,9 @@
       },
       "System.Text.Json": {
         "type": "Direct",
-        "requested": "[9.0.3, )",
-        "resolved": "9.0.3",
-        "contentHash": "r2JRkLjsYrq5Dpo7+y3Wa73OfirZPdVhxiTJWwZ+oJM7FOAe0LkM3GlH+pgkNRdd1G1kwUbmRCdmh4uoaWwu1g=="
+        "requested": "[9.0.4, )",
+        "resolved": "9.0.4",
+        "contentHash": "pYtmpcO6R3Ef1XilZEHgXP2xBPVORbYEzRP7dl0IAAbN8Dm+kfwio8aCKle97rAWXOExr292MuxWYurIuwN62g=="
       },
       "xunit": {
         "type": "Direct",
@@ -1393,7 +1393,7 @@
           "NJsonSchema": "[11.2.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )",
+          "System.Text.Json": "[9.0.4, )",
           "automapper": "[14.0.0, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
@@ -1404,7 +1404,7 @@
           "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Compliance": {
@@ -1413,7 +1413,7 @@
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Concepts": {
@@ -1425,7 +1425,7 @@
           "OneOf": "[3.0.271, )",
           "OneOf.SourceGenerator": "[3.0.271, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Connections": {
@@ -1437,7 +1437,7 @@
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )",
+          "System.Text.Json": "[9.0.4, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -1446,7 +1446,7 @@
         "dependencies": {
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )",
+          "System.Text.Json": "[9.0.4, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -1462,13 +1462,13 @@
           "OpenTelemetry.Instrumentation.GrpcNetClient": "[1.10.0-beta.1, )",
           "OpenTelemetry.Instrumentation.Http": "[1.11.1, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Grains": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.8.0, )",
+          "Cratis.Applications": "[15.8.1, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
@@ -1480,18 +1480,18 @@
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.8.0, )",
+          "Cratis.Applications.Orleans": "[15.8.1, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Infrastructure": {
@@ -1505,7 +1505,7 @@
           "OpenTelemetry.Exporter.InMemory": "[1.11.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )",
+          "System.Text.Json": "[9.0.4, )",
           "humanizer": "[2.14.1, )"
         }
       },
@@ -1517,7 +1517,7 @@
           "Microsoft.NET.Test.Sdk": "[17.13.0, )",
           "Microsoft.Orleans.TestingHost": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )",
+          "System.Text.Json": "[9.0.4, )",
           "Testcontainers": "[4.3.0, )",
           "mongodb.driver": "[3.3.0, )",
           "xunit": "[2.9.3, )"
@@ -1530,14 +1530,14 @@
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Orleans.InProcess": {
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, )",
-          "Cratis.Applications.Orleans": "[15.8.0, )",
+          "Cratis.Applications.Orleans": "[15.8.1, )",
           "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
@@ -1558,7 +1558,7 @@
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "NJsonSchema": "[11.2.0, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )",
+          "System.Text.Json": "[9.0.4, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -1569,7 +1569,7 @@
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Services": {
@@ -1583,7 +1583,7 @@
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Setup": {
@@ -1595,7 +1595,7 @@
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Storage": {
@@ -1603,13 +1603,13 @@
         "dependencies": {
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "Cratis.Chronicle.Storage.MongoDB": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.MongoDB": "[15.8.0, )",
+          "Cratis.Applications.MongoDB": "[15.8.1, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
@@ -1623,7 +1623,7 @@
           "Polly.Core": "[8.5.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.3, )"
+          "System.Text.Json": "[9.0.4, )"
         }
       },
       "AutoMapper": {
@@ -1646,29 +1646,29 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.8.0, )",
-        "resolved": "15.8.0",
-        "contentHash": "FyyQbJRv1SAk3Dh3tDFKhavvstps23QDb79Y8qswxYnMuvyOKtonBztdlX2Xk2Dwzw+Beojvm3Oc6UWmQAOdOQ==",
+        "requested": "[15.8.1, )",
+        "resolved": "15.8.1",
+        "contentHash": "o6GDAg6Ipfk6LS8kZltl1FRVdHBDIO4Ae+80xCVhp/EJgeYUlnujzTQDMaT+2goFZwpLMPO+uYz94mdvr8G7KQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "FluentValidation": "11.11.0",
-          "Microsoft.Extensions.Configuration.FileExtensions": "9.0.3",
-          "Microsoft.Extensions.Hosting": "9.0.3",
-          "Microsoft.Extensions.Logging": "9.0.3",
-          "System.Text.Json": "9.0.3"
+          "Microsoft.Extensions.Configuration.FileExtensions": "9.0.4",
+          "Microsoft.Extensions.Hosting": "9.0.4",
+          "Microsoft.Extensions.Logging": "9.0.4",
+          "System.Text.Json": "9.0.4"
         }
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.8.0, )",
-        "resolved": "15.8.0",
-        "contentHash": "FZ55mreNccZ0fPKVP7zxQDr7aj+SAAn9BBAMGO52LTEK2M1AnJ2Oe4j8snKzTIPayGg9MwFU1OtNs7Grs3VGyg==",
+        "requested": "[15.8.1, )",
+        "resolved": "15.8.1",
+        "contentHash": "GNVdyItdcIulL3xHaezbGeAOyoDCdc2VI8HKbTEOZO0JluQAAmc7l+Vbg73kn7l3p7eqX4RNt4cFaUu8uom7bg==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
-          "Microsoft.Extensions.Logging": "9.0.3",
+          "Microsoft.Extensions.Logging": "9.0.4",
           "Microsoft.Orleans.Core.Abstractions": "9.1.2",
           "Microsoft.Orleans.Serialization": "9.1.2",
-          "System.Text.Json": "9.0.3"
+          "System.Text.Json": "9.0.4"
         }
       },
       "Cratis.Metrics.Roslyn": {
