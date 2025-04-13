@@ -1303,7 +1303,7 @@
       "Cratis.Chronicle.Grains": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.8.1, )",
+          "Cratis.Applications": "[15.8.2, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
@@ -1321,7 +1321,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.8.1, )",
+          "Cratis.Applications.Orleans": "[15.8.2, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1378,9 +1378,9 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.8.1, )",
-        "resolved": "15.8.1",
-        "contentHash": "o6GDAg6Ipfk6LS8kZltl1FRVdHBDIO4Ae+80xCVhp/EJgeYUlnujzTQDMaT+2goFZwpLMPO+uYz94mdvr8G7KQ==",
+        "requested": "[15.8.2, )",
+        "resolved": "15.8.2",
+        "contentHash": "RBZJ8yAflwSU765M4KJ83UYvtPC+IIqxaMI0aKZe0q31crSa3SgyV9hmpbcXXDVuyyndggYvzSrcufaFL315LQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "FluentValidation": "11.11.0",
@@ -1392,9 +1392,9 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.8.1, )",
-        "resolved": "15.8.1",
-        "contentHash": "GNVdyItdcIulL3xHaezbGeAOyoDCdc2VI8HKbTEOZO0JluQAAmc7l+Vbg73kn7l3p7eqX4RNt4cFaUu8uom7bg==",
+        "requested": "[15.8.2, )",
+        "resolved": "15.8.2",
+        "contentHash": "thACEpwSHn4flMrSptxuvLfUGrg0Yi92gsidkNOf0RlMyiwqZU1cCHFtiBagR+SxqzJ7LAdTjcUQvNcHY4tcVg==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "Microsoft.Extensions.Logging": "9.0.4",

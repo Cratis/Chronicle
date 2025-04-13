@@ -887,9 +887,9 @@
       "Cratis.Chronicle.Api": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.8.1, )",
-          "Cratis.Applications.ProxyGenerator.Build": "[15.8.1, )",
-          "Cratis.Applications.Swagger": "[15.8.1, )",
+          "Cratis.Applications": "[15.8.2, )",
+          "Cratis.Applications.ProxyGenerator.Build": "[15.8.2, )",
+          "Cratis.Applications.Swagger": "[15.8.2, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
@@ -939,9 +939,9 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.8.1, )",
-        "resolved": "15.8.1",
-        "contentHash": "o6GDAg6Ipfk6LS8kZltl1FRVdHBDIO4Ae+80xCVhp/EJgeYUlnujzTQDMaT+2goFZwpLMPO+uYz94mdvr8G7KQ==",
+        "requested": "[15.8.2, )",
+        "resolved": "15.8.2",
+        "contentHash": "RBZJ8yAflwSU765M4KJ83UYvtPC+IIqxaMI0aKZe0q31crSa3SgyV9hmpbcXXDVuyyndggYvzSrcufaFL315LQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "FluentValidation": "11.11.0",
