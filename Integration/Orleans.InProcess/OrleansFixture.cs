@@ -56,7 +56,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
             {
-                services.AddKeyedSingleton("Cratis.Applications", new Meter("Cratis.Applications"));
+                services.AddCratisApplicationModelMeter();
                 services.AddSingleton(Globals.JsonSerializerOptions);
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
