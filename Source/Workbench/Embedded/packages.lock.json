@@ -487,10 +487,26 @@
           "Humanizer.Core": "[2.14.1]"
         }
       },
+      "Microsoft.Build.Framework": {
+        "type": "Transitive",
+        "resolved": "17.13.9",
+        "contentHash": "Yc9R6+YdvB7KStBN2SiojR5bsFf+/xklQFhlgRog1wp+2V6rpfOyJftP6WdMwpvRAdy7kWSrvlrbllw62OgtlA=="
+      },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
+      },
+      "Microsoft.Build.Utilities.Core": {
+        "type": "Transitive",
+        "resolved": "17.13.9",
+        "contentHash": "8l/iUywD8ARu+9P5J2AUihLF2WAJRhZm3dbphKHBKZgwcJfHpfeVzIbh/4ZT7hnj5D0p6gVdoODs/X5b9aM9Qw==",
+        "dependencies": {
+          "Microsoft.Build.Framework": "17.13.9",
+          "Microsoft.NET.StringTools": "17.13.9",
+          "System.Collections.Immutable": "8.0.0",
+          "System.Configuration.ConfigurationManager": "8.0.0"
+        }
       },
       "Microsoft.Extensions.ApiDescription.Server": {
         "type": "Transitive",
@@ -721,6 +737,11 @@
         "resolved": "9.0.4",
         "contentHash": "SPFyMjyku1nqTFFJ928JAMd0QnRe4xjE7KeKnZMWXf3xk+6e0WiOZAluYtLdbJUXtsl2cCRSi8cBquJ408k8RA=="
       },
+      "Microsoft.NET.StringTools": {
+        "type": "Transitive",
+        "resolved": "17.13.9",
+        "contentHash": "GjB0YvVu4gamPBYr+iKokahqZIBWds5hVNSFAYUsxk1KZLI5oubs52xmG3sMDTKy1yR7MBxBhi/k9YY6/qw53A=="
+      },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
         "resolved": "2.1.0",
@@ -821,6 +842,20 @@
         "resolved": "8.1.1",
         "contentHash": "GDLX/MpK4oa2nYC1N/zN2UidQTtVKLPF6gkdEmGb0RITEwpJG9Gu8olKqPYnKqVeFn44JZoCS0M2LGRKXP8B/A=="
       },
+      "System.Collections.Immutable": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "AurL6Y5BA1WotzlEvVaIDpqzpIPvYnnldxru8oXJU2yFxFUy3+pNXjXd1ymO+RA0rq0+590Q8gaz2l3Sr7fmqg=="
+      },
+      "System.Configuration.ConfigurationManager": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "JlYi9XVvIREURRUlGMr1F6vOFLk7YSY4p1vHo4kX3tQ0AGrjqlRWHDi66ImHhy6qwXBG3BJ6Y1QlYQ+Qz6Xgww==",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "8.0.0",
+          "System.Security.Cryptography.ProtectedData": "8.0.0"
+        }
+      },
       "System.Diagnostics.DiagnosticSource": {
         "type": "Transitive",
         "resolved": "9.0.0",
@@ -867,6 +902,11 @@
           "Microsoft.NETCore.Platforms": "1.1.0",
           "Microsoft.NETCore.Targets": "1.1.0"
         }
+      },
+      "System.Security.Cryptography.ProtectedData": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "+TUFINV2q2ifyXauQXRwy4CiBhqvDEDZeVJU7qfxya4aRYOKzVBpN+4acx25VcPB9ywUN6C0n8drWl110PhZEg=="
       },
       "System.Security.Principal.Windows": {
         "type": "Transitive",
@@ -948,6 +988,29 @@
           "Microsoft.Extensions.Configuration.FileExtensions": "9.0.4",
           "Microsoft.Extensions.Hosting": "9.0.4",
           "Microsoft.Extensions.Logging": "9.0.4",
+          "System.Text.Json": "9.0.4"
+        }
+      },
+      "Cratis.Applications.ProxyGenerator.Build": {
+        "type": "CentralTransitive",
+        "requested": "[15.8.2, )",
+        "resolved": "15.8.2",
+        "contentHash": "5AxnG7zXCP/hI0opXHpbCwVqFucugTZOUVl2RQBK/0f9y3h8audi4DXYpsVxZh3eRLHoYIvZUAc9FMzgcTKFew==",
+        "dependencies": {
+          "Microsoft.Build.Framework": "17.13.9",
+          "Microsoft.Build.Utilities.Core": "17.13.9",
+          "System.Text.Json": "9.0.4"
+        }
+      },
+      "Cratis.Applications.Swagger": {
+        "type": "CentralTransitive",
+        "requested": "[15.8.2, )",
+        "resolved": "15.8.2",
+        "contentHash": "iUE9JGXkinDQOwd50iYGvK8WUZH984N4Na7SVFo5CbiA/6LU3HHMlqbJd0sOKF6BzyCTwKlE8mQuUfWIxrO2ww==",
+        "dependencies": {
+          "Cratis.Applications": "15.8.2",
+          "Cratis.Fundamentals": "6.3.2",
+          "Swashbuckle.AspNetCore": "8.1.1",
           "System.Text.Json": "9.0.4"
         }
       },
