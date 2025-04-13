@@ -35,7 +35,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var waitTime = 20.Seconds();
+            var waitTime = 5.Seconds();
             await ReducerObserver.WaitTillActive(waitTime);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
