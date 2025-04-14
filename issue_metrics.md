@@ -8,13 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 289 |
+| Number of items that remain open | 291 |
 | Number of items closed | 531 |
 | Number of most active mentors | 0 |
-| Total number of items created | 820 |
+| Total number of items created | 822 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Support clustering for Kernel | https://github.com/Cratis/Chronicle/issues/1863 | [einari](https://github.com/einari) | None | None | None |
 | Support for compensating existing events | https://github.com/Cratis/Chronicle/issues/1860 | [einari](https://github.com/einari) | None | None | None |
 | Support migration of events between generations (up & down casting) | https://github.com/Cratis/Chronicle/issues/1859 | [einari](https://github.com/einari) | None | None | None |
 | Add support for redacting events | https://github.com/Cratis/Chronicle/issues/1858 | [einari](https://github.com/einari) | None | None | None |
@@ -185,6 +186,7 @@
 | Add tracing to UnitOfWork | https://github.com/Cratis/Chronicle/issues/1396 | [woksin](https://github.com/woksin) | None | None | None |
 | Add logging messages for client reactors + reducers | https://github.com/Cratis/Chronicle/issues/1395 | [einari](https://github.com/einari) | None | None | None |
 | Support specifying key for events for Reactors and Reducers | https://github.com/Cratis/Chronicle/issues/1392 | [einari](https://github.com/einari) | None | None | None |
+| AggregateRootCommitResult.Events does not seem to come in order of when events was Applied | https://github.com/Cratis/Chronicle/issues/1864 | [woksin](https://github.com/woksin) | None | None | None |
 | Look into how we represent a Key and see if we need to improve this | https://github.com/Cratis/Chronicle/issues/1387 | [einari](https://github.com/einari) | None | None | None |
 | Switch to KeepAliveAttribute for Grains that needs to always be there | https://github.com/Cratis/Chronicle/issues/1386 | [einari](https://github.com/einari) | None | 168 days, 16:13:26 | None |
 | Look into if it makes sense to allow sharing reducers and projections for Aggregates and Read Models | https://github.com/Cratis/Chronicle/issues/1383 | [einari](https://github.com/einari) | None | None | None |
@@ -368,5 +370,4 @@
 | Protect system collections for custom event sequences | https://github.com/Cratis/Chronicle/issues/932 | [einari](https://github.com/einari) | None | None | None |
 | Remove tenant configuration | https://github.com/Cratis/Chronicle/issues/931 | [einari](https://github.com/einari) | None | 342 days, 17:43:03 | None |
 | Remove the concept of Microservice completely | https://github.com/Cratis/Chronicle/issues/930 | [einari](https://github.com/einari) | None | 341 days, 20:57:06 | None |
-| Change configuration to only need a connection string to a MongoDB database and it figures out the rest | https://github.com/Cratis/Chronicle/issues/929 | [einari](https://github.com/einari) | None | 392 days, 7:24:40 | None |
-| Rename from Observer to Reaction | https://github.com/Cratis/Chronicle/issues/928 | [einari](https://github.com/einari) | None | 341 days, 21:17:47 | Non
+| Change configuration to only need a
