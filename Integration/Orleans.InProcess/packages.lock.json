@@ -1518,7 +1518,7 @@
           "Microsoft.Orleans.TestingHost": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )",
-          "Testcontainers": "[4.3.0, )",
+          "Testcontainers": "[4.4.0, )",
           "mongodb.driver": "[3.3.0, )",
           "xunit": "[2.9.3, )"
         }
@@ -2232,9 +2232,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.3.0, )",
-        "resolved": "4.3.0",
-        "contentHash": "1cxsjDE2+rdi/ELOel+NbQhQ7tvaqXG2YDN6nmhDzyAu9baGM2FUENG/3eG7N+ak3nap35RFvxyhIdVBeqNwlA==",
+        "requested": "[4.4.0, )",
+        "resolved": "4.4.0",
+        "contentHash": "P4+fXNjMtLW1CRjBQ3SUQWxz98mio+79OL6B+4DmzMaafW1rEVZ/eFHFG9TrxMWeg+cgftkzV7oPcGNZQ12Q9w==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "3.126.1",
           "Docker.DotNet.Enhanced.X509": "3.126.1",
