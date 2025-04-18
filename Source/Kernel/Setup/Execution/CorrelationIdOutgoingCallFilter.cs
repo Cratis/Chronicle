@@ -12,7 +12,10 @@ public class CorrelationIdOutgoingCallFilter(ICorrelationIdAccessor correlationI
     /// <inheritdoc/>
     public async Task Invoke(IOutgoingGrainCallContext context)
     {
-        RequestContext.Set(RequestContextKeys.CorrelationIdKey, correlationIdAccessor.Current.Value);
+        if (context.InterfaceName.StartsWith("Cratis"))
+        {
+            RequestContext.Set(RequestContextKeys.CorrelationIdKey, correlationIdAccessor.Current.Value);
+        }
         await context.Invoke();
     }
 }
