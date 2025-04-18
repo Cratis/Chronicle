@@ -33,7 +33,8 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         object @event,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default) => Task.FromResult(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.Unavailable));
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default) => Task.FromResult(AppendResult.Success(correlationId ?? CorrelationId.New(), EventSequenceNumber.Unavailable));
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(
@@ -41,10 +42,11 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         IEnumerable<object> events,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events) => Task.FromResult(AppendManyResult.Success(CorrelationId.New(), []));
+    public Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(

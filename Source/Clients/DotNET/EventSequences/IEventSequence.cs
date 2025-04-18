@@ -73,8 +73,15 @@ public interface IEventSequence
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendResult> Append(EventSourceId eventSourceId, object @event, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
+    Task<AppendResult> Append(
+        EventSourceId eventSourceId,
+        object @event,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default);
 
     /// <summary>
     /// Append a collection of events to the event store.
@@ -84,21 +91,29 @@ public interface IEventSequence
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
     /// </remarks>
-    Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<object> events, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
+    Task<AppendManyResult> AppendMany(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.
     /// </summary>
     /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
     /// </remarks>
-    Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events);
+    Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

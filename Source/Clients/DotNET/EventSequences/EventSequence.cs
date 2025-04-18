@@ -46,12 +46,14 @@ public class EventSequence(
         object @event,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default)
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default)
     {
         var eventClrType = @event.GetType();
         eventStreamType ??= EventStreamType.All;
         eventStreamId ??= EventStreamId.Default;
         eventSourceType ??= EventSourceType.Default;
+        correlationId ??= correlationIdAccessor.Current;
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
@@ -68,7 +70,7 @@ public class EventSequence(
             EventSourceId = eventSourceId,
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId,
-            CorrelationId = correlationIdAccessor.Current,
+            CorrelationId = correlationId,
             EventType = new()
             {
                 Id = eventType.Id,
@@ -88,7 +90,8 @@ public class EventSequence(
         IEnumerable<object> events,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default)
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -104,11 +107,11 @@ public class EventSequence(
             };
         }).ToList();
 
-        return await AppendManyImplementation(eventsToAppend);
+        return await AppendManyImplementation(eventsToAppend, correlationId ?? correlationIdAccessor.Current);
     }
 
     /// <inheritdoc/>
-    public async Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events)
+    public async Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -124,7 +127,7 @@ public class EventSequence(
             };
         }).ToList();
 
-        return await AppendManyImplementation(eventsToAppend);
+        return await AppendManyImplementation(eventsToAppend, correlationId ?? correlationIdAccessor.Current);
     }
 
     /// <inheritdoc/>
@@ -206,7 +209,7 @@ public class EventSequence(
         }
     }
 
-    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend)
+    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend, CorrelationId correlationId)
     {
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
@@ -215,7 +218,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            CorrelationId = correlationIdAccessor.Current,
+            CorrelationId = correlationId,
             Events = eventsToAppend,
             Causation = causationChain,
             CausedBy = identity.ToContract()
