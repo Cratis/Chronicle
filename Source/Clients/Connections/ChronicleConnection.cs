@@ -15,8 +15,10 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Execution;
 using Cratis.Tasks;
 using Grpc.Core;
+using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.Logging;
@@ -32,6 +34,7 @@ public class ChronicleConnection : IChronicleConnection
     readonly ChronicleUrl _url;
     readonly int _connectTimeout;
     readonly ITaskFactory _tasks;
+    readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
     GrpcChannel? _channel;
@@ -48,6 +51,7 @@ public class ChronicleConnection : IChronicleConnection
     /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
+    /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
     /// <param name="logger">Logger for logging.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -56,6 +60,7 @@ public class ChronicleConnection : IChronicleConnection
         int connectTimeout,
         IConnectionLifecycle connectionLifecycle,
         ITaskFactory tasks,
+        ICorrelationIdAccessor correlationIdAccessor,
         ILogger<ChronicleConnection> logger,
         CancellationToken cancellationToken)
     {
@@ -64,6 +69,7 @@ public class ChronicleConnection : IChronicleConnection
         _connectTimeout = connectTimeout;
         Lifecycle = connectionLifecycle;
         _tasks = tasks;
+        _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
         _logger = logger;
 
@@ -112,7 +118,8 @@ public class ChronicleConnection : IChronicleConnection
         _keepAliveSubscription?.Dispose();
 
         _channel = CreateGrpcChannel();
-        _connectionService = _channel.CreateGrpcService<IConnectionService>();
+        var callInvoker = _channel.Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
+        _connectionService = callInvoker.CreateGrpcService<IConnectionService>();
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -126,20 +133,20 @@ public class ChronicleConnection : IChronicleConnection
         try
         {
             _services = new Services(
-                _channel.CreateGrpcService<IEventStores>(),
-                _channel.CreateGrpcService<INamespaces>(),
-                _channel.CreateGrpcService<IRecommendations>(),
-                _channel.CreateGrpcService<IIdentities>(),
-                _channel.CreateGrpcService<IEventSequences>(),
-                _channel.CreateGrpcService<IEventTypes>(),
-                _channel.CreateGrpcService<IConstraints>(),
-                _channel.CreateGrpcService<IObservers>(),
-                _channel.CreateGrpcService<IFailedPartitions>(),
-                _channel.CreateGrpcService<IReactors>(),
-                _channel.CreateGrpcService<IReducers>(),
-                _channel.CreateGrpcService<IProjections>(),
-                _channel.CreateGrpcService<IJobs>(),
-                _channel.CreateGrpcService<IServer>());
+                callInvoker.CreateGrpcService<IEventStores>(),
+                callInvoker.CreateGrpcService<INamespaces>(),
+                callInvoker.CreateGrpcService<IRecommendations>(),
+                callInvoker.CreateGrpcService<IIdentities>(),
+                callInvoker.CreateGrpcService<IEventSequences>(),
+                callInvoker.CreateGrpcService<IEventTypes>(),
+                callInvoker.CreateGrpcService<IConstraints>(),
+                callInvoker.CreateGrpcService<IObservers>(),
+                callInvoker.CreateGrpcService<IFailedPartitions>(),
+                callInvoker.CreateGrpcService<IReactors>(),
+                callInvoker.CreateGrpcService<IReducers>(),
+                callInvoker.CreateGrpcService<IProjections>(),
+                callInvoker.CreateGrpcService<IJobs>(),
+                callInvoker.CreateGrpcService<IServer>());
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));
             _logger.Connected();
