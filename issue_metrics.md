@@ -8,13 +8,15 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 291 |
+| Number of items that remain open | 293 |
 | Number of items closed | 531 |
 | Number of most active mentors | 0 |
-| Total number of items created | 822 |
+| Total number of items created | 824 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Support Microsoft SQL Server as Sink for Reducers and Projections | https://github.com/Cratis/Chronicle/issues/1869 | [einari](https://github.com/einari) | None | None | None |
+| Support Microsoft SQL Server as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | [einari](https://github.com/einari) | None | None | None |
 | Support clustering for Kernel | https://github.com/Cratis/Chronicle/issues/1863 | [einari](https://github.com/einari) | None | None | None |
 | Support for compensating existing events | https://github.com/Cratis/Chronicle/issues/1860 | [einari](https://github.com/einari) | None | None | None |
 | Support migration of events between generations (up & down casting) | https://github.com/Cratis/Chronicle/issues/1859 | [einari](https://github.com/einari) | None | None | None |
@@ -368,6 +370,4 @@
 | Fix namespaces | https://github.com/Cratis/Chronicle/issues/939 | [einari](https://github.com/einari) | None | 346 days, 19:01:00 | None |
 | Formalize storage APIs - move away from having to implement Orleans interfaces | https://github.com/Cratis/Chronicle/issues/934 | [einari](https://github.com/einari) | None | 297 days, 7:13:29 | None |
 | Protect system collections for custom event sequences | https://github.com/Cratis/Chronicle/issues/932 | [einari](https://github.com/einari) | None | None | None |
-| Remove tenant configuration | https://github.com/Cratis/Chronicle/issues/931 | [einari](https://github.com/einari) | None | 342 days, 17:43:03 | None |
-| Remove the concept of Microservice completely | https://github.com/Cratis/Chronicle/issues/930 | [einari](https://github.com/einari) | None | 341 days, 20:57:06 | None |
-| Change configuration to only need a
+| Remove tenant configurati
