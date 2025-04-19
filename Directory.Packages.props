@@ -21,12 +21,12 @@
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="6.3.2" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.3.2" />
-        <PackageVersion Include="Cratis.Applications" Version="15.9.1" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="15.9.1" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="15.9.1" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="15.9.1" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="15.9.1" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="15.9.1" />
+        <PackageVersion Include="Cratis.Applications" Version="15.10.0" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="15.10.0" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="15.10.0" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="15.10.0" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="15.10.0" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="15.10.0" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.1.2" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.1.2" />

@@ -1157,7 +1157,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.9.1, )",
+          "Cratis.Applications.Orleans": "[15.10.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1190,9 +1190,9 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.9.1, )",
-        "resolved": "15.9.1",
-        "contentHash": "9Wm7wC8pX+sLYx+BmyIsFShI66THvR3X6JognYCkO2aAyXWR6asApW3JX1YliekaCnXFfMaDHsctEXnuKOgU1Q==",
+        "requested": "[15.10.0, )",
+        "resolved": "15.10.0",
+        "contentHash": "ZumpBjdgJL+OvxNp8dObKhnW9oowQoAx48bxJbWno5qRvfELLKl2KeG5zt5bRio6O6TOH3Z4Tkbfi0eOZaW+EQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "Microsoft.Extensions.Logging": "9.0.4",

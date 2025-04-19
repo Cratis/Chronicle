@@ -982,9 +982,9 @@
       "Cratis.Chronicle.Api": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.9.1, )",
-          "Cratis.Applications.ProxyGenerator.Build": "[15.9.1, )",
-          "Cratis.Applications.Swagger": "[15.9.1, )",
+          "Cratis.Applications": "[15.10.0, )",
+          "Cratis.Applications.ProxyGenerator.Build": "[15.10.0, )",
+          "Cratis.Applications.Swagger": "[15.10.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
@@ -1034,9 +1034,9 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.9.1, )",
-        "resolved": "15.9.1",
-        "contentHash": "RLr+r3f36tjDhInMMRa7Pn69NKCGd3TXoJxqGE3sTzc4FjTHrQ02XySdS8jbKJKQbZFJ3VLh+9jRBLI/4Vs8cg==",
+        "requested": "[15.10.0, )",
+        "resolved": "15.10.0",
+        "contentHash": "fUltVSGS3TNPgz4qsFbJfI/X3Us9Frua9M5Cu6SvzxeWzpnierFDOqvfTAzWDGMgqxwHXfuxgUe7F2dniyRdfg==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "FluentValidation": "11.11.0",
@@ -1049,9 +1049,9 @@
       },
       "Cratis.Applications.ProxyGenerator.Build": {
         "type": "CentralTransitive",
-        "requested": "[15.9.1, )",
-        "resolved": "15.9.1",
-        "contentHash": "dkkSPRw7cr0ax+926PUyamVBqsC3mb/zw75fY/nDlixQYewSgR+Crc1m29S9pjLTgoS5Ma/zAOowQu/2QOYdPw==",
+        "requested": "[15.10.0, )",
+        "resolved": "15.10.0",
+        "contentHash": "9sB+glitlY7FiN18BBxM1Vf9KMk3GW9lwWmTUU9jCwlJ3WMYKqhEgcesQESGFyK6kqGn/VeWpeJOQdl6tXBuuQ==",
         "dependencies": {
           "Microsoft.Build.Framework": "17.13.9",
           "Microsoft.Build.Utilities.Core": "17.13.9",
@@ -1060,11 +1060,11 @@
       },
       "Cratis.Applications.Swagger": {
         "type": "CentralTransitive",
-        "requested": "[15.9.1, )",
-        "resolved": "15.9.1",
-        "contentHash": "GTsFg3j7ZAWrRKjoH2cmeB/QEOWCfwJwHCv47eUJeZGw+QiLQMmx0tLe9qRHN0YD4ceJFkxZu0xwapl+4vFVtw==",
+        "requested": "[15.10.0, )",
+        "resolved": "15.10.0",
+        "contentHash": "eYNN3v1FSPQLThYv6AIZ7hDMqHqz1RQHIDXg2J8UVjPmP2MDKBAgaUO28qXwu2MridFGbp2J1MAwdmKSPE53sA==",
         "dependencies": {
-          "Cratis.Applications": "15.9.1",
+          "Cratis.Applications": "15.10.0",
           "Cratis.Fundamentals": "6.3.2",
           "Swashbuckle.AspNetCore": "8.1.1",
           "System.Text.Json": "9.0.4"
