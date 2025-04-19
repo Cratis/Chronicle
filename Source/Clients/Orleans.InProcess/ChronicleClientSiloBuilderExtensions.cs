@@ -8,7 +8,6 @@ using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
-using Cratis.Chronicle.Orleans.Execution;
 using Cratis.Chronicle.Orleans.InProcess;
 using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
