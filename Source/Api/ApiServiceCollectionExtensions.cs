@@ -19,6 +19,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Execution;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Client;
@@ -71,12 +72,14 @@ public static class ApiServiceCollectionExtensions
             {
                 var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
                 var options = sp.GetRequiredService<IOptions<ChronicleApiOptions>>();
+                var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
                 var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
                 return new ChronicleConnection(
                     options.Value.ChronicleUrl,
                     options.Value.ConnectTimeout,
                     connectionLifecycle,
                     new Cratis.Tasks.TaskFactory(),
+                    correlationIdAccessor,
                     sp.GetRequiredService<ILogger<ChronicleConnection>>(),
                     lifetime.ApplicationStopping);
             });
