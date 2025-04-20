@@ -92,9 +92,10 @@ public static class ChronicleClientSiloBuilderExtensions
 
     static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
     {
+        // Add Chronicle to the silo as the first thing we do, order matters - this is especially important for the different call filters.
+        builder.AddChronicleToSilo(configureChronicle);
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
-        builder.AddChronicleToSilo(configureChronicle);
         builder.AddStartupTask<ChronicleOrleansClientStartupTask>();
         builder.ConfigureServices(services =>
         {
