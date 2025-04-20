@@ -14,7 +14,7 @@ public class CorrelationIdOutgoingCallFilter(ICorrelationIdAccessor correlationI
     {
         if (context.InterfaceName.StartsWith("Cratis"))
         {
-            RequestContext.Set(RequestContextKeys.CorrelationIdKey, correlationIdAccessor.Current.Value);
+            RequestContext.Set(WellKnownKeys.CorrelationId, correlationIdAccessor.Current.Value);
         }
         await context.Invoke();
     }

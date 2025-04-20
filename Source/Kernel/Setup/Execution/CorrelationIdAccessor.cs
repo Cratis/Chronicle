@@ -11,7 +11,7 @@ public class CorrelationIdAccessor(Cratis.Execution.CorrelationIdAccessor correl
     {
         get
         {
-            var value = RequestContext.Get(RequestContextKeys.CorrelationIdKey);
+            var value = RequestContext.Get(WellKnownKeys.CorrelationId);
             if (value is Guid guid)
             {
                 return new CorrelationId(guid);

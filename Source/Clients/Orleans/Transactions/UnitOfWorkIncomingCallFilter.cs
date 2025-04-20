@@ -22,7 +22,7 @@ public class UnitOfWorkIncomingCallFilter(
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
-        if (RequestContext.Get(Constants.CorrelationIdKey) is Guid correlationId &&
+        if (RequestContext.Get(WellKnownKeys.CorrelationId) is Guid correlationId &&
             context.IsMessageToAggregateRoot() &&
             unitOfWorkManager.TryGetFor(correlationId, out var unitOfWork))
         {

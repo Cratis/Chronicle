@@ -11,7 +11,7 @@ public class CorrelationIdIncomingCallFilter : IIncomingGrainCallFilter
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
-        if (RequestContext.Get(RequestContextKeys.CorrelationIdKey) is Guid correlationId)
+        if (RequestContext.Get(WellKnownKeys.CorrelationId) is Guid correlationId)
         {
             Cratis.Execution.CorrelationIdAccessor.SetCurrent(correlationId);
         }

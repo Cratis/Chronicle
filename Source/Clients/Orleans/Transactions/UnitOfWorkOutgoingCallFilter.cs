@@ -15,8 +15,16 @@ public class UnitOfWorkOutgoingCallFilter(IUnitOfWorkManager unitOfWorkManager) 
     /// <inheritdoc/>
     public async Task Invoke(IOutgoingGrainCallContext context)
     {
-        var correlationId = unitOfWorkManager.HasCurrent ? unitOfWorkManager.Current.CorrelationId : CorrelationId.New();
-        RequestContext.Set(Constants.CorrelationIdKey, correlationId.Value);
+        static bool hasCorrelationId() => RequestContext.Entries.Any(x => x.Key == WellKnownKeys.CorrelationId);
+
+        var correlationId = unitOfWorkManager.HasCurrent ? unitOfWorkManager.Current.CorrelationId : null;
+        if (correlationId is not null)
+        {
+            RequestContext.Set(WellKnownKeys.CorrelationId, correlationId.Value);
+        }
+
+        correlationId ??= hasCorrelationId() ? (CorrelationId)(Guid)RequestContext.Get(WellKnownKeys.CorrelationId) : CorrelationId.New();
+
         if (context.IsMessageToAggregateRoot() && !unitOfWorkManager.HasCurrent)
         {
             unitOfWorkManager.Begin(correlationId);
