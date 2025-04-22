@@ -13,9 +13,6 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CountExpressionResolver"/> class.
-/// </remarks>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class CountExpressionResolver(ITypeFormats typeFormats) : IModelPropertyExpressionResolver
 {

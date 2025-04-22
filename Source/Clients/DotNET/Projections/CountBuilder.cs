@@ -8,13 +8,10 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IPropertyExpressionBuilder"/> for counting.
 /// </summary>
+/// <param name="targetProperty">Target property we're building for.</param>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CountBuilder{TModel, TEvent, TProperty}"/> class.
-/// </remarks>
-/// <param name="targetProperty">Target property we're building for.</param>
 public class CountBuilder<TModel, TEvent, TProperty>(PropertyPath targetProperty) : IPropertyExpressionBuilder
 {
     /// <inheritdoc/>

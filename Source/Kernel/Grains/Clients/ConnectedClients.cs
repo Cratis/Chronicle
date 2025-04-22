@@ -2,7 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Metrics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Clients;
@@ -10,22 +13,17 @@ namespace Cratis.Chronicle.Grains.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ConnectedClients"/> class.
-/// </remarks>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-/// <param name="metricsFactory"><see cref="IConnectedClientsMetricsFactory"/> for creating metrics.</param>
+/// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
 public class ConnectedClients(
     ILogger<ConnectedClients> logger,
-    IConnectedClientsMetricsFactory metricsFactory) : Grain, IConnectedClients
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter) : Grain, IConnectedClients
 {
     readonly List<ConnectedClient> _clients = [];
-    IConnectedClientsMetrics? _metrics;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _metrics = metricsFactory.Create();
         this.RegisterGrainTimer(ReviseConnectedClients, new() { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(1) });
         return Task.CompletedTask;
     }
@@ -46,7 +44,8 @@ public class ConnectedClients(
             LastSeen = DateTimeOffset.UtcNow,
             IsRunningWithDebugger = isRunningWithDebugger
         });
-        _metrics?.SetConnectedClients(_clients.Count);
+
+        meter.ConnectedClients(_clients.Count);
 
         return Task.CompletedTask;
     }
@@ -62,7 +61,7 @@ public class ConnectedClients(
             _clients.Remove(client);
         }
 
-        _metrics?.SetConnectedClients(_clients.Count);
+        meter.ConnectedClients(_clients.Count);
 
         return Task.CompletedTask;
     }

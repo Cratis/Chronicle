@@ -95,7 +95,7 @@ public static class PropertyMappers
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
 
-        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
+        return (@event, target, arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
@@ -107,6 +107,76 @@ public static class PropertyMappers
             var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
             var originalValue = value;
             value++;
+            if (targetType?.Equals(typeof(int)) == false)
+            {
+                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
+            }
+            else
+            {
+                actualTarget[lastSegment.Value] = value;
+            }
+            return new(targetProperty, originalValue, value, arrayIndexers);
+        };
+    }
+
+    /// <summary>
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can increment the target property when called.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> to use.</param>
+    /// <param name="targetProperty">Target property.</param>
+    /// <param name="targetPropertySchema">The target properties <see cref="JsonSchemaProperty"/>.</param>
+    /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
+    public static PropertyMapper<AppendedEvent, ExpandoObject> Increment(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
+    {
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+
+        return (@event, target, arrayIndexers) =>
+        {
+            var lastSegment = targetProperty.LastSegment;
+            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            {
+                valueAsObject = 0;
+                actualTarget[lastSegment.Value] = valueAsObject;
+            }
+            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
+            var originalValue = value;
+            value++;
+            if (targetType?.Equals(typeof(int)) == false)
+            {
+                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
+            }
+            else
+            {
+                actualTarget[lastSegment.Value] = value;
+            }
+            return new(targetProperty, originalValue, value, arrayIndexers);
+        };
+    }
+
+    /// <summary>
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can increment the target property when called.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> to use.</param>
+    /// <param name="targetProperty">Target property.</param>
+    /// <param name="targetPropertySchema">The target properties <see cref="JsonSchemaProperty"/>.</param>
+    /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
+    public static PropertyMapper<AppendedEvent, ExpandoObject> Decrement(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
+    {
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+
+        return (@event, target, arrayIndexers) =>
+        {
+            var lastSegment = targetProperty.LastSegment;
+            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            {
+                valueAsObject = 0;
+                actualTarget[lastSegment.Value] = valueAsObject;
+            }
+            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
+            var originalValue = value;
+            value--;
             if (targetType?.Equals(typeof(int)) == false)
             {
                 actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);

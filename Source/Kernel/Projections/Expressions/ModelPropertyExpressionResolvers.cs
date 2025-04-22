@@ -23,6 +23,8 @@ public class ModelPropertyExpressionResolvers(IEventValueProviderExpressionResol
             new AddExpressionResolver(eventValueProviderExpressionResolvers),
             new SubtractExpressionResolver(eventValueProviderExpressionResolvers),
             new CountExpressionResolver(typeFormats),
+            new IncrementExpressionResolver(typeFormats),
+            new DecrementExpressionResolver(typeFormats),
             new SetExpressionResolver(eventValueProviderExpressionResolvers)
         ];
 

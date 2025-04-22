@@ -74,6 +74,22 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
 
     /// <summary>
+    /// Increment the value of a property on the model.
+    /// </summary>
+    /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    TBuilder Increment<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+    /// <summary>
+    /// Increment the value of a property on the model.
+    /// </summary>
+    /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    TBuilder Decrement<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+    /// <summary>
     /// Start building the add operation to a target property on the model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>

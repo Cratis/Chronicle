@@ -44,6 +44,22 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IP
     }
 
     /// <inheritdoc/>
+    public TBuilder Increment<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    {
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        _propertyExpressions[propertyPath] = new IncrementBuilder<TModel, TEvent, TProperty>(propertyPath);
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder Decrement<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    {
+        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        _propertyExpressions[propertyPath] = new IncrementBuilder<TModel, TEvent, TProperty>(propertyPath);
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
     public IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
         var propertyPath = modelPropertyAccessor.GetPropertyPath();

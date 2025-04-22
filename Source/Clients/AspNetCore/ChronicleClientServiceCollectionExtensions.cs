@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
+using Cratis.Execution;
 using Cratis.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ public static class ChronicleClientServiceCollectionExtensions
         this IServiceCollection services,
         Action<ChronicleOptions>? configureChronicleOptions = default)
     {
+        services.AddHttpContextAccessor();
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
@@ -75,7 +77,10 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ModelNameConvention);
-        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.CorrelationIdAccessor);
+
+        // We're hardcoding the CorrelationId accessor here, as it is not available in the ChronicleAspNetCoreOptions anyways, and registering it dynamically causes a
+        // circular dependency in the DI container.
+        services.AddSingleton<ICorrelationIdAccessor>(sp => new CorrelationIdAccessor());
         services.AddSingleton(Globals.JsonSerializerOptions);
 
         return services;

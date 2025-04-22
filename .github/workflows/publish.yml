@@ -181,7 +181,7 @@ jobs:
         working-directory: ./Source/Clients/DotNET
 
       - name: Build
-        run: dotnet build --configuration Release -p:Repack=true
+        run: dotnet build --configuration Release -p:Repack=true -p:DisableProxyGenerator=true
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}

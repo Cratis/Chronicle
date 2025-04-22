@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Applications.Orleans.StateMachines;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -15,6 +16,7 @@ using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -38,7 +40,7 @@ public partial class Observer(
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
     ILogger<Observer> logger,
-    IMeter<Observer> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
     ObserverId _observerId = ObserverId.Unspecified;

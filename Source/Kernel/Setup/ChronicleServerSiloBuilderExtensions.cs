@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Placement;
@@ -17,6 +16,7 @@ using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
 using Cratis.Chronicle.Services.Observation;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
 using Cratis.Json;
@@ -39,6 +39,11 @@ public static class ChronicleServerSiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
+        builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
+        builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
+        builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
+
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
@@ -59,7 +64,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
-        builder.Services.AddChronicleMeter();
+        builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
         return builder;

@@ -14,30 +14,19 @@ public static class BsonDocumentExtensions
     /// Remove CLR type information from a <see cref="BsonDocument"/>.
     /// </summary>
     /// <param name="document"><see cref="BsonDocument"/> to remove from.</param>
-    public static void RemoveTypeInfo(this BsonDocument document) => RemoveTypeInfoImplementation(document);
-
-    static bool RemoveTypeInfoImplementation(this BsonDocument document, BsonDocument? parent = null, string? childProperty = null)
+    public static void RemoveTypeInfo(this BsonDocument document)
     {
         var elementsToRemove = new List<string>();
 
         foreach (var child in document.Where(_ => _.Value is BsonDocument))
         {
-            if (RemoveTypeInfoImplementation(child.Value.AsBsonDocument, document, child.Name))
-            {
-                elementsToRemove.Add(child.Name);
-            }
+            RemoveTypeInfo(child.Value.AsBsonDocument);
         }
 
-        foreach (var elementToRemove in elementsToRemove)
+        var hasDiscriminator = document.Any(_ => _.Name == "_t");
+        if (hasDiscriminator)
         {
-            document.Remove(elementToRemove);
+            document.Remove("_t");
         }
-
-        if (!string.IsNullOrEmpty(childProperty) && parent is not null)
-        {
-            return document.Any(_ => _.Name == "_t");
-        }
-
-        return false;
     }
 }

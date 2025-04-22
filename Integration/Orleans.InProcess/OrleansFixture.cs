@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.Metrics;
 using System.Reflection;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -39,6 +40,8 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
         var builder = Host.CreateDefaultBuilder();
 
         var chronicleOptions = new Configuration.ChronicleOptions();
+
+
         builder.UseCratisMongoDB(
             mongo =>
             {
@@ -54,6 +57,7 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
             {
+                services.AddCratisApplicationModelMeter();
                 services.AddSingleton(Globals.JsonSerializerOptions);
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
