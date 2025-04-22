@@ -19,5 +19,7 @@ public class NullLoggerFactory : ILoggerFactory
     public ILogger CreateLogger(string categoryName) => NullLogger.Instance;
 
     /// <inheritdoc/>
-    public void Dispose() => throw new NotImplementedException();
+    public void Dispose()
+    {
+    }
 }
