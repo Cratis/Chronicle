@@ -14,9 +14,6 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents the settings for connecting to Chronicle.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
-/// </remarks>
 /// <param name="url"><see cref="ChronicleUrl"/> to use.</param>
 /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
@@ -47,7 +44,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="ChronicleUrl"/> to use.
     /// </summary>
-    public ChronicleUrl Url { get; init; } = url;
+    public ChronicleUrl Url { get; set; } = url;
 
     /// <summary>
     /// Gets or sets the software version.
@@ -72,7 +69,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="JsonSerializerOptions"/> to use.
     /// </summary>
-    public JsonSerializerOptions JsonSerializerOptions { get; init; } = jsonSerializerOptions ?? Globals.JsonSerializerOptions;
+    public JsonSerializerOptions JsonSerializerOptions { get; set; } = jsonSerializerOptions ?? Globals.JsonSerializerOptions;
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> to use.
@@ -92,17 +89,17 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IModelNameConvention"/> to use.
     /// </summary>
-    public IModelNameConvention ModelNameConvention { get; init; } = modelNameConvention ?? new DefaultModelNameConvention();
+    public IModelNameConvention ModelNameConvention { get; set; } = modelNameConvention ?? new DefaultModelNameConvention();
 
     /// <summary>
     /// Gets the timeout when connecting in seconds.
     /// </summary>
-    public int ConnectTimeout { get; init; } = connectTimeout;
+    public int ConnectTimeout { get; set; } = connectTimeout;
 
     /// <summary>
     /// Gets the <see cref="ILoggerFactory"/> to use internally in the client.
     /// </summary>
-    public ILoggerFactory LoggerFactory { get; init; } = loggerFactory ?? new LoggerFactory();
+    public ILoggerFactory LoggerFactory { get; set; } = loggerFactory ?? new LoggerFactory();
 
     /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
