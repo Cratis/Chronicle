@@ -11,19 +11,19 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// </summary>
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to catch up.</param>
 /// <param name="ObserverType">The <see cref="ObserverType"/>.</param>
-/// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="Key"><see cref="Key">Partition</see> to retry.</param>
-public abstract record ObserverPartitionedJobRequest(ObserverKey ObserverKey, ObserverType ObserverType,  ObserverSubscription ObserverSubscription, Key Key) : IObserverJobRequest
+public abstract record ObserverPartitionedJobRequest(ObserverKey ObserverKey, ObserverType ObserverType, Key Key) : IObserverJobRequest
 {
     /// <summary>
     /// Creates an <see cref="ObserverSubscriberKey"/> from the request.
     /// </summary>
+    /// <param name="siloAddress">The <see cref="SiloAddress"/>.</param>
     /// <returns>The <see cref="ObserverSubscriberKey"/>.</returns>
-    public ObserverSubscriberKey ToObserverSubscriberKey() => new(
+    public ObserverSubscriberKey ToObserverSubscriberKey(SiloAddress siloAddress) => new(
                     ObserverKey.ObserverId,
                     ObserverKey.EventStore,
                     ObserverKey.Namespace,
                     ObserverKey.EventSequenceId,
                     Key?.ToString() ?? EventSourceId.Unspecified,
-                    ObserverSubscription.SiloAddress.ToParsableString());
+                    siloAddress.ToParsableString());
 }

@@ -82,28 +82,29 @@ public class HandleEventsForPartition(
         ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.LastSuccessfullyHandledEventSequenceNumber));
 
     /// <inheritdoc/>
-    protected override Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
+    protected override async Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
     {
         try
         {
             logger.Preparing(request.Partition, request.StartEventSequenceNumber, request.EndEventSequenceNumber);
             _observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+            var subscription = await _observer.GetSubscription();
             _eventSourceId = request.Partition.ToString() ?? EventSourceId.Unspecified;
 
-            if (request.ObserverSubscription.IsSubscribed)
+            if (subscription.IsSubscribed)
             {
-                _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ToObserverSubscriberKey()) as IObserverSubscriber)!;
+                _subscriber = (GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(subscription.SiloAddress)) as IObserverSubscriber)!;
                 logger.SuccessfullyPrepared(request.Partition);
-                return Task.FromResult(Result.Success<PrepareJobStepError>());
+                return Result.Success<PrepareJobStepError>();
             }
 
             logger.PreparingStoppedUnsubscribed(request.Partition);
-            return Task.FromResult(Result.Failed(PrepareJobStepError.CannotPrepare));
+            return Result.Failed(PrepareJobStepError.CannotPrepare);
         }
         catch (Exception e)
         {
             logger.FailedPreparing(e, nameof(HandleEventsForPartition));
-            return Task.FromResult(Result.Failed(PrepareJobStepError.UnexpectedErrorPreparing));
+            return Result.Failed(PrepareJobStepError.UnexpectedErrorPreparing);
         }
     }
 
