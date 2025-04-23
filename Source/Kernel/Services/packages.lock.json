@@ -19,9 +19,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.196, )",
-        "resolved": "2.0.196",
-        "contentHash": "2vqL2iokFYGGezJF/bdP7SW6bnwFSzSeQjwD5wjuZvoPnu8ZcWf4gzIF5Uk/30axvunOImqK6DIRsJmI5LgWUw=="
+        "requested": "[2.0.197, )",
+        "resolved": "2.0.197",
+        "contentHash": "am2IRVMlKmfiehHIm4dpp6yoyFnSjHp0DXHCYiWjpe0TsuHkPT2PqYLG9+gpwvAZeoPpT/kDJj4pLTEOJ7Gqww=="
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
@@ -1157,7 +1157,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.8.3, )",
+          "Cratis.Applications.Orleans": "[15.10.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1190,9 +1190,9 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.8.3, )",
-        "resolved": "15.8.3",
-        "contentHash": "zL46kTB7GR4n2PlJZh8PwHyVjyh14UPfcXD535fveEa+kWLoRopKm1790/jRTayEHCpbNjotc3q9nxesSSOLxw==",
+        "requested": "[15.10.0, )",
+        "resolved": "15.10.0",
+        "contentHash": "ZumpBjdgJL+OvxNp8dObKhnW9oowQoAx48bxJbWno5qRvfELLKl2KeG5zt5bRio6O6TOH3Z4Tkbfi0eOZaW+EQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.3.2",
           "Microsoft.Extensions.Logging": "9.0.4",

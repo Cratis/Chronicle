@@ -28,9 +28,9 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             await TheJobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
-            var x = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status == JobStatus.CompletedSuccessfully, TimeSpan.FromSeconds(20));
+            var x = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status == JobStatus.CompletedSuccessfully, TimeSpanFactory.FromSeconds(20));
             await JobsManager.Resume(JobId);
-            CompletedJobState = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status == JobStatus.CompletedSuccessfully && state.Progress.IsCompleted, TimeSpan.FromSeconds(20));
+            CompletedJobState = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status == JobStatus.CompletedSuccessfully && state.Progress.IsCompleted, TimeSpanFactory.FromSeconds(20));
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }

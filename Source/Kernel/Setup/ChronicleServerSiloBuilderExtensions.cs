@@ -15,6 +15,7 @@ using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
 using Cratis.Chronicle.Services.Observation;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
 using Cratis.Json;
@@ -37,6 +38,11 @@ public static class ChronicleServerSiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
+        builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
+        builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
+        builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
+
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder
             .AddChronicleServicesAsInMemory()

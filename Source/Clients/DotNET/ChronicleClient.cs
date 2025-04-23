@@ -62,6 +62,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             options.ConnectTimeout,
             connectionLifecycle,
             new Cratis.Tasks.TaskFactory(),
+            options.CorrelationIdAccessor,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
             CancellationToken.None);
     }

@@ -89,7 +89,7 @@ public partial class Observer(
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
     public Task<ObserverState> GetState() => Task.FromResult(State);
-#pragma warning restore CA1721 // Property names should not match get methods
+#pragma warning restore CA1721 // Property namTes should not match get methods
 
     /// <inheritdoc/>
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
