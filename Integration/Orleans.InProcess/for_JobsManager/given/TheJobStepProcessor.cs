@@ -31,8 +31,8 @@ public class TheJobStepProcessor
     public void SetNumJobStepsToComplete(int numJobSteps) => _numJobStepsToComplete = numJobSteps;
     public void SetStartTask(Task startTask) => _startTask = startTask;
     public Task WaitForStart() => _startTask;
-    public Task WaitForAllPreparedStepsToBeStarted(TimeSpan? maxWaitTime = null) => _allPreparedJobsStarted.Task.WaitAsync(maxWaitTime ?? TimeSpan.FromSeconds(10));
-    public Task WaitForStepsToBeCompleted(TimeSpan? maxWaitTime = null) => _jobsCompleted.Task.WaitAsync(maxWaitTime ?? TimeSpan.FromSeconds(10));
+    public Task WaitForAllPreparedStepsToBeStarted(TimeSpan? maxWaitTime = null) => _allPreparedJobsStarted.Task.WaitAsync(maxWaitTime ?? TimeSpanFactory.FromSeconds(10));
+    public Task WaitForStepsToBeCompleted(TimeSpan? maxWaitTime = null) => _jobsCompleted.Task.WaitAsync(maxWaitTime ?? TimeSpanFactory.FromSeconds(10));
 
     public IEnumerable<JobStepId> GetJobStepsForJob(JobId jobId)
     {

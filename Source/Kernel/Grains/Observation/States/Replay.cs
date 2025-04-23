@@ -41,7 +41,7 @@ public class Replay(
 
         await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
             logger,
-            new(observerKey, state.Type, subscription, state.EventTypes),
+            new(observerKey, state.Type, state.EventTypes),
             requestPredicate: null,
             () =>
             {

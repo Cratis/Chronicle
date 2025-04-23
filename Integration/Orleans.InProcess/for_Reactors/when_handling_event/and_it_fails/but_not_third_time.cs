@@ -50,7 +50,7 @@ public class but_not_third_time(context context) : Given<context>(context)
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(waitTime);
 
-            FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId, TimeSpan.FromSeconds(60));
+            FailedPartitionsBeforeRetry = await EventStore.WaitForThereToBeFailedPartitions(ObserverId, TimeSpanFactory.FromSeconds(60));
             Jobs = await EventStore.WaitForThereToBeJobs(waitTime);
 
             // Wait for the third event to have been handled
