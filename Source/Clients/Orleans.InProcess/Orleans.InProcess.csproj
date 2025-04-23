@@ -12,20 +12,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj">
+        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- <ProjectReference Include="../DotNET/DotNET.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../Orleans/Orleans.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -33,6 +28,14 @@
         </ProjectReference>
 
         <ProjectReference Include="../Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+        -->
+
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
+
+        <ProjectReference Include="../Orleans/Orleans.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
@@ -86,11 +89,11 @@
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Services/Services.csproj">
+        <!-- <ProjectReference Include="../../Kernel/Services/Services.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
             <Aliases>Server</Aliases>
-        </ProjectReference>
+        </ProjectReference> -->
 
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -99,13 +102,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" />
-        <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
+        <!-- <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" /> -->
+        <!-- <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.AspNetCore.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Diagnostics.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Infrastructure.dll" />
+        <DoNotInternalize Include="Cratis.Chronicle.Infrastructure.dll" /> -->
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Grains.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" />

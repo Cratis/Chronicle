@@ -1410,25 +1410,11 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
-      "Cratis.Chronicle": {
+      "Cratis.Chronicle.AspNetCore": {
         "type": "Project",
         "dependencies": {
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
-          "Grpc.Net.Client": "[2.70.0, )",
-          "Microsoft.Extensions.Hosting": "[9.0.4, )",
-          "NJsonSchema": "[11.2.0, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.4, )",
-          "protobuf-net.Grpc": "[1.2.2, )"
-        }
-      },
-      "Cratis.Chronicle.AspNetCore": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Chronicle": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }
@@ -1467,7 +1453,6 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1562,7 +1547,6 @@
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1573,6 +1557,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Applications.Orleans": "[15.10.0, )",
+          "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",
@@ -1605,6 +1590,7 @@
           "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
+          "NJsonSchema": "[11.2.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }

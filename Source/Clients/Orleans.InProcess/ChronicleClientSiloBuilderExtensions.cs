@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias Server;
+// extern alias Server;
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -129,9 +129,9 @@ public static class ChronicleClientSiloBuilderExtensions
                 var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
                 var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
-                connection.SetServices(services);
-                return new ChronicleClient(connection, options);
+                // var connection = new Cratis.Chronicle.Orleans.InProcess.ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
+                // connection.SetServices(services);
+                return new ChronicleClient(null!, options);
             });
 
             services.AddSingleton(sp =>

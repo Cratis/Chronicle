@@ -1,17 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias Server;
+// extern alias Server;
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
-using Server::Cratis.Chronicle.Services.Clients;
+// using Cratis.Chronicle.Services.Clients;
 
 namespace Cratis.Chronicle.Orleans.InProcess;
 
+#if(false)
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for Orleans in-process.
 /// </summary>
@@ -77,3 +78,4 @@ internal class ChronicleConnection(
         _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
     }
 }
+#endif

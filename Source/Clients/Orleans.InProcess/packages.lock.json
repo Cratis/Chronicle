@@ -325,16 +325,8 @@
       },
       "Grpc.Core.Api": {
         "type": "Transitive",
-        "resolved": "2.70.0",
-        "contentHash": "66UotvWcSIq41oiQhLWcQACyKPM4umxXNiht5DQTLZJfNwEswWOcS7Z0xIEHyNIBE7ZpjotH22bEjTkvhPxmVw=="
-      },
-      "Grpc.Net.Common": {
-        "type": "Transitive",
-        "resolved": "2.70.0",
-        "contentHash": "rBdEUMyCwa+iB8mqC6JKyPbj3SBHHkReJj/yy/XKJI63GcG6w9DJMMGTVcYHqq4Ci2W4m0HT4jt2pFfFscar8g==",
-        "dependencies": {
-          "Grpc.Core.Api": "2.70.0"
-        }
+        "resolved": "2.66.0",
+        "contentHash": "HsjsQVAHe4hqP4t4rpUnmq+MZvPdyrlPsWF4T5fbMvyP3o/lMV+KVJfDlaNH8+v0aGQTVT3EsDFufbhaWb52cw=="
       },
       "Humanizer.Core": {
         "type": "Transitive",
@@ -1461,25 +1453,11 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
-      "Cratis.Chronicle": {
+      "Cratis.Chronicle.AspNetCore": {
         "type": "Project",
         "dependencies": {
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
-          "Grpc.Net.Client": "[2.70.0, )",
-          "Microsoft.Extensions.Hosting": "[9.0.4, )",
-          "NJsonSchema": "[11.2.0, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.4, )",
-          "protobuf-net.Grpc": "[1.2.2, )"
-        }
-      },
-      "Cratis.Chronicle.AspNetCore": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Chronicle": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }
@@ -1512,27 +1490,6 @@
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
-        }
-      },
-      "Cratis.Chronicle.Connections": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "Grpc.Net.Client": "[2.70.0, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.4, )",
-          "protobuf-net.Grpc": "[1.2.2, )"
-        }
-      },
-      "Cratis.Chronicle.Contracts": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.4, )",
-          "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
       "Cratis.Chronicle.Diagnostics": {
@@ -1598,7 +1555,6 @@
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1610,20 +1566,6 @@
         "dependencies": {
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.4, )"
-        }
-      },
-      "Cratis.Chronicle.Services": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
-          "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
-          "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.4, )"
@@ -1723,16 +1665,6 @@
         "requested": "[11.11.0, )",
         "resolved": "11.11.0",
         "contentHash": "cyIVdQBwSipxWG8MA3Rqox7iNbUNUTK5bfJi9tIdm4CAfH71Oo5ABLP4/QyrUwuakqpUEPGtE43BDddvEehuYw=="
-      },
-      "Grpc.Net.Client": {
-        "type": "CentralTransitive",
-        "requested": "[2.70.0, )",
-        "resolved": "2.70.0",
-        "contentHash": "xNv0FFCVJa5S1beUtye82WFCxKThuE1jbN8DO1x1Rj8VSIWXLBUmfSID5a1fGzsU2R/EMfwPoWclJ2RMfQuGXw==",
-        "dependencies": {
-          "Grpc.Net.Common": "2.70.0",
-          "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
-        }
       },
       "Humanizer": {
         "type": "CentralTransitive",

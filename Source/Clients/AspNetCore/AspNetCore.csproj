@@ -13,7 +13,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- <ProjectReference Include="../DotNET/DotNET.csproj"/>
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
@@ -21,6 +29,6 @@
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        </ProjectReference> -->
     </ItemGroup>
 </Project>

@@ -10,11 +10,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- <ProjectReference Include="../DotNET/DotNET.csproj"/> -->
+        <!-- <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        </ProjectReference> -->
     </ItemGroup>
 
     <ItemGroup>
