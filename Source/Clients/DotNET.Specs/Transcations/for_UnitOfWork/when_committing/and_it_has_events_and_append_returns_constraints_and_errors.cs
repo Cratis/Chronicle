@@ -16,7 +16,7 @@ public class and_it_has_events_and_append_returns_constraints_and_errors : given
     void Establish()
     {
         _eventSequence
-            .When(_ => _.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>()))
+            .When(_ => _.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<CorrelationId>()))
             .Do(callInfo => _events = callInfo.Arg<IEnumerable<EventForEventSourceId>>());
 
         _result = new AppendManyResult
@@ -35,7 +35,7 @@ public class and_it_has_events_and_append_returns_constraints_and_errors : given
         };
 
         _eventSequence
-            .AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
+            .AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<CorrelationId>())
             .Returns(_result);
     }
 
