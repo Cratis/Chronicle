@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Services.Models;
+using Cratis.Chronicle.Services.Sinks;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers;
 

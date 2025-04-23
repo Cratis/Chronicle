@@ -4,9 +4,9 @@
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains;
+using Cratis.Chronicle.Services.Projections.Definitions;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 

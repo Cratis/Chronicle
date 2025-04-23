@@ -1580,6 +1580,7 @@
           "Cratis.Applications.Swagger": "[15.10.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "Swashbuckle.AspNetCore": "[8.1.1, )",
@@ -1622,7 +1623,6 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1732,6 +1732,7 @@
           "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
+          "NJsonSchema": "[11.2.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }

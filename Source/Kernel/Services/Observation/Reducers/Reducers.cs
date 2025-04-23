@@ -14,6 +14,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;

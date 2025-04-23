@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
+using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;

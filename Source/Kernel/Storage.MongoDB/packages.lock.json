@@ -1380,6 +1380,7 @@
           "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
+          "NJsonSchema": "[11.2.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }

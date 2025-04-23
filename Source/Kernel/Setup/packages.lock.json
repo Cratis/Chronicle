@@ -152,6 +152,17 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
+      "NJsonSchema": {
+        "type": "Direct",
+        "requested": "[11.2.0, )",
+        "resolved": "11.2.0",
+        "contentHash": "ucPJuxr7d3sbOB4pewr50lDhjCloIFgyFV3OwyIGWGKiSL4H2FNjfT0kYwaIbPdhT8psPyphYpMYhzbdBZpudw==",
+        "dependencies": {
+          "NJsonSchema.Annotations": "11.2.0",
+          "Namotion.Reflection": "3.3.0",
+          "Newtonsoft.Json": "13.0.3"
+        }
+      },
       "Roslynator.Analyzers": {
         "type": "Direct",
         "requested": "[4.13.1, )",
@@ -1306,7 +1317,6 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1755,17 +1765,6 @@
         "contentHash": "97QepnH00n67fOhxbmYu5AQZTbgflQbfdkfRu17OawXZgNTTG7wMkYPQH11X9uWEN+3wj8dU+ohPVCyPV53sDg==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
-        }
-      },
-      "NJsonSchema": {
-        "type": "CentralTransitive",
-        "requested": "[11.2.0, )",
-        "resolved": "11.2.0",
-        "contentHash": "ucPJuxr7d3sbOB4pewr50lDhjCloIFgyFV3OwyIGWGKiSL4H2FNjfT0kYwaIbPdhT8psPyphYpMYhzbdBZpudw==",
-        "dependencies": {
-          "NJsonSchema.Annotations": "11.2.0",
-          "Namotion.Reflection": "3.3.0",
-          "Newtonsoft.Json": "13.0.3"
         }
       },
       "OneOf": {

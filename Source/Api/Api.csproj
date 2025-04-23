@@ -12,6 +12,7 @@
     <ItemGroup>
         <ProjectReference Include="../Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../Kernel/Contracts/Contracts.csproj" />
+        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
