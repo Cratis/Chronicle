@@ -39,7 +39,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
 
         async Task Because()
         {
-            await _tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await _tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             _observable.Dispose();
         }
     }

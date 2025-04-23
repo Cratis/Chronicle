@@ -16,7 +16,7 @@ public static class JobsHelpers
 {
     public static async Task<IEnumerable<Job>> WaitForThereToBeJobs(this IEventStore eventStore, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         var jobs = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!jobs.Any() && !cts.IsCancellationRequested)
@@ -30,7 +30,7 @@ public static class JobsHelpers
 
     public static async Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IEventStore eventStore, TimeSpan? timeout = default, params JobStatus[] includeStatuses)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         var jobs = await eventStore.GetJobs();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (jobs.Any() && !jobs.All(_ => includeStatuses.Contains(_.Status)) && !cts.IsCancellationRequested)
@@ -52,7 +52,7 @@ public static class JobsHelpers
     public static async Task WaitTillJobIsDeleted<TJobState>(this IJobStorage jobStorage, JobId jobId, TimeSpan? timeout = null)
         where TJobState : JobState
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
@@ -67,7 +67,7 @@ public static class JobsHelpers
     public static async Task<TJobState> WaitTillJobMeetsPredicate<TJobState>(this IJobStorage jobStorage, JobId jobId, Func<JobState, bool> predicate, TimeSpan? timeout = null)
         where TJobState : JobState
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {

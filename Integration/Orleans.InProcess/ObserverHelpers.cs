@@ -22,7 +22,7 @@ public static class ObserverHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task WaitForState(this IObserver observer, ObserverRunningState runningState, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
         while (currentRunningState != runningState && !cts.IsCancellationRequested)
@@ -40,7 +40,7 @@ public static class ObserverHelpers
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
     public static async Task WaitTillActive(this IObserver observer, TimeSpan? timeout = default) =>
-        await observer.WaitForState(ObserverRunningState.Active, timeout ?? TimeSpan.FromSeconds(5));
+        await observer.WaitForState(ObserverRunningState.Active, timeout ?? TimeSpanFactory.DefaultTimeout());
 
     /// <summary>
     /// Wait till the observer has been subscribed, with an optional timeout.
@@ -50,7 +50,7 @@ public static class ObserverHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task WaitTillSubscribed(this IObserver observer, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!await observer.IsSubscribed())
         {
@@ -67,7 +67,7 @@ public static class ObserverHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task WaitTillReachesEventSequenceNumber(this IObserver observer, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
@@ -90,7 +90,7 @@ public static class ObserverHelpers
     /// <returns>Collection of <see cref="FailedPartition"/>.</returns>
     public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IEventStore eventStore, ObserverId observerId, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         var failedPartitions = Enumerable.Empty<FailedPartition>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
