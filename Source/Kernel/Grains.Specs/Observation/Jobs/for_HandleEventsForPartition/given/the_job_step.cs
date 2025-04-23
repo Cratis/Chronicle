@@ -33,7 +33,6 @@ public class the_job_step : Specification
         _request = new(
             new("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log),
             ObserverType.Projection,
-            new(observerKey.ObserverId, observerKey, [], typeof(ISomeObserverType), SiloAddress.Zero),
             "some-partition",
             EventSequenceNumber.First,
             EventSequenceNumber.Max,

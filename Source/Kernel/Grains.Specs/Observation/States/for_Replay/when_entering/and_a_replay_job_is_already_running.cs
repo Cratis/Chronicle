@@ -24,7 +24,6 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
                         Request = new ReplayObserverRequest(
                             _observerKey,
                             ObserverType.Unknown,
-                            _subscription,
                             [new EventType(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
                         StatusChanges =
                         [
