@@ -62,7 +62,6 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        var subscription = await observer.GetSubscription();
 
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
@@ -77,7 +76,6 @@ public class CatchUpObserver(IStorage storage, ILogger<CatchUpObserver> logger) 
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
                     request.ObserverType,
-                    subscription,
                     key,
                     request.FromEventSequenceNumber,
                     EventSequenceNumber.Max,

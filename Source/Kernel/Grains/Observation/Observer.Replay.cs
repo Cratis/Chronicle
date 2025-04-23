@@ -27,7 +27,7 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, State.Type, _subscription, partition, EventSequenceNumber.First, sequenceNumber, State.EventTypes));
+        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, State.Type, partition, EventSequenceNumber.First, sequenceNumber, State.EventTypes));
 
         State.ReplayingPartitions.Add(partition);
         await WriteStateAsync();

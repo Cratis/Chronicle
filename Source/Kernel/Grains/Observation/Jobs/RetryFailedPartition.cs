@@ -66,7 +66,6 @@ public class RetryFailedPartition(ILogger<RetryFailedPartition> logger) : Job<Re
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
                     request.ObserverType,
-                    request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,
