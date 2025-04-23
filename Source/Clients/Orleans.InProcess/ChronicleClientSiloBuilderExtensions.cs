@@ -94,7 +94,7 @@ public static class ChronicleClientSiloBuilderExtensions
     {
         // Add Chronicle to the silo as the first thing we do, order matters - this is especially important for the different call filters.
         builder.AddChronicleToSilo(configureChronicle);
-        builder.AddActivityPropagation();     
+        builder.AddActivityPropagation();
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
         builder.AddStartupTask<ChronicleOrleansClientStartupTask>();
