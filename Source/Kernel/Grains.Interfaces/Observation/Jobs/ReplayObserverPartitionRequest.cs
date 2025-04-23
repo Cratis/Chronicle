@@ -12,7 +12,6 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// </summary>
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to replay.</param>
 /// <param name="ObserverType">The <see cref="ObserverType"/>.</param>
-/// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="Key"><see cref="Key">Partition</see> to retry.</param>
 /// <param name="FromSequenceNumber">From <see cref="EventSequenceNumber"/> to retry.</param>
 /// <param name="ToSequenceNumber">To <see cref="EventSequenceNumber"/> to retry.</param>
@@ -20,8 +19,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 public record ReplayObserverPartitionRequest(
     ObserverKey ObserverKey,
     ObserverType ObserverType,
-    ObserverSubscription ObserverSubscription,
     Key Key,
     EventSequenceNumber FromSequenceNumber,
     EventSequenceNumber ToSequenceNumber,
-    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, ObserverSubscription, Key);
+    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key);

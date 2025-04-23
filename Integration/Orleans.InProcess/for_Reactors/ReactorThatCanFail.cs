@@ -28,7 +28,7 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpan.FromSeconds(5);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (HandledEvents != count)
         {

@@ -48,7 +48,6 @@ public class CatchUpObserverPartition(ILogger<CatchUpObserverPartition> logger) 
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
                     request.ObserverType,
-                    request.ObserverSubscription,
                     request.Key,
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,

@@ -39,7 +39,6 @@ public class ReplayObserver(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
                     request.ObserverType,
-                    request.ObserverSubscription,
                     key,
                     EventSequenceNumber.First,
                     EventSequenceNumber.Max,

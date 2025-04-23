@@ -78,7 +78,7 @@ public class UnitOfWork(
                             .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation))
                             .ToArray();
             var eventSequence = eventStore.GetEventSequence(eventSequenceId);
-            var result = await eventSequence.AppendMany(sorted);
+            var result = await eventSequence.AppendMany(sorted, correlationId);
             result.ConstraintViolations.ForEach(_constraintViolations.Add);
             result.Errors.ForEach(_appendErrors.Add);
             _lastCommittedEventSequenceNumber = result.SequenceNumbers.OrderBy(_ => _.Value).LastOrDefault();

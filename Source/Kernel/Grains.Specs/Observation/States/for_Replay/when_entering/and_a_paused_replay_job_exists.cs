@@ -27,7 +27,6 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
             Request = new ReplayObserverRequest(
                             _observerKey,
                             ObserverType.Unknown,
-                            _subscription,
                             [new(Guid.NewGuid().ToString(), EventTypeGeneration.First)]),
             StatusChanges =
             [

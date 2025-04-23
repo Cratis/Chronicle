@@ -11,12 +11,10 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// </summary>
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to replay.</param>
 /// <param name="ObserverType">The <see cref="ObserverType"/>.</param>
-/// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="FromEventSequenceNumber">The <see cref="EventSequenceNumber"/> it should catch up from.</param>
 /// <param name="EventTypes">The event types to replay.</param>
 public record CatchUpObserverRequest(
     ObserverKey ObserverKey,
     ObserverType ObserverType,
-    ObserverSubscription ObserverSubscription,
     EventSequenceNumber FromEventSequenceNumber,
     IEnumerable<EventType> EventTypes) : IObserverJobRequest;
