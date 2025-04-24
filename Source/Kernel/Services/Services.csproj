@@ -4,6 +4,7 @@
         <AssemblyName>Cratis.Chronicle.Services</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Services</RootNamespace>
         <NoWarn>$(NoWarn);CS8618</NoWarn>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     </PropertyGroup>
 
     <ItemGroup>

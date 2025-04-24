@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ChronicleOptions = Cratis.Chronicle.ChronicleOptions;
 
 namespace Orleans.Hosting;
 

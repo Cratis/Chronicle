@@ -3,12 +3,12 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.Setup;
+namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
 /// Extension methods for <see cref="IChronicleBuilder"/>.
 /// </summary>
-public static class ServicesChronicleBuilderExtensions
+public static class ChronicleBuilderServicesExtensions
 {
     /// <summary>
     /// Configure services for the builder.

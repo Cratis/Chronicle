@@ -13,5 +13,6 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
     </ItemGroup>
 </Project>

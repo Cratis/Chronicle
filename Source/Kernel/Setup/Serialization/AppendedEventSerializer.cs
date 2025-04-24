@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// <param name="storage">The <see cref="IStorage"/>.</param>
 public class AppendedEventSerializer(
     JsonSerializerOptions jsonSerializerOptions,
-    IExpandoObjectConverter expandoObjectConverter,
+    Cratis.Chronicle.Json.IExpandoObjectConverter expandoObjectConverter,
     IStorage storage) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     /// <inheritdoc/>

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Jobs;
@@ -92,7 +93,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
                 new EventTypes(storage),
                 new Constraints(grainFactory),
-                new Observers(grainFactory, storage),
+                new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),

@@ -15,6 +15,16 @@
         <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
     </ItemGroup>
 
+    <PropertyGroup>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="**/*.cs" Exclude="obj/**/*.cs"/>
+        <Compile Include="../../Kernel/Setup/**/*.cs" Exclude="../../Kernel/Setup/obj/**/*.cs"/>
+        <Compile Include="../../Kernel/Services/**/*.cs" Exclude="../../Kernel/Services/obj/**/*.cs"/>
+    </ItemGroup>
+
     <ItemGroup>
         <!-- <ProjectReference Include="../DotNET/DotNET.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -79,10 +89,10 @@
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
+        <!-- <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
+        </ProjectReference> -->
 
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -113,7 +123,7 @@
         <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Grains.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Setup.dll" />
+        <!-- <DoNotInternalize Include="Cratis.Chronicle.Setup.dll" /> -->
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
         <DoNotInternalize Include="ChronicleOptions" />
         <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />

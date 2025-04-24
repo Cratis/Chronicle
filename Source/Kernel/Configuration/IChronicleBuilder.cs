@@ -4,7 +4,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.Setup;
+namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
 /// Defines a builder for configuring Chronicle.
