@@ -8,11 +8,10 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
-// using Cratis.Chronicle.Services.Clients;
+using Cratis.Chronicle.Services.Clients;
 
 namespace Cratis.Chronicle.Orleans.InProcess;
 
-#if(false)
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for Orleans in-process.
 /// </summary>
@@ -28,7 +27,7 @@ internal class ChronicleConnection(
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
     IServices? _services;
-    ConnectionService? _connectionService;
+    Cratis.Chronicle.Services.Clients.ConnectionService? _connectionService;
 
     /// <inheritdoc/>
     IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
@@ -64,7 +63,7 @@ internal class ChronicleConnection(
 
     void Connect()
     {
-        _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
+        _connectionService = new Cratis.Chronicle.Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Cratis.Chronicle.Services.Clients.ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
@@ -78,4 +77,4 @@ internal class ChronicleConnection(
         _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
     }
 }
-#endif
+

@@ -14,6 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
         <!-- <ProjectReference Include="../DotNET/DotNET.csproj"/> -->
         <!-- <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>

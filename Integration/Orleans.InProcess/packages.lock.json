@@ -1445,6 +1445,7 @@
         "dependencies": {
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
+          "Microsoft.Orleans.Server": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }
@@ -1547,6 +1548,7 @@
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1559,14 +1561,17 @@
           "Cratis.Applications.Orleans": "[15.10.0, )",
           "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
+          "Microsoft.Extensions.Resilience": "[9.4.0, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
+          "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
           "Microsoft.Orleans.Server": "[9.1.2, )",
           "Microsoft.Orleans.Streaming": "[9.1.2, )",
           "NJsonSchema": "[11.2.0, )",
           "OneOf": "[3.0.271, )",
           "Orleans.Providers.MongoDB": "[9.1.0, )",
+          "Polly.Core": "[8.5.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )",
           "protobuf-net.Grpc": "[1.2.2, )"
@@ -1579,19 +1584,6 @@
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.4, )"
-        }
-      },
-      "Cratis.Chronicle.Setup": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "Microsoft.Extensions.Resilience": "[9.4.0, )",
-          "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
-          "Microsoft.Orleans.Server": "[9.1.2, )",
-          "Microsoft.Orleans.Streaming": "[9.1.2, )",
-          "NJsonSchema": "[11.2.0, )",
-          "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }
       },
@@ -1610,7 +1602,6 @@
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
-          "Cratis.Chronicle.Setup": "[1.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Reminders": "[9.1.2, )",

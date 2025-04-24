@@ -890,6 +890,7 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
           "Grpc.Net.Client": "[2.70.0, )",
@@ -905,7 +906,6 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Grpc.Net.Client": "[2.70.0, )",
           "System.Private.Uri": "[4.3.2, )",

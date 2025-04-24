@@ -1095,6 +1095,7 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[11.11.0, )",
           "Grpc.Net.Client": "[2.70.0, )",
@@ -1136,6 +1137,7 @@
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
