@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="FromDerivatives"/>.
 /// </summary>
-public static class FromDerivativesConverters
+internal static class FromDerivativesConverters
 {
     /// <summary>
     /// Converts a <see cref="FromDerivatives"/> to its corresponding contract representation.

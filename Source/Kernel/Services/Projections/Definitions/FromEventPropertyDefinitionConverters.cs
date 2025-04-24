@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="FromEventPropertyDefinition"/>.
 /// </summary>
-public static class FromEventPropertyDefinitionConverters
+internal static class FromEventPropertyDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="FromEventPropertyDefinition"/>.

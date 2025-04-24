@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <summary>
 /// Extension methods for converting to and from <see cref="Contracts.Projections.EventToApply"/>.
 /// </summary>
-public static class EventToApplyConverters
+internal static class EventToApplyConverters
 {
     /// <summary>
     /// Convert to Chronicle representation.

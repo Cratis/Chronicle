@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 /// <summary>
 /// Represents converter methods between <see cref="Contracts.Events.Constraints.Constraint"/> and <see cref="IConstraintDefinition"/>.
 /// </summary>
-public static class ConstraintConverters
+internal static class ConstraintConverters
 {
     /// <summary>
     /// Convert <see cref="Contracts.Events.Constraints.Constraint"/> to <see cref="IConstraintDefinition"/>.

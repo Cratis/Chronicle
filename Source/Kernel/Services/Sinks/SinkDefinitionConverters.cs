@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Sinks;
 /// <summary>
 /// Converter methods for <see cref="SinkDefinition"/>.
 /// </summary>
-public static class SinkDefinitionConverters
+internal static class SinkDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="SinkDefinition"/>.

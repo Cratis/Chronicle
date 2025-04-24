@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <summary>
 /// Converter methods for <see cref="EventType"/>.
 /// </summary>
-public static class EventTypeConverters
+internal static class EventTypeConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="EventType"/>.

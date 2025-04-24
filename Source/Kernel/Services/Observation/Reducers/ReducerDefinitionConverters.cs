@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <summary>
 /// Extension methods for converting between <see cref="ReducerDefinition"/> and <see cref="Contracts.Observation.Reducers.ReducerDefinition"/>.
 /// </summary>
-public static class ReducerDefinitionConverters
+internal static class ReducerDefinitionConverters
 {
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Reducers.ReducerDefinition"/> to <see cref="ReducerDefinition"/>.

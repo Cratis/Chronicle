@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Identities;
 /// <summary>
 /// Converters for converting to/from contracts for identities.
 /// </summary>
-public static class IdentityConverters
+internal static class IdentityConverters
 {
     /// <summary>
     /// Convert from contract to concept.

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Services.Events;
 /// <summary>
 /// Converter methods for <see cref="AppendedEvent"/>.
 /// </summary>
-public static class AppendedEventConverters
+internal static class AppendedEventConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="AppendedEvent"/>.

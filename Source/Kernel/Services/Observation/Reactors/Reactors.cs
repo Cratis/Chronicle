@@ -27,7 +27,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class Reactors(
+internal class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
     ILogger<Reactors> logger) : IReactors

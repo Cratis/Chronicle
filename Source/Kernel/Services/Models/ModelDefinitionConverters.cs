@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Models;
 /// <summary>
 /// Converter methods for <see cref="ModelDefinition"/>.
 /// </summary>
-public static class ModelDefinitionConverters
+internal static class ModelDefinitionConverters
 {
     /// <summary>
     /// Converts a <see cref="ModelDefinition"/> to a <see cref="Contracts.Models.ModelDefinition"/>.

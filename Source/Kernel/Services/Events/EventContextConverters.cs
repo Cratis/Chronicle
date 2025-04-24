@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Events;
 /// <summary>
 /// Converter methods for <see cref="EventContext"/>.
 /// </summary>
-public static class EventContextConverters
+internal static class EventContextConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="EventContext"/>.

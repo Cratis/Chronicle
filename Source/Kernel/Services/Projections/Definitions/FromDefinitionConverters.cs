@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="FromDefinition"/>.
 /// </summary>
-public static class FromDefinitionConverters
+internal static class FromDefinitionConverters
 {
     /// <summary>
     /// Converts a <see cref="FromDefinition"/> to its corresponding contract representation.

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Events;
 /// <summary>
 /// Converter methods for <see cref="EventMetadata"/>.
 /// </summary>
-public static class EventMetadataConverters
+internal static class EventMetadataConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="EventMetadata"/>.

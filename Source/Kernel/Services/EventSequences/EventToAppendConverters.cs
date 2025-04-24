@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// <summary>
 /// Extension methods for converting between <see cref="Contracts.Events.EventToAppend"/> and <see cref="EventToAppend"/>.
 /// </summary>
-public static class EventToAppendConverters
+internal static class EventToAppendConverters
 {
     /// <summary>
     /// Convert to a Chronicle representation of <see cref="Contracts.Events.EventToAppend"/>.

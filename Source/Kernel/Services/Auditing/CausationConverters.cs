@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Auditing;
 /// <summary>
 /// Extension methods for converting to and from <see cref="Causation"/>.
 /// </summary>
-public static class CausationConverters
+internal static class CausationConverters
 {
     /// <summary>
     /// Convert to contract representation.

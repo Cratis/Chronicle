@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Events;
 /// <summary>
 /// Converter methods for <see cref="EventObservationState"/>.
 /// </summary>
-public static class EventObservationStateConverters
+internal static class EventObservationStateConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="EventObservationState"/>.

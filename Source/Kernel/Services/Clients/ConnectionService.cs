@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Services.Clients;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class ConnectionService(
+internal class ConnectionService(
     IGrainFactory grainFactory,
     ILogger<ConnectionService> logger) : IConnectionService
 {

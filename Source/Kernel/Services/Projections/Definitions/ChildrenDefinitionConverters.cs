@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="ChildrenDefinition"/>.
 /// </summary>
-public static class ChildrenDefinitionConverters
+internal static class ChildrenDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="ChildrenDefinition"/>.

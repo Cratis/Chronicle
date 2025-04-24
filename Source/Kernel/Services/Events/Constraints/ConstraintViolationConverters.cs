@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 /// <summary>
 /// Represents methods for converting between <see cref="ConstraintViolation"/> and <see cref="Contracts.Events.Constraints.ConstraintViolation"/>.
 /// </summary>
-public static class ConstraintViolationConverters
+internal static class ConstraintViolationConverters
 {
     /// <summary>
     /// Convert to a Chronicle representation of <see cref="ConstraintViolation"/> to a contract version of <see cref="Contracts.Events.Constraints.ConstraintViolation"/>.

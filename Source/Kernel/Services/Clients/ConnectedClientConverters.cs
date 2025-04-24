@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <summary>
 /// Converter methods for <see cref="ConnectedClient"/>.
 /// </summary>
-public static class ConnectedClientConverters
+internal static class ConnectedClientConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="ConnectedClient"/>.

@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing events.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-public class EventSequences(
+internal class EventSequences(
     IGrainFactory grainFactory,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences

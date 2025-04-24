@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="ProjectionDefinition"/>.
 /// </summary>
-public static class ProjectionDefinitionConverters
+internal static class ProjectionDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="ProjectionDefinition"/>.

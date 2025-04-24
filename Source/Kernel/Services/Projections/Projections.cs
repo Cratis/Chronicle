@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="clusterClient"><see cref="IClusterClient"/> for interacting with the cluster.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-public class Projections(
+internal class Projections(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     JsonSerializerOptions jsonSerializerOptions) : IProjections

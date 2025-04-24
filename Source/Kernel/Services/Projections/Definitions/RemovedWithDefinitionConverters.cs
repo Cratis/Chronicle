@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="RemovedWithDefinition"/>.
 /// </summary>
-public static class RemovedWithDefinitionConverters
+internal static class RemovedWithDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="RemovedWithDefinition"/>.

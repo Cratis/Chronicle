@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Projections.Definitions;
 /// <summary>
 /// Converter methods for <see cref="JoinDefinition"/>.
 /// </summary>
-public static class JoinDefinitionConverters
+internal static class JoinDefinitionConverters
 {
     /// <summary>
     /// Convert to contract version of <see cref="JoinDefinition"/>.

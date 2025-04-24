@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Services.Jobs;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
-public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
+internal class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
 {
     /// <inheritdoc/>
     public Task Stop(StopJob command, CallContext context = default) =>
