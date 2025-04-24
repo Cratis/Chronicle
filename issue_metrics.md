@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 129 days, 4:43:23 | 1 day, 9:27:20 | 279 days, 4:57:20 |
-| Time to close | 251 days, 14:04:08 | 108 days, 5:21:47 | 785 days, 1:53:27 |
+| Time to close | 253 days, 4:38:52 | 108 days, 12:11:06 | 787 days, 18:12:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 293 |
-| Number of items closed | 531 |
+| Number of items that remain open | 292 |
+| Number of items closed | 532 |
 | Number of most active mentors | 0 |
 | Total number of items created | 824 |
 
@@ -370,4 +370,4 @@
 | Fix namespaces | https://github.com/Cratis/Chronicle/issues/939 | [einari](https://github.com/einari) | None | 346 days, 19:01:00 | None |
 | Formalize storage APIs - move away from having to implement Orleans interfaces | https://github.com/Cratis/Chronicle/issues/934 | [einari](https://github.com/einari) | None | 297 days, 7:13:29 | None |
 | Protect system collections for custom event sequences | https://github.com/Cratis/Chronicle/issues/932 | [einari](https://github.com/einari) | None | None | None |
-| Remove tenant configurati
+| Remove tenant configurat
