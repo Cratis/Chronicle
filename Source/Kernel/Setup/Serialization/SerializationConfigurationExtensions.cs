@@ -34,22 +34,6 @@ public static class SerializationConfigurationExtensions
     }
 
     /// <summary>
-    /// Adds the serializer for appended events.
-    /// </summary>
-    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddAppendedEventSerializer(this IServiceCollection services)
-    {
-        services.AddSerializer(builder =>
-        {
-            builder.Services
-                .AddCompleteSerializer<AppendedEventSerializer>()
-                .AddCompleteSerializer<OneOfSerializer>();
-        });
-        return services;
-    }
-
-    /// <summary>
     /// Add a complete serializer, convenience method when a serializer implements all the interfaces.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
@@ -60,6 +44,22 @@ public static class SerializationConfigurationExtensions
     {
         services.AddSingleton<TSerializer>();
         services.AddSingleton<IGeneralizedCodec, TSerializer>();
+        services.AddSingleton<IGeneralizedCopier, TSerializer>();
+        services.AddSingleton<ITypeFilter, TSerializer>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Add a complete serializer, convenience method when a serializer implements all the interfaces.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <typeparam name="TSerializer">Type of serializer.</typeparam>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddCompleteCopier<TSerializer>(this IServiceCollection services)
+        where TSerializer : class, IGeneralizedCopier, ITypeFilter
+    {
+        services.AddSingleton<TSerializer>();
         services.AddSingleton<IGeneralizedCopier, TSerializer>();
         services.AddSingleton<ITypeFilter, TSerializer>();
 
@@ -80,11 +80,14 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new JobStateConverter());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
-        services.AddConceptSerializer();
-        services.AddAppendedEventSerializer();
-        services.AddSerializer(
-            serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
-            options));
+        services
+            .AddConceptSerializer()
+            .AddCompleteSerializer<AppendedEventSerializer>()
+            .AddCompleteSerializer<OneOfSerializer>()
+            .AddCompleteCopier<ReadOnlyArrayCopier>()
+            .AddSerializer(
+                serializerBuilder => serializerBuilder.AddJsonSerializer(
+                _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
+                options));
     }
 }
