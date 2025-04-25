@@ -37,7 +37,6 @@ public static class MongoDBChronicleBuilderExtensions
         builder.SiloBuilder.AddStartupTask<CustomSerializersRegistrationService>(ServiceLifecycleStage.First);
         builder.SiloBuilder
             .UseMongoDBClient(server)
-
             .UseMongoDBClustering(options =>
             {
                 options.DatabaseName = database;
