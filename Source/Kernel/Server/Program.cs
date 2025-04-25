@@ -58,7 +58,6 @@ builder.Host
        mongo.Database = WellKnownDatabaseNames.Chronicle;
    })
    .UseOrleans(_ => _
-        .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
            .WithMongoDB(chronicleOptions))
         .UseDashboard(options =>
