@@ -19,6 +19,16 @@ public class ChronicleOptions
     public int ApiPort { get; init; } = 8080;
 
     /// <summary>
+    /// Gets the port for the Orleans Silo-to-Silo communication.
+    /// </summary>
+    public int SiloPort { get; init; } = 11111;
+
+    /// <summary>
+    /// Gets the port for the Orleans Client-to-Silo communication.
+    /// </summary>
+    public int GatewayPort { get; init; } = 30000;
+
+    /// <summary>
     /// Gets the <see cref="Events"/> configuration.
     /// </summary>
     public Events Events { get; init; } = new Events();
