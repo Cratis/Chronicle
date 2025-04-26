@@ -19,10 +19,10 @@ public static class ClusterEndpointSiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder ConfigureClusterEndpoint(this ISiloBuilder builder, ChronicleOptions options)
     {
-        if (!string.IsNullOrEmpty(options.Hostname))
+        if (!string.IsNullOrEmpty(options.AdvertisedHostname))
         {
             builder.ConfigureEndpoints(
-                hostname: options.Hostname,
+                hostname: options.AdvertisedHostname,
                 siloPort: options.SiloPort,
                 gatewayPort: options.GatewayPort,
                 listenOnAnyHostAddress: true);

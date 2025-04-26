@@ -32,7 +32,7 @@ public class ChronicleOptions
     /// Gets or sets the IP address to be advertised in membership tables.
     /// </summary>
     /// <remarks>
-    /// If this is not set, the <see cref="Hostname"/> will be used as the advertised IP address.
+    /// If this is not set, the <see cref="AdvertisedHostname"/> will be used as the advertised IP address.
     /// </remarks>
     public string AdvertisedIPAddress { get; init; } = string.Empty;
 
@@ -42,7 +42,7 @@ public class ChronicleOptions
     /// <remarks>
     /// If <see cref="AdvertisedIPAddress"/> is not set, this will be used as the advertised IP address.
     /// </remarks>
-    public string Hostname { get; init; } = string.Empty;
+    public string AdvertisedHostname { get; init; } = string.Empty;
 
     /// <summary>
     /// Gets the <see cref="Events"/> configuration.
