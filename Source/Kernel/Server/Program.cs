@@ -58,7 +58,7 @@ builder.Host
        mongo.Database = WellKnownDatabaseNames.Chronicle;
    })
    .UseOrleans(_ => _
-        .ConfigureEndpoints(siloPort: chronicleOptions.SiloPort, gatewayPort: chronicleOptions.GatewayPort)
+        .ConfigureClusterEndpoint(chronicleOptions)
         .AddChronicleToSilo(_ => _
            .WithMongoDB(chronicleOptions))
         .UseDashboard(options =>

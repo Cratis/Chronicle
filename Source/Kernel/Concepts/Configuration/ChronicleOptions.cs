@@ -29,6 +29,22 @@ public class ChronicleOptions
     public int GatewayPort { get; init; } = 30000;
 
     /// <summary>
+    /// Gets or sets the IP address to be advertised in membership tables.
+    /// </summary>
+    /// <remarks>
+    /// If this is not set, the <see cref="Hostname"/> will be used as the advertised IP address.
+    /// </remarks>
+    public string AdvertisedIPAddress { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the host name.
+    /// </summary>
+    /// <remarks>
+    /// If <see cref="AdvertisedIPAddress"/> is not set, this will be used as the advertised IP address.
+    /// </remarks>
+    public string Hostname { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the <see cref="Events"/> configuration.
     /// </summary>
     public Events Events { get; init; } = new Events();
