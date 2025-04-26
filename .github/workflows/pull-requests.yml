@@ -268,7 +268,7 @@ publish-docker-production:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           message: |
-            Docker Image for this PR:
+            Docker Image for development purposes with MongoDB embedded for this PR:
             https://ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}-development
 
             docker run -d -p 35000:35000 -p 27017:27017 ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}-development
