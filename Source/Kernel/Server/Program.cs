@@ -11,10 +11,13 @@ using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
 AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+
+string[] defaultSectionPaths = ["Cratis", "Chronicle"];
 
 // Force invariant culture for the Kernel
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -24,11 +27,22 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.Zero);
+
 builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
+builder.Services
+    .AddOptions<ChronicleOptions>()
+    .BindConfiguration(ConfigurationPath.Combine(defaultSectionPaths))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 var chronicleOptions = new ChronicleOptions();
-builder.Configuration.Bind(chronicleOptions);
-builder.Services.Configure<ChronicleOptions>(builder.Configuration);
+builder.Configuration
+    .GetSection(ConfigurationPath.Combine(defaultSectionPaths))
+    .Bind(chronicleOptions);
+
+builder.Configuration
+    .Bind(chronicleOptions);
+builder.Services.AddSingleton(Options.Create(chronicleOptions));
 
 if (chronicleOptions.Features.Api)
 {
@@ -83,6 +97,8 @@ builder.Host
 var app = builder.Build();
 app.UseRouting();
 app.UseCratisApplicationModel();
+
+var options = app.Services.GetRequiredService<IOptions<ChronicleOptions>>().Value;
 
 if (chronicleOptions.Features.Api)
 {
