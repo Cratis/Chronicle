@@ -149,7 +149,7 @@ jobs:
             https://github.com/cratis/chronicle/packages/1655206?version=${{ needs.release.outputs.version }}
           allow-repeats: false
 
-publish-docker-production:
+  publish-docker-production:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     needs: [workbench, kernel, release]
