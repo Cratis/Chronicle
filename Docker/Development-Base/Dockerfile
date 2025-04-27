@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image
 ####################################
-FROM cratis/base-mongodb
+FROM cratis/base
 ARG CONFIGURATION=Release
 ARG VERSION
 
@@ -27,5 +27,5 @@ RUN ./copy-server-files.sh
 RUN rm appsettings.Development.json
 RUN rm ./chronicle.json
 
-ENTRYPOINT ["dotnet", "./Cratis.Chronicle.Server"]
+ENTRYPOINT ["dotnet", "./Cratis.Chronicle.Server.dll"]
 
