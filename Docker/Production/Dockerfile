@@ -27,4 +27,5 @@ RUN ./copy-server-files.sh
 RUN rm appsettings.Development.json
 RUN rm ./chronicle.json
 
-ENTRYPOINT ["./Cratis.Chronicle.Server"]
+# ENTRYPOINT ["./Cratis.Chronicle.Server"]
+
