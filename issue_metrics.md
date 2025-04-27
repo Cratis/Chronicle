@@ -2,7 +2,7 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 129 days, 4:43:23 | 1 day, 9:27:20 | 279 days, 4:57:20 |
+| Time to first response | 125 days, 18:08:14 | 1 day, 17:46:30 | 260 days, 20:54:35 |
 | Time to close | 253 days, 4:38:52 | 108 days, 12:11:06 | 787 days, 18:12:54 |
 | Time to answer | None | None | None |
 
@@ -15,8 +15,8 @@
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
-| Support Microsoft SQL Server as Sink for Reducers and Projections | https://github.com/Cratis/Chronicle/issues/1869 | [einari](https://github.com/einari) | None | None | None |
-| Support Microsoft SQL Server as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | [einari](https://github.com/einari) | None | None | None |
+| Support SQL type of servers as Sink for Reducers and Projections | https://github.com/Cratis/Chronicle/issues/1869 | [einari](https://github.com/einari) | 8 days, 18:13:02 | None | None |
+| Support SQL type Servers as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | [einari](https://github.com/einari) | None | None | None |
 | Support clustering for Kernel | https://github.com/Cratis/Chronicle/issues/1863 | [einari](https://github.com/einari) | None | None | None |
 | Support for compensating existing events | https://github.com/Cratis/Chronicle/issues/1860 | [einari](https://github.com/einari) | None | None | None |
 | Support migration of events between generations (up & down casting) | https://github.com/Cratis/Chronicle/issues/1859 | [einari](https://github.com/einari) | None | None | None |
@@ -370,4 +370,4 @@
 | Fix namespaces | https://github.com/Cratis/Chronicle/issues/939 | [einari](https://github.com/einari) | None | 346 days, 19:01:00 | None |
 | Formalize storage APIs - move away from having to implement Orleans interfaces | https://github.com/Cratis/Chronicle/issues/934 | [einari](https://github.com/einari) | None | 297 days, 7:13:29 | None |
 | Protect system collections for custom event sequences | https://github.com/Cratis/Chronicle/issues/932 | [einari](https://github.com/einari) | None | None | None |
-| Remove tenant configurat
+| Remove tenant 
