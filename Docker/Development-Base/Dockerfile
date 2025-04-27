@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image
 ####################################
-FROM mcr.microsoft.com/dotnet/runtime:9.0.0-bookworm-slim
+FROM cratis/base-mongodb
 ARG CONFIGURATION=Release
 ARG VERSION
 
@@ -27,5 +27,5 @@ RUN ./copy-server-files.sh
 RUN rm appsettings.Development.json
 RUN rm ./chronicle.json
 
-ENTRYPOINT ["./Cratis.Chronicle.Server"]
+ENTRYPOINT ["dotnet", "./Cratis.Chronicle.Server"]
 
