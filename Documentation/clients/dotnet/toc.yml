@@ -6,3 +6,5 @@
   href: events/reactors.md
 - name: Reducers
   href: events/reducers.md
+- name: Projections
+  href: events/projections.md

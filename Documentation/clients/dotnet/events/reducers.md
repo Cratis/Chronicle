@@ -18,6 +18,10 @@ public class MyReducer : IReducerFor<MyReadModel>
 The `IReducerFor<>` takes a generic argument, which is the type of the read model the reducer works
 with. A read model is basically a `class` or `record` that represents the state events are reduced to.
 
+```csharp
+public record MyReadModel(Guid Id, string Something);
+```
+
 The methods you add onto the class will be discovered by convention and the system recognizes the following
 signatures, name of the method(s) can be anything:
 
@@ -35,3 +39,7 @@ The `currentInstance` argument will hold the current instance from the underlyin
 If there is no instance, this value will be null.
 
 > Note: Deletion is currently not supported, but will be implemented as the following [issue](https://github.com/Cratis/Chronicle/issues/1028) describes.
+
+A concrete example of a reducer:
+
+{{snippet:Quickstart-BooksReducer}}
