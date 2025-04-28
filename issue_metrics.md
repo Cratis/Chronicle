@@ -8,13 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 292 |
+| Number of items that remain open | 293 |
 | Number of items closed | 532 |
 | Number of most active mentors | 0 |
-| Total number of items created | 824 |
+| Total number of items created | 825 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Formalize Read Model definition storage and make it generational | https://github.com/Cratis/Chronicle/issues/1877 | [einari](https://github.com/einari) | None | None | None |
 | Support SQL type of servers as Sink for Reducers and Projections | https://github.com/Cratis/Chronicle/issues/1869 | [einari](https://github.com/einari) | 8 days, 18:13:02 | None | None |
 | Support SQL type Servers as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | [einari](https://github.com/einari) | None | None | None |
 | Support clustering for Kernel | https://github.com/Cratis/Chronicle/issues/1863 | [einari](https://github.com/einari) | None | None | None |
@@ -369,5 +370,4 @@
 | Hard to figure out how to get going with a minimal setup | https://github.com/Cratis/Chronicle/issues/943 | [woksin](https://github.com/woksin) | 26 days, 21:25:43 | 26 days, 21:33:48 | None |
 | Fix namespaces | https://github.com/Cratis/Chronicle/issues/939 | [einari](https://github.com/einari) | None | 346 days, 19:01:00 | None |
 | Formalize storage APIs - move away from having to implement Orleans interfaces | https://github.com/Cratis/Chronicle/issues/934 | [einari](https://github.com/einari) | None | 297 days, 7:13:29 | None |
-| Protect system collections for custom event sequences | https://github.com/Cratis/Chronicle/issues/932 | [einari](https://github.com/einari) | None | None | None |
-| Remove tenant 
+| Pr
