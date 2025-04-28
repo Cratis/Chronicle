@@ -1,13 +1,13 @@
 # Reactors
 
-Observers are classes that holds methods that react to certain events.
-By adding an attribute in front of the handler class, it will automatically be discovered at startup and
-the system will figure out which methods will be handling what events.
+Reactors are classes that holds methods that react to certain events.
+By implementing the interface `IReactor`, it will automatically be discovered at startup and
+the system will figure out which methods will be handling what events by convention.
 
 ```csharp
 using Cratis.Chronicle.Reactors;
 
-public class MyObserver : IReactor
+public class MyReactor : IReactor
 {
 }
 ```
