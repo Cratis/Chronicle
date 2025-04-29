@@ -819,8 +819,8 @@
       },
       "Namotion.Reflection": {
         "type": "Transitive",
-        "resolved": "3.3.0",
-        "contentHash": "8bIO+tMrKLv/5Hx1rnJgoz8MjGhpiWtSxadvhmGYm/WTeOLAnfR1ZKNz1FMmhQ0YmchNebn6ERVUOwBqV81GXQ=="
+        "resolved": "3.4.2",
+        "contentHash": "ZHrvPdAg7zV78iOTiH9ua+34rBfn4iH6Bjfo2bzUHOGD3KkjGUvqxBFy+v9p6qwV+GEeYWl4NOqXH8tVcZOMpw=="
       },
       "Newtonsoft.Json": {
         "type": "Transitive",
@@ -829,8 +829,8 @@
       },
       "NJsonSchema.Annotations": {
         "type": "Transitive",
-        "resolved": "11.2.0",
-        "contentHash": "YY7oavkCD+lbcFsjvDY0+h1/C+TgX5lYRQaracIq5zqF6FC35ddig+hARrta4Hk5/O3RbjH5I22/Qg25YNqmrA=="
+        "resolved": "11.3.2",
+        "contentHash": "rSwQFKdLlq/lbAJfYqI5KBE46KJCbc99L6G9XM1nVpCOxE0eoaNE8+fkJ7Ws+I5VqP7oEPGKXTR3Q7PmYoeTDA=="
       },
       "OpenTelemetry.Api": {
         "type": "Transitive",
@@ -1024,7 +1024,7 @@
           "FluentValidation": "[11.11.0, )",
           "Microsoft.Extensions.DependencyInjection": "[9.0.4, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.4, )",
-          "NJsonSchema": "[11.2.0, )",
+          "NJsonSchema": "[11.3.2, )",
           "OpenTelemetry.Exporter.InMemory": "[1.11.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
@@ -1208,12 +1208,12 @@
       },
       "NJsonSchema": {
         "type": "CentralTransitive",
-        "requested": "[11.2.0, )",
-        "resolved": "11.2.0",
-        "contentHash": "ucPJuxr7d3sbOB4pewr50lDhjCloIFgyFV3OwyIGWGKiSL4H2FNjfT0kYwaIbPdhT8psPyphYpMYhzbdBZpudw==",
+        "requested": "[11.3.2, )",
+        "resolved": "11.3.2",
+        "contentHash": "QXvelMLKz1NsMPc0HndaaxryNIV1V+AFYuZV9w3H6e+03jp3f3n1w8XLcIaA5WA51EHQdZEP4V2Bfgl6kpxDKg==",
         "dependencies": {
-          "NJsonSchema.Annotations": "11.2.0",
-          "Namotion.Reflection": "3.3.0",
+          "NJsonSchema.Annotations": "11.3.2",
+          "Namotion.Reflection": "3.4.2",
           "Newtonsoft.Json": "13.0.3"
         }
       },
