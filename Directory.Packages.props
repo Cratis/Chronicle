@@ -74,7 +74,7 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageVersion>
         <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
-        <PackageVersion Include="NJsonSchema" Version="11.2.0" />
+        <PackageVersion Include="NJsonSchema" Version="11.3.2" />
         <PackageVersion Include="Polly.Core" Version="8.5.2" />
         <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.52">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
