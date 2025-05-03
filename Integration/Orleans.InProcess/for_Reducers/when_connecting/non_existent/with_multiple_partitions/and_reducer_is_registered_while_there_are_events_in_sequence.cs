@@ -1,20 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-using System.Text;
-using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.Observation;
-using HandlebarsDotNet;
-using Humanizer;
-using Xunit.Abstractions;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_connecting.non_existent.with_multiple_partitions.and_reducer_is_registered_while_there_are_events_in_sequence.context;
 using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 

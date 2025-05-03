@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Metrics;
-using System.Reflection;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -10,7 +8,6 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
@@ -22,7 +19,6 @@ using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Orleans.Storage;
-using Orleans.TestingHost;
 using Orleans.TestingHost.Logging;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;

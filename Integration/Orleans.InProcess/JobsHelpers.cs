@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Storage.Jobs;
 using JobStatus = Cratis.Chronicle.Contracts.Jobs.JobStatus;
 

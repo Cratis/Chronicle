@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts;
-using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_on_id.and_event_joined_has_happened_first.context;
 

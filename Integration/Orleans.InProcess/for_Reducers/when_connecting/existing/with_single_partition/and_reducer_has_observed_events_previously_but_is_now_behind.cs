@@ -1,16 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.Observation;
-using Humanizer;
-using Xunit.Abstractions;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_connecting.existing.with_single_partition.and_reducer_has_observed_events_previously_but_is_now_behind.context;
 using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 

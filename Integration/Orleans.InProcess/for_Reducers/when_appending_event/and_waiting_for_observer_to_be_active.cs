@@ -5,10 +5,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Humanizer;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_appending_event.and_waiting_for_observer_to_be_active.context;
 using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
