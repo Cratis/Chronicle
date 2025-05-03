@@ -85,4 +85,13 @@ public interface IReducers
     /// <param name="reducerType">Type of reducer.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
     Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type reducerType);
+
+    /// <summary>
+    /// Get the state of a specific reactor.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
+    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
+    /// <returns><see cref="ReducerState"/>.</returns>
+    Task<ReducerState> GetState<TReducer, TModel>()
+        where TReducer : IReducerFor<TModel>;
 }

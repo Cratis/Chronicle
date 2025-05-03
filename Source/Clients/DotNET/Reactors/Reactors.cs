@@ -148,6 +148,25 @@ public class Reactors : IReactors
         return _eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
     }
 
+    /// <inheritdoc/>
+    public async Task<ReactorState> GetState<TReactor>()
+        where TReactor : IReactor
+    {
+        var reactorType = typeof(TReactor);
+        var handler = _handlers[reactorType];
+        var request = new GetObserverInformationRequest
+        {
+            ObserverId = handler.Id,
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace
+        };
+        var state = await _eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        return new ReactorState(
+            state.RunningState.ToClient(),
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber);
+    }
+
     static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)

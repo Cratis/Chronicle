@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
@@ -27,6 +28,23 @@ public class Observers(IGrainFactory grainFactory, IStorage storage) : IObserver
     /// <inheritdoc/>
     public Task ReplayPartition(ReplayPartition command, CallContext context = default) =>
         grainFactory.GetObserver(storage, command).ReplayPartition(command.Partition);
+
+    /// <inheritdoc/>
+    public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
+    {
+        var observer = grainFactory.GetObserver(storage, request);
+        var state = await observer.GetState();
+        return new ObserverInformation
+        {
+            ObserverId = request.ObserverId,
+            EventSequenceId = state.EventSequenceId,
+            Type = state.Type.ToContract(),
+            EventTypes = state.EventTypes.ToContract(),
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
+            RunningState = state.RunningState.ToContract()
+        };
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)

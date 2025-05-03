@@ -134,6 +134,25 @@ public class Reducers(
         return eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
     }
 
+    /// <inheritdoc/>
+    public async Task<ReducerState> GetState<TReducer, TModel>()
+        where TReducer : IReducerFor<TModel>
+    {
+        var reducerType = typeof(TReducer);
+        var handler = _handlers[reducerType];
+        var request = new GetObserverInformationRequest
+        {
+            ObserverId = handler.Id,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace
+        };
+        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        return new ReducerState(
+            state.RunningState.ToClient(),
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber);
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
     {
         var handler = new ReducerHandler(

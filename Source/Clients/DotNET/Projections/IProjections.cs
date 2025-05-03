@@ -115,4 +115,13 @@ public interface IProjections
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
+
+    /// <summary>
+    /// Get the state of a specific reactor.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
+    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
+    /// <returns><see cref="ProjectionState"/>.</returns>
+    Task<ProjectionState> GetState<TReducer, TModel>()
+        where TReducer : IProjectionFor<TModel>;
 }

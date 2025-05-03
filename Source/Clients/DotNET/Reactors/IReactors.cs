@@ -50,4 +50,12 @@ public interface IReactors
     /// <param name="reactorType">Type of reducer.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
     Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type reactorType);
+
+    /// <summary>
+    /// Get the state of a specific reactor.
+    /// </summary>
+    /// <typeparam name="TReactor">Type of reactor get for.</typeparam>
+    /// <returns><see cref="ReactorState"/>.</returns>
+    Task<ReactorState> GetState<TReactor>()
+        where TReactor : IReactor;
 }

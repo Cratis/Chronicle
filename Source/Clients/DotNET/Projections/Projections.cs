@@ -5,10 +5,12 @@ using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
@@ -205,6 +207,25 @@ public class Projections(
             EventStore = eventStore.Name,
             Projections = [.. Definitions]
         });
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionState> GetState<TProjection, TModel>()
+        where TProjection : IProjectionFor<TModel>
+    {
+        var projectionType = typeof(TProjection);
+        var handler = _definitionsByModelType[projectionType];
+        var request = new GetObserverInformationRequest
+        {
+            ObserverId = handler.Identifier,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace
+        };
+        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        return new ProjectionState(
+            state.RunningState.ToClient(),
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber);
     }
 
     static Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
