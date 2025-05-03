@@ -15,7 +15,7 @@ public static class TimeSpanFactory
     {
         if (Debugger.IsAttached)
         {
-            return TimeSpan.MaxValue;
+            return Timeout.InfiniteTimeSpan;
         }
         return TimeSpan.FromSeconds(5);
     }
@@ -29,7 +29,7 @@ public static class TimeSpanFactory
     {
         if (Debugger.IsAttached)
         {
-            return TimeSpan.MaxValue;
+            return Timeout.InfiniteTimeSpan;
         }
         return TimeSpan.FromSeconds(seconds);
     }
