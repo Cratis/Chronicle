@@ -10,7 +10,6 @@ public class a_disconnected_reactor_observing_an_event(GlobalFixture globalFixtu
 {
     public TaskCompletionSource Tcs;
     public ReactorWithoutDelay Reactor;
-    public IObserver ReactorObserver;
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(SomeOtherEvent)];
 
     protected override void ConfigureServices(IServiceCollection services)
