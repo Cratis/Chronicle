@@ -180,6 +180,39 @@ public class Projections(
     public IObservable<ProjectionChangeset<TModel>> Watch<TModel>() => projectionWatcherManager.GetWatcher<TModel>().Observable;
 
     /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TProjection, TModel>()
+        where TProjection : IProjectionFor<TModel> =>
+            GetFailedPartitions(typeof(TProjection));
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type projectionType)
+    {
+        var definition = _definitionsByModelType[projectionType];
+        return eventStore.FailedPartitions.GetFailedPartitionsFor(definition.Identifier);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionState> GetState<TProjection, TModel>()
+        where TProjection : IProjectionFor<TModel>
+    {
+        var projectionType = typeof(TProjection);
+        var definition = _definitionsByModelType[projectionType];
+        var request = new GetObserverInformationRequest
+        {
+            ObserverId = definition.Identifier,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = definition.EventSequenceId
+        };
+        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        return new ProjectionState(
+            state.RunningState.ToClient(),
+            state.IsSubscribed,
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber);
+    }
+
+    /// <inheritdoc/>
     public Task Discover()
     {
         _definitionsByModelType = FindAllProjectionDefinitions(
@@ -207,25 +240,6 @@ public class Projections(
             EventStore = eventStore.Name,
             Projections = [.. Definitions]
         });
-    }
-
-    /// <inheritdoc/>
-    public async Task<ProjectionState> GetState<TProjection, TModel>()
-        where TProjection : IProjectionFor<TModel>
-    {
-        var projectionType = typeof(TProjection);
-        var handler = _definitionsByModelType[projectionType];
-        var request = new GetObserverInformationRequest
-        {
-            ObserverId = handler.Identifier,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace
-        };
-        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
-        return new ProjectionState(
-            state.RunningState.ToClient(),
-            state.NextEventSequenceNumber,
-            state.LastHandledEventSequenceNumber);
     }
 
     static Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(

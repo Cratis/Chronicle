@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -105,6 +106,31 @@ public interface IProjections
     IObservable<ProjectionChangeset<TModel>> Watch<TModel>();
 
     /// <summary>
+    /// Get any failed partitions for a specific projection.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection.</typeparam>
+    /// <typeparam name="TModel">The model type the projection is for.</typeparam>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TProjection, TModel>()
+        where TProjection : IProjectionFor<TModel>;
+
+    /// <summary>
+    /// Get any failed partitions for a specific projection.
+    /// </summary>
+    /// <param name="projectionType">Type of projection.</param>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type projectionType);
+
+    /// <summary>
+    /// Get the state of a specific reactor.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
+    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
+    /// <returns><see cref="ProjectionState"/>.</returns>
+    Task<ProjectionState> GetState<TReducer, TModel>()
+        where TReducer : IProjectionFor<TModel>;
+
+    /// <summary>
     /// Discover all projections from entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>
@@ -115,13 +141,4 @@ public interface IProjections
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
-
-    /// <summary>
-    /// Get the state of a specific reactor.
-    /// </summary>
-    /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
-    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
-    /// <returns><see cref="ProjectionState"/>.</returns>
-    Task<ProjectionState> GetState<TReducer, TModel>()
-        where TReducer : IProjectionFor<TModel>;
 }

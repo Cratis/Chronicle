@@ -158,12 +158,14 @@ public class Reactors : IReactors
         {
             ObserverId = handler.Id,
             EventStore = _eventStore.Name,
-            Namespace = _eventStore.Namespace
+            Namespace = _eventStore.Namespace,
+            EventSequenceId = handler.EventSequenceId
         };
         var state = await _eventStore.Connection.Services.Observers.GetObserverInformation(request);
         return new ReactorState(
             handler.Id,
             state.RunningState.ToClient(),
+            state.IsSubscribed,
             state.NextEventSequenceNumber,
             state.LastHandledEventSequenceNumber);
     }

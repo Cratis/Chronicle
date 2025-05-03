@@ -76,8 +76,10 @@ public interface IReducers
     /// Get any failed partitions for a specific reducer.
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer.</typeparam>
+    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TReducer>();
+    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TReducer, TModel>()
+        where TReducer : IReducerFor<TModel>;
 
     /// <summary>
     /// Get any failed partitions for a specific reducer.

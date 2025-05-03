@@ -19,21 +19,22 @@ public class Observers(IGrainFactory grainFactory, IStorage storage) : IObserver
 {
     /// <inheritdoc/>
     public Task RetryPartition(RetryPartition command, CallContext context = default) =>
-        grainFactory.GetObserver(storage, command).TryStartRecoverJobForFailedPartition(command.Partition);
+        grainFactory.GetObserver(command).TryStartRecoverJobForFailedPartition(command.Partition);
 
     /// <inheritdoc/>
     public Task Replay(Replay command, CallContext context = default) =>
-        grainFactory.GetObserver(storage, command).Replay();
+        grainFactory.GetObserver(command).Replay();
 
     /// <inheritdoc/>
     public Task ReplayPartition(ReplayPartition command, CallContext context = default) =>
-        grainFactory.GetObserver(storage, command).ReplayPartition(command.Partition);
+        grainFactory.GetObserver(command).ReplayPartition(command.Partition);
 
     /// <inheritdoc/>
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
-        var observer = grainFactory.GetObserver(storage, request);
+        var observer = grainFactory.GetObserver(request);
         var state = await observer.GetState();
+        var subscribed = await observer.IsSubscribed();
         return new ObserverInformation
         {
             ObserverId = request.ObserverId,
@@ -42,7 +43,8 @@ public class Observers(IGrainFactory grainFactory, IStorage storage) : IObserver
             EventTypes = state.EventTypes.ToContract(),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
-            RunningState = state.RunningState.ToContract()
+            RunningState = state.RunningState.ToContract(),
+            IsSubscribed = subscribed
         };
     }
 

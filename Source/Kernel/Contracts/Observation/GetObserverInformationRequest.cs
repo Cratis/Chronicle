@@ -11,21 +11,19 @@ namespace Cratis.Chronicle.Contracts.Observation;
 [ProtoContract]
 public class GetObserverInformationRequest : IObserverCommand
 {
-    /// <summary>
-    /// /// Gets or sets the event store name.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(1)]
     public string EventStore { get; set; }
 
-    /// <summary>
-    /// Gets or sets the namespace.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(2)]
     public string Namespace { get; set; }
 
-    /// <summary>
-    /// Gets or sets the observer ID.
-    /// </summary>
+    /// <inheritdoc/>
     [ProtoMember(3)]
     public string ObserverId { get; set; }
+
+    /// <inheritdoc/>
+    [ProtoMember(4)]
+    public string EventSequenceId { get; set; } = string.Empty;
 }

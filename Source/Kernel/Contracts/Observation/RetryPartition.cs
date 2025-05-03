@@ -23,9 +23,13 @@ public class RetryPartition : IObserverCommand
     [ProtoMember(3)]
     public string ObserverId { get; set; }
 
+    /// <inheritdoc/>
+    [ProtoMember(4)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the partition to rewind.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(5)]
     public string Partition { get; set; }
 }

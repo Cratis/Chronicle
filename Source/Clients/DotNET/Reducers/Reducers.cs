@@ -124,8 +124,9 @@ public class Reducers(
     public bool HasReducerFor(Type modelType) => _handlers.ContainsKey(modelType);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReducer>() =>
-        GetFailedPartitions(typeof(TReducer));
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReducer, TModel>()
+        where TReducer : IReducerFor<TModel> =>
+            GetFailedPartitions(typeof(TReducer));
 
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type reducerType)
@@ -144,11 +145,13 @@ public class Reducers(
         {
             ObserverId = handler.Id,
             EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace
+            Namespace = eventStore.Namespace,
+            EventSequenceId = handler.EventSequenceId
         };
         var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
         return new ReducerState(
             state.RunningState.ToClient(),
+            state.IsSubscribed,
             state.NextEventSequenceNumber,
             state.LastHandledEventSequenceNumber);
     }

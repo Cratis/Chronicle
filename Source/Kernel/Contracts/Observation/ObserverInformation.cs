@@ -53,4 +53,10 @@ public class ObserverInformation
     /// </summary>
     [ProtoMember(7)]
     public ObserverRunningState RunningState { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the observer is subscribed to its handler.
+    /// </summary>
+    [ProtoMember(8)]
+    public bool IsSubscribed { get; set; }
 }
