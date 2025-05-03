@@ -162,6 +162,7 @@ public class Reactors : IReactors
         };
         var state = await _eventStore.Connection.Services.Observers.GetObserverInformation(request);
         return new ReactorState(
+            handler.Id,
             state.RunningState.ToClient(),
             state.NextEventSequenceNumber,
             state.LastHandledEventSequenceNumber);
