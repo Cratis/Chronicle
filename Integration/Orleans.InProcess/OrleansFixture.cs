@@ -8,7 +8,6 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -104,14 +103,6 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
     public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
     public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
-
-    public IObserver GetObserverForReactor<T>() => GrainFactory
-        .GetGrain<IObserver>(
-            new ObserverKey(
-                typeof(T).GetReactorId().Value,
-                Constants.EventStore,
-                Concepts.EventStoreNamespaceName.Default,
-                EventSequenceId.Log));
 
     public IObserver GetObserverForReducer<T>() => GrainFactory
         .GetGrain<IObserver>(

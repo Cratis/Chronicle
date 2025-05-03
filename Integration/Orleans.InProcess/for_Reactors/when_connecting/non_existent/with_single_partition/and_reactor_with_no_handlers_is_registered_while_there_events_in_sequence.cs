@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition.and_reactor_with_no_handlers_is_registered_while_there_events_in_sequence.context;
-using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition;
 
@@ -16,7 +16,7 @@ public class and_reactor_with_no_handlers_is_registered_while_there_events_in_se
     public class context(GlobalFixture globalFixture) : given.a_disconnected_reactor_observing_no_event_types(globalFixture)
     {
         public List<EventForEventSourceId> Events;
-        public ObserverState ReactorObserverState;
+        public ReactorState ReactorState;
 
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
 
@@ -29,17 +29,16 @@ public class and_reactor_with_no_handlers_is_registered_while_there_events_in_se
 
         async Task Because()
         {
-            ReactorObserver = GetObserverForReactor<ReactorWithoutHandlers>();
             await EventStore.Reactors.Register<ReactorWithoutHandlers>();
-            await ReactorObserver.WaitForState(ObserverRunningState.Disconnected);
+            await EventStore.Reactors.WaitForState<ReactorWithoutHandlers>(ObserverRunningState.Disconnected);
             await Task.Delay(500);
-            ReactorObserverState = await ReactorObserver.GetState();
+            ReactorState = await EventStore.Reactors.GetState<ReactorWithoutHandlers>();
         }
     }
 
     [Fact]
-    void should_have_reactor_observer_be_in_disconnected_state() => Context.ReactorObserverState.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
+    void should_have_reactor_observer_be_in_disconnected_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
 
     [Fact]
-    void should_not_catch_up_any_events() => Context.ReactorObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
+    void should_not_catch_up_any_events() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
 }
