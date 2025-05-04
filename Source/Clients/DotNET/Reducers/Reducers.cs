@@ -99,10 +99,10 @@ public class Reducers(
     }
 
     /// <inheritdoc/>
-    public IEnumerable<IReducerHandler> GetAll() => _handlersByModelType.Values;
+    public IEnumerable<IReducerHandler> GetAllHandlers() => _handlersByModelType.Values;
 
     /// <inheritdoc/>
-    public IReducerHandler GetById(ReducerId reducerId)
+    public IReducerHandler GetHandlerById(ReducerId reducerId)
     {
         var reducer = _handlersByModelType.Values.SingleOrDefault(_ => _.Id == reducerId);
         ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer);
@@ -110,15 +110,15 @@ public class Reducers(
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetFor(Type reducerType)
+    public IReducerHandler GetHandlerFor(Type reducerType)
     {
         ThrowIfTypeIsNotAReducer(reducerType);
         return _handlersByType[reducerType];
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetFor<TReducer>()
-        where TReducer : IReducer => GetFor(typeof(TReducer));
+    public IReducerHandler GetHandlerFor<TReducer>()
+        where TReducer : IReducer => GetHandlerFor(typeof(TReducer));
 
     /// <inheritdoc/>
     public Type GetClrType(ReducerId reducerId)
@@ -129,7 +129,7 @@ public class Reducers(
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetForModelType(Type modelType) => _handlersByModelType[modelType];
+    public IReducerHandler GetHandlerForReadModelType(Type modelType) => _handlersByModelType[modelType];
 
     /// <inheritdoc/>
     public bool HasReducerFor(Type modelType) => _handlersByModelType.ContainsKey(modelType);
@@ -142,7 +142,7 @@ public class Reducers(
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reducerType)
     {
-        var handler = GetFor(reducerType);
+        var handler = GetHandlerFor(reducerType);
         return handler.GetFailedPartitions();
     }
 

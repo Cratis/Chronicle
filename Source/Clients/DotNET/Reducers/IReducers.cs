@@ -43,35 +43,35 @@ public interface IReducers
     /// Get all registered handlers.
     /// </summary>
     /// <returns>Collection of <see cref="IReducerHandler"/>.</returns>
-    IEnumerable<IReducerHandler> GetAll();
+    IEnumerable<IReducerHandler> GetAllHandlers();
 
     /// <summary>
     /// Get all registered reducers by its identifier.
     /// </summary>
     /// <param name="reducerId">The identifier of the reducer to get.</param>
     /// <returns><see cref="IReducerHandler"/> instance.</returns>
-    IReducerHandler GetById(ReducerId reducerId);
+    IReducerHandler GetHandlerById(ReducerId reducerId);
 
     /// <summary>
     /// Get a specific handler for a specific model type.
     /// </summary>
     /// <param name="modelType">Model type to get for.</param>
     /// <returns><see cref="IReducerHandler"/> instance.</returns>
-    IReducerHandler GetForModelType(Type modelType);
+    IReducerHandler GetHandlerForReadModelType(Type modelType);
 
     /// <summary>
     /// Gets a specific handler by its reducer type.
     /// </summary>
     /// <param name="reducerType">The reducer type to get for.</param>
     /// <returns><see cref="IReducerHandler"/>.</returns>
-    IReducerHandler GetFor(Type reducerType);
+    IReducerHandler GetHandlerFor(Type reducerType);
 
     /// <summary>
     /// Get a specific handler for a specific reducer.
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer to get for.</typeparam>
     /// <returns><see cref="IReducerHandler"/>.</returns>
-    IReducerHandler GetFor<TReducer>()
+    IReducerHandler GetHandlerFor<TReducer>()
         where TReducer : IReducer;
 
     /// <summary>

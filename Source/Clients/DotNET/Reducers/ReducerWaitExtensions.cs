@@ -36,6 +36,15 @@ public static class ReducerWaitExtensions
     }
 
     /// <summary>
+    /// Wait till the reducer is active, with an optional timeout.
+    /// </summary>
+    /// <param name="reducer">Reducer to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
+    public static Task WaitTillActive(this IReducerHandler reducer, TimeSpan? timeout = default) =>
+        reducer.WaitForState(ObserverRunningState.Active, timeout);
+
+    /// <summary>
     /// Wait till the reactor has been subscribed, with an optional timeout.
     /// </summary>
     /// <param name="reducer">Reducer to wait for.</param>
@@ -103,7 +112,7 @@ public static class ReducerWaitExtensions
     /// <typeparam name="TReducer">Type of reducer to wait for.</typeparam>
     /// <returns>Awaitable task.</returns>
     public static Task WaitForState<TReducer>(this IReducers reducers, ObserverRunningState runningState, TimeSpan? timeout = default)
-        where TReducer : IReducer => reducers.GetFor<TReducer>().WaitForState(runningState, timeout);
+        where TReducer : IReducer => reducers.GetHandlerFor<TReducer>().WaitForState(runningState, timeout);
 
     /// <summary>
     /// Wait till the reducer is active, with an optional timeout.
@@ -112,9 +121,8 @@ public static class ReducerWaitExtensions
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillActive<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
-        where TReducer : IReducer =>
-        await reducers.WaitForState<TReducer>(ObserverRunningState.Active, timeout);
+    public static Task WaitTillActive<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
+        where TReducer : IReducer => reducers.WaitForState<TReducer>(ObserverRunningState.Active, timeout);
 
     /// <summary>
     /// Wait till the reactor has been subscribed, with an optional timeout.
@@ -124,7 +132,7 @@ public static class ReducerWaitExtensions
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
     /// <returns>Awaitable task.</returns>
     public static Task WaitTillSubscribed<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
-        where TReducer : IReducer => reducers.GetFor<TReducer>().WaitTillSubscribed(timeout);
+        where TReducer : IReducer => reducers.GetHandlerFor<TReducer>().WaitTillSubscribed(timeout);
 
     /// <summary>
     /// Wait till the reducer reaches a specific event sequence number, with an optional timeout.
@@ -135,7 +143,7 @@ public static class ReducerWaitExtensions
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
     /// <returns>Awaitable task.</returns>
     public static Task WaitTillReachesEventSequenceNumber<TReducer>(this IReducers reducers, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
-        where TReducer : IReducer => reducers.GetFor<TReducer>().WaitTillReachesEventSequenceNumber(eventSequenceNumber, timeout);
+        where TReducer : IReducer => reducers.GetHandlerFor<TReducer>().WaitTillReachesEventSequenceNumber(eventSequenceNumber, timeout);
 
     /// <summary>
     /// Wait for there to be failed partitions for a specific reducer, with an optional timeout.
@@ -145,5 +153,5 @@ public static class ReducerWaitExtensions
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
     /// <returns>Awaitable task.</returns>
     public static Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
-        where TReducer : IReducer => reducers.GetFor<TReducer>().WaitForThereToBeFailedPartitions(timeout);
+        where TReducer : IReducer => reducers.GetHandlerFor<TReducer>().WaitForThereToBeFailedPartitions(timeout);
 }
