@@ -5,11 +5,14 @@
             "label": "build",
             "command": "dotnet",
             "type": "process",
+            "isBuildCommand": true,
             "args": [
                 "build",
                 "--no-restore",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
+                "/p:Configuration=Debug",
+                "/p:Platform=AnyCPU",
                 "${input:project}"
             ],
             "problemMatcher": "$msCompile",
