@@ -21,10 +21,9 @@ public static class ReducerWaitExtensions
     /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TReducer">Type of reducer to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitForState<TReducer, TModel>(this IReducers reducers, ObserverRunningState runningState, TimeSpan? timeout = default)
-        where TReducer : IReducerFor<TModel>
+    public static async Task WaitForState<TReducer>(this IReducers reducers, ObserverRunningState runningState, TimeSpan? timeout = default)
+        where TReducer : IReducer
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
 
@@ -32,7 +31,7 @@ public static class ReducerWaitExtensions
         using var cts = new CancellationTokenSource(timeout.Value);
         while (currentRunningState != runningState && !cts.IsCancellationRequested)
         {
-            var state = await reducers.GetState<TReducer, TModel>();
+            var state = await reducers.GetStateFor<TReducer>();
             currentRunningState = state.RunningState;
             await Task.Delay(20, cts.Token);
         }
@@ -44,11 +43,10 @@ public static class ReducerWaitExtensions
     /// <param name="reducers">Reducer system to wait for the specific reducer for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillActive<TReducer, TModel>(this IReducers reducers, TimeSpan? timeout = default)
-        where TReducer : IReducerFor<TModel> =>
-        await reducers.WaitForState<TReducer, TModel>(ObserverRunningState.Active, timeout);
+    public static async Task WaitTillActive<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
+        where TReducer : IReducer =>
+        await reducers.WaitForState<TReducer>(ObserverRunningState.Active, timeout);
 
     /// <summary>
     /// Wait till the reactor has been subscribed, with an optional timeout.
@@ -56,16 +54,15 @@ public static class ReducerWaitExtensions
     /// <param name="reducers">Reducer system to wait for the specific reducer for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillSubscribed<TReducer, TModel>(this IReducers reducers, TimeSpan? timeout = default)
-        where TReducer : IReducerFor<TModel>
+    public static async Task WaitTillSubscribed<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
+        where TReducer : IReducer
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
-            var state = await reducers.GetState<TReducer, TModel>();
+            var state = await reducers.GetStateFor<TReducer>();
             if (state.IsSubscribed)
             {
                 break;
@@ -81,17 +78,16 @@ public static class ReducerWaitExtensions
     /// <param name="eventSequenceNumber">The expected <see cref="EventSequenceNumber"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillReachesEventSequenceNumber<TReducer, TModel>(this IReducers reducers, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
-        where TReducer : IReducerFor<TModel>
+    public static async Task WaitTillReachesEventSequenceNumber<TReducer>(this IReducers reducers, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
+        where TReducer : IReducer
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var state = await reducers.GetState<TReducer, TModel>();
+        var state = await reducers.GetStateFor<TReducer>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
-            state = await reducers.GetState<TReducer, TModel>();
+            state = await reducers.GetStateFor<TReducer>();
             await Task.Delay(20, cts.Token);
         }
     }
@@ -102,17 +98,16 @@ public static class ReducerWaitExtensions
     /// <param name="reducers">Reducer system to wait for the specific reducer for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TReducer">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions<TReducer, TModel>(this IReducers reducers, TimeSpan? timeout = default)
-        where TReducer : IReducerFor<TModel>
+    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions<TReducer>(this IReducers reducers, TimeSpan? timeout = default)
+        where TReducer : IReducer
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var failedPartitions = await reducers.GetFailedPartitions<TReducer, TModel>();
+        var failedPartitions = await reducers.GetFailedPartitionsFor<TReducer>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
-            failedPartitions = await reducers.GetFailedPartitions<TReducer, TModel>();
+            failedPartitions = await reducers.GetFailedPartitionsFor<TReducer>();
             await Task.Delay(20, cts.Token);
         }
         return failedPartitions;

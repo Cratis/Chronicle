@@ -29,7 +29,8 @@ public interface IReducers
     /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
     Task<IReducerHandler> Register<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>;
+        where TReducer : IReducerFor<TModel>
+        where TModel : class;
 
     /// <summary>
     /// Check if there is a reducer for a specific model type.
@@ -59,11 +60,19 @@ public interface IReducers
     IReducerHandler GetForModelType(Type modelType);
 
     /// <summary>
-    /// Gets a specific handler by its id.
+    /// Gets a specific handler by its reducer type.
     /// </summary>
     /// <param name="reducerType">The reducer type to get for.</param>
     /// <returns><see cref="IReducerHandler"/>.</returns>
-    IReducerHandler GetByType(Type reducerType);
+    IReducerHandler GetFor(Type reducerType);
+
+    /// <summary>
+    /// Get a specific handler for a specific reducer.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reducer to get for.</typeparam>
+    /// <returns><see cref="IReducerHandler"/>.</returns>
+    IReducerHandler GetFor<TReducer>()
+        where TReducer : IReducer;
 
     /// <summary>
     /// Get the CLR type for a specific reducer.
@@ -76,24 +85,22 @@ public interface IReducers
     /// Get any failed partitions for a specific reducer.
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer.</typeparam>
-    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>;
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor<TReducer>()
+        where TReducer : IReducer;
 
     /// <summary>
     /// Get any failed partitions for a specific reducer.
     /// </summary>
     /// <param name="reducerType">Type of reducer.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type reducerType);
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(Type reducerType);
 
     /// <summary>
     /// Get the state of a specific reactor.
     /// </summary>
     /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
-    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
     /// <returns><see cref="ReducerState"/>.</returns>
-    Task<ReducerState> GetState<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>;
+    Task<ReducerState> GetStateFor<TReducer>()
+        where TReducer : IReducer;
 }

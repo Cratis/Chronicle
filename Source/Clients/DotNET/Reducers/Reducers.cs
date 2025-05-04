@@ -48,15 +48,16 @@ public class Reducers(
     ILogger<Reducers> logger) : IReducers
 {
     IEnumerable<Type> _aggregateRootStateTypes = [];
-    IDictionary<Type, IReducerHandler> _handlers = new Dictionary<Type, IReducerHandler>();
+    Dictionary<Type, IReducerHandler> _handlersByType = new();
+    Dictionary<Type, IReducerHandler> _handlersByModelType = new();
 
     /// <inheritdoc/>
     public Task Discover()
     {
         _aggregateRootStateTypes = clientArtifacts.AggregateRootStateTypes;
-        _handlers = clientArtifacts.Reducers
+        _handlersByType = clientArtifacts.Reducers
                             .ToDictionary(
-                                _ => _.GetReadModelType(),
+                                _ => _,
                                 reducerType =>
                                 {
                                     var readModelType = reducerType.GetReadModelType();
@@ -64,6 +65,10 @@ public class Reducers(
                                     var eventSequenceId = reducerType.GetEventSequenceId();
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
+
+        _handlersByModelType = _handlersByType.ToDictionary(
+            _ => _.Value.ReadModelType,
+            _ => _.Value);
         return Task.CompletedTask;
     }
 
@@ -72,7 +77,7 @@ public class Reducers(
     {
         logger.RegisterReducers();
 
-        foreach (var handler in _handlers.Values.Where(_ => _.IsActive))
+        foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
         {
             RegisterReducer(handler);
         }
@@ -82,65 +87,71 @@ public class Reducers(
     /// <inheritdoc/>
     public Task<IReducerHandler> Register<TReducer, TModel>()
         where TReducer : IReducerFor<TModel>
+        where TModel : class
     {
         var reducerType = typeof(TReducer);
         var modelType = typeof(TModel);
         var handler = CreateHandlerFor(reducerType, modelType);
         RegisterReducer(handler);
-        _handlers.Add(modelType, handler);
+        _handlersByType.Add(reducerType, handler);
+        _handlersByModelType.Add(modelType, handler);
         return Task.FromResult<IReducerHandler>(handler);
     }
 
     /// <inheritdoc/>
-    public IEnumerable<IReducerHandler> GetAll() => _handlers.Values;
+    public IEnumerable<IReducerHandler> GetAll() => _handlersByModelType.Values;
 
     /// <inheritdoc/>
     public IReducerHandler GetById(ReducerId reducerId)
     {
-        var reducer = _handlers.Values.SingleOrDefault(_ => _.Id == reducerId);
+        var reducer = _handlersByModelType.Values.SingleOrDefault(_ => _.Id == reducerId);
         ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer);
         return reducer!;
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetByType(Type reducerType)
+    public IReducerHandler GetFor(Type reducerType)
     {
         ThrowIfTypeIsNotAReducer(reducerType);
-        return _handlers[reducerType];
+        return _handlersByType[reducerType];
     }
+
+    /// <inheritdoc/>
+    public IReducerHandler GetFor<TReducer>()
+        where TReducer : IReducer => GetFor(typeof(TReducer));
 
     /// <inheritdoc/>
     public Type GetClrType(ReducerId reducerId)
     {
-        var reducer = _handlers.SingleOrDefault(_ => _.Value.Id == reducerId);
+        var reducer = _handlersByModelType.SingleOrDefault(_ => _.Value.Id == reducerId);
         ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer.Value);
         return reducer.Key;
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetForModelType(Type modelType) => _handlers[modelType];
+    public IReducerHandler GetForModelType(Type modelType) => _handlersByModelType[modelType];
 
     /// <inheritdoc/>
-    public bool HasReducerFor(Type modelType) => _handlers.ContainsKey(modelType);
+    public bool HasReducerFor(Type modelType) => _handlersByModelType.ContainsKey(modelType);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel> =>
-            GetFailedPartitions(typeof(TReducer));
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReducer>()
+        where TReducer : IReducer =>
+            GetFailedPartitionsFor(typeof(TReducer));
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type reducerType)
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reducerType)
     {
-        var handler = GetByType(reducerType);
+        var handler = GetFor(reducerType);
         return eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
     }
 
     /// <inheritdoc/>
-    public async Task<ReducerState> GetState<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>
+    public async Task<ReducerState> GetStateFor<TReducer>()
+        where TReducer : IReducer
     {
         var reducerType = typeof(TReducer);
-        var handler = _handlers[reducerType];
+        var handler = _handlersByType[reducerType];
         var request = new GetObserverInformationRequest
         {
             ObserverId = handler.Id,
@@ -171,7 +182,8 @@ public class Reducers(
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
-            _handlers.Remove(modelType);
+            _handlersByType.Remove(reducerType);
+            _handlersByModelType.Remove(modelType);
             register?.Dispose();
         });
 
@@ -294,7 +306,7 @@ public class Reducers(
 
     void ThrowIfTypeIsNotAReducer(Type reducerType)
     {
-        if (!_handlers.ContainsKey(reducerType))
+        if (!_handlersByType.ContainsKey(reducerType))
         {
             throw new UnknownReducerType(reducerType);
         }

@@ -21,10 +21,9 @@ public static class ProjectionWaitExtensions
     /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TProjection">Type of projection to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the projection is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitForState<TProjection, TModel>(this IProjections projections, ObserverRunningState runningState, TimeSpan? timeout = default)
-        where TProjection : IProjectionFor<TModel>
+    public static async Task WaitForState<TProjection>(this IProjections projections, ObserverRunningState runningState, TimeSpan? timeout = default)
+        where TProjection : IProjection
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
 
@@ -32,7 +31,7 @@ public static class ProjectionWaitExtensions
         using var cts = new CancellationTokenSource(timeout.Value);
         while (currentRunningState != runningState && !cts.IsCancellationRequested)
         {
-            var state = await projections.GetState<TProjection, TModel>();
+            var state = await projections.GetStateFor<TProjection>();
             currentRunningState = state.RunningState;
             await Task.Delay(20, cts.Token);
         }
@@ -44,11 +43,10 @@ public static class ProjectionWaitExtensions
     /// <param name="projections">Projection system to wait for the specific projection for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TProjection">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the projection is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillActive<TProjection, TModel>(this IProjections projections, TimeSpan? timeout = default)
-        where TProjection : IProjectionFor<TModel> =>
-        await projections.WaitForState<TProjection, TModel>(ObserverRunningState.Active, timeout);
+    public static async Task WaitTillActive<TProjection>(this IProjections projections, TimeSpan? timeout = default)
+        where TProjection : IProjection =>
+        await projections.WaitForState<TProjection>(ObserverRunningState.Active, timeout);
 
     /// <summary>
     /// Wait till the reactor has been subscribed, with an optional timeout.
@@ -56,16 +54,15 @@ public static class ProjectionWaitExtensions
     /// <param name="projections">Projection system to wait for the specific projection for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TProjection">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the projection is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillSubscribed<TProjection, TModel>(this IProjections projections, TimeSpan? timeout = default)
-        where TProjection : IProjectionFor<TModel>
+    public static async Task WaitTillSubscribed<TProjection>(this IProjections projections, TimeSpan? timeout = default)
+        where TProjection : IProjection
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
-            var state = await projections.GetState<TProjection, TModel>();
+            var state = await projections.GetStateFor<TProjection>();
             if (state.IsSubscribed)
             {
                 break;
@@ -81,17 +78,16 @@ public static class ProjectionWaitExtensions
     /// <param name="eventSequenceNumber">The expected <see cref="EventSequenceNumber"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TProjection">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the projection is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillReachesEventSequenceNumber<TProjection, TModel>(this IProjections projections, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
-        where TProjection : IProjectionFor<TModel>
+    public static async Task WaitTillReachesEventSequenceNumber<TProjection>(this IProjections projections, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
+        where TProjection : IProjection
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var state = await projections.GetState<TProjection, TModel>();
+        var state = await projections.GetStateFor<TProjection>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
-            state = await projections.GetState<TProjection, TModel>();
+            state = await projections.GetStateFor<TProjection>();
             await Task.Delay(20, cts.Token);
         }
     }
@@ -102,17 +98,16 @@ public static class ProjectionWaitExtensions
     /// <param name="projections">Projection system to wait for the specific projection for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <typeparam name="TProjection">Type of reactor to wait for.</typeparam>
-    /// <typeparam name="TModel">Type of model the projection is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions<TProjection, TModel>(this IProjections projections, TimeSpan? timeout = default)
-        where TProjection : IProjectionFor<TModel>
+    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions<TProjection>(this IProjections projections, TimeSpan? timeout = default)
+        where TProjection : IProjection
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var failedPartitions = await projections.GetFailedPartitions<TProjection, TModel>();
+        var failedPartitions = await projections.GetFailedPartitionsFor<TProjection>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
-            failedPartitions = await projections.GetFailedPartitions<TProjection, TModel>();
+            failedPartitions = await projections.GetFailedPartitionsFor<TProjection>();
             await Task.Delay(20, cts.Token);
         }
         return failedPartitions;

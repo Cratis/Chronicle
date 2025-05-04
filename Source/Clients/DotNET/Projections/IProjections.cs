@@ -35,6 +35,14 @@ public interface IProjections
     /// <summary>
     /// Get the <see cref="ProjectionId"/> for a specific type.
     /// </summary>
+    /// <typeparam name="TProjection">Type of projection to get for.</typeparam>
+    /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
+    ProjectionId GetProjectionIdFor<TProjection>()
+        where TProjection : IProjection;
+
+    /// <summary>
+    /// Get the <see cref="ProjectionId"/> for a specific type.
+    /// </summary>
     /// <typeparam name="TModel">Type of model to get for.</typeparam>
     /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
     ProjectionId GetProjectionIdForModel<TModel>();
@@ -109,26 +117,24 @@ public interface IProjections
     /// Get any failed partitions for a specific projection.
     /// </summary>
     /// <typeparam name="TProjection">Type of projection.</typeparam>
-    /// <typeparam name="TModel">The model type the projection is for.</typeparam>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TProjection, TModel>()
-        where TProjection : IProjectionFor<TModel>;
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor<TProjection>()
+        where TProjection : IProjection;
 
     /// <summary>
     /// Get any failed partitions for a specific projection.
     /// </summary>
     /// <param name="projectionType">Type of projection.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type projectionType);
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(Type projectionType);
 
     /// <summary>
-    /// Get the state of a specific reactor.
+    /// Get the state of a specific projection.
     /// </summary>
-    /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
-    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
+    /// <typeparam name="TProjection">Type of projection get for.</typeparam>
     /// <returns><see cref="ProjectionState"/>.</returns>
-    Task<ProjectionState> GetState<TReducer, TModel>()
-        where TReducer : IProjectionFor<TModel>;
+    Task<ProjectionState> GetStateFor<TProjection>()
+        where TProjection : IProjection;
 
     /// <summary>
     /// Discover all projections from entry assembly and dependencies.

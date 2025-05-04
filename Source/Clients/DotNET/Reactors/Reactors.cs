@@ -130,6 +130,10 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
+    public ReactorHandler GetHandlerFor<TReactor>()
+        where TReactor : IReactor => _handlers[typeof(TReactor)];
+
+    /// <inheritdoc/>
     public ReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
@@ -138,18 +142,18 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReactor>() =>
-        GetFailedPartitions(typeof(TReactor));
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReactor>() =>
+        GetFailedPartitionsFor(typeof(TReactor));
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type reactorType)
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reactorType)
     {
         var handler = _handlers[reactorType];
         return _eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
     }
 
     /// <inheritdoc/>
-    public async Task<ReactorState> GetState<TReactor>()
+    public async Task<ReactorState> GetStateFor<TReactor>()
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
