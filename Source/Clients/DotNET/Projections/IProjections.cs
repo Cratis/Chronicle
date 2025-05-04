@@ -33,6 +33,14 @@ public interface IProjections
     bool HasFor(Type modelType);
 
     /// <summary>
+    /// Get the <see cref="IProjectionHandler"/> for a specific projection type.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection to get for.</typeparam>
+    /// <returns><see cref="IProjectionHandler"/> for the projection.</returns>
+    IProjectionHandler GetHandlerFor<TProjection>()
+        where TProjection : IProjection;
+
+    /// <summary>
     /// Get the <see cref="ProjectionId"/> for a specific type.
     /// </summary>
     /// <typeparam name="TProjection">Type of projection to get for.</typeparam>
