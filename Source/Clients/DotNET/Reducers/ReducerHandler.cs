@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -12,12 +13,14 @@ namespace Cratis.Chronicle.Reducers;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReducerHandler"/> class.
 /// </remarks>
+/// <param name="eventStore"><see cref="IEventStore"/> the reducers belong to.</param>
 /// <param name="reducerId">The identifier of the reducer.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="invoker">The actual invoker.</param>
 /// <param name="eventSerializer">The event serializer to use.</param>
 /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
 public class ReducerHandler(
+    IEventStore eventStore,
     ReducerId reducerId,
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
@@ -61,6 +64,28 @@ public class ReducerHandler(
 
     /// <inheritdoc/>
     public void Disconnect() => _cancellationTokenSource.Cancel();
+
+    /// <inheritdoc/>
+    public async Task<ReducerState> GetState()
+    {
+        var request = new Contracts.Observation.GetObserverInformationRequest
+        {
+            ObserverId = Id,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = EventSequenceId
+        };
+        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        return new ReducerState(
+            state.RunningState.ToClient(),
+            state.IsSubscribed,
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber);
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> GetFailedPartitions() =>
+        eventStore.FailedPartitions.GetFailedPartitionsFor(Id);
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();

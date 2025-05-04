@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.g
 
 public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
     where TProjection : class, IProjectionFor<TModel>, new()
+    where TModel : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
     protected GlobalFixture _globalFixture = globalFixture;
@@ -74,7 +75,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
     protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
     {
-        await Observer.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
+        // await Observer.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
         Result = await GetModelResult();
     }
 

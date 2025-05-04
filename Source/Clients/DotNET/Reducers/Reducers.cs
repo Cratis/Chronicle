@@ -143,33 +143,22 @@ public class Reducers(
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reducerType)
     {
         var handler = GetFor(reducerType);
-        return eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
+        return handler.GetFailedPartitions();
     }
 
     /// <inheritdoc/>
-    public async Task<ReducerState> GetStateFor<TReducer>()
+    public Task<ReducerState> GetStateFor<TReducer>()
         where TReducer : IReducer
     {
         var reducerType = typeof(TReducer);
         var handler = _handlersByType[reducerType];
-        var request = new GetObserverInformationRequest
-        {
-            ObserverId = handler.Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = handler.EventSequenceId
-        };
-        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
-        return new ReducerState(
-            state.RunningState.ToClient(),
-            state.IsSubscribed,
-            state.NextEventSequenceNumber,
-            state.LastHandledEventSequenceNumber);
+        return handler.GetState();
     }
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
     {
         var handler = new ReducerHandler(
+            eventStore,
             reducerType.GetReducerId(),
             reducerType.GetEventSequenceId(),
             new ReducerInvoker(
