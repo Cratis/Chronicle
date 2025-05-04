@@ -149,29 +149,16 @@ public class Reactors : IReactors
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reactorType)
     {
         var handler = _handlers[reactorType];
-        return _eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
+        return handler.GetFailedPartitions();
     }
 
     /// <inheritdoc/>
-    public async Task<ReactorState> GetStateFor<TReactor>()
+    public Task<ReactorState> GetStateFor<TReactor>()
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
         var handler = _handlers[reactorType];
-        var request = new GetObserverInformationRequest
-        {
-            ObserverId = handler.Id,
-            EventStore = _eventStore.Name,
-            Namespace = _eventStore.Namespace,
-            EventSequenceId = handler.EventSequenceId
-        };
-        var state = await _eventStore.Connection.Services.Observers.GetObserverInformation(request);
-        return new ReactorState(
-            handler.Id,
-            state.RunningState.ToClient(),
-            state.IsSubscribed,
-            state.NextEventSequenceNumber,
-            state.LastHandledEventSequenceNumber);
+        return handler.GetState();
     }
 
     static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
@@ -185,10 +172,11 @@ public class Reactors : IReactors
     ReactorHandler CreateHandlerFor(Type reactorType)
     {
         var handler = new ReactorHandler(
-                                    reactorType.GetReactorId(),
-                                    reactorType.GetEventSequenceId(),
-                                    new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
-                                    _causationManager);
+            _eventStore,
+            reactorType.GetReactorId(),
+            reactorType.GetEventSequenceId(),
+            new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
+            _causationManager);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
