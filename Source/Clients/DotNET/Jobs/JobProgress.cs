@@ -1,55 +1,45 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using ProtoBuf;
-
-namespace Cratis.Chronicle.Contracts.Jobs;
+namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
 /// Represents progress of a job.
 /// </summary>
-[ProtoContract]
 public class JobProgress
 {
     /// <summary>
     /// Gets or sets the total number of steps.
     /// </summary>
-    [ProtoMember(1)]
-    public int TotalSteps { get; set; }
+    public int TotalSteps { get; init; }
 
     /// <summary>
     /// Gets or sets the completed number of steps.
     /// </summary>
-    [ProtoMember(2)]
-    public int SuccessfulSteps { get; set; }
+    public int SuccessfulSteps { get; init; }
 
     /// <summary>
     /// Gets or sets the failed number of steps.
     /// </summary>
-    [ProtoMember(3)]
-    public int FailedSteps { get; set; }
+    public int FailedSteps { get; init; }
 
     /// <summary>
     /// Gets or sets the number of stopped steps.
     /// </summary>
-    [ProtoMember(4)]
     public int StoppedSteps { get; set; }
 
     /// <summary>
     /// Gets whether or not the job is completed.
     /// </summary>
-    [ProtoMember(5)]
-    public bool IsCompleted { get; set; }
+    public bool IsCompleted { get; init; }
 
     /// <summary>
-    /// Gets whether or not the job is completed.
+    /// Gets whether the job is completed where it also can have stopped steps.
     /// </summary>
-    [ProtoMember(6)]
-    public bool IsStopped { get; set; }
+    public bool IsStopped { get; init; }
 
     /// <summary>
     /// Gets or sets the current message associated with the progress.
     /// </summary>
-    [ProtoMember(7)]
-    public string Message { get; set; }
+    public JobProgressMessage Message { get; init; } = JobProgressMessage.None;
 }

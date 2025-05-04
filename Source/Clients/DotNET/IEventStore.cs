@@ -5,6 +5,7 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -57,6 +58,11 @@ public interface IEventStore
     /// Gets the <see cref="IEventLog"/> event sequence.
     /// </summary>
     IEventLog EventLog { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IJobs"/> for the event store.
+    /// </summary>
+    IJobs Jobs { get; }
 
     /// <summary>
     /// Gets the <see cref="IReactors"/> for the event store.

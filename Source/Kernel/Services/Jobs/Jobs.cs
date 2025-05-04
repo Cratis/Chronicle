@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Jobs;
+using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
@@ -28,6 +29,23 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
     /// <inheritdoc/>
     public Task Delete(DeleteJob command, CallContext context = default) =>
         grainFactory.GetJobsManager(command.EventStore, command.Namespace).Delete(command.JobId);
+
+    /// <inheritdoc/>
+    public async Task<OneOf<Job, Contracts.Jobs.JobError>> GetJob(GetJobRequest request, CallContext context = default)
+    {
+        grainFactory.GetJobsManager(request.EventStore, request.Namespace);
+
+        var result = await storage.GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).Jobs
+            .GetJob(request.JobId);
+
+        if (result.IsSuccess)
+        {
+            return new OneOf<Job, Contracts.Jobs.JobError>(result.AsT0.ToContract());
+        }
+
+        return new OneOf<Job, Contracts.Jobs.JobError>((Contracts.Jobs.JobError)(int)result.AsT1);
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Job>> GetJobs(GetJobsRequest request, CallContext context = default) =>

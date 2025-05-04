@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Configuration;
 
@@ -35,6 +36,14 @@ public interface IJobs
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     Task Delete(DeleteJob command, CallContext context = default);
+
+    /// <summary>
+    /// Get a specific job.
+    /// </summary>
+    /// <param name="request"><see cref="GetJobRequest"/> representing what to get.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Either <see cref="Job"/> instance or a <see cref="JobError"/> .</returns>
+    Task<OneOf<Job, JobError>> GetJob(GetJobRequest request, CallContext context = default);
 
     /// <summary>
     /// Get all jobs.
