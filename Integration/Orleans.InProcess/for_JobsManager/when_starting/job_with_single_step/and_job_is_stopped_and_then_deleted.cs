@@ -8,7 +8,6 @@ using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Storage.Jobs;
-
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped_and_then_deleted.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
@@ -31,9 +30,9 @@ public class and_job_is_stopped_and_then_deleted(context context) : Given<contex
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
-            await JobStorage.WaitTillJobProgressStopped<JobWithSingleStepState>(JobId);
+            await EventStore.Jobs.WaitTillJobProgressStopped(JobId.Value);
             await JobsManager.Delete(JobId);
-            await JobStorage.WaitTillJobIsDeleted<JobWithSingleStepState>(JobId);
+            await EventStore.Jobs.WaitTillJobIsDeleted(JobId.Value);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }

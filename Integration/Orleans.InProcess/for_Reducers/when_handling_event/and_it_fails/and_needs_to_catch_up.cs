@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Integration.Base;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
 using Humanizer;
@@ -47,7 +47,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
             FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.WaitForThereToBeJobs();
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobs();
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
@@ -57,8 +57,8 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
 
             // Wait for the third event to have been handled
             await Tcs[2].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
-            JobsWithCatchUp = await EventStore.WaitForThereToBeJobs();
-            JobsAfterCompleted = await EventStore.WaitForThereToBeNoJobs();
+            JobsWithCatchUp = await EventStore.Jobs.WaitForThereToBeJobs();
+            JobsAfterCompleted = await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             FailedPartitionsAfterRetry = await reducer.GetFailedPartitions();
             ReducerState = await reducer.GetState();
@@ -67,7 +67,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.ShouldContain(nameof(RetryFailedPartition));
+    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain(nameof(RetryFailedPartition));
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
     [Fact] void should_start_catchup_for_partition_job() => Context.JobsWithCatchUp.SingleOrDefault(_ => _.Type == nameof(CatchUpObserverPartition)).ShouldNotBeNull();
     [Fact] void should_have_completed_all_jobs_at_the_end() => Context.JobsAfterCompleted.ShouldBeEmpty();

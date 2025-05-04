@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped_and_then_resumed.context;
@@ -18,10 +18,10 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
 {
     public class context(GlobalFixture globalFixture) : given.a_jobs_manager(globalFixture)
     {
-        public Result<JobId, StartJobError> StartJobResult;
-        public JobState CompletedJobState;
+        public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
+        public Job CompletedJobState;
         public IImmutableList<JobStepState> JobStepStates;
-        public JobId JobId;
+        public Concepts.Jobs.JobId JobId;
 
         async Task Because()
         {
@@ -32,9 +32,9 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
-            await JobStorage.WaitTillJobProgressStopped<JobWithSingleStepState>(JobId);
-            await JobsManager.Resume(JobId);
-            CompletedJobState = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status == JobStatus.CompletedSuccessfully);
+            await EventStore.Jobs.WaitTillJobProgressStopped(JobId.Value);
+            await EventStore.Jobs.Resume(JobId.Value);
+            CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }
@@ -65,5 +65,5 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
     public void should_perform_work_for_job_step_twice() => Context.TheJobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 2);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }

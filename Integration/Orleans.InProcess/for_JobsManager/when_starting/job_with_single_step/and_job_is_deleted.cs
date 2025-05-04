@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_deleted.context;
@@ -18,9 +18,9 @@ public class and_job_is_deleted(context context) : Given<context>(context)
 {
     public class context(GlobalFixture globalFixture) : given.a_jobs_manager(globalFixture)
     {
-        public Result<JobId, StartJobError> StartJobResult;
+        public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public IImmutableList<JobStepState> JobStepStates;
-        public JobId JobId;
+        public Concepts.Jobs.JobId JobId;
 
         async Task Because()
         {
@@ -31,7 +31,7 @@ public class and_job_is_deleted(context context) : Given<context>(context)
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Delete(JobId);
             taskCompletionSource.SetResult();
-            await JobStorage.WaitTillJobIsDeleted<JobWithSingleStepState>(JobId);
+            await EventStore.Jobs.WaitTillJobIsDeleted(JobId.Value);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
             JobStepStates = getJobStepState.AsT0;
         }
@@ -47,5 +47,5 @@ public class and_job_is_deleted(context context) : Given<context>(context)
     public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_stopped_work_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.Stopped, 1);
+    public void should_have_stopped_work_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.Stopped, 1);
 }
