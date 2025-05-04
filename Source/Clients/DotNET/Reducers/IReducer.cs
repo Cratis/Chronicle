@@ -4,8 +4,6 @@
 namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
-/// Defines a reducer for a specific model.
+/// Defines a reducer.
 /// </summary>
-/// <typeparam name="TModel">Type of model the reducer is for.</typeparam>
-public interface IReducerFor<TModel> : IReducer
-    where TModel : class;
+public interface IReducer;
