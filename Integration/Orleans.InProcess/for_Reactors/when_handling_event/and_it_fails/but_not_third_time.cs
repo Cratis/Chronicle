@@ -31,7 +31,8 @@ public class but_not_third_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            await EventStore.Reactors.WaitTillActive<ReactorThatCanFail>();
+            var reactor = EventStore.Reactors.GetHandlerFor<ReactorThatCanFail>();
+            await reactor.WaitTillActive();
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = true;
             Observers[2].ShouldFail = false;
@@ -40,13 +41,13 @@ public class but_not_third_time(context context) : Given<context>(context)
             // Wait for the first event to have been handled
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
-            FailedPartitionsBeforeRetry = await EventStore.Reactors.WaitForThereToBeFailedPartitions<ReactorThatCanFail>();
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
             Jobs = await EventStore.WaitForThereToBeJobs();
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
-            FailedPartitionsBeforeRetry = await EventStore.Reactors.WaitForThereToBeFailedPartitions<ReactorThatCanFail>();
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
             Jobs = await EventStore.WaitForThereToBeJobs();
 
             // Wait for the third event to have been handled
@@ -55,7 +56,7 @@ public class but_not_third_time(context context) : Given<context>(context)
             await Observers[2].WaitTillHandledEventReaches(1);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
-            ReactorState = await EventStore.Reactors.GetStateFor<ReactorThatCanFail>();
+            ReactorState = await reactor.GetState();
         }
     }
 

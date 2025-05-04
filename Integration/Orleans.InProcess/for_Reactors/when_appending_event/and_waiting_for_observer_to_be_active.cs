@@ -40,14 +40,14 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
 
         async Task Because()
         {
-            await EventStore.Reactors.WaitTillActive<SomeReactor>();
+            var reactor = EventStore.Reactors.GetHandlerFor<SomeReactor>();
+            await reactor.WaitTillActive();
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             WaitingForObserverStateError = await Catch.Exception(async () => await EventStore.Reactors.WaitForState<SomeReactor>(ObserverRunningState.Active));
-            await EventStore.Reactors.WaitTillReachesEventSequenceNumber<SomeReactor>(EventSequenceNumber.First);
-            ReactorState = await EventStore.Reactors.GetStateFor<SomeReactor>();
-
-            FailedPartitions = await EventStore.FailedPartitions.GetFailedPartitionsFor(ReactorState.Id);
+            await reactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
+            ReactorState = await reactor.GetState();
+            FailedPartitions = await reactor.GetFailedPartitions();
         }
     }
 

@@ -28,11 +28,11 @@ public class and_reactor_is_registered_while_there_are_events_in_sequence(contex
 
         async Task Because()
         {
-            await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ReactorWithoutDelay>(LastEventSequenceNumberAppended);
+            var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
+            await reactor.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
             await Reactor.WaitTillHandledEventReaches(Events.Count);
-            await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
-            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutDelay>();
+            await reactor.WaitTillActive();
+            ReactorState = await reactor.GetState();
         }
     }
 

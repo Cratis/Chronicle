@@ -26,13 +26,13 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
         async Task Establish()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
+            await reactor.WaitTillActive();
 
             EventsToHandle = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
             var result = await EventStore.EventLog.AppendMany(EventsToHandle);
             LastHandledEventSequenceNumber = result.SequenceNumbers.Last();
 
-            await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ReactorWithoutDelay>(LastHandledEventSequenceNumber);
+            await reactor.WaitTillReachesEventSequenceNumber(LastHandledEventSequenceNumber);
             reactor.Disconnect();
 
             NewEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeOtherEvent(42), 10).ToList();
@@ -42,9 +42,9 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
 
         async Task Because()
         {
-            await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
-            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutDelay>();
+            var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
+            await reactor.WaitTillActive();
+            ReactorState = await reactor.GetState();
         }
     }
 

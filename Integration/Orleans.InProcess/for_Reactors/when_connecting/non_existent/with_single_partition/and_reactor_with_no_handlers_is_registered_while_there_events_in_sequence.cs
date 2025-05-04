@@ -29,10 +29,9 @@ public class and_reactor_with_no_handlers_is_registered_while_there_events_in_se
 
         async Task Because()
         {
-            await EventStore.Reactors.Register<ReactorWithoutHandlers>();
-            await EventStore.Reactors.WaitForState<ReactorWithoutHandlers>(ObserverRunningState.Disconnected);
-            await Task.Delay(500);
-            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutHandlers>();
+            var reactor = await EventStore.Reactors.Register<ReactorWithoutHandlers>();
+            await reactor.WaitForState(ObserverRunningState.Disconnected);
+            ReactorState = await reactor.GetState();
         }
     }
 

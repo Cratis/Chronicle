@@ -25,13 +25,13 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one
         async Task Establish()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
+            await reactor.WaitTillActive();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
             var lastHandled = result.SequenceNumbers.Last();
 
-            await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ReactorWithoutDelay>(lastHandled);
+            await reactor.WaitTillReachesEventSequenceNumber(lastHandled);
             reactor.Disconnect();
 
             CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 1, "Partition").ToList();
@@ -41,11 +41,11 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one
 
         async Task Because()
         {
-            await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ReactorWithoutDelay>(LastEventSequenceNumberAfterDisconnect);
+            var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
+            await reactor.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             await Reactor.WaitTillHandledEventReaches(FirstEvents.Count + CatchupEvents.Count);
-            await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
-            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutDelay>();
+            await reactor.WaitTillActive();
+            ReactorState = await reactor.GetState();
         }
     }
 
