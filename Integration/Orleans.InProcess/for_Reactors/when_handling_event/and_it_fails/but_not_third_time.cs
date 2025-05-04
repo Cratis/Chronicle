@@ -55,7 +55,7 @@ public class but_not_third_time(context context) : Given<context>(context)
             await Observers[2].WaitTillHandledEventReaches(1);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
-            ReactorState = await EventStore.Reactors.GetState<ReactorThatCanFail>();
+            ReactorState = await EventStore.Reactors.GetStateFor<ReactorThatCanFail>();
         }
     }
 

@@ -48,7 +48,7 @@ public class but_not_second_time(context context) : Given<context>(context)
             await Observers[1].WaitTillHandledEventReaches(1);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
-            ReactorState = await EventStore.Reactors.GetState<ReactorThatCanFail>();
+            ReactorState = await EventStore.Reactors.GetStateFor<ReactorThatCanFail>();
         }
     }
 

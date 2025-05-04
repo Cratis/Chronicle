@@ -45,7 +45,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one
             await EventStore.Reactors.WaitTillReachesEventSequenceNumber<ReactorWithoutDelay>(LastEventSequenceNumberAfterDisconnect);
             await Reactor.WaitTillHandledEventReaches(FirstEvents.Count + CatchupEvents.Count);
             await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
-            ReactorState = await EventStore.Reactors.GetState<ReactorWithoutDelay>();
+            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutDelay>();
         }
     }
 

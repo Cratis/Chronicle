@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.given;
@@ -10,7 +9,6 @@ public class a_reducer_observing_an_event(GlobalFixture globalFixture) : Integra
 {
     public TaskCompletionSource Tcs;
     public SomeReducer Reducer;
-    public IObserver ReducerObserver;
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
     public override IEnumerable<Type> Reducers => [typeof(SomeReducer)];
 
@@ -19,10 +17,5 @@ public class a_reducer_observing_an_event(GlobalFixture globalFixture) : Integra
         Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Reducer = new SomeReducer(Tcs);
         services.AddSingleton(Reducer);
-    }
-
-    void Establish()
-    {
-        ReducerObserver = GetObserverForReducer<SomeReducer>();
     }
 }

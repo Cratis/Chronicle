@@ -28,7 +28,7 @@ public class and_reactor_is_registered_while_there_are_no_events_to_handle(conte
         {
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
-            ReactorState = await EventStore.Reactors.GetState<ReactorWithoutDelay>();
+            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutDelay>();
         }
     }
 

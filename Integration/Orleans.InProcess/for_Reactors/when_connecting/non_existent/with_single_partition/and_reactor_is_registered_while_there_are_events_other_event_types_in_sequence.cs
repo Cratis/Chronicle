@@ -32,7 +32,7 @@ public class and_reactor_is_registered_while_there_are_events_other_event_types_
             await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await Task.Delay(1000);
             await EventStore.Reactors.WaitTillActive<ReactorWithoutDelay>();
-            ReactorState = await EventStore.Reactors.GetState<ReactorWithoutDelay>();
+            ReactorState = await EventStore.Reactors.GetStateFor<ReactorWithoutDelay>();
         }
     }
 

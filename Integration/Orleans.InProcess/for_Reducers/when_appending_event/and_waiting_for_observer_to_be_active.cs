@@ -1,13 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_appending_event.and_waiting_for_observer_to_be_active.context;
-using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_appending_event;
 
@@ -20,8 +18,7 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         public EventSourceId EventSourceId;
         public SomeEvent Event;
         public SomeReducer Reducer;
-        public IObserver ReducerObserver;
-        public ObserverState ReducerObserverState;
+        public ReducerState ReducerState;
         public Exception WaitingForObserverStateError;
         public IEnumerable<FailedPartition> FailedPartitions;
 
@@ -38,24 +35,18 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         {
             EventSourceId = "some source";
             Event = new SomeEvent(42);
-            ReducerObserver = GetObserverForReducer<SomeReducer>();
         }
 
         async Task Because()
         {
-            await ReducerObserver.WaitTillActive();
+            await EventStore.Reducers.WaitTillActive<SomeReducer>();
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tcs.Task.WaitAsync(TimeSpanFactory.FromSeconds(5));
-            WaitingForObserverStateError = await Catch.Exception(async () => await ReducerObserver.WaitForState(ObserverRunningState.Active, TimeSpanFactory.DefaultTimeout()));
-            await ReducerObserver.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First, TimeSpanFactory.DefaultTimeout());
-            ReducerObserverState = await ReducerObserver.GetState();
+            WaitingForObserverStateError = await Catch.Exception(async () => await EventStore.Reducers.WaitTillActive<SomeReducer>());
+            await EventStore.Reducers.WaitTillReachesEventSequenceNumber<SomeReducer>(EventSequenceNumber.First);
+            ReducerState = await EventStore.Reducers.GetStateFor<SomeReducer>();
 
-            FailedPartitions = await EventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
-            {
-                EventStore = EventStore.Name.Value,
-                Namespace = Concepts.EventStoreNamespaceName.Default,
-                ObserverId = ReducerObserverState.Id
-            });
+            FailedPartitions = await EventStore.Reducers.GetFailedPartitionsFor<SomeReducer>();
         }
     }
 
@@ -69,13 +60,13 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
     void should_not_fail_to_wait_for_observer_to_be_active_again() => Context.WaitingForObserverStateError.ShouldBeNull();
 
     [Fact]
-    void should_have_observer_state_be_active() => Context.ReducerObserverState.RunningState.ShouldEqual(ObserverRunningState.Active);
+    void should_have_observer_state_be_active() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
 
     [Fact]
-    void should_have_correct_observer_state_last_handled_event_sequence_number() => Context.ReducerObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);
+    void should_have_correct_observer_state_last_handled_event_sequence_number() => Context.ReducerState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);
 
     [Fact]
-    void should_have_correct_observer_state_next_event_sequence_number() => Context.ReducerObserverState.NextEventSequenceNumber.Value.ShouldEqual(1ul);
+    void should_have_correct_observer_state_next_event_sequence_number() => Context.ReducerState.NextEventSequenceNumber.Value.ShouldEqual(1ul);
 
     [Fact]
     void should_not_have_failed_partitions() => Context.FailedPartitions.ShouldBeEmpty();

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Reactors;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
@@ -13,7 +12,6 @@ public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixt
     public ReactorThatCanFail[] Observers;
     public override IEnumerable<Type> Reactors => [typeof(ReactorThatCanFail)];
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
-    public ReactorId ObserverId;
     int _activationCount;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -23,11 +21,5 @@ public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixt
         services.AddTransient(_ => Observers[_activationCount++]);
     }
 
-    async Task Establish()
-    {
-        var state = await EventStore.Reactors.GetState<ReactorThatCanFail>();
-        ObserverId = state.Id;
-    }
-
-    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.FailedPartitions.GetFailedPartitionsFor(ObserverId);
+    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.Reactors.GetFailedPartitionsFor<ReactorThatCanFail>();
 }
