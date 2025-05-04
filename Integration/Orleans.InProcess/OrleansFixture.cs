@@ -2,13 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -103,21 +100,6 @@ public class OrleansFixture(GlobalFixture globalFixture) : WebApplicationFactory
     public IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
     public IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
     public EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
-
-    public IObserver GetObserverForReducer<T>() => GrainFactory
-        .GetGrain<IObserver>(
-            new ObserverKey(
-                typeof(T).GetReducerId().Value,
-                Constants.EventStore,
-                Concepts.EventStoreNamespaceName.Default,
-                EventSequenceId.Log));
-
-    public IObserver GetObserverForProjection<TProjection>() => GrainFactory
-        .GetGrain<IObserver>(
-            new ObserverKey(typeof(TProjection).GetProjectionId().Value,
-                Constants.EventStore,
-                Concepts.EventStoreNamespaceName.Default,
-                EventSequenceId.Log));
 
     public GlobalFixture GlobalFixture { get; } = globalFixture;
 

@@ -26,7 +26,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     public override IEnumerable<Type> Projections => [typeof(TProjection)];
     protected List<object> EventsToAppend = [];
     protected List<EventAndEventSourceId> EventsWithEventSourceIdToAppend = [];
-    protected Grains.Observation.IObserver Observer;
+    protected IProjectionHandler Projection;
     protected bool WaitForEachEvent;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -42,8 +42,8 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
     async Task Because()
     {
-        Observer = GetObserverForProjection<TProjection>();
-        await Observer.WaitTillActive();
+        Projection = EventStore.Projections.GetHandlerFor<TProjection>();
+        await Projection.WaitTillActive();
 
         AppendResult appendResult = null;
         foreach (var @event in EventsToAppend)
@@ -75,7 +75,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
 
     protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
     {
-        // await Observer.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
+        await Projection.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
         Result = await GetModelResult();
     }
 
