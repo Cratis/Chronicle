@@ -18,19 +18,18 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
         public List<EventForEventSourceId> FirstEvents;
         public List<EventForEventSourceId> CatchupEvents;
         public ReducerState ReducerState;
-
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
 
         async Task Establish()
         {
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
-            await EventStore.Reducers.WaitTillSubscribed<ReducerWithoutDelay>();
+            await reducer.WaitTillSubscribed();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
             var lastHandled = result.SequenceNumbers.Last();
 
-            await EventStore.Reducers.WaitTillReachesEventSequenceNumber<ReducerWithoutDelay>(lastHandled);
+            await reducer.WaitTillReachesEventSequenceNumber(lastHandled);
             reducer.Disconnect();
 
             CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
@@ -40,10 +39,10 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
 
         async Task Because()
         {
-            await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
-            await EventStore.Reducers.WaitTillSubscribed<ReducerWithoutDelay>();
-            await EventStore.Reducers.WaitTillReachesEventSequenceNumber<ReducerWithoutDelay>(LastEventSequenceNumberAfterDisconnect);
-            ReducerState = await EventStore.Reducers.GetStateFor<ReducerWithoutDelay>();
+            var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
+            await reducer.WaitTillSubscribed();
+            await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
+            ReducerState = await reducer.GetState();
         }
     }
 

@@ -34,7 +34,8 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
 
         async Task Because()
         {
-            await EventStore.Reducers.WaitTillActive<ReducerThatCanFail>();
+            var reducer = EventStore.Reducers.GetHandlerFor<ReducerThatCanFail>();
+            await reducer.WaitTillActive();
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             Observers[1].HandleTime = 1.Seconds();
@@ -45,7 +46,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             // Wait for the first event to have been handled
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
-            FailedPartitionsBeforeRetry = await EventStore.Reducers.WaitForThereToBeFailedPartitions<ReducerThatCanFail>();
+            FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
             Jobs = await EventStore.WaitForThereToBeJobs();
 
             // Wait for the second event to have been handled
@@ -59,8 +60,8 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             JobsWithCatchUp = await EventStore.WaitForThereToBeJobs();
             JobsAfterCompleted = await EventStore.WaitForThereToBeNoJobs();
 
-            FailedPartitionsAfterRetry = await GetFailedPartitions();
-            ReducerState = await EventStore.Reducers.GetStateFor<ReducerThatCanFail>();
+            FailedPartitionsAfterRetry = await reducer.GetFailedPartitions();
+            ReducerState = await reducer.GetState();
             await Observers[2].WaitTillHandledEventReaches(1);
         }
     }

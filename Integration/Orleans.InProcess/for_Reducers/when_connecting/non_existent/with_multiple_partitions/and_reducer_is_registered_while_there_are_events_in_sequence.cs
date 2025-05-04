@@ -30,13 +30,13 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
 
         async Task Because()
         {
-            await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
-            await EventStore.Reducers.WaitTillSubscribed<ReducerWithoutDelay>();
-            await EventStore.Reducers.WaitTillReachesEventSequenceNumber<ReducerWithoutDelay>(LastEventSequenceNumberAppended);
+            var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
+            await reducer.WaitTillSubscribed();
+            await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
 
             await Reducer.WaitTillHandledEventReaches(Events.Count);
 
-            ReducerState = await EventStore.Reducers.GetStateFor<ReducerWithoutDelay>();
+            ReducerState = await reducer.GetState();
         }
     }
 

@@ -30,7 +30,8 @@ public class but_not_third_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            await EventStore.Reducers.WaitTillActive<ReducerThatCanFail>();
+            var reducer = EventStore.Reducers.GetHandlerFor<ReducerThatCanFail>();
+            await reducer.WaitTillActive();
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = true;
             Observers[2].ShouldFail = false;
@@ -39,25 +40,25 @@ public class but_not_third_time(context context) : Given<context>(context)
             // Wait for the first event to have been handled
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
-            FailedPartitionsBeforeRetry = await EventStore.Reducers.WaitForThereToBeFailedPartitions<ReducerThatCanFail>();
+            FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
             Jobs = await EventStore.WaitForThereToBeJobs();
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
-            FailedPartitionsBeforeRetry = await EventStore.Reducers.WaitForThereToBeFailedPartitions<ReducerThatCanFail>();
+            FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
             Jobs = await EventStore.WaitForThereToBeJobs();
 
             // Wait for the third event to have been handled
             await Tcs[2].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             await EventStore.WaitForThereToBeNoJobs();
 
-            FailedPartitionsAfterRetry = await GetFailedPartitions();
-            await EventStore.Reducers.WaitTillActive<ReducerThatCanFail>();
+            FailedPartitionsAfterRetry = await reducer.GetFailedPartitions();
+            await reducer.WaitTillActive();
 
             await Observers[2].WaitTillHandledEventReaches(1);
 
-            ReducerState = await EventStore.Reducers.GetStateFor<ReducerThatCanFail>();
+            ReducerState = await reducer.GetState();
         }
     }
 
