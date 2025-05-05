@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
-// public class Startup
-// {
-//     public void Configure(IApplicationBuilder app)
-//     {
-//     }
-// }
+public class Startup
+{
+    public void Configure(IApplicationBuilder app)
+    {
+    }
+}
