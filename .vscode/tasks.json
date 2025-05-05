@@ -9,10 +9,13 @@
             "args": [
                 "build",
                 "--no-restore",
-                "/property:GenerateFullPaths=true",
+                "/p:MaxCpuCount=0",
+                "/p:GenerateFullPaths=true",
+                "/clp:ErrorsOnly",
                 "/consoleloggerparameters:NoSummary",
                 "/p:Configuration=Debug",
-                "/p:Platform=AnyCPU",
+                "/p:Platform=AnyCpu",
+                "/p:UseSharedCompilation=true",
                 "${input:project}"
             ],
             "problemMatcher": "$msCompile",
