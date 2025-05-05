@@ -18,21 +18,13 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 public class OrleansFixture : IClientArtifactsProvider, IDisposable
 {
-    static readonly Type _webApplicationFactoryType;
-    static readonly PropertyInfo _servicesProperty;
+    static Type _webApplicationFactoryType = null!;
+    static PropertyInfo _servicesProperty = null!;
+    static bool _isInitialized;
 
     readonly IDisposable _webApplicationFactory;
     bool _backupPerformed;
     string _name = string.Empty;
-
-    static OrleansFixture()
-    {
-        var testAssembly = TestAssemblyLocator.GetTestAssembly();
-        var startupType = testAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
-        startupType ??= testAssembly!.ExportedTypes.FirstOrDefault()!;
-        _webApplicationFactoryType = typeof(ChronicleWebApplicationFactory<>).MakeGenericType(startupType!);
-        _servicesProperty = _webApplicationFactoryType.GetProperty("Services", BindingFlags.Instance | BindingFlags.Public)!;
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrleansFixture"/> class.
@@ -41,6 +33,17 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable
     public OrleansFixture(ChronicleFixture chronicleFixture)
     {
         ChronicleFixture = chronicleFixture;
+
+        if (!_isInitialized)
+        {
+            var testAssembly = TestAssemblyLocator.GetTestAssembly();
+            var startupType = testAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
+            startupType ??= testAssembly!.ExportedTypes.FirstOrDefault()!;
+            _webApplicationFactoryType = typeof(ChronicleWebApplicationFactory<>).MakeGenericType(startupType!);
+            _servicesProperty = _webApplicationFactoryType.GetProperty("Services", BindingFlags.Instance | BindingFlags.Public)!;
+
+            _isInitialized = true;
+        }
 
         var configureServices = ConfigureServices;
         _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices]) as IDisposable)!;
