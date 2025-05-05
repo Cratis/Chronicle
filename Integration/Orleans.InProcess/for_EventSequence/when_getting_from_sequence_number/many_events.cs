@@ -35,6 +35,7 @@ public class many_events(context context) : Given<context>(context)
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber((ulong)Context.Events.Count - 1);
 
     [Fact] void should_get_all_the_appended_events() => Context.AppendedEvents.Count.ShouldEqual(3);
+
     [Fact]
     async Task should_have_stored_all_the_events_in_correct_order()
     {
