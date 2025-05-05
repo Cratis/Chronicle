@@ -15,6 +15,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
         <PackageReference Include="Polly.Core" />
     </ItemGroup>
 

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../Orleans.InProcess/Orleans.InProcess.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="mongodb.driver" />
+        <PackageReference Include="Testcontainers" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
+    </ItemGroup>
+</Project>
