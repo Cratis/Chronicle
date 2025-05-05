@@ -1,19 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Jobs;
-
-namespace Cratis.Chronicle.Storage.Jobs;
+namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
 /// Represents the state of a job step.
 /// </summary>
-public class JobStepState
+public class JobStep
 {
     /// <summary>
     /// Gets or sets the <see cref="JobStepId"/>.
     /// </summary>
-    public JobStepIdentifier Id { get; set; } = JobStepIdentifier.NotSet;
+    public JobStepId Id { get; set; } = JobStepId.Unknown;
 
     /// <summary>
     /// Gets or sets the <see cref="JobStepType"/> .
@@ -33,15 +31,10 @@ public class JobStepState
     /// <summary>
     /// Gets or sets collection of status changes that happened to the job step.
     /// </summary>
-    public IList<JobStepStatusChanged> StatusChanges { get; set; } = [];
+    public IEnumerable<JobStepStatusChanged> StatusChanges { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="JobStepProgress"/>.
     /// </summary>
     public JobStepProgress Progress { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets whether the job step has been prepared.
-    /// </summary>
-    public bool IsPrepared { get; set; }
 }

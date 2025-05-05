@@ -99,7 +99,7 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
-        Jobs = new Jobs.Jobs(eventStoreName, @namespace, connection);
+        Jobs = new Jobs.Jobs(this);
 
         Reactors = new Reactors.Reactors(
             this,

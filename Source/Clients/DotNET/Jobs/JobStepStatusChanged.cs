@@ -4,14 +4,14 @@
 namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
-/// Represents a status change event that occurred for a job.
+/// Represents a state change event.
 /// </summary>
-public class JobStatusChanged
+public class JobStepStatusChanged
 {
     /// <summary>
-    /// Gets or sets the <see cref="JobStatus"/>.
+    /// Gets or sets the <see cref="JobStepStatus"/>.
     /// </summary>
-    public JobStatus Status { get; set; }
+    public JobStepStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets when the event occurred.

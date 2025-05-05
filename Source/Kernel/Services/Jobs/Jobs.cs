@@ -66,4 +66,20 @@ public class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
 
         return Observable.Empty<IEnumerable<Job>>();
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<JobStep>> GetJobSteps(GetJobStepsRequest request, CallContext context = default)
+    {
+        var catchOrObserve = await storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).JobSteps
+            .GetForJob(request.JobId, request.Statuses.Select(_ => (Concepts.Jobs.JobStepStatus)(int)_).ToArray());
+
+        if (catchOrObserve.IsSuccess)
+        {
+            return catchOrObserve.AsT0.ToContract();
+        }
+
+        return [];
+    }
 }

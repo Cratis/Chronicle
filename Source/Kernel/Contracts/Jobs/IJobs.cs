@@ -19,6 +19,7 @@ public interface IJobs
     /// <param name="command"><see cref="StopJob"/> command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Stop(StopJob command, CallContext context = default);
 
     /// <summary>
@@ -27,6 +28,7 @@ public interface IJobs
     /// <param name="command"><see cref="StopJob"/> command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Resume(ResumeJob command, CallContext context = default);
 
     /// <summary>
@@ -35,6 +37,7 @@ public interface IJobs
     /// <param name="command"><see cref="StopJob"/> command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Delete(DeleteJob command, CallContext context = default);
 
     /// <summary>
@@ -43,6 +46,7 @@ public interface IJobs
     /// <param name="request"><see cref="GetJobRequest"/> representing what to get.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Either <see cref="Job"/> instance or a <see cref="JobError"/> .</returns>
+    [Operation]
     Task<OneOf<Job, JobError>> GetJob(GetJobRequest request, CallContext context = default);
 
     /// <summary>
@@ -51,6 +55,7 @@ public interface IJobs
     /// <param name="request">The <see cref="GetJobsRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Collection of all jobs.</returns>
+    [Operation]
     Task<IEnumerable<Job>> GetJobs(GetJobsRequest request, CallContext context = default);
 
     /// <summary>
@@ -59,5 +64,15 @@ public interface IJobs
     /// <param name="request">The <see cref="GetJobsRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Observable of collection of all jobs.</returns>
+    [Operation]
     IObservable<IEnumerable<Job>> ObserveJobs(GetJobsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Gets the job steps for a specific job.
+    /// </summary>
+    /// <param name="request"><see cref="GetJobStepsRequest"/> representing what to get.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Collection of <see cref="JobStep"/>.</returns>
+    [Operation]
+    Task<IEnumerable<JobStep>> GetJobSteps(GetJobStepsRequest request, CallContext context = default);
 }

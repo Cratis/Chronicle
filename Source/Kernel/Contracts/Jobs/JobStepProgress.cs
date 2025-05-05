@@ -6,26 +6,20 @@ using ProtoBuf;
 namespace Cratis.Chronicle.Contracts.Jobs;
 
 /// <summary>
-/// Represents the request for getting a specific jobs.
+/// Represents the progress of a step.
 /// </summary>
 [ProtoContract]
-public class GetJobRequest
+public class JobStepProgress
 {
     /// <summary>
-    /// Gets or sets the event store name.
+    /// Gets or sets the percentage of the step.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public int Percentage { get; set; }
 
     /// <summary>
-    /// Gets or sets the namespace.
+    /// Gets or sets the current message associated with the progress.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
-
-    /// <summary>
-    /// Gets or sets the job id.
-    /// </summary>
-    [ProtoMember(3)]
-    public Guid JobId { get; set; }
+    public string Message { get; set; }
 }
