@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Cratis.Specifications;
-using Xunit;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -11,10 +10,10 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents a base class for specification by example type of context setups.
 /// </summary>
 /// <param name="fixture">The <see cref="ChronicleFixture"/>.</param>
-public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) : OrleansFixture(fixture), IAsyncLifetime
+public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) : OrleansFixture(fixture)
 {
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    protected override async Task OnInitializeAsync()
     {
         EnsureBuilt();
         await OnEstablish();
@@ -22,7 +21,7 @@ public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) 
     }
 
     /// <inheritdoc/>
-    public Task DisposeAsync() => OnDestroy();
+    protected override Task OnDisposeAsync() => OnDestroy();
 
     Task OnEstablish()
     {

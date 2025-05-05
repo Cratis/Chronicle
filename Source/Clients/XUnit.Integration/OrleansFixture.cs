@@ -10,19 +10,20 @@ using Cratis.Chronicle.Storage.EventSequences;
 using DotNet.Testcontainers.Networks;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
+using Xunit;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
 /// Represents a fixture for Orleans integration tests.
 /// </summary>
-public class OrleansFixture : IClientArtifactsProvider, IDisposable
+public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifetime
 {
     static Type _webApplicationFactoryType = null!;
     static PropertyInfo _servicesProperty = null!;
     static bool _isInitialized;
 
-    readonly IDisposable _webApplicationFactory;
+    readonly IAsyncDisposable _webApplicationFactory;
     bool _backupPerformed;
     string _name = string.Empty;
 
@@ -46,7 +47,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable
         }
 
         var configureServices = ConfigureServices;
-        _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices]) as IDisposable)!;
+        _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices]) as IAsyncDisposable)!;
         var services = _servicesProperty.GetValue(_webApplicationFactory);
         Services = (services as IServiceProvider)!;
     }
@@ -168,14 +169,25 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable
     /// <inheritdoc/>
     public virtual void Dispose()
     {
+    }
+
+    /// <inheritdoc/>
+    public Task InitializeAsync()
+    {
+        return OnInitializeAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task DisposeAsync()
+    {
         if (!_backupPerformed)
         {
             ChronicleFixture.PerformBackup(_name);
             _backupPerformed = true;
         }
 
-        ChronicleFixture.RemoveAllDatabases().GetAwaiter().GetResult();
-        _webApplicationFactory.Dispose();
+        await ChronicleFixture.RemoveAllDatabases();
+        await _webApplicationFactory.DisposeAsync();
     }
 
     /// <summary>
@@ -236,4 +248,16 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable
     protected virtual void ConfigureServices(IServiceCollection services)
     {
     }
+
+    /// <summary>
+    /// Overridable method to perform actions when the fixture is disposed async.
+    /// </summary>
+    /// <returns>Awaitable Task.</returns>
+    protected virtual Task OnInitializeAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// Overridable method to perform actions when the fixture is disposed async.
+    /// </summary>
+    /// <returns>Awaitable Task.</returns>
+    protected virtual Task OnDisposeAsync() => Task.CompletedTask;
 }
