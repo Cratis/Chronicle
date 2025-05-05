@@ -2,17 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition.and_reactor_is_registered_while_there_are_no_events_to_handle.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class and_reactor_is_registered_while_there_are_no_events_to_handle(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_disconnected_reactor_observing_an_event(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_disconnected_reactor_observing_an_event(ChronicleFixture)
     {
         public ReactorState ReactorState;
         public EventSequenceNumber LastEventSequenceNumber;

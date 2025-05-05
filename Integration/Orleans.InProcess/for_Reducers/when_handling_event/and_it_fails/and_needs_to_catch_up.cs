@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
@@ -12,10 +11,10 @@ using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_handling_event.and_it_fails;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class and_needs_to_catch_up(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_reducer_observing_an_event_that_can_fail(globalFixture, 3)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_reducer_observing_an_event_that_can_fail(ChronicleFixture, 3)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

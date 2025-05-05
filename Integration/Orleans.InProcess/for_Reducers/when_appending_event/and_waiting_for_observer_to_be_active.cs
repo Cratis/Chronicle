@@ -2,17 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_appending_event.and_waiting_for_observer_to_be_active.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_appending_event;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class and_waiting_for_observer_to_be_active(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
     {
         public static TaskCompletionSource Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;
@@ -51,9 +50,9 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
         }
     }
 
-    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber(1);
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(1);
 
-    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(Concepts.Events.EventSequenceNumber.First);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
 
     [Fact] void should_have_handled_the_event() => Context.Reducer.HandledEvents.ShouldEqual(1);
 

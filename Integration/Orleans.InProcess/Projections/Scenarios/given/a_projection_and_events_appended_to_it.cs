@@ -3,18 +3,17 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Integration.Base;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.given;
 
 
-public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+public class a_projection_and_events_appended_to_it<TProjection, TModel>(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
     where TProjection : class, IProjectionFor<TModel>, new()
     where TModel : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
-    protected GlobalFixture _globalFixture = globalFixture;
+    protected ChronicleFixture _ChronicleFixture = ChronicleFixture;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public EventSourceId EventSourceId;
@@ -82,7 +81,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(GlobalF
     protected async Task<TModel> GetModel(EventSourceId eventSourceId)
     {
         var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), eventSourceId);
-        var result = await _globalFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
+        var result = await _ChronicleFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
         return result.FirstOrDefault();
     }
 }

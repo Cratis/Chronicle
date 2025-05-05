@@ -2,17 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Storage.MongoDB;
 using MongoDB.Bson;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.existing_sequence_number.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class existing_sequence_number(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
         public SomeEvent FirstEvent;
@@ -45,8 +44,8 @@ public class existing_sequence_number(context context) : Given<context>(context)
         async Task Because() => await EventStore.EventLog.Append(EventSourceId, SecondEvent);
     }
 
-    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveCorrectNextSequenceNumber(2);
-    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveCorrectTailSequenceNumber(1);
-    [Fact] Task should_have_the_first_event_stored() => Context.ShouldHaveStoredCorrectEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
-    [Fact] Task should_have_the_second_event_stored() => Context.ShouldHaveStoredCorrectEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(2);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(1);
+    [Fact] Task should_have_the_first_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
+    [Fact] Task should_have_the_second_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
 }

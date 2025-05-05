@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
@@ -12,10 +11,10 @@ using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.w
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class and_job_step_completes_successfully(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_jobs_manager(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_jobs_manager(ChronicleFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;

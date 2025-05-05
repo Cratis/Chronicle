@@ -1539,20 +1539,6 @@
           "humanizer": "[2.14.1, )"
         }
       },
-      "Cratis.Chronicle.Integration.Base": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "Cratis.Specifications.XUnit": "[3.0.4, )",
-          "Microsoft.NET.Test.Sdk": "[17.13.0, )",
-          "Microsoft.Orleans.TestingHost": "[9.1.2, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.4, )",
-          "Testcontainers": "[4.4.0, )",
-          "mongodb.driver": "[3.3.0, )",
-          "xunit": "[2.9.3, )"
-        }
-      },
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
@@ -1664,6 +1650,21 @@
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
+        }
+      },
+      "Cratis.Chronicle.XUnit.Integration": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
+          "Cratis.Chronicle.Orleans.InProcess": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "Cratis.Specifications.XUnit": "[3.0.4, )",
+          "Microsoft.AspNetCore.Mvc.Testing": "[9.0.4, )",
+          "Microsoft.Orleans.TestingHost": "[9.1.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.4, )",
+          "Testcontainers": "[4.4.0, )",
+          "mongodb.driver": "[3.3.0, )"
         }
       },
       "AutoMapper": {

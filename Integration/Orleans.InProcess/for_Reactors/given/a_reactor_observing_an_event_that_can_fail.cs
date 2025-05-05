@@ -1,12 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
-public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixture, int numberOfObservations) : IntegrationSpecificationContext(globalFixture)
+public class a_reactor_observing_an_event_that_can_fail(ChronicleFixture ChronicleFixture, int numberOfObservations) : IntegrationSpecificationContext(ChronicleFixture)
 {
     public TaskCompletionSource[] Tcs;
     public ReactorThatCanFail[] Observers;

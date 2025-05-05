@@ -14,14 +14,17 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit\XUnit.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit.Integration\XUnit.Integration.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Cratis.Fundamentals" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-
-        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
