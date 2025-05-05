@@ -169,6 +169,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     /// <inheritdoc/>
     public virtual void Dispose()
     {
+        (_webApplicationFactory as IDisposable)?.Dispose();
     }
 
     /// <inheritdoc/>
