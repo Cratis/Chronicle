@@ -1,36 +1,52 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.DependencyInjection;
-using Cratis.Json;
 using DotNet.Testcontainers.Networks;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Orleans.Storage;
-using Orleans.TestingHost.Logging;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
 /// Represents a fixture for Orleans integration tests.
 /// </summary>
-/// <param name="globalFixture">The global <see cref="ChronicleFixture"/>.</param>
-public class OrleansFixture(ChronicleFixture globalFixture) : WebApplicationFactory<Startup>, IClientArtifactsProvider
+public class OrleansFixture : IClientArtifactsProvider, IDisposable
 {
+    static readonly Type _webApplicationFactoryType;
+    static readonly PropertyInfo _servicesProperty;
+
+    readonly IDisposable _webApplicationFactory;
     bool _backupPerformed;
     string _name = string.Empty;
+
+    static OrleansFixture()
+    {
+        var testAssembly = TestAssemblyLocator.GetTestAssembly();
+        var startupType = testAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
+        startupType ??= testAssembly!.ExportedTypes.FirstOrDefault()!;
+        _webApplicationFactoryType = typeof(ChronicleWebApplicationFactory<>).MakeGenericType(startupType!);
+        _servicesProperty = _webApplicationFactoryType.GetProperty("Services", BindingFlags.Instance | BindingFlags.Public)!;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrleansFixture"/> class.
+    /// </summary>
+    /// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
+    public OrleansFixture(ChronicleFixture chronicleFixture)
+    {
+        ChronicleFixture = chronicleFixture;
+
+        var configureServices = ConfigureServices;
+        _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices]) as IDisposable)!;
+        var services = _servicesProperty.GetValue(_webApplicationFactory);
+        Services = (services as IServiceProvider)!;
+    }
 
     /// <summary>
     /// Gets the docker network.
@@ -65,7 +81,7 @@ public class OrleansFixture(ChronicleFixture globalFixture) : WebApplicationFact
     /// <summary>
     /// Gets the <see cref="ChronicleFixture"/>.
     /// </summary>
-    public ChronicleFixture ChronicleFixture { get; } = globalFixture;
+    public ChronicleFixture ChronicleFixture { get; }
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes { get; } = [];
@@ -113,6 +129,11 @@ public class OrleansFixture(ChronicleFixture globalFixture) : WebApplicationFact
     public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; } = [];
 
     /// <summary>
+    /// Gets the <see cref="IServiceProvider"/> for resolving services.
+    /// </summary>
+    public IServiceProvider Services { get; } = null!;
+
+    /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
     /// </summary>
     internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
@@ -139,6 +160,19 @@ public class OrleansFixture(ChronicleFixture globalFixture) : WebApplicationFact
     /// </summary>
     public void Initialize()
     {
+    }
+
+    /// <inheritdoc/>
+    public virtual void Dispose()
+    {
+        if (!_backupPerformed)
+        {
+            ChronicleFixture.PerformBackup(_name);
+            _backupPerformed = true;
+        }
+
+        ChronicleFixture.RemoveAllDatabases().GetAwaiter().GetResult();
+        _webApplicationFactory.Dispose();
     }
 
     /// <summary>
@@ -184,81 +218,12 @@ public class OrleansFixture(ChronicleFixture globalFixture) : WebApplicationFact
     /// <returns>The <see cref="EventSequenceKey"/>.</returns>
     internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
 
-    /// <inheritdoc/>
-    protected override IHostBuilder CreateHostBuilder()
-    {
-        var builder = Host.CreateDefaultBuilder();
-
-        var chronicleOptions = new Concepts.Configuration.ChronicleOptions();
-
-        builder.UseCratisMongoDB(
-            mongo =>
-            {
-                mongo.Server = "mongodb://localhost:27018";
-                mongo.Database = "orleans";
-            });
-        builder.ConfigureLogging(_ =>
-        {
-            _.ClearProviders();
-            _.AddFile($"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
-        });
-        builder
-            .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddCratisApplicationModelMeter();
-                services.AddSingleton(Globals.JsonSerializerOptions);
-                services.AddBindingsByConvention();
-                services.AddSelfBindings();
-                services.AddChronicleTelemetry(ctx.Configuration);
-                services.AddControllers();
-                ctx.Configuration.Bind(chronicleOptions);
-                services.Configure<ChronicleOptions>(opts => opts.ArtifactsProvider = this);
-
-                ConfigureServices(services);
-            });
-        builder.AddCratisChronicle();
-
-        builder.UseOrleans(silo =>
-            {
-                silo
-                    .UseLocalhostClustering()
-                    .AddCratisChronicle(
-                        options => options.EventStoreName = Constants.EventStore,
-                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
-            })
-            .UseConsoleLifetime();
-
-        // For some weird reason we need this https://stackoverflow.com/questions/69974249/no-app-configured-error-while-using-webapplicationfactory-for-running-integrat
-        builder.ConfigureWebHostDefaults(b => b.Configure(app => { }));
-        return builder;
-    }
-
-    /// <inheritdoc/>
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseSolutionRelativeContentRoot("Integration/Orleans.InProcess");
-    }
-
     /// <summary>
     /// Ensures that the event store is built.
     /// </summary>
     protected void EnsureBuilt()
     {
         Services.GetRequiredService<IEventStore>();
-    }
-
-    /// <inheritdoc/>
-    protected override void Dispose(bool disposing)
-    {
-        if (!_backupPerformed)
-        {
-            ChronicleFixture.PerformBackup(_name);
-            _backupPerformed = true;
-        }
-
-        ChronicleFixture.RemoveAllDatabases().GetAwaiter().GetResult();
-        base.Dispose(false);
     }
 
     /// <summary>

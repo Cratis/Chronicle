@@ -22,7 +22,7 @@ public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) 
     }
 
     /// <inheritdoc/>
-    public new Task DisposeAsync() => OnDestroy();
+    public Task DisposeAsync() => OnDestroy();
 
     Task OnEstablish()
     {
