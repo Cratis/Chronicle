@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -62,6 +63,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IFailedPartitions FailedPartitions => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public IJobs Jobs => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;
