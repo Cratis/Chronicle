@@ -20,16 +20,17 @@ public static class EventsShouldExtensions
     /// <param name="sequenceNumber">The sequence number of the event.</param>
     /// <param name="eventSourceId">The event source ID.</param>
     /// <param name="validator">Action to validate the event.</param>
-    public static void ShouldHaveAppendedEvent<TEvent>(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Action<TEvent> validator)
+    /// <returns>Awaitable task.</returns>
+    public static async Task ShouldHaveAppendedEvent<TEvent>(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Action<TEvent> validator)
     {
         var eventLog = fixture.GetEventLogStorage();
-        var @event = eventLog.GetEventAt(sequenceNumber.Value).GetAwaiter().GetResult();
+        var @event = await eventLog.GetEventAt(sequenceNumber.Value);
         var eventClrType = typeof(TEvent);
         var eventType = fixture.EventStore.EventTypes.GetEventTypeFor(eventClrType);
         Assert.Equal(@event.Context.EventSourceId.Value, eventSourceId.Value);
         Assert.Equal(@event.Metadata.SequenceNumber.Value, sequenceNumber.Value);
         Assert.Equal(@event.Metadata.Type.Id.Value, eventType.Id.Value);
-        var eventObject = fixture.Services.GetRequiredService<IEventSerializer>().Deserialize(eventClrType, @event.Content).GetAwaiter().GetResult();
+        var eventObject = await fixture.Services.GetRequiredService<IEventSerializer>().Deserialize(eventClrType, @event.Content);
         Assert.IsType<TEvent>(eventObject);
         var theEvent = (TEvent)eventObject;
         validator(theEvent);
@@ -40,10 +41,11 @@ public static class EventsShouldExtensions
     /// </summary>
     /// <param name="fixture">The fixture to use.</param>
     /// <param name="sequenceNumber">The expected next sequence number.</param>
-    public static void ShouldHaveNextSequenceNumber(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber)
+    /// <returns>Awaitable task.</returns>
+    public static async Task ShouldHaveNextSequenceNumber(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber)
     {
         var eventLog = fixture.EventLogSequenceGrain;
-        var number = eventLog.GetNextSequenceNumber().GetAwaiter().GetResult();
+        var number = await eventLog.GetNextSequenceNumber();
         Assert.Equal(number.Value, sequenceNumber.Value);
     }
 
@@ -52,14 +54,15 @@ public static class EventsShouldExtensions
     /// </summary>
     /// <param name="fixture">The fixture to use.</param>
     /// <param name="sequenceNumber">The expected tail sequence number.</param>
-    public static void ShouldHaveTailSequenceNumber(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber)
+    /// <returns>Awaitable task.</returns>
+    public static async Task ShouldHaveTailSequenceNumber(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber)
     {
         var eventLog = fixture.EventLogSequenceGrain;
-        var number = eventLog.GetTailSequenceNumber().GetAwaiter().GetResult();
+        var number = await eventLog.GetTailSequenceNumber();
         Assert.Equal(number.Value, sequenceNumber.Value);
 
         var storedEventLog = fixture.GetEventLogStorage();
-        var storedNumber = storedEventLog.GetTailSequenceNumber().GetAwaiter().GetResult();
+        var storedNumber = await storedEventLog.GetTailSequenceNumber();
         Assert.Equal(storedNumber.Value, sequenceNumber.Value);
     }
 }
