@@ -72,6 +72,7 @@
         "encryptor",
         "enumerables",
         "Expando",
+        "Finalizers",
         "fluentui",
         "Gridlines",
         "Grpc",
