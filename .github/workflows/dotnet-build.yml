@@ -41,7 +41,7 @@ jobs:
       # If it is the GitHub Bot triggering the workflow, we need to restore the packages.lock.json files
       - name: Restore packages
         if: github.actor == 'github-actions[bot]'
-        run: dotnet restore --force-evaluate
+        run: dotnet restore -f --force-evaluate
 
       - name: Commit changes
         if: github.actor == 'github-actions[bot]'
