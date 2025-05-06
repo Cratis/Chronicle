@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains.Jobs.for_Job.given;
 using Moq;
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;
 

@@ -90,7 +90,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         using var scope = logger.BeginJobStepScope(State);
         try
         {
-            if (!State.Prepared)
+            if (!State.IsPrepared)
             {
                 return StartJobStepError.NotPrepared;
             }
@@ -136,7 +136,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
             return prepareResult;
         }
 
-        State.Prepared = true;
+        State.IsPrepared = true;
         _ = await WriteStateAsync();
         return prepareResult;
     }
@@ -163,7 +163,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 return Result.Success<JobStepError>();
             }
 
-            if (!State.Prepared)
+            if (!State.IsPrepared)
             {
                 return Result.Success<JobStepError>();
             }

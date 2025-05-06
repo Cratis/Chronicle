@@ -2,15 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Integration.Base;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.with_unique_event_violation.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class with_unique_event_violation(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueEventConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted)];

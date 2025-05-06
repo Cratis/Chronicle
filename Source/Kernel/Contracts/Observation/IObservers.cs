@@ -40,6 +40,14 @@ public interface IObservers
     Task RetryPartition(RetryPartition command, CallContext context = default);
 
     /// <summary>
+    /// Get the current details of an observer.
+    /// </summary>
+    /// <param name="request">The <see cref="GetObserverInformationRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="ObserverInformation"/>.</returns>
+    Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get all observers.
     /// </summary>
     /// <param name="request">The <see cref="AllObserversRequest"/>.</param>

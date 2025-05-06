@@ -5,6 +5,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -14,11 +15,13 @@ namespace Cratis.Chronicle.Reactors;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReactorHandler"/>.
 /// </remarks>
+/// <param name="eventStore"><see cref="IEventStore"/> the Reactors belong to.</param>
 /// <param name="reactorId">Unique identifier.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the Reactor is for.</param>
 /// <param name="reactorInvoker">The actual invoker.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
 public class ReactorHandler(
+    IEventStore eventStore,
     ReactorId reactorId,
     EventSequenceId eventSequenceId,
     IReactorInvoker reactorInvoker,
@@ -101,6 +104,35 @@ public class ReactorHandler(
 
         BaseIdentityProvider.ClearCurrentIdentity();
     }
+
+    /// <summary>
+    /// Get the current state of the Reactor.
+    /// </summary>
+    /// <returns>Current <see cref="ReactorState"/>.</returns>
+    public async Task<ReactorState> GetState()
+    {
+        var request = new Contracts.Observation.GetObserverInformationRequest
+        {
+            ObserverId = Id,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = EventSequenceId
+        };
+        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        return new ReactorState(
+            Id,
+            state.RunningState.ToClient(),
+            state.IsSubscribed,
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber);
+    }
+
+    /// <summary>
+    /// Get any failed partitions for a specific reactor.
+    /// </summary>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    public Task<IEnumerable<FailedPartition>> GetFailedPartitions() =>
+        eventStore.FailedPartitions.GetFailedPartitionsFor(Id);
 
     /// <summary>
     /// Disconnect the handler.

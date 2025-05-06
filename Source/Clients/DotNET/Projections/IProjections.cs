@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Models;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -30,6 +31,22 @@ public interface IProjections
     /// <param name="modelType">Type of model to check for.</param>
     /// <returns>True if it exists, false if not.</returns>
     bool HasFor(Type modelType);
+
+    /// <summary>
+    /// Get the <see cref="IProjectionHandler"/> for a specific projection type.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection to get for.</typeparam>
+    /// <returns><see cref="IProjectionHandler"/> for the projection.</returns>
+    IProjectionHandler GetHandlerFor<TProjection>()
+        where TProjection : IProjection;
+
+    /// <summary>
+    /// Get the <see cref="ProjectionId"/> for a specific type.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection to get for.</typeparam>
+    /// <returns>The <see cref="ProjectionId"/> for the type.</returns>
+    ProjectionId GetProjectionIdFor<TProjection>()
+        where TProjection : IProjection;
 
     /// <summary>
     /// Get the <see cref="ProjectionId"/> for a specific type.
@@ -103,6 +120,29 @@ public interface IProjections
     /// <typeparam name="TModel">Type of model to observe changes for.</typeparam>
     /// <returns>An observable of <see cref="ProjectionChangeset{TModel}"/>.</returns>
     IObservable<ProjectionChangeset<TModel>> Watch<TModel>();
+
+    /// <summary>
+    /// Get any failed partitions for a specific projection.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection.</typeparam>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor<TProjection>()
+        where TProjection : IProjection;
+
+    /// <summary>
+    /// Get any failed partitions for a specific projection.
+    /// </summary>
+    /// <param name="projectionType">Type of projection.</param>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(Type projectionType);
+
+    /// <summary>
+    /// Get the state of a specific projection.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection get for.</typeparam>
+    /// <returns><see cref="ProjectionState"/>.</returns>
+    Task<ProjectionState> GetStateFor<TProjection>()
+        where TProjection : IProjection;
 
     /// <summary>
     /// Discover all projections from entry assembly and dependencies.

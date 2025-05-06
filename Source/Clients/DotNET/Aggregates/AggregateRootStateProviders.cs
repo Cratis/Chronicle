@@ -39,7 +39,7 @@ public class AggregateRootStateProviders(
 
         if (hasReducer)
         {
-            var reducer = reducers.GetForModelType(stateType);
+            var reducer = reducers.GetHandlerForReadModelType(stateType);
             return Task.FromResult<IAggregateRootStateProvider<TState>>(new ReducerAggregateRootStateProvider<TState>(aggregateRootContext, reducer, serviceProvider));
         }
 

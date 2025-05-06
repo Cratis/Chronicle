@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Integration.Base;
+
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 
-public class a_jobs_manager(GlobalFixture globalFixture) : all_dependencies(globalFixture)
+public class a_jobs_manager(ChronicleFixture ChronicleFixture) : all_dependencies(ChronicleFixture)
 {
     public IJobsManager JobsManager;
 

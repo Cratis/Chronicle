@@ -19,6 +19,7 @@ class GetObserversSortBy {
     private _nextEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
     private _lastHandledEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
     private _runningState: SortingActionsForQuery<ObserverInformation[]>;
+    private _isSubscribed: SortingActionsForQuery<ObserverInformation[]>;
 
     constructor(readonly query: GetObservers) {
         this._observerId = new SortingActionsForQuery<ObserverInformation[]>('observerId', query);
@@ -28,6 +29,7 @@ class GetObserversSortBy {
         this._nextEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('nextEventSequenceNumber', query);
         this._lastHandledEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('lastHandledEventSequenceNumber', query);
         this._runningState = new SortingActionsForQuery<ObserverInformation[]>('runningState', query);
+        this._isSubscribed = new SortingActionsForQuery<ObserverInformation[]>('isSubscribed', query);
     }
 
     get observerId(): SortingActionsForQuery<ObserverInformation[]> {
@@ -51,6 +53,9 @@ class GetObserversSortBy {
     get runningState(): SortingActionsForQuery<ObserverInformation[]> {
         return this._runningState;
     }
+    get isSubscribed(): SortingActionsForQuery<ObserverInformation[]> {
+        return this._isSubscribed;
+    }
 }
 
 class GetObserversSortByWithoutQuery {
@@ -61,6 +66,7 @@ class GetObserversSortByWithoutQuery {
     private _nextEventSequenceNumber: SortingActions  = new SortingActions('nextEventSequenceNumber');
     private _lastHandledEventSequenceNumber: SortingActions  = new SortingActions('lastHandledEventSequenceNumber');
     private _runningState: SortingActions  = new SortingActions('runningState');
+    private _isSubscribed: SortingActions  = new SortingActions('isSubscribed');
 
     get observerId(): SortingActions {
         return this._observerId;
@@ -82,6 +88,9 @@ class GetObserversSortByWithoutQuery {
     }
     get runningState(): SortingActions {
         return this._runningState;
+    }
+    get isSubscribed(): SortingActions {
+        return this._isSubscribed;
     }
 }
 

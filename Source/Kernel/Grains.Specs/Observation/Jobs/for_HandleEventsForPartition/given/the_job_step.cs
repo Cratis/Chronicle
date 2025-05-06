@@ -6,13 +6,11 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Orleans.Core;
 using Orleans.TestKit;
-using Orleans.TestKit.Storage;
+
 namespace Cratis.Chronicle.Grains.Observation.Jobs.for_HandleEventsForPartition.given;
 
 public class the_job_step : Specification

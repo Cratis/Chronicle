@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -59,4 +60,16 @@ public interface IReducerHandler
     /// Disconnect the handler.
     /// </summary>
     void Disconnect();
+
+    /// <summary>
+    /// Get the current state of the reducer.
+    /// </summary>
+    /// <returns>The current <see cref="ReducerState"/>.</returns>
+    Task<ReducerState> GetState();
+
+    /// <summary>
+    /// Get any failed partitions for a specific reducer.
+    /// </summary>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitions();
 }

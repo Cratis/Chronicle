@@ -1488,9 +1488,9 @@
           "OpenTelemetry": "[1.12.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.12.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.11.2, )",
-          "OpenTelemetry.Instrumentation.AspNetCore": "[1.11.1, )",
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.12.0, )",
           "OpenTelemetry.Instrumentation.GrpcNetClient": "[1.10.0-beta.1, )",
-          "OpenTelemetry.Instrumentation.Http": "[1.11.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.12.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }
@@ -1537,20 +1537,6 @@
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.4, )",
           "humanizer": "[2.14.1, )"
-        }
-      },
-      "Cratis.Chronicle.Integration.Base": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "Cratis.Specifications.XUnit": "[3.0.4, )",
-          "Microsoft.NET.Test.Sdk": "[17.13.0, )",
-          "Microsoft.Orleans.TestingHost": "[9.1.2, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Text.Json": "[9.0.4, )",
-          "Testcontainers": "[4.4.0, )",
-          "mongodb.driver": "[3.4.0, )",
-          "xunit": "[2.9.3, )"
         }
       },
       "Cratis.Chronicle.Orleans": {
@@ -1654,6 +1640,31 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.4, )"
+        }
+      },
+      "Cratis.Chronicle.XUnit": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle": "[1.0.0, )",
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.4, )"
+        }
+      },
+      "Cratis.Chronicle.XUnit.Integration": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
+          "Cratis.Chronicle.Orleans.InProcess": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "Cratis.Specifications.XUnit": "[3.0.4, )",
+          "Microsoft.AspNetCore.Mvc.Testing": "[9.0.4, )",
+          "Microsoft.Orleans.TestingHost": "[9.1.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.4, )",
+          "Testcontainers": "[4.4.0, )",
+          "mongodb.driver": "[3.4.0, )"
         }
       },
       "AutoMapper": {
@@ -2207,11 +2218,11 @@
       },
       "OpenTelemetry.Instrumentation.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[1.11.1, )",
-        "resolved": "1.11.1",
-        "contentHash": "KAzLOcCGi6TviuJWx0+QSgjVCrEnWDayN3aFSHoKzINPx/Tfwd9MIePUUDXQ+xHzrwon8IfExIDT1+UyIf3hoA==",
+        "requested": "[1.12.0, )",
+        "resolved": "1.12.0",
+        "contentHash": "r+Mzggd2P4N0Y34QIO6kakVPBOKFYSHnLkTrXXM+r37ABp+iaUvVUe+u/uxszsi5f7P5mrG0uYYaJ1QGHvzo3A==",
         "dependencies": {
-          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.11.2, 2.0.0)"
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.12.0, 2.0.0)"
         }
       },
       "OpenTelemetry.Instrumentation.GrpcNetClient": {
@@ -2225,13 +2236,13 @@
       },
       "OpenTelemetry.Instrumentation.Http": {
         "type": "CentralTransitive",
-        "requested": "[1.11.1, )",
-        "resolved": "1.11.1",
-        "contentHash": "hyZ3H8HxtQPvipBPdkN6tJWSCvY06XVyLbKlHuJlPrlV/lQJ/QuEBKYTXqcSa21LE/Th4HV+Choxi8eTu74xyw==",
+        "requested": "[1.12.0, )",
+        "resolved": "1.12.0",
+        "contentHash": "0rW+MbHgUQAdbvBtRxPYoQBosbNdWegL7cYkRlxq+KQ/VFyU8itt4pWTccmu1/FWmTgqJyT3LaujyDZoRrm8Yg==",
         "dependencies": {
           "Microsoft.Extensions.Configuration": "9.0.0",
           "Microsoft.Extensions.Options": "9.0.0",
-          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.11.2, 2.0.0)"
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.12.0, 2.0.0)"
         }
       },
       "Orleans.Providers.MongoDB": {

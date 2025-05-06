@@ -43,5 +43,5 @@ public class JobStepState
     /// <summary>
     /// Gets or sets whether the job step has been prepared.
     /// </summary>
-    public bool Prepared { get; set; }
+    public bool IsPrepared { get; set; }
 }

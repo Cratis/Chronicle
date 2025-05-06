@@ -3,15 +3,14 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Integration.Base;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending.many_with_first_event_violating_unique_constraint.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_appending;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class many_with_first_event_violating_unique_constraint(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : IntegrationSpecificationContext(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];

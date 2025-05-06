@@ -29,7 +29,8 @@ public interface IReducers
     /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
     Task<IReducerHandler> Register<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>;
+        where TReducer : IReducerFor<TModel>
+        where TModel : class;
 
     /// <summary>
     /// Check if there is a reducer for a specific model type.
@@ -42,28 +43,36 @@ public interface IReducers
     /// Get all registered handlers.
     /// </summary>
     /// <returns>Collection of <see cref="IReducerHandler"/>.</returns>
-    IEnumerable<IReducerHandler> GetAll();
+    IEnumerable<IReducerHandler> GetAllHandlers();
 
     /// <summary>
     /// Get all registered reducers by its identifier.
     /// </summary>
     /// <param name="reducerId">The identifier of the reducer to get.</param>
     /// <returns><see cref="IReducerHandler"/> instance.</returns>
-    IReducerHandler GetById(ReducerId reducerId);
+    IReducerHandler GetHandlerById(ReducerId reducerId);
 
     /// <summary>
     /// Get a specific handler for a specific model type.
     /// </summary>
     /// <param name="modelType">Model type to get for.</param>
     /// <returns><see cref="IReducerHandler"/> instance.</returns>
-    IReducerHandler GetForModelType(Type modelType);
+    IReducerHandler GetHandlerForReadModelType(Type modelType);
 
     /// <summary>
-    /// Gets a specific handler by its id.
+    /// Gets a specific handler by its reducer type.
     /// </summary>
     /// <param name="reducerType">The reducer type to get for.</param>
     /// <returns><see cref="IReducerHandler"/>.</returns>
-    IReducerHandler GetByType(Type reducerType);
+    IReducerHandler GetHandlerFor(Type reducerType);
+
+    /// <summary>
+    /// Get a specific handler for a specific reducer.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reducer to get for.</typeparam>
+    /// <returns><see cref="IReducerHandler"/>.</returns>
+    IReducerHandler GetHandlerFor<TReducer>()
+        where TReducer : IReducer;
 
     /// <summary>
     /// Get the CLR type for a specific reducer.
@@ -77,12 +86,21 @@ public interface IReducers
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer.</typeparam>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions<TReducer>();
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor<TReducer>()
+        where TReducer : IReducer;
 
     /// <summary>
     /// Get any failed partitions for a specific reducer.
     /// </summary>
     /// <param name="reducerType">Type of reducer.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions(Type reducerType);
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(Type reducerType);
+
+    /// <summary>
+    /// Get the state of a specific reactor.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reactor get for.</typeparam>
+    /// <returns><see cref="ReducerState"/>.</returns>
+    Task<ReducerState> GetStateFor<TReducer>()
+        where TReducer : IReducer;
 }

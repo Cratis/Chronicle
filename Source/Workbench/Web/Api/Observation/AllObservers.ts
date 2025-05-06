@@ -19,6 +19,7 @@ class AllObserversSortBy {
     private _nextEventSequenceNumber: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _lastHandledEventSequenceNumber: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _runningState: SortingActionsForObservableQuery<ObserverInformation[]>;
+    private _isSubscribed: SortingActionsForObservableQuery<ObserverInformation[]>;
 
     constructor(readonly query: AllObservers) {
         this._observerId = new SortingActionsForObservableQuery<ObserverInformation[]>('observerId', query);
@@ -28,6 +29,7 @@ class AllObserversSortBy {
         this._nextEventSequenceNumber = new SortingActionsForObservableQuery<ObserverInformation[]>('nextEventSequenceNumber', query);
         this._lastHandledEventSequenceNumber = new SortingActionsForObservableQuery<ObserverInformation[]>('lastHandledEventSequenceNumber', query);
         this._runningState = new SortingActionsForObservableQuery<ObserverInformation[]>('runningState', query);
+        this._isSubscribed = new SortingActionsForObservableQuery<ObserverInformation[]>('isSubscribed', query);
     }
 
     get observerId(): SortingActionsForObservableQuery<ObserverInformation[]> {
@@ -51,6 +53,9 @@ class AllObserversSortBy {
     get runningState(): SortingActionsForObservableQuery<ObserverInformation[]> {
         return this._runningState;
     }
+    get isSubscribed(): SortingActionsForObservableQuery<ObserverInformation[]> {
+        return this._isSubscribed;
+    }
 }
 
 class AllObserversSortByWithoutQuery {
@@ -61,6 +66,7 @@ class AllObserversSortByWithoutQuery {
     private _nextEventSequenceNumber: SortingActions  = new SortingActions('nextEventSequenceNumber');
     private _lastHandledEventSequenceNumber: SortingActions  = new SortingActions('lastHandledEventSequenceNumber');
     private _runningState: SortingActions  = new SortingActions('runningState');
+    private _isSubscribed: SortingActions  = new SortingActions('isSubscribed');
 
     get observerId(): SortingActions {
         return this._observerId;
@@ -82,6 +88,9 @@ class AllObserversSortByWithoutQuery {
     }
     get runningState(): SortingActions {
         return this._runningState;
+    }
+    get isSubscribed(): SortingActions {
+        return this._isSubscribed;
     }
 }
 

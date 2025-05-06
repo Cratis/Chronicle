@@ -30,14 +30,26 @@ public class JobProgress
     public int FailedSteps { get; set; }
 
     /// <summary>
-    /// Gets whether or not the job is completed.
+    /// Gets or sets the number of stopped steps.
     /// </summary>
     [ProtoMember(4)]
+    public int StoppedSteps { get; set; }
+
+    /// <summary>
+    /// Gets whether or not the job is completed.
+    /// </summary>
+    [ProtoMember(5)]
     public bool IsCompleted { get; set; }
+
+    /// <summary>
+    /// Gets whether or not the job is completed.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool IsStopped { get; set; }
 
     /// <summary>
     /// Gets or sets the current message associated with the progress.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(7)]
     public string Message { get; set; }
 }

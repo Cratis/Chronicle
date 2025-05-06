@@ -44,7 +44,7 @@ public class HandleEventsForPartition(
     {
         _selfGrainReference = this.AsReference<IHandleEventsForPartition>();
 
-        if (State.Prepared)
+        if (State.IsPrepared)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();

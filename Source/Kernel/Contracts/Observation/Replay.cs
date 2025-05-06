@@ -22,4 +22,8 @@ public class Replay : IObserverCommand
     /// <inheritdoc/>
     [ProtoMember(3)]
     public string ObserverId { get; set; }
+
+    /// <inheritdoc/>
+    [ProtoMember(4)]
+    public string EventSequenceId { get; set; } = string.Empty;
 }
