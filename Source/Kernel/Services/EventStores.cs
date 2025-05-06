@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Services;
 /// Represents an implementation of <see cref="IEventStores"/>.
 /// </summary>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
-internal class EventStores(IStorage storage) : IEventStores
+internal sealed class EventStores(IStorage storage) : IEventStores
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetEventStores()
