@@ -196,7 +196,12 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
         }
 
         await ChronicleFixture.RemoveAllDatabases();
-        _ = Task.Run(_webApplicationFactory.DisposeAsync);
+        _ = Task.Run(async () =>
+        {
+            await _webApplicationFactory.DisposeAsync();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        });
     }
 
     /// <summary>
