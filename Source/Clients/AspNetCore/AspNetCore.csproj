@@ -1,7 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.AspNetCore</AssemblyName>
         <RootNamespace>Cratis.Chronicle.AspNetCore</RootNamespace>
+    </PropertyGroup>
+
+    <Target Name="BuildDependencies">
+        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,23 +24,16 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(Repack)' == 'true'">
         <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' != 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../Connections/Connections.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="FluentValidation" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <!-- <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference> -->
     </ItemGroup>
 </Project>

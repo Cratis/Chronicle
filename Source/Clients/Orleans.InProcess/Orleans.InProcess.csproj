@@ -1,4 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Orleans.InProcess</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans.InProcess</RootNamespace>
@@ -6,13 +7,20 @@
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Orleans.InProcess" />
-        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
-    </ItemGroup>
+    <Target Name="BuildDependencies">
+        <MSBuild Projects="../Orleans/Orleans.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
+    </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Orleans.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -26,23 +34,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <ProjectReference Include="../DotNET/DotNET.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
-
-
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference>
-        -->
-
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
 
         <ProjectReference Include="../Orleans/Orleans.csproj">
@@ -89,21 +80,10 @@
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
-        <!-- <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-        </ProjectReference> -->
-
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
-
-        <!-- <ProjectReference Include="../../Kernel/Services/Services.csproj">
-            <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
-            <Aliases>Server</Aliases>
-        </ProjectReference> -->
 
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -111,19 +91,21 @@
         </ProjectReference>
     </ItemGroup>
 
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' != 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
+        <ProjectReference Include="../Connections/Connections.csproj"/>
+    </ItemGroup>
+
     <ItemGroup>
-        <!-- <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.DotNET.dll" /> -->
-        <!-- <InputAssemblies Include="$(OutputPath)Cratis.Chronicle.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.AspNetCore.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Diagnostics.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Infrastructure.dll" /> -->
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Grains.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" />
-        <!-- <DoNotInternalize Include="Cratis.Chronicle.Setup.dll" /> -->
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
         <DoNotInternalize Include="ChronicleOptions" />
         <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />

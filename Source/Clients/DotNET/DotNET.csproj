@@ -12,6 +12,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
         <InternalsVisibleTo Include="ProtoBuf.Grpc.Internal.Proxies" />
