@@ -8,6 +8,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
         <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
