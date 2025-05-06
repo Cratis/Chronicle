@@ -226,7 +226,7 @@ public class Projections(
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
-                .. rulesProjections.Discover(),
+                .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
                 .. _handlersByModelType.Values.Select(_ => _.Definition).ToList()
             ]).ToImmutableList();
 

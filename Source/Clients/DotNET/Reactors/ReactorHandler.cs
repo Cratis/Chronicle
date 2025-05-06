@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
@@ -118,7 +119,8 @@ public class ReactorHandler(
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId
         };
-        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+        var state = await servicesAccessor.Services.Observers.GetObserverInformation(request);
         return new ReactorState(
             Id,
             state.RunningState.ToClient(),

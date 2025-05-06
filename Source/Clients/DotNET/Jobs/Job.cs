@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
+
 namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
@@ -51,7 +53,8 @@ public class Job(IEventStore eventStore)
     /// <returns>Collection of <see cref="JobStep"/>.</returns>
     public async Task<IEnumerable<JobStep>> GetJobSteps(params JobStepStatus[] statuses)
     {
-        var result = await eventStore.Connection.Services.Jobs.GetJobSteps(new()
+        var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+        var result = await servicesAccessor.Services.Jobs.GetJobSteps(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
