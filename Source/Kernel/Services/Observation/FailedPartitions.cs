@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// Represents an implementation of <see cref="IFailedPartitions"/>.
 /// </summary>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
-internal class FailedPartitions(IStorage storage) : IFailedPartitions
+internal sealed class FailedPartitions(IStorage storage) : IFailedPartitions
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default)

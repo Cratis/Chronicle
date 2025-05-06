@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for observing actual events as they are made available.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-internal class Reducers(
+internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
     IExpandoObjectConverter expandoObjectConverter,

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Services.Host;
 /// Represents an implementation of <see cref="IServer"/>.
 /// </summary>
 /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
-internal class Server(IClusterClient clusterClient) : IServer
+internal sealed class Server(IClusterClient clusterClient) : IServer
 {
     readonly IBroadcastChannelProvider _reloadStateChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ReloadState);
 

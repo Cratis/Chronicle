@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Services.Recommendations;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for recommendations.</param>
-internal class Recommendations(IGrainFactory grainFactory, IStorage storage) : IRecommendations
+internal sealed class Recommendations(IGrainFactory grainFactory, IStorage storage) : IRecommendations
 {
     /// <inheritdoc/>
     public Task Perform(Perform command, CallContext context = default) =>

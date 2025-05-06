@@ -19,13 +19,13 @@ internal static partial class ReactorsLogMessages
     internal static partial void Observe(this ILogger<Reactors> logger);
 
     [LoggerMessage(LogLevel.Debug, "Registering Reactor {ReactorId} from connection {ConnectionId} with event store {EventStore} and namespace {@Namespace} for event sequence {EventSequenceId}")]
-    internal static partial void Registering(this ILogger<Reactors> logger, ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
+    internal static partial void Registering(this ILogger<Reactors> logger, ReactorId reactorId, Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Debug, "Subscribing reactor {ReactorId} from connection {ConnectionId} with event store {EventStore} and namespace {@Namespace} for event sequence {EventSequenceId}")]
-    internal static partial void Subscribing(this ILogger<Reactors> logger, ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
+    internal static partial void Subscribing(this ILogger<Reactors> logger, ReactorId reactorId, Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Debug, "Reactor {ReactorId} disconnected from connection {ConnectionId} with event store {EventStore} and namespace {@Namespace} for event sequence {EventSequenceId}")]
-    internal static partial void Disconnected(this ILogger<Reactors> logger, ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
+    internal static partial void Disconnected(this ILogger<Reactors> logger, ReactorId reactorId, Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Debug, "Reactor {ReactorId} observer stream disconnected from connection {ConnectionId}")]
     internal static partial void ObserverStreamDisconnected(this ILogger<Reactors> logger, ObserverId reactorId, ConnectionId connectionId);
