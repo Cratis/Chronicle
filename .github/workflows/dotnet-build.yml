@@ -23,34 +23,8 @@ on:
       - "!Source/Workbench/**"
 
 jobs:
-  update-lock-files:
-    if: github.actor == 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET_VERSION }}
-
-      - name: Restore packages
-        run: dotnet restore --force-evaluate
-
-      - name: Commit changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add **/packages.lock.json
-          git commit -m "Update packages.lock.json" || echo "No changes to commit"
-          git push
-
   dotnet-build:
     runs-on: ubuntu-latest
-    needs: [update-lock-files]
 
     steps:
       - name: Checkout code
@@ -63,6 +37,20 @@ jobs:
           cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
+
+      # If it is the GitHub Bot triggering the workflow, we need to restore the packages.lock.json files
+      - name: Restore packages
+        if: github.actor == 'github-actions[bot]'
+        run: dotnet restore --force-evaluate
+
+      - name: Commit changes
+        if: github.actor == 'github-actions[bot]'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add **/packages.lock.json
+          git commit -m "Update packages.lock.json" || echo "No changes to commit"
+          git push
 
       - uses: actions/cache@v3
         id: dotnet-x64-output
