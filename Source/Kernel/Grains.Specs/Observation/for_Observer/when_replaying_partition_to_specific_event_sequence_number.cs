@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 
-public class when_replaying_partition_to_specific_event_sequnce_number : given.an_observer
+public class when_replaying_partition_to_specific_event_sequence_number : given.an_observer
 {
     static Key partition;
     static EventSequenceNumber toSequenceNumber;

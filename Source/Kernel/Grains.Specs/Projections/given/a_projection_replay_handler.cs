@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
