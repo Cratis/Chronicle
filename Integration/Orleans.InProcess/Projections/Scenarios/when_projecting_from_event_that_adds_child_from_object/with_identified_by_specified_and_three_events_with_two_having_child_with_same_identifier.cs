@@ -1,17 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object.with_identified_by_specified_and_three_events_with_two_having_child_with_same_identifier.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class with_identified_by_specified_and_three_events_with_two_having_child_with_same_identifier(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<IdentifiableChildrenProjection, ModelWithChildren>(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<IdentifiableChildrenProjection, ModelWithChildren>(ChronicleFixture)
     {
         string model_id;
         public EventWithChildObject FirstEventAppended;

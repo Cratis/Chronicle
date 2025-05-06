@@ -133,6 +133,10 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
+    public ReactorHandler GetHandlerFor<TReactor>()
+        where TReactor : IReactor => _handlers[typeof(TReactor)];
+
+    /// <inheritdoc/>
     public ReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
@@ -141,14 +145,23 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions<TReactor>() =>
-        GetFailedPartitions(typeof(TReactor));
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReactor>() =>
+        GetFailedPartitionsFor(typeof(TReactor));
 
     /// <inheritdoc/>
-    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitions(Type reactorType)
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reactorType)
     {
         var handler = _handlers[reactorType];
-        return _eventStore.FailedPartitions.GetFailedPartitionsFor(handler.Id);
+        return handler.GetFailedPartitions();
+    }
+
+    /// <inheritdoc/>
+    public Task<ReactorState> GetStateFor<TReactor>()
+        where TReactor : IReactor
+    {
+        var reactorType = typeof(TReactor);
+        var handler = _handlers[reactorType];
+        return handler.GetState();
     }
 
     static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
@@ -162,10 +175,11 @@ public class Reactors : IReactors
     ReactorHandler CreateHandlerFor(Type reactorType)
     {
         var handler = new ReactorHandler(
-                                    reactorType.GetReactorId(),
-                                    reactorType.GetEventSequenceId(),
-                                    new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
-                                    _causationManager);
+            _eventStore,
+            reactorType.GetReactorId(),
+            reactorType.GetEventSequenceId(),
+            new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
+            _causationManager);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>

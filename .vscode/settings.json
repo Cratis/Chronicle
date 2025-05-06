@@ -73,6 +73,7 @@
         "encryptor",
         "enumerables",
         "Expando",
+        "Finalizers",
         "fluentui",
         "Gridlines",
         "Grpc",
@@ -113,6 +114,7 @@
         "templating",
         "Testcontainers",
         "tinycolor",
+        "Tmpfs",
         "treenode",
         "treetable",
         "tseslint",
@@ -127,6 +129,6 @@
         "wwwroot",
         "Xunit"
     ],
-    "dotnet.defaultSolution": "cratis.slnx",
+    "dotnet.defaultSolution": "cratis.sln",
     "dotnet.automaticallyCreateSolutionInWorkspace": false
 }

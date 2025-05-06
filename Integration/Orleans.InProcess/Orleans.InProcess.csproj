@@ -5,7 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Base\Base.csproj" />
         <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
         <ProjectReference Include="..\..\Source\Clients\Connections\Connections.csproj" />
         <ProjectReference Include="..\..\Source\Clients\Orleans\Orleans.csproj" />
@@ -24,6 +23,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
         <PackageReference Include="Polly.Core" />
     </ItemGroup>
 

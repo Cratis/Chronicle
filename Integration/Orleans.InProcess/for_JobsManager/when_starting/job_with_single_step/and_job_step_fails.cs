@@ -3,24 +3,23 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class and_job_step_fails(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_jobs_manager(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_jobs_manager(ChronicleFixture)
     {
-        public Result<JobId, StartJobError> StartJobResult;
-        public JobState CompletedJobState;
+        public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
+        public Job CompletedJobState;
         public IImmutableList<JobStepState> JobStepStates;
-        public JobId JobId;
+        public Concepts.Jobs.JobId JobId;
 
         async Task Because()
         {
@@ -31,9 +30,9 @@ public class and_job_step_fails(context context) : Given<context>(context)
             var getJobState = await JobStorage.GetJob(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
 
-            CompletedJobState = await JobStorage.WaitTillJobProgressCompleted<JobWithSingleStepState>(JobId);
+            CompletedJobState = await EventStore.Jobs.WaitTillJobProgressCompleted(JobId.Value);
             JobStepStates = getJobStepState.AsT0;
-            CompletedJobState = await JobStorage.WaitTillJobMeetsPredicate<JobWithSingleStepState>(JobId, state => state.Status is JobStatus.CompletedWithFailures);
+            CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status is JobStatus.CompletedWithFailures);
         }
     }
 
@@ -50,7 +49,7 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_keep_state_of_failed_job_step() => Context.JobStepStates.ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_job_step_state_where_status_is_failed() => Context.JobStepStates[0].Status.ShouldEqual(JobStepStatus.CompletedWithFailure);
+    public void should_have_job_step_state_where_status_is_failed() => Context.JobStepStates[0].Status.ShouldEqual(Concepts.Jobs.JobStepStatus.CompletedWithFailure);
 
     [Fact]
     public void should_have_completed_job_with_failure() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedWithFailures);
@@ -65,5 +64,5 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, JobStepStatus.CompletedWithFailure, 1);
+    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedWithFailure, 1);
 }

@@ -22,4 +22,9 @@ public interface IObserverCommand
     /// Gets or sets the observer identifier.
     /// </summary>
     string ObserverId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event sequence identifier.
+    /// </summary>
+    string EventSequenceId { get; set; }
 }

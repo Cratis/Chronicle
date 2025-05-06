@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Models;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.ProjectionTypes;
@@ -10,10 +9,10 @@ using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scena
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_properties;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class using_composite_key_from_property_and_context_property(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ModelWithCompositeKey>(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ModelWithCompositeKey>(ChronicleFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
         public CompositeKey CompositeId;
@@ -30,7 +29,7 @@ public class using_composite_key_from_property_and_context_property(context cont
 
         async Task Because()
         {
-            var result = await GlobalFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
+            var result = await ChronicleFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
             Model = await result.FirstOrDefaultAsync();
         }
     }

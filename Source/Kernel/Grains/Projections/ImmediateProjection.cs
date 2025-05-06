@@ -79,7 +79,6 @@ public class ImmediateProjection(
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
             projectionChanged = State.LastUpdated > _lastUpdated;
             _lastUpdated = State.LastUpdated ?? DateTimeOffset.UtcNow;
-            fromSequenceNumber = EventSequenceNumber.First;
 
             var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
             var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);

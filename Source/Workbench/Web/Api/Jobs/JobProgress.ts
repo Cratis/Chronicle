@@ -17,8 +17,14 @@ export class JobProgress {
     @field(Number)
     failedSteps!: number;
 
+    @field(Number)
+    stoppedSteps!: number;
+
     @field(Boolean)
     isCompleted!: boolean;
+
+    @field(Boolean)
+    isStopped!: boolean;
 
     @field(String)
     message!: string;

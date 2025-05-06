@@ -9,6 +9,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -101,6 +102,8 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
+        Jobs = new Jobs.Jobs(this);
+
         Reactors = new Reactors.Reactors(
             this,
             EventTypes,
@@ -175,6 +178,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventLog EventLog { get; }
+
+    /// <inheritdoc/>
+    public IJobs Jobs { get; }
 
     /// <inheritdoc/>
     public IReactors Reactors { get; }

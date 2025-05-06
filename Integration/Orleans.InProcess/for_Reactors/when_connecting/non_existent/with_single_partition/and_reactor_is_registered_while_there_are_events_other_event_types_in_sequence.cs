@@ -3,20 +3,19 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Integration.Base;
-using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition.and_reactor_is_registered_while_there_are_events_other_event_types_in_sequence.context;
-using ObserverRunningState = Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_connecting.non_existent.with_single_partition;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class and_reactor_is_registered_while_there_are_events_other_event_types_in_sequence(context context) : Given<context>(context)
 {
-    public class context(GlobalFixture globalFixture) : given.a_disconnected_reactor_observing_an_event(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_disconnected_reactor_observing_an_event(ChronicleFixture)
     {
         public List<EventForEventSourceId> Events;
-        public ObserverState ReactorObserverState;
+        public ReactorState ReactorState;
 
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
 
@@ -29,19 +28,17 @@ public class and_reactor_is_registered_while_there_are_events_other_event_types_
 
         async Task Because()
         {
-            ReactorObserver = GetObserverForReactor<ReactorWithoutDelay>();
-            await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await Task.Delay(1000);
-            await ReactorObserver.WaitTillActive();
-            ReactorObserverState = await ReactorObserver.GetState();
+            var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
+            await reactor.WaitTillActive();
+            ReactorState = await reactor.GetState();
         }
     }
 
     [Fact]
-    void should_have_reactor_observer_be_in_running_state() => Context.ReactorObserverState.RunningState.ShouldEqual(ObserverRunningState.Active);
+    void should_have_reactor_observer_be_in_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
 
     [Fact]
-    void should_catch_up_none_events() => Context.ReactorObserverState.LastHandledEventSequenceNumber.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
+    void should_catch_up_none_events() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
 
     [Fact]
     void should_process_all_events() => Context.Reactor.HandledEvents.ShouldEqual(0);

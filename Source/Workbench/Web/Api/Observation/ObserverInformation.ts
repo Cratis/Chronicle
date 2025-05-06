@@ -31,4 +31,7 @@ export class ObserverInformation {
 
     @field(Number)
     runningState!: ObserverRunningState;
+
+    @field(Boolean)
+    isSubscribed!: boolean;
 }

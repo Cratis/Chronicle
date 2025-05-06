@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Base;
 using Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Concepts;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Events;
 using Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.Models;
@@ -10,14 +9,14 @@ using context = Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scena
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event;
 
-[Collection(GlobalCollection.Name)]
+[Collection(ChronicleCollection.Name)]
 public class with_event_that_changes_multiple_properties(context context) : Given<context>(context)
 {
     const string GroupName = "Group";
     const string UserName = "User";
     const string ProfileName = "ProfileName";
 
-    public class context(GlobalFixture globalFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(globalFixture)
+    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(ChronicleFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

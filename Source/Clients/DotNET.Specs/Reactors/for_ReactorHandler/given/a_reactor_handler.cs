@@ -8,6 +8,7 @@ public class a_reactor_handler : all_dependencies
     protected ReactorHandler handler;
 
     void Establish() => handler = new(
+        _eventStore,
         _reactorId,
         _eventSequenceId,
         _reactorInvoker,

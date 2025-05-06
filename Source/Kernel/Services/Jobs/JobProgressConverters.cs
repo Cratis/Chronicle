@@ -21,7 +21,9 @@ internal static class JobProgressConverters
             TotalSteps = jobProgress.TotalSteps,
             SuccessfulSteps = jobProgress.SuccessfulSteps,
             FailedSteps = jobProgress.FailedSteps,
+            StoppedSteps = jobProgress.StoppedSteps,
             IsCompleted = jobProgress.IsCompleted,
+            IsStopped = jobProgress.IsStopped,
             Message = jobProgress.Message
         };
 }

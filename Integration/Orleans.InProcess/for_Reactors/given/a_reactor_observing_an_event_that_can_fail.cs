@@ -1,20 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Integration.Base;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
-public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixture, int numberOfObservations) : IntegrationSpecificationContext(globalFixture)
+public class a_reactor_observing_an_event_that_can_fail(ChronicleFixture ChronicleFixture, int numberOfObservations) : IntegrationSpecificationContext(ChronicleFixture)
 {
     public TaskCompletionSource[] Tcs;
     public ReactorThatCanFail[] Observers;
-    public IObserver ReactorObserver;
     public override IEnumerable<Type> Reactors => [typeof(ReactorThatCanFail)];
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
-    public Concepts.Observation.ObserverId ObserverId;
     int _activationCount;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -24,17 +20,5 @@ public class a_reactor_observing_an_event_that_can_fail(GlobalFixture globalFixt
         services.AddTransient(_ => Observers[_activationCount++]);
     }
 
-    async Task Establish()
-    {
-        ReactorObserver = GetObserverForReactor<ReactorThatCanFail>();
-        var reactorObserverState = await ReactorObserver.GetState();
-        ObserverId = reactorObserverState.Id;
-    }
-
-    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => ServicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()
-    {
-        EventStore = EventStore.Name.Value,
-        Namespace = Concepts.EventStoreNamespaceName.Default,
-        ObserverId = ObserverId
-    });
+    protected Task<IEnumerable<FailedPartition>> GetFailedPartitions() => EventStore.Reactors.GetFailedPartitionsFor<ReactorThatCanFail>();
 }

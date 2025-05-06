@@ -4,3 +4,7 @@
   href: aggregates/aggregate-root.md
 - name: Reactors
   href: events/reactors.md
+- name: Reducers
+  href: events/reducers.md
+- name: Projections
+  href: events/projections.md

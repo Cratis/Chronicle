@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Reactors.for_ReactorHandler.given;
 public class all_dependencies : Specification
 {
     protected ReactorId _reactorId;
+    protected IEventStore _eventStore;
     protected EventSequenceId _eventSequenceId;
     protected IReactorInvoker _reactorInvoker;
     protected ICausationManager _causationManager;
@@ -16,6 +17,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
+        _eventStore = Substitute.For<IEventStore>();
         _reactorId = Guid.NewGuid().ToString();
         _eventSequenceId = Guid.NewGuid().ToString();
         _reactorInvoker = Substitute.For<IReactorInvoker>();
