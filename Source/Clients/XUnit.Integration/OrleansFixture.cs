@@ -26,6 +26,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     readonly IAsyncDisposable _webApplicationFactory;
     bool _backupPerformed;
     string _name = string.Empty;
+    IServiceProvider? _services;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrleansFixture"/> class.
@@ -48,8 +49,6 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
 
         var configureServices = ConfigureServices;
         _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices]) as IAsyncDisposable)!;
-        var services = _servicesProperty.GetValue(_webApplicationFactory);
-        Services = (services as IServiceProvider)!;
     }
 
     /// <summary>
@@ -135,7 +134,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
     /// </summary>
-    public IServiceProvider Services { get; } = null!;
+    public IServiceProvider Services => _services ??= (_servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
 
     /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
