@@ -13,6 +13,8 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 </Project>
