@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
-using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Builder;
@@ -33,7 +32,7 @@ public class ChronicleWebApplicationFactory<TStartup>(
     protected override IHostBuilder CreateHostBuilder()
     {
         var builder = Host.CreateDefaultBuilder();
-        var chronicleOptions = new Concepts.Configuration.ChronicleOptions();
+        var chronicleOptions = new Configuration.ChronicleOptions();
 
         builder.UseCratisMongoDB(
             mongo =>
