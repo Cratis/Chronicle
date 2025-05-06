@@ -1428,6 +1428,8 @@
       "Cratis.Chronicle.AspNetCore": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle": "[1.0.0, )",
+          "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[12.0.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1489,7 +1491,6 @@
       "Cratis.Chronicle.Diagnostics": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Concepts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "OpenTelemetry": "[1.12.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.12.0, )",
@@ -1549,8 +1550,10 @@
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
+          "Microsoft.Extensions.Hosting": "[9.0.4, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
@@ -1560,7 +1563,10 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Applications.Orleans": "[15.10.0, )",
+          "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
+          "Cratis.Chronicle.Connections": "[1.0.0, )",
+          "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Microsoft.Extensions.Resilience": "[9.4.0, )",
           "Microsoft.Orleans.BroadcastChannel": "[9.1.2, )",
@@ -1628,7 +1634,11 @@
       "Cratis.Chronicle.XUnit.Integration": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Applications.MongoDB": "[15.10.0, )",
+          "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
+          "Cratis.Chronicle.Configuration": "[1.0.0, )",
+          "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
           "Cratis.Chronicle.Orleans.InProcess": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Cratis.Specifications.XUnit": "[3.0.4, )",

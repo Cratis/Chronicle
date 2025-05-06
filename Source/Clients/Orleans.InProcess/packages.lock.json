@@ -366,8 +366,16 @@
       },
       "Grpc.Core.Api": {
         "type": "Transitive",
-        "resolved": "2.66.0",
-        "contentHash": "HsjsQVAHe4hqP4t4rpUnmq+MZvPdyrlPsWF4T5fbMvyP3o/lMV+KVJfDlaNH8+v0aGQTVT3EsDFufbhaWb52cw=="
+        "resolved": "2.71.0",
+        "contentHash": "QquqUC37yxsDzd1QaDRsH2+uuznWPTS8CVE2Yzwl3CvU4geTNkolQXoVN812M2IwT6zpv3jsZRc9ExJFNFslTg=="
+      },
+      "Grpc.Net.Common": {
+        "type": "Transitive",
+        "resolved": "2.71.0",
+        "contentHash": "v0c8R97TwRYwNXlC8GyRXwYTCNufpDfUtj9la+wUrZFzVWkFJuNAltU+c0yI3zu0jl54k7en6u2WKgZgd57r2Q==",
+        "dependencies": {
+          "Grpc.Core.Api": "2.71.0"
+        }
       },
       "Humanizer.Core": {
         "type": "Transitive",
@@ -1494,9 +1502,26 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
+      "Cratis.Chronicle": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "FluentValidation": "[12.0.0, )",
+          "Grpc.Net.Client": "[2.71.0, )",
+          "Microsoft.Extensions.Hosting": "[9.0.4, )",
+          "NJsonSchema": "[11.3.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Reactive": "[6.0.1, )",
+          "System.Text.Json": "[9.0.4, )",
+          "protobuf-net.Grpc": "[1.2.2, )"
+        }
+      },
       "Cratis.Chronicle.AspNetCore": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle": "[1.0.0, )",
+          "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[12.0.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1534,10 +1559,30 @@
           "System.Text.Json": "[9.0.4, )"
         }
       },
+      "Cratis.Chronicle.Connections": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle.Contracts": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "Grpc.Net.Client": "[2.71.0, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Reactive": "[6.0.1, )",
+          "System.Text.Json": "[9.0.4, )",
+          "protobuf-net.Grpc": "[1.2.2, )"
+        }
+      },
+      "Cratis.Chronicle.Contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.4, )",
+          "protobuf-net.Grpc": "[1.2.2, )"
+        }
+      },
       "Cratis.Chronicle.Diagnostics": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Concepts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "OpenTelemetry": "[1.12.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.12.0, )",
@@ -1597,8 +1642,10 @@
       "Cratis.Chronicle.Orleans": {
         "type": "Project",
         "dependencies": {
+          "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
+          "Microsoft.Extensions.Hosting": "[9.0.4, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
@@ -1694,6 +1741,16 @@
         "requested": "[12.0.0, )",
         "resolved": "12.0.0",
         "contentHash": "8NVLxtMUXynRHJIX3Hn1ACovaqZIJASufXIIFkD0EUbcd5PmMsL1xUD5h548gCezJ5BzlITaR9CAMrGe29aWpA=="
+      },
+      "Grpc.Net.Client": {
+        "type": "CentralTransitive",
+        "requested": "[2.71.0, )",
+        "resolved": "2.71.0",
+        "contentHash": "U1vr20r5ngoT9nlb7wejF28EKN+taMhJsV9XtK9MkiepTZwnKxxiarriiMfCHuDAfPUm9XUjFMn/RIuJ4YY61w==",
+        "dependencies": {
+          "Grpc.Net.Common": "2.71.0",
+          "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
+        }
       },
       "Humanizer": {
         "type": "CentralTransitive",
