@@ -22,6 +22,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     static Type _webApplicationFactoryType = null!;
     static PropertyInfo _servicesProperty = null!;
     static bool _isInitialized;
+    static string _contentRoot = string.Empty;
 
     readonly IAsyncDisposable _webApplicationFactory;
     bool _backupPerformed;
@@ -39,6 +40,15 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
         if (!_isInitialized)
         {
             var testAssembly = TestAssemblyLocator.GetTestAssembly();
+
+            var codeBaseUri = new Uri(testAssembly!.Location);
+            _contentRoot = Path.GetDirectoryName(codeBaseUri.LocalPath)!;
+
+            while (!Directory.EnumerateFiles(_contentRoot, "*.csproj").Any())
+            {
+                _contentRoot = Path.GetDirectoryName(_contentRoot)!;
+            }
+
             var startupType = testAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
             startupType ??= testAssembly!.ExportedTypes.FirstOrDefault()!;
             _webApplicationFactoryType = typeof(ChronicleWebApplicationFactory<>).MakeGenericType(startupType!);
@@ -48,7 +58,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
         }
 
         var configureServices = ConfigureServices;
-        _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices]) as IAsyncDisposable)!;
+        _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices, _contentRoot]) as IAsyncDisposable)!;
     }
 
     /// <summary>
@@ -168,7 +178,6 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     /// <inheritdoc/>
     public virtual void Dispose()
     {
-        (_webApplicationFactory as IDisposable)?.Dispose();
     }
 
     /// <inheritdoc/>
@@ -187,7 +196,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
         }
 
         await ChronicleFixture.RemoveAllDatabases();
-        await _webApplicationFactory.DisposeAsync();
+        _ = Task.Run(_webApplicationFactory.DisposeAsync);
     }
 
     /// <summary>
