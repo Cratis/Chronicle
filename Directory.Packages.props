@@ -87,7 +87,7 @@
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="8.1.1" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="8.0.2" />
         <PackageVersion Include="automapper" Version="14.0.0" />
-        <PackageVersion Include="FluentValidation" Version="11.11.0" />
+        <PackageVersion Include="FluentValidation" Version="12.0.0" />
         <PackageVersion Include="handlebars.net" Version="2.1.6" />
         <PackageVersion Include="OneOf" Version="3.0.271" />
         <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
