@@ -12,5 +12,5 @@ public class ChronicleCollection : ICollectionFixture<ChronicleFixture>
     /// <summary>
     /// Gets the name of the collection.
     /// </summary>
-    public const string Name = "Global";
+    public const string Name = "Chronicle";
 }
