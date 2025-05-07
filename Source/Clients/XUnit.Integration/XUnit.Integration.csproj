@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <Target Name="BuildDependencies">
-        <MSBuild Projects="../Orleans/Orleans.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <MSBuild Projects="../Orleans.InProcess/Orleans.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
     </Target>
 
     <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
@@ -26,8 +26,12 @@
         <ProjectReference Include="../DotNET/DotNET.csproj"/>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../Orleans.InProcess/Orleans.InProcess.csproj" />
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
