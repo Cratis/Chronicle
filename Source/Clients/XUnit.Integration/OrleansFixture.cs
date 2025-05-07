@@ -103,9 +103,6 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     public virtual IEnumerable<Type> Projections { get; } = [];
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Adapters { get; } = [];
-
-    /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors { get; } = [];
 
     /// <inheritdoc/>
