@@ -1522,6 +1522,7 @@
         "dependencies": {
           "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
+          "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[12.0.0, )",
           "System.Private.Uri": "[4.3.2, )",

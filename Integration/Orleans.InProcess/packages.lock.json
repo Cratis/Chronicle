@@ -1430,6 +1430,7 @@
         "dependencies": {
           "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
+          "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "FluentValidation": "[12.0.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1654,10 +1655,8 @@
           "Cratis.Chronicle.Concepts": "[1.0.0, )",
           "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
-          "Cratis.Chronicle.Grains": "[1.0.0, )",
           "Cratis.Chronicle.Orleans.InProcess": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
-          "Cratis.Chronicle.Storage.MongoDB": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Cratis.Specifications.XUnit": "[3.0.4, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[9.0.4, )",
