@@ -56,7 +56,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
             startupType ??= testAssembly!.ExportedTypes.FirstOrDefault()!;
             _webApplicationFactoryType = typeof(ChronicleWebApplicationFactory<>).MakeGenericType(startupType!);
             _servicesProperty = _webApplicationFactoryType.GetProperty(nameof(ChronicleWebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
-            _createClientMethod = _webApplicationFactoryType.GetMethod(nameof(ChronicleWebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public)!;
+            _createClientMethod = _webApplicationFactoryType.GetMethod(nameof(ChronicleWebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
             _createClientWithOptionsMethod = _webApplicationFactoryType.GetMethod(nameof(ChronicleWebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
 
             _isInitialized = true;
