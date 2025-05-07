@@ -8,6 +8,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using DotNet.Testcontainers.Networks;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
 using Xunit;
@@ -21,6 +22,8 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
 {
     static Type _webApplicationFactoryType = null!;
     static PropertyInfo _servicesProperty = null!;
+    static MethodInfo _createClientMethod = null!;
+    static MethodInfo _createClientWithOptionsMethod = null!;
     static bool _isInitialized;
     static string _contentRoot = string.Empty;
 
@@ -52,7 +55,9 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
             var startupType = testAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
             startupType ??= testAssembly!.ExportedTypes.FirstOrDefault()!;
             _webApplicationFactoryType = typeof(ChronicleWebApplicationFactory<>).MakeGenericType(startupType!);
-            _servicesProperty = _webApplicationFactoryType.GetProperty("Services", BindingFlags.Instance | BindingFlags.Public)!;
+            _servicesProperty = _webApplicationFactoryType.GetProperty(nameof(ChronicleWebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
+            _createClientMethod = _webApplicationFactoryType.GetMethod(nameof(ChronicleWebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
+            _createClientWithOptionsMethod = _webApplicationFactoryType.GetMethod(nameof(ChronicleWebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
 
             _isInitialized = true;
         }
@@ -174,6 +179,19 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     public void Initialize()
     {
     }
+
+    /// <summary>
+    /// Create a new <see cref="HttpClient"/> instance.
+    /// </summary>
+    /// <returns>A new <see cref="HttpClient"/> instance.</returns>
+    public HttpClient CreateClient() => (_createClientMethod.Invoke(_webApplicationFactory, null) as HttpClient)!;
+
+    /// <summary>
+    /// Create a new <see cref="HttpClient"/> instance.
+    /// </summary>
+    /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
+    /// <returns>A new <see cref="HttpClient"/> instance.</returns>
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => (_createClientMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
 
     /// <inheritdoc/>
     public virtual void Dispose()
