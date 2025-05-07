@@ -618,21 +618,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "Namotion.Reflection": {
-        "type": "Transitive",
-        "resolved": "3.4.2",
-        "contentHash": "ZHrvPdAg7zV78iOTiH9ua+34rBfn4iH6Bjfo2bzUHOGD3KkjGUvqxBFy+v9p6qwV+GEeYWl4NOqXH8tVcZOMpw=="
-      },
-      "Newtonsoft.Json": {
-        "type": "Transitive",
-        "resolved": "13.0.3",
-        "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
-      },
-      "NJsonSchema.Annotations": {
-        "type": "Transitive",
-        "resolved": "11.3.2",
-        "contentHash": "rSwQFKdLlq/lbAJfYqI5KBE46KJCbc99L6G9XM1nVpCOxE0eoaNE8+fkJ7Ws+I5VqP7oEPGKXTR3Q7PmYoeTDA=="
-      },
       "OpenTelemetry.Api": {
         "type": "Transitive",
         "resolved": "1.11.2",
@@ -730,27 +715,6 @@
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
-      "Cratis.Chronicle.Infrastructure": {
-        "type": "Project",
-        "dependencies": {
-          "Cratis.Fundamentals": "[6.3.2, )",
-          "FluentValidation": "[12.0.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[9.0.4, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.4, )",
-          "NJsonSchema": "[11.3.2, )",
-          "OpenTelemetry.Exporter.InMemory": "[1.11.2, )",
-          "System.Private.Uri": "[4.3.2, )",
-          "System.Reactive": "[6.0.1, )",
-          "System.Text.Json": "[9.0.4, )",
-          "humanizer": "[2.14.1, )"
-        }
-      },
-      "FluentValidation": {
-        "type": "CentralTransitive",
-        "requested": "[12.0.0, )",
-        "resolved": "12.0.0",
-        "contentHash": "8NVLxtMUXynRHJIX3Hn1ACovaqZIJASufXIIFkD0EUbcd5PmMsL1xUD5h548gCezJ5BzlITaR9CAMrGe29aWpA=="
-      },
       "Humanizer": {
         "type": "CentralTransitive",
         "requested": "[2.14.1, )",
@@ -810,34 +774,23 @@
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
         "requested": "[9.0.4, )",
-        "resolved": "9.0.4",
-        "contentHash": "f2MTUaS2EQ3lX4325ytPAISZqgBfXmY0WvgD80ji6Z20AoDNiCESxsqo6mFRwHJD/jfVKRw9FsW6+86gNre3ug==",
+        "resolved": "9.0.3",
+        "contentHash": "lDbxJpkl6X8KZGpkAxgrrthQ42YeiR0xjPp7KPx+sCPc3ZbpaIbjzd0QQ+9kDdK2RU2DOl3pc6tQyAgEZY3V0A==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.4"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.3"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[9.0.4, )",
-        "resolved": "9.0.4",
-        "contentHash": "UI0TQPVkS78bFdjkTodmkH0Fe8lXv9LnhGFKgKrsgUJ5a5FVdFRcgjIkBVLbGgdRhxWirxH/8IXUtEyYJx6GQg=="
+        "resolved": "9.0.3",
+        "contentHash": "TfaHPSe39NyL2wxkisRxXK7xvHGZYBZ+dy3r+mqGvnxKgAPdHkMu3QMQZI4pquP6W5FIQBqs8FJpWV8ffCgDqQ=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "CentralTransitive",
         "requested": "[9.0.4, )",
         "resolved": "9.0.3",
         "contentHash": "194P+NOekDXrPHmM2R8678T4bRfZ2isQXDDAsXKE5qI0QLUnXbwB0upljAkyxk+Kkt1DV1tV+9tHOtHEEh3ksw=="
-      },
-      "NJsonSchema": {
-        "type": "CentralTransitive",
-        "requested": "[11.3.2, )",
-        "resolved": "11.3.2",
-        "contentHash": "QXvelMLKz1NsMPc0HndaaxryNIV1V+AFYuZV9w3H6e+03jp3f3n1w8XLcIaA5WA51EHQdZEP4V2Bfgl6kpxDKg==",
-        "dependencies": {
-          "NJsonSchema.Annotations": "11.3.2",
-          "Namotion.Reflection": "3.4.2",
-          "Newtonsoft.Json": "13.0.3"
-        }
       },
       "OpenTelemetry": {
         "type": "CentralTransitive",
@@ -848,15 +801,6 @@
           "Microsoft.Extensions.Diagnostics.Abstractions": "9.0.0",
           "Microsoft.Extensions.Logging.Configuration": "9.0.0",
           "OpenTelemetry.Api.ProviderBuilderExtensions": "1.11.2"
-        }
-      },
-      "OpenTelemetry.Exporter.InMemory": {
-        "type": "CentralTransitive",
-        "requested": "[1.11.2, )",
-        "resolved": "1.11.2",
-        "contentHash": "LJkSqzSjIh7DiJN1xbuAxFwug15NLn7dX6taLFiOMiuqxNpk79thfsI3nP+nYilWJF3Du5L2pglB+xquJHLPGw==",
-        "dependencies": {
-          "OpenTelemetry": "1.11.2"
         }
       }
     },
