@@ -1594,6 +1594,19 @@
           "System.Text.Json": "[9.0.4, )"
         }
       },
+      "Cratis.Chronicle.Setup": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Fundamentals": "[6.3.2, )",
+          "Microsoft.Extensions.Resilience": "[9.4.0, )",
+          "Microsoft.Orleans.Serialization.SystemTextJson": "[9.1.2, )",
+          "Microsoft.Orleans.Server": "[9.1.2, )",
+          "Microsoft.Orleans.Streaming": "[9.1.2, )",
+          "NJsonSchema": "[11.3.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.4, )"
+        }
+      },
       "Cratis.Chronicle.Storage": {
         "type": "Project",
         "dependencies": {
@@ -1626,6 +1639,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle": "[1.0.0, )",
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
@@ -1637,9 +1651,13 @@
           "Cratis.Applications.MongoDB": "[15.10.0, )",
           "Cratis.Chronicle": "[1.0.0, )",
           "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
+          "Cratis.Chronicle.Concepts": "[1.0.0, )",
           "Cratis.Chronicle.Configuration": "[1.0.0, )",
           "Cratis.Chronicle.Diagnostics": "[1.0.0, )",
+          "Cratis.Chronicle.Grains": "[1.0.0, )",
           "Cratis.Chronicle.Orleans.InProcess": "[1.0.0, )",
+          "Cratis.Chronicle.Setup": "[1.0.0, )",
+          "Cratis.Chronicle.Storage.MongoDB": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "Cratis.Specifications.XUnit": "[3.0.4, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[9.0.4, )",

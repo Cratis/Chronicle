@@ -1150,6 +1150,7 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle": "[1.0.0, )",
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.3.2, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
