@@ -53,6 +53,7 @@
 
         <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj">
