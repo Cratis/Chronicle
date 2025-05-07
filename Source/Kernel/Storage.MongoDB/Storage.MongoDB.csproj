@@ -23,6 +23,5 @@
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-
     </ItemGroup>
 </Project>
