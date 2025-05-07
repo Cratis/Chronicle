@@ -29,9 +29,9 @@
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
+        <!-- <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/> -->
     </ItemGroup>
 
     <ItemGroup>
