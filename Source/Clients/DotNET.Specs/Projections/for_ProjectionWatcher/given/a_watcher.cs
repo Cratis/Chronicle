@@ -13,8 +13,8 @@ public class a_watcher : Specification
     protected IChronicleConnection _connection;
     protected IConnectionLifecycle _lifecycle;
     internal IChronicleServicesAccessor _serviceAccessor;
-    protected IServices _services;
-    protected Contracts.Projections.IProjections _projectionsService;
+    internal IServices _services;
+    internal Contracts.Projections.IProjections _projectionsService;
     protected ProjectionWatcher<SomeModel> _watcher;
     protected int _stopCount;
 

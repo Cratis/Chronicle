@@ -20,7 +20,7 @@ public class all_dependencies : Specification
     protected IIdentityProvider _identityProvider;
     protected IChronicleConnection _connection;
     internal IChronicleServicesAccessor _serviceAccessor;
-    protected IEventSequences _eventSequences;
+    internal IEventSequences _eventSequences;
     internal IServices services;
     protected ICorrelationIdAccessor _correlationIdAccessor;
 
