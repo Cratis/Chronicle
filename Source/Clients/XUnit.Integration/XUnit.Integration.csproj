@@ -10,12 +10,6 @@
         <MSBuild Projects="../Orleans.InProcess/Orleans.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
     </Target>
 
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
-    </PropertyGroup>
-
     <ItemGroup Condition="'$(Repack)' == 'true'">
         <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
         <Reference Include="../AspNetCore/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.AspNetCore.dll"/>
@@ -30,9 +24,15 @@
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
         <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
-        <!-- <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/> -->
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
     </ItemGroup>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="xunit">
