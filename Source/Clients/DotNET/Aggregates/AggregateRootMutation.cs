@@ -55,7 +55,14 @@ public class AggregateRootMutation(
             { CausationAggregateRootTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
             { CausationEventSequenceIdProperty, eventSequence.Id }
         });
-        aggregateRootContext.UnitOfWOrk.AddEvent(eventSequence.Id, EventSourceId, @event, causation);
+        aggregateRootContext.UnitOfWOrk.AddEvent(
+            eventSequence.Id,
+            EventSourceId,
+            @event,
+            causation,
+            aggregateRootContext.EventStreamType,
+            aggregateRootContext.EventStreamId,
+            aggregateRootContext.EventSourceType);
         UncommittedEvents = UncommittedEvents.Add(@event);
 
         await mutator.Mutate(@event);

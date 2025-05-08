@@ -20,4 +20,20 @@ public record EventForEventSourceIdWithSequenceNumber(
     EventSequenceNumber SequenceNumber,
     EventSourceId EventSourceId,
     object Event,
-    Causation Causation);
+    Causation Causation)
+{
+    /// <summary>
+    /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.
+    /// </summary>
+    public EventStreamType EventStreamType { get; init; } = EventStreamType.All;
+
+    /// <summary>
+    /// Gets or inits the <see cref="EventStreamId"/> for the event. Defaults to <see cref="EventStreamId.Default"/>.
+    /// </summary>
+    public EventStreamId EventStreamId { get; init; } = EventStreamId.Default;
+
+    /// <summary>
+    /// Gets or inits the <see cref="EventSourceType"/> for the event. Defaults to <see cref="EventSourceType.Default"/>.
+    /// </summary>
+    public EventSourceType EventSourceType { get; init; } = EventSourceType.Default;
+}

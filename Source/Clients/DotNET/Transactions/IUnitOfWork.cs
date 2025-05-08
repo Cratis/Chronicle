@@ -39,7 +39,17 @@ public interface IUnitOfWork : IDisposable
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> for the event.</param>
     /// <param name="event">The event that has occurred.</param>
     /// <param name="causation">The <see cref="Causation"/> for the event.</param>
-    void AddEvent(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation);
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> for the event, will default to the All stream if not set.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> for the event, will default to Default is not set.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> for the event, will default to Default is not set.</param>
+    void AddEvent(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        object @event,
+        Causation causation,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default);
 
     /// <summary>
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.
