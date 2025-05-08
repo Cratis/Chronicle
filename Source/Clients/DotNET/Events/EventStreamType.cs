@@ -15,11 +15,6 @@ public record EventStreamType(string Value) : ConceptAs<string>(Value)
     public static readonly EventStreamType All = "All";
 
     /// <summary>
-    /// Gets the representation of an <see cref="EventStreamType"/> representing aggregate roots.
-    /// </summary>
-    public static readonly EventStreamType AggregateRoot = "AggregateRoot";
-
-    /// <summary>
     /// Check whether or not the <see cref="EventStreamType"/> is the all type.
     /// </summary>
     public bool IsAll => this == All;
