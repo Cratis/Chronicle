@@ -407,7 +407,8 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             {
                 StatusChanged(State.Progress.FailedSteps > 0 ? JobStatus.CompletedWithFailures : JobStatus.CompletedSuccessfully);
             }
-            var shouldClearState = State.Status is not JobStatus.Failed and not JobStatus.CompletedWithFailures && (State.Status is JobStatus.Removing || !KeepAfterCompleted);
+            var shouldClearState = State.Status is not JobStatus.Failed and not JobStatus.CompletedWithFailures &&
+                                    (State.Status is JobStatus.Removing || !KeepAfterCompleted);
             if (shouldClearState)
             {
                 await ClearStateAsync();

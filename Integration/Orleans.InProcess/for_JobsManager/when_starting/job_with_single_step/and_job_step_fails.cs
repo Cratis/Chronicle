@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
@@ -18,7 +16,7 @@ public class and_job_step_fails(context context) : Given<context>(context)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
-        public IImmutableList<JobStepState> JobStepStates;
+        public IEnumerable<JobStep> JobStep;
         public Concepts.Jobs.JobId JobId;
 
         async Task Because()
@@ -31,7 +29,7 @@ public class and_job_step_fails(context context) : Given<context>(context)
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
 
             CompletedJobState = await EventStore.Jobs.WaitTillJobProgressCompleted(JobId.Value);
-            JobStepStates = getJobStepState.AsT0;
+            JobStep = await CompletedJobState.GetJobSteps();
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status is JobStatus.CompletedWithFailures);
         }
     }
@@ -46,10 +44,10 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_keep_state_of_failed_job_step() => Context.JobStepStates.ShouldContainSingleItem();
+    public void should_keep_state_of_failed_job_step() => Context.JobStep.ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_job_step_state_where_status_is_failed() => Context.JobStepStates[0].Status.ShouldEqual(Concepts.Jobs.JobStepStatus.CompletedWithFailure);
+    public void should_have_job_step_state_where_status_is_failed() => Context.JobStep.First().Status.ShouldEqual(JobStepStatus.CompletedWithFailure);
 
     [Fact]
     public void should_have_completed_job_with_failure() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedWithFailures);

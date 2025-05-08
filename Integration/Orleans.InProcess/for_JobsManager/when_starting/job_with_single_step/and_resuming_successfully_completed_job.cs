@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_resuming_successfully_completed_job.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
@@ -19,7 +17,7 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
         public Concepts.Jobs.JobId JobId;
-        public IImmutableList<JobStepState> JobStepStates;
+        public IEnumerable<JobStep> JobSteps;
 
         async Task Because()
         {
@@ -27,11 +25,11 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             await TheJobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
+            var job = await EventStore.Jobs.GetJob(JobId.Value);
             var x = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully, TimeSpanFactory.FromSeconds(20));
             await JobsManager.Resume(JobId);
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully && state.Progress.IsCompleted, TimeSpanFactory.FromSeconds(20));
-            var getJobStepState = await JobStepStorage.GetForJob(JobId);
-            JobStepStates = getJobStepState.AsT0;
+            JobSteps = await job.GetJobSteps();
         }
     }
 
@@ -42,7 +40,7 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_not_keep_any_job_step_states_after_completed() => Context.JobStepStates.ShouldBeEmpty();
+    public void should_not_keep_any_job_step_states_after_completed() => Context.JobSteps.ShouldBeEmpty();
 
     [Fact]
     public void should_have_completed_job_successfully() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedSuccessfully);

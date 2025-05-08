@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_deleted.context;
 
@@ -18,7 +16,7 @@ public class and_job_is_deleted(context context) : Given<context>(context)
     public class context(ChronicleFixture ChronicleFixture) : given.a_jobs_manager(ChronicleFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
-        public IImmutableList<JobStepState> JobStepStates;
+        public IEnumerable<JobStep> JobSteps;
         public Concepts.Jobs.JobId JobId;
 
         async Task Because()
@@ -27,12 +25,12 @@ public class and_job_is_deleted(context context) : Given<context>(context)
             TheJobStepProcessor.SetStartTask(taskCompletionSource.Task);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             JobId = StartJobResult.AsT0;
+            var job = await EventStore.Jobs.GetJob(JobId.Value);
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Delete(JobId);
             taskCompletionSource.SetResult();
             await EventStore.Jobs.WaitTillJobIsDeleted(JobId.Value);
-            var getJobStepState = await JobStepStorage.GetForJob(JobId);
-            JobStepStates = getJobStepState.AsT0;
+            JobSteps = await job.GetJobSteps();
         }
     }
 
@@ -40,7 +38,7 @@ public class and_job_is_deleted(context context) : Given<context>(context)
     public void should_start_job() => Context.StartJobResult.IsSuccess.ShouldBeTrue();
 
     [Fact]
-    public void should_remove_state_of_job_step() => Context.JobStepStates.ShouldBeEmpty();
+    public void should_remove_state_of_job_step() => Context.JobSteps.ShouldBeEmpty();
 
     [Fact]
     public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
