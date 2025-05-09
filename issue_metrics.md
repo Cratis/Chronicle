@@ -2,19 +2,20 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 125 days, 18:08:14 | 1 day, 17:46:30 | 260 days, 20:54:35 |
+| Time to first response | 122 days, 6:18:55 | 1 day, 9:27:20 | 242 days, 12:51:50 |
 | Time to close | 253 days, 4:38:52 | 108 days, 12:11:06 | 787 days, 18:12:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 293 |
+| Number of items that remain open | 294 |
 | Number of items closed | 532 |
 | Number of most active mentors | 0 |
-| Total number of items created | 825 |
+| Total number of items created | 826 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Watch Projection changeset for Children RemoveWithJoin issue | https://github.com/Cratis/Chronicle/issues/1896 | [woksin](https://github.com/woksin) | 0:32:56 | None | None |
 | Formalize Read Model definition storage and make it generational | https://github.com/Cratis/Chronicle/issues/1877 | [einari](https://github.com/einari) | None | None | None |
 | Support SQL type of servers as Sink for Reducers and Projections | https://github.com/Cratis/Chronicle/issues/1869 | [einari](https://github.com/einari) | 8 days, 18:13:02 | None | None |
 | Support SQL type Servers as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | [einari](https://github.com/einari) | None | None | None |
@@ -369,5 +370,4 @@
 | Optimize ClientObserver/Reducer registration | https://github.com/Cratis/Chronicle/issues/944 | [einari](https://github.com/einari) | None | 541 days, 0:55:30 | None |
 | Hard to figure out how to get going with a minimal setup | https://github.com/Cratis/Chronicle/issues/943 | [woksin](https://github.com/woksin) | 26 days, 21:25:43 | 26 days, 21:33:48 | None |
 | Fix namespaces | https://github.com/Cratis/Chronicle/issues/939 | [einari](https://github.com/einari) | None | 346 days, 19:01:00 | None |
-| Formalize storage APIs - move away from having to implement Orleans interfaces | https://github.com/Cratis/Chronicle/issues/934 | [einari](https://github.com/einari) | None | 297 days, 7:13:29 | None |
-| Pr
+| Formalize storage APIs - move a
