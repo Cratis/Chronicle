@@ -18,10 +18,17 @@ public class UnitOfWorkMiddleware(RequestDelegate next)
     /// </summary>
     /// <param name="context">The <see cref="HttpContext"/>. </param>
     /// <param name="unitOfWorkManager">The <see cref="IUnitOfWorkManager"/> to use.</param>
+    /// <param name="correlationIdAccessor">The <see cref="ICorrelationIdAccessor"/> to get the <see cref="CorrelationId"/> from.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task InvokeAsync(HttpContext context, IUnitOfWorkManager unitOfWorkManager)
+    public async Task InvokeAsync(HttpContext context, IUnitOfWorkManager unitOfWorkManager, ICorrelationIdAccessor correlationIdAccessor)
     {
-        var unitOfWork = unitOfWorkManager.Begin(CorrelationId.New());
+        var correlationId = correlationIdAccessor.Current;
+        if (correlationId == CorrelationId.NotSet)
+        {
+            correlationId = CorrelationId.New();
+            CorrelationIdAccessor.SetCurrent(correlationId);
+        }
+        var unitOfWork = unitOfWorkManager.Begin(correlationId);
         try
         {
             await next(context);

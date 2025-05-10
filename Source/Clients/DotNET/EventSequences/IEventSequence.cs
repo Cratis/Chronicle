@@ -17,6 +17,16 @@ public interface IEventSequence
     EventSequenceId Id { get; }
 
     /// <summary>
+    /// Gets the transactional event sequence.
+    /// </summary>
+    /// <remarks>
+    /// Use this when you want to typically append events to the event sequence as a transaction that takes place in the same unit of work.
+    /// This is very useful when you have disperse event sources that you want to append events to in a single transaction, typically within one request.
+    /// Using this will also mean that any result will be handled by Chronicle infrastructure and bubbled up, typically when using Chronicle with ASP.NET Core.
+    /// </remarks>
+    ITransactionalEventSequence Transactional { get; }
+
+    /// <summary>
     /// Get all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
@@ -66,7 +76,7 @@ public interface IEventSequence
     Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type);
 
     /// <summary>
-    /// Append a single event to the event store as a transaction.
+    /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="event">The event.</param>
@@ -74,7 +84,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
         EventSourceId eventSourceId,
         object @event,
@@ -84,7 +94,7 @@ public interface IEventSequence
         CorrelationId? correlationId = default);
 
     /// <summary>
-    /// Append a collection of events to the event store.
+    /// Append a collection of events to the event store as a transaction.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of events to append.</param>
@@ -92,7 +102,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
     /// </remarks>
@@ -109,7 +119,7 @@ public interface IEventSequence
     /// </summary>
     /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
     /// </remarks>

@@ -28,6 +28,9 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public EventSequenceId Id => EventSequenceId.Log;
 
     /// <inheritdoc/>
+    public ITransactionalEventSequence Transactional => throw new NotImplementedException();
+
+    /// <inheritdoc/>
     public Task<AppendResult> Append(
         EventSourceId eventSourceId,
         object @event,

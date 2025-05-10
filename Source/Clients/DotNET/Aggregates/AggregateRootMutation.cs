@@ -22,7 +22,7 @@ public class AggregateRootMutation(
     /// <summary>
     /// The causation aggregate root type property.
     /// </summary>
-    public const string CausationAggregateRootTypeProperty = "aggregateRootType";
+    public const string AggregateRootCausationTypeProperty = "aggregateRootType";
 
     /// <summary>
     /// The event sequence id causation property.
@@ -52,7 +52,7 @@ public class AggregateRootMutation(
         @event.GetType().ValidateEventType();
         var causation = new Causation(DateTimeOffset.Now, CausationType, new Dictionary<string, string>
         {
-            { CausationAggregateRootTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
+            { AggregateRootCausationTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
             { CausationEventSequenceIdProperty, eventSequence.Id }
         });
         aggregateRootContext.UnitOfWOrk.AddEvent(
