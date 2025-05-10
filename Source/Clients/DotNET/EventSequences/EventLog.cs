@@ -5,6 +5,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
+/// <param name="unitOfWorkManager"><see cref="IUnitOfWorkManager"/> for working with the unit of work.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 public class EventLog(
      EventStoreName eventStoreName,
@@ -32,6 +34,7 @@ public class EventLog(
      IEventSerializer eventSerializer,
      ICorrelationIdAccessor correlationIdAccessor,
      ICausationManager causationManager,
+     IUnitOfWorkManager unitOfWorkManager,
      IIdentityProvider identityProvider) : EventSequence(
         eventStoreName,
         @namespace,
@@ -42,6 +45,5 @@ public class EventLog(
         eventSerializer,
         correlationIdAccessor,
         causationManager,
-        identityProvider), IEventLog
-{
-}
+        unitOfWorkManager,
+        identityProvider), IEventLog;

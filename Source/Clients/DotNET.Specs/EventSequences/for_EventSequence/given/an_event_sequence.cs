@@ -19,6 +19,7 @@ public class an_event_sequence : all_dependencies
             _eventSerializer,
             _correlationIdAccessor,
             _causationManager,
+            _unitOfWorkManager,
             _identityProvider);
     }
 }
