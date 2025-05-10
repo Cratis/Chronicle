@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Rules;
 /// <summary>
 /// Defines a system that knows about projections related to rules.
 /// </summary>
-public interface IRulesProjections
+internal interface IRulesProjections
 {
     /// <summary>
     /// Discover all the projection definitions related to rules.

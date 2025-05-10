@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <summary>
 /// Extension methods for converting to and from <see cref="ProjectionResult"/>.
 /// </summary>
-public static class ProjectionResultConverters
+internal static class ProjectionResultConverters
 {
     /// <summary>
     /// Convert to contract representation.

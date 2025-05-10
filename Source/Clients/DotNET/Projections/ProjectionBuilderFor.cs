@@ -72,8 +72,11 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         return this;
     }
 
-    /// <inheritdoc/>
-    public ProjectionDefinition Build()
+    /// <summary>
+    /// Build the projection definition.
+    /// </summary>
+    /// <returns><see cref="ProjectionDefinition"/>.</returns>
+    internal ProjectionDefinition Build()
     {
         var modelType = typeof(TModel);
         var modelSchema = _schemaGenerator.Generate(modelType);

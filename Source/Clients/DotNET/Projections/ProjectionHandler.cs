@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Observation;
 
@@ -32,7 +33,8 @@ public class ProjectionHandler(
             Namespace = eventStore.Namespace,
             EventSequenceId = definition.EventSequenceId
         };
-        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+        var state = await servicesAccessor.Services.Observers.GetObserverInformation(request);
         return new ProjectionState(
             state.RunningState.ToClient(),
             state.IsSubscribed,

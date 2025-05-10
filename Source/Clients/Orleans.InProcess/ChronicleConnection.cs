@@ -1,13 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias Server;
-
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
-using Server::Cratis.Chronicle.Services.Clients;
 
 namespace Cratis.Chronicle.Orleans.InProcess;
 
@@ -18,27 +16,26 @@ namespace Cratis.Chronicle.Orleans.InProcess;
 /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
 /// </remarks>
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
-/// <param name="services"><see cref="IServices"/> to use.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-public class ChronicleConnection(
+internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
-    IServices services,
     IGrainFactory grainFactory,
-    ILoggerFactory loggerFactory) : IChronicleConnection
+    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
-    ConnectionService? _connectionService;
+    IServices? _services;
+    Cratis.Chronicle.Services.Clients.ConnectionService? _connectionService;
 
     /// <inheritdoc/>
-    public IConnectionLifecycle Lifecycle { get; } = lifecycle;
+    IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
 
     /// <inheritdoc/>
-    public IServices Services
+    IServices IChronicleServicesAccessor.Services
     {
         get
         {
             ConnectIfNotConnected();
-            return services;
+            return _services!;
         }
     }
 
@@ -47,9 +44,15 @@ public class ChronicleConnection(
     {
     }
 
+    /// <summary>
+    /// Set the services.
+    /// </summary>
+    /// <param name="services">Services to set.</param>
+    internal void SetServices(IServices services) => _services = services;
+
     void ConnectIfNotConnected()
     {
-        if (!Lifecycle.IsConnected)
+        if (!lifecycle.IsConnected)
         {
             Connect();
         }
@@ -57,13 +60,13 @@ public class ChronicleConnection(
 
     void Connect()
     {
-        _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
+        _connectionService = new Cratis.Chronicle.Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Cratis.Chronicle.Services.Clients.ConnectionService>());
         _connectionService.Connect(new()
         {
-            ConnectionId = Lifecycle.ConnectionId,
+            ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
-        Lifecycle.Connected();
+        lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)

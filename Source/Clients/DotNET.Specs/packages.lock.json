@@ -42,6 +42,12 @@
           "xunit": "2.8.0"
         }
       },
+      "FluentValidation": {
+        "type": "Direct",
+        "requested": "[12.0.0, )",
+        "resolved": "12.0.0",
+        "contentHash": "8NVLxtMUXynRHJIX3Hn1ACovaqZIJASufXIIFkD0EUbcd5PmMsL1xUD5h548gCezJ5BzlITaR9CAMrGe29aWpA=="
+      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[2.0.201, )",
@@ -80,6 +86,17 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
+      "NJsonSchema": {
+        "type": "Direct",
+        "requested": "[11.3.2, )",
+        "resolved": "11.3.2",
+        "contentHash": "QXvelMLKz1NsMPc0HndaaxryNIV1V+AFYuZV9w3H6e+03jp3f3n1w8XLcIaA5WA51EHQdZEP4V2Bfgl6kpxDKg==",
+        "dependencies": {
+          "NJsonSchema.Annotations": "11.3.2",
+          "Namotion.Reflection": "3.4.2",
+          "Newtonsoft.Json": "13.0.3"
+        }
+      },
       "NSubstitute": {
         "type": "Direct",
         "requested": "[5.3.0, )",
@@ -87,6 +104,17 @@
         "contentHash": "lJ47Cps5Qzr86N99lcwd+OUvQma7+fBgr8+Mn+aOC0WrlqMNkdivaYD9IvnZ5Mqo6Ky3LS7ZI+tUq1/s9ERd0Q==",
         "dependencies": {
           "Castle.Core": "5.1.1"
+        }
+      },
+      "protobuf-net.Grpc": {
+        "type": "Direct",
+        "requested": "[1.2.2, )",
+        "resolved": "1.2.2",
+        "contentHash": "ywpDWMKewrojQQyAKicELuTuaH+heEQfcuB+aJdENN9OfNOIuWLnwLdnHOzJ1162hD/1trzYDFMV5g8vmTxJTQ==",
+        "dependencies": {
+          "Grpc.Core.Api": "2.66.0",
+          "System.IO.Pipelines": "8.0.0",
+          "protobuf-net": "2.4.8"
         }
       },
       "Roslynator.Analyzers": {
@@ -1016,8 +1044,6 @@
       "Cratis.Chronicle": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Chronicle.Connections": "[1.0.0, )",
-          "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.4.0, )",
           "FluentValidation": "[12.0.0, )",
@@ -1027,7 +1053,6 @@
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.4, )",
-          "automapper": "[14.0.0, )",
           "protobuf-net.Grpc": "[1.2.2, )"
         }
       },
@@ -1035,7 +1060,6 @@
         "type": "Project",
         "dependencies": {
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
-          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.4.0, )",
           "Grpc.Net.Client": "[2.71.0, )",
           "System.Private.Uri": "[4.3.2, )",
@@ -1068,15 +1092,6 @@
           "humanizer": "[2.14.1, )"
         }
       },
-      "AutoMapper": {
-        "type": "CentralTransitive",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
-        }
-      },
       "Castle.Core": {
         "type": "CentralTransitive",
         "requested": "[5.2.1, )",
@@ -1091,12 +1106,6 @@
         "requested": "[3.0.4, )",
         "resolved": "3.0.4",
         "contentHash": "GCj4rdgNBHz7NDs43eAXwb+klzkxQJFM90eDshn6K4QAi7JYujpGf6ozpmCdZLVUx21TuBtfcye9NltRc9dwUg=="
-      },
-      "FluentValidation": {
-        "type": "CentralTransitive",
-        "requested": "[12.0.0, )",
-        "resolved": "12.0.0",
-        "contentHash": "8NVLxtMUXynRHJIX3Hn1ACovaqZIJASufXIIFkD0EUbcd5PmMsL1xUD5h548gCezJ5BzlITaR9CAMrGe29aWpA=="
       },
       "Grpc.Net.Client": {
         "type": "CentralTransitive",
@@ -1228,17 +1237,6 @@
           "Microsoft.Extensions.Options": "9.0.4"
         }
       },
-      "NJsonSchema": {
-        "type": "CentralTransitive",
-        "requested": "[11.3.2, )",
-        "resolved": "11.3.2",
-        "contentHash": "QXvelMLKz1NsMPc0HndaaxryNIV1V+AFYuZV9w3H6e+03jp3f3n1w8XLcIaA5WA51EHQdZEP4V2Bfgl6kpxDKg==",
-        "dependencies": {
-          "NJsonSchema.Annotations": "11.3.2",
-          "Namotion.Reflection": "3.4.2",
-          "Newtonsoft.Json": "13.0.3"
-        }
-      },
       "OpenTelemetry": {
         "type": "CentralTransitive",
         "requested": "[1.12.0, )",
@@ -1257,17 +1255,6 @@
         "contentHash": "LJkSqzSjIh7DiJN1xbuAxFwug15NLn7dX6taLFiOMiuqxNpk79thfsI3nP+nYilWJF3Du5L2pglB+xquJHLPGw==",
         "dependencies": {
           "OpenTelemetry": "1.11.2"
-        }
-      },
-      "protobuf-net.Grpc": {
-        "type": "CentralTransitive",
-        "requested": "[1.2.2, )",
-        "resolved": "1.2.2",
-        "contentHash": "ywpDWMKewrojQQyAKicELuTuaH+heEQfcuB+aJdENN9OfNOIuWLnwLdnHOzJ1162hD/1trzYDFMV5g8vmTxJTQ==",
-        "dependencies": {
-          "Grpc.Core.Api": "2.66.0",
-          "System.IO.Pipelines": "8.0.0",
-          "protobuf-net": "2.4.8"
         }
       },
       "System.Reactive": {

@@ -26,7 +26,7 @@ public class CatchUpObserverPartition(ILogger<CatchUpObserverPartition> logger) 
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
-            logger.NoneEventsWereHandled(nameof(CatchUpObserverPartition));
+            logger.NoEventsWereHandled(nameof(CatchUpObserverPartition));
             return;
         }
         await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber);
