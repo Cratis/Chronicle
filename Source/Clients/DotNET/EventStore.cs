@@ -100,6 +100,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             correlationIdAccessor,
             causationManager,
+            UnitOfWorkManager,
             identityProvider);
 
         Jobs = new Jobs.Jobs(this);
@@ -236,6 +237,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             _correlationIdAccessor,
             _causationManager,
+            UnitOfWorkManager,
             _identityProvider);
 
     /// <inheritdoc/>

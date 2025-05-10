@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped.context;
 
@@ -19,7 +17,7 @@ public class and_job_is_stopped(context context) : Given<context>(context)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
-        public IImmutableList<JobStepState> JobStepStates;
+        public IEnumerable<JobStep> JobSteps;
         public Concepts.Jobs.JobId JobId;
 
         async Task Because()
@@ -28,12 +26,12 @@ public class and_job_is_stopped(context context) : Given<context>(context)
             TheJobStepProcessor.SetStartTask(taskCompletionSource.Task);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             JobId = StartJobResult.AsT0;
+            var job = await EventStore.Jobs.GetJob(JobId.Value);
             await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
             CompletedJobState = await EventStore.Jobs.WaitTillJobProgressStopped(JobId.Value);
-            var getJobStepState = await JobStepStorage.GetForJob(JobId);
-            JobStepStates = getJobStepState.AsT0;
+            JobSteps = await job.GetJobSteps();
         }
     }
 
@@ -44,7 +42,7 @@ public class and_job_is_stopped(context context) : Given<context>(context)
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_not_remove_state_of_job_step() => Context.JobStepStates.ShouldNotBeEmpty();
+    public void should_not_remove_state_of_job_step() => Context.JobSteps.ShouldNotBeEmpty();
 
     [Fact]
     public void should_have_stopped_job_status() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.Stopped);

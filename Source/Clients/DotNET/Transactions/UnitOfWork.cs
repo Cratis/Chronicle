@@ -42,14 +42,26 @@ public class UnitOfWork(
     public bool IsSuccess => _constraintViolations.IsEmpty && _appendErrors.IsEmpty;
 
     /// <inheritdoc/>
-    public void AddEvent(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation)
+    public void AddEvent(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        object @event,
+        Causation causation,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default)
     {
         if (!_events.TryGetValue(eventSequenceId, out var events))
         {
             _events[eventSequenceId] = events = [];
         }
 
-        events.Add(new(_currentSequenceNumber, eventSourceId, @event, causation));
+        events.Add(new(_currentSequenceNumber, eventSourceId, @event, causation)
+        {
+            EventStreamType = eventStreamType ?? EventStreamType.All,
+            EventStreamId = eventStreamId ?? EventStreamId.Default,
+            EventSourceType = eventSourceType ?? EventSourceType.Default
+        });
 
         _currentSequenceNumber++;
     }
@@ -75,7 +87,12 @@ public class UnitOfWork(
         {
             var sorted = events
                             .OrderBy(_ => _.SequenceNumber)
-                            .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation))
+                            .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation)
+                            {
+                                EventStreamType = e.EventStreamType,
+                                EventStreamId = e.EventStreamId,
+                                EventSourceType = e.EventSourceType
+                            })
                             .ToArray();
             var eventSequence = eventStore.GetEventSequence(eventSequenceId);
             var result = await eventSequence.AppendMany(sorted, correlationId);

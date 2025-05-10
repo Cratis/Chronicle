@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using context = Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step.and_then_resumed.context;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_starting.job_with_single_step;
@@ -19,7 +17,7 @@ public class and_then_resumed(context context) : Given<context>(context)
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
         public Concepts.Jobs.JobId JobId;
-        public IImmutableList<JobStepState> JobStepStates;
+        public IEnumerable<JobStep> JobSteps;
 
         async Task Because()
         {
@@ -31,8 +29,7 @@ public class and_then_resumed(context context) : Given<context>(context)
             await EventStore.Jobs.Resume(JobId.Value);
             taskCompletionSource.SetResult();
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully);
-            var getJobStepState = await JobStepStorage.GetForJob(JobId);
-            JobStepStates = getJobStepState.AsT0;
+            JobSteps = await CompletedJobState.GetJobSteps();
         }
     }
 
@@ -43,7 +40,7 @@ public class and_then_resumed(context context) : Given<context>(context)
     public void should_have_correct_job_type() => Context.CompletedJobState.Type.Value.ShouldEqual(nameof(JobWithSingleStep));
 
     [Fact]
-    public void should_not_keep_any_job_step_states_after_completed() => Context.JobStepStates.ShouldBeEmpty();
+    public void should_not_keep_any_job_step_states_after_completed() => Context.JobSteps.ShouldBeEmpty();
 
     [Fact]
     public void should_have_completed_job_successfully() => Context.CompletedJobState.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
