@@ -43,7 +43,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release --framework net9.0
+        run: dotnet build --configuration Release --framework net9.0
 
   dotnet-build-repack:
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release --framework net9.0 -p:Repack=true
+        run: dotnet build --configuration Release --framework net9.0 -p:Repack=true
 
   specs:
     runs-on: ubuntu-latest
