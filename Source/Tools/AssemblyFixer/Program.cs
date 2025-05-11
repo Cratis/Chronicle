@@ -19,7 +19,31 @@ var referencesToRemove = args.Length > 2 ? args[2].Split(';') : [];
 var tempAssemblyPath = Path.GetTempFileName();
 
 Console.WriteLine($"Fixing assembly {assemblyPath}");
-var assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
+
+AssemblyDefinition assembly = null!;
+var retryCount = 0;
+const int maxRetries = 5;
+const int retryDelay = 500;
+
+while (retryCount < maxRetries)
+{
+    try
+    {
+        assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
+        break;
+    }
+    catch (IOException)
+    {
+        retryCount++;
+        if (retryCount >= maxRetries)
+        {
+            Console.WriteLine("Failed to read the assembly after multiple attempts.");
+            throw;
+        }
+        Console.WriteLine($"IOException encountered. Retrying {retryCount}/{maxRetries}...");
+        await Task.Delay(retryDelay);
+    }
+}
 
 Console.WriteLine("Removing ApplicationPart attribute for assemblies");
 assembliesToFix.ForEach(_ => Console.WriteLine($"  Assembly assembly: {_}"));
