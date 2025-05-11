@@ -1,4 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
@@ -7,12 +8,33 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
+        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../Clients/ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
 
+    <Target Name="BuildDependencies">
+        <MSBuild Projects="../Clients/Connections/Connections.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <MSBuild Projects="../Kernel/Contracts/Contracts.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Web" />
+
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <Reference Include="../Clients/Connections/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.Connections.dll"/>
+        <Reference Include="../Kernel/Contracts/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.Contracts.dll"/>
+    </ItemGroup>
+
     <ItemGroup>
-        <ProjectReference Include="../Clients/Connections/Connections.csproj" />
-        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Clients/Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -24,6 +46,11 @@
         <PackageReference Include="Cratis.Applications" />
         <PackageReference Include="Cratis.Applications.Swagger" />
         <PackageReference Include="Grpc.Net.Client" />
+        <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
     </ItemGroup>
 
     <PropertyGroup>
@@ -37,13 +64,18 @@
         <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
-    <Target Name="EmbedXmlDocs" AfterTargets="AfterBuild">
+    <Target Name="EmbedXmlDocs" AfterTargets="Build">
         <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
         <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../Tools/ResourceEmbedder" />
     </Target>
 
     <ItemGroup>
         <EmbeddedResource Include="SwaggerDark.css" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.ResourceEmbedder.dll" />
+        <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.ResourceEmbedder.dll" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
