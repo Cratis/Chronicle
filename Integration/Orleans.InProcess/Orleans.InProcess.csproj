@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../../Source/Client/DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+        <Reference Include="../../Source/Clients/DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
     </ItemGroup>
 
     <ItemGroup>
