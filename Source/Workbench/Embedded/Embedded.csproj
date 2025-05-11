@@ -36,6 +36,7 @@
 
     <ItemGroup Condition="'$(Repack)' != 'true'">
         <ProjectReference Include="../../Api/Api.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
 
     <Target Name="BuildFrontend" BeforeTargets="BeforeBuild" Condition="'$(Configuration)'=='Debug'">
