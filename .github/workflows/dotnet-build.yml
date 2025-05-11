@@ -33,33 +33,14 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
-
-      # If it is the GitHub Bot triggering the workflow, we need to restore the packages.lock.json files
-      - name: Restore packages
-        if: github.actor == 'github-actions[bot]'
-        run: dotnet restore -f --force-evaluate
-
-      - name: Commit changes
-        if: github.actor == 'github-actions[bot]'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add **/packages.lock.json
-          git commit -m "Update packages.lock.json" || echo "No changes to commit"
-          git push
 
       - uses: actions/cache@v3
         id: dotnet-x64-output
         with:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
-
-      - name: Restore
-        run: dotnet restore --locked-mode
 
       - name: Build
         run: dotnet build --no-restore --configuration Release --framework net9.0
@@ -74,13 +55,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
-
-      - name: Restore
-        run: dotnet restore --locked-mode
 
       - name: Build
         run: dotnet build --no-restore --configuration Release --framework net9.0 -p:Repack=true
@@ -95,8 +71,6 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
@@ -130,8 +104,6 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
