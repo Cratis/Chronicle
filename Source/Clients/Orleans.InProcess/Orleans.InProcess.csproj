@@ -27,57 +27,46 @@
 
         <ProjectReference Include="../Orleans/Orleans.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Projections/Projections.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
     </ItemGroup>
 
