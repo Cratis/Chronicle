@@ -133,10 +133,10 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
-      - name: Restore
-        run: dotnet restore -f
+      - name: Build root
+        run: dotnet build --configuration Debug
 
-      - name: Build
+      - name: Build repackaged clients
         run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
         working-directory: ./Source/Clients
 
