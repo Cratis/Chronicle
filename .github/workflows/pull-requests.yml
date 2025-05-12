@@ -135,7 +135,6 @@ jobs:
 
       - name: Restore
         run: dotnet restore -f
-        working-directory: ./Source/Clients
 
       - name: Build
         run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
