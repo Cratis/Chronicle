@@ -59,7 +59,7 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Build
-        run: dotnet build --configuration Release --framework net9.0 -p:Repack=true -v D
+        run: dotnet build --configuration Release --framework net9.0 -p:Repack=true
         working-directory: ./Source/Clients
 
   specs:
