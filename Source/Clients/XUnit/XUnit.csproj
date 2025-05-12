@@ -1,36 +1,42 @@
 <Project>
-    <Import Project="Sdk.props"
-            Sdk="Microsoft.NET.Sdk" />
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.XUnit</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit</RootNamespace>
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
+
     <Target Name="BuildDependencies">
-        <MSBuild Projects="../DotNET/DotNET.csproj"
-                 Targets="Build"
-                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
     </Target>
-    <Import Project="Sdk.targets"
-            Sdk="Microsoft.NET.Sdk" />
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
     <PropertyGroup Condition="'$(Repack)' == 'true'">
         <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
     </PropertyGroup>
+
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" />
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
     </ItemGroup>
+
     <ItemGroup Condition="'$(Repack)' != 'true'">
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
     </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
+
     <ItemGroup>
         <DoNotInternalize Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="xunit">
             <PrivateAssets>all</PrivateAssets>

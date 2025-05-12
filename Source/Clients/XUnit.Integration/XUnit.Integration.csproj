@@ -8,12 +8,15 @@
 
     <Target Name="BuildDependencies">
         <MSBuild Projects="../Orleans.InProcess/Orleans.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../AspNetCore/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.AspNetCore.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../Orleans.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.Orleans.InProcess.dll" DestinationFolder="$(OutDir)"/>
     </Target>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
-        <Reference Include="../AspNetCore/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.AspNetCore.dll"/>
-        <Reference Include="../Orleans.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.Orleans.InProcess.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.AspNetCore.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.Orleans.InProcess.dll"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' != 'true'">

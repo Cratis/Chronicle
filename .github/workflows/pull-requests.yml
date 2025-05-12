@@ -134,7 +134,8 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Build
-        run: dotnet build --configuration Debug -p:Repack=true
+        run: dotnet build --configuration Debug -p:Repack=true -v D
+        working-directory: ./Source/Clients
 
       - name: Add GitHub Package Registry to NuGet
         run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}

@@ -6,10 +6,6 @@
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
-    </ItemGroup>
-
     <ItemGroup>
         <ProjectReference Include="../../../Source/Clients/AspNetCore/AspNetCore.csproj" />
     </ItemGroup>

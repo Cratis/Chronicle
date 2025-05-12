@@ -1,20 +1,9 @@
-<Project>
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Orleans.InProcess</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans.InProcess</RootNamespace>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
-    </PropertyGroup>
-
-    <Target Name="BuildDependencies">
-        <MSBuild Projects="../Orleans/Orleans.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
-    </Target>
-
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
     </PropertyGroup>
 
     <ItemGroup>
