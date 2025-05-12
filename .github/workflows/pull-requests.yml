@@ -136,6 +136,10 @@ jobs:
       - name: Build root
         run: dotnet build --configuration Debug
 
+      - name: Clean output for repackaged clients
+        run: dotnet clean
+        working-directory: ./Source/Clients
+
       - name: Build repackaged clients
         run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
         working-directory: ./Source/Clients
