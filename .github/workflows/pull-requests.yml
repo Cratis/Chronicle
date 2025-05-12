@@ -134,7 +134,7 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Build
-        run: dotnet build --configuration Debug -p:Repack=true
+        run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
         working-directory: ./Source/Clients
 
       - name: Add GitHub Package Registry to NuGet
