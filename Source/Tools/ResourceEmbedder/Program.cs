@@ -19,7 +19,7 @@ while (retryCount < maxRetries)
 {
     try
     {
-        assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
+        assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = false });
         break;
     }
     catch (IOException)
@@ -39,7 +39,7 @@ var resourceName = Path.GetFileName(resourceFile);
 var resource = new EmbeddedResource(resourceName, ManifestResourceAttributes.Public, resourceBytes);
 assembly.MainModule.Resources.Add(resource);
 
-assembly.Write(tempAssemblyPath, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PortablePdbWriterProvider() });
+assembly.Write(tempAssemblyPath, new WriterParameters { WriteSymbols = false, SymbolWriterProvider = new PortablePdbWriterProvider() });
 assembly.Dispose();
 
 File.Copy(tempAssemblyPath, assemblyPath, true);
