@@ -16,9 +16,14 @@ if (args.Length < 2)
 var assemblyPath = args[0];
 var assembliesToFix = args[1].Split(';');
 var referencesToRemove = args.Length > 2 ? args[2].Split(';') : [];
+referencesToRemove = referencesToRemove.Where(reference => !string.IsNullOrWhiteSpace(reference)).ToArray();
 var tempAssemblyPath = Path.GetTempFileName();
 
 Console.WriteLine($"Fixing assembly {assemblyPath}");
+foreach (var reference in referencesToRemove)
+{
+    Console.WriteLine($"  Reference to remove: {reference}");
+}
 
 AssemblyDefinition assembly = null!;
 var retryCount = 0;
@@ -43,12 +48,21 @@ while (retryCount < maxRetries)
         Console.WriteLine($"IOException encountered. Retrying {retryCount}/{maxRetries}...");
         await Task.Delay(retryDelay);
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error reading assembly: {ex.Message}");
+        Environment.Exit(1);
+    }
 }
 
 Console.WriteLine("Removing ApplicationPart attribute for assemblies");
-assembliesToFix.ForEach(_ => Console.WriteLine($"  Assembly assembly: {_}"));
+assembliesToFix.ForEach(_ => Console.WriteLine($"  Assembly: {_}"));
 
 var customAttributes = assembly.CustomAttributes.Where(_ => _.AttributeType.FullName == "Orleans.ApplicationPartAttribute");
+if (!customAttributes.Any())
+{
+    Console.WriteLine("  No ApplicationPart attributes found.");
+}
 var attributesToRemove = customAttributes.Where(attribute =>
 {
     var argument = attribute.ConstructorArguments[0].Value.ToString() ?? string.Empty;
@@ -74,7 +88,16 @@ if (referencesToRemove.Length > 0)
     });
 }
 
+if (referencesToRemove.Length == 0 && attributesToRemove.Count == 0)
+{
+    Console.WriteLine("No changes made to the assembly.");
+    return;
+}
+
 assembly.Write(tempAssemblyPath, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PortablePdbWriterProvider() });
 assembly.Dispose();
 
+var tempPdbPath = Path.ChangeExtension(tempAssemblyPath, ".pdb");
+var assemblyPdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
 File.Copy(tempAssemblyPath, assemblyPath, true);
+File.Copy(tempPdbPath, assemblyPdbPath, true);
