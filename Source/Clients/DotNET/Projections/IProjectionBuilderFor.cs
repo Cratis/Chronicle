@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Projections;
@@ -37,10 +36,4 @@ public interface IProjectionBuilderFor<TModel> : IProjectionBuilder<TModel, IPro
     /// </summary>
     /// <returns>Builder continuation.</returns>
     IProjectionBuilderFor<TModel> Passive();
-
-    /// <summary>
-    /// Build a <see cref="ProjectionDefinition"/>.
-    /// </summary>
-    /// <returns>A new <see cref="ProjectionDefinition"/>.</returns>
-    ProjectionDefinition Build();
 }

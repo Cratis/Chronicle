@@ -214,7 +214,7 @@ public class HandleEventsForPartition(
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                logger.HandledNoneEvents(currentState.Partition);
+                logger.HandledNoEvents(currentState.Partition);
             }
             else
             {

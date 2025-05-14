@@ -15,6 +15,10 @@
         </ProjectReference>
     </ItemGroup>
 
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="xunit">
             <PrivateAssets>all</PrivateAssets>

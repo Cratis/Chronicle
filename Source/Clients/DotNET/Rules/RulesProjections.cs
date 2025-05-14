@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Rules;
 /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
 /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
 [Singleton]
-public class RulesProjections(
+internal class RulesProjections(
     IServiceProvider serviceProvider,
     IClientArtifactsProvider clientArtifacts,
     IEventTypes eventTypes,

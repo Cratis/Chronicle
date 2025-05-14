@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Jobs;
 /// <summary>
 /// Extension methods for converting between <see cref="JobProgress"/> and <see cref="Concepts.Jobs.JobProgress"/>.
 /// </summary>
-public static class JobProgressConverters
+internal static class JobProgressConverters
 {
     /// <summary>
     /// Convert from <see cref="Concepts.Jobs.JobProgress"/> to <see cref="JobProgress"/>.

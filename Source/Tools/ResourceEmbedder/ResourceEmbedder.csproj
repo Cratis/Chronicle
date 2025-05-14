@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.ResourceEmbedder</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.ResourceEmbedder</RootNamespace>
+
         <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
     </PropertyGroup>

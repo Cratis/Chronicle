@@ -18,6 +18,7 @@ public interface IRecommendations
     /// <param name="command">The command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Perform(Perform command, CallContext context = default);
 
     /// <summary>
@@ -26,6 +27,7 @@ public interface IRecommendations
     /// <param name="command">The command.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Ignore(Perform command, CallContext context = default);
 
     /// <summary>

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
@@ -75,7 +76,8 @@ public class ReducerHandler(
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId
         };
-        var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
+        var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+        var state = await servicesAccessor.Services.Observers.GetObserverInformation(request);
         return new ReducerState(
             state.RunningState.ToClient(),
             state.IsSubscribed,
