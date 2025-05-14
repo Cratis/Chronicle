@@ -14,7 +14,7 @@ public interface IProjectionHandler
     /// <summary>
     /// Gets the <see cref="ProjectionDefinition"/>.
     /// </summary>
-    ProjectionDefinition Definition { get; }
+    ProjectionDefinition Definition { get; }
 
     /// <summary>
     /// Get the current state of the reducer.

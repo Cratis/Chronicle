@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <summary>
 /// Extension methods for converting between <see cref="Contracts.Jobs.Job"/> and <see cref="Job"/>.
 /// </summary>
-public static class JobsConverters
+internal static class JobsConverters
 {
     /// <summary>
     /// Convert from <see cref="Contracts.Jobs.Job"/> to <see cref="Job"/>.

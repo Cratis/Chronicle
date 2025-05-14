@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Extension methods for converting <see cref="Contracts.Observation.ObserverRunningState"/> to <see cref="ObserverRunningState"/>.
 /// </summary>
-public static class ObserverRunningStateConverters
+internal static class ObserverRunningStateConverters
 {
     /// <summary>
     /// Convert to contract.
