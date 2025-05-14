@@ -19,7 +19,7 @@ while (retryCount < maxRetries)
 {
     try
     {
-        assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = false });
+        assembly = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
         break;
     }
     catch (IOException)
@@ -42,6 +42,9 @@ assembly.MainModule.Resources.Add(resource);
 assembly.Write(tempAssemblyPath, new WriterParameters { WriteSymbols = false, SymbolWriterProvider = new PortablePdbWriterProvider() });
 assembly.Dispose();
 
+var tempPdbPath = Path.ChangeExtension(tempAssemblyPath, ".pdb");
+var assemblyPdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
 File.Copy(tempAssemblyPath, assemblyPath, true);
+File.Copy(tempPdbPath, assemblyPdbPath, true);
 
 Console.WriteLine($"Resource {resourceName} injected successfully.");
