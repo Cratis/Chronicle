@@ -44,18 +44,21 @@ while (retryCount < maxRetries)
 
 var violationCount = 0;
 var violatingTypesCount = 0;
-foreach (var internalAssemblyPath in internalAssemblies.Where(File.Exists))
+internalAssemblies = internalAssemblies.Where(File.Exists).ToArray();
+foreach (var internalAssemblyPath in internalAssemblies)
 {
     Console.WriteLine($"\nChecking for internal type usage for '{internalAssemblyPath}'");
     var internalAssembly = AssemblyDefinition.ReadAssembly(internalAssemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
 
-    foreach (var internalType in internalAssembly.MainModule.Types.Where(type => type.IsNotPublic && !type.FullName.Contains('<')).ToArray())
+    var internalTypes = internalAssembly.MainModule.Types.Where(type => !type.FullName.Contains('<')).ToArray();
+    var typesToCheck = assembly.MainModule.Types.Where(type => !internalTypes.Any(internalType => internalType.FullName == type.FullName)).ToArray();
+    foreach (var internalType in internalTypes)
     {
-        violationCount++;
-        var typesReferencingInternalType = assembly.GetTypesReferencingInternalType(internalType);
+        var typesReferencingInternalType = typesToCheck.GetTypesReferencingInternalType(internalType);
         if (typesReferencingInternalType.Length > 0)
         {
-            Console.WriteLine($"\nInternal type '{internalType.FullName}' is used directly or indirectly by the following types:");
+            violationCount++;
+            Console.WriteLine($"\nInternal type '{internalType.FullName}' is used with a public element by the following types:");
             foreach (var type in typesReferencingInternalType)
             {
                 Console.WriteLine($"  {type.FullName}");
@@ -69,6 +72,7 @@ if (violatingTypesCount > 0)
 {
     Console.WriteLine($"\nFound {violationCount} violated types");
     Console.WriteLine("\n\nTypes listed as using directly or indirectly is an approximation and may not be complete.");
+    Console.WriteLine("\nMake the element exposing the types internal for the type to remain internal.");
     Environment.Exit(1);
 }
 else

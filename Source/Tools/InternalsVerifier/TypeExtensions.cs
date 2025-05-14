@@ -14,26 +14,15 @@ public static class TypeExtensions
     /// <summary>
     /// Get the types referencing an internal type, directly or indirectly.
     /// </summary>
-    /// <param name="assembly">Assembly to get from.</param>
+    /// <param name="typesToCheck">Collection of types to get from.</param>
     /// <param name="internalType">The type that is supposed to be internal.</param>
     /// <returns>Collection of internal types.</returns>
-    public static TypeDefinition[] GetTypesReferencingInternalType(this AssemblyDefinition assembly, TypeDefinition internalType)
-    {
-        var referencingTypes = assembly.MainModule.Types.Where(_ =>
-            _.IsReferencedBy(internalType) &&
-            _.FullName != internalType.FullName).ToArray();
-        IEnumerable<TypeDefinition> result = [];
-        foreach (var type in referencingTypes)
-        {
-            var types = GetTypesReferencingInternalType(assembly, type);
-            if (types.Length > 0)
-            {
-                result = result.Concat(types);
-            }
-        }
-
-        return result.Distinct().ToArray();
-    }
+    public static TypeDefinition[] GetTypesReferencingInternalType(
+        this IEnumerable<TypeDefinition> typesToCheck,
+        TypeDefinition internalType) =>
+        typesToCheck.Where(_ =>
+            _.FullName != internalType.FullName &&
+            _.IsReferencedBy(internalType)).ToArray();
 
     /// <summary>
     /// Check if a type is referenced by another type publicly.
@@ -43,6 +32,10 @@ public static class TypeExtensions
     /// <returns>True if it is referenced, false if not.</returns>
     public static bool IsReferencedBy(this TypeDefinition type, TypeDefinition referencedType)
     {
+        if (!type.IsPublic)
+        {
+            return false;
+        }
         return
             type.Fields.Any(_ => _.IsPublic && _.FieldType.IsReferencedBy(referencedType)) ||
             type.Properties.Any(_ => _.GetMethod.IsPublic && _.PropertyType.IsReferencedBy(referencedType)) ||
