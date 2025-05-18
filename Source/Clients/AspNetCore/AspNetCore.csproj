@@ -1,5 +1,5 @@
 <Project>
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
 
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.AspNetCore</AssemblyName>
@@ -11,7 +11,7 @@
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
     </Target>
 
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Web" />
 
     <PropertyGroup Condition="'$(Repack)' == 'true'">
         <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
