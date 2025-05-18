@@ -8,10 +8,20 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-/// <param name="observers"><see cref="IObservers"/> for working with the observers.</param>
 [Route("/api/event-store/{eventStore}/observers")]
-public class ObserverCommands(IObservers observers) : ControllerBase
+public class ObserverCommands : ControllerBase
 {
+    readonly IObservers _observers;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverCommands"/> class.
+    /// </summary>
+    /// <param name="observers"><see cref="IObservers"/> for working with the observers.</param>
+    internal ObserverCommands(IObservers observers)
+    {
+        _observers = observers;
+    }
+
     /// <summary>
     /// Rewind a specific observer in an event store and specific namespace.
     /// </summary>
@@ -24,7 +34,7 @@ public class ObserverCommands(IObservers observers) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string observerId) =>
-        observers.Replay(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, EventSequenceId = string.Empty });
+        _observers.Replay(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, EventSequenceId = string.Empty });
 
     /// <summary>
     /// Retry a specific partition in an event store and specific namespace.
@@ -40,7 +50,7 @@ public class ObserverCommands(IObservers observers) : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string observerId,
         [FromRoute] string partition) =>
-        observers.ReplayPartition(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition, EventSequenceId = string.Empty });
+        _observers.ReplayPartition(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition, EventSequenceId = string.Empty });
 
     /// <summary>
     /// Rewind a specific observer in an event store and specific namespace.
@@ -56,5 +66,5 @@ public class ObserverCommands(IObservers observers) : ControllerBase
         [FromRoute] string @namespace,
         [FromRoute] string observerId,
         [FromRoute] string partition) =>
-        observers.RetryPartition(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition, EventSequenceId = string.Empty });
+        _observers.RetryPartition(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, Partition = partition, EventSequenceId = string.Empty });
 }
