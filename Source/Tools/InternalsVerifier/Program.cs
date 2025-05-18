@@ -19,7 +19,10 @@ string[] typesToIgnore = [];
 if (args.Length == 3)
 {
     typesToIgnore = args[2].Split(';');
-    Console.WriteLine($"Ignoring types: {string.Join(", ", typesToIgnore)}\n");
+    if (typesToIgnore.Length > 0)
+    {
+        Console.WriteLine($"Ignoring types: {string.Join(", ", typesToIgnore)}\n");
+    }
 }
 
 Console.WriteLine($"Verifying internals for {assemblyPath}");
