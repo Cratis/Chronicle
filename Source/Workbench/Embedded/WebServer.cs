@@ -34,7 +34,8 @@ public class WebServer(
             {
                 var builder = WebApplication.CreateBuilder();
                 builder.Configuration.Sources.Clear();
-                var chronicleServices = serviceProvider.GetService<IServices>();
+                var chronicleServices = serviceProvider.GetRequiredService<IServices>();
+                builder.Services.AddSingleton(chronicleServices);
 
                 builder.Host
                     .UseCratisApplicationModel(options =>
@@ -44,7 +45,7 @@ public class WebServer(
                         options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
                     });
 
-                builder.Services.AddCratisChronicleApi(chronicleServices);
+                builder.Services.AddCratisChronicleApi();
                 builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));
                 builder.WebHost
                     .UseKestrel(options =>
