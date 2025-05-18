@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// <summary>
 /// Represents the <see cref="JsonConverter{T}"/> that can convert <see cref="ObserverSubscription"/>.
 /// </summary>
-public class ObserverSubscriptionJsonConverter : TypeWithObjectPropertiesJsonConverter<ObserverSubscription>
+internal class ObserverSubscriptionJsonConverter : TypeWithObjectPropertiesJsonConverter<ObserverSubscription>
 {
     /// <inheritdoc/>
     protected override IEnumerable<string> ObjectProperties => [nameof(ObserverSubscription.Arguments)];
