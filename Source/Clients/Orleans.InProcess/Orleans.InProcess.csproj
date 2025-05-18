@@ -75,14 +75,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
-        <!-- <DoNotInternalize Include="Cratis.Chronicle.Grains.dll" /> -->
-        <!-- <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" /> -->
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
-        <DoNotInternalize Include="ChronicleOptions" />
-        <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />
-        <DoNotInternalize Include="Orleans.Hosting" />
+        <DoNotInternalize Include="Cratis.Chronicle.Setup.MongoDBChronicleBuilderExtensions" />
     </ItemGroup>
 
     <ItemGroup>
