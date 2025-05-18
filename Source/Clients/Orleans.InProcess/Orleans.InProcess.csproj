@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../Orleans/Orleans.csproj"/>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
@@ -64,12 +65,7 @@
         </ProjectReference>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
-    </ItemGroup>
-
     <ItemGroup Condition="'$(Repack)' != 'true'">
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
         <ProjectReference Include="../Connections/Connections.csproj"/>
     </ItemGroup>

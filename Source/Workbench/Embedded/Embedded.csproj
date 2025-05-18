@@ -1,5 +1,4 @@
-<Project>
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Workbench.Embedded</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Workbench.Embedded</RootNamespace>
@@ -20,23 +19,11 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
-    <Target Name="BuildDependencies">
-        <MSBuild Projects="../../Api/Api.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
-    </Target>
-
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
-    </PropertyGroup>
-
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../../Api/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.Api.dll"/>
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(Repack)' != 'true'">
+    <ItemGroup>
         <ProjectReference Include="../../Api/Api.csproj" />
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <Target Name="BuildFrontend" BeforeTargets="BeforeBuild" Condition="'$(Configuration)'=='Debug'">

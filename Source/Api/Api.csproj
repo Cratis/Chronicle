@@ -1,5 +1,4 @@
-<Project >
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
+<Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
@@ -10,17 +9,6 @@
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
     </PropertyGroup>
 
-    <Target Name="BuildDependencies">
-        <MSBuild Projects="../Clients/DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
-        <Copy SourceFiles="../Clients/DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
-    </Target>
-
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Web" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
-    </PropertyGroup>
-
     <ItemGroup>
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
@@ -29,14 +17,17 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <ProjectReference Include="../Clients/DotNET/DotNET.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' != 'true'">
-        <ProjectReference Include="../Connections/Connections.csproj" />
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+    <ItemGroup>
+        <ProjectReference Include="../Clients/Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
-
 
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" />
