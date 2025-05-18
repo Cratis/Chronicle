@@ -5,7 +5,6 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;

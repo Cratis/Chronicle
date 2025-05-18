@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using OneOf.Types;
 
