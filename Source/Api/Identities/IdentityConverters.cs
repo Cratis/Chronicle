@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Identities;
 /// <summary>
 /// Converts between contracts and API models for identities.
 /// </summary>
-public static class IdentityConverters
+internal static class IdentityConverters
 {
     /// <summary>
     /// Converts a contract identity to an API identity.
