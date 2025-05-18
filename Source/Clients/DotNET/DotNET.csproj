@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.InProcess" />
