@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Monads;
 using Moq;
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;
 
@@ -17,7 +17,7 @@ public class when_starting : given.the_manager
         _jobId = Guid.Parse("24ff9a76-a590-49b7-847d-28fcc9bf1024");
         _request = new(42);
         _job = AddJob<INullJobWithSomeRequest>(_jobId);
-        _job.Setup(_ => _.Start(Moq.It.IsAny<SomeJobRequest>())).Returns(Task.FromResult(Result.Success<StartJobError>()));
+        _job.Setup(_ => _.Start(It.IsAny<SomeJobRequest>())).Returns(Task.FromResult(Result.Success<StartJobError>()));
     }
 
     Task Because() => _manager.Start<INullJobWithSomeRequest, SomeJobRequest>(_jobId, _request);

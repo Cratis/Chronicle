@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using OneOf;
 using OneOf.Types;
 
-namespace Cratis.Chronicle;
+namespace Cratis.Chronicle.Monads;
 
 /// <summary>
 /// Represents an optional value.

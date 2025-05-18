@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Monads;
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>

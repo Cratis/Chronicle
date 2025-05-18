@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Concepts.for_Result.with_value;
+namespace Cratis.Chronicle.Monads.for_Result.with_value;
 
 public class when_error : Specification
 {

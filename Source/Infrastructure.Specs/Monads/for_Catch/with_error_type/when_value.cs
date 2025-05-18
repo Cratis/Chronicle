@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Concepts.for_Catch.with_error_type;
+namespace Cratis.Chronicle.Monads.for_Catch.with_error_type;
 
 public class when_value : Specification
 {

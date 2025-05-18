@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 

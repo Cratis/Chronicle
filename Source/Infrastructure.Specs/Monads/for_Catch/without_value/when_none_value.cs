@@ -3,7 +3,7 @@
 
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Concepts.for_Catch.without_value;
+namespace Cratis.Chronicle.Monads.for_Catch.without_value;
 
 public class when_none_value : Specification
 {

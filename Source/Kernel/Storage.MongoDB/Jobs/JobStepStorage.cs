@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Strings;
 using MongoDB.Bson;

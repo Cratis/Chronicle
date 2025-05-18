@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// <summary>
 /// Represents a <see cref="JsonConverter{T}"/> that can convert <see cref="JobState"/>.
 /// </summary>
-internal class JobStateConverter : JsonConverter<JobState>
+internal sealed class JobStateConverter : JsonConverter<JobState>
 {
     readonly Lazy<IJobTypes> _jobTypes;
 

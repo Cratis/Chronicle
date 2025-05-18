@@ -3,7 +3,7 @@
 
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Concepts.for_Result.with_value;
+namespace Cratis.Chronicle.Monads.for_Result.with_value;
 
 public class when_not_error : Specification
 {

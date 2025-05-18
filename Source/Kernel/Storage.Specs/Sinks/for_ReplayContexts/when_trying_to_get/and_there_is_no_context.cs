@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts.when_trying_to_get;
 

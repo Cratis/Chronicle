@@ -2,18 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.ExceptionServices;
 using OneOf;
 
-namespace Cratis.Chronicle;
+namespace Cratis.Chronicle.Monads;
 
 /// <summary>
-/// Represents the result of trying an execution that can return a result or potentially produce an <see cref="Exception"/>.
+/// Represents the result of trying an execution that can return a result or an error.
 /// </summary>
 /// <typeparam name="TResult">The result type.</typeparam>
-public class Catch<TResult> : OneOfBase<TResult, Exception>
+/// <typeparam name="TError">The error type.</typeparam>
+public class Result<TResult, TError> : OneOfBase<TResult, TError>
 {
-    Catch(OneOf<TResult, Exception> input)
+    /// <summary>
+    /// Initializes an instance of the <see cref="Result{TResult, TError}"/> class.
+    /// </summary>
+    /// <param name="input">The input.</param>
+    Result(OneOf<TResult, TError> input)
         : base(input)
     {
     }
@@ -23,24 +27,25 @@ public class Catch<TResult> : OneOfBase<TResult, Exception>
     /// </summary>
     public bool IsSuccess => IsT0;
 
-    public static implicit operator Catch<TResult>(TResult value) => Success(value);
-    public static implicit operator Catch<TResult>(Exception error) => Failed(error);
-    public static explicit operator Exception(Catch<TResult> obj) => obj.AsT1;
-    public static explicit operator TResult(Catch<TResult> obj) => obj.AsT0;
+    public static implicit operator Result<TResult, TError>(TResult value) => Success(value);
+    public static implicit operator Result<TResult, TError>(TError error) => Failed(error);
+
+    public static explicit operator TResult(Result<TResult, TError> obj) => obj.AsT0;
+    public static explicit operator TError(Result<TResult, TError> obj) => obj.AsT1;
 
     /// <summary>
-    /// Creates a failed <see cref="Catch{T}"/>.
+    /// Creates a failed <see cref="Result{T}"/>.
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>The created <see cref="Result{T}"/>.</returns>
-    public static Catch<TResult> Failed(Exception error) => new(OneOf<TResult, Exception>.FromT1(error));
+    public static Result<TResult, TError> Failed(TError error) => new(OneOf<TResult, TError>.FromT1(error));
 
     /// <summary>
-    /// Creates a successful <see cref="Catch{T}"/>.
+    /// Creates a successful <see cref="Result{T}"/>.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <returns>The created <see cref="Result{T}"/>.</returns>
-    public static Catch<TResult> Success(TResult value) => new(OneOf<TResult, Exception>.FromT0(value));
+    public static Result<TResult, TError> Success(TResult value) => new(OneOf<TResult, TError>.FromT0(value));
 
     /// <summary>
     /// Try to get the result <typeparamref name="TResult"/>.
@@ -54,16 +59,5 @@ public class Catch<TResult> : OneOfBase<TResult, Exception>
     /// </summary>
     /// <param name="error">The optional error.</param>
     /// <returns>A boolean indicating whether the error was present.</returns>
-    public bool TryGetException([NotNullWhen(true)]out Exception? error) => TryPickT1(out error, out _);
-
-    /// <summary>
-    /// Rethrows the <see cref="Exception"/> error if any, preserving the correct stack trace.
-    /// </summary>
-    public void RethrowError()
-    {
-        if (TryGetException(out var error))
-        {
-            ExceptionDispatchInfo.Capture(error).Throw();
-        }
-    }
+    public bool TryGetError([NotNullWhen(true)]out TError error) => TryPickT1(out error, out _);
 }

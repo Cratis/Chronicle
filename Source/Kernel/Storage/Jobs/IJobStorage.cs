@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Monads;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Storage.Jobs;

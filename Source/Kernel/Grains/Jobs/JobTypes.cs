@@ -4,6 +4,7 @@
 using System.CodeDom.Compiler;
 using System.Reflection;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Monads;
 using Cratis.DependencyInjection;
 using Cratis.Reflection;
 using Cratis.Types;

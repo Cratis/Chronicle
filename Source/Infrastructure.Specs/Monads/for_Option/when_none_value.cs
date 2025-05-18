@@ -3,7 +3,7 @@
 
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Concepts.for_Option;
+namespace Cratis.Chronicle.Monads.for_Option;
 
 public class when_none_value : Specification
 {

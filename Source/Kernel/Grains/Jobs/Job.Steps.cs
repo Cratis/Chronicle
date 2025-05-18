@@ -4,9 +4,10 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Reflection;
-using OneOf.Types;
+
 namespace Cratis.Chronicle.Grains.Jobs;
 
 public abstract partial class Job<TRequest, TJobState>
@@ -221,7 +222,7 @@ public abstract partial class Job<TRequest, TJobState>
         return Result<StartJobError>.Success();
     }
 
-    async Task<Result<bool, None>> TryPrepareAllJobSteps(ReadOnlyDictionary<JobStepId, JobStepGrainAndRequest> jobStepRequests)
+    async Task<Result<bool, OneOf.Types.None>> TryPrepareAllJobSteps(ReadOnlyDictionary<JobStepId, JobStepGrainAndRequest> jobStepRequests)
     {
         foreach (var (id, grainAndRequest) in jobStepRequests)
         {
