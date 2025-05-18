@@ -10,10 +10,20 @@ namespace Cratis.Chronicle.Api.Identities;
 /// <summary>
 /// Represents the API for querying identities.
 /// </summary>
-/// <param name="identities"><see cref="IIdentities"/> for working with identities.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/identities")]
-public class IdentitiesQueries(IIdentities identities) : ControllerBase
+public class IdentitiesQueries : ControllerBase
 {
+    readonly IIdentities _identities;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IdentitiesQueries"/> class.
+    /// </summary>
+    /// <param name="identities"><see cref="IIdentities"/> for working with identities.</param>
+    internal IdentitiesQueries(IIdentities identities)
+    {
+        _identities = identities;
+    }
+
     /// <summary>
     /// Gets all identities.
     /// </summary>
@@ -24,7 +34,7 @@ public class IdentitiesQueries(IIdentities identities) : ControllerBase
     public Task<IEnumerable<Identity>> GetIdentities(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        identities.GetIdentities(new() { EventStore = eventStore, Namespace = @namespace });
+        _identities.GetIdentities(new() { EventStore = eventStore, Namespace = @namespace });
 
     /// <summary>
     /// Observes all identities.
@@ -36,5 +46,5 @@ public class IdentitiesQueries(IIdentities identities) : ControllerBase
     public ISubject<IEnumerable<Identity>> AllIdentities(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        identities.InvokeAndWrapWithSubject(token => identities.ObserveIdentities(new() { EventStore = eventStore, Namespace = @namespace }, token));
+        _identities.InvokeAndWrapWithSubject(token => _identities.ObserveIdentities(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }

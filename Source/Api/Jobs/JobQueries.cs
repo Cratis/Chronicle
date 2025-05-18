@@ -10,10 +10,20 @@ namespace Cratis.Chronicle.Api.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
-/// <param name="jobs"><see cref="IJobs"/> for jobs.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/jobs")]
-public class JobQueries(IJobs jobs) : ControllerBase
+public class JobQueries : ControllerBase
 {
+    readonly IJobs _jobs;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JobQueries"/> class.
+    /// </summary>
+    /// <param name="jobs"><see cref="IJobs"/> for jobs.</param>
+    internal JobQueries(IJobs jobs)
+    {
+        _jobs = jobs;
+    }
+
     /// <summary>
     /// Observes all jobs for a specific event store and namespace.
     /// </summary>
@@ -24,5 +34,5 @@ public class JobQueries(IJobs jobs) : ControllerBase
     public ISubject<IEnumerable<Job>> AllJobs(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        jobs.InvokeAndWrapWithSubject(token => jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }, token));
+        _jobs.InvokeAndWrapWithSubject(token => _jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }

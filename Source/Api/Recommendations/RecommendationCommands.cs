@@ -8,10 +8,20 @@ namespace Cratis.Chronicle.Api.Recommendations;
 /// <summary>
 /// Represents the API for working with recommendations.
 /// </summary>
-/// <param name="recommendations"><see cref="IRecommendations"/> for recommendations.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/recommendations")]
-public class RecommendationCommands(IRecommendations recommendations) : ControllerBase
+public class RecommendationCommands : ControllerBase
 {
+    readonly IRecommendations _recommendations;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecommendationCommands"/> class.
+    /// </summary>
+    /// <param name="recommendations"><see cref="IRecommendations"/> for recommendations.</param>
+    internal RecommendationCommands(IRecommendations recommendations)
+    {
+        _recommendations = recommendations;
+    }
+
     /// <summary>
     /// Perform a recommendation.
     /// </summary>
@@ -24,7 +34,7 @@ public class RecommendationCommands(IRecommendations recommendations) : Controll
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid recommendationId) =>
-        recommendations.Perform(new() { EventStore = eventStore, Namespace = @namespace, RecommendationId = recommendationId });
+        _recommendations.Perform(new() { EventStore = eventStore, Namespace = @namespace, RecommendationId = recommendationId });
 
     /// <summary>
     /// Ignore a recommendation.
@@ -38,5 +48,5 @@ public class RecommendationCommands(IRecommendations recommendations) : Controll
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid recommendationId) =>
-        recommendations.Ignore(new() { EventStore = eventStore, Namespace = @namespace, RecommendationId = recommendationId });
+        _recommendations.Ignore(new() { EventStore = eventStore, Namespace = @namespace, RecommendationId = recommendationId });
 }

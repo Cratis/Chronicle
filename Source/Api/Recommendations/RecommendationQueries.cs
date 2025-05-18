@@ -11,10 +11,20 @@ namespace Cratis.Chronicle.Api.Recommendations;
 /// <summary>
 /// Represents the API for working with recommendations.
 /// </summary>
-/// <param name="recommendations"><see cref="IRecommendations"/> for recommendations.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/recommendations")]
-public class RecommendationQueries(IRecommendations recommendations) : ControllerBase
+public class RecommendationQueries : ControllerBase
 {
+    readonly IRecommendations _recommendations;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecommendationQueries"/> class.
+    /// </summary>
+    /// <param name="recommendations"><see cref="IRecommendations"/> for recommendations.</param>
+    internal RecommendationQueries(IRecommendations recommendations)
+    {
+        _recommendations = recommendations;
+    }
+
     /// <summary>
     /// Get all observers for an event store and namespace.
     /// </summary>

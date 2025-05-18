@@ -10,10 +10,20 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-/// <param name="observers"><see cref="IObservers"/> for working with observers.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/observers")]
-public class ObserverQueries(IObservers observers) : ControllerBase
+public class ObserverQueries : ControllerBase
 {
+    readonly IObservers _observers;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverQueries"/> class.
+    /// </summary>
+    /// <param name="observers"><see cref="IObservers"/> for working with observers.</param>
+    internal ObserverQueries(IObservers observers)
+    {
+        _observers = observers;
+    }
+
     /// <summary>
     /// Get all observers for an event store and namespace.
     /// </summary>
@@ -24,7 +34,7 @@ public class ObserverQueries(IObservers observers) : ControllerBase
     public Task<IEnumerable<ObserverInformation>> GetObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace });
+        _observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace });
 
     /// <summary>
     /// Get and observe all observers for an event store and namespace.
@@ -36,5 +46,5 @@ public class ObserverQueries(IObservers observers) : ControllerBase
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        observers.InvokeAndWrapWithSubject(token => observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token));
+        _observers.InvokeAndWrapWithSubject(token => _observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token));
 }

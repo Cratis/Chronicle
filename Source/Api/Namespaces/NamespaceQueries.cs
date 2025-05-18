@@ -10,10 +10,20 @@ namespace Cratis.Chronicle.Api.Namespaces;
 /// <summary>
 /// Represents the API for working with namespaces.
 /// </summary>
-/// <param name="namespaces"><see cref="INamespaces"/> for working with namespaces.</param>
 [Route("/api/event-store/{eventStore}/namespaces")]
-public class NamespaceQueries(INamespaces namespaces) : ControllerBase
+public class NamespaceQueries : ControllerBase
 {
+    readonly INamespaces _namespaces;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NamespaceQueries"/> class.
+    /// </summary>
+    /// <param name="namespaces"><see cref="INamespaces"/> for working with namespaces.</param>
+    internal NamespaceQueries(INamespaces namespaces)
+    {
+        _namespaces = namespaces;
+    }
+
     /// <summary>
     /// Observes all namespaces registered.
     /// </summary>
@@ -21,5 +31,5 @@ public class NamespaceQueries(INamespaces namespaces) : ControllerBase
     /// <returns>An observable for observing a collection of namespace names.</returns>
     [HttpGet]
     public ISubject<IEnumerable<string>> AllNamespaces([FromRoute] string eventStore) =>
-        namespaces.InvokeAndWrapWithSubject(token => namespaces.ObserveNamespaces(new() { EventStore = eventStore }, token));
+        _namespaces.InvokeAndWrapWithSubject(token => _namespaces.ObserveNamespaces(new() { EventStore = eventStore }, token));
 }

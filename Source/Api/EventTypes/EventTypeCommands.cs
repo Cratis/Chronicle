@@ -8,13 +8,20 @@ namespace Cratis.Chronicle.Api.Events;
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventTypeCommands"/> class.
-/// </remarks>
-/// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
 [Route("/api/event-store/{eventStore}/types")]
-public class EventTypeCommands(IEventTypes eventTypes) : Controller
+public class EventTypeCommands : Controller
 {
+    readonly IEventTypes _eventTypes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventTypeCommands"/> class.
+    /// </summary>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
+    internal EventTypeCommands(IEventTypes eventTypes)
+    {
+        _eventTypes = eventTypes;
+    }
+
     /// <summary>
     /// Register schemas.
     /// </summary>
@@ -25,7 +32,7 @@ public class EventTypeCommands(IEventTypes eventTypes) : Controller
     public Task Register(
         [FromRoute] string eventStore,
         [FromBody] RegisterEventTypes payload) =>
-            eventTypes.Register(new RegisterEventTypesRequest
+            _eventTypes.Register(new RegisterEventTypesRequest
             {
                 EventStore = eventStore,
                 Types = payload.Types.ToList()

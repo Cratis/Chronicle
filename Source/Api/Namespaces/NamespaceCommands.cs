@@ -8,10 +8,20 @@ namespace Cratis.Chronicle.Api.Namespaces;
 /// <summary>
 /// Represents the API for working with namespaces.
 /// </summary>
-/// <param name="namespaces"><see cref="INamespaces"/> for working namespaces.</param>
 [Route("/api/event-store/{eventStore}/namespaces")]
-public class NamespaceCommands(INamespaces namespaces) : ControllerBase
+public class NamespaceCommands : ControllerBase
 {
+    readonly INamespaces _namespaces;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NamespaceCommands"/> class.
+    /// </summary>
+    /// <param name="namespaces"><see cref="INamespaces"/> for working namespaces.</param>
+    internal NamespaceCommands(INamespaces namespaces)
+    {
+        _namespaces = namespaces;
+    }
+
     /// <summary>
     /// Ensure a namespace exists.
     /// </summary>
@@ -22,5 +32,5 @@ public class NamespaceCommands(INamespaces namespaces) : ControllerBase
     public Task EnsureNamespace(
         [FromRoute] string eventStore,
         [FromBody] Ensure command) =>
-        namespaces.Ensure(new() { EventStore = eventStore, Name = command.Namespace });
+        _namespaces.Ensure(new() { EventStore = eventStore, Name = command.Namespace });
 }

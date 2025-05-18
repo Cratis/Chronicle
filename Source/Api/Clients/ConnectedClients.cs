@@ -8,11 +8,8 @@ namespace Cratis.Chronicle.Api.Clients;
 /// <summary>
 /// Represents the API for querying connected clients.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ConnectedClients"/> class.
-/// </remarks>
 [Route("/api/clients")]
-public class ConnectedClients() : Controller
+public class ConnectedClients : Controller
 {
     /// <summary>
     /// Get and observe all connected clients for a specific event store.

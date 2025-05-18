@@ -8,10 +8,20 @@ namespace Cratis.Chronicle.Api.Jobs;
 /// <summary>
 /// Represents the API for working with jobs.
 /// </summary>
-/// <param name="jobs"><see cref="IJobs"/> to work with jobs.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/jobs")]
-public class JobCommands(IJobs jobs) : ControllerBase
+public class JobCommands : ControllerBase
 {
+    readonly IJobs _jobs;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JobCommands"/> class.
+    /// </summary>
+    /// <param name="jobs"><see cref="IJobs"/> to work with jobs.</param>
+    internal JobCommands(IJobs jobs)
+    {
+        _jobs = jobs;
+    }
+
     /// <summary>
     /// Stop a specific job.
     /// </summary>
@@ -24,7 +34,7 @@ public class JobCommands(IJobs jobs) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        jobs.Resume(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
+        _jobs.Resume(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
 
     /// <summary>
     /// Stop a specific job.
@@ -38,7 +48,7 @@ public class JobCommands(IJobs jobs) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        jobs.Stop(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
+        _jobs.Stop(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
 
     /// <summary>
     /// Delete a specific job.
@@ -52,5 +62,5 @@ public class JobCommands(IJobs jobs) : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        jobs.Delete(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
+        _jobs.Delete(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
 }

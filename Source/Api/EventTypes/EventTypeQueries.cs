@@ -9,10 +9,20 @@ namespace Cratis.Chronicle.Api.EventTypes;
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
-/// <param name="eventTypes"><see cref="IEventTypes"/> for working with event types.</param>
 [Route("/api/event-store/{eventStore}/types")]
-public class EventTypeQueries(IEventTypes eventTypes) : ControllerBase
+public class EventTypeQueries : ControllerBase
 {
+    readonly IEventTypes _eventTypes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventTypeQueries"/> class.
+    /// </summary>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
+    internal EventTypeQueries(IEventTypes eventTypes)
+    {
+        _eventTypes = eventTypes;
+    }
+
     /// <summary>
     /// Gets all event types.
     /// </summary>
@@ -20,7 +30,7 @@ public class EventTypeQueries(IEventTypes eventTypes) : ControllerBase
     /// <returns>Collection of event types.</returns>
     [HttpGet]
     public Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore) =>
-        eventTypes.GetAll(new() { EventStore = eventStore });
+        _eventTypes.GetAll(new() { EventStore = eventStore });
 
     /// <summary>
     /// Gets all event types with schemas.
@@ -29,5 +39,5 @@ public class EventTypeQueries(IEventTypes eventTypes) : ControllerBase
     /// <returns>Collection of event types with schemas.</returns>
     [HttpGet("schemas")]
     public Task<IEnumerable<EventTypeRegistration>> AllEventTypesWithSchemas([FromRoute] string eventStore) =>
-        eventTypes.GetAllRegistrations(new() { EventStore = eventStore });
+        _eventTypes.GetAllRegistrations(new() { EventStore = eventStore });
 }

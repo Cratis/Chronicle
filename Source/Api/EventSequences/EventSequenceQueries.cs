@@ -11,11 +11,25 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
-/// <param name="eventSequences"><see cref="IEventSequences"/> service for working with the event log.</param>
-/// <param name="queryContextManager"><see cref="IQueryContextManager"/> for managing query contexts.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceQueries(IEventSequences eventSequences, IQueryContextManager queryContextManager) : ControllerBase
+public class EventSequenceQueries : ControllerBase
 {
+    readonly IEventSequences _eventSequences;
+    readonly IQueryContextManager _queryContextManager;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSequenceQueries"/> class.
+    /// </summary>
+    /// <param name="eventSequences"><see cref="IEventSequences"/> service for working with the event log.</param>
+    /// <param name="queryContextManager"><see cref="IQueryContextManager"/> for managing query contexts.</param>
+    internal EventSequenceQueries(
+        IEventSequences eventSequences,
+        IQueryContextManager queryContextManager)
+    {
+        _eventSequences = eventSequences;
+        _queryContextManager = queryContextManager;
+    }
+
     /// <summary>
     /// Get events for a specific event sequence in an event store in a specific namespace.
     /// </summary>
@@ -31,9 +45,9 @@ public class EventSequenceQueries(IEventSequences eventSequences, IQueryContextM
         [FromRoute] string eventSequenceId,
         [FromQuery] string? eventSourceId = null!)
     {
-        var queryContext = queryContextManager.Current;
+        var queryContext = _queryContextManager.Current;
 
-        var tail = await eventSequences.GetTailSequenceNumber(new()
+        var tail = await _eventSequences.GetTailSequenceNumber(new()
         {
             EventStore = eventStore,
             Namespace = @namespace,
@@ -42,7 +56,7 @@ public class EventSequenceQueries(IEventSequences eventSequences, IQueryContextM
         queryContext.TotalItems = (int)tail.SequenceNumber;
 
         var from = (ulong)(queryContext.Paging.Page * queryContext.Paging.Size);
-        var response = await eventSequences.GetEventsFromEventSequenceNumber(new()
+        var response = await _eventSequences.GetEventsFromEventSequenceNumber(new()
         {
             EventStore = eventStore,
             Namespace = @namespace,

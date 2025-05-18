@@ -12,16 +12,26 @@ namespace Cratis.Chronicle.Api.EventStores;
 /// <summary>
 /// Represents the API for working with event stores.
 /// </summary>
-/// <param name="eventStores">The <see cref="IEventStores"/> contract.</param>
 [Route("/api/event-stores")]
-public class EventStoreQueries(IEventStores eventStores) : ControllerBase
+public class EventStoreQueries : ControllerBase
 {
+    readonly IEventStores _eventStores;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventStoreQueries"/> class.
+    /// </summary>
+    /// <param name="eventStores">The <see cref="IEventStores"/> contract.</param>
+    internal EventStoreQueries(IEventStores eventStores)
+    {
+        _eventStores = eventStores;
+    }
+
     /// <summary>
     /// Get all event stores registered.
     /// </summary>
     /// <returns>A collection of event store names.</returns>
     [HttpGet]
-    public async Task<IEnumerable<string>> GetEventStores() => await eventStores.GetEventStores();
+    public async Task<IEnumerable<string>> GetEventStores() => await _eventStores.GetEventStores();
 
     /// <summary>
     /// Observes all event stores registered..
@@ -29,5 +39,5 @@ public class EventStoreQueries(IEventStores eventStores) : ControllerBase
     /// <returns>An observable for observing a collection of event store names.</returns>
     [HttpGet("observe")]
     public ISubject<IEnumerable<string>> AllEventStores() =>
-        eventStores.InvokeAndWrapWithSubject(token => eventStores.ObserveEventStores(token));
+        _eventStores.InvokeAndWrapWithSubject(token => _eventStores.ObserveEventStores(token));
 }
