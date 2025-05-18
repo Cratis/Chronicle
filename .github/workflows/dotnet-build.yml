@@ -58,8 +58,8 @@ jobs:
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
-      - name: Build
-        run: dotnet build --configuration Release --framework net9.0 -p:Repack=true -maxcpucount:1
+      - name: Build repackaged clients
+        run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
         working-directory: ./Source/Clients
 
   specs:
