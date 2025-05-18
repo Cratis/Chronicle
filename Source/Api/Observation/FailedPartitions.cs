@@ -10,10 +10,20 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <summary>
 /// Represents the API for getting failed partitions.
 /// </summary>
-/// <param name="failedPartitions"><see cref="IFailedPartitions"/> for working with failed partitions.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/failed-partitions")]
-public class FailedPartitions(IFailedPartitions failedPartitions) : ControllerBase
+public class FailedPartitions : ControllerBase
 {
+    readonly IFailedPartitions _failedPartitions;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FailedPartitions"/> class.
+    /// </summary>
+    /// <param name="failedPartitions"><see cref="IFailedPartitions"/> for working with failed partitions.</param>
+    internal FailedPartitions(IFailedPartitions failedPartitions)
+    {
+        _failedPartitions = failedPartitions;
+    }
+
     /// <summary>
     /// Gets all failed partitions for an event store and namespace.
     /// </summary>
@@ -26,5 +36,5 @@ public class FailedPartitions(IFailedPartitions failedPartitions) : ControllerBa
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string? observerId = default) =>
-        failedPartitions.InvokeAndWrapWithSubject(token => failedPartitions.ObserveFailedPartitions(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId }, token));
+        _failedPartitions.InvokeAndWrapWithSubject(token => _failedPartitions.ObserveFailedPartitions(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId }, token));
 }
