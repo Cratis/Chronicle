@@ -31,10 +31,10 @@ public class IdentitiesQueries : ControllerBase
     /// <param name="namespace">The namespace to get identities for.</param>
     /// <returns>Collection of identities.</returns>
     [HttpGet]
-    public Task<IEnumerable<Identity>> GetIdentities(
+    public async Task<IEnumerable<Identity>> GetIdentities(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        _identities.GetIdentities(new() { EventStore = eventStore, Namespace = @namespace });
+        (await _identities.GetIdentities(new() { EventStore = eventStore, Namespace = @namespace })).ToApi();
 
     /// <summary>
     /// Observes all identities.
@@ -46,5 +46,7 @@ public class IdentitiesQueries : ControllerBase
     public ISubject<IEnumerable<Identity>> AllIdentities(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        _identities.InvokeAndWrapWithSubject(token => _identities.ObserveIdentities(new() { EventStore = eventStore, Namespace = @namespace }, token));
+        _identities.InvokeAndWrapWithTransformSubject(
+            token => _identities.ObserveIdentities(new() { EventStore = eventStore, Namespace = @namespace }, token),
+            identities => identities.ToApi());
 }

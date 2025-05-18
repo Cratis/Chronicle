@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Applications.Queries;
-using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Api.Events;
 using Cratis.Chronicle.Contracts.EventSequences;
 
 namespace Cratis.Chronicle.Api.EventSequences;
@@ -66,6 +66,6 @@ public class EventSequenceQueries : ControllerBase
             EventSourceId = eventSourceId ?? null!
         });
 
-        return response.Events;
+        return response.Events.ToApi();
     }
 }

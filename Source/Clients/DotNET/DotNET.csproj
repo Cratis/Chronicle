@@ -23,11 +23,9 @@
     <ItemGroup>
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <ExcludeAssets>runtime;compile</ExcludeAssets>
         </ProjectReference>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
     </ItemGroup>
