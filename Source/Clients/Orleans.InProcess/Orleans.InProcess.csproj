@@ -28,6 +28,14 @@
         <ProjectReference Include="../Orleans/Orleans.csproj"/>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
 
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -65,12 +73,9 @@
         </ProjectReference>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' != 'true'">
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
-        <ProjectReference Include="../Connections/Connections.csproj"/>
-    </ItemGroup>
-
     <ItemGroup>
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" />
+        <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Connections.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Setup.MongoDBChronicleBuilderExtensions" />
