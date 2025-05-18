@@ -6,13 +6,24 @@
         <InputAssemblies Include="$(TargetPath)"/>
         <InputAssemblies Include="@(AssemblyToMerge)"/>
         <InputAssemblies Include="@(InternalAssembly)"/>
+        <FullyQualifiedDoNotInternalize
+            Include="@(DoNotInternalize->'$(OutputPath)%(Identity)')"
+            Condition="'%(DoNotInternalize.Extension)' == '.dll'" />
+
+        <DoNotInternalizeTypes
+            Include="@(DoNotInternalize)"
+            Condition="'%(DoNotInternalize.Extension)' != '.dll'" />
+
         <FilteredReferences
             Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
             KeepMetadata="PrivateAssets;TargetPath" />
 
+        <InternalizeAssemblies
+            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"/>
+
         <InternalAssemblies
             Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
-            Exclude="@(DoNotInternalize)"/>
+            Exclude="@(FullyQualifiedDoNotInternalize)"/>
 
         <InputAssemblies
             Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
@@ -29,13 +40,12 @@
         <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
         <InternalAssemblyNames>@(InternalAssemblies->'%(Filename)', ';')</InternalAssemblyNames>
         <InternalAssemblyPaths>@(InternalAssemblies->'$(TargetDir)%(Filename)%(Extension)', ';')</InternalAssemblyPaths>
+        <ExplicitPublicTypes>@(DoNotInternalizeTypes->'%(Identity)', ';')</ExplicitPublicTypes>
         <AssemblyNamesToFix>@(AssembliesToFix->'%(Filename)', ';')</AssemblyNamesToFix>
         <RemoveReferences>@(RemoveReference->'%(Identity)', ';')</RemoveReferences>
+        <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' != ''">"&quot;$(ExplicitPublicTypes)&quot;"</ExplicitPublicTypesArgument>
+        <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' == ''"></ExplicitPublicTypesArgument>
     </PropertyGroup>
-
-    <Message Importance="high" Text="Input @(InputAssemblies)" />
-    <Message Importance="high" Text="Internalize @(InternalAssemblies)" />
-    <Message Importance="high" Text="DoNotInternalize @(DoNotInternalize)" />
 
     <ILRepack
         AllowDuplicateResources="false"
@@ -43,7 +53,7 @@
         CopyAttributes="false"
         ExcludeInternalizeSerializable="false"
         InputAssemblies="@(InputAssemblies)"
-        InternalizeAssembly="@(InternalAssemblies)"
+        InternalizeAssembly="@(InternalizeAssemblies)"
         Internalize="true"
         InternalizeExclude="@(DoNotInternalize)"
         OutputFile="$(TargetPath)"
@@ -57,6 +67,6 @@
         TargetKind="SameAsPrimaryAssembly"/>
 
     <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
-    <Exec Command="dotnet run $(TargetPath) &quot;$(InternalAssemblyPaths)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(InternalAssemblyPaths)&quot; &quot;$(ExplicitPublicTypes)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
   </Target>
 </Project>

@@ -14,6 +14,13 @@ if (args.Length < 2)
 
 var assemblyPath = args[0];
 var internalAssemblies = args[1].Split(';');
+string[] typesToIgnore = [];
+
+if (args.Length == 3)
+{
+    typesToIgnore = args[2].Split(';');
+    Console.WriteLine($"Ignoring types: {string.Join(", ", typesToIgnore)}\n");
+}
 
 Console.WriteLine($"Verifying internals for {assemblyPath}");
 
@@ -47,10 +54,12 @@ var violatingTypesCount = 0;
 internalAssemblies = internalAssemblies.Where(File.Exists).ToArray();
 foreach (var internalAssemblyPath in internalAssemblies)
 {
-    Console.WriteLine($"\nChecking for internal type usage for '{internalAssemblyPath}'");
     var internalAssembly = AssemblyDefinition.ReadAssembly(internalAssemblyPath, new ReaderParameters { ReadWrite = true, ReadSymbols = true });
 
-    var internalTypes = internalAssembly.MainModule.Types.Where(type => !type.FullName.Contains('<')).ToArray();
+    var internalTypes = internalAssembly.MainModule.Types.Where(type =>
+        !type.FullName.Contains('<') &&
+        !typesToIgnore.Any(ignore => ignore == type.FullName) &&
+        !typesToIgnore.Any(ignore => ignore == type.Name)).ToArray();
     var typesToCheck = assembly.MainModule.Types.Where(type => !internalTypes.Any(internalType => internalType.FullName == type.FullName)).ToArray();
     foreach (var internalType in internalTypes)
     {
