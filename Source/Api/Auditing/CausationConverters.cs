@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Auditing;
 /// <summary>
 /// Converts between contracts and API models for causation.
 /// </summary>
-public static class CausationConverters
+internal static class CausationConverters
 {
     /// <summary>
     /// Converts a contract causation to an API causation.

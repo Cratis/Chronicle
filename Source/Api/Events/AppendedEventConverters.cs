@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Events;
 /// <summary>
 /// Converts between <see cref="AppendedEvent"/> and its contract representation.
 /// </summary>
-public static class AppendedEventConverters
+internal static class AppendedEventConverters
 {
     /// <summary>
     /// Converts a contract <see cref="Contracts.Events.AppendedEvent"/> to an <see cref="AppendedEvent"/>.

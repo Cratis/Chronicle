@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Events;
 /// <summary>
 /// Converts between <see cref="Contracts.Events.EventMetadata"/> and <see cref="EventMetadata"/>.
 /// </summary>
-public static class EventMetadataConverters
+internal static class EventMetadataConverters
 {
     /// <summary>
     /// Converts a <see cref="Contracts.Events.EventMetadata"/> to an <see cref="EventMetadata"/>.

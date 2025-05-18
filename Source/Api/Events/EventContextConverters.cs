@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Api.Events;
 /// <summary>
 /// Converts between contracts and API models for event context.
 /// </summary>
-public static class EventContextConverters
+internal static class EventContextConverters
 {
     /// <summary>
     /// Converts a contract <see cref="Contracts.Events.EventContext"/> to an <see cref="EventContext"/>.
