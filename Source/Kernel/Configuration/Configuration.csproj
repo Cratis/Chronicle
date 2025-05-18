@@ -5,6 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime;compile</ExcludeAssets>
