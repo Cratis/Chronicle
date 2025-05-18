@@ -1,4 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project >
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
@@ -7,21 +8,31 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
-        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../Clients/ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
+
+    <Target Name="BuildDependencies">
+        <MSBuild Projects="../Clients/DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <Copy SourceFiles="../Clients/DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Web" />
 
     <ItemGroup>
         <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../Clients/Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
     </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' != 'true'">
+        <ProjectReference Include="../Connections/Connections.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+    </ItemGroup>
+
 
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" />
