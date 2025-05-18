@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +14,7 @@ namespace Cratis.Chronicle.Configuration;
 public class ConfigurationForObserverProvider(IOptionsMonitor<ChronicleOptions> optionsMonitor) : IConfigurationForObserverProvider
 {
     /// <inheritdoc/>
-    public Task<Observers> GetFor(ObserverKey observerKey)
+    public Task<Observers> GetFor(string observerKey)
     {
         // TODO: Merge with persisted config and attributes.
         return Task.FromResult(optionsMonitor.CurrentValue.Observers);
