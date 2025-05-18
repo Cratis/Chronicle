@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using OneOf;
 using OneOf.Types;
 
-namespace Cratis.Chronicle.Concepts;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents the result of trying an execution that returns success or a specific error.

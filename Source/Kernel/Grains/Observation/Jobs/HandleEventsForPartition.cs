@@ -83,7 +83,7 @@ public class HandleEventsForPartition(
         ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.LastSuccessfullyHandledEventSequenceNumber));
 
     /// <inheritdoc/>
-    protected override async Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
+    protected override async Task<Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
     {
         try
         {

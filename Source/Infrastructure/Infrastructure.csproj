@@ -12,5 +12,7 @@
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+        <PackageReference Include="OneOf" />
+        <PackageReference Include="OneOf.SourceGenerator" />
     </ItemGroup>
 </Project>

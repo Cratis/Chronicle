@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using OneOf;
 
-namespace Cratis.Chronicle.Concepts;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents the result of trying an execution that can return a result, an error or potentially produce an <see cref="Exception"/>.

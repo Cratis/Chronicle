@@ -24,14 +24,8 @@
 
     <ItemGroup>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
-
-        <ProjectReference Include="../Orleans/Orleans.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
@@ -83,8 +77,8 @@
     <ItemGroup>
         <AssemblyToExcludeFromMerge Include="$(OutputPath)Cratis.Chronicle.Infrastructure.dll" />
         <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Grains.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" />
+        <!-- <DoNotInternalize Include="Cratis.Chronicle.Grains.dll" /> -->
+        <!-- <DoNotInternalize Include="Cratis.Chronicle.Storage.MongoDB.dll" /> -->
         <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
         <DoNotInternalize Include="ChronicleOptions" />
         <DoNotInternalize Include="MongoDBChronicleBuilderExtensions" />

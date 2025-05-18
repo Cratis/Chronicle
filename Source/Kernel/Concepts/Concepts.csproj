@@ -12,7 +12,5 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" />
-        <PackageReference Include="OneOf" />
-        <PackageReference Include="OneOf.SourceGenerator" />
     </ItemGroup>
 </Project>
