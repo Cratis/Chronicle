@@ -34,8 +34,6 @@
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
         <PackageReference Include="Cratis.Applications" />
         <PackageReference Include="Cratis.Applications.Swagger" />
-        <PackageReference Include="Grpc.Net.Client" />
-        <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -60,9 +58,5 @@
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
     </ItemGroup>
 </Project>
