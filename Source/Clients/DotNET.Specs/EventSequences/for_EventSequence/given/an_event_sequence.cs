@@ -5,11 +5,11 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 
 public class an_event_sequence : all_dependencies
 {
-    protected EventSequence event_sequence;
+    protected EventSequence _eventSequence;
 
     void Establish()
     {
-        event_sequence = new(
+        _eventSequence = new(
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString(),

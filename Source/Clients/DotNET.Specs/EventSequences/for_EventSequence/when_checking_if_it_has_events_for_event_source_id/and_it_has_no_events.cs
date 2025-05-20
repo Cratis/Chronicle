@@ -17,7 +17,7 @@ public class and_it_has_no_events : given.an_event_sequence
             req => req.EventSourceId == _eventSourceId)).Returns(Task.FromResult(new Contracts.EventSequences.HasEventsForEventSourceIdResponse { HasEvents = false }));
     }
 
-    async Task Because() => _result = await event_sequence.HasEventsFor(_eventSourceId);
+    async Task Because() => _result = await _eventSequence.HasEventsFor(_eventSourceId);
 
     [Fact] void should_return_false_when_no_events_exist() => _result.ShouldBeFalse();
 }
