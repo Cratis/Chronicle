@@ -131,5 +131,6 @@
         "Xunit"
     ],
     "dotnet.defaultSolution": "cratis.sln",
-    "dotnet.automaticallyCreateSolutionInWorkspace": false
+    "dotnet.automaticallyCreateSolutionInWorkspace": false,
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true
 }
