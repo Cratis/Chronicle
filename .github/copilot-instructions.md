@@ -5,10 +5,10 @@
 - Do not add unnecessary comments or documentation.
 - Use `using` directives for namespaces at the top of the file.
 - Use namespaces that match the folder structure.
-- Use file-scoped namespace declaration.
+- Prefer file-scoped namespace declarations and single-line using directives.
 - Honor the existing code style and conventions in the project.
 - Honor the .editorconfig file for formatting and style rules.
 
-➡️ **For detailed instructions on how to write and structure tests, see:**
+## Testing
 
-[.github/copilot-instructions/specs.md](./copilot-instructions/specs.md)
+- [How to Write Specs](./instructions/specs.md)
