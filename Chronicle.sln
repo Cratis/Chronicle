@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.InProcess", "Integr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{B8EFCA5F-814F-285C-A8CB-F00F14650265}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Source\Api\Api.csproj", "{E66B6CEE-C231-4FFD-AEFB-FFFE02EB5B71}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Source\Clients\Api\Api.csproj", "{E66B6CEE-C231-4FFD-AEFB-FFFE02EB5B71}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.Specs", "Source\Clients\AspNetCore.Specs\AspNetCore.Specs.csproj", "{9E3560EC-DBA7-4918-BF68-15EA9F96DF17}"
 EndProject
