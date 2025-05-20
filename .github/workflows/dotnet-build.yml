@@ -97,14 +97,14 @@ jobs:
     strategy:
       matrix:
         namespace:
-          - 'Orleans.InProcess.for_EventSequence'
-          - 'Orleans.InProcess.for_JobsManager'
-          - 'Orleans.InProcess.for_Reactors'
-          - 'Orleans.InProcess.for_Reducers'
-          - 'Orleans.InProcess.Projections'
-          - 'Orleans.InProcess.AggregateRoots'
+          - 'for_EventSequence'
+          - 'for_JobsManager'
+          - 'for_Reactors'
+          - 'for_Reducers'
+          - 'Projections'
+          - 'AggregateRoots'
     env:
-      NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
+      NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

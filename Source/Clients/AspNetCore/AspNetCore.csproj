@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.InProcess"/>
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess"/>
     </ItemGroup>
 
     <ItemGroup>

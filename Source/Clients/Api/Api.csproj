@@ -10,21 +10,21 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <ProjectReference Include="../Clients/DotNET/DotNET.csproj" />
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Clients/Connections/Connections.csproj">
+        <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../Kernel/Contracts/Contracts.csproj">
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
@@ -43,13 +43,13 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../Workbench/Web/Api</CratisProxiesOutputPath>
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Web/Api</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
     <Target Name="EmbedXmlDocs" AfterTargets="Build">
         <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
-        <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../Tools/ResourceEmbedder" />
+        <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
     </Target>
 
     <ItemGroup>

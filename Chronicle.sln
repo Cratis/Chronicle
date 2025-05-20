@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Integration", "Integration", "{823D4020-332D-2C13-F261-6F510F11A57E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.InProcess", "Integration\Orleans.InProcess\Orleans.InProcess.csproj", "{CBD394FD-8B9A-4AB0-86E7-3A10F5F710DB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.InProcess", "Integration\DotNET.InProcess\DotNET.InProcess.csproj", "{CBD394FD-8B9A-4AB0-86E7-3A10F5F710DB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{B8EFCA5F-814F-285C-A8CB-F00F14650265}"
 EndProject
@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.Specs", "Source\Clie
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET", "Source\Clients\DotNET\DotNET.csproj", "{E4B200E6-44C9-4130-A705-66E5619B33EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.InProcess", "Source\Clients\Orleans.InProcess\Orleans.InProcess.csproj", "{F5725DE8-DC19-4514-8182-853C0B4EDB18}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.InProcess", "Source\Clients\DotNET.InProcess\DotNET.InProcess.csproj", "{F5725DE8-DC19-4514-8182-853C0B4EDB18}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.XUnit", "Source\Clients\Orleans.XUnit\Orleans.XUnit.csproj", "{821E5325-4977-453B-818E-7DBB56365847}"
 EndProject

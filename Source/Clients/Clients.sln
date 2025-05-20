@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "AspNetCore\As
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans", "Orleans\Orleans.csproj", "{85EFC70A-EFE4-496E-ABF4-60FF696E858F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.InProcess", "Orleans.InProcess\Orleans.InProcess.csproj", "{C56E14FE-4DC3-4788-846B-E69D97ED2F4D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.InProcess", "DotNET.InProcess\DotNET.InProcess.csproj", "{C56E14FE-4DC3-4788-846B-E69D97ED2F4D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit", "XUnit\XUnit.csproj", "{1D97E5AE-D223-4288-BD3E-B1494D35B6B5}"
 EndProject
