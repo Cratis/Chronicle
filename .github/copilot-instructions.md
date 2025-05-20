@@ -5,10 +5,11 @@
 - Do not add unnecessary comments or documentation.
 - Use `using` directives for namespaces at the top of the file.
 - Use namespaces that match the folder structure.
-- Prefer file-scoped namespace declarations and single-line using directives.
+- Use file-scoped namespace declarations.
+- Use single-line using directives.
 - Honor the existing code style and conventions in the project.
 - Honor the .editorconfig file for formatting and style rules.
 
 ## Testing
 
-- [How to Write Specs](./instructions/specs.md)
+- [How to Write Specs](./instructions/tests.md)
