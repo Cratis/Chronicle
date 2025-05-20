@@ -1,4 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Orleans.XUnit</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Orleans.XUnit</RootNamespace>
@@ -6,17 +8,36 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../XUnit/XUnit.csproj" />
-        <ProjectReference Include="../Orleans/Orleans.csproj" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit"/>
+    </ItemGroup>
 
+    <Target Name="BuildDependencies">
+        <MSBuild Projects="../DotNET.InProcess/DotNET.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.dll" DestinationFolder="$(OutDir)"/>
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' != 'true'">
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
             <Aliases>Server</Aliases>
         </ProjectReference>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll"/>
+    <ItemGroup>
+        <ProjectReference Include="../XUnit/XUnit.csproj" />
+        <ProjectReference Include="../Orleans/Orleans.csproj" />
     </ItemGroup>
 
     <ItemGroup>
