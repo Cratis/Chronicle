@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Api.Events;
+using IEventTypes = Cratis.Chronicle.Contracts.Events.IEventTypes;
 
 namespace Cratis.Chronicle.Api.EventTypes;
 
@@ -29,8 +30,8 @@ public class EventTypeQueries : ControllerBase
     /// <param name="eventStore">The event store to get event types for.</param>
     /// <returns>Collection of event types.</returns>
     [HttpGet]
-    public Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore) =>
-        _eventTypes.GetAll(new() { EventStore = eventStore });
+    public async Task<IEnumerable<EventType>> AllEventTypes([FromRoute] string eventStore) =>
+        (await _eventTypes.GetAll(new() { EventStore = eventStore })).ToApi();
 
     /// <summary>
     /// Gets all event types with schemas.
@@ -38,6 +39,6 @@ public class EventTypeQueries : ControllerBase
     /// <param name="eventStore">The event store to get event types for.</param>
     /// <returns>Collection of event types with schemas.</returns>
     [HttpGet("schemas")]
-    public Task<IEnumerable<EventTypeRegistration>> AllEventTypesWithSchemas([FromRoute] string eventStore) =>
-        _eventTypes.GetAllRegistrations(new() { EventStore = eventStore });
+    public async Task<IEnumerable<EventTypeRegistration>> AllEventTypesWithSchemas([FromRoute] string eventStore) =>
+        (await _eventTypes.GetAllRegistrations(new() { EventStore = eventStore })).ToApi();
 }

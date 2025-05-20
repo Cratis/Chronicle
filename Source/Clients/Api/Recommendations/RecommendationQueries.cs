@@ -32,10 +32,10 @@ public class RecommendationQueries : ControllerBase
     /// <param name="namespace">Namespace the recommendations are for.</param>
     /// <returns>Collection of <see cref="Recommendation"/>.</returns>
     [HttpGet]
-    public Task<IEnumerable<Recommendation>> GetRecommendations(
+    public async Task<IEnumerable<Recommendation>> GetRecommendations(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        _recommendations.GetRecommendations(new() { EventStore = eventStore, Namespace = @namespace });
+        (await _recommendations.GetRecommendations(new() { EventStore = eventStore, Namespace = @namespace })).ToApi();
 
     /// <summary>
     /// Get and observe all observers for an event store and namespace.
@@ -47,5 +47,7 @@ public class RecommendationQueries : ControllerBase
     public ISubject<IEnumerable<Recommendation>> AllRecommendations(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        _recommendations.InvokeAndWrapWithSubject(token => _recommendations.ObserveRecommendations(new() { EventStore = eventStore, Namespace = @namespace }, token));
+        _recommendations.InvokeAndWrapWithTransformSubject(
+            token => _recommendations.ObserveRecommendations(new() { EventStore = eventStore, Namespace = @namespace }, token),
+            recommendations => recommendations.ToApi());
 }

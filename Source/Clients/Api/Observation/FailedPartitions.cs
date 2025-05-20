@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Reactive;
+using IFailedPartitions = Cratis.Chronicle.Contracts.Observation.IFailedPartitions;
 
 namespace Cratis.Chronicle.Api.Observation;
 
@@ -36,5 +36,7 @@ public class FailedPartitions : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string? observerId = default) =>
-        _failedPartitions.InvokeAndWrapWithSubject(token => _failedPartitions.ObserveFailedPartitions(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId }, token));
+        _failedPartitions.InvokeAndWrapWithTransformSubject(
+            token => _failedPartitions.ObserveFailedPartitions(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId }, token),
+            failedPartitions => failedPartitions.ToApi());
 }

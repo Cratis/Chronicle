@@ -5,16 +5,14 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { Guid } from '@cratis/fundamentals';
 import { JobProgress } from './JobProgress';
 import { JobStatus } from './JobStatus';
 import { JobStatusChanged } from './JobStatusChanged';
-import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class Job {
 
-    @field(Guid)
-    id!: Guid;
+    @field(String)
+    id!: string;
 
     @field(String)
     details!: string;
@@ -25,8 +23,8 @@ export class Job {
     @field(Number)
     status!: JobStatus;
 
-    @field(SerializableDateTimeOffset)
-    created!: SerializableDateTimeOffset;
+    @field(Date)
+    created!: Date;
 
     @field(JobStatusChanged, true)
     statusChanges!: JobStatusChanged[];

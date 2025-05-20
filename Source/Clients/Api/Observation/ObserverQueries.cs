@@ -31,10 +31,10 @@ public class ObserverQueries : ControllerBase
     /// <param name="namespace">The namespace within the event store the observers are for.</param>
     /// <returns>Collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("all-observers")]
-    public Task<IEnumerable<ObserverInformation>> GetObservers(
+    public async Task<IEnumerable<ObserverInformation>> GetObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        _observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace });
+        (await _observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace })).ToApi();
 
     /// <summary>
     /// Get and observe all observers for an event store and namespace.
@@ -46,5 +46,7 @@ public class ObserverQueries : ControllerBase
     public ISubject<IEnumerable<ObserverInformation>> AllObservers(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
-        _observers.InvokeAndWrapWithSubject(token => _observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token));
+        _observers.InvokeAndWrapWithTransformSubject(
+            token => _observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token),
+            observers => observers.ToApi());
 }

@@ -35,6 +35,6 @@ public class EventTypeCommands : Controller
             _eventTypes.Register(new RegisterEventTypesRequest
             {
                 EventStore = eventStore,
-                Types = payload.Types.ToList()
+                Types = payload.Types.ToContract().ToList()
             });
 }
