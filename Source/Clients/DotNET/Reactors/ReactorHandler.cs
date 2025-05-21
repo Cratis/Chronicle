@@ -25,7 +25,7 @@ public class ReactorHandler(
     ReactorId reactorId,
     EventSequenceId eventSequenceId,
     IReactorInvoker reactorInvoker,
-    ICausationManager causationManager) : IDisposable
+    ICausationManager causationManager) : IDisposable, IReactorHandler
 {
     /// <summary>
     /// The Reactor id causation property.
@@ -120,7 +120,6 @@ public class ReactorHandler(
         };
         var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
         return new ReactorState(
-            Id,
             state.RunningState.ToClient(),
             state.IsSubscribed,
             state.NextEventSequenceNumber,
@@ -141,4 +140,22 @@ public class ReactorHandler(
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
+}
+
+/// <summary>
+/// Defines a reactor handler.
+/// </summary>
+public interface IReactorHandler : ICanGetObserverInformation
+{
+    /// <summary>
+    /// Gets the <see cref="ReactorId"/>.
+    /// </summary>
+    ReactorId ReactorId { get; }
+
+    /// <summary>
+    /// Gets the current <see cref="ReactorState"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    [Obsolete("Obsolete")]
+    Task<ReactorState> GetState();
 }

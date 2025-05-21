@@ -9,14 +9,13 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Represents the state of a reactor.
 /// </summary>
-/// <param name="Id">The unique identifier of the reactor.</param>
 /// <param name="RunningState">The current running state of the reactor.</param>
 /// <param name="IsSubscribed">Indicates whether the reducer is subscribed its handler.</param>
 /// <param name="NextEventSequenceNumber">The next event sequence number.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
+[Obsolete("To not break with code this can be marked as obsolete for now until we figure out whether to have more specific info here")]
 public record ReactorState(
-    ReactorId Id,
     ObserverRunningState RunningState,
     bool IsSubscribed,
     EventSequenceNumber NextEventSequenceNumber,
-    EventSequenceNumber LastHandledEventSequenceNumber);
+    EventSequenceNumber LastHandledEventSequenceNumber) : ObserverState(RunningState, IsSubscribed, NextEventSequenceNumber, LastHandledEventSequenceNumber);

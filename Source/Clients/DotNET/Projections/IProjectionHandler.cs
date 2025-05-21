@@ -9,22 +9,17 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a system for handling projections.
 /// </summary>
-public interface IProjectionHandler
+public interface IProjectionHandler : ICanGetObserverInformation
 {
     /// <summary>
     /// Gets the <see cref="ProjectionDefinition"/>.
     /// </summary>
-    ProjectionDefinition Definition { get; }
+    ProjectionDefinition Definition { get; }
 
     /// <summary>
-    /// Get the current state of the reducer.
+    /// Gets the current <see cref="ProjectionState"/>.
     /// </summary>
-    /// <returns>The current <see cref="ProjectionState"/>.</returns>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    [Obsolete("Obsolete")]
     Task<ProjectionState> GetState();
-
-    /// <summary>
-    /// Get any failed partitions for a specific reducer.
-    /// </summary>
-    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
-    Task<IEnumerable<FailedPartition>> GetFailedPartitions();
 }

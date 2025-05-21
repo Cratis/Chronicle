@@ -19,10 +19,19 @@ public class ProjectionHandler(
     public ProjectionDefinition Definition => definition;
 
     /// <inheritdoc/>
+    public async Task<ObserverState> GetObserverState()
+    {
+        #pragma warning disable CS0618 // Type or member is obsolete
+        return await GetState();
+        #pragma warning restore CS0618
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> GetFailedPartitions() =>
          eventStore.FailedPartitions.GetFailedPartitionsFor(Definition.Identifier);
 
     /// <inheritdoc/>
+    [Obsolete("Obsolete")]
     public async Task<ProjectionState> GetState()
     {
         var request = new Contracts.Observation.GetObserverInformationRequest
@@ -33,7 +42,7 @@ public class ProjectionHandler(
             EventSequenceId = definition.EventSequenceId
         };
         var state = await eventStore.Connection.Services.Observers.GetObserverInformation(request);
-        return new ProjectionState(
+        return new(
             state.RunningState.ToClient(),
             state.IsSubscribed,
             state.NextEventSequenceNumber,
