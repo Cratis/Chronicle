@@ -8,13 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 295 |
+| Number of items that remain open | 296 |
 | Number of items closed | 532 |
 | Number of most active mentors | 0 |
-| Total number of items created | 827 |
+| Total number of items created | 828 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Reactor/Reducer/Projection-Handler should be split apart | https://github.com/Cratis/Chronicle/issues/1899 | [einari](https://github.com/einari) | None | None | None |
 | Simplify and merge projects | https://github.com/Cratis/Chronicle/issues/1898 | [einari](https://github.com/einari) | None | None | None |
 | Watch Projection changeset for Children RemoveWithJoin issue | https://github.com/Cratis/Chronicle/issues/1896 | [woksin](https://github.com/woksin) | 0:32:56 | None | None |
 | Formalize Read Model definition storage and make it generational | https://github.com/Cratis/Chronicle/issues/1877 | [einari](https://github.com/einari) | None | None | None |
@@ -369,5 +370,4 @@
 | Client validation of reducers | https://github.com/Cratis/Chronicle/issues/947 | [einari](https://github.com/einari) | None | None | None |
 | Introduce a long running task system with supervisor methodology | https://github.com/Cratis/Chronicle/issues/946 | [einari](https://github.com/einari) | None | 69 days, 6:03:51 | None |
 | Optimize ClientObserver/Reducer registration | https://github.com/Cratis/Chronicle/issues/944 | [einari](https://github.com/einari) | None | 541 days, 0:55:30 | None |
-| Hard to figure out how to get going with a minimal setup | https://github.com/Cratis/Chronicle/issues/943 | [woksin](https://github.com/woksin) | 26 days, 21:25:43 | 26 days, 21:33:48 | None |
-| Fix namespaces | https://github
+| Hard to figure out how to get going with a minimal setup
