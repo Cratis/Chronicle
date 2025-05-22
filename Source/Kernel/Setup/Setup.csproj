@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Setup</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Setup</RootNamespace>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
@@ -9,6 +10,7 @@
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="NJsonSchema"  />
     </ItemGroup>
 
     <ItemGroup>

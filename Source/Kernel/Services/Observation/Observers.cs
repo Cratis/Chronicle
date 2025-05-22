@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
-public class Observers(IGrainFactory grainFactory, IStorage storage) : IObservers
+internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : IObservers
 {
     /// <inheritdoc/>
     public Task RetryPartition(RetryPartition command, CallContext context = default) =>

@@ -55,10 +55,10 @@ public class known_event : given.an_event_sequence
             Errors = []
         };
 
-        _connection.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
+        _serviceAccessor.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
     }
 
-    async Task Because() => await event_sequence.Append(_eventSourceId, _event);
+    async Task Because() => await _eventSequence.Append(_eventSourceId, _event);
 
     [Fact] void should_append_event() => _command.ShouldNotBeNull();
     [Fact] void should_append_event_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);

@@ -15,7 +15,7 @@ public class all_dependencies : Specification
     protected IEventTypes _eventTypes;
     protected IProjectionWatcherManager _projectionWatcherManager;
     protected IClientArtifactsProvider _clientArtifacts;
-    protected IRulesProjections _rulesProjections;
+    internal IRulesProjections _rulesProjections;
     protected IJsonSchemaGenerator _schemaGenerator;
     protected IModelNameResolver _modelNameResolver;
     protected IEventSerializer _eventSerializer;

@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Recommendations;
 /// <summary>
 /// Converts between <see cref="Concepts.Recommendations.RecommendationInformation"/> and <see cref="Recommendation"/>.
 /// </summary>
-public static class RecommendationConverters
+internal static class RecommendationConverters
 {
     /// <summary>
     /// Convert from <see cref="Concepts.Recommendations.RecommendationInformation"/> to <see cref="Recommendation"/>.

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Extension methods for tracing.
 /// </summary>
-public static class Tracing
+internal static class Tracing
 {
     /// <summary>
     /// Starts tracing for registering an observer.

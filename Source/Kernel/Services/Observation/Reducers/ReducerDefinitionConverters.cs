@@ -1,16 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Services.Models;
+using Cratis.Chronicle.Services.Sinks;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers;
 
 /// <summary>
 /// Extension methods for converting between <see cref="ReducerDefinition"/> and <see cref="Contracts.Observation.Reducers.ReducerDefinition"/>.
 /// </summary>
-public static class ReducerDefinitionConverters
+internal static class ReducerDefinitionConverters
 {
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Reducers.ReducerDefinition"/> to <see cref="ReducerDefinition"/>.

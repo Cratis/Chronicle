@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Extension methods for converting between <see cref="Contracts.Observation.EventTypeWithKeyExpression"/> and <see cref="EventTypeWithKeyExpression"/>.
 /// </summary>
-public static class EventTypeWithKeyExpressionConverters
+internal static class EventTypeWithKeyExpressionConverters
 {
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.EventTypeWithKeyExpression"/> to <see cref="EventTypeWithKeyExpression"/>.

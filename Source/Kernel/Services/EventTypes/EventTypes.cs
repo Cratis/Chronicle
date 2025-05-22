@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Services.Events;
 /// Initializes a new instance of the <see cref="EventTypes"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
-public class EventTypes(IStorage storage) : IEventTypes
+internal sealed class EventTypes(IStorage storage) : IEventTypes
 {
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)

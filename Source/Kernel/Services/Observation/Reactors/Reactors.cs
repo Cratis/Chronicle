@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
+using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
@@ -26,7 +27,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class Reactors(
+internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
     ILogger<Reactors> logger) : IReactors

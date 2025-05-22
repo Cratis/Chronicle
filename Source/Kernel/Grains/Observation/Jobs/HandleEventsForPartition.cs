@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
@@ -83,7 +84,7 @@ public class HandleEventsForPartition(
         ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.LastSuccessfullyHandledEventSequenceNumber));
 
     /// <inheritdoc/>
-    protected override async Task<Concepts.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
+    protected override async Task<Monads.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
     {
         try
         {
@@ -214,7 +215,7 @@ public class HandleEventsForPartition(
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                logger.HandledNoneEvents(currentState.Partition);
+                logger.HandledNoEvents(currentState.Partition);
             }
             else
             {
