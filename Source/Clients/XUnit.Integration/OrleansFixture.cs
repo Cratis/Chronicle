@@ -191,7 +191,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     /// </summary>
     /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
-    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => (_createClientMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => (_createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
 
     /// <inheritdoc/>
     public virtual void Dispose()
