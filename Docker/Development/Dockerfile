@@ -29,5 +29,5 @@ RUN ./copy-server-files.sh
 COPY ./Docker/Development/appsettings.json ./appsettings.json
 RUN rm appsettings.Development.json
 
-EXPOSE 8080 11111 30000 35000
+EXPOSE 27017 8080 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]
