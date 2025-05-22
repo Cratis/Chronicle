@@ -47,12 +47,12 @@
       },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
-        "requested": "[17.13.0, )",
-        "resolved": "17.13.0",
-        "contentHash": "W19wCPizaIC9Zh47w8wWI/yxuqR7/dtABwOrc8r2jX/8mUNxM2vw4fXDh+DJTeogxV+KzKwg5jNNGQVwf3LXyA==",
+        "requested": "[17.14.0, )",
+        "resolved": "17.14.0",
+        "contentHash": "rTtdOm6C96q9QgP3mS8nUGPGPh5Xm2HnBYJggNmNrJ3LDmX9lJuUIgnJEfvX6wSQY4swUMiCcIXd3OkjhYCgtw==",
         "dependencies": {
-          "Microsoft.CodeCoverage": "17.13.0",
-          "Microsoft.TestPlatform.TestHost": "17.13.0"
+          "Microsoft.CodeCoverage": "17.14.0",
+          "Microsoft.TestPlatform.TestHost": "17.14.0"
         }
       },
       "Microsoft.SourceLink.GitHub": {
@@ -122,6 +122,22 @@
         "resolved": "3.1.0",
         "contentHash": "K9O9TOzugqOo4LJ87uuq1VG8RAqGp20Ng85Wx932oT5LNBkIgeeGYubVW5UMnOOTanFNbGavmbuYrJr4INzSwg=="
       },
+      "AutoMapper": {
+        "type": "Transitive",
+        "resolved": "14.0.0",
+        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
+        "dependencies": {
+          "Microsoft.Extensions.Options": "8.0.0"
+        }
+      },
+      "Castle.Core": {
+        "type": "Transitive",
+        "resolved": "5.1.1",
+        "contentHash": "rpYtIczkzGpf+EkZgDr9CClTdemhsrwA/W5hMoPjLkRFnXzH44zDLoovXeKtmxb1ykXK9aJVODSpiJml8CTw2g==",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "6.0.0"
+        }
+      },
       "Grpc.Core.Api": {
         "type": "Transitive",
         "resolved": "2.71.0",
@@ -133,6 +149,61 @@
         "contentHash": "v0c8R97TwRYwNXlC8GyRXwYTCNufpDfUtj9la+wUrZFzVWkFJuNAltU+c0yI3zu0jl54k7en6u2WKgZgd57r2Q==",
         "dependencies": {
           "Grpc.Core.Api": "2.71.0"
+        }
+      },
+      "Humanizer": {
+        "type": "Transitive",
+        "resolved": "2.14.1",
+        "contentHash": "/FUTD3cEceAAmJSCPN9+J+VhGwmL/C12jvwlyM1DFXShEMsBzvLzLqSrJ2rb+k/W2znKw7JyflZgZpyE+tI7lA==",
+        "dependencies": {
+          "Humanizer.Core.af": "2.14.1",
+          "Humanizer.Core.ar": "2.14.1",
+          "Humanizer.Core.az": "2.14.1",
+          "Humanizer.Core.bg": "2.14.1",
+          "Humanizer.Core.bn-BD": "2.14.1",
+          "Humanizer.Core.cs": "2.14.1",
+          "Humanizer.Core.da": "2.14.1",
+          "Humanizer.Core.de": "2.14.1",
+          "Humanizer.Core.el": "2.14.1",
+          "Humanizer.Core.es": "2.14.1",
+          "Humanizer.Core.fa": "2.14.1",
+          "Humanizer.Core.fi-FI": "2.14.1",
+          "Humanizer.Core.fr": "2.14.1",
+          "Humanizer.Core.fr-BE": "2.14.1",
+          "Humanizer.Core.he": "2.14.1",
+          "Humanizer.Core.hr": "2.14.1",
+          "Humanizer.Core.hu": "2.14.1",
+          "Humanizer.Core.hy": "2.14.1",
+          "Humanizer.Core.id": "2.14.1",
+          "Humanizer.Core.is": "2.14.1",
+          "Humanizer.Core.it": "2.14.1",
+          "Humanizer.Core.ja": "2.14.1",
+          "Humanizer.Core.ko-KR": "2.14.1",
+          "Humanizer.Core.ku": "2.14.1",
+          "Humanizer.Core.lv": "2.14.1",
+          "Humanizer.Core.ms-MY": "2.14.1",
+          "Humanizer.Core.mt": "2.14.1",
+          "Humanizer.Core.nb": "2.14.1",
+          "Humanizer.Core.nb-NO": "2.14.1",
+          "Humanizer.Core.nl": "2.14.1",
+          "Humanizer.Core.pl": "2.14.1",
+          "Humanizer.Core.pt": "2.14.1",
+          "Humanizer.Core.ro": "2.14.1",
+          "Humanizer.Core.ru": "2.14.1",
+          "Humanizer.Core.sk": "2.14.1",
+          "Humanizer.Core.sl": "2.14.1",
+          "Humanizer.Core.sr": "2.14.1",
+          "Humanizer.Core.sr-Latn": "2.14.1",
+          "Humanizer.Core.sv": "2.14.1",
+          "Humanizer.Core.th-TH": "2.14.1",
+          "Humanizer.Core.tr": "2.14.1",
+          "Humanizer.Core.uk": "2.14.1",
+          "Humanizer.Core.uz-Cyrl-UZ": "2.14.1",
+          "Humanizer.Core.uz-Latn-UZ": "2.14.1",
+          "Humanizer.Core.vi": "2.14.1",
+          "Humanizer.Core.zh-CN": "2.14.1",
+          "Humanizer.Core.zh-Hans": "2.14.1",
+          "Humanizer.Core.zh-Hant": "2.14.1"
         }
       },
       "Humanizer.Core": {
@@ -531,8 +602,8 @@
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
-        "resolved": "17.13.0",
-        "contentHash": "9LIUy0y+DvUmEPtbRDw6Bay3rzwqFV8P4efTrK4CZhQle3M/QwLPjISghfcolmEGAPWxuJi6m98ZEfk4VR4Lfg=="
+        "resolved": "17.14.0",
+        "contentHash": "z2GYXGG6LjGoumT59xSB2dMnqSwQBjkxdDJmSJHwy5nPtZ435GXa6wj5hz/lRrAZ7NyXXxZNXVsiHXzHRru5eA=="
       },
       "Microsoft.Extensions.Configuration": {
         "type": "Transitive",
@@ -775,19 +846,19 @@
       },
       "Microsoft.TestPlatform.ObjectModel": {
         "type": "Transitive",
-        "resolved": "17.13.0",
-        "contentHash": "bt0E0Dx+iqW97o4A59RCmUmz/5NarJ7LRL+jXbSHod72ibL5XdNm1Ke+UO5tFhBG4VwHLcSjqq9BUSblGNWamw==",
+        "resolved": "17.14.0",
+        "contentHash": "3h7y7f/HuY8jdZa163p/55VmGw/fYJwrI8FOtsp4aEQAJaPgBr5LBS25uOfBwRYI95QDiByfaqSPBcWEvuHEwA==",
         "dependencies": {
-          "System.Reflection.Metadata": "1.6.0"
+          "System.Reflection.Metadata": "8.0.0"
         }
       },
       "Microsoft.TestPlatform.TestHost": {
         "type": "Transitive",
-        "resolved": "17.13.0",
-        "contentHash": "9GGw08Dc3AXspjekdyTdZ/wYWFlxbgcF0s7BKxzVX+hzAwpifDOdxM+ceVaaJSQOwqt3jtuNlHn3XTpKUS9x9Q==",
+        "resolved": "17.14.0",
+        "contentHash": "8htQBKM92s/NXUI/U0/CKKLlvlDfWIo3/mbnY/GS/2XLkBGNIVQufmUpDIzznaZqUpdzspGSsJcLhVN8aRoMaA==",
         "dependencies": {
-          "Microsoft.TestPlatform.ObjectModel": "17.13.0",
-          "Newtonsoft.Json": "13.0.1"
+          "Microsoft.TestPlatform.ObjectModel": "17.14.0",
+          "Newtonsoft.Json": "13.0.3"
         }
       },
       "Namotion.Reflection": {
@@ -835,6 +906,11 @@
         "resolved": "1.2.0.556",
         "contentHash": "zvn9Mqs/ox/83cpYPignI8hJEM2A93s2HkHs8HYMOAQW0PkampyoErAiIyKxgTLqbbad29HX/shv/6LGSjPJNQ=="
       },
+      "System.Collections.Immutable": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "AurL6Y5BA1WotzlEvVaIDpqzpIPvYnnldxru8oXJU2yFxFUy3+pNXjXd1ymO+RA0rq0+590Q8gaz2l3Sr7fmqg=="
+      },
       "System.Diagnostics.DiagnosticSource": {
         "type": "Transitive",
         "resolved": "9.0.0",
@@ -875,8 +951,11 @@
       },
       "System.Reflection.Metadata": {
         "type": "Transitive",
-        "resolved": "1.6.0",
-        "contentHash": "COC1aiAJjCoA5GBF+QKL2uLqEBew4JsCkQmoHKbN3TlOZKa2fKLz5CpiRQKDz0RsAOEGsVKqOD5bomsXq/4STQ=="
+        "resolved": "8.0.0",
+        "contentHash": "ptvgrFh7PvWI8bcVqG5rsA/weWM09EnthFHR5SCnS6IN+P4mj6rE1lBDC4U8HL9/57htKAqy4KQ3bBj84cfYyQ==",
+        "dependencies": {
+          "System.Collections.Immutable": "8.0.0"
+        }
       },
       "System.Runtime": {
         "type": "Transitive",
@@ -1007,24 +1086,6 @@
           "humanizer": "[2.14.1, )"
         }
       },
-      "AutoMapper": {
-        "type": "CentralTransitive",
-        "requested": "[14.0.0, )",
-        "resolved": "14.0.0",
-        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Options": "8.0.0"
-        }
-      },
-      "Castle.Core": {
-        "type": "CentralTransitive",
-        "requested": "[5.2.1, )",
-        "resolved": "5.1.1",
-        "contentHash": "rpYtIczkzGpf+EkZgDr9CClTdemhsrwA/W5hMoPjLkRFnXzH44zDLoovXeKtmxb1ykXK9aJVODSpiJml8CTw2g==",
-        "dependencies": {
-          "System.Diagnostics.EventLog": "6.0.0"
-        }
-      },
       "Cratis.Specifications": {
         "type": "CentralTransitive",
         "requested": "[3.0.4, )",
@@ -1045,62 +1106,6 @@
         "dependencies": {
           "Grpc.Net.Common": "2.71.0",
           "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
-        }
-      },
-      "Humanizer": {
-        "type": "CentralTransitive",
-        "requested": "[2.14.1, )",
-        "resolved": "2.14.1",
-        "contentHash": "/FUTD3cEceAAmJSCPN9+J+VhGwmL/C12jvwlyM1DFXShEMsBzvLzLqSrJ2rb+k/W2znKw7JyflZgZpyE+tI7lA==",
-        "dependencies": {
-          "Humanizer.Core.af": "2.14.1",
-          "Humanizer.Core.ar": "2.14.1",
-          "Humanizer.Core.az": "2.14.1",
-          "Humanizer.Core.bg": "2.14.1",
-          "Humanizer.Core.bn-BD": "2.14.1",
-          "Humanizer.Core.cs": "2.14.1",
-          "Humanizer.Core.da": "2.14.1",
-          "Humanizer.Core.de": "2.14.1",
-          "Humanizer.Core.el": "2.14.1",
-          "Humanizer.Core.es": "2.14.1",
-          "Humanizer.Core.fa": "2.14.1",
-          "Humanizer.Core.fi-FI": "2.14.1",
-          "Humanizer.Core.fr": "2.14.1",
-          "Humanizer.Core.fr-BE": "2.14.1",
-          "Humanizer.Core.he": "2.14.1",
-          "Humanizer.Core.hr": "2.14.1",
-          "Humanizer.Core.hu": "2.14.1",
-          "Humanizer.Core.hy": "2.14.1",
-          "Humanizer.Core.id": "2.14.1",
-          "Humanizer.Core.is": "2.14.1",
-          "Humanizer.Core.it": "2.14.1",
-          "Humanizer.Core.ja": "2.14.1",
-          "Humanizer.Core.ko-KR": "2.14.1",
-          "Humanizer.Core.ku": "2.14.1",
-          "Humanizer.Core.lv": "2.14.1",
-          "Humanizer.Core.ms-MY": "2.14.1",
-          "Humanizer.Core.mt": "2.14.1",
-          "Humanizer.Core.nb": "2.14.1",
-          "Humanizer.Core.nb-NO": "2.14.1",
-          "Humanizer.Core.nl": "2.14.1",
-          "Humanizer.Core.pl": "2.14.1",
-          "Humanizer.Core.pt": "2.14.1",
-          "Humanizer.Core.ro": "2.14.1",
-          "Humanizer.Core.ru": "2.14.1",
-          "Humanizer.Core.sk": "2.14.1",
-          "Humanizer.Core.sl": "2.14.1",
-          "Humanizer.Core.sr": "2.14.1",
-          "Humanizer.Core.sr-Latn": "2.14.1",
-          "Humanizer.Core.sv": "2.14.1",
-          "Humanizer.Core.th-TH": "2.14.1",
-          "Humanizer.Core.tr": "2.14.1",
-          "Humanizer.Core.uk": "2.14.1",
-          "Humanizer.Core.uz-Cyrl-UZ": "2.14.1",
-          "Humanizer.Core.uz-Latn-UZ": "2.14.1",
-          "Humanizer.Core.vi": "2.14.1",
-          "Humanizer.Core.zh-CN": "2.14.1",
-          "Humanizer.Core.zh-Hans": "2.14.1",
-          "Humanizer.Core.zh-Hant": "2.14.1"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {
