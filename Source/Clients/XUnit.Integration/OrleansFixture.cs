@@ -21,13 +21,13 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifetime
 {
+    static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
     static Type _webApplicationFactoryType = null!;
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
     static MethodInfo _createClientWithOptionsMethod = null!;
     static bool _isInitialized;
     static string _contentRoot = string.Empty;
-    static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
     readonly IAsyncDisposable _webApplicationFactory;
     bool _backupPerformed;
@@ -67,9 +67,12 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
         var configureServices = ConfigureServices;
         _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices, _contentRoot]) as IAsyncDisposable)!;
     }
-    
+
+    /// <summary>
+    /// Gets the value indicating whether to auto discover artifacts.
+    /// </summary>
     public virtual bool AutoDiscoverArtifacts { get; }
-    
+
     /// <summary>
     /// Gets the docker network.
     /// </summary>
