@@ -7,6 +7,7 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Types;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,7 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     static MethodInfo _createClientWithOptionsMethod = null!;
     static bool _isInitialized;
     static string _contentRoot = string.Empty;
+    static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
     readonly IAsyncDisposable _webApplicationFactory;
     bool _backupPerformed;
@@ -65,7 +67,9 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
         var configureServices = ConfigureServices;
         _webApplicationFactory = (Activator.CreateInstance(_webApplicationFactoryType, [this, configureServices, _contentRoot]) as IAsyncDisposable)!;
     }
-
+    
+    public virtual bool AutoDiscoverArtifacts { get; }
+    
     /// <summary>
     /// Gets the docker network.
     /// </summary>
@@ -102,49 +106,49 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     public ChronicleFixture ChronicleFixture { get; }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> EventTypes { get; } = [];
+    public virtual IEnumerable<Type> EventTypes => GetArtifactTypes(provider => provider.EventTypes);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Projections { get; } = [];
+    public virtual IEnumerable<Type> Projections => GetArtifactTypes(provider => provider.Projections);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Adapters { get; } = [];
+    public virtual IEnumerable<Type> Adapters => GetArtifactTypes(provider => provider.Adapters);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reactors { get; } = [];
+    public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reducers { get; } = [];
+    public virtual IEnumerable<Type> Reducers => GetArtifactTypes(provider => provider.Reducers);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ReactorMiddlewares { get; } = [];
+    public virtual IEnumerable<Type> ReactorMiddlewares => GetArtifactTypes(provider => provider.ReactorMiddlewares);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; } = [];
+    public virtual IEnumerable<Type> ComplianceForTypesProviders => GetArtifactTypes(provider => provider.ComplianceForTypesProviders);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; } = [];
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders => GetArtifactTypes(provider => provider.ComplianceForPropertiesProviders);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Rules { get; } = [];
+    public virtual IEnumerable<Type> Rules => GetArtifactTypes(provider => provider.Rules);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; } = [];
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders => GetArtifactTypes(provider => provider.AdditionalEventInformationProviders);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRoots { get; } = [];
+    public virtual IEnumerable<Type> AggregateRoots => GetArtifactTypes(provider => provider.AggregateRoots);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRootStateTypes { get; } = [];
+    public virtual IEnumerable<Type> AggregateRootStateTypes => GetArtifactTypes(provider => provider.AggregateRootStateTypes);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ConstraintTypes { get; } = [];
+    public virtual IEnumerable<Type> ConstraintTypes => GetArtifactTypes(provider => provider.ConstraintTypes);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> UniqueConstraints { get; } = [];
+    public virtual IEnumerable<Type> UniqueConstraints => GetArtifactTypes(provider => provider.UniqueConstraints);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; } = [];
+    public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
@@ -292,4 +296,14 @@ public class OrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifet
     /// </summary>
     /// <returns>Awaitable Task.</returns>
     protected virtual Task OnDisposeAsync() => Task.CompletedTask;
+
+    IEnumerable<Type> GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
+    {
+        if (!AutoDiscoverArtifacts)
+        {
+            return [];
+        }
+        _defaultClientArtifactsProvider.Initialize();
+        return getTypes(_defaultClientArtifactsProvider);
+    }
 }
