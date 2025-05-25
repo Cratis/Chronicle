@@ -7,7 +7,6 @@ using Cratis.DependencyInjection;
 using Cratis.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -23,10 +22,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="configureServices">Action to configure the services.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
+/// <remarks>When deriving this class and overriding <see cref="IntegrationTestWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
 public class ChronicleWebApplicationFactory<TStartup>(
     IClientArtifactsProvider artifactsProvider,
     Action<IServiceCollection> configureServices,
-    string contentRoot) : WebApplicationFactory<TStartup>
+    ContentRoot contentRoot) : IntegrationTestWebApplicationFactory<TStartup>(contentRoot)
     where TStartup : class
 {
     /// <inheritdoc/>
@@ -75,11 +75,5 @@ public class ChronicleWebApplicationFactory<TStartup>(
 
         builder.ConfigureWebHostDefaults(b => b.Configure(app => app.UseCratisChronicle()));
         return builder;
-    }
-
-    /// <inheritdoc/>
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseContentRoot(contentRoot);
     }
 }
