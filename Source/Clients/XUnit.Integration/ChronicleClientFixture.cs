@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.ServiceModel;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
@@ -18,7 +19,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents the base fixture.
 /// </summary>
-public abstract class BaseOrleansFixture : IClientArtifactsProvider, IDisposable, IAsyncLifetime
+public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDisposable, IAsyncLifetime, IChronicleSetupFixture
 {
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
     static PropertyInfo _servicesProperty = null!;
@@ -34,10 +35,10 @@ public abstract class BaseOrleansFixture : IClientArtifactsProvider, IDisposable
     IServiceProvider? _services;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrleansFixture"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleOrleansFixture"/> class.
     /// </summary>
     /// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
-    protected BaseOrleansFixture(ChronicleFixture chronicleFixture)
+    protected ChronicleClientFixture(ChronicleFixture chronicleFixture)
     {
         ChronicleFixture = chronicleFixture;
 
@@ -325,5 +326,32 @@ public abstract class BaseOrleansFixture : IClientArtifactsProvider, IDisposable
         }
         _defaultClientArtifactsProvider.Initialize();
         return getTypes(_defaultClientArtifactsProvider);
+    }
+}
+
+/// <summary>
+/// Represents a fixture for Orleans integration tests.
+/// </summary>
+/// <typeparam name="TFactory">The web application factory type.</typeparam>
+/// <typeparam name="TStartup">The startup class type.</typeparam>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ChronicleOrleansFixture"/> class.
+/// </remarks>
+/// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
+#pragma warning disable SA1402
+public class ChronicleClientFixture<TFactory, TStartup>(ChronicleFixture chronicleFixture) : ChronicleClientFixture(chronicleFixture)
+#pragma warning restore SA1402
+    where TFactory : ChronicleWebApplicationFactory<TStartup>
+    where TStartup : class
+{
+    /// <inheritdoc/>
+    protected override IAsyncDisposable CreateWebApplicationFactory()
+    {
+        var webApplicationFactoryType = typeof(TFactory);
+        if (!webApplicationFactoryType.GetConstructors().Any(_ => _.GetParameters().FirstOrDefault()?.ParameterType == typeof(ContentRoot)))
+        {
+            throw new ServiceActivationException("WebApplicationFactory must have a public constructor that only takes ContentRoot parameter");
+        }
+        return (Activator.CreateInstance(webApplicationFactoryType, [ContentRoot]) as IAsyncDisposable)!;
     }
 }
