@@ -5,7 +5,7 @@ using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
-public class a_reactor_observing_an_event_that_can_fail(ChronicleFixture ChronicleFixture, int numberOfObservations) : IntegrationSpecificationContext(ChronicleFixture)
+public class a_reactor_observing_an_event_that_can_fail(ChronicleMongoDBFixture chronicleMongoDbFixture, int numberOfObservations) : IntegrationSpecificationContext(chronicleMongoDbFixture)
 {
     public TaskCompletionSource[] Tcs;
     public ReactorThatCanFail[] Observers;

@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_handl
 [Collection(ChronicleCollection.Name)]
 public class and_needs_to_catch_up(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_reducer_observing_an_event_that_can_fail(ChronicleFixture, 3)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_reducer_observing_an_event_that_can_fail(chronicleMongoDbFixture, 3)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

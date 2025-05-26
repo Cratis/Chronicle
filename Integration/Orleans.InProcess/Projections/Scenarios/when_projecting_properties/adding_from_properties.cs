@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.w
 [Collection(ChronicleCollection.Name)]
 public class adding_from_properties(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<AddingFromPropertiesProjection, Model>(ChronicleFixture)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_projection_and_events_appended_to_it<AddingFromPropertiesProjection, Model>(chronicleMongoDbFixture)
     {
         public EventWithPropertiesForAllSupportedTypes FirstEventAppended;
         public EventWithPropertiesForAllSupportedTypes SecondEventAppended;

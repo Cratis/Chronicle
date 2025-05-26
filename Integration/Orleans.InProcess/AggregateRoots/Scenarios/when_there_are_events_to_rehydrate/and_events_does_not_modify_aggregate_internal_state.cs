@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Scenario
 [Collection(ChronicleCollection.Name)]
 public class and_events_does_not_modify_aggregate_internal_state(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.context_for_aggregate_root<IUser, UserInternalState>(ChronicleFixture)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.context_for_aggregate_root<IUser, UserInternalState>(chronicleMongoDbFixture)
     {
         UserId _userId;
 

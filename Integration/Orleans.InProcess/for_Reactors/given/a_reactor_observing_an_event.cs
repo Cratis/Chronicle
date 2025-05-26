@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.given;
 
-public class a_reactor_observing_an_event(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
+public class a_reactor_observing_an_event(ChronicleMongoDBFixture chronicleMongoDbFixture) : IntegrationSpecificationContext(chronicleMongoDbFixture)
 {
     public TaskCompletionSource Tcs;
     public SomeReactor Reactor;

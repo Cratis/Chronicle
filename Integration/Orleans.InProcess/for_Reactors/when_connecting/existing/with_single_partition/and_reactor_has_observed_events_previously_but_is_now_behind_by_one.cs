@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_conne
 [Collection(ChronicleCollection.Name)]
 public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_disconnected_reactor_observing_an_event(ChronicleFixture)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_disconnected_reactor_observing_an_event(chronicleMongoDbFixture)
     {
         public List<EventForEventSourceId> FirstEvents;
         public List<EventForEventSourceId> CatchupEvents;

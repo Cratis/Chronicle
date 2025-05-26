@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios.w
 [Collection(ChronicleCollection.Name)]
 public class using_composite_key_from_property_and_context_property(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ModelWithCompositeKey>(ChronicleFixture)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ModelWithCompositeKey>(chronicleMongoDbFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
         public CompositeKey CompositeId;
@@ -29,7 +29,7 @@ public class using_composite_key_from_property_and_context_property(context cont
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
+            var result = await chronicleMongoDbFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
             Model = await result.FirstOrDefaultAsync();
         }
     }

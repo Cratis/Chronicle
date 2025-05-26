@@ -16,7 +16,7 @@ public class with_from_every(context context) : Given<context>(context)
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithFromEvery, GroupWithLastUpdated>(ChronicleFixture)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithFromEvery, GroupWithLastUpdated>(chronicleMongoDbFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;
@@ -38,7 +38,7 @@ public class with_from_every(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<GroupWithLastUpdated>().FindAsync(_ => _.Id == UserId.ToString());
+            var result = await chronicleMongoDbFixture.ReadModels.Database.GetCollection<GroupWithLastUpdated>().FindAsync(_ => _.Id == UserId.ToString());
             Model = await result.FirstOrDefaultAsync();
         }
     }

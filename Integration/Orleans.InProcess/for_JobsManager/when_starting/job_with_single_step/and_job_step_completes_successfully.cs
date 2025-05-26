@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_st
 [Collection(ChronicleCollection.Name)]
 public class and_job_step_completes_successfully(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_jobs_manager(ChronicleFixture)
+    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_jobs_manager(chronicleMongoDbFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
