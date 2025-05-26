@@ -50,13 +50,21 @@ public abstract class IntegrationSpecificationContext<TChronicleFixture, TFactor
     where TFactory : ChronicleWebApplicationFactory<TStartup>
     where TStartup : class
 {
+    /// <summary>
+    /// Gets whether to skip discovering and registering <see cref="IEventStore"/>.
+    /// </summary>
+    protected virtual bool SkipDiscoverAndRegisterEventStore { get; } = false;
+
     /// <inheritdoc/>
     protected override async Task OnInitializeAsync()
     {
         EnsureBuilt();
         var eventStore = Services.GetRequiredService<IEventStore>();
-        await eventStore.DiscoverAll();
-        await eventStore.RegisterAll();
+        if (!SkipDiscoverAndRegisterEventStore)
+        {
+            await eventStore.DiscoverAll();
+            await eventStore.RegisterAll();
+        }
         await OnEstablish();
         await OnBecause();
     }
