@@ -6,7 +6,6 @@ using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.MongoDB;
 using DotNet.Testcontainers.Networks;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
@@ -52,7 +51,6 @@ public interface IChronicleSetupFixture
     /// </summary>
     public IServiceProvider Services { get; }
 
-
     /// <summary>
     /// Internal: Gets the <see cref="IEventStoreNamespaceStorage"/> for the event store namespace.
     /// </summary>
@@ -95,7 +93,7 @@ public interface IChronicleSetupFixture
     /// <param name="id">The event sequence ID.</param>
     /// <returns>The <see cref="EventSequenceKey"/>.</returns>
     internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
-    
+
     /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
     /// </summary>

@@ -3,3 +3,4 @@
 
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Cratis.Chronicle.Integration.Orleans.InProcess")]
+[assembly: InternalsVisibleTo("Cratis.Chronicle.Integration.Api")]

@@ -3,10 +3,15 @@
 
 using System.Reflection;
 using System.ServiceModel;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Types;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans.Storage;
 using Xunit;
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -150,6 +155,22 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IClientArtifac
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
     /// </summary>
     public IServiceProvider Services => _services ??= EnsureInitialized(() => _servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
+
+    // ReSharper disable MemberHidesInterfaceMemberWithDefaultImplementation
+#pragma warning disable SA1600
+    internal IGrainFactory GrainFactory => (this as IChronicleSetupFixture).GrainFactory;
+    internal IEventSequence EventLogSequenceGrain => (this as IChronicleSetupFixture).EventLogSequenceGrain;
+    internal IEventStoreStorage EventStoreStorage => (this as IChronicleSetupFixture).EventStoreStorage;
+    internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventStoreNamespaceStorage(namespaceName);
+    internal IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventLogStorage(namespaceName);
+    internal TStorage GetGrainStorage<TStorage>(string key)
+        where TStorage : IGrainStorage => (this as IChronicleSetupFixture).GetGrainStorage<TStorage>(key);
+    internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => (this as IChronicleSetupFixture).GetEventSequenceStatesStorage();
+    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => (this as IChronicleSetupFixture).GetEventSequenceGrain(id);
+    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => (this as IChronicleSetupFixture).CreateEventSequenceKey(id);
+
+    // ReSharper enable MemberHidesInterfaceMemberWithDefaultImplementation
+#pragma warning restore SA1600
 
     /// <summary>
     /// Sets the name of the fixture.
