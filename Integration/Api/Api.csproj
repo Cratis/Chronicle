@@ -6,16 +6,11 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Api/Api.csproj" />
+        <ProjectReference Include="../../Source/Clients/Orleans.InProcess/Orleans.InProcess.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
-        <PackageReference Include="Polly.Core" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Folder Include="for_Endpoints/" />
     </ItemGroup>
 
 </Project>
