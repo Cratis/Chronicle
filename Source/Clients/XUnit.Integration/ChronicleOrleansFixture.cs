@@ -8,18 +8,20 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents a fixture for Orleans integration tests.
 /// </summary>
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ChronicleOrleansFixture"/> class.
+/// Initializes a new instance of the <see cref="ChronicleOrleansFixture{T}"/> class.
 /// </remarks>
-/// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
-public class ChronicleOrleansFixture(ChronicleFixture chronicleFixture) : ChronicleClientFixture(chronicleFixture)
+/// <param name="chronicleFixture"><see cref="ChronicleMongoDBFixture"/> to use.</param>
+public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chronicleFixture) : ChronicleClientFixture<TChronicleFixture>(chronicleFixture)
+    where TChronicleFixture : IChronicleFixture
 {
     /// <inheritdoc/>
     protected override IAsyncDisposable CreateWebApplicationFactory()
     {
         var startupType = TestAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
         startupType ??= TestAssembly!.ExportedTypes.FirstOrDefault()!;
-        var webApplicationFactoryType = typeof(ChronicleOrleansWebApplicationFactory<>).MakeGenericType(startupType!);
+        var webApplicationFactoryType = typeof(ChronicleOrleansInProcessWebApplicationFactory<>).MakeGenericType(startupType!);
         var configureServices = ConfigureServices;
         return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, ContentRoot]) as IAsyncDisposable)!;
     }

@@ -3,14 +3,17 @@
 
 using System.Reflection;
 using Cratis.Specifications;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
 /// Represents a base class for specification by example type of context setups.
 /// </summary>
-/// <param name="fixture">The <see cref="ChronicleFixture"/>.</param>
-public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) : ChronicleOrleansFixture(fixture)
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
+/// <param name="fixture">The <see cref="ChronicleMongoDBFixture"/>.</param>
+public abstract class IntegrationSpecificationContext<TChronicleFixture>(TChronicleFixture fixture) : ChronicleOrleansFixture<TChronicleFixture>(fixture)
+    where TChronicleFixture : IChronicleFixture
 {
     /// <inheritdoc/>
     protected override async Task OnInitializeAsync()
@@ -36,12 +39,14 @@ public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) 
 /// <summary>
 /// Represents a base class for specification by example type of context setups.
 /// </summary>
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
 /// <typeparam name="TFactory">The web application factory type.</typeparam>
 /// <typeparam name="TStartup">The startup class type.</typeparam>
-/// <param name="fixture">The <see cref="ChronicleFixture"/>.</param>
+/// <param name="fixture">The <see cref="ChronicleMongoDBFixture"/>.</param>
 #pragma warning disable SA1402
-public abstract class IntegrationSpecificationContext<TFactory, TStartup>(ChronicleFixture fixture) : ChronicleClientFixture<TFactory, TStartup>(fixture)
+public abstract class IntegrationSpecificationContext<TChronicleFixture, TFactory, TStartup>(TChronicleFixture fixture) : ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(fixture)
 #pragma warning restore SA1402
+    where TChronicleFixture : IChronicleFixture
     where TFactory : ChronicleWebApplicationFactory<TStartup>
     where TStartup : class
 {
@@ -49,6 +54,9 @@ public abstract class IntegrationSpecificationContext<TFactory, TStartup>(Chroni
     protected override async Task OnInitializeAsync()
     {
         EnsureBuilt();
+        var eventStore = Services.GetRequiredService<IEventStore>();
+        await eventStore.DiscoverAll();
+        await eventStore.RegisterAll();
         await OnEstablish();
         await OnBecause();
     }

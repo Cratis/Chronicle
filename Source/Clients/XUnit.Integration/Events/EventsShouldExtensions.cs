@@ -21,7 +21,7 @@ public static class EventsShouldExtensions
     /// <param name="eventSourceId">The event source ID.</param>
     /// <param name="validator">Action to validate the event.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task ShouldHaveAppendedEvent<TEvent>(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Action<TEvent> validator)
+    public static async Task ShouldHaveAppendedEvent<TEvent>(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Action<TEvent> validator)
     {
         var eventLog = fixture.GetEventLogStorage();
         var @event = await eventLog.GetEventAt(sequenceNumber.Value);
@@ -42,7 +42,7 @@ public static class EventsShouldExtensions
     /// <param name="fixture">The fixture to use.</param>
     /// <param name="sequenceNumber">The expected next sequence number.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task ShouldHaveNextSequenceNumber(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber)
+    public static async Task ShouldHaveNextSequenceNumber(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber)
     {
         var eventLog = fixture.EventLogSequenceGrain;
         var number = await eventLog.GetNextSequenceNumber();
@@ -55,7 +55,7 @@ public static class EventsShouldExtensions
     /// <param name="fixture">The fixture to use.</param>
     /// <param name="sequenceNumber">The expected tail sequence number.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task ShouldHaveTailSequenceNumber(this IntegrationSpecificationContext fixture, EventSequenceNumber sequenceNumber)
+    public static async Task ShouldHaveTailSequenceNumber(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber)
     {
         var eventLog = fixture.EventLogSequenceGrain;
         var number = await eventLog.GetTailSequenceNumber();

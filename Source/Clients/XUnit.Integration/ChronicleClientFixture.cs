@@ -3,23 +3,19 @@
 
 using System.Reflection;
 using System.ServiceModel;
-using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Types;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Storage;
 using Xunit;
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
 /// Represents the base fixture.
 /// </summary>
-public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDisposable, IAsyncLifetime, IChronicleSetupFixture
+/// <typeparam name="TChronicleFixture">The type of the chroncile fixture.</typeparam>
+public abstract class ChronicleClientFixture<TChronicleFixture> : IClientArtifactsProvider, IDisposable, IAsyncLifetime, IChronicleSetupFixture
+    where TChronicleFixture : IChronicleFixture
 {
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
     static PropertyInfo _servicesProperty = null!;
@@ -35,10 +31,10 @@ public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDispos
     IServiceProvider? _services;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleOrleansFixture"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleClientFixture"/> class.
     /// </summary>
     /// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
-    protected ChronicleClientFixture(ChronicleFixture chronicleFixture)
+    protected ChronicleClientFixture(TChronicleFixture chronicleFixture)
     {
         ChronicleFixture = chronicleFixture;
 
@@ -103,7 +99,7 @@ public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDispos
     /// <summary>
     /// Gets the <see cref="ChronicleFixture"/>.
     /// </summary>
-    public ChronicleFixture ChronicleFixture { get; }
+    public TChronicleFixture ChronicleFixture { get; }
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes => GetArtifactTypes(provider => provider.EventTypes);
@@ -154,22 +150,6 @@ public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDispos
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
     /// </summary>
     public IServiceProvider Services => _services ??= EnsureInitialized(() => _servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
-
-    /// <summary>
-    /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
-    /// </summary>
-    internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventSequence"/> for the event log.
-    /// </summary>
-    /// <returns>The <see cref="IEventSequence"/>.</returns>
-    internal IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
-    /// </summary>
-    internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
 
     /// <summary>
     /// Sets the name of the fixture.
@@ -225,49 +205,6 @@ public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDispos
             GC.WaitForPendingFinalizers();
         });
     }
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventStoreNamespaceStorage"/> for the event store namespace.
-    /// </summary>
-    /// <param name="namespaceName">The namespace name.</param>
-    /// <returns>The <see cref="IEventStoreNamespaceStorage"/>.</returns>
-    internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventSequenceStorage"/> for the event log.
-    /// </summary>
-    /// <param name="namespaceName">The namespace name.</param>
-    /// <returns>The <see cref="IEventSequenceStorage"/>.</returns>
-    internal IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(EventSequenceId.Log);
-
-    /// <summary>
-    /// Gets the <see cref="IGrainStorage"/> for the specified key.
-    /// </summary>
-    /// <typeparam name="TStorage">The type of the storage.</typeparam>
-    /// <param name="key">The key of the storage.</param>
-    /// <returns>The <see cref="IGrainStorage"/>.</returns>
-    internal TStorage GetGrainStorage<TStorage>(string key)
-        where TStorage : IGrainStorage => (TStorage)Services.GetRequiredKeyedService<IGrainStorage>(key);
-
-    /// <summary>
-    /// Internal: Gets the <see cref="EventSequencesStorageProvider"/> for the event sequences.
-    /// </summary>
-    /// <returns>The <see cref="EventSequencesStorageProvider"/>.</returns>
-    internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => GetGrainStorage<EventSequencesStorageProvider>(WellKnownGrainStorageProviders.EventSequences);
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventSequence"/> for the specified event sequence ID.
-    /// </summary>
-    /// <param name="id">The event sequence ID.</param>
-    /// <returns>The <see cref="IEventSequence"/>.</returns>
-    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
-
-    /// <summary>
-    /// Internal: Creates an <see cref="EventSequenceKey"/> for the specified event sequence ID.
-    /// </summary>
-    /// <param name="id">The event sequence ID.</param>
-    /// <returns>The <see cref="EventSequenceKey"/>.</returns>
-    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
 
     /// <summary>
     /// Creates the WebApplicationFactory.
@@ -332,14 +269,16 @@ public abstract class ChronicleClientFixture : IClientArtifactsProvider, IDispos
 /// <summary>
 /// Represents a fixture for Orleans integration tests.
 /// </summary>
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture</typeparam>
 /// <typeparam name="TFactory">The web application factory type.</typeparam>
 /// <typeparam name="TStartup">The startup class type.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ChronicleOrleansFixture"/> class.
+/// Initializes a new instance of the <see cref="ChronicleClientFixture{T, TF, TS}"/> class.
 /// </remarks>
-/// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
+/// <param name="chronicleFixture"><see cref="ChronicleMongoDBFixture"/> to use.</param>
 #pragma warning disable SA1402
-public class ChronicleClientFixture<TFactory, TStartup>(ChronicleFixture chronicleFixture) : ChronicleClientFixture(chronicleFixture)
+public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChronicleFixture chronicleFixture) : ChronicleClientFixture<TChronicleFixture>(chronicleFixture)
+    where TChronicleFixture : IChronicleFixture
 #pragma warning restore SA1402
     where TFactory : ChronicleWebApplicationFactory<TStartup>
     where TStartup : class
@@ -348,10 +287,14 @@ public class ChronicleClientFixture<TFactory, TStartup>(ChronicleFixture chronic
     protected override IAsyncDisposable CreateWebApplicationFactory()
     {
         var webApplicationFactoryType = typeof(TFactory);
-        if (!webApplicationFactoryType.GetConstructors().Any(_ => _.GetParameters().FirstOrDefault()?.ParameterType == typeof(ContentRoot)))
+        if (!webApplicationFactoryType.GetConstructors().Any(_ =>
+            {
+                var parameters = _.GetParameters();
+                return parameters.Length == 2 && parameters[0].ParameterType == typeof(IClientArtifactsProvider) && parameters[1].ParameterType == typeof(ContentRoot);
+            }))
         {
-            throw new ServiceActivationException("WebApplicationFactory must have a public constructor that only takes ContentRoot parameter");
+            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IClientArtifactsProvider)} and {nameof(ContentRoot)} parameters");
         }
-        return (Activator.CreateInstance(webApplicationFactoryType, [ContentRoot]) as IAsyncDisposable)!;
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
     }
 }
