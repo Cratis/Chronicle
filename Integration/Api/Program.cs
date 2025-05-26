@@ -70,3 +70,5 @@ static void PrintExceptionInfo(Exception exception)
     Console.WriteLine($"Exception message: {exception.Message}");
     Console.WriteLine($"Stack Trace: {exception.StackTrace}");
 }
+
+public partial class Program;
