@@ -6,7 +6,7 @@
         <Version>1.0.0</Version>
         <Copyright>Copyright Cratis</Copyright>
         <Authors>all contributors</Authors>
-        <DebugType>portable</DebugType>
+        <DebugType>Embedded</DebugType>
         <PackageIcon>logo.png</PackageIcon>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
