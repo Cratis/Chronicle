@@ -19,15 +19,18 @@ public class ChronicleMongoDBFixture : ChronicleFixture
     /// <summary>
     /// Initializes a new instance of <see cref="ChronicleMongoDBFixture"/>.
     /// </summary>
-    public ChronicleMongoDBFixture() : base(network => new ContainerBuilder()
-        .WithImage("mongo")
-        .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-        .WithPortBinding(MongoDBPort, 27017)
-        .WithHostname(HostName)
-        .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
-        .WithNetwork(network)
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017))
-        .Build())
+    public ChronicleMongoDBFixture() : base(network =>
+    {
+        var builder = new ContainerBuilder()
+            .WithImage("mongo")
+            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
+            .WithPortBinding(MongoDBPort, 27017)
+            .WithHostname(HostName)
+            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
+            .WithNetwork(network)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017));
+        return builder.Build();
+    })
     {
     }
 }

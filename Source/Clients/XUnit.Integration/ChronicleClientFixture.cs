@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents the base fixture.
 /// </summary>
 /// <typeparam name="TChronicleFixture">The type of the chroncile fixture.</typeparam>
-public abstract class ChronicleClientFixture<TChronicleFixture> : IClientArtifactsProvider, IDisposable, IAsyncLifetime, IChronicleSetupFixture
+public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
@@ -311,10 +311,10 @@ public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChro
         if (!webApplicationFactoryType.GetConstructors().Any(_ =>
             {
                 var parameters = _.GetParameters();
-                return parameters.Length == 2 && parameters[0].ParameterType == typeof(IClientArtifactsProvider) && parameters[1].ParameterType == typeof(ContentRoot);
+                return parameters.Length == 2 && parameters[0].ParameterType == typeof(IChronicleSetupFixture) && parameters[1].ParameterType == typeof(ContentRoot);
             }))
         {
-            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IClientArtifactsProvider)} and {nameof(ContentRoot)} parameters");
+            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IChronicleSetupFixture)} and {nameof(ContentRoot)} parameters");
         }
         return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
     }

@@ -17,20 +17,23 @@ public class ChronicleDevelopmentFixture : ChronicleFixture
     /// <summary>
     /// Initializes a new instance of <see cref="ChronicleMongoDBFixture"/>.
     /// </summary>
-    public ChronicleDevelopmentFixture() : base(network => new ContainerBuilder()
-        .WithImage("cratis/chronicle:latest-development")
+    public ChronicleDevelopmentFixture() : base(network =>
+    {
+        var builder = new ContainerBuilder()
+            .WithImage("cratis/chronicle:latest-development")
 
-        // For some reason, this makes the container crash every time
-        // .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-        .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
-        .WithPortBinding(MongoDBPort, 27017)
-        .WithPortBinding(8081, 8080)
-        .WithPortBinding(35000, 35000)
-        .WithHostname(HostName)
-        .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
-        .WithNetwork(network)
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017))
-        .Build())
+            // For some reason, this makes the container crash every time
+            // .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
+            .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
+            .WithPortBinding(MongoDBPort, 27017)
+            .WithPortBinding(8081, 8080)
+            .WithPortBinding(35000, 35000)
+            .WithHostname(HostName)
+            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
+            .WithNetwork(network)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017));
+        return builder.Build();
+    })
     {
     }
 }

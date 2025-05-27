@@ -9,11 +9,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents a web application factory for integration tests.
 /// </summary>
-/// <param name="artifactsProvider">The <see cref="IClientArtifactsProvider"/>.</param>
+/// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
-public abstract class ChronicleWebApplicationFactory<TStartup>(IClientArtifactsProvider artifactsProvider, ContentRoot contentRoot) : WebApplicationFactory<TStartup>
+public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFixture fixture, ContentRoot contentRoot) : WebApplicationFactory<TStartup>
     where TStartup : class
 {
     /// <inheritdoc/>
@@ -21,6 +21,6 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IClientArtifactsP
     {
         builder
             .UseContentRoot(contentRoot)
-            .ConfigureServices(services => services.Configure<ChronicleOptions>(options => options.ArtifactsProvider = artifactsProvider));
+            .ConfigureServices(services => services.Configure<ChronicleOptions>(options => options.ArtifactsProvider = fixture));
     }
 }

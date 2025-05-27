@@ -18,15 +18,15 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents a web application factory for Chronicle In Process integration tests.
 /// </summary>
-/// <param name="artifactsProvider">The client artifacts provider.</param>
+/// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
 /// <param name="configureServices">Action to configure the services.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
 public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
-    IClientArtifactsProvider artifactsProvider,
+    IChronicleSetupFixture fixture,
     Action<IServiceCollection> configureServices,
-    ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(artifactsProvider: artifactsProvider, contentRoot)
+    ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
     /// <inheritdoc/>

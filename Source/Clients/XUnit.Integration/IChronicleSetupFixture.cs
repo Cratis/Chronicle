@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Marks the integration test setup fixture.
 /// </summary>
-public interface IChronicleSetupFixture
+public interface IChronicleSetupFixture : IClientArtifactsProvider
 {
     /// <summary>
     /// Gets the docker network.
