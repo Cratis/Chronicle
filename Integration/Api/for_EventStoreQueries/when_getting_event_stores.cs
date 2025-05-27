@@ -15,7 +15,6 @@ public class when_getting_event_stores(context context) : Given<context>(context
         async Task Because()
         {
             Result = await Client.ExecuteQuery<IEnumerable<string>>("/api/event-stores");
-            Console.WriteLine(Result);
         }
     }
 

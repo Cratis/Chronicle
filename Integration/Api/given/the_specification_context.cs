@@ -3,4 +3,11 @@
 
 namespace Cratis.Chronicle.Integration.Api.given;
 
-public class the_specification_context(ChronicleDevelopmentFixture fixture) : IntegrationSpecificationContext<ChronicleDevelopmentFixture, ApiWebApplicationFactory, Program>(fixture);
+public class the_specification_context(ChronicleDevelopmentFixture fixture) : IntegrationSpecificationContext<ChronicleDevelopmentFixture, ApiWebApplicationFactory, Program>(fixture)
+{
+    async Task Establish()
+    {
+        await EventStore.DiscoverAll();
+        await EventStore.RegisterAll();
+    }
+}
