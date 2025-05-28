@@ -10,7 +10,6 @@
 | --- | ---: |
 | Number of items that remain open | 296 |
 | Number of items closed | 532 |
-| Number of most active mentors | 0 |
 | Total number of items created | 828 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
@@ -370,4 +369,4 @@
 | Client validation of reducers | https://github.com/Cratis/Chronicle/issues/947 | [einari](https://github.com/einari) | None | None | None |
 | Introduce a long running task system with supervisor methodology | https://github.com/Cratis/Chronicle/issues/946 | [einari](https://github.com/einari) | None | 69 days, 6:03:51 | None |
 | Optimize ClientObserver/Reducer registration | https://github.com/Cratis/Chronicle/issues/944 | [einari](https://github.com/einari) | None | 541 days, 0:55:30 | None |
-| Hard to figure out how to get going with a minimal setup
+| Hard to figure out how to get going with a minimal setup | https://github.com/Cratis/Chronicle
