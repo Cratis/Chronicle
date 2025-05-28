@@ -6,8 +6,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
-        <ProjectReference Include="../Orleans.InProcess/Orleans.InProcess.csproj" />
+        <ProjectReference Include="../DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
+        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -19,5 +26,6 @@
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="Microsoft.Orleans.TestingHost"/>
+        <PackageReference Include="Cratis.Applications.MongoDB"/>
     </ItemGroup>
 </Project>

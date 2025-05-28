@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Extension methods for converting between <see cref="Concepts.Observation.FailedPartition"/> and <see cref="FailedPartition"/>.
 /// </summary>
-public static class FailedPartitionConverters
+internal static class FailedPartitionConverters
 {
     /// <summary>
     /// Convert from <see cref="Concepts.Observation.FailedPartition"/> to <see cref="FailedPartition"/>.

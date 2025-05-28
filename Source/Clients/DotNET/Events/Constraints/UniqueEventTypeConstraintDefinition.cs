@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events.Constraints;
-using UniqueEventTypeConstraintDefinitionContract = Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition;
-
 namespace Cratis.Chronicle.Events.Constraints;
 
 /// <summary>
@@ -17,16 +14,4 @@ public record UniqueEventTypeConstraintDefinition(
     ConstraintName Name,
     ConstraintViolationMessageProvider MessageCallback,
     EventTypeId EventTypeId,
-    EventTypeId? RemovedWith) : IConstraintDefinition
-{
-    /// <inheritdoc/>
-    public Constraint ToContract() => new()
-    {
-        Name = Name,
-        Type = ConstraintType.UniqueEventType,
-        Definition = new(new UniqueEventTypeConstraintDefinitionContract
-        {
-            EventTypeId = EventTypeId
-        })
-    };
-}
+    EventTypeId? RemovedWith) : IConstraintDefinition;

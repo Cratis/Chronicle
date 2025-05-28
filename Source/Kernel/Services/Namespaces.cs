@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Services;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
-public class Namespaces(IGrainFactory grainFactory, IStorage storage) : INamespaces
+internal sealed class Namespaces(IGrainFactory grainFactory, IStorage storage) : INamespaces
 {
     /// <inheritdoc/>
     public async Task Ensure(EnsureNamespace command)

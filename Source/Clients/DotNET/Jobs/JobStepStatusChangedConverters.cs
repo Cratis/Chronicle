@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <summary>
 /// Extension methods for converting between contract and client job step status changed representations.
 /// </summary>
-public static class JobStepStatusChangedConverters
+internal static class JobStepStatusChangedConverters
 {
     /// <summary>
     /// Converts a contract <see cref="Contracts.Jobs.JobStepStatusChanged"/> to client <see cref="JobStepStatusChanged"/>.

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 /// Represents the service for working with constraints.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use.</param>
-public class Constraints(IGrainFactory grainFactory) : IConstraints
+internal sealed class Constraints(IGrainFactory grainFactory) : IConstraints
 {
     /// <inheritdoc/>
     public async Task Register(RegisterConstraintsRequest request)

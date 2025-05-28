@@ -49,4 +49,35 @@ public static class ObservableExtensions
         });
         return subject;
     }
+
+    /// <summary>
+    /// Invokes an action and wraps the observable result in a subject providing, with a cancellation token passed to the action that cancels when the subject is completed.
+    /// </summary>
+    /// <param name="instance">The instance to extend.</param>
+    /// <param name="action">The action to invoke that returns an observable.</param>
+    /// <param name="transform">The transform to apply to the observable result.</param>
+    /// <typeparam name="TResult">Type of result.</typeparam>
+    /// <typeparam name="TSource">Type of source.</typeparam>
+    /// <returns>The subject.</returns>
+#pragma warning disable RCS1175 // Unused 'this' parameter
+#pragma warning disable IDE0060 // Remove unused parameter
+    public static ISubject<TResult> InvokeAndWrapWithTransformSubject<TResult, TSource>(this object instance, Func<CancellationToken, IObservable<TSource>> action, Func<TSource, TResult> transform)
+#pragma warning restore IDE0060 // Remove unused parameter
+#pragma warning restore RCS1175 // Unused 'this' parameter
+    {
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        var cts = new CancellationTokenSource();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
+        var sourceObservable = action(cts.Token);
+        var sourceSubject = new Subject<TSource>();
+        sourceObservable.Subscribe(sourceSubject);
+        var subject = new TransformingSubject<TSource, TResult>(sourceSubject, transform);
+        subject.Subscribe(_ => { }, _ => { }, () =>
+        {
+            cts.Cancel();
+            cts.Dispose();
+        });
+        return subject;
+    }
 }

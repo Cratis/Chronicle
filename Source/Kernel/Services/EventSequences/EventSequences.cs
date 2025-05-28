@@ -3,11 +3,12 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Services.Auditing;
+using Cratis.Chronicle.Services.Events;
+using Cratis.Chronicle.Services.Identities;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using ProtoBuf.Grpc;
@@ -23,7 +24,7 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing events.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-public class EventSequences(
+internal sealed class EventSequences(
     IGrainFactory grainFactory,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences

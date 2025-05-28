@@ -16,7 +16,7 @@ public class a_value_handler_and_a_type_with_one_property : a_type_with_one_prop
     {
         schema.Properties.First()!.Value.ExtensionData = new Dictionary<string, object?>()
         {
-            { JsonSchemaGenerator.ComplianceKey, new[] { new ComplianceSchemaMetadata(_metadataType, string.Empty) } }
+            { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(_metadataType, string.Empty) } }
         };
 
         _valueHandler = Substitute.For<IJsonCompliancePropertyValueHandler>();

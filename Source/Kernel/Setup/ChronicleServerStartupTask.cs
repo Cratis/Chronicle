@@ -13,7 +13,7 @@ namespace Orleans.Hosting;
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-public class ChronicleServerStartupTask(
+internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
 {

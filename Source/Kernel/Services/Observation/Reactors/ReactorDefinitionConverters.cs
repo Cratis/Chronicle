@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <summary>
 /// Extension methods for converting between <see cref="ReactorDefinition"/> and <see cref="Contracts.Observation.Reactors.ReactorDefinition"/>.
 /// </summary>
-public static class ReactorDefinitionConverters
+internal static class ReactorDefinitionConverters
 {
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Reactors.ReactorDefinition"/> to <see cref="ReactorDefinition"/>.

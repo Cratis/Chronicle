@@ -13,17 +13,15 @@
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Cratis.Applications.MongoDB" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
-
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Setup/Setup.csproj" />
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Compliance/Compliance.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-
     </ItemGroup>
 </Project>

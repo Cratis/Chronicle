@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -20,13 +19,13 @@ internal static partial class ReducersLogMessages
     internal static partial void Observe(this ILogger<Reducers> logger);
 
     [LoggerMessage(LogLevel.Debug, "Registering Reducer {ReducerId} from connection {ConnectionId} with event store {EventStore} and namespace {@Namespace} for event sequence {EventSequenceId}")]
-    internal static partial void Registering(this ILogger<Reducers> logger, ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
+    internal static partial void Registering(this ILogger<Reducers> logger, ReducerId reducerId, Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Debug, "Subscribing reducer {ReducerId} from connection {ConnectionId} with event store {EventStore} and namespace {@Namespace} for event sequence {EventSequenceId}")]
-    internal static partial void Subscribing(this ILogger<Reducers> logger, ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
+    internal static partial void Subscribing(this ILogger<Reducers> logger, ReducerId reducerId, Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Debug, "Reducer {ReducerId} disconnected from connection {ConnectionId} with event store {EventStore} and namespace {@Namespace} for event sequence {EventSequenceId}")]
-    internal static partial void Disconnected(this ILogger<Reducers> logger, ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
+    internal static partial void Disconnected(this ILogger<Reducers> logger, ReducerId reducerId, Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Debug, "Reducer {ReducerId} observer stream disconnected from connection {ConnectionId}")]
     internal static partial void ObserverStreamDisconnected(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId);

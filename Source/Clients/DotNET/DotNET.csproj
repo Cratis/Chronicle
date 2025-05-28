@@ -2,25 +2,50 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
+        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
+        <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Connections/Connections.csproj"/>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
-            <!-- <PrivateAssets>all</PrivateAssets> -->
-        </ProjectReference>
+        <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+        <InternalsVisibleTo Include="ProtoBuf.Grpc.Internal.Proxies" />
+        <InternalsVisibleTo Include="System.Reflection.Emit" />
     </ItemGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          <PrivateAssets>all</PrivateAssets>
-        </PackageReference> -->
+        <ProjectReference Include="../Connections/Connections.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
+        <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
+    </ItemGroup>
+
+    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
+        <Message Text="Generating gRPC clients" Importance="high" />
+        <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+    </Target>
+
+    <ItemGroup>
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <PackageReference Include="automapper" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />

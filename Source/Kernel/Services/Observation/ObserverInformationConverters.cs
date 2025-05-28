@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Converters for <see cref="ObserverInformation"/>.
 /// </summary>
-public static class ObserverInformationConverters
+internal static class ObserverInformationConverters
 {
     /// <summary>
     /// Convert to contract.

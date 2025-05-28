@@ -10,7 +10,7 @@ public class unknown_event : given.an_event_sequence
 
     void Establish() => _eventTypes.HasFor(typeof(object)).Returns(false);
 
-    async Task Because() => result = await Catch.Exception(async () => await event_sequence.Append(Guid.NewGuid().ToString(), new object()));
+    async Task Because() => result = await Catch.Exception(async () => await _eventSequence.Append(Guid.NewGuid().ToString(), new object()));
 
     [Fact] void should_throw_unknown_event_type() => result.ShouldBeOfExactType<UnknownEventType>();
 }

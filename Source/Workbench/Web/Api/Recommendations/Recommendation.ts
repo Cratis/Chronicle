@@ -6,7 +6,6 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
-import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class Recommendation {
 
@@ -22,6 +21,6 @@ export class Recommendation {
     @field(String)
     type!: string;
 
-    @field(SerializableDateTimeOffset)
-    occurred!: SerializableDateTimeOffset;
+    @field(Date)
+    occurred!: Date;
 }
