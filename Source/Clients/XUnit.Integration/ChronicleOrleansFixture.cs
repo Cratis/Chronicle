@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChronicleOrleansFixture{T}"/> class.
 /// </remarks>
-/// <param name="chronicleFixture"><see cref="ChronicleMongoDBFixture"/> to use.</param>
+/// <param name="chronicleFixture"><see cref="ChronicleInProcessFixture"/> to use.</param>
 public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chronicleFixture) : ChronicleClientFixture<TChronicleFixture>(chronicleFixture)
     where TChronicleFixture : IChronicleFixture
 {

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents a base class for specification by example type of context setups.
 /// </summary>
 /// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
-/// <param name="fixture">The <see cref="ChronicleMongoDBFixture"/>.</param>
+/// <param name="fixture">The <see cref="ChronicleInProcessFixture"/>.</param>
 public abstract class IntegrationSpecificationContext<TChronicleFixture>(TChronicleFixture fixture) : ChronicleOrleansFixture<TChronicleFixture>(fixture)
     where TChronicleFixture : IChronicleFixture
 {
@@ -41,7 +41,7 @@ public abstract class IntegrationSpecificationContext<TChronicleFixture>(TChroni
 /// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
 /// <typeparam name="TFactory">The web application factory type.</typeparam>
 /// <typeparam name="TStartup">The startup class type.</typeparam>
-/// <param name="fixture">The <see cref="ChronicleMongoDBFixture"/>.</param>
+/// <param name="fixture">The <see cref="ChronicleInProcessFixture"/>.</param>
 #pragma warning disable SA1402
 public abstract class IntegrationSpecificationContext<TChronicleFixture, TFactory, TStartup>(TChronicleFixture fixture) : ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(fixture)
 #pragma warning restore SA1402

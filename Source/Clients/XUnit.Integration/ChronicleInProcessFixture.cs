@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents a global fixture for the test runs only the MongoDB container.
 /// </summary>
-public class ChronicleMongoDBFixture : ChronicleFixture
+public class ChronicleInProcessFixture : ChronicleFixture
 {
     /// <summary>
     /// Gets the name of the Mongo container.
@@ -17,9 +17,9 @@ public class ChronicleMongoDBFixture : ChronicleFixture
     public const string HostName = "mongo";
 
     /// <summary>
-    /// Initializes a new instance of <see cref="ChronicleMongoDBFixture"/>.
+    /// Initializes a new instance of <see cref="ChronicleInProcessFixture"/>.
     /// </summary>
-    public ChronicleMongoDBFixture() : base(network =>
+    public ChronicleInProcessFixture() : base(network =>
     {
         var builder = new ContainerBuilder()
             .WithImage("mongo")

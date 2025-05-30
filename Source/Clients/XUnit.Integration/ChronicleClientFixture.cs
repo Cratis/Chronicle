@@ -296,7 +296,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChronicleClientFixture{T, TF, TS}"/> class.
 /// </remarks>
-/// <param name="chronicleFixture"><see cref="ChronicleMongoDBFixture"/> to use.</param>
+/// <param name="chronicleFixture"><see cref="ChronicleInProcessFixture"/> to use.</param>
 #pragma warning disable SA1402
 public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChronicleFixture chronicleFixture) : ChronicleClientFixture<TChronicleFixture>(chronicleFixture)
     where TChronicleFixture : IChronicleFixture
