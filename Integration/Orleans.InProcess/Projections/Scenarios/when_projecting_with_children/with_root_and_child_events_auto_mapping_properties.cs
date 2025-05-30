@@ -14,7 +14,7 @@ public class with_root_and_child_events_auto_mapping_properties(context context)
 {
     const string GroupName = "Group";
 
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithAutoMapping, Group>(chronicleMongoDbFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithAutoMapping, Group>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

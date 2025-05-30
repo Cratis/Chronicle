@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.when_st
 [Collection(ChronicleCollection.Name)]
 public class and_job_is_stopped_and_then_deleted(context context) : Given<context>(context)
 {
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_jobs_manager(chronicleMongoDbFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_jobs_manager(chronicleInProcessFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public IEnumerable<JobStep> JobSteps;

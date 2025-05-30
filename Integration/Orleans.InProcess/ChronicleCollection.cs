@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 /// Collection fixture for the Chronicle integration tests.
 /// </summary>
 [CollectionDefinition(Name)]
-public class ChronicleCollection : ICollectionFixture<ChronicleMongoDBFixture>
+public class ChronicleCollection : ICollectionFixture<ChronicleInProcessFixture>
 {
     /// <summary>
     /// Gets the name of the collection.

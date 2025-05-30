@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.given;
 
-public class a_disconnected_reducer_observing_an_event(ChronicleMongoDBFixture chronicleMongoDbFixture) : IntegrationSpecificationContext(chronicleMongoDbFixture)
+public class a_disconnected_reducer_observing_an_event(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
 {
     public TaskCompletionSource Tcs;
     public ReducerWithoutDelay Reducer;

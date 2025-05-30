@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handl
 [Trait("Category", "Output")]
 public class but_not_second_time(context context) : Given<context>(context)
 {
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_reactor_observing_an_event_that_can_fail(chronicleMongoDbFixture, 2)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_reactor_observing_an_event_that_can_fail(chronicleInProcessFixture, 2)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

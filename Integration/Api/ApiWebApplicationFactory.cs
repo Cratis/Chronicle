@@ -9,10 +9,6 @@ public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoo
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
-        builder.ConfigureTestServices(services =>
-        {
-            services.AddCratisChronicleClient();
-            services.Configure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
-        });
+        builder.ConfigureTestServices(services => services.Configure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore));
     }
 }

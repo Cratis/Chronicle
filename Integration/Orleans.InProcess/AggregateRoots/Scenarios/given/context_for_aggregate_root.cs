@@ -9,12 +9,12 @@ using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.AggregateRoots.Scenarios.given;
 
-public class context_for_aggregate_root<TAggregate, TInternalState>(ChronicleMongoDBFixture chronicleMongoDbFixture) : IntegrationSpecificationContext(chronicleMongoDbFixture)
+public class context_for_aggregate_root<TAggregate, TInternalState>(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
     where TAggregate : IIntegrationTestAggregateRoot<TInternalState>
     where TInternalState : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
-    protected ChronicleMongoDBFixture ChronicleMongoDbFixture = chronicleMongoDbFixture;
+    protected ChronicleInProcessFixture ChronicleInProcessFixture = chronicleInProcessFixture;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public TInternalState ResultState;

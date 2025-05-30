@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_handl
 [Collection(ChronicleCollection.Name)]
 public class and_needs_to_catch_up(context context) : Given<context>(context)
 {
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_reactor_observing_an_event_that_can_fail(chronicleMongoDbFixture, 3)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_reactor_observing_an_event_that_can_fail(chronicleInProcessFixture, 3)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

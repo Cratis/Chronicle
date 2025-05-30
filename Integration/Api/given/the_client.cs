@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration.Api.given;
 
-public class the_client(ChronicleDevelopmentFixture fixture) : the_specification_context(fixture)
+public class the_client(ChronicleOutOfProcessFixture fixture) : the_specification_context(fixture)
 {
     protected HttpClient Client { get; private set; }
 

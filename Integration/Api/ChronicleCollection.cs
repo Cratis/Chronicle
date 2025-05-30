@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Integration.Api;
 /// Collection fixture for the Chronicle integration tests.
 /// </summary>
 [CollectionDefinition(Name)]
-public class ChronicleCollection : ICollectionFixture<ChronicleDevelopmentFixture>
+public class ChronicleCollection : ICollectionFixture<ChronicleOutOfProcessFixture>
 {
     /// <summary>
     /// Gets the name of the collection.

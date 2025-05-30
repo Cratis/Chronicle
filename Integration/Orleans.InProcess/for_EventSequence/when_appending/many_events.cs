@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_
 [Collection(ChronicleCollection.Name)]
 public class many_events(context context) : Given<context>(context)
 {
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : IntegrationSpecificationContext(chronicleMongoDbFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }

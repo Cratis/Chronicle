@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_
 [Collection(ChronicleCollection.Name)]
 public class with_unique_constraint_violation(context context) : Given<context>(context)
 {
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : IntegrationSpecificationContext(chronicleMongoDbFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];

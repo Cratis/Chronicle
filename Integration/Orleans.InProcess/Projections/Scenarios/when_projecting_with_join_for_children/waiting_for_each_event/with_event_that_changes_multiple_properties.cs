@@ -16,7 +16,7 @@ public class with_event_that_changes_multiple_properties(context context) : Give
     const string UserName = "User";
     const string ProfileName = "ProfileName";
 
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleMongoDbFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

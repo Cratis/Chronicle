@@ -3,4 +3,4 @@
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess;
 
-public class IntegrationSpecificationContext(ChronicleMongoDBFixture fixture) : IntegrationSpecificationContext<ChronicleMongoDBFixture>(fixture);
+public class IntegrationSpecificationContext(ChronicleInProcessFixture fixture) : IntegrationSpecificationContext<ChronicleInProcessFixture>(fixture);

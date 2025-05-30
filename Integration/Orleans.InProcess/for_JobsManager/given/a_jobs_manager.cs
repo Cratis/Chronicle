@@ -5,7 +5,7 @@ using Cratis.Chronicle.Grains.Jobs;
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_JobsManager.given;
 
-public class a_jobs_manager(ChronicleMongoDBFixture chronicleMongoDbFixture) : all_dependencies(chronicleMongoDbFixture)
+public class a_jobs_manager(ChronicleInProcessFixture chronicleInProcessFixture) : all_dependencies(chronicleInProcessFixture)
 {
     public IJobsManager JobsManager;
 

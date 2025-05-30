@@ -15,7 +15,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(ChronicleMongoDBFixture chronicleMongoDbFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleMongoDbFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;
