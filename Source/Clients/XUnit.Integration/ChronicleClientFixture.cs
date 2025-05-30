@@ -15,6 +15,8 @@ using Orleans.Storage;
 using Xunit;
 namespace Cratis.Chronicle.XUnit.Integration;
 
+// ReSharper disable MemberHidesInterfaceMemberWithDefaultImplementation
+#pragma warning disable SA1600
 /// <summary>
 /// Represents the base fixture.
 /// </summary>
@@ -36,7 +38,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     IServiceProvider? _services;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleClientFixture"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleClientFixture{T}"/> class.
     /// </summary>
     /// <param name="chronicleFixture"><see cref="ChronicleFixture"/> to use.</param>
     protected ChronicleClientFixture(TChronicleFixture chronicleFixture)
@@ -60,16 +62,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// Gets the value indicating whether to auto discover artifacts.
     /// </summary>
     public virtual bool AutoDiscoverArtifacts { get; }
-
-    /// <summary>
-    /// Gets the test <see cref="Assembly"/>.
-    /// </summary>
-    protected static Assembly? TestAssembly { get; private set; }
-
-    /// <summary>
-    /// Gets the content root of the tests.
-    /// </summary>
-    protected static ContentRoot? ContentRoot { get; private set; }
 
     /// <summary>
     /// Gets the docker network.
@@ -156,21 +148,19 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     public IServiceProvider Services => _services ??= EnsureInitialized(() => _servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
 
-    // ReSharper disable MemberHidesInterfaceMemberWithDefaultImplementation
-#pragma warning disable SA1600
     internal IGrainFactory GrainFactory => (this as IChronicleSetupFixture).GrainFactory;
     internal IEventSequence EventLogSequenceGrain => (this as IChronicleSetupFixture).EventLogSequenceGrain;
     internal IEventStoreStorage EventStoreStorage => (this as IChronicleSetupFixture).EventStoreStorage;
-    internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventStoreNamespaceStorage(namespaceName);
-    internal IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventLogStorage(namespaceName);
-    internal TStorage GetGrainStorage<TStorage>(string key)
-        where TStorage : IGrainStorage => (this as IChronicleSetupFixture).GetGrainStorage<TStorage>(key);
-    internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => (this as IChronicleSetupFixture).GetEventSequenceStatesStorage();
-    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => (this as IChronicleSetupFixture).GetEventSequenceGrain(id);
-    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => (this as IChronicleSetupFixture).CreateEventSequenceKey(id);
 
-    // ReSharper enable MemberHidesInterfaceMemberWithDefaultImplementation
-#pragma warning restore SA1600
+    /// <summary>
+    /// Gets the test <see cref="Assembly"/>.
+    /// </summary>
+    protected static Assembly? TestAssembly { get; private set; }
+
+    /// <summary>
+    /// Gets the content root of the tests.
+    /// </summary>
+    protected static ContentRoot? ContentRoot { get; private set; }
 
     /// <summary>
     /// Sets the name of the fixture.
@@ -226,6 +216,17 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
             GC.WaitForPendingFinalizers();
         });
     }
+
+    internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventStoreNamespaceStorage(namespaceName);
+    internal IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventLogStorage(namespaceName);
+    internal TStorage GetGrainStorage<TStorage>(string key)
+        where TStorage : IGrainStorage => (this as IChronicleSetupFixture).GetGrainStorage<TStorage>(key);
+    internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => (this as IChronicleSetupFixture).GetEventSequenceStatesStorage();
+    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => (this as IChronicleSetupFixture).GetEventSequenceGrain(id);
+    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => (this as IChronicleSetupFixture).CreateEventSequenceKey(id);
+
+    // ReSharper enable MemberHidesInterfaceMemberWithDefaultImplementation
+#pragma warning restore SA1600
 
     /// <summary>
     /// Creates the WebApplicationFactory.
@@ -290,7 +291,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 /// <summary>
 /// Represents a fixture for Orleans integration tests.
 /// </summary>
-/// <typeparam name="TChronicleFixture">The type of the chronicle fixture</typeparam>
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
 /// <typeparam name="TFactory">The web application factory type.</typeparam>
 /// <typeparam name="TStartup">The startup class type.</typeparam>
 /// <remarks>

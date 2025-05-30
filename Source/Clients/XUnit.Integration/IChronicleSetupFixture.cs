@@ -52,6 +52,28 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     public IServiceProvider Services { get; }
 
     /// <summary>
+    /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
+    /// </summary>
+    internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
+
+    /// <summary>
+    /// Internal: Gets the <see cref="IEventSequence"/> for the event log.
+    /// </summary>
+    /// <returns>The <see cref="IEventSequence"/>.</returns>
+    internal IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
+
+    /// <summary>
+    /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
+    /// </summary>
+    internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
+
+    /// <summary>
+    /// Sets the name of the fixture.
+    /// </summary>
+    /// <param name="name">Name for the fixture.</param>
+    public void SetName(string name);
+
+    /// <summary>
     /// Internal: Gets the <see cref="IEventStoreNamespaceStorage"/> for the event store namespace.
     /// </summary>
     /// <param name="namespaceName">The namespace name.</param>
@@ -93,26 +115,4 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     /// <param name="id">The event sequence ID.</param>
     /// <returns>The <see cref="EventSequenceKey"/>.</returns>
     internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
-
-    /// <summary>
-    /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
-    /// </summary>
-    internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventSequence"/> for the event log.
-    /// </summary>
-    /// <returns>The <see cref="IEventSequence"/>.</returns>
-    internal IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
-
-    /// <summary>
-    /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
-    /// </summary>
-    internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
-
-    /// <summary>
-    /// Sets the name of the fixture.
-    /// </summary>
-    /// <param name="name">Name for the fixture.</param>
-    public void SetName(string name);
 }

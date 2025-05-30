@@ -42,9 +42,11 @@ public static class HttpClientExtensions
         {
             commandResult = await response.Content.ReadFromJsonAsync<CommandResult<TCommandResult>>(options: Globals.JsonSerializerOptions);
         }
-        catch (Exception)
+        catch
         {
+            // ignored
         }
+
         return commandResult;
     }
 
@@ -86,12 +88,13 @@ public static class HttpClientExtensions
         {
             queryResult = await response.Content.ReadFromJsonAsync<QueryResult<TQueryResult>>(options: Globals.JsonSerializerOptions);
         }
-        catch (Exception)
+        catch
         {
+            // ignored
         }
+
         return queryResult;
     }
-
 
     /// <summary>
     /// Performs the query get request.
