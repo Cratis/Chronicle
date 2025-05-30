@@ -4,7 +4,7 @@
 using Microsoft.AspNetCore.TestHost;
 namespace Cratis.Chronicle.Integration.Api;
 
-public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoot contentRoot) : ChronicleWebApplicationFactory<Program>(fixture, contentRoot)
+public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoot contentRoot) : ChronicleWebApplicationFactory<Program>(fixture, _ => { }, contentRoot)
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
