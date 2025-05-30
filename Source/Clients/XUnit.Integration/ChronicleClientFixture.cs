@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Types;
 using DotNet.Testcontainers.Networks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
@@ -312,11 +313,19 @@ public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChro
         if (!webApplicationFactoryType.GetConstructors().Any(_ =>
             {
                 var parameters = _.GetParameters();
-                return parameters.Length == 2 && parameters[0].ParameterType == typeof(IChronicleSetupFixture) && parameters[1].ParameterType == typeof(ContentRoot);
+                return parameters.Length == 3 && parameters[0].ParameterType == typeof(IChronicleSetupFixture) && parameters[1].ParameterType == typeof(Action<IWebHostBuilder>) && parameters[2].ParameterType == typeof(ContentRoot);
             }))
         {
-            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IChronicleSetupFixture)} and {nameof(ContentRoot)} parameters");
+            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IChronicleSetupFixture)}, {nameof(Action<IWebHostBuilder>)} and {nameof(ContentRoot)} parameters");
         }
-        return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, new Action<IWebHostBuilder>(ConfigureWebHostBuilder), ContentRoot]) as IAsyncDisposable)!;
+    }
+
+    /// <summary>
+    /// Configures the <see cref="IWebHostBuilder"/>.
+    /// </summary>
+    /// <param name="builder">The <see cref="IWebHostBuilder"/> to configure.</param>
+    protected virtual void ConfigureWebHostBuilder(IWebHostBuilder builder)
+    {
     }
 }
