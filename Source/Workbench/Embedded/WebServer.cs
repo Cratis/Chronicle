@@ -43,7 +43,7 @@ public class WebServer(
                         options.Tenancy = workbenchOptions.Value.ApplicationModel.Tenancy;
                         options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
                     });
-
+                builder.AddCratisChronicle();
                 builder.Services.AddCratisChronicleApi(chronicleServices);
                 builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));
                 builder.WebHost
