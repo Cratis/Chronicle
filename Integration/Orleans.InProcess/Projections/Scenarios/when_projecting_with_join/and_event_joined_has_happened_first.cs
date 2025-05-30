@@ -14,7 +14,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithJoinOnRoot, User>(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithJoinOnRoot, User>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

@@ -15,12 +15,12 @@
       },
       "Cratis.Applications": {
         "type": "Direct",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "ExzyqUokfmPQPxn9Kov9x39Nwvq4CY8UW4U3Flo/TEjHSX2l3dVjK4/SDCX+BzK7AWAWlCc1uQx4pBE290eVyw==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "usEJnTfu9Vb+7xT/2CHhKuUirx2xLeCT89Mbtyb9Tg2VSsFrzf0jwAEdtoidW1r7mnLdkoHwjneBp4RwGLu2tA==",
         "dependencies": {
           "Cratis.Fundamentals": "6.4.0",
-          "FluentValidation": "11.11.0",
+          "FluentValidation": "12.0.0",
           "Microsoft.Extensions.Configuration.FileExtensions": "9.0.4",
           "Microsoft.Extensions.Hosting": "9.0.4",
           "Microsoft.Extensions.Logging": "9.0.4",
@@ -30,11 +30,11 @@
       },
       "Cratis.Applications.MongoDB": {
         "type": "Direct",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "qlIywQ0prUnl9MVu5r/kd4JsGCXaXIeU1q3tZLr7MAWPTRds3xEKJBRr4d9Riodd5m07vuXbRXP4SknAS7kTSQ==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "k2wjNKYx8RjMLDPuMTy8srO70yNr8kpvtVyXzf0eXbFqXR1hgXj6T1Kh/p86rL/btGFOXLt5BSC7uiBaZDrSjw==",
         "dependencies": {
-          "Cratis.Applications": "15.10.3",
+          "Cratis.Applications": "15.10.4",
           "Cratis.Fundamentals": "6.4.0",
           "Cratis.Metrics.Roslyn": "6.4.0",
           "Microsoft.Extensions.Hosting": "9.0.4",
@@ -47,9 +47,9 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "Direct",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "UfaOq6PxbGKCTggc3Gd1GVkaCMeLJsZeeE42TC28AFsnXEpCErMwTW0gYag378i9onWmIStq+kSq0HUDe/UEAg==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "S1XG7tNlXthHZ1TMn4Ra1zA33LFyKwzojPhInTRuq5OED+Gje0ppbqNcOivhNI4LdBoGBZD9G1M/0Bm0NPb27w==",
         "dependencies": {
           "Cratis.Fundamentals": "6.4.0",
           "Microsoft.Extensions.Logging": "9.0.4",
@@ -60,11 +60,11 @@
       },
       "Cratis.Applications.Orleans.MongoDB": {
         "type": "Direct",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "1qvwp15ZS5FeLpSODNwHGfb/2lgtuYfc/yWDAARpVeh/ljYfvU39kahq9vJYIySaWW8I7tre3AkKj0NBEfP7MA==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "O5pHZJs9jr7Otgw2o9SlrHU3OJdsMCFGnsffZ+T0a7OFum8X3iouLaAgz9VHzNqfvjNwTJygie072zQl31CdcA==",
         "dependencies": {
-          "Cratis.Applications.MongoDB": "15.10.3",
+          "Cratis.Applications.MongoDB": "15.10.4",
           "Cratis.Fundamentals": "6.4.0",
           "Microsoft.Orleans.Runtime": "9.1.2",
           "Microsoft.Orleans.Sdk": "9.1.2",
@@ -1572,18 +1572,46 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
+      "Cratis.Chronicle": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle.Connections": "[1.0.0, )",
+          "Cratis.Chronicle.Contracts": "[1.0.0, )",
+          "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.4.0, )",
+          "FluentValidation": "[12.0.0, )",
+          "Grpc.Net.Client": "[2.71.0, )",
+          "Microsoft.Extensions.Hosting": "[9.0.4, )",
+          "NJsonSchema": "[11.3.2, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Reactive": "[6.0.1, )",
+          "System.Text.Json": "[9.0.4, )",
+          "automapper": "[14.0.0, )",
+          "protobuf-net.Grpc": "[1.2.2, )"
+        }
+      },
       "Cratis.Chronicle.Api": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.10.3, )",
-          "Cratis.Applications.ProxyGenerator.Build": "[15.10.3, )",
-          "Cratis.Applications.Swagger": "[15.10.3, )",
+          "Cratis.Applications": "[15.10.4, )",
+          "Cratis.Applications.ProxyGenerator.Build": "[15.10.4, )",
+          "Cratis.Applications.Swagger": "[15.10.4, )",
+          "Cratis.Chronicle.AspNetCore": "[1.0.0, )",
           "Cratis.Chronicle.Connections": "[1.0.0, )",
           "Cratis.Chronicle.Contracts": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.4.0, )",
           "Grpc.Net.Client": "[2.71.0, )",
           "Swashbuckle.AspNetCore": "[8.1.1, )",
           "Swashbuckle.AspNetCore.Filters": "[8.0.3, )",
+          "System.Private.Uri": "[4.3.2, )",
+          "System.Text.Json": "[9.0.4, )"
+        }
+      },
+      "Cratis.Chronicle.AspNetCore": {
+        "type": "Project",
+        "dependencies": {
+          "Cratis.Chronicle": "[1.0.0, )",
+          "Cratis.Fundamentals": "[6.4.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Text.Json": "[9.0.4, )"
         }
@@ -1649,7 +1677,7 @@
       "Cratis.Chronicle.Grains": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications": "[15.10.3, )",
+          "Cratis.Applications": "[15.10.4, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Grains.Interfaces": "[1.0.0, )",
           "Cratis.Chronicle.Projections": "[1.0.0, )",
@@ -1667,7 +1695,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.10.3, )",
+          "Cratis.Applications.Orleans": "[15.10.4, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.4.0, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1737,7 +1765,7 @@
       "Cratis.Chronicle.Storage.MongoDB": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.MongoDB": "[15.10.3, )",
+          "Cratis.Applications.MongoDB": "[15.10.4, )",
           "Cratis.Chronicle.Compliance": "[1.0.0, )",
           "Cratis.Chronicle.Infrastructure": "[1.0.0, )",
           "Cratis.Chronicle.Setup": "[1.0.0, )",
@@ -1754,6 +1782,15 @@
           "System.Text.Json": "[9.0.4, )"
         }
       },
+      "AutoMapper": {
+        "type": "CentralTransitive",
+        "requested": "[14.0.0, )",
+        "resolved": "14.0.0",
+        "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ==",
+        "dependencies": {
+          "Microsoft.Extensions.Options": "8.0.0"
+        }
+      },
       "Castle.Core": {
         "type": "CentralTransitive",
         "requested": "[5.2.1, )",
@@ -1765,9 +1802,9 @@
       },
       "Cratis.Applications.ProxyGenerator.Build": {
         "type": "CentralTransitive",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "xXKSxEuzai3RO2vUZZVnq+Tf9LgVP6DaQX/R2Fo9nwrt+5Q60c3t1/K9un0j887x6s6b3MzMYKmairqbMya8Xw==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "Xq+bdaZy46AkMBf44Dn3X/cwk9iMiih8CwK4o7gWli1k9cbtSbNdber8XHLWrHOtzMox3sdbDt029j+6zYh+Dg==",
         "dependencies": {
           "Microsoft.Build.Framework": "17.13.9",
           "Microsoft.Build.Utilities.Core": "17.13.9",
@@ -1776,11 +1813,11 @@
       },
       "Cratis.Applications.Swagger": {
         "type": "CentralTransitive",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "LG8PoL+CvMVMS89TAqK8gpN9DPdG8zpjyTUb5z+VZ5a2SqxztcPKHAw4yDkJVpj3vmn7zkDOyChIsB7DezH96A==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "S/QYJmwtMDmCF32x7R78euUk5RGSBRJLrQ1LboTnzpfslpm1YUZeUV2tK4I31122WGO9T8lfNvREHo3k05B8FQ==",
         "dependencies": {
-          "Cratis.Applications": "15.10.3",
+          "Cratis.Applications": "15.10.4",
           "Cratis.Fundamentals": "6.4.0",
           "Swashbuckle.AspNetCore": "8.1.1",
           "System.Text.Json": "9.0.4"

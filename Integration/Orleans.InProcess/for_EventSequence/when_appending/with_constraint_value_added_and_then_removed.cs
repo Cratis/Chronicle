@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_EventSequence.when_
 [Collection(ChronicleCollection.Name)]
 public class with_constraint_value_added_and_then_removed(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];

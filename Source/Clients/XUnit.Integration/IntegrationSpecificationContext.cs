@@ -9,8 +9,10 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents a base class for specification by example type of context setups.
 /// </summary>
-/// <param name="fixture">The <see cref="ChronicleFixture"/>.</param>
-public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) : OrleansFixture(fixture)
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
+/// <param name="fixture">The <see cref="ChronicleInProcessFixture"/>.</param>
+public abstract class IntegrationSpecificationContext<TChronicleFixture>(TChronicleFixture fixture) : ChronicleOrleansFixture<TChronicleFixture>(fixture)
+    where TChronicleFixture : IChronicleFixture
 {
     /// <inheritdoc/>
     protected override async Task OnInitializeAsync()
@@ -23,24 +25,47 @@ public abstract class IntegrationSpecificationContext(ChronicleFixture fixture) 
     /// <inheritdoc/>
     protected override Task OnDisposeAsync() => OnDestroy();
 
-    Task OnEstablish()
+    Task OnEstablish() => InvokeMethod("Establish");
+
+    Task OnBecause() => InvokeMethod("Because");
+
+    Task OnDestroy() => InvokeMethod("Destroy");
+
+    Task InvokeMethod(string name) =>
+        (typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public)!.Invoke(null, [this]) as Task)!;
+}
+
+/// <summary>
+/// Represents a base class for specification by example type of context setups.
+/// </summary>
+/// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
+/// <typeparam name="TFactory">The web application factory type.</typeparam>
+/// <typeparam name="TStartup">The startup class type.</typeparam>
+/// <param name="fixture">The <see cref="ChronicleInProcessFixture"/>.</param>
+#pragma warning disable SA1402
+public abstract class IntegrationSpecificationContext<TChronicleFixture, TFactory, TStartup>(TChronicleFixture fixture) : ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(fixture)
+#pragma warning restore SA1402
+    where TChronicleFixture : IChronicleFixture
+    where TFactory : ChronicleWebApplicationFactory<TStartup>
+    where TStartup : class
+{
+    /// <inheritdoc/>
+    protected override async Task OnInitializeAsync()
     {
-        return InvokeMethod("Establish");
+        EnsureBuilt();
+        await OnEstablish();
+        await OnBecause();
     }
 
-    Task OnBecause()
-    {
-        return InvokeMethod("Because");
-    }
+    /// <inheritdoc/>
+    protected override Task OnDisposeAsync() => OnDestroy();
 
-    Task OnDestroy()
-    {
-        return InvokeMethod("Destroy");
-    }
+    Task OnEstablish() => InvokeMethod("Establish");
 
-    Task InvokeMethod(string name)
-    {
-#nullable disable
-        return typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public).Invoke(null, [this]) as Task;
-    }
+    Task OnBecause() => InvokeMethod("Because");
+
+    Task OnDestroy() => InvokeMethod("Destroy");
+
+    Task InvokeMethod(string name) =>
+        (typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public)!.Invoke(null, [this]) as Task)!;
 }

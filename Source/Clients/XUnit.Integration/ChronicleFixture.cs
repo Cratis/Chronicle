@@ -3,95 +3,64 @@
 
 using Docker.DotNet;
 using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using MongoDB.Driver;
-
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
-/// Represents a global fixture for the test run.
+/// Represents the base <see cref="IChronicleFixture"/>.
 /// </summary>
-public class ChronicleFixture : IAsyncDisposable
+public abstract class ChronicleFixture : IChronicleFixture
 {
     /// <summary>
-    /// Gets the name of the Mongo container.
+    /// The exposed MongoDb port.
     /// </summary>
-    public const string HostName = "mongo";
+    public const int MongoDBPort = 27018;
+
+    MongoDBDatabase? _eventStore;
+    MongoDBDatabase? _eventStoreForNamespace;
+    MongoDBDatabase? _readModels;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="ChronicleFixture"/>.
+    /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
     /// </summary>
-    public ChronicleFixture()
+    /// <param name="createMongoDBContainer">The factory for the mongodb container.</param>
+    protected ChronicleFixture(Func<INetwork, IContainer> createMongoDBContainer)
     {
         Directory.CreateDirectory("backups");
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
-
-        MongoDBContainer = new ContainerBuilder()
-            .WithImage("mongo")
-            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-            .WithPortBinding(27018, 27017)
-            .WithHostname(HostName)
-            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
-            .WithNetwork(Network)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017))
-            .Build();
-
-        var retryCount = 0;
-        Exception? failure;
-        do
-        {
-            try
-            {
-                failure = null;
-                MongoDBContainer.StartAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
-            {
-                failure = e;
-                Task.Delay(2000).GetAwaiter().GetResult();
-            }
-        }
-        while (failure is not null && ++retryCount < 10);
-
-        EventStore = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreDatabaseName);
-        EventStoreForNamespace = new MongoDBDatabase(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
-        ReadModels = new MongoDBDatabase(MongoDBContainer, Constants.ReadModelsDatabaseName);
+        MongoDBContainer = createMongoDBContainer(Network);
+        StartContainer(MongoDBContainer).GetAwaiter().GetResult();
     }
-
-    /// <summary>
-    /// Get the container network.
-    /// </summary>
-    public INetwork Network { get; }
 
     /// <summary>
     /// Get the MongoDB container.
     /// </summary>
     public IContainer MongoDBContainer { get; }
 
-    /// <summary>
-    /// Gets the event store database.
-    /// </summary>
-    public MongoDBDatabase EventStore { get; }
+    /// <inheritdoc/>
+    public INetwork Network { get; }
 
-    /// <summary>
-    /// Gets the event store database for the namespace used in the event store.
-    /// </summary>
-    public MongoDBDatabase EventStoreForNamespace { get; }
+    /// <inheritdoc/>
+    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName);
 
-    /// <summary>
-    /// Gets the read models database.
-    /// </summary>
-    public MongoDBDatabase ReadModels { get; }
+    /// <inheritdoc/>
+    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
 
-    /// <summary>
-    /// Performs a backup of the MongoDB database.
-    /// </summary>
-    /// <param name="prefix">The prefix to use in the filename.</param>
-    public void PerformBackup(string? prefix = null)
+    /// <inheritdoc/>
+    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
+
+    /// <inheritdoc/>
+    public virtual async ValueTask DisposeAsync()
+    {
+        await MongoDBContainer.DisposeAsync();
+    }
+
+    /// <inheritdoc/>
+    public virtual void PerformBackup(string? prefix = null)
     {
         prefix ??= string.Empty;
         if (!string.IsNullOrEmpty(prefix))
@@ -100,19 +69,22 @@ public class ChronicleFixture : IAsyncDisposable
         }
 
         var backupName = $"{prefix}{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.tgz";
-        MongoDBContainer.ExecAsync(
-        [
-            "mongodump",
-            $"--archive=/backups/{backupName}",
-            "--gzip"
-        ]).GetAwaiter().GetResult();
+        try
+        {
+            MongoDBContainer.ExecAsync(
+            [
+                "mongodump",
+                $"--archive=/backups/{backupName}",
+                "--gzip"
+            ]).GetAwaiter().GetResult();
+        }
+        catch
+        {
+        }
     }
 
-    /// <summary>
-    /// Clears all databases in the MongoDB container.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    public async Task RemoveAllDatabases()
+    /// <inheritdoc/>
+    public virtual async Task RemoveAllDatabases()
     {
         var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
         {
@@ -123,16 +95,29 @@ public class ChronicleFixture : IAsyncDisposable
         using var mongoClient = new MongoClient(settings);
         var namesCursor = await mongoClient.ListDatabaseNamesAsync();
         var names = await namesCursor.ToListAsync();
-        foreach (var name in names)
+        foreach (var name in names.Where(name => name != "admin" && name != "config" && name != "local"))
         {
-            if (name == "admin" || name == "config" || name == "local") continue;
             await mongoClient.DropDatabaseAsync(name);
         }
     }
 
-    /// <inheritdoc/>
-    public async ValueTask DisposeAsync()
+    static async Task StartContainer(IContainer container)
     {
-        await MongoDBContainer.DisposeAsync();
+        var retryCount = 0;
+        Exception? failure;
+        do
+        {
+            try
+            {
+                failure = null;
+                await container.StartAsync();
+            }
+            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
+            {
+                failure = e;
+                await Task.Delay(2000);
+            }
+        }
+        while (failure is not null && ++retryCount < 10);
     }
 }

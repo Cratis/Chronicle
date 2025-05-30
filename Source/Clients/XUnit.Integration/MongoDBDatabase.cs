@@ -29,7 +29,7 @@ public class MongoDBDatabase : IDisposable
         };
         var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
 
-        _mongoClient = new MongoClient(settings);
+        _mongoClient = new(settings);
 
         Database = _mongoClient.GetDatabase(database);
         var changeDatabase = _mongoClient.GetDatabase($"{database}-changes");
@@ -46,7 +46,7 @@ public class MongoDBDatabase : IDisposable
 
             var cursor = await Database.WatchAsync(
                 pipeline,
-                new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
+                new() { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
 
             while (await cursor.MoveNextAsync())
             {

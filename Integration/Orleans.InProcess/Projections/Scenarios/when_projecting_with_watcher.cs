@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.Projections.Scenarios;
 [Collection(ChronicleCollection.Name)]
 public class when_projecting_with_watcher(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<AutoMappedPropertiesProjection, Model>(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AutoMappedPropertiesProjection, Model>(chronicleInProcessFixture)
     {
         public EventWithPropertiesForAllSupportedTypes EventAppended;
 

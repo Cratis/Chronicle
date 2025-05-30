@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reactors.when_appen
 [Collection(ChronicleCollection.Name)]
 public class and_not_waiting_for_observer_to_be_active(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : IntegrationSpecificationContext(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
     {
         public static TaskCompletionSource Tsc = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;

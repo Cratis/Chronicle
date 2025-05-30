@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Integration.Api</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Integration.Api</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Api/Api.csproj" />
+        <ProjectReference Include="../../Source/Clients/Orleans.InProcess/Orleans.InProcess.csproj" />
+        <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    </ItemGroup>
+
+</Project>

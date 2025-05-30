@@ -122,3 +122,33 @@ jobs:
 
       - name: Run integration tests for .Net 9
         run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+
+  integration-api:
+    runs-on: ubuntu-latest
+    needs: [dotnet-build]
+    strategy:
+      matrix:
+        namespace:
+          - 'Api.for_Endpoints'
+    env:
+      NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+          dotnet-version: |
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./**/bin
+          key: ${{ env.DOTNET_CACHE }}
+
+      - name: Run API integration tests for .Net 9
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0

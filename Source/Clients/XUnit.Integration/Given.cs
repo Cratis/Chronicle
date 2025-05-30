@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <typeparam name="TSetup">Type of context.</typeparam>
 public class Given<TSetup> : IClassFixture<TSetup>
-    where TSetup : IntegrationSpecificationContext
+    where TSetup : class, IChronicleSetupFixture
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Given{TSetup}"/> class.

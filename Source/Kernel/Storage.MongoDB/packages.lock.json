@@ -4,11 +4,11 @@
     "net9.0": {
       "Cratis.Applications.MongoDB": {
         "type": "Direct",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "qlIywQ0prUnl9MVu5r/kd4JsGCXaXIeU1q3tZLr7MAWPTRds3xEKJBRr4d9Riodd5m07vuXbRXP4SknAS7kTSQ==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "k2wjNKYx8RjMLDPuMTy8srO70yNr8kpvtVyXzf0eXbFqXR1hgXj6T1Kh/p86rL/btGFOXLt5BSC7uiBaZDrSjw==",
         "dependencies": {
-          "Cratis.Applications": "15.10.3",
+          "Cratis.Applications": "15.10.4",
           "Cratis.Fundamentals": "6.4.0",
           "Cratis.Metrics.Roslyn": "6.4.0",
           "Microsoft.Extensions.Hosting": "9.0.4",
@@ -1394,12 +1394,12 @@
       },
       "Cratis.Applications": {
         "type": "CentralTransitive",
-        "requested": "[15.10.3, )",
-        "resolved": "15.10.3",
-        "contentHash": "ExzyqUokfmPQPxn9Kov9x39Nwvq4CY8UW4U3Flo/TEjHSX2l3dVjK4/SDCX+BzK7AWAWlCc1uQx4pBE290eVyw==",
+        "requested": "[15.10.4, )",
+        "resolved": "15.10.4",
+        "contentHash": "usEJnTfu9Vb+7xT/2CHhKuUirx2xLeCT89Mbtyb9Tg2VSsFrzf0jwAEdtoidW1r7mnLdkoHwjneBp4RwGLu2tA==",
         "dependencies": {
           "Cratis.Fundamentals": "6.4.0",
-          "FluentValidation": "11.11.0",
+          "FluentValidation": "12.0.0",
           "Microsoft.Extensions.Configuration.FileExtensions": "9.0.4",
           "Microsoft.Extensions.Hosting": "9.0.4",
           "Microsoft.Extensions.Logging": "9.0.4",

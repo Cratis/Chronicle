@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.when_conne
 [Collection(ChronicleCollection.Name)]
 public class and_reducer_is_registered_while_there_are_events_in_sequence(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_disconnected_reducer_observing_an_event(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_disconnected_reducer_observing_an_event(chronicleInProcessFixture)
     {
         public List<EventForEventSourceId> Events;
 

@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration.Orleans.InProcess.for_Reducers.given;
 
-public class a_reducer_observing_an_event_that_can_fail(ChronicleFixture ChronicleFixture, int numberOfObservations) : IntegrationSpecificationContext(ChronicleFixture)
+public class a_reducer_observing_an_event_that_can_fail(ChronicleInProcessFixture chronicleInProcessFixture, int numberOfObservations) : IntegrationSpecificationContext(chronicleInProcessFixture)
 {
     public TaskCompletionSource[] Tcs;
     public ReducerThatCanFail[] Observers;

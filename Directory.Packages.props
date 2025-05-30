@@ -21,12 +21,12 @@
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="6.4.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.4.0" />
-        <PackageVersion Include="Cratis.Applications" Version="15.10.3" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="15.10.3" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="15.10.3" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="15.10.3" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="15.10.3" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="15.10.3" />
+        <PackageVersion Include="Cratis.Applications" Version="15.10.4" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="15.10.4" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="15.10.4" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="15.10.4" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="15.10.4" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="15.10.4" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.1.2" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.1.2" />
@@ -98,7 +98,7 @@
         <PackageVersion Include="xunit" Version="2.9.3" />
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.0" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
-        <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.13.0" />
+        <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.14.0" />
     </ItemGroup>
 
     <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' "/>
