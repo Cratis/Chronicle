@@ -99,18 +99,18 @@
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "Direct",
-        "requested": "[9.0.4, )",
-        "resolved": "9.0.4",
-        "contentHash": "f2MTUaS2EQ3lX4325ytPAISZqgBfXmY0WvgD80ji6Z20AoDNiCESxsqo6mFRwHJD/jfVKRw9FsW6+86gNre3ug==",
+        "requested": "[9.0.5, )",
+        "resolved": "9.0.5",
+        "contentHash": "N1Mn0T/tUBPoLL+Fzsp+VCEtneUhhxc1//Dx3BeuQ8AX+XrMlYCfnp2zgpEXnTCB7053CLdiqVWPZ7mEX6MPjg==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.4"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.5"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "Direct",
-        "requested": "[9.0.4, )",
-        "resolved": "9.0.4",
-        "contentHash": "UI0TQPVkS78bFdjkTodmkH0Fe8lXv9LnhGFKgKrsgUJ5a5FVdFRcgjIkBVLbGgdRhxWirxH/8IXUtEyYJx6GQg=="
+        "requested": "[9.0.5, )",
+        "resolved": "9.0.5",
+        "contentHash": "cjnRtsEAzU73aN6W7vkWy8Phj5t3Xm78HSqgrbh/O4Q9SK/yN73wZVa21QQY6amSLQRQ/M8N+koGnY6PuvKQsw=="
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
@@ -135,11 +135,11 @@
       },
       "OpenTelemetry.Exporter.InMemory": {
         "type": "Direct",
-        "requested": "[1.11.2, )",
-        "resolved": "1.11.2",
-        "contentHash": "LJkSqzSjIh7DiJN1xbuAxFwug15NLn7dX6taLFiOMiuqxNpk79thfsI3nP+nYilWJF3Du5L2pglB+xquJHLPGw==",
+        "requested": "[1.12.0, )",
+        "resolved": "1.12.0",
+        "contentHash": "2uuBbkt46t6Q3PrKXQj6yeIMu+DnI/zvS39kDSRdMvIIGej5sfNi7cy3NYTELkI7fveOSYW0U0ahtu6nrezwQw==",
         "dependencies": {
-          "OpenTelemetry": "1.11.2"
+          "OpenTelemetry": "1.12.0"
         }
       },
       "Roslynator.Analyzers": {
@@ -742,7 +742,7 @@
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "CentralTransitive",
-        "requested": "[9.0.4, )",
+        "requested": "[9.0.5, )",
         "resolved": "9.0.4",
         "contentHash": "ACtnvl3H3M/f8Z42980JxsNu7V9PPbzys4vBs83ZewnsgKd7JeYK18OMPo0g+MxAHrpgMrjmlinXDiaSRPcVnA=="
       },

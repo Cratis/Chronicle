@@ -4,9 +4,9 @@
     "net9.0": {
       "Cratis.Applications": {
         "type": "Direct",
-        "requested": "[15.10.4, )",
-        "resolved": "15.10.4",
-        "contentHash": "usEJnTfu9Vb+7xT/2CHhKuUirx2xLeCT89Mbtyb9Tg2VSsFrzf0jwAEdtoidW1r7mnLdkoHwjneBp4RwGLu2tA==",
+        "requested": "[16.0.0, )",
+        "resolved": "16.0.0",
+        "contentHash": "Kcj+1XB0Re8WooFYzHsvxJiStdGutHhj0Eg9XOZMX1mtiUzDZzyr+sW5Ei53fIDO026nThT4cyhunyCQRsbEhg==",
         "dependencies": {
           "Cratis.Fundamentals": "6.4.0",
           "FluentValidation": "12.0.0",
@@ -1237,7 +1237,7 @@
       "Cratis.Chronicle.Grains.Interfaces": {
         "type": "Project",
         "dependencies": {
-          "Cratis.Applications.Orleans": "[15.10.4, )",
+          "Cratis.Applications.Orleans": "[16.0.0, )",
           "Cratis.Chronicle.Storage": "[1.0.0, )",
           "Cratis.Fundamentals": "[6.4.0, )",
           "Microsoft.Orleans.Sdk": "[9.1.2, )",
@@ -1250,10 +1250,10 @@
         "dependencies": {
           "Cratis.Fundamentals": "[6.4.0, )",
           "FluentValidation": "[12.0.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[9.0.4, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.4, )",
+          "Microsoft.Extensions.DependencyInjection": "[9.0.5, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[9.0.5, )",
           "NJsonSchema": "[11.3.2, )",
-          "OpenTelemetry.Exporter.InMemory": "[1.11.2, )",
+          "OpenTelemetry.Exporter.InMemory": "[1.12.0, )",
           "System.Private.Uri": "[4.3.2, )",
           "System.Reactive": "[6.0.1, )",
           "System.Text.Json": "[9.0.4, )",
@@ -1280,9 +1280,9 @@
       },
       "Cratis.Applications.Orleans": {
         "type": "CentralTransitive",
-        "requested": "[15.10.4, )",
-        "resolved": "15.10.4",
-        "contentHash": "S1XG7tNlXthHZ1TMn4Ra1zA33LFyKwzojPhInTRuq5OED+Gje0ppbqNcOivhNI4LdBoGBZD9G1M/0Bm0NPb27w==",
+        "requested": "[16.0.0, )",
+        "resolved": "16.0.0",
+        "contentHash": "x7G7uoUIAkerrx4Y9o0P8J6dRJSX5W4kXMEZYaUdQjS5wU/QERkzbBNroPwUx61ASVQRw4bp5oOJNyFuEbsOcQ==",
         "dependencies": {
           "Cratis.Fundamentals": "6.4.0",
           "Microsoft.Extensions.Logging": "9.0.4",
@@ -1355,28 +1355,28 @@
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
-        "requested": "[9.0.4, )",
-        "resolved": "9.0.4",
-        "contentHash": "f2MTUaS2EQ3lX4325ytPAISZqgBfXmY0WvgD80ji6Z20AoDNiCESxsqo6mFRwHJD/jfVKRw9FsW6+86gNre3ug==",
+        "requested": "[9.0.5, )",
+        "resolved": "9.0.5",
+        "contentHash": "N1Mn0T/tUBPoLL+Fzsp+VCEtneUhhxc1//Dx3BeuQ8AX+XrMlYCfnp2zgpEXnTCB7053CLdiqVWPZ7mEX6MPjg==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.4"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.5"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[9.0.4, )",
-        "resolved": "9.0.4",
-        "contentHash": "UI0TQPVkS78bFdjkTodmkH0Fe8lXv9LnhGFKgKrsgUJ5a5FVdFRcgjIkBVLbGgdRhxWirxH/8IXUtEyYJx6GQg=="
+        "requested": "[9.0.5, )",
+        "resolved": "9.0.5",
+        "contentHash": "cjnRtsEAzU73aN6W7vkWy8Phj5t3Xm78HSqgrbh/O4Q9SK/yN73wZVa21QQY6amSLQRQ/M8N+koGnY6PuvKQsw=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "CentralTransitive",
-        "requested": "[9.0.4, )",
+        "requested": "[9.0.5, )",
         "resolved": "9.0.4",
         "contentHash": "ACtnvl3H3M/f8Z42980JxsNu7V9PPbzys4vBs83ZewnsgKd7JeYK18OMPo0g+MxAHrpgMrjmlinXDiaSRPcVnA=="
       },
       "Microsoft.Extensions.Hosting": {
         "type": "CentralTransitive",
-        "requested": "[9.0.4, )",
+        "requested": "[9.0.5, )",
         "resolved": "9.0.4",
         "contentHash": "1rZwLE+tTUIyZRUzmlk/DQj+v+Eqox+rjb+X7Fi+cYTbQfIZPYwpf1pVybsV3oje8+Pe4GaNukpBVUlPYeQdeQ==",
         "dependencies": {
@@ -1406,7 +1406,7 @@
       },
       "Microsoft.Extensions.Logging.Console": {
         "type": "CentralTransitive",
-        "requested": "[9.0.4, )",
+        "requested": "[9.0.5, )",
         "resolved": "9.0.4",
         "contentHash": "cI0lQe0js65INCTCtAgnlVJWKgzgoRHVAW1B1zwCbmcliO4IZoTf92f1SYbLeLk7FzMJ/GlCvjLvJegJ6kltmQ==",
         "dependencies": {
@@ -1514,11 +1514,11 @@
       },
       "OpenTelemetry.Exporter.InMemory": {
         "type": "CentralTransitive",
-        "requested": "[1.11.2, )",
-        "resolved": "1.11.2",
-        "contentHash": "LJkSqzSjIh7DiJN1xbuAxFwug15NLn7dX6taLFiOMiuqxNpk79thfsI3nP+nYilWJF3Du5L2pglB+xquJHLPGw==",
+        "requested": "[1.12.0, )",
+        "resolved": "1.12.0",
+        "contentHash": "2uuBbkt46t6Q3PrKXQj6yeIMu+DnI/zvS39kDSRdMvIIGej5sfNi7cy3NYTELkI7fveOSYW0U0ahtu6nrezwQw==",
         "dependencies": {
-          "OpenTelemetry": "1.11.2"
+          "OpenTelemetry": "1.12.0"
         }
       },
       "System.Reactive": {
