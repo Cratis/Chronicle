@@ -50,9 +50,9 @@
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
-        "requested": "[4.13.0, )",
-        "resolved": "4.13.0",
-        "contentHash": "XNq3sEcjn5jG73mJjjRCl4IR9+IgxHyVpEYDI/lxWGvYZzpJLkNfigmuUII+Cjvg1gQERO3Oq2CXQBhAqc//OA=="
+        "requested": "[4.14.0, )",
+        "resolved": "4.14.0",
+        "contentHash": "OdHxWnyjPBrcgu/3kZnsDceyfel57oP9YgK1uGmq8rA3aijLcb/S2GiTfB1geoy8XnpinjNSs9bla40IadQ45w=="
       },
       "Microsoft.CodeAnalysis.NetAnalyzers": {
         "type": "Direct",
