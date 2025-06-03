@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans.Providers.MongoDB.Configuration;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -36,12 +37,11 @@ public static class MongoDBChronicleBuilderExtensions
         builder.SiloBuilder.AddStartupTask<CustomSerializersRegistrationService>(ServiceLifecycleStage.First);
         builder.SiloBuilder
             .UseMongoDBClient(server)
-
-            // .UseMongoDBClustering(options =>
-            // {
-            //     options.DatabaseName = database;
-            //     options.Strategy = MongoDBMembershipStrategy.Multiple;
-            // })
+            .UseMongoDBClustering(options =>
+            {
+                options.DatabaseName = database;
+                options.Strategy = MongoDBMembershipStrategy.Multiple;
+            })
             .UseMongoDBReminders(options => options.DatabaseName = database);
 
         builder.ConfigureServices(services =>
