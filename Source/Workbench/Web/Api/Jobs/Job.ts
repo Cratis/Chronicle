@@ -5,14 +5,15 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
+import { Guid } from '@cratis/fundamentals';
 import { JobProgress } from './JobProgress';
 import { JobStatus } from './JobStatus';
 import { JobStatusChanged } from './JobStatusChanged';
 
 export class Job {
 
-    @field(String)
-    id!: string;
+    @field(Guid)
+    id!: Guid;
 
     @field(String)
     details!: string;

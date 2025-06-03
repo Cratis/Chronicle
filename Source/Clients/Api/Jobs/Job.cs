@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Api.Jobs;
 /// <param name="StatusChanges">Collection of status changes that happened to the job.</param>
 /// <param name="Progress">The <see cref="JobProgress"/>.</param>
 public record Job(
-    string Id,
+    Guid Id,
     string Details,
     string Type,
     JobStatus Status,

@@ -7,7 +7,7 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Guid } from '@cratis/fundamentals';
 
 @injectable()
-export class JobViewModels {
+export class JobsViewModel {
 
     constructor(@inject('params') private readonly _params: EventStoreAndNamespaceParams) {
     }

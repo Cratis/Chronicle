@@ -14,7 +14,7 @@ internal static class JobConverters
     /// <param name="job">The job to convert.</param>
     /// <returns>The converted job.</returns>
     public static Job ToApi(this Contracts.Jobs.Job job) => new(
-        job.Id.ToString(),
+        job.Id,
         job.Details,
         job.Type,
         (JobStatus)(int)job.Status,
