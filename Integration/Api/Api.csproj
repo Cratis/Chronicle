@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Source/Api/Api.csproj" />
+        <ProjectReference Include="../../Source/Clients/Api/Api.csproj" />
         <ProjectReference Include="../../Source/Clients/Orleans.InProcess/Orleans.InProcess.csproj" />
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
