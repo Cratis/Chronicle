@@ -9,6 +9,7 @@ using System.Xml;
 using System.Xml.XPath;
 using Cratis.Applications.Swagger;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
