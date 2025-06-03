@@ -6,8 +6,8 @@
     },
     {
         "name": "Api",
-        "path": "${workspaceFolder}/Source/Api",
-        "outputPath": "${workspaceFolder}/Source/Api/bin/Debug/net9.0/Cratis.Chronicle.Api.dll"
+        "path": "${workspaceFolder}/Source/Clients/Api",
+        "outputPath": "${workspaceFolder}/Source/Clients/Api/bin/Debug/net9.0/Cratis.Chronicle.Api.dll"
     },
     {
         "name": "AspNetCore Sample",
