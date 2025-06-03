@@ -11,6 +11,7 @@ using Cratis.Applications.Swagger;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Execution;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -89,6 +90,8 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reducers);
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().Projections);
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().Jobs);
+
+        services.AddSingleton<IControllerActivator, CustomControllerActivator>();
 
         return services;
     }
