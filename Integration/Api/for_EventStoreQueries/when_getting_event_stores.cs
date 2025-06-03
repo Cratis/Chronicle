@@ -23,5 +23,4 @@ public class when_getting_event_stores(context context) : Given<context>(context
 
     [Fact]
     void should_return_one_event_store() => Context.Result.Data.Count().ShouldEqual(1);
-
 }

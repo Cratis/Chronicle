@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     IChronicleSetupFixture fixture,
     Action<IServiceCollection> configureServices,
-    ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, _ => { },  contentRoot)
+    ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
     /// <inheritdoc/>
