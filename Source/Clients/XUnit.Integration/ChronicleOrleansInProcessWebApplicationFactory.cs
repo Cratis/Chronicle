@@ -33,7 +33,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     protected override IHostBuilder CreateHostBuilder()
     {
         var builder = Host.CreateDefaultBuilder();
-        var chronicleOptions = new Concepts.Configuration.ChronicleOptions();
+        var chronicleOptions = new Configuration.ChronicleOptions();
 
         builder.UseCratisMongoDB(
             mongo =>
