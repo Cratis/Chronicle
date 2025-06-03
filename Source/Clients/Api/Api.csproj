@@ -40,12 +40,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
-
 
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" />
