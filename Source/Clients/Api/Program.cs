@@ -20,7 +20,6 @@ var chronicleApiOptions = new ChronicleApiOptions();
 builder.Configuration.Bind(chronicleApiOptions);
 builder.Services.Configure<ChronicleApiOptions>(builder.Configuration);
 builder.Services.AddCratisChronicleApi();
-builder.AddCratisChronicle();
 
 builder.Host
    .UseDefaultServiceProvider(_ =>
