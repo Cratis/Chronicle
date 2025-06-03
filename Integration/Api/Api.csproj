@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Integration.Api</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Integration.Api</RootNamespace>
+        <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
