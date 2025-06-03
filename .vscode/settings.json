@@ -130,7 +130,7 @@
         "wwwroot",
         "Xunit"
     ],
-    "dotnet.defaultSolution": "cratis.sln",
+    "dotnet.defaultSolution": "$(workspaceFolder)/Cratis.sln",
     "dotnet.automaticallyCreateSolutionInWorkspace": false,
     "github.copilot.chat.codeGeneration.useInstructionFiles": true
 }
