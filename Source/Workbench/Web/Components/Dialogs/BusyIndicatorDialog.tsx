@@ -15,6 +15,7 @@ export const BusyIndicatorDialog = (props: BusyIndicatorDialogRequest) => {
 
     return (
         <>
+            {/*eslint-disable-next-line @typescript-eslint/no-empty-function */}
             <Dialog header={headerElement} modal visible={true} onHide={() => { }}>
                 <ProgressSpinner />
                 <p className="m-0">
