@@ -43,7 +43,7 @@ public class an_observer : Specification
     {
         _observersConfig = new();
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
-        _configurationProvider.GetFor(Arg.Any<ObserverKey>()).Returns(_observersConfig);
+        _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _silo.AddService(_configurationProvider);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
