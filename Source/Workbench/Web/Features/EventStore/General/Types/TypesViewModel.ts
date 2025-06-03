@@ -12,8 +12,8 @@ export class TypesViewModel {
     }
 
     async addEventType() {
-        const response = await this._dialogs.show<AddEventTypeRequest, AddEventTypeResponse>(new AddEventTypeRequest());
-        console.log(response.name);
+        const [, response]= await this._dialogs.show<AddEventTypeRequest, AddEventTypeResponse>(new AddEventTypeRequest());
+        console.log(response!.name);
 
         // Execute AddEventType command
     }

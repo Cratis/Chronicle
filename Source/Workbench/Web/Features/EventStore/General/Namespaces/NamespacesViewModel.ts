@@ -16,12 +16,12 @@ export class NamespacesViewModel {
     }
 
     async addNamespace() {
-        const response = await this._dialogs.show<AddNamespaceRequest, AddNamespaceResponse>(new AddNamespaceRequest());
-        if (response.create === false) return;
+        const [, response] = await this._dialogs.show<AddNamespaceRequest, AddNamespaceResponse>(new AddNamespaceRequest());
+        if (response!.create === false) return;
 
         const command = new EnsureNamespace();
         command.eventStore = this._params.eventStore!;
-        command.namespace = response.name;
+        command.namespace = response!.name;
         await command.execute();
     }
 }

@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.when_handling_even
 [Collection(ChronicleCollection.Name)]
 public class and_needs_to_catch_up(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_reducer_observing_an_event_that_can_fail(ChronicleFixture, 3)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_reducer_observing_an_event_that_can_fail(chronicleInProcessFixture, 3)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

@@ -12,7 +12,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     const string BootTitle = "MyBook";
     const string UserName = "User";
 
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<BorrowedBooksProjection, BorrowedBook>(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<BorrowedBooksProjection, BorrowedBook>(chronicleInProcessFixture)
     {
         public Guid UserId;
         public Guid BookId;
@@ -31,7 +31,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
 
         protected override Task<BorrowedBook> GetModelResult()
         {
-            var result = ChronicleFixture.ReadModels.Database.GetCollection<BorrowedBook>().Find(_ => _.Id == BookId);
+            var result = chronicleInProcessFixture.ReadModels.Database.GetCollection<BorrowedBook>().Find(_ => _.Id == BookId);
             return result.FirstOrDefaultAsync();
         }
     }

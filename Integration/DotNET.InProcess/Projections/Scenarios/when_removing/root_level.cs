@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_remo
 [Collection(ChronicleCollection.Name)]
 public class root_level(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithRootRemove, Model>(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithRootRemove, Model>(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes), typeof(RemoveRoot)];
 

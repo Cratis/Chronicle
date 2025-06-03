@@ -10,7 +10,7 @@ import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { TypesViewModel } from './TypesViewModel';
 import { withViewModel } from '@cratis/applications.react.mvvm';
-import { useDialogRequest } from '@cratis/applications.react.mvvm/dialogs';
+import { useDialog } from '@cratis/applications.react.mvvm/dialogs';
 import { AddEventType, AddEventTypeRequest, AddEventTypeResponse } from './AddEventType';
 import { DataPage } from 'Components';
 import { TypeDetails } from './TypeDetails';
@@ -25,7 +25,7 @@ const renderTombstone = () => {
 
 export const Types = withViewModel(TypesViewModel, () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddEventTypeDialogWrapper, addEventTypeDialogContext, addEventTypeDialogResolver] = useDialogRequest<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest);
+    const [AddEventTypeDialog] = useDialog<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest, AddEventType);
 
     const queryArgs: AllEventTypesArguments = {
         eventStore: params.eventStore!
@@ -61,9 +61,7 @@ export const Types = withViewModel(TypesViewModel, () => {
                         body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>
-            <AddEventTypeDialogWrapper>
-                <AddEventType request={addEventTypeDialogContext.request} resolver={addEventTypeDialogResolver} />
-            </AddEventTypeDialogWrapper>
+            <AddEventTypeDialog/>
         </>
     );
 });

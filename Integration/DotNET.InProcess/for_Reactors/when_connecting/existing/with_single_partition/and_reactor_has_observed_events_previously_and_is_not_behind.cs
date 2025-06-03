@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_Reactors.when_connecting.ex
 [Collection(ChronicleCollection.Name)]
 public class and_reactor_has_observed_events_previously_and_is_not_behind(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_disconnected_reactor_observing_an_event(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_disconnected_reactor_observing_an_event(chronicleInProcessFixture)
     {
         public List<EventForEventSourceId> EventsToHandle;
         public List<EventForEventSourceId> NewEvents;

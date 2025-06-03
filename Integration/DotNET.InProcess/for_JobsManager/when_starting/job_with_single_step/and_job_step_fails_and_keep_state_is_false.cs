@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.when_starting.j
 [Collection(ChronicleCollection.Name)]
 public class and_job_step_fails_and_keep_state_is_false(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_jobs_manager(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_jobs_manager(chronicleInProcessFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job? Job;

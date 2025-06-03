@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Dialog } from 'primereact/dialog';
-import { DialogButtons, ConfirmationDialogRequest, useDialogContext } from '@cratis/applications.react.mvvm/dialogs';
-import { DialogResult } from '@cratis/applications.react/dialogs';
+import { DialogResult, DialogButtons, ConfirmationDialogRequest, useDialogContext } from '@cratis/applications.react/dialogs';
 import { Button } from 'primereact/button';
 
 export const ConfirmationDialog = () => {
-    const { request, resolver } = useDialogContext<ConfirmationDialogRequest, DialogResult>();
+    const { request, closeDialog } = useDialogContext<ConfirmationDialogRequest>();
 
     const headerElement = (
         <div className="inline-flex align-items-center justify-content-center gap-2">
@@ -17,28 +16,28 @@ export const ConfirmationDialog = () => {
 
     const okFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => resolver(DialogResult.Ok)} autoFocus />
+            <Button label="Ok" icon="pi pi-check" onClick={() => closeDialog(DialogResult.Ok)} autoFocus />
         </>
     );
 
     const okCancelFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => resolver(DialogResult.Ok)} autoFocus />
-            <Button label="Cancel" icon="pi pi-times" severity='secondary' onClick={() => resolver(DialogResult.Cancelled)} />
+            <Button label="Ok" icon="pi pi-check" onClick={() => closeDialog(DialogResult.Ok)} autoFocus />
+            <Button label="Cancel" icon="pi pi-times" severity='secondary' onClick={() => closeDialog(DialogResult.Cancelled)} />
         </>
     );
 
     const yesNoFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => resolver(DialogResult.Yes)} autoFocus />
-            <Button label="No" icon="pi pi-times" severity='secondary' onClick={() => resolver(DialogResult.No)} />
+            <Button label="Yes" icon="pi pi-check" onClick={() => closeDialog(DialogResult.Yes)} autoFocus />
+            <Button label="No" icon="pi pi-times" severity='secondary' onClick={() => closeDialog(DialogResult.No)} />
         </>
     );
 
     const yesNoCancelFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => resolver(DialogResult.Yes)} autoFocus />
-            <Button label="No" icon="pi pi-times" severity='secondary' onClick={() => resolver(DialogResult.No)} />
+            <Button label="Yes" icon="pi pi-check" onClick={() => closeDialog(DialogResult.Yes)} autoFocus />
+            <Button label="No" icon="pi pi-times" severity='secondary' onClick={() => closeDialog(DialogResult.No)} />
         </>
     );
 
@@ -65,7 +64,7 @@ export const ConfirmationDialog = () => {
 
     return (
         <>
-            <Dialog header={headerElement} modal footer={footer} onHide={() => resolver(DialogResult.Cancelled)} visible={true}>
+            <Dialog header={headerElement} modal footer={footer} onHide={() => closeDialog(DialogResult.Cancelled)} visible={true}>
                 <p className="m-0">
                     {request.message}
                 </p>

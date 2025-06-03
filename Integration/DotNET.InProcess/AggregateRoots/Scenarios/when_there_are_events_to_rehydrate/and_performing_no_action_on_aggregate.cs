@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios.when_t
 [Collection(ChronicleCollection.Name)]
 public class and_performing_no_action_on_aggregate(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.context_for_aggregate_root<IUser, UserInternalState>(ChronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.context_for_aggregate_root<IUser, UserInternalState>(chronicleInProcessFixture)
     {
         UserId _userId;
         public UserName UserName;

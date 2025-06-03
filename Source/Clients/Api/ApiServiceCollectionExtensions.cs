@@ -9,20 +9,9 @@ using System.Xml;
 using System.Xml.XPath;
 using Cratis.Applications.Swagger;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
-using Cratis.Chronicle.Contracts.Host;
-using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Observation.Reactors;
-using Cratis.Chronicle.Contracts.Observation.Reducers;
-using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Execution;
-using Grpc.Net.Client;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using ProtoBuf.Grpc.Client;
 
 namespace Cratis.Chronicle.Api;
 
@@ -50,7 +39,7 @@ public static class ApiServiceCollectionExtensions
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
             });
-
+        services.TryAddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
         services.AddSwaggerGen(options =>
         {
             options.IncludeXmlComments(() =>

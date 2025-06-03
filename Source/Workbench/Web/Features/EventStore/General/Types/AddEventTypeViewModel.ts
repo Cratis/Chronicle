@@ -1,22 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { inject, injectable } from 'tsyringe';
-import { AddEventTypeResponse, type AddEventTypeProps } from './AddEventType';
+import { injectable } from 'tsyringe';
+import { AddEventTypeResponse, type AddEventTypeRequest } from './AddEventType';
+import { DialogContextContent, DialogResult } from '@cratis/applications.react/dialogs';
 
 @injectable()
 export class AddEventTypeViewModel {
 
-    constructor(@inject('props') private readonly _props: AddEventTypeProps) {
+    constructor(
+        private readonly _dialogContext: DialogContextContent<AddEventTypeRequest, AddEventTypeResponse>) {
     }
 
     name: string = '';
 
     proceed() {
-        this._props.resolver(new AddEventTypeResponse(this.name));
+        this._dialogContext.closeDialog(DialogResult.Ok, new AddEventTypeResponse(this.name));
     }
 
     cancel() {
-        this._props.resolver(new AddEventTypeResponse(''));
+        this._dialogContext.closeDialog(DialogResult.Cancelled, new AddEventTypeResponse(''));
     }
 }

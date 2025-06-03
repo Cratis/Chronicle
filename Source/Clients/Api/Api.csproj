@@ -11,6 +11,10 @@
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
     </PropertyGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Api" />
+    </ItemGroup>
+
     <Target Name="BuildDependencies">
         <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>

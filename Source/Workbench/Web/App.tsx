@@ -7,8 +7,8 @@ import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
 import { LayoutProvider } from './Layout/Default/context/LayoutContext';
-import { DialogComponents } from '@cratis/applications.react.mvvm/dialogs';
-import { ConfirmationDialog } from 'Components/Dialogs';
+import { DialogComponents } from '@cratis/applications.react/dialogs';
+import { BusyIndicatorDialog, ConfirmationDialog } from 'Components/Dialogs';
 import { ApplicationModel } from '@cratis/applications.react';
 import { MVVM } from '@cratis/applications.react.mvvm';
 
@@ -23,7 +23,7 @@ function App() {
         <ApplicationModel development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
             <MVVM>
                 <LayoutProvider>
-                    <DialogComponents confirmation={ConfirmationDialog}>
+                    <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
                         <BrowserRouter>
                             <Routes>
                                 <Route path={basePath}>

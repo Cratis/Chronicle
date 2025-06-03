@@ -6,6 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj"/>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />

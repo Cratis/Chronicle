@@ -2,20 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { withViewModel } from '@cratis/applications.react.mvvm';
-import { DialogResolver } from '@cratis/applications.react.mvvm/dialogs';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { AddEventTypeViewModel } from './AddEventTypeViewModel';
 import { InputText } from 'primereact/inputtext';
 import strings from 'Strings';
 
-export interface AddEventTypeProps {
-    request: AddEventTypeRequest;
-    resolver: DialogResolver<AddEventTypeResponse>;
-}
-
 export class AddEventTypeRequest {
-
 }
 
 export class AddEventTypeResponse {
@@ -23,7 +16,7 @@ export class AddEventTypeResponse {
     }
 }
 
-export const AddEventType = withViewModel<AddEventTypeViewModel, AddEventTypeProps>(AddEventTypeViewModel, ({ viewModel }) => {
+export const AddEventType = withViewModel<AddEventTypeViewModel>(AddEventTypeViewModel, ({ viewModel }) => {
     return (
         <div>
             <Dialog header={strings.eventStore.general.types.dialogs.addEventType.title} visible={true} style={{ width: '20vw' }} modal onHide={() => viewModel.cancel()}>

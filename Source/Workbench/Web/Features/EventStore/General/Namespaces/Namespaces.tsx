@@ -10,12 +10,12 @@ import { DataPage, MenuItem } from 'Components';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
-import { useDialogRequest } from '@cratis/applications.react.mvvm/dialogs';
+import { useDialog } from '@cratis/applications.react.mvvm/dialogs';
 import { AddNamespace, AddNamespaceRequest, AddNamespaceResponse } from './AddNamespace';
 
 export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddNamespaceDialogWrapper] = useDialogRequest<AddNamespaceRequest, AddNamespaceResponse>(AddNamespaceRequest);
+    const [AddNamespaceDialog] = useDialog<AddNamespaceRequest, AddNamespaceResponse>(AddNamespaceRequest, AddNamespace);
     const queryArgs: AllNamespacesArguments = {
         eventStore: params.eventStore!
     };
@@ -43,9 +43,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                     <Column header={strings.eventStore.general.namespaces.columns.name} sortable body={nameColumn} />
                 </DataPage.Columns>
             </DataPage>
-            <AddNamespaceDialogWrapper>
-                <AddNamespace />
-            </AddNamespaceDialogWrapper>
+            <AddNamespaceDialog/>
         </>
     );
 });

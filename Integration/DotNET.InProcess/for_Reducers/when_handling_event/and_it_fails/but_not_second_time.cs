@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.when_handling_even
 [Collection(ChronicleCollection.Name)]
 public class but_not_second_time(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture ChronicleFixture) : given.a_reducer_observing_an_event_that_can_fail(ChronicleFixture, 2)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_reducer_observing_an_event_that_can_fail(chronicleInProcessFixture, 2)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

@@ -5,13 +5,13 @@ import { withViewModel } from '@cratis/applications.react.mvvm';
 import { QueryViewModel } from './QueryViewModel';
 import { EventList } from './EventList';
 import { QueryDefinition } from './QueryDefinition';
-import { Menubar } from 'primereact/menubar';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { EventHistogram } from './Histogram/Histogram';
 import { SequenceSelector } from './SequenceSelector';
 import { MenuItem } from 'primereact/menuitem';
 import { useRef } from 'react';
 import { useToggle } from 'usehooks-ts';
+import { Menubar } from 'primereact/menubar';
 
 export interface QueryProps {
     query: QueryDefinition;
