@@ -65,7 +65,7 @@
         "postcss": "8.5.4",
         "sinon": "20.0.0",
         "sinon-chai": "4.0.0",
-        "tailwindcss": "4.1.8",
+        "tailwindcss": "3.4.17",
         "ts-node": "10.9.2",
         "tsconfig-paths": "4.2.0",
         "typescript": "5.8.3",
