@@ -4,9 +4,9 @@
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains;
+using Cratis.Chronicle.Services.Projections.Definitions;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="clusterClient"><see cref="IClusterClient"/> for interacting with the cluster.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-public class Projections(
+internal sealed class Projections(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     JsonSerializerOptions jsonSerializerOptions) : IProjections

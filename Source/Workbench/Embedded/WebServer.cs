@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Api;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +34,8 @@ public class WebServer(
             {
                 var builder = WebApplication.CreateBuilder();
                 builder.Configuration.Sources.Clear();
-                var chronicleServices = serviceProvider.GetService<IServices>();
+                var chronicleServices = serviceProvider.GetRequiredService<IServices>();
+                builder.Services.AddSingleton(chronicleServices);
 
                 builder.Host
                     .UseCratisApplicationModel(options =>
@@ -43,8 +44,8 @@ public class WebServer(
                         options.Tenancy = workbenchOptions.Value.ApplicationModel.Tenancy;
                         options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
                     });
-                builder.AddCratisChronicle();
-                builder.Services.AddCratisChronicleApi(chronicleServices);
+
+                builder.Services.AddCratisChronicleApi();
                 builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));
                 builder.WebHost
                     .UseKestrel(options =>

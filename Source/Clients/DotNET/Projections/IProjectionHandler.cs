@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Projections;
@@ -12,9 +11,9 @@ namespace Cratis.Chronicle.Projections;
 public interface IProjectionHandler
 {
     /// <summary>
-    /// Gets the <see cref="ProjectionDefinition"/>.
+    /// Gets the identifier of the projection.
     /// </summary>
-    ProjectionDefinition Definition { get; }
+    ProjectionId Id { get; }
 
     /// <summary>
     /// Get the current state of the reducer.

@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
@@ -175,7 +175,7 @@ public class JobsManager(
         try
         {
             var jobStateResult = await _jobStorage!.GetJob(jobId);
-            var getJobState = await jobStateResult.Match<Task<Result<JobState, None>>>(
+            var getJobState = await jobStateResult.Match(
                 state => Task.FromResult(Result.Success<JobState, None>(state)),
                 async jobError =>
                 {

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
+
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
@@ -9,10 +11,12 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="eventStore"><see cref="IEventStore"/> to use for getting failed partitions.</param>
 public class FailedPartitions(IEventStore eventStore) : IFailedPartitions
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> GetAllFailedPartitions()
     {
-        var failedPartitions = await eventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+        var failedPartitions = await _servicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -24,7 +28,7 @@ public class FailedPartitions(IEventStore eventStore) : IFailedPartitions
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(ObserverId observerId)
     {
-        var failedPartitions = await eventStore.Connection.Services.FailedPartitions.GetFailedPartitions(new()
+        var failedPartitions = await _servicesAccessor.Services.FailedPartitions.GetFailedPartitions(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,

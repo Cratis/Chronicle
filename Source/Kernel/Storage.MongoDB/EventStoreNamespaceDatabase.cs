@@ -26,7 +26,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <param name="eventStore"><see cref="EventStoreName"/> the database is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the database is for.</param>
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for creating clients.</param>
-    /// <param name="mongoDBOptions"><see cref="Concepts.Configuration.Storage"/> configuration.</param>
+    /// <param name="mongoDBOptions"><see cref="Configuration.Storage"/> configuration.</param>
     public EventStoreNamespaceDatabase(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,

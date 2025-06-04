@@ -7,9 +7,7 @@
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
 import { Causation } from '../Auditing/Causation';
-import { EventObservationState } from './EventObservationState';
 import { Identity } from '../Identities/Identity';
-import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class EventContext {
 
@@ -28,14 +26,8 @@ export class EventContext {
     @field(String)
     eventStreamId!: string;
 
-    @field(SerializableDateTimeOffset)
-    occurred!: SerializableDateTimeOffset;
-
-    @field(String)
-    eventStore!: string;
-
-    @field(String)
-    namespace!: string;
+    @field(Date)
+    occurred!: Date;
 
     @field(Guid)
     correlationId!: Guid;
@@ -45,7 +37,4 @@ export class EventContext {
 
     @field(Identity)
     causedBy!: Identity;
-
-    @field(Number)
-    observationState!: EventObservationState;
 }

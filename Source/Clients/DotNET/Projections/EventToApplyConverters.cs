@@ -10,14 +10,14 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Extension methods for converting to and from <see cref="Contracts.Projections.EventToApply"/>.
 /// </summary>
-public static class EventToApplyConverters
+internal static class EventToApplyConverters
 {
     /// <summary>
     /// Convert to contract representation.
     /// </summary>
     /// <param name="eventToApply"><see cref="EventToApply"/> to convert from.</param>
     /// <returns>Converted <see cref="Contracts.Projections.EventToApply"/>.</returns>
-    public static Contracts.Projections.EventToApply ToContract(this EventToApply eventToApply) =>
+    internal static Contracts.Projections.EventToApply ToContract(this EventToApply eventToApply) =>
         new()
         {
             EventType = eventToApply.EventType.ToContract(),
@@ -29,6 +29,6 @@ public static class EventToApplyConverters
     /// </summary>
     /// <param name="eventsToApply">Collection <see cref="EventToApply"/> to convert from.</param>
     /// <returns>Converted collection of <see cref="Contracts.Projections.EventToApply"/>.</returns>
-    public static IList<Contracts.Projections.EventToApply> ToContract(this IEnumerable<EventToApply> eventsToApply) =>
+    internal static IList<Contracts.Projections.EventToApply> ToContract(this IEnumerable<EventToApply> eventsToApply) =>
         eventsToApply.Select(_ => _.ToContract()).ToList();
 }

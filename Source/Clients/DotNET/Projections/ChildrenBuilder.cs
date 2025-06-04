@@ -70,8 +70,11 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
         return this;
     }
 
-    /// <inheritdoc/>
-    public ChildrenDefinition Build()
+    /// <summary>
+    /// Build the <see cref="ChildrenDefinition"/>.
+    /// </summary>
+    /// <returns>A a new <see cref="ChildrenDefinition"/>.</returns>
+    internal ChildrenDefinition Build()
     {
         return new()
         {

@@ -35,5 +35,5 @@ public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
     /// Builds a <see cref="FromEveryDefinition"/> from expressions.
     /// </summary>
     /// <returns>A new <see cref="FromEveryDefinition"/> instance.</returns>
-    public FromEveryDefinition Build() => new() { Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()), IncludeChildren = _includeChildren };
+    internal FromEveryDefinition Build() => new() { Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()), IncludeChildren = _includeChildren };
 }

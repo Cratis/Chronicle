@@ -9,7 +9,6 @@ import { Guid } from '@cratis/fundamentals';
 import { JobProgress } from './JobProgress';
 import { JobStatus } from './JobStatus';
 import { JobStatusChanged } from './JobStatusChanged';
-import { SerializableDateTimeOffset } from '../Primitives/SerializableDateTimeOffset';
 
 export class Job {
 
@@ -25,8 +24,8 @@ export class Job {
     @field(Number)
     status!: JobStatus;
 
-    @field(SerializableDateTimeOffset)
-    created!: SerializableDateTimeOffset;
+    @field(Date)
+    created!: Date;
 
     @field(JobStatusChanged, true)
     statusChanges!: JobStatusChanged[];

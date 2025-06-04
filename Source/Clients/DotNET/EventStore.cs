@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
@@ -27,6 +28,7 @@ namespace Cratis.Chronicle;
 public class EventStore : IEventStore
 {
     readonly EventStoreName _eventStoreName;
+    readonly IChronicleServicesAccessor _servicesAccessor;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
@@ -69,6 +71,7 @@ public class EventStore : IEventStore
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
+        _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(this);
@@ -127,23 +130,18 @@ public class EventStore : IEventStore
             jsonSerializerOptions,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
-        Projections = new Projections.Projections(
+        var projections = new Projections.Projections(
             this,
             EventTypes,
             new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
-            new RulesProjections(
-                serviceProvider,
-                clientArtifactsProvider,
-                EventTypes,
-                modelNameResolver,
-                schemaGenerator,
-                jsonSerializerOptions),
             schemaGenerator,
             modelNameResolver,
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
+        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, schemaGenerator, jsonSerializerOptions));
+        Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
         AggregateRootFactory = new AggregateRootFactory(
@@ -245,7 +243,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
-        var namespaces = await Connection.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
+        var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 }

@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -26,7 +27,6 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
 /// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-/// <param name="rulesProjections"><see cref="IRulesProjections"/> for getting projection definitions related to rules.</param>
 /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
@@ -37,18 +37,22 @@ public class Projections(
     IEventTypes eventTypes,
     IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
-    IRulesProjections rulesProjections,
     IJsonSchemaGenerator schemaGenerator,
     IModelNameResolver modelNameResolver,
     IEventSerializer eventSerializer,
     IServiceProvider serviceProvider,
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+    IRulesProjections? _rulesProjections;
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
+    Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
 
-    /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
+    /// <summary>
+    /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
+    /// </summary>
+    internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
 
     /// <inheritdoc/>
     public bool HasFor(ProjectionId projectionId) => Definitions.Any(_ => _.Identifier == projectionId);
@@ -62,19 +66,19 @@ public class Projections(
 
     /// <inheritdoc/>
     public ProjectionId GetProjectionIdFor<TProjection>()
-        where TProjection : IProjection => _handlersByType[typeof(TProjection)].Definition.Identifier;
+        where TProjection : IProjection => _handlersByType[typeof(TProjection)].Id;
 
     /// <inheritdoc/>
     public ProjectionId GetProjectionIdForModel<TModelType>() => GetProjectionIdForModel(typeof(TModelType));
 
     /// <inheritdoc/>
-    public ProjectionId GetProjectionIdForModel(Type modelType) => _handlersByModelType[modelType].Definition.Identifier;
+    public ProjectionId GetProjectionIdForModel(Type modelType) => _handlersByModelType[modelType].Id;
 
     /// <inheritdoc/>
     public async Task<ProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
     {
-        var projectionDefinition = _handlersByModelType[modelType];
-        var result = await GetInstanceById(projectionDefinition.Definition.Identifier, modelKey);
+        var handler = _handlersByModelType[modelType];
+        var result = await GetInstanceById(handler.Id, modelKey);
         var model = result.Model.Deserialize(modelType, jsonSerializerOptions)!;
         return new(model, result.AffectedProperties, result.ProjectedEventsCount);
     }
@@ -85,14 +89,14 @@ public class Projections(
         var handler = _handlersByModelType[typeof(TModel)];
         var request = new GetInstanceByIdRequest
         {
-            ProjectionId = handler.Definition.Identifier,
+            ProjectionId = handler.Id,
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceById(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
         return result.ToClient<TModel>();
     }
 
@@ -109,7 +113,7 @@ public class Projections(
             ModelKey = modelKey,
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceById(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
         return result.ToClient();
     }
 
@@ -123,7 +127,7 @@ public class Projections(
 
         var request = new GetInstanceByIdForSessionRequest
         {
-            ProjectionId = handler.Definition.Identifier,
+            ProjectionId = handler.Id,
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
@@ -131,7 +135,7 @@ public class Projections(
             SessionId = sessionId
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdForSession(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSession(request);
         return result.ToClient(modelType);
     }
 
@@ -152,7 +156,7 @@ public class Projections(
 
         var request = new GetInstanceByIdForSessionWithEventsAppliedRequest
         {
-            ProjectionId = handler.Definition.Identifier,
+            ProjectionId = handler.Id,
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
@@ -161,7 +165,7 @@ public class Projections(
             Events = eventsToApply.ToContract()
         };
 
-        var result = await eventStore.Connection.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
+        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
         return result.ToClient(modelType);
     }
 
@@ -171,7 +175,7 @@ public class Projections(
         var handler = _handlersByModelType[modelType];
         var request = new DehydrateSessionRequest
         {
-            ProjectionId = handler.Definition.Identifier,
+            ProjectionId = handler.Id,
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
@@ -179,7 +183,7 @@ public class Projections(
             SessionId = sessionId
         };
 
-        await eventStore.Connection.Services.Projections.DehydrateSession(request);
+        await _servicesAccessor.Services.Projections.DehydrateSession(request);
     }
 
     /// <inheritdoc/>
@@ -209,7 +213,7 @@ public class Projections(
     /// <inheritdoc/>
     public Task Discover()
     {
-        _handlersByType = FindAllProjectionDefinitions(
+        _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             schemaGenerator,
@@ -217,14 +221,18 @@ public class Projections(
             serviceProvider,
             jsonSerializerOptions);
 
+        _handlersByType = _definitionsByType.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Value.EventSequenceId) as IProjectionHandler);
+
         _handlersByModelType = _handlersByType.ToDictionary(
             _ => _.Key.GetReadModelType(),
             _ => _.Value);
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
-                .. rulesProjections.Discover(),
-                .. _handlersByModelType.Values.Select(_ => _.Definition).ToList()
+                .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
+                .. _definitionsByType.Values.Select(_ => _).ToList()
             ]).ToImmutableList();
 
         return Task.CompletedTask;
@@ -233,14 +241,20 @@ public class Projections(
     /// <inheritdoc/>
     public async Task Register()
     {
-        await eventStore.Connection.Services.Projections.Register(new()
+        await _servicesAccessor.Services.Projections.Register(new()
         {
             EventStore = eventStore.Name,
             Projections = [.. Definitions]
         });
     }
 
-    Dictionary<Type, IProjectionHandler> FindAllProjectionDefinitions(
+    /// <summary>
+    /// Sets the <see cref="IRulesProjections"/>.
+    /// </summary>
+    /// <param name="rulesProjections"><see cref="IRulesProjections"/> instance to set.</param>
+    internal void SetRulesProjections(IRulesProjections rulesProjections) => _rulesProjections = rulesProjections;
+
+    Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
@@ -255,7 +269,7 @@ public class Projections(
                         var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                         var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                        var definition = (method.Invoke(
+                        return (method.Invoke(
                             null,
                             [
                                 _,
@@ -265,7 +279,6 @@ public class Projections(
                                 serviceProvider,
                                 jsonSerializerOptions
                             ]) as ProjectionDefinition)!;
-                        return new ProjectionHandler(eventStore, definition) as IProjectionHandler;
                     });
 
     static class ProjectionDefinitionCreator<TModel>

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
+
 namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
@@ -9,9 +11,11 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="eventStore">The <see cref="IEventStore"/>.</param>
 public class Jobs(IEventStore eventStore) : IJobs
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+
     /// <inheritdoc/>
     public Task Stop(JobId jobId) =>
-        eventStore.Connection.Services.Jobs.Stop(new()
+        _servicesAccessor.Services.Jobs.Stop(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -20,7 +24,7 @@ public class Jobs(IEventStore eventStore) : IJobs
 
     /// <inheritdoc/>
     public Task Resume(JobId jobId) =>
-        eventStore.Connection.Services.Jobs.Resume(new()
+        _servicesAccessor.Services.Jobs.Resume(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -29,7 +33,7 @@ public class Jobs(IEventStore eventStore) : IJobs
 
     /// <inheritdoc/>
     public Task Delete(JobId jobId) =>
-        eventStore.Connection.Services.Jobs.Delete(new()
+        _servicesAccessor.Services.Jobs.Delete(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -39,7 +43,7 @@ public class Jobs(IEventStore eventStore) : IJobs
     /// <inheritdoc/>
     public async Task<Job?> GetJob(JobId jobId)
     {
-        var result = await eventStore.Connection.Services.Jobs.GetJob(new()
+        var result = await _servicesAccessor.Services.Jobs.GetJob(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -57,7 +61,7 @@ public class Jobs(IEventStore eventStore) : IJobs
     /// <inheritdoc/>
     public async Task<IEnumerable<Job>> GetJobs()
     {
-        var jobs = await eventStore.Connection.Services.Jobs.GetJobs(new()
+        var jobs = await _servicesAccessor.Services.Jobs.GetJobs(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,

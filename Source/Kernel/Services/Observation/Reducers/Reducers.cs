@@ -14,6 +14,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
@@ -32,7 +33,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for observing actual events as they are made available.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class Reducers(
+internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
     IExpandoObjectConverter expandoObjectConverter,

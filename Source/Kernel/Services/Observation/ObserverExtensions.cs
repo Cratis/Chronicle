@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Helper methods for working with observers.
 /// </summary>
-public static class ObserverExtensions
+internal static class ObserverExtensions
 {
     /// <summary>
     /// Get the observer for a specific command.

@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Clients;
-using Cratis.Chronicle.Concepts.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Microsoft.Extensions.Logging;
 

@@ -28,8 +28,11 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
         return this;
     }
 
-    /// <inheritdoc/>
-    public JoinDefinition Build()
+    /// <summary>
+    /// Build <see cref="JoinDefinition"/> from the builder.
+    /// </summary>
+    /// <returns>A new instance of <see cref="JoinDefinition"/>.</returns>
+    internal JoinDefinition Build()
     {
         ThrowIfMissingOnForRootProjection();
         ThrowIfOnSpecifiedForChildProjection();

@@ -10,7 +10,7 @@ import { Job, JobStatus } from 'Api/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/applications.react.mvvm';
-import { JobViewModels } from './JobViewModels';
+import { JobsViewModel } from './JobsViewModel';
 
 const jobStatus = (job: Job) => {
     switch (job.status) {
@@ -44,7 +44,7 @@ const progress = (job: Job) => {
     return `${Math.abs(progress).toFixed()}%`;
 };
 
-export const Jobs = withViewModel(JobViewModels, ({ viewModel }) => {
+export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AllJobsArguments = {
         eventStore: params.eventStore!,

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="protobuf-net.Grpc" />
+      <PackageReference Include="Grpc.Net.Client" />
+    </ItemGroup>
+</Project>

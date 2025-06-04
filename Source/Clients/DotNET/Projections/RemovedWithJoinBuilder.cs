@@ -12,8 +12,11 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 public class RemovedWithJoinBuilder<TModel, TEvent> : KeyBuilder<TEvent, RemovedWithJoinBuilder<TModel, TEvent>>, IRemovedWithJoinBuilder<TModel, TEvent, RemovedWithJoinBuilder<TModel, TEvent>>
 {
-    /// <inheritdoc/>
-    public RemovedWithJoinDefinition Build() => new()
+    /// <summary>
+    /// Build the removed with join definition.
+    /// </summary>
+    /// <returns>A new <see cref="RemovedWithJoinDefinition"/>.</returns>
+    internal RemovedWithJoinDefinition Build() => new()
     {
         Key = _keyExpression,
     };

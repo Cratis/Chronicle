@@ -9,15 +9,27 @@ public class two_constraints : no_constraints
 {
     protected static readonly ConstraintName _firstConstraintName = "FirstConstraint";
     protected static readonly ConstraintName _secondConstraintName = "SecondConstraint";
+    protected const string _firstEventTypeName = "FirstEventType";
+    protected const string _secondEventTypeName = "SecondEventType";
+    protected const string _firstProperty = "firstProperty";
+    protected const string _secondProperty = "secondProperty";
+
     protected IConstraintDefinition _firstConstraint;
     protected IConstraintDefinition _secondConstraint;
 
     async Task Establish()
     {
-        _firstConstraint = Substitute.For<IConstraintDefinition>();
-        _firstConstraint.Name.Returns(_firstConstraintName);
-        _secondConstraint = Substitute.For<IConstraintDefinition>();
-        _secondConstraint.Name.Returns(_secondConstraintName);
+        _firstConstraint = new UniqueConstraintDefinition(_firstConstraintName,
+            _ => (ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}",
+            [new UniqueConstraintEventDefinition(_firstEventTypeName, [_firstProperty])],
+            null,
+            false);
+
+        _secondConstraint = new UniqueConstraintDefinition(_secondConstraintName,
+            _ => (ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}",
+            [new UniqueConstraintEventDefinition(_secondEventTypeName, [_secondProperty])],
+            null,
+            false);
 
         _constraintsProvider.Provide().Returns(new[] { _firstConstraint, _secondConstraint }.ToImmutableList());
         await _constraints.Discover();

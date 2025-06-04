@@ -5,8 +5,6 @@ namespace Cratis.Chronicle.Events.Constraints.for_Constraints;
 
 public class when_resolving_message_for_violation : given.two_constraints
 {
-    const string _firstProperty = "firstProperty";
-    const string _secondProperty = "secondProperty";
     ConstraintViolation _violation;
     string _firstPropertyValue;
     string _secondPropertyValue;
@@ -16,8 +14,6 @@ public class when_resolving_message_for_violation : given.two_constraints
     {
         _firstPropertyValue = Guid.NewGuid().ToString();
         _secondPropertyValue = Guid.NewGuid().ToString();
-
-        _firstConstraint.MessageCallback(Arg.Any<ConstraintViolation>()).Returns((ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}");
 
         _violation = new ConstraintViolation(
             "SomeEvent",

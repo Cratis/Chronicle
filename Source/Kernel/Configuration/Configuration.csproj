@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Configuration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Configuration</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime;compile</ExcludeAssets>
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
+    </ItemGroup>
+</Project>

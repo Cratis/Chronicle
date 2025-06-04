@@ -20,8 +20,9 @@ public static class HostBuilderExtensions
         this IHostBuilder hostBuilder,
         ILoggerFactory? loggerFactory = default)
     {
-#pragma warning disable CA2000
+#pragma warning disable CA2000 // Dispose objects before losing scope
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         hostBuilder.ConfigureServices((context, services) =>
         {

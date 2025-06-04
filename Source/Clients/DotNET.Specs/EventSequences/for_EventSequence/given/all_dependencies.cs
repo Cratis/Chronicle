@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -20,8 +21,9 @@ public class all_dependencies : Specification
     protected IUnitOfWorkManager _unitOfWorkManager;
     protected IIdentityProvider _identityProvider;
     protected IChronicleConnection _connection;
-    protected IEventSequences _eventSequences;
-    protected IServices services;
+    internal IChronicleServicesAccessor _serviceAccessor;
+    internal IEventSequences _eventSequences;
+    internal IServices services;
     protected ICorrelationIdAccessor _correlationIdAccessor;
 
 
@@ -33,10 +35,11 @@ public class all_dependencies : Specification
         _causationManager = Substitute.For<ICausationManager>();
         _unitOfWorkManager = Substitute.For<IUnitOfWorkManager>();
         _identityProvider = Substitute.For<IIdentityProvider>();
-        _connection = Substitute.For<IChronicleConnection>();
+        _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _serviceAccessor = _connection as IChronicleServicesAccessor;
         _eventSequences = Substitute.For<IEventSequences>();
         services = Substitute.For<IServices>();
-        _connection.Services.Returns(services);
+        _serviceAccessor.Services.Returns(services);
         services.EventSequences.Returns(_eventSequences);
         _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
         _correlationIdAccessor.Current.Returns((CorrelationId)Guid.Empty);

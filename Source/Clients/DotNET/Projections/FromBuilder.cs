@@ -16,8 +16,11 @@ public class FromBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     : ModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>, TParentBuilder>(projectionBuilder), IFromBuilder<TModel, TEvent>
         where TParentBuilder : class
 {
-    /// <inheritdoc/>
-    public FromDefinition Build() => new()
+    /// <summary>
+    /// Build <see cref="FromDefinition"/> from the builder.
+    /// </summary>
+    /// <returns>A new instance of <see cref="FromDefinition"/>.</returns>
+    internal FromDefinition Build() => new()
     {
         Properties = _propertyExpressions.ToDictionary(_ => (string)_.Key, _ => _.Value.Build()),
         Key = _keyExpression,

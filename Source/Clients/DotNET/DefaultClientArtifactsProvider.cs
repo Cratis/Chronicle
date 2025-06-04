@@ -5,7 +5,6 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
-using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
@@ -34,9 +33,6 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Projections { get; private set; } = [];
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> Adapters { get; private set; } = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors { get; private set; } = [];
@@ -84,7 +80,6 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
         ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
         Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
-        Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
         Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
         ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();

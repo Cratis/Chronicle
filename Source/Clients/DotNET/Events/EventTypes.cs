@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Schemas;
 using NJsonSchema;
@@ -18,6 +19,7 @@ public class EventTypes : IEventTypes
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
+    readonly IChronicleServicesAccessor _servicesAccessor;
 
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
@@ -31,6 +33,7 @@ public class EventTypes : IEventTypes
         IClientArtifactsProvider clientArtifacts)
     {
         _eventStore = eventStore;
+        _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
         eventStore.Connection.Lifecycle.OnConnected += Register;
@@ -73,7 +76,7 @@ public class EventTypes : IEventTypes
             Schema = _schemasByEventType[_.Key].ToJson()
         }).ToList();
 
-        await _eventStore.Connection.Services.EventTypes.Register(new()
+        await _servicesAccessor.Services.EventTypes.Register(new()
         {
             EventStore = _eventStore.Name,
             Types = registrations

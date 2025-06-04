@@ -5,6 +5,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReadmeFile Include="NJsonSchema" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>

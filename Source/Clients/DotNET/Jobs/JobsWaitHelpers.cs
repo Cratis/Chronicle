@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Jobs;
 
-namespace Cratis.Chronicle.Integration.Orleans.InProcess;
+namespace Cratis.Chronicle.InProcess.Integration;
 
 /// <summary>
 /// Helper methods for working with jobs for integration testing purposes.

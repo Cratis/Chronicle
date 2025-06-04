@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Sinks;
@@ -47,6 +48,7 @@ public class Reducers(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<Reducers> logger) : IReducers
 {
+    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     IEnumerable<Type> _aggregateRootStateTypes = [];
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
@@ -211,7 +213,7 @@ public class Reducers(
         var messages = new BehaviorSubject<ReducerMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        var operationsToObserve = eventStore.Connection.Services.Reducers.Observe(messages);
+        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages);
 
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve

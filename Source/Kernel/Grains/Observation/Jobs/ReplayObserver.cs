@@ -103,7 +103,7 @@ public class ReplayObserver(
             }
             else
             {
-                logger.NoneEventsWereHandled(nameof(ReplayObserver));
+                logger.NoEventsWereHandled(nameof(ReplayObserver));
             }
         }
 

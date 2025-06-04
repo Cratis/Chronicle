@@ -4,7 +4,14 @@
         <AssemblyName>Cratis.Chronicle.Services</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Services</RootNamespace>
         <NoWarn>$(NoWarn);CS8618</NoWarn>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />

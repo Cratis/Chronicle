@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Chronicle.Reactive;
@@ -16,7 +15,7 @@ namespace Cratis.Chronicle.Services.Recommendations;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for recommendations.</param>
-public class Recommendations(IGrainFactory grainFactory, IStorage storage) : IRecommendations
+internal sealed class Recommendations(IGrainFactory grainFactory, IStorage storage) : IRecommendations
 {
     /// <inheritdoc/>
     public Task Perform(Perform command, CallContext context = default) =>
@@ -42,6 +41,6 @@ public class Recommendations(IGrainFactory grainFactory, IStorage storage) : IRe
             .CompletedBy(context.CancellationToken)
             .Select(_ => _.ToContract());
 
-    IRecommendationsManager GetRecommendationsManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+    IRecommendationsManager GetRecommendationsManager(Cratis.Chronicle.Concepts.EventStoreName eventStore, Cratis.Chronicle.Concepts.EventStoreNamespaceName @namespace) =>
         grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
 }

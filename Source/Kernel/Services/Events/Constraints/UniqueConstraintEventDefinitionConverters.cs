@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Services.Events.Constraints;
 /// <summary>
 /// Represents converter methods for converting between <see cref="Contracts.Events.Constraints.UniqueConstraintEventDefinition"/> and <see cref="UniqueConstraintEventDefinition"/>.
 /// </summary>
-public static class UniqueConstraintEventDefinitionConverters
+internal static class UniqueConstraintEventDefinitionConverters
 {
     /// <summary>
     /// Convert <see cref="Contracts.Events.Constraints.UniqueConstraintEventDefinition"/> to <see cref="UniqueConstraintEventDefinition"/>.

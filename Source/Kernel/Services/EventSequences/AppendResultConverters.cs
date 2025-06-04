@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// <summary>
 /// Represents methods for converting between <see cref="AppendResult"/> and <see cref="AppendResponse"/>.
 /// </summary>
-public static class AppendResultConverters
+internal static class AppendResultConverters
 {
     /// <summary>
     /// Convert from a Chronicle representation of <see cref="AppendResult"/> to <see cref="AppendResponse"/>.

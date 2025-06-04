@@ -33,24 +33,8 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
-
-      # If it is the GitHub Bot triggering the workflow, we need to restore the packages.lock.json files
-      - name: Restore packages
-        if: github.actor == 'github-actions[bot]'
-        run: dotnet restore -f --force-evaluate
-
-      - name: Commit changes
-        if: github.actor == 'github-actions[bot]'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add **/packages.lock.json
-          git commit -m "Update packages.lock.json" || echo "No changes to commit"
-          git push
 
       - uses: actions/cache@v3
         id: dotnet-x64-output
@@ -58,11 +42,32 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Restore
-        run: dotnet restore --locked-mode
-
       - name: Build
-        run: dotnet build --no-restore --configuration Release --framework net9.0
+        run: dotnet build --configuration Release --framework net9.0
+
+  dotnet-build-repack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Build root
+        run: dotnet build --configuration Debug
+
+      - name: Clean output for repackaged clients
+        run: dotnet clean
+        working-directory: ./Source/Clients
+
+      - name: Build repackaged clients
+        run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
+        working-directory: ./Source/Clients
 
   specs:
     runs-on: ubuntu-latest
@@ -74,8 +79,6 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
@@ -94,14 +97,14 @@ jobs:
     strategy:
       matrix:
         namespace:
-          - 'Orleans.InProcess.for_EventSequence'
-          - 'Orleans.InProcess.for_JobsManager'
-          - 'Orleans.InProcess.for_Reactors'
-          - 'Orleans.InProcess.for_Reducers'
-          - 'Orleans.InProcess.Projections'
-          - 'Orleans.InProcess.AggregateRoots'
+          - 'for_EventSequence'
+          - 'for_JobsManager'
+          - 'for_Reactors'
+          - 'for_Reducers'
+          - 'Projections'
+          - 'AggregateRoots'
     env:
-      NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
+      NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -109,8 +112,6 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
@@ -139,8 +140,6 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 

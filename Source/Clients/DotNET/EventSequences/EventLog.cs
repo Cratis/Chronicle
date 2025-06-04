@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Identities;
