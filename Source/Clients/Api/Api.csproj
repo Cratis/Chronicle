@@ -66,7 +66,7 @@
         <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
     </PropertyGroup>
 
-    <Target Name="EmbedXmlDocs" AfterTargets="Build">
+    <Target Name="EmbedXmlDocs" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
         <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
         <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
     </Target>
