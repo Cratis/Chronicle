@@ -81,6 +81,22 @@
             }
         },
         {
+            "name": ".NET Core Launch (ResourceEmbedder)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net9.0/Cratis.Chronicle.ResourceEmbedder.dll",
+            "args": [
+                "/Volumes/Code/Cratis/Chronicle/Source/Clients/Api/bin/Release/net9.0/Cratis.Chronicle.Api.dll",
+                "/Volumes/Code/Cratis/Chronicle/Source/Clients/Api/bin/Release/net9.0/Cratis.Chronicle.Api.xml"
+            ],
+            "cwd": "${workspaceFolder}/Source/Tools/ResourceEmbedder",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
             "name": ".NET Core Launch (GrpcClients)",
             "type": "coreclr",
             "request": "launch",
