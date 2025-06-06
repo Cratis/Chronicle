@@ -58,6 +58,9 @@ jobs:
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
+      - name: Restore dependencies
+        run: dotnet restore
+
       - name: Build root
         run: dotnet build -f net9.0 --configuration Debug
 
