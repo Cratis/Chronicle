@@ -31,7 +31,7 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
 
         _invoker
             .Invoke(Arg.Any<IServiceProvider>(), Arg.Any<IEnumerable<EventAndContext>>(), Arg.Any<object>())
-            .Returns((CallInfo callInfo) =>
+            .Returns(callInfo =>
             {
                 var ev = callInfo.ArgAt<IEnumerable<EventAndContext>>(1);
                 var initial = callInfo.ArgAt<object?>(2);
