@@ -31,7 +31,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
 
         protected override Task<BorrowedBook> GetModelResult()
         {
-            var result = chronicleInProcessFixture.ReadModels.Database.GetCollection<BorrowedBook>().Find(_ => _.Id == BookId);
+            var result = ChronicleFixture.ReadModels.Database.GetCollection<BorrowedBook>().Find(_ => _.Id == BookId);
             return result.FirstOrDefaultAsync();
         }
     }
