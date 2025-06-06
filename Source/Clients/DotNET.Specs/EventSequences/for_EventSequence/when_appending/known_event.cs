@@ -43,7 +43,7 @@ public class known_event : given.an_event_sequence
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
         _eventSequences
             .When(_ => _.Append(Arg.Any<AppendRequest>(), CallContext.Default))
-            .Do((CallInfo callInfo) => _command = callInfo.Arg<AppendRequest>());
+            .Do(callInfo => _command = callInfo.Arg<AppendRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
         _identityProvider.GetCurrent().Returns(_causedBy);
 

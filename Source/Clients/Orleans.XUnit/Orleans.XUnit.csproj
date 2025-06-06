@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <Target Name="BuildDependencies">
-        <MSBuild Projects="../DotNET.InProcess/DotNET.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <MSBuild Projects="../DotNET.InProcess/DotNET.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);TargetFrameworks=$(TargetFrameworks);Repack=$(Repack)" />
         <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
         <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.dll" DestinationFolder="$(OutDir)"/>
     </Target>

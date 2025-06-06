@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/Api/Api.csproj" />
-        <ProjectReference Include="../../Source/Clients/Orleans.InProcess/Orleans.InProcess.csproj" />
+        <ProjectReference Include="../../Source/Clients/DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
 

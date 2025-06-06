@@ -15,7 +15,7 @@ public static class EventValueProviders
     /// Create a <see cref="ValueProvider{T}"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static readonly ValueProvider<AppendedEvent> EventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId.Value;
+    public static readonly ValueProvider<AppendedEvent> EventSourceId = @event => @event.Context.EventSourceId.Value;
 
     /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that provides a value from the event content.
@@ -24,7 +24,7 @@ public static class EventValueProviders
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> EventContent(PropertyPath sourceProperty)
     {
-        return (AppendedEvent @event) => sourceProperty.GetValue(@event.Content, ArrayIndexers.NoIndexers)!;
+        return @event => sourceProperty.GetValue(@event.Content, ArrayIndexers.NoIndexers)!;
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public static class EventValueProviders
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> EventContext(PropertyPath sourceProperty)
     {
-        return (AppendedEvent @event) => sourceProperty.GetValue(@event.Context, ArrayIndexers.NoIndexers)!;
+        return @event => sourceProperty.GetValue(@event.Context, ArrayIndexers.NoIndexers)!;
     }
 
     /// <summary>
@@ -42,11 +42,11 @@ public static class EventValueProviders
     /// </summary>
     /// <param name="value">Constant to provide.</param>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> Value(string value) => (AppendedEvent _) => value;
+    public static ValueProvider<AppendedEvent> Value(string value) => _ => value;
 
     /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> UniqueIdentifier() => (AppendedEvent @event) => $"{@event.Metadata.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
+    public static ValueProvider<AppendedEvent> UniqueIdentifier() => @event => $"{@event.Metadata.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
 }

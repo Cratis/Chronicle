@@ -21,7 +21,7 @@ internal static class ObserverExtensions
     /// <returns>An instance of the observer.</returns>
     public static IObserver GetObserver(this IGrainFactory grainFactory, IObserverCommand command)
     {
-        var eventSequenceId = string.IsNullOrEmpty(command.EventSequenceId) ? (EventSequenceId)command.EventSequenceId : EventSequenceId.Log;
+        var eventSequenceId = string.IsNullOrEmpty(command.EventSequenceId) ? EventSequenceId.Log : (EventSequenceId)command.EventSequenceId;
         var key = new ObserverKey(command.ObserverId, command.EventStore, command.Namespace, eventSequenceId);
         return grainFactory.GetGrain<IObserver>(key);
     }

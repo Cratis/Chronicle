@@ -31,7 +31,7 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
 
         _projections
             .GetInstanceByIdForSessionWithEventsApplied(_correlationId, typeof(StateForAggregateRoot), _eventSourceId, _events)
-            .Returns((CallInfo callInfo) =>
+            .Returns(callInfo =>
             {
                 _eventsInvokedWith = callInfo.ArgAt<IEnumerable<object>>(3);
                 return _projectionResult;

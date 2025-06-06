@@ -24,7 +24,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
+        return (@event, target, arrayIndexers) =>
         {
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             var property = targetProperty.LastSegment.Value;
@@ -42,7 +42,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
+        return (@event, target, arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
@@ -67,7 +67,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers) =>
+        return (@event, target, arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;

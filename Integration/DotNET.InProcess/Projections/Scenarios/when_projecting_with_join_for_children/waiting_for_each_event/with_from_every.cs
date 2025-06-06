@@ -38,7 +38,7 @@ public class with_from_every(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await chronicleInProcessFixture.ReadModels.Database.GetCollection<GroupWithLastUpdated>().FindAsync(_ => _.Id == UserId.ToString());
+            var result = await ChronicleFixture.ReadModels.Database.GetCollection<GroupWithLastUpdated>().FindAsync(_ => _.Id == UserId.ToString());
             Model = await result.FirstOrDefaultAsync();
         }
     }

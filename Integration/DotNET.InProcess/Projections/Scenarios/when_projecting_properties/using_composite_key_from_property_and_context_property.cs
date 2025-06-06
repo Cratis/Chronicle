@@ -29,7 +29,7 @@ public class using_composite_key_from_property_and_context_property(context cont
 
         async Task Because()
         {
-            var result = await chronicleInProcessFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
+            var result = await ChronicleFixture.ReadModels.Database.GetCollection<ModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
             Model = await result.FirstOrDefaultAsync();
         }
     }

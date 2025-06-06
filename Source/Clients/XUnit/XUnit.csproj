@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <Target Name="BuildDependencies">
-        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
+        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);TargetFrameworks=$(TargetFrameworks);Repack=$(Repack)" />
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
     </Target>
 

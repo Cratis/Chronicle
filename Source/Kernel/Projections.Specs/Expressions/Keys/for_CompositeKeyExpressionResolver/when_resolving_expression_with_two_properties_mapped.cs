@@ -17,8 +17,8 @@ public class when_resolving_expression_with_two_properties_mapped : given.a_reso
 
     Key _result;
 
-    ValueProvider<AppendedEvent> first = (AppendedEvent _) => _firstValue;
-    ValueProvider<AppendedEvent> second = (AppendedEvent _) => _secondValue;
+    ValueProvider<AppendedEvent> first = _ => _firstValue;
+    ValueProvider<AppendedEvent> second = _ => _secondValue;
 
     void Establish()
     {
