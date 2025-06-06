@@ -14,14 +14,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
 using Xunit;
+
 namespace Cratis.Chronicle.XUnit.Integration;
 
-// ReSharper disable MemberHidesInterfaceMemberWithDefaultImplementation
-#pragma warning disable SA1600
 /// <summary>
 /// Represents the base fixture.
 /// </summary>
-/// <typeparam name="TChronicleFixture">The type of the chroncile fixture.</typeparam>
+/// <typeparam name="TChronicleFixture">The type of the Chronicle fixture.</typeparam>
 public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
@@ -146,8 +145,19 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     public IServiceProvider Services => _services ??= EnsureInitialized(() => _servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
 
+    /// <summary>
+    /// Gets the <see cref="IGrainFactory"/> for resolving grains.
+    /// </summary>
     internal IGrainFactory GrainFactory => (this as IChronicleSetupFixture).GrainFactory;
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequence"/> grain for the event log sequence.
+    /// </summary>
     internal IEventSequence EventLogSequenceGrain => (this as IChronicleSetupFixture).EventLogSequenceGrain;
+
+    /// <summary>
+    /// Gets the <see cref="IEventStoreStorage"/> for the event store storage.
+    /// </summary>
     internal IEventStoreStorage EventStoreStorage => (this as IChronicleSetupFixture).EventStoreStorage;
 
     /// <summary>
@@ -215,16 +225,48 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         });
     }
 
+    /// <summary>
+    /// Gets the <see cref="IEventStoreNamespaceStorage"/> for the specified namespace.
+    /// </summary>
+    /// <param name="namespaceName">Namespace to get for.</param>
+    /// <returns>The <see cref="IEventStoreNamespaceStorage"/> for the specified namespace.</returns>
     internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventStoreNamespaceStorage(namespaceName);
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequenceStorage"/> for the event log storage.
+    /// </summary>
+    /// <param name="namespaceName">Namespace to get for.</param>
+    /// <returns>The <see cref="IEventSequenceStorage"/> for the event log storage.</returns>
     internal IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventLogStorage(namespaceName);
+
+    /// <summary>
+    /// Gets the grain storage for the specified key.
+    /// </summary>
+    /// <typeparam name="TStorage">The type of the grain storage.</typeparam>
+    /// <param name="key">The key for the grain storage.</param>
+    /// <returns>The grain storage for the specified key.</returns>
     internal TStorage GetGrainStorage<TStorage>(string key)
         where TStorage : IGrainStorage => (this as IChronicleSetupFixture).GetGrainStorage<TStorage>(key);
-    internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => (this as IChronicleSetupFixture).GetEventSequenceStatesStorage();
-    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => (this as IChronicleSetupFixture).GetEventSequenceGrain(id);
-    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => (this as IChronicleSetupFixture).CreateEventSequenceKey(id);
 
-    // ReSharper enable MemberHidesInterfaceMemberWithDefaultImplementation
-#pragma warning restore SA1600
+    /// <summary>
+    /// Gets the <see cref="EventSequencesStorageProvider"/> for the event sequence states storage.
+    /// </summary>
+    /// <returns>The <see cref="EventSequencesStorageProvider"/> for the event sequence states storage.</returns>
+    internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => (this as IChronicleSetupFixture).GetEventSequenceStatesStorage();
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequence"/> grain for the specified event sequence ID.
+    /// </summary>
+    /// <param name="id">The <see cref="EventSequenceId"/> for the event sequence.</param>
+    /// <returns>The <see cref="IEventSequence"/> grain for the specified event sequence ID.</returns>
+    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => (this as IChronicleSetupFixture).GetEventSequenceGrain(id);
+
+    /// <summary>
+    /// Creates a new <see cref="EventSequenceKey"/> for the specified event sequence ID.
+    /// </summary>
+    /// <param name="id">The <see cref="EventSequenceId"/> for the event sequence.</param>
+    /// <returns>A new <see cref="EventSequenceKey"/> for the specified event sequence ID.</returns>
+    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => (this as IChronicleSetupFixture).CreateEventSequenceKey(id);
 
     /// <summary>
     /// Creates the WebApplicationFactory.
