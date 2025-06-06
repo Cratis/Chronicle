@@ -59,7 +59,7 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Build root
-        run: dotnet build --configuration Debug
+        run: dotnet build -f net9.0 --configuration Debug
 
       - name: Clean output for repackaged clients
         run: dotnet clean
