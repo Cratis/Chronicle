@@ -13,5 +13,10 @@
 | Topic | Description |
 | ------- | ----------- |
 | [Events](./clients/dotnet/events/events.md) | How to work with events. |
-| [Reactors](./clients/dotnet/events/observers.md) | How to work with observers. |
-| [Integration](./clients/dotnet/integration/integration.md) | How to create integration connectors and adapters for 3rd parties. |
+| [Aggregates](./clients/dotnet/aggregates/aggregate-root.md) | How to work with observers. |
+
+## Contributing
+
+| Topic | Description |
+| ------- | ----------- |
+| [Clients](./contributing/clients/index.md) | How to contribute to clients. |

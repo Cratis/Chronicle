@@ -6,5 +6,7 @@
   href: recipes/toc.yml
 - name: Clients
   href: clients/toc.yml
+- name: Contributing
+  href: contributing/toc.yml
 - name: Api
   href: ../../api/chronicle/
