@@ -104,8 +104,7 @@ to express rules. If your actions take complex objects as arguments, the fluent 
 in one place. With the FluentValidation API you also have more flexibility with the rules, as you can express conditionals for the rules,
 something the attribute model does not allow for unless one hand-rolls this type of flexibility into the rules themselves.
 
-Following the [Bank sample](../../../Samples/Banking/Bank/) we have the possibility to open a bank account. The bank accounts can have a friendly
-name associated with it. This name makes sense to make sure is unique.
+Lets look at a bank example, the bank accounts can have a friendly name associated with it. This name makes sense to make sure is unique.
 
 The action that opens the account takes a complex type; a command:
 
@@ -176,7 +175,7 @@ Having the rules within the class like this can be convenient, but you might fin
 some rules be reusable or even more generic and applicable as abstract concepts.
 Cratis provides a method in the base class called `RuleForState()` that lets you fluently describe rules per projected state property.
 
-> Note: Out of the box Cratis provides some rules, but you can easily [extend it](../recipes/rules/extending-rules.md).
+> Note: Out of the box Cratis provides some rules, but you can easily [extend it](../../recipes/rules/extending-rules.md).
 
 Lets change to using a generic `.Unique()` rule:
 
