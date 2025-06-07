@@ -39,4 +39,4 @@ If you prefer to browse the code in VSCode, you can do so by clicking [here](htt
 ## Contributing / Running locally
 
 If you're looking to either contribute or dive into the code by building and running the Cratis Chronicle locally,
-you can read more [here](./Documentation/contributing.md). You'll find issues to start with by going to [here](https://github.com/cratis/chronicle/contribute).
+you can read more [here](./Documentation/contributing/index.md). You'll find issues to start with by going to [here](https://github.com/cratis/chronicle/contribute).
