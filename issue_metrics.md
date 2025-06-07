@@ -3,17 +3,18 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 122 days, 6:18:55 | 1 day, 9:27:20 | 242 days, 12:51:50 |
-| Time to close | 253 days, 4:38:52 | 108 days, 12:11:06 | 787 days, 18:12:54 |
+| Time to close | 260 days, 23:07:10 | 110 days, 0:10:46 | 795 days, 12:48:07 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 296 |
-| Number of items closed | 532 |
-| Total number of items created | 828 |
+| Number of items that remain open | 292 |
+| Number of items closed | 537 |
+| Total number of items created | 829 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Improve the way integration specifications has to be set up | https://github.com/Cratis/Chronicle/issues/1906 | [einari](https://github.com/einari) | None | None | None |
 | Reactor/Reducer/Projection-Handler should be split apart | https://github.com/Cratis/Chronicle/issues/1899 | [einari](https://github.com/einari) | None | None | None |
 | Simplify and merge projects | https://github.com/Cratis/Chronicle/issues/1898 | [einari](https://github.com/einari) | None | None | None |
 | Watch Projection changeset for Children RemoveWithJoin issue | https://github.com/Cratis/Chronicle/issues/1896 | [woksin](https://github.com/woksin) | 0:32:56 | None | None |
@@ -368,5 +369,4 @@
 | Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.com/einari) | None | 394 days, 1:35:16 | None |
 | Client validation of reducers | https://github.com/Cratis/Chronicle/issues/947 | [einari](https://github.com/einari) | None | None | None |
 | Introduce a long running task system with supervisor methodology | https://github.com/Cratis/Chronicle/issues/946 | [einari](https://github.com/einari) | None | 69 days, 6:03:51 | None |
-| Optimize ClientObserver/Reducer registration | https://github.com/Cratis/Chronicle/issues/944 | [einari](https://github.com/einari) | None | 541 days, 0:55:30 | None |
-| Hard to figure out how to get going with a minimal setup | https://github.com/Cratis/Chronicle
+| Optimize ClientObserver/Reducer registration | https://github.com/Cratis/Chronicle/issues/9
