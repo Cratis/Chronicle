@@ -1,2 +1,4 @@
-- name: Services
-  href: ./services.md
+- name: Clients
+  href: ./clients/toc.yml
+- name: Kernel
+  href: ./kernel/toc.yml
