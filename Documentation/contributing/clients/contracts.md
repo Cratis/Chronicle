@@ -1,25 +1,22 @@
+
 # Contracts
 
-The contracts project holds all the gRPC definitions for data and services, representing the
-full protocol of the **Kernel**. They are defined as C# types, where data
-is represented using classes and services as interfaces.
+The Contracts project contains all gRPC definitions for data and services, representing the complete protocol of the **Kernel**.
+Contracts are defined as C# types: data is represented using classes, and services as interfaces.
 
-It leverages [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) to be able
-to have this *code-first* approach to defining protobuf contracts.
+We use [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) to enable a *code-first* approach to defining protobuf contracts.
 
-The implementation of the contracts belongs to the **Kernel**, see the [services documentation](../kernel/services.md)
-for more details.
+The implementation of these contracts resides in the **Kernel**. For more details, see the [services documentation](../kernel/services.md).
 
 ## Attributes
 
-The [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) supports defining
-the contracts using annotations found in `System.ServiceModel` and the ones found in `Protobuf` and `Protobuf.Grpc`.
-We leverage the latter annotations.
+[protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) supports defining contracts using annotations from `System.ServiceModel`
+as well as those from `Protobuf` and `Protobuf.Grpc`. We use the latter.
 
-For a data type, this means using the `[ProtoContract]` on the the type and the `[ProtoMember(<id>)]` on
-properties where the **id** is an incremental number that identifies the position within the contract.
+For data types, decorate the class with `[ProtoContract]` and each property with `[ProtoMember(<id>)]`, where **id** is a sequential number
+indicating the field's position in the contract.
 
-Following is an example:
+Example:
 
 ```csharp
 [ProtoContract]
@@ -36,11 +33,11 @@ public class AppendRequest
 }
 ```
 
-Additional properties should always be added at the end without reordering existing.
+Always add new properties at the end, without reordering existing ones.
 
-For service contracts, we leverage the `[Service]` and `[Operation]` attributes.
+For service contracts, use the `[Service]` and `[Operation]` attributes.
 
-The following is an example of use.
+Example:
 
 ```csharp
 [Service]
@@ -59,11 +56,10 @@ public interface IEventSequences
 
 ## Streaming APIs
 
-Some APIs need to stream data from client to server or server to client or both ways.
-We leverage the `System.Reactive` type `IObservable<>` for this, as we find that more
-intuitive and is also more consistent with how we implement throughout. It also
-gives you more expressive power when consuming these as you can then leverage the
-full power of `System.Reactive` and its fluent interfaces.
+Some APIs require streaming data from client to server, server to client, or both. We use the `System.Reactive` type `IObservable<>` for streaming, as it is intuitive,
+consistent with our implementation, and provides expressive power through the fluent interfaces of `System.Reactive`.
+
+Example:
 
 ```csharp
 [Service]
