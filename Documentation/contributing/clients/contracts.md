@@ -1,4 +1,3 @@
-
 # Contracts
 
 The Contracts project contains all gRPC definitions for data and services, representing the complete protocol of the **Kernel**.
