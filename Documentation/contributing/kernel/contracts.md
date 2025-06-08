@@ -5,7 +5,7 @@ Contracts are defined as C# types: data is represented using classes, and servic
 
 We use [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) to enable a *code-first* approach to defining protobuf contracts.
 
-The implementation of these contracts resides in the **Kernel**. For more details, see the [services documentation](../kernel/services.md).
+The implementation of these contracts resides in the **Kernel**. For more details, see the [services documentation](./services.md).
 
 ## Attributes
 
