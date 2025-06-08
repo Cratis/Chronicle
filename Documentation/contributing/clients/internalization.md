@@ -7,7 +7,7 @@ When tools like IDEs auto-import namespaces, exposing these internals can lead t
 Furthermore, some APIs are not intended for public consumption or long-term support.
 Exposing these would require us to maintain and version them alongside the official client APIs, which is undesirable.
 
-Typical examples of APIs we internalize include [contracts](./contracts.md) and any Kernel APIs bundled with the full .NET InProcess client.
+Typical examples of APIs we internalize include [contracts](../kernel/contracts.md) and any Kernel APIs bundled with the full .NET InProcess client.
 
 ## Repacking assemblies
 

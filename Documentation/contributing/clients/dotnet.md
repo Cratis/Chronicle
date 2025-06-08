@@ -15,5 +15,5 @@ customization for those who need it.
 
 ## Repack
 
-The .NET client is repacked. It hides the [contracts](./contracts.md) and
+The .NET client is repacked. It hides the [contracts](../kernel/contracts.md) and
 also includes the `Connection` project.

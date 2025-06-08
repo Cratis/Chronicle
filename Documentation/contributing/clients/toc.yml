@@ -5,6 +5,6 @@
 - name: REST API
   href: ./api.md
 - name: Contracts
-  href: ./contracts.md
+  href: ../kernel/contracts.md
 - name: Internalization
   href: ./internalization.md

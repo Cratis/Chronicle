@@ -37,7 +37,7 @@ The `Connections` project provides abstractions for managing connections to the 
 ### Contracts
 
 All **gRPC** protobuf data and service definitions are created in a code-first manner using the [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) package.
-These definitions are referred to as [contracts](./contracts.md).
+These definitions are referred to as [contracts](../kernel/contracts.md).
 
 ### Infrastructure
 
@@ -46,7 +46,7 @@ The `Infrastructure` project, located at `./Source/Infrastructure`, contains sha
 ## .NET
 
 Most clients are built on top of the common .NET client, which serves as the idiomatic C# entry point to the **Kernel** API surface.
-It relies on the [gRPC contracts](./contracts.md) for communication.
+It relies on the [gRPC contracts](../kernel/contracts.md) for communication.
 The goal is to provide a C#-friendly API that is intuitive and easy to use. For more details, see [the .NET client documentation](dotnet.md).
 
 ## .NET InProcess
