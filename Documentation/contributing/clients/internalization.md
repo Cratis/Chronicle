@@ -60,44 +60,46 @@ Example:
 
 ## Grpc Client Factory
 
-With the structure we have with the goal of reusing the heavy lifting of connections, we have to be a bit clever
-with how we create instances of the clients for the gRPC services.
+To efficiently reuse the core connection logic while internalizing implementation details, we take a specialized approach
+to generating and consuming gRPC clients.
 
-When we do a repack, the `ChronicleConnection` which resides in the `Connections` project is not capable
-out of the box to create clients at runtime, due to fact that the types are internal.
+When assemblies are repacked, types such as `ChronicleConnection` from the `Connections` project become internal, making it
+impossible to instantiate gRPC clients at runtime using standard mechanisms. To address this, we generate the required client
+types at build time and merge them into the .NET client assembly.
 
-To remedy this we have to do a couple of things.
+This process involves two key steps:
 
-- Create clients at build time and merge it into the .NET client.
-- Override the default `ClientFactory` to support finding these types and leverage them instead of creating new ones, which will fail.
+- **Build-time client generation:** The `GrpcClients` project uses `System.Reflection.Emit` and gRPC tooling to generate a dedicated assembly containing all required client implementations. These types are pre-generated and ready for use, eliminating the need for runtime code generation.
+- **Custom ClientFactory:** We override the default `ClientFactory` to discover and instantiate these pre-generated client types. Instead of attempting to create new clients dynamically (which would fail due to internalized types), the factory locates and uses the merged implementations.
 
-For the .NET client, the full flow is therefor a little bit different:
+The resulting workflow for the .NET client is as follows:
 
 ```mermaid
 flowchart LR
     GrpcClients --> Build --> ILRepack --> AssemblyFixer --> InternalsVerifier
 ```
 
-The `GrpcClients` project leverages `System.Reflections.Emit` to create a new assembly and uses the gRPC libraries to create
-the client implementations and it just copies all of this information into pre-generated types.
-
-From this the overridden `ClientFactory` will find the correct client implementation and leverage it if it finds it.
+By generating clients ahead of time and customizing the factory, we ensure that all necessary gRPC clients are available and
+discoverable, even after internalization. This approach maintains a clean public API, leverages shared connection logic,
+and avoids runtime errors related to inaccessible types.
 
 ## Internal assemblies
 
-It is also possible to explicitly specify assemblies one wants to have merged and internalized by using the `<InternalAssembly>`
-item, recognized by the `ILRepack.targets`.
+You can explicitly specify which assemblies should be merged and internalized by using the `<InternalAssembly>` item,
+which is recognized by the `ILRepack.targets` file.
 
-Following example shows how we take the generated contract clients assembly and merge it in:
+For example, to merge the generated contract clients assembly and ensure its types are internalized, add the following to your project file:
 
 ```xml
 <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
 ```
 
-## Do not internalize
+## Excluding assemblies from internalization
 
-Sometimes you need to not internalize something, you just want it merged.
-Like we do for the `Connections` project:
+In some scenarios, you may want to merge an assembly into the output without internalizing its types—preserving their original accessibility.
+For example, the `Connections` project is merged but remains public so its types are accessible to consumers.
+
+To achieve this, use the `<DoNotInternalize>` item in your project file to specify assemblies that should be merged as-is:
 
 ```xml
 <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
