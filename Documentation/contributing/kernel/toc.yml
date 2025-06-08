@@ -1,2 +1,4 @@
+- name: Contracts
+  href: ./contracts.md
 - name: Services
   href: ./services.md

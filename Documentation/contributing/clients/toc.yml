@@ -4,7 +4,5 @@
   href: ./dotnet.md
 - name: REST API
   href: ./api.md
-- name: Contracts
-  href: ../kernel/contracts.md
 - name: Internalization
   href: ./internalization.md
