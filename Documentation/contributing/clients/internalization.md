@@ -46,6 +46,65 @@ This tells MSBuild where to find the repacking workflow configuration:
 </PropertyGroup>
 ```
 
+The projects that a repacked project depends on that it wants to have automatically merged in are added as `<ProjectReference>`
+with a slight twist. By marking it as a **private asset**, the `ILRepack.targets` file will pick it up as something
+to merge in.
+
+Example:
+
+```xml
+<ProjectReference Include="../Connections/Connections.csproj">
+    <PrivateAssets>all</PrivateAssets>
+</ProjectReference>
+```
+
+## Grpc Client Factory
+
+With the structure we have with the goal of reusing the heavy lifting of connections, we have to be a bit clever
+with how we create instances of the clients for the gRPC services.
+
+When we do a repack, the `ChronicleConnection` which resides in the `Connections` project is not capable
+out of the box to create clients at runtime, due to fact that the types are internal.
+
+To remedy this we have to do a couple of things.
+
+- Create clients at build time and merge it into the .NET client.
+- Override the default `ClientFactory` to support finding these types and leverage them instead of creating new ones, which will fail.
+
+For the .NET client, the full flow is therefor a little bit different:
+
+```mermaid
+flowchart LR
+    GrpcClients --> Build --> ILRepack --> AssemblyFixer --> InternalsVerifier
+```
+
+The `GrpcClients` project leverages `System.Reflections.Emit` to create a new assembly and uses the gRPC libraries to create
+the client implementations and it just copies all of this information into pre-generated types.
+
+From this the overridden `ClientFactory` will find the correct client implementation and leverage it if it finds it.
+
+## Internal assemblies
+
+It is also possible to explicitly specify assemblies one wants to have merged and internalized by using the `<InternalAssembly>`
+item, recognized by the `ILRepack.targets`.
+
+Following example shows how we take the generated contract clients assembly and merge it in:
+
+```xml
+<InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
+```
+
+## Do not internalize
+
+Sometimes you need to not internalize something, you just want it merged.
+Like we do for the `Connections` project:
+
+```xml
+<DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
+```
+
+The `ILRepack.targets` file recognizes this item and will configure the `ILRepack` tool correctly.
+
 ### Repack property
 
 Repacking is triggered only when the `Repack` property is explicitly set to `true` during the build process.
