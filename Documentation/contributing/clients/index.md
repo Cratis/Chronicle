@@ -5,7 +5,7 @@ Below are the core principles for building public facing APIs exposed in our cli
 - APIs should be lovable
 - Provide sane defaults but make them flexible, extensible and overridable
 - Consistency is king
-- It should be easy to things right, hard to do things wrong
+- It should be easy to do things right, hard to do things wrong
 - Never expose more than is needed
 
 ## Topics
