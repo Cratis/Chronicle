@@ -68,15 +68,31 @@ You can read more about the [internalization process](./internalization.md).
 
 ## ASP.NET Core
 
+With the ASP.NET Core client the developer gets a way to work with Chronicle that feels more natural in
+that environment by basically just providing methods that extend the `WebApplicationBuilder` and
+configured everything to work properly from that.
+
 ## XUnit
+
+For unit level tests, there are test helpers found in the XUnit that allows one to write tests that
+does not rely on infrastructure.
 
 ## XUnit.Integration
 
+With the `XUnit.Integration` project the testing is more focused on a full stack with all the infrastructure
+in place. It provides test setup for both in-process as well as out-of-process.
+
 ## Orleans
+
+The `Orleans` project provides the developer with the opportunity to leverage some of the capabilities of
+Orleans in conjunction with Chronicle in a tighter way. For instance, it has an implementation of
+`AggregateRoot` that is a Grain, making your aggregates actors.
 
 ## Orleans.XUnit
 
+With the building blocks found in the `Orleans` project, the `Orleans.XUnit` project provides test utilities
+to build tests when using these.
+
 ## API
 
-
-
+The `API` project holds all the REST endpoints leveraged by the Workbench. Read the [API Project](./api.md) docs for more details.
