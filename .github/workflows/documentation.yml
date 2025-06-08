@@ -16,12 +16,6 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      # - name: Checkout the repository
-      #   uses: actions/checkout@v1
-
-      # - name: Validate links
-      #   uses: Youssef1313/markdown-links-verifier@v0.1.3
-
       - name: Trigger Documentation Build
         uses: peter-evans/repository-dispatch@v3
         with:
