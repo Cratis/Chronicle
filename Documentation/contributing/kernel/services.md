@@ -1,12 +1,9 @@
 # Services
 
-All implementation of gRPC services for [contracts](./contracts.md) are found
-in the `Services` project.
+All gRPC service implementations for our [contracts](./contracts.md) reside in the `Services` project.
 
-It is owned by the `Kernel` and should always be kept internal.
+These services are owned by the `Kernel` and must remain internal. Every service implementation should
+be marked as `internal`, since they are also merged into the `DotNET.InProcess` client.
+This is required by our [internalization](../clients/internalization.md) process for client assemblies.
 
-All service implementations need to be marked `internal` as they are also
-merged into the `DotNET.InProcess` client. This is due to how we [internalize](../clients/internalization.md)
-merged assemblies for our clients.
-
-Services build on top of the Grains that are exposed by the Kernel.
+Service implementations are built on top of the Grains exposed by the Kernel.
