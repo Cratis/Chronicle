@@ -1,34 +1,34 @@
 # Internalization
 
-The clients should only expose a single idiomatic API surface, whatever dependencies it has to provide that should not be exposed.
-This is to avoid confusion for anyone consuming our client packages. We have concepts represented with the same name sitting in
-different namespaces and packages for different purposes, with tools automatically resolving using statements, these can easily then
-be pulled in and create confusion and less optimal developer experience.
+Clients must present a single, clear, and idiomatic API surface. Any dependencies required to implement this API should remain hidden from consumers.
+This prevents confusion caused by exposing internal concepts or types that may exist in multiple namespaces or packages for different purposes.
+When tools like IDEs auto-import namespaces, exposing these internals can lead to ambiguous references and a degraded developer experience.
 
-In addition to that, there are APIs we don't want to publicly support and version in the same manner as we do with the
-official client APIs.
+Furthermore, some APIs are not intended for public consumption or long-term support.
+Exposing these would require us to maintain and version them alongside the official client APIs, which is undesirable.
 
-Good examples of things we want to hide are the [contracts](./contracts.md) and any of the Kernel APIs being included in the
-full .NET InProcess client.
+Typical examples of APIs we internalize include [contracts](./contracts.md) and any Kernel APIs bundled with the full .NET InProcess client.
 
 ## Repacking assemblies
 
-To be able to hide APIs we don't want to share, we repack our assemblies. This is done using a tool called [ILRepack](https://github.com/gluck/il-repack).
-It makes it possible for us to take a set of assemblies and merge them into one single assembly.
-As part of that process we also have to change the members of most of the assemblies to be internal. By doing that,
-they won't become visible and consumable for anyone outside.
+To prevent exposing APIs that are not intended for public use, we repack our assemblies using [ILRepack](https://github.com/gluck/il-repack).
+This tool merges multiple assemblies into a single output, allowing us to internalize types and members that should remain hidden from consumers.
+By making these internals inaccessible, we ensure a clean and focused API surface for client developers.
 
-However, this has some consequences that we need to deal with. We've built tools to help us deal with issues that arise and also
-build tools for helping us if we do something that causes [internals to become visible](#internals-verifier).
+Repacking introduces some challenges, such as managing dependencies and ensuring that no internalized types are accidentally exposed.
+To address these, we've developed supporting tools that automate the process, verify the integrity of the merged assemblies, and catch any violations—such
+as accidentally leaking internals—early in the build pipeline. For more details on this verification, see [Internals Verifier](#internals-verifier).
+
+The following flow happens when doing a repack build:
 
 ```mermaid
 flowchart LR
     Build --> ILRepack --> AssemblyFixer --> InternalsVerifier
 ```
 
-The process is captured in a `.targets` file called `ILRepack.targets` located in the `Source/Clients` folder.
-We leverage a [MSBuild wrapper for ILRepack](https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task) which we include
-as a package reference in the projects that performs repacking.
+The repacking workflow is defined in a `.targets` file named `ILRepack.targets` within the `Source/Clients` directory.
+To automate and integrate ILRepack into our build process, we use the [ILRepack.Lib.MSBuild.Task](https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task) MSBuild wrapper.
+This package is referenced directly in any project that requires assembly repacking, ensuring a seamless and repeatable build experience.
 
 ```xml
 <PackageReference Include="ILRepack.Lib.MSBuild.Task">
@@ -37,15 +37,20 @@ as a package reference in the projects that performs repacking.
 </PackageReference>
 ```
 
-The next thing the project needs to have is a reference to the `ILRepack.targets` file in a `<PropertyGroup>`.
+Next, ensure your project includes a reference to the `ILRepack.targets` file within a `<PropertyGroup>`.
+This tells MSBuild where to find the repacking workflow configuration:
 
 ```xml
-<ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
+<PropertyGroup>
+    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
+</PropertyGroup>
 ```
 
 ### Repack property
 
-Repacking will only occur if the `Repack` property is set to true. This is something you specify during build.
+Repacking is triggered only when the `Repack` property is explicitly set to `true` during the build process.
+This allows you to control when internalization occurs, ensuring that regular development builds remain fast and developer-friendly.
+To enable repacking, pass the property as a parameter when invoking the build:
 
 ```shell
 dotnet build -p:Repack=true
@@ -53,12 +58,10 @@ dotnet build -p:Repack=true
 
 ### Projects depending on repacked assemblies
 
-When we have packages / projects that depend on a package that gets repacked and also need to know about the things
-that has been internalized, like we have for the `AspNetCore` project for instance. We need to make
-the internals visible to this assembly. We do this by adding an `<InternalsVisibleTo>` property with the name of
-the assembly that the internals should be visible to.
+When a project depends on a repacked assembly and requires access to its internalized types—such as the `AspNetCore` project does,
+we must explicitly grant visibility to those internals. This is achieved by adding an `<InternalsVisibleTo>` entry for the consuming assembly.
 
-For instance in the `DotNET.csproj` file, you'll find an `<ItemGroup>` with a set of these, like the following:
+For example, in the `DotNET.csproj` file, you will find an `<ItemGroup>` containing one or more such entries:
 
 ```xml
 <ItemGroup>
@@ -66,24 +69,23 @@ For instance in the `DotNET.csproj` file, you'll find an `<ItemGroup>` with a se
 </ItemGroup>
 ```
 
-Another issue for these projects is that it can't have a regular project reference when we do repacking, as it
-needs the compiler to bind it to the correct assembly - otherwise it won't work at runtime.
-But, we don't need the repacking while developing, as that will hurt the feedback loop.
+Another challenge for these projects is that a standard project reference cannot be used during repacking, since the compiler must bind to the correct,
+repacked assembly for runtime correctness. However, during regular development, repacking is unnecessary and would slow down the feedback loop.
 
-For us to be able to support both of these scenarios optimally, the `.csproj` files for these projects are
-somewhat different.
+To support both scenarios efficiently, the `.csproj` files for these projects require a custom approach.
 
-To begin with, we need to control the build ourselves to build things in order.
-That means we can't leverage the default `.csproj` approach of having the following project definition at the top:
+First, we need to explicitly control the build order to ensure dependencies are built in the correct sequence.
+This means we cannot rely on the default `.csproj` pattern, which typically starts with a project definition like:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk"> <!-- ... or Microsoft.NET.Sdk.Web for ASP.NET Core -->
 ```
 
-The `Sdk="..."` has to be removed. Instead we import the correct Sdk props & targets files in the correct location.
+Instead of specifying `Sdk="..."` at the top of the `.csproj` file, we explicitly import the appropriate SDK props and targets files at the correct locations.
+This approach gives us full control over the build process and allows us to customize the build order and dependencies as needed.
 
-With the following snippet we take control over building the dependency, in this case the `DotNET.csproj` project before
-our own gets built, but only if the `Repack` property is set to true.
+The following configuration ensures that the `DotNET.csproj` dependency is built before the current project, but only when the `Repack` property is set to `true`.
+This guarantees that the repacked assembly is available for reference during the build, while preserving the standard development workflow when repacking is not required.
 
 ```xml
 <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
@@ -109,22 +111,23 @@ our own gets built, but only if the `Repack` property is set to true.
 </ItemGroup>
 ```
 
-With this block of configuration in the `.csproj` file, we bind to the correct output file during repack and leverage
-a regular project reference when not doing repack.
+This configuration ensures that, when repacking is enabled, your project references the merged output assembly directly—guaranteeing runtime correctness and hiding internal APIs.
+During normal development (when repacking is not enabled), it falls back to standard project references, preserving fast incremental builds and IDE tooling support.
+This dual approach provides both a clean public API for consumers and a smooth developer experience for contributors.
 
 ### Building deterministically
 
-The `dotnet` tool in conjunction with `msbuild` tries to be as fast as possible and will parallelize tasks.
-This will make the build flaky and sometimes break due to the complexity. To overcome that problem we
-basically have to disable parallelism when building with repacking.
+By default, the `dotnet` CLI and `msbuild` optimize for speed by running build tasks in parallel. However, when repacking assemblies, this parallelism can introduce race conditions
+and intermittent build failures due to the complex dependencies and sequencing required. To ensure a reliable and deterministic build when repacking, we explicitly disable
+parallelism by setting `-maxcpucount:1` on the build command. This forces the build to run tasks sequentially, guaranteeing that all dependencies are processed in the correct order
+and preventing issues related to concurrent execution.
 
 ```shell
 dotnet build -p:Repack=true -maxcpucount:1
 ```
 
-With this we get it to build everything properly and artifacts be ready before the next step.
-Typically during our GitHub actions, we build for release and for pull requests we only build for one
-.NET target framework like the following:
+This approach ensures that all necessary artifacts are built in the correct order and are available before proceeding to subsequent steps in the pipeline. In our GitHub Actions workflows,
+we typically perform release builds, while pull request builds target a single .NET framework for efficiency. For example:
 
 ```shell
 dotnet build -f net9.0 --configuration Release -p:Repack=true -maxcpucount:1
@@ -132,20 +135,19 @@ dotnet build -f net9.0 --configuration Release -p:Repack=true -maxcpucount:1
 
 ## Assembly fixer
 
-The assembly fixer tool located in the `Source/Tools/AssemblyFixer` folder makes the merged assemblies work at runtime.
-This is a specific problem when using the `DotNET.InProcess` package, as that sets up everything using Microsoft Orleans.
-Orleans have a feature where it discovers artifacts such as `Grains` from different assemblies. Assemblies that
-include a reference to the Orleans SDK will get an attribute called `AssemblyPart` added to it.
-When we merge assemblies, most of these assemblies seize to exist at runtime and Orleans would crash.
+The Assembly Fixer tool, found in the `Source/Tools/AssemblyFixer` directory, ensures that merged assemblies function correctly at runtime. This is particularly important for scenarios
+involving the `DotNET.InProcess` package, which relies on Microsoft Orleans for artifact discovery (such as `Grains`). Orleans uses the `AssemblyPart` attribute to identify assemblies
+containing relevant artifacts. However, after merging, many of these original assemblies no longer exist, which can cause Orleans to fail during runtime.
 
-With the Assembly fixer, we load the finished merged assembly and remove all of these attributes.
+To address this, the Assembly Fixer processes the merged output and removes all `AssemblyPart` attributes that reference assemblies no longer present. This step prevents Orleans from attempting to load missing assemblies, ensuring stable runtime behavior for the repacked client.
 
 ## Internals Verifier
 
-If we have anything that publicly exposes something from one of the assemblies that should be internalized.
-The ILRepack tool will not make those types internal. This is a violation and something that is easy to forget.
-With the `InternalsVerifier` we get a post build tool that will look through types in the merged assembly
-and check if these are originating from an assembly that should be internalized and then break the build
-as a consequence.
+When a public API inadvertently exposes a type from an assembly that should have been internalized, ILRepack cannot automatically make those types internal. This is a common source
+of accidental leaks—such as a public property, method, or constructor referencing an internalized type—which can compromise the intended encapsulation.
 
-This is as easy as having a property exposed with a type or a public constructor taking a dependency.
+To prevent this, we use the `InternalsVerifier` as a post-build tool. It scans the merged assembly for any public members that reference types originating from assemblies marked for
+internalization. If such a violation is detected, the build fails immediately, ensuring that no internal implementation details are exposed to consumers.
+
+Typical violations include public properties or constructors that use internalized types, which are easy to overlook during development. The `InternalsVerifier` enforces this boundary
+automatically, maintaining a clean and intentional API surface.
