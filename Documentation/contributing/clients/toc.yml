@@ -1,3 +1,5 @@
+- name: Contributing to Clients
+  href: ./index.md
 - name: Client Types
   href: ./client-types.md
 - name: .NET
