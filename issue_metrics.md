@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 292 |
+| Number of items that remain open | 293 |
 | Number of items closed | 537 |
-| Total number of items created | 829 |
+| Total number of items created | 830 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Symbol package validation failed - NuGet | https://github.com/Cratis/Chronicle/issues/1907 | [einari](https://github.com/einari) | None | None | None |
 | Improve the way integration specifications has to be set up | https://github.com/Cratis/Chronicle/issues/1906 | [einari](https://github.com/einari) | None | None | None |
 | Reactor/Reducer/Projection-Handler should be split apart | https://github.com/Cratis/Chronicle/issues/1899 | [einari](https://github.com/einari) | None | None | None |
 | Simplify and merge projects | https://github.com/Cratis/Chronicle/issues/1898 | [einari](https://github.com/einari) | None | None | None |
@@ -368,5 +369,4 @@
 | Add support for custom keys beyond what EventSourceId is offering | https://github.com/Cratis/Chronicle/issues/949 | [einari](https://github.com/einari) | None | None | None |
 | Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.com/einari) | None | 394 days, 1:35:16 | None |
 | Client validation of reducers | https://github.com/Cratis/Chronicle/issues/947 | [einari](https://github.com/einari) | None | None | None |
-| Introduce a long running task system with supervisor methodology | https://github.com/Cratis/Chronicle/issues/946 | [einari](https://github.com/einari) | None | 69 days, 6:03:51 | None |
-| Optimize ClientObserver/Reducer registration | https://github.com/Cratis/Chronicle/issues/9
+| Introduce a long running task system with supervisor methodology | https://github.com/Cratis/Chronicle/issues/946 | [einari](h
