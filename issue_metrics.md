@@ -3,17 +3,19 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 122 days, 6:18:55 | 1 day, 9:27:20 | 242 days, 12:51:50 |
-| Time to close | 260 days, 23:07:10 | 110 days, 0:10:46 | 795 days, 12:48:07 |
+| Time to close | 261 days, 1:27:23 | 110 days, 16:27:50 | 795 days, 4:01:30 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 293 |
-| Number of items closed | 537 |
-| Total number of items created | 830 |
+| Number of items that remain open | 294 |
+| Number of items closed | 538 |
+| Total number of items created | 832 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| Sequence Query editor in Workbench | https://github.com/Cratis/Chronicle/issues/1911 | [einari](https://github.com/einari) | None | None | None |
+| Multiple sinks for projection engine | https://github.com/Cratis/Chronicle/issues/1910 | [woksin](https://github.com/woksin) | None | None | None |
 | Symbol package validation failed - NuGet | https://github.com/Cratis/Chronicle/issues/1907 | [einari](https://github.com/einari) | None | None | None |
 | Improve the way integration specifications has to be set up | https://github.com/Cratis/Chronicle/issues/1906 | [einari](https://github.com/einari) | None | None | None |
 | Reactor/Reducer/Projection-Handler should be split apart | https://github.com/Cratis/Chronicle/issues/1899 | [einari](https://github.com/einari) | None | None | None |
@@ -250,7 +252,7 @@
 | Add access to IServiceProvider on RuleAttribute | https://github.com/Cratis/Chronicle/issues/1296 | [einari](https://github.com/einari) | None | None | None |
 | Make DefineState on attribute based rules a virtual method on the base `RuleAttribute` - making the API clearer | https://github.com/Cratis/Chronicle/issues/1295 | [einari](https://github.com/einari) | None | None | None |
 | Move Rules documentation and correct it from Application Model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | [einari](https://github.com/einari) | None | None | None |
-| Repack client consumed assemblies to internalize dependencies we don't want to expose externally | https://github.com/Cratis/Chronicle/issues/1293 | [einari](https://github.com/einari) | None | None | None |
+| Repack client consumed assemblies to internalize dependencies we don't want to expose externally | https://github.com/Cratis/Chronicle/issues/1293 | [einari](https://github.com/einari) | None | 313 days, 8:28:42 | None |
 | Introduce a "transaction scope" for AggregateRoot operations | https://github.com/Cratis/Chronicle/issues/1291 | [einari](https://github.com/einari) | None | 18 days, 20:42:50 | None |
 | Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | [einari](https://github.com/einari) | None | None | None |
 | Add a way to clear state / API call. Only available in Development | https://github.com/Cratis/Chronicle/issues/1287 | [einari](https://github.com/einari) | None | None | None |
@@ -367,6 +369,4 @@
 | Change Catchup and Replay to handle bulks | https://github.com/Cratis/Chronicle/issues/951 | [einari](https://github.com/einari) | None | 69 days, 5:52:39 | None |
 | Add documentation for reducers | https://github.com/Cratis/Chronicle/issues/950 | [einari](https://github.com/einari) | None | None | None |
 | Add support for custom keys beyond what EventSourceId is offering | https://github.com/Cratis/Chronicle/issues/949 | [einari](https://github.com/einari) | None | None | None |
-| Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.com/einari) | None | 394 days, 1:35:16 | None |
-| Client validation of reducers | https://github.com/Cratis/Chronicle/issues/947 | [einari](https://github.com/einari) | None | None | None |
-| Introduce a long running task system with supervisor methodology | https://github.com/Cratis/Chronicle/issues/946 | [einari](h
+| Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.com/eina
