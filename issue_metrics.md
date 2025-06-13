@@ -15,7 +15,7 @@
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
 | Sequence Query editor in Workbench | https://github.com/Cratis/Chronicle/issues/1911 | [einari](https://github.com/einari) | None | None | None |
-| Multiple sinks for projection engine | https://github.com/Cratis/Chronicle/issues/1910 | [woksin](https://github.com/woksin) | None | None | None |
+| Multiple sinks for projections and reducers | https://github.com/Cratis/Chronicle/issues/1910 | [woksin](https://github.com/woksin) | None | None | None |
 | Symbol package validation failed - NuGet | https://github.com/Cratis/Chronicle/issues/1907 | [einari](https://github.com/einari) | None | None | None |
 | Improve the way integration specifications has to be set up | https://github.com/Cratis/Chronicle/issues/1906 | [einari](https://github.com/einari) | None | None | None |
 | Reactor/Reducer/Projection-Handler should be split apart | https://github.com/Cratis/Chronicle/issues/1899 | [einari](https://github.com/einari) | None | None | None |
@@ -369,4 +369,4 @@
 | Change Catchup and Replay to handle bulks | https://github.com/Cratis/Chronicle/issues/951 | [einari](https://github.com/einari) | None | 69 days, 5:52:39 | None |
 | Add documentation for reducers | https://github.com/Cratis/Chronicle/issues/950 | [einari](https://github.com/einari) | None | None | None |
 | Add support for custom keys beyond what EventSourceId is offering | https://github.com/Cratis/Chronicle/issues/949 | [einari](https://github.com/einari) | None | None | None |
-| Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.com/eina
+| Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.c
