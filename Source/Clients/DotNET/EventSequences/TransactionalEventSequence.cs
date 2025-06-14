@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -33,7 +34,8 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         object @event,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default)
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var causation = GetCausation();
         UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType);
@@ -46,7 +48,8 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         IEnumerable<object> events,
         EventStreamType? eventStreamType = null,
         EventStreamId? eventStreamId = null,
-        EventSourceType? eventSourceType = null)
+        EventSourceType? eventSourceType = null,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var causation = GetCausation();
         foreach (var @event in events)

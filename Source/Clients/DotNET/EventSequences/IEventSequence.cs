@@ -3,8 +3,64 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
+
+/*
+const MyComponent = () => {
+    const [readModel] = MyReadModel.use();
+    const [command] = MyCommand.use();
+
+    const buttonClick = () => {
+        command.from(readModel);
+
+    };
+};
+
+var evt = new Event();
+
+var appendManyOperation = eventLog
+    .ForEventSourceId(eventSourceId, builder =>  builder
+        .ConcurrencyScope(b => b
+            .WithEventStreamType(EventStreamType.Default)
+            .WithEventStreamId(EventStreamId.Default)
+            .WithEventSourceId()
+            .WithEventTypes(new[] { EventType.MyEventType })
+
+        .Append(evt);
+        .Append(evt);
+        .Append(evt);
+        .Append(evt))
+    .ForEventSourceId(eventSourceId, builder =>  builder
+        .ConcurrencyScope(b => b
+            .WithEventStreamType(EventStreamType.Default)
+            .WithEventStreamId(EventStreamId.Default)
+            .WithEventTypes(new[] { EventType.MyEventType })
+        .Append(evt);
+        .Append(evt);
+        .Append(evt);
+        .Append(evt));
+
+appendManyOperation.Perform();
+
+using (var uow = Uow.Begin())
+{
+    uow.Add(appendManyOperation);
+}
+
+await eventLog.Append(evt, concurrencyScope: concurrencyScope);
+await eventLog.Append(evt, concurrencyScope: builder => builder.WithEventSourceId(...).With...());
+await eventLog.Append(evt, concurrencyScope: ConcurrencyScope.None);
+await eventLog.Append(evt); // Use default concurrency scope - event sequence number is fetched from event store before appending and put into the concurrency scope.
+
+Configurable concurrency strategy defaults:
+- none
+- optimistic concurrency scope based on event sequence number, event source id (Strategy)
+
+AggregateRoot:
+- Dynamically pick up what properties to use based on e.g. EventSourceType used or not
+*/
 
 /// <summary>
 /// Defines the client event sequence.
@@ -62,8 +118,9 @@ public interface IEventSequence
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence.
     /// </summary>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. If not specified, it will return the tail sequence number for all event sources.</param>
     /// <returns>Tail sequence number.</returns>
-    Task<EventSequenceNumber> GetTailSequenceNumber();
+    Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default);
 
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence for a specific observer.
@@ -84,6 +141,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
         EventSourceId eventSourceId,
@@ -91,7 +149,8 @@ public interface IEventSequence
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default);
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.
@@ -102,6 +161,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
@@ -112,18 +172,23 @@ public interface IEventSequence
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default);
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.
     /// </summary>
     /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
     /// </remarks>
-    Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default);
+    Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
     /// Redact an event at a specific sequence number.
