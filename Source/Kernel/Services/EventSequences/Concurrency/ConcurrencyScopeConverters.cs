@@ -21,7 +21,7 @@ internal static class ConcurrencyScopeConverters
         this Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope scope) =>
         new(
             scope.EventSequenceNumber,
-            ToMaybeConcept<EventSourceId>(scope.EventSourceId, value => value),
+            scope.EventSourceId,
             ToMaybeConcept<EventStreamType>(scope.EventStreamType, value => value),
             ToMaybeConcept<EventStreamId>(scope.EventStreamId, value => value),
             ToMaybeConcept<EventSourceType>(scope.EventSourceType, value => value),
@@ -33,7 +33,7 @@ internal static class ConcurrencyScopeConverters
     /// <param name="scopes"><see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScopeMany"/> to convert.</param>
     /// <returns>A converted <see cref="ConcurrencyScope"/>.</returns>
     public static ConcurrencyScopes ToChronicle(
-        this IDictionary<string, Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScopeMany> scopes)
+        this IDictionary<string, Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes)
     {
         var result = new ConcurrencyScopes();
         foreach (var (eventSourceId, scope) in scopes)
@@ -43,15 +43,6 @@ internal static class ConcurrencyScopeConverters
 
         return result;
     }
-    static ConcurrencyScopes.Scope ToChronicle(
-        this Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScopeMany scope) =>
-        new(
-            scope.EventSequenceNumber,
-            scope.EventSourceId,
-            ToMaybeConcept<EventStreamType>(scope.EventStreamType, value => value),
-            ToMaybeConcept<EventStreamId>(scope.EventStreamId, value => value),
-            ToMaybeConcept<EventSourceType>(scope.EventSourceType, value => value),
-            scope.EventTypes?.Select(EventType.Parse));
 
     static T? ToMaybeConcept<T>(string? value, Func<string, T> toConcept)
         where T : ConceptAs<string>

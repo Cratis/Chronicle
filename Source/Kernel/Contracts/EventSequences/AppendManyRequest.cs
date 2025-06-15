@@ -55,5 +55,5 @@ public class AppendManyRequest : IEventSequenceRequest
     /// Gets or sets the concurrency scopes.
     /// </summary>
     [ProtoMember(8)]
-    public IDictionary<string, ConcurrencyScopeMany> ConcurrencyScopes { get; set; }
+    public IDictionary<string, ConcurrencyScope> ConcurrencyScopes { get; set; }
 }

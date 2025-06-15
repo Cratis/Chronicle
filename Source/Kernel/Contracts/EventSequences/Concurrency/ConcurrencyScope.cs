@@ -18,10 +18,10 @@ public class ConcurrencyScope
     public ulong EventSequenceNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional <see cref="EventSourceId"/> to scope to. If not set, it will not be used.
+    /// Gets or sets the value indicating whether to scope to the event source id.
     /// </summary>
     [ProtoMember(2)]
-    public string? EventSourceId { get; set; }
+    public bool EventSourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the optional event stream type to scope to. If not set, it will not be used.

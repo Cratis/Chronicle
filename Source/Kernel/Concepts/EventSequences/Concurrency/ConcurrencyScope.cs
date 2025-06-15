@@ -9,14 +9,14 @@ namespace Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 /// Represents a concurrency scope for an event sequence append operation.
 /// </summary>
 /// <param name="SequenceNumber">The expected sequence number.</param>
-/// <param name="EventSourceId">Optional <see cref="EventSourceId"/> to scope to. If not set, it will not be used.</param>
+/// <param name="EventSourceId">The value indicating whether to scope to the associated <see cref="EventSourceId"/>.</param>
 /// <param name="EventStreamType">Optional <see cref="EventStreamType"/> to scope to. If not set, it will not be used.</param>
 /// <param name="EventStreamId">Optional <see cref="EventStreamId"/> to scope to. If not set, it will not be used.</param>
 /// <param name="EventSourceType">Optional <see cref="EventSourceType"/> to scope to. If not set, it will not be used.</param>
 /// <param name="EventTypes">Optional collection of <see cref="EventType"/> to scope to. If not set, it will not be used.</param>
 public record ConcurrencyScope(
     EventSequenceNumber SequenceNumber,
-    EventSourceId? EventSourceId,
+    bool EventSourceId,
     EventStreamType? EventStreamType,
     EventStreamId? EventStreamId,
     EventSourceType? EventSourceType,
