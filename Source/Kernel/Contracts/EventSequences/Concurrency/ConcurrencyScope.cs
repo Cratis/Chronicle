@@ -15,7 +15,7 @@ public class ConcurrencyScope
     /// Gets or sets the expected sequence number for the event sequence operation.
     /// </summary>
     [ProtoMember(1)]
-    public long EventSequenceNumber { get; set; }
+    public ulong EventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the optional <see cref="EventSourceId"/> to scope to. If not set, it will not be used.

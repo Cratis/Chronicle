@@ -15,13 +15,13 @@ public class ConcurrencyScopeMany
     /// Gets or sets the expected sequence number for the event sequence operation.
     /// </summary>
     [ProtoMember(1)]
-    public long EventSequenceNumber { get; set; }
+    public ulong EventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the value indicating whether to scope to the event source id.
     /// </summary>
     [ProtoMember(2)]
-    public bool? EventSourceId { get; set; }
+    public bool EventSourceId { get; set; }
 
     /// <summary>
     /// Gets or sets the optional event stream type to scope to. If not set, it will not be used.

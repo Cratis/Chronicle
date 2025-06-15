@@ -12,26 +12,14 @@ namespace Cratis.Chronicle.Contracts.EventSequences.Concurrency;
 public class ConcurrencyViolation
 {
     /// <summary>
-    /// Gets or sets the event sequence id.
-    /// </summary>
-    [ProtoMember(1)]
-    public string EventSequenceId { get; init; }
-
-    /// <summary>
     /// Gets or sets the expected event sequence number.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(1)]
     public ulong ExpectedSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the actual event sequence number.
     /// </summary>
-    [ProtoMember(3)]
-    public string ActualSequenceNumber { get; set; }
-
-    /// <summary>
-    /// Gets or sets the message with more details.
-    /// </summary>
-    [ProtoMember(4)]
-    public string Message { get; set; }
+    [ProtoMember(2)]
+    public ulong ActualSequenceNumber { get; set; }
 }
