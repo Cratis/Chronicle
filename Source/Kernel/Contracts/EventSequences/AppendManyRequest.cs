@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Auditing;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventSequences.Concurrency;
 using Cratis.Chronicle.Contracts.Identities;
 using ProtoBuf;
 
@@ -49,4 +50,10 @@ public class AppendManyRequest : IEventSequenceRequest
     /// </summary>
     [ProtoMember(7)]
     public Identity CausedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the concurrency scopes.
+    /// </summary>
+    [ProtoMember(8)]
+    public IDictionary<string, ConcurrencyScopeMany> ConcurrencyScopes { get; set; }
 }
