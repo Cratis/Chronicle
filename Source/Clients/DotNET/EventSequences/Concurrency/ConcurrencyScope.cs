@@ -23,7 +23,7 @@ public record ConcurrencyScope(
     IEnumerable<EventType>? EventTypes = default)
 {
     /// <summary>
-    /// Represents a concurrency scope that does not apply any constraints.
+    /// Represents a concurrency scope that has not been specified yet.
     /// </summary>
     public static readonly ConcurrencyScope NotSet = new(
         EventSequenceNumber.Max,
