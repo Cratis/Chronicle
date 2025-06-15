@@ -25,22 +25,10 @@ public record ConcurrencyScope(
     /// <summary>
     /// Represents a concurrency scope that has not been specified yet.
     /// </summary>
-    public static readonly ConcurrencyScope NotSet = new(
-        EventSequenceNumber.Max,
-        default,
-        default,
-        default,
-        default,
-        default);
+    public static readonly ConcurrencyScope NotSet = new(EventSequenceNumber.Max);
 
     /// <summary>
     /// Represents a concurrency scope that does not apply any constraints.
     /// </summary>
-    public static readonly ConcurrencyScope None = new(
-        EventSequenceNumber.Unavailable,
-        default,
-        default,
-        default,
-        default,
-        default);
+    public static readonly ConcurrencyScope None = new(EventSequenceNumber.Unavailable);
 }
