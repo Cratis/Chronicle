@@ -1,0 +1,65 @@
+@import "tailwindcss";
+/* @import url(allotment/dist/style.css); */
+
+/* @import 'primereact/resources/themes/saga-blue/theme.css'; */
+@import 'primereact/resources/themes/lara-dark-blue/theme.css';
+
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color-scheme: light;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  --topbar-height: 4rem;
+  --sidebar-width: 280px;
+  --sidebar-closed-width: calc(4.5rem + 2px);
+  --footer-height: 0px;
+  --focus-border: var(--primary-color);
+
+  --cratis-sidebar-namespace-bg: var(--shade500);
+  --cratis-sidebar-space-textColor: var(--shade000);
+  --cratis-sidebar-bg: var(--shade800);
+  --cratis-sidebar-textColor: var(--shade000);
+  --cratis-sidebar-menuitem-active-bg: var(--surface-c);
+  --cratis-sidebar-menuitem-active-textColor: var(--text-color-secondary);
+  --cratis-topbar-bg: var(--surface-a);
+  --cratis-layout-border-color: var(--surface-border);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--surface-ground);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+.highlight {
+    background-color: var(--highlight-bg);
+    color: var(--highlight-text-color);
+}
+
+.contentBackground {
+    background-color: var(--surface-0);
+}
+
+.panel {
+    background: var(--surface-card);
+    border: 1px solid var(--shade600);
+    border-radius: var(--border-radius);
+    color: var(--menu-text-color);
+}
