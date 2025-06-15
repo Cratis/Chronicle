@@ -121,6 +121,11 @@
                     "sequenceNumber": "Sequence number",
                     "eventType": "Event Type",
                     "occurred": "Occurred"
+                },
+                "filters": {
+                    "placeholders": {
+                        "eventType": "Event type"
+                    }
                 }
             },
             "observers": {
