@@ -6,6 +6,7 @@ import { PrimeReactProvider } from 'primereact/api';
 import ReactDOM from 'react-dom/client';
 import 'primeicons/primeicons.css';
 import './index.css';
+import 'primeicons/primeicons.css';
 import React from 'react';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';

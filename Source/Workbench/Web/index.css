@@ -1,7 +1,5 @@
+@import url(allotment/dist/style.css);
 @import "tailwindcss";
-/* @import url(allotment/dist/style.css); */
-
-/* @import 'primereact/resources/themes/saga-blue/theme.css'; */
 @import 'primereact/resources/themes/lara-dark-blue/theme.css';
 
 :root {
@@ -24,13 +22,13 @@
   --footer-height: 0px;
   --focus-border: var(--primary-color);
 
-  --cratis-sidebar-namespace-bg: var(--shade500);
-  --cratis-sidebar-space-textColor: var(--shade000);
-  --cratis-sidebar-bg: var(--shade800);
-  --cratis-sidebar-textColor: var(--shade000);
-  --cratis-sidebar-menuitem-active-bg: var(--surface-c);
-  --cratis-sidebar-menuitem-active-textColor: var(--text-color-secondary);
-  --cratis-topbar-bg: var(--surface-a);
+  --cratis-sidebar-namespace-bg: var(--gray-600);
+  --cratis-sidebar-space-textColor: var(--gray-300);
+  --cratis-sidebar-bg: var(--gray-800);
+  --cratis-sidebar-textColor: var(--gray-300);
+  --cratis-sidebar-menuitem-active-bg: var(--gray-700);
+  --cratis-sidebar-menuitem-active-textColor: var(--highlight-text-color);
+  --cratis-topbar-bg: var(--gray-900);
   --cratis-layout-border-color: var(--surface-border);
 }
 
