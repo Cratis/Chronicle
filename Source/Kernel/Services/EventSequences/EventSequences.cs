@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Services.Auditing;
 using Cratis.Chronicle.Services.Events;
+using Cratis.Chronicle.Services.EventSequences.Concurrency;
 using Cratis.Chronicle.Services.Identities;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -42,7 +43,8 @@ internal sealed class EventSequences(
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.CorrelationId,
             request.Causation.ToChronicle(),
-            request.CausedBy.ToChronicle());
+            request.CausedBy.ToChronicle(),
+            request.ConcurrencyScope.ToChronicle());
 
         return result.ToContract();
     }
@@ -55,7 +57,8 @@ internal sealed class EventSequences(
             request.Events.ToChronicle(),
             request.CorrelationId,
             request.Causation.ToChronicle(),
-            request.CausedBy.ToChronicle());
+            request.CausedBy.ToChronicle(),
+            request.ConcurrencyScopes.ToChronicle());
 
         return result.ToContract();
     }
