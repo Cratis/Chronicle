@@ -9,6 +9,7 @@
 - Use single-line using directives.
 - Honor the existing code style and conventions in the project.
 - Honor the .editorconfig file for formatting and style rules.
+- Never use `private` access modifier, as C# defaults to `private`.
 
 ## Testing
 
