@@ -234,15 +234,7 @@ public class EventSequenceStorage(
 
         var collection = _collection;
         var filters = new List<FilterDefinition<Event>>();
-        if (eventTypes?.Any() ?? false)
-        {
-            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
-        }
-
-        if (eventSourceId?.IsSpecified == true)
-        {
-            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
-        }
+        AddOptionalEventFilters(filters, eventSourceId, eventTypes);
 
         var filter = Builders<Event>.Filter.And([.. filters]);
 
@@ -263,14 +255,7 @@ public class EventSequenceStorage(
 
         var collection = _collection;
         var filters = new List<FilterDefinition<Event>>();
-        if (eventTypes?.Any() ?? false)
-        {
-            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
-        }
-        if (eventSourceId?.IsSpecified == true)
-        {
-            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
-        }
+        AddOptionalEventFilters(filters, eventSourceId, eventTypes);
         if (filters.Count == 0)
         {
             filters.Add(FilterDefinition<Event>.Empty);
@@ -378,15 +363,7 @@ public class EventSequenceStorage(
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber)
             };
-
-        if (eventTypes?.Any() ?? false)
-        {
-            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
-        }
-        if (eventSourceId?.IsSpecified == true)
-        {
-            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
-        }
+        AddOptionalEventFilters(filters, eventSourceId, eventTypes);
 
         var filter = Builders<Event>.Filter.And([.. filters]);
         var highest = await collection.Find(filter)
@@ -488,11 +465,7 @@ public class EventSequenceStorage(
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber)
             };
-
-        if (eventSourceId?.IsSpecified == true)
-        {
-            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
-        }
+        AddOptionalEventFilters(filters, eventSourceId, eventTypes);
 
         if (eventStreamType?.IsAll == false)
         {
@@ -503,18 +476,7 @@ public class EventSequenceStorage(
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamId, eventStreamId));
         }
-
-        if (eventTypes?.Any() == true)
-        {
-            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
-        }
-
-        var filter = Builders<Event>.Filter.And([.. filters]);
-        var cursor = await collection.Find(filter)
-                                     .SortByAscendingSequenceNumber()
-                                     .ToCursorAsync(cancellationToken)
-                                     .ConfigureAwait(false);
-        return new EventCursor(converter, cursor);
+        return await ToEventCursor(filters, collection, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -532,24 +494,25 @@ public class EventSequenceStorage(
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start),
                 Builders<Event>.Filter.Lte(_ => _.SequenceNumber, end)
             };
+        AddOptionalEventFilters(filters, eventSourceId, eventTypes);
+        return await ToEventCursor(filters, collection, cancellationToken);
+    }
 
-        if (eventSourceId?.IsSpecified == true)
-        {
-            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
-        }
-
-        if (eventTypes?.Any() == true)
-        {
-            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
-        }
-
-        var filter = Builders<Event>.Filter.And([.. filters]);
-
-        var cursor = await collection.Find(filter)
-                                     .SortByAscendingSequenceNumber()
-                                     .ToCursorAsync(cancellationToken)
-                                     .ConfigureAwait(false);
-        return new EventCursor(converter, cursor);
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetBefore(
+        DateTimeOffset date,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        CancellationToken cancellationToken = default)
+    {
+        logger.GettingBefore(eventSequenceId, date);
+        var collection = _collection;
+        var filters = new List<FilterDefinition<Event>>
+            {
+                Builders<Event>.Filter.Lte(_ => _.Occurred, date)
+            };
+        AddOptionalEventFilters(filters, eventSourceId, eventTypes);
+        return await ToEventCursor(filters, collection, cancellationToken);
     }
 
     UpdateOneModel<Event> CreateRedactionUpdateModelFor(
@@ -579,5 +542,34 @@ public class EventSequenceStorage(
             Builders<Event>.Update
                 .Set(e => e.Type, GlobalEventTypes.Redaction)
                 .Set(e => e.Content, generationalContent));
+    }
+
+    void AddOptionalEventFilters(
+        IList<FilterDefinition<Event>> filters,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<EventType>? eventTypes = default)
+    {
+        if (eventSourceId?.IsSpecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+    }
+
+    async Task<EventCursor> ToEventCursor(
+        IEnumerable<FilterDefinition<Event>> filters,
+        IMongoCollection<Event> collection,
+        CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Event>.Filter.And([.. filters]);
+        var cursor = await collection.Find(filter)
+            .SortByAscendingSequenceNumber()
+            .ToCursorAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return new EventCursor(converter, cursor);
     }
 }

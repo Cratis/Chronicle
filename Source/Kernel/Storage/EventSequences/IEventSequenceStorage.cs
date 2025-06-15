@@ -187,4 +187,14 @@ public interface IEventSequenceStorage
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get events before a specific given <see cref="DateTimeOffset"/>.
+    /// </summary>
+    /// <param name="date"><see cref="DateTimeOffset"/>.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
+    /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns><see cref="IEventCursor"/>.</returns>
+    Task<IEventCursor> GetBefore(DateTimeOffset date, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
 }
