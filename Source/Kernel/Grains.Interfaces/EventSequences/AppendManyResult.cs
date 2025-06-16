@@ -46,6 +46,8 @@ public class AppendManyResult
     /// Gets any exception messages that might have occurred.
     /// </summary>
     public IEnumerable<AppendError> Errors { get; init; } = [];
+    
+    // TODO: ConcurrencyViolations
 
     /// <summary>
     /// Create a successful result.

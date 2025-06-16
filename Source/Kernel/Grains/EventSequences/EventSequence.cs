@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Events.Constraints;
@@ -148,7 +149,8 @@ public class EventSequence(
         JsonObject content,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        Identity causedBy)
+        Identity causedBy,
+        ConcurrencyScope concurrencyScope)
     {
         try
         {
@@ -173,7 +175,8 @@ public class EventSequence(
         IEnumerable<EventToAppend> events,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        Identity causedBy)
+        Identity causedBy,
+        ConcurrencyScopes concurrencyScopes)
     {
         var tasks = events.Select(async e =>
         {
@@ -385,7 +388,13 @@ public class EventSequence(
         }
     }
 
-    AppendResult HandleAppendEventException(Exception ex, EventSourceType eventSourceType, EventSourceId eventSourceId, EventType eventType, EventStreamId eventStreamId, CorrelationId correlationId)
+    AppendResult HandleAppendEventException(
+        Exception ex,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventType eventType,
+        EventStreamId eventStreamId,
+        CorrelationId correlationId)
     {
         _metrics?.FailedAppending(eventSourceId, eventType.Id);
         logger.ErrorAppending(
@@ -409,7 +418,11 @@ public class EventSequence(
         return expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
     }
 
-    async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(EventSourceId eventSourceId, EventType eventType, CorrelationId correlationId, ExpandoObject compliantEventAsExpandoObject)
+    async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(
+        EventSourceId eventSourceId,
+        EventType eventType,
+        CorrelationId correlationId,
+        ExpandoObject compliantEventAsExpandoObject)
     {
         var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject);
         var constraintValidationResult = await constraintContext.Validate();
@@ -421,7 +434,11 @@ public class EventSequence(
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
     }
 
-    async Task HandleFailedAppendResult(Result<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
+    async Task HandleFailedAppendResult(
+        Result<AppendedEvent, AppendEventError>? appendResult,
+        EventType eventType,
+        EventSourceId eventSourceId,
+        string eventName)
     {
         if (appendResult is null)
         {
