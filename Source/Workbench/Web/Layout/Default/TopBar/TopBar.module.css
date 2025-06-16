@@ -6,6 +6,7 @@
     justify-content: space-between;
     align-items: center;
     height: var(--topbar-height);
+    color: var(--highlight-text-color);
 }
 
 .leftSide {
