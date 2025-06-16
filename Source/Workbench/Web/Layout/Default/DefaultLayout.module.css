@@ -36,6 +36,7 @@
 }
 
 .appOutlet {
+    width: calc(100vw);
     height: calc(100vh - var(--topbar-height) - var(--footer-height));
     margin-top: var(--topbar-height);
     padding-left: var(--sidebar-width);
