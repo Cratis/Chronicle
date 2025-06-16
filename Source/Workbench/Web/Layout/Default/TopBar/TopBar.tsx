@@ -24,8 +24,7 @@ export const TopBar = () => {
                     <Button
                         onClick={toggleLeftSidebarOpen}
                         text
-                        rounded
-                        className='p-2'>
+                        className={css.hamburgerMenuButton}>
                         <FaBars />
                     </Button>
                 </div>
