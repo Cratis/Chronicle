@@ -28,7 +28,7 @@
   --cratis-sidebar-textColor: var(--gray-300);
   --cratis-sidebar-menuitem-active-bg: var(--gray-700);
   --cratis-sidebar-menuitem-active-textColor: var(--highlight-text-color);
-  --cratis-topbar-bg: var(--gray-900);
+  --cratis-topbar-bg: var(--gray-800);
   --cratis-layout-border-color: var(--surface-border);
 }
 
