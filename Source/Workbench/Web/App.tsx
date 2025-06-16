@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useTheme } from './Utils/useTheme';
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
@@ -18,7 +17,6 @@ function App() {
     const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
     const basePath = basePathElement?.content ?? '/';
 
-    useTheme(basePath);
     return (
         <ApplicationModel development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
             <MVVM>
