@@ -8,12 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 294 |
+| Number of items that remain open | 296 |
 | Number of items closed | 538 |
-| Total number of items created | 832 |
+| Total number of items created | 834 |
 
 | Title | URL | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- |
+| [Design] - DSL for projections | https://github.com/Cratis/Chronicle/issues/1915 | [einari](https://github.com/einari) | None | None | None |
+| Chronicle should not decide casing on read models, event types or other artifacts given to it by the client | https://github.com/Cratis/Chronicle/issues/1914 | [einari](https://github.com/einari) | None | None | None |
 | Sequence Query editor in Workbench | https://github.com/Cratis/Chronicle/issues/1911 | [einari](https://github.com/einari) | None | None | None |
 | Multiple sinks for projections and reducers | https://github.com/Cratis/Chronicle/issues/1910 | [woksin](https://github.com/woksin) | None | None | None |
 | Symbol package validation failed - NuGet | https://github.com/Cratis/Chronicle/issues/1907 | [einari](https://github.com/einari) | None | None | None |
@@ -367,6 +369,4 @@
 | Change ClientObservers to handle in bulks | https://github.com/Cratis/Chronicle/issues/953 | [einari](https://github.com/einari) | None | 69 days, 5:51:50 | None |
 | Change Projections to handle bulks | https://github.com/Cratis/Chronicle/issues/952 | [einari](https://github.com/einari) | None | 69 days, 5:52:05 | None |
 | Change Catchup and Replay to handle bulks | https://github.com/Cratis/Chronicle/issues/951 | [einari](https://github.com/einari) | None | 69 days, 5:52:39 | None |
-| Add documentation for reducers | https://github.com/Cratis/Chronicle/issues/950 | [einari](https://github.com/einari) | None | None | None |
-| Add support for custom keys beyond what EventSourceId is offering | https://github.com/Cratis/Chronicle/issues/949 | [einari](https://github.com/einari) | None | None | None |
-| Rewrite observer supervisor | https://github.com/Cratis/Chronicle/issues/948 | [einari](https://github.c
+| Add documentation for reducers | https://github.com/Cratis/C
