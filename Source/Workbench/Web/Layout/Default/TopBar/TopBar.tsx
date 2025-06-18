@@ -4,7 +4,7 @@
 import { useLayoutContext } from '../context/LayoutContext';
 import { Button } from 'primereact/button';
 import css from './TopBar.module.css';
-import { FaBars } from 'react-icons/fa6';
+import { FaBars, FaHouse } from 'react-icons/fa6';
 // import { Profile } from "./Profile";
 // import { Notifications } from './Notifications';
 // import { Connection } from './Connection';
@@ -27,6 +27,9 @@ export const TopBar = () => {
                         className={css.hamburgerMenuButton}>
                         <FaBars />
                     </Button>
+                    <a href="/">
+                        <FaHouse />
+                    </a>
                 </div>
                 <div className="flex-1 flex align-center justify-center">
                     <div className="font-extrabold text-2xl m-2">{params.eventStore}</div>
