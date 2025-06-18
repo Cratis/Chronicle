@@ -8,11 +8,12 @@ import { FaBars, FaHouse } from 'react-icons/fa6';
 // import { Profile } from "./Profile";
 // import { Notifications } from './Notifications';
 // import { Connection } from './Connection';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { EventStore } from './EventStore';
 import * as Shared from 'Shared';
 
 export const TopBar = () => {
+    const navigate = useNavigate();
     const params = useParams<Shared.EventStoreAndNamespaceParams>();
 
     const { toggleLeftSidebarOpen } = useLayoutContext();
@@ -27,7 +28,7 @@ export const TopBar = () => {
                         className={css.hamburgerMenuButton}>
                         <FaBars />
                     </Button>
-                    <a href="/">
+                    <a href="#" onClick={() => navigate('/')}>
                         <FaHouse />
                     </a>
                 </div>
