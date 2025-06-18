@@ -162,7 +162,17 @@ public class EventSequence(
 
             var (compliantEvent, constraintContext) = getValidAndCompliantEvent.AsT0;
 
-            return await AppendValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, compliantEvent, constraintContext);
+            return await AppendValidAndCompliantEvent(
+                eventSourceType,
+                eventSourceId,
+                eventStreamType,
+                eventStreamId,
+                eventType,
+                correlationId,
+                causation,
+                causedBy,
+                compliantEvent,
+                constraintContext);
         }
         catch (Exception ex)
         {
