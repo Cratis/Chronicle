@@ -128,12 +128,14 @@
                 "empty": "No events found",
                 "columns": {
                     "sequenceNumber": "Sequence number",
+                    "eventSourceId": "Event Source Id",
                     "eventType": "Event Type",
                     "occurred": "Occurred"
                 },
                 "filters": {
                     "placeholders": {
-                        "eventType": "Event type"
+                        "eventType": "Event type",
+                        "eventSourceId": "Event source"
                     }
                 }
             },

@@ -26,8 +26,9 @@ export const Sequences = () => {
         eventSequenceId: 'event-log'
     };
 
-    const filters:DataTableFilterMeta = {
-        'metadata.type.id': { value: null, matchMode: FilterMatchMode.IN }
+    const filters: DataTableFilterMeta = {
+        'metadata.type.id': { value: null, matchMode: FilterMatchMode.IN },
+        'context.eventSourceId': { value: null, matchMode: FilterMatchMode.IN }
     };
 
     const [eventTypes] = AllEventTypes.use({
@@ -59,14 +60,27 @@ export const Sequences = () => {
             detailsComponent={EventDetails}>
             <DataPage.Columns>
                 <Column field='metadata.sequenceNumber' header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
-                <Column field='metadata.type.id'
-                        header={strings.eventStore.namespaces.sequences.columns.eventType}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField='metadata.type.id'
-                        filterElement={eventTypeFilterTemplate}
-                        filterPlaceholder='Event Types'/>
+
+                <Column
+                    field='metadata.type.id'
+                    header={strings.eventStore.namespaces.sequences.columns.eventType}
+                    showFilterMatchModes={false}
+                    filter
+                    filterMenuStyle={{ width: '14rem' }}
+                    filterField='metadata.type.id'
+                    filterElement={eventTypeFilterTemplate}
+                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
+
+                <Column
+                    field='context.eventSourceId'
+                    header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
+                    showFilterMatchModes={false}
+                    filter
+                    filterMenuStyle={{ width: '14rem' }}
+                    filterField='context.eventSourceId'
+                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId}
+                    />
+
                 <Column field='context.occurred' header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred} />
             </DataPage.Columns>
         </DataPage>
