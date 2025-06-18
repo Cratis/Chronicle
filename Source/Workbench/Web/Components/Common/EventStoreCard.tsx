@@ -18,19 +18,19 @@ export function EventStoreCard(props: IEventStoreCard) {
     const navigate = useNavigate();
 
     const image = (
-        <div className='p-4' style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+        <div className='pl-4' style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
             <ImDatabase size={48} />
         </div>
     );
     const heading = (
-        <h1 className='text-2xl cursor-pointer pt-6' onClick={() => navigate(path!)}>
+        <h1 className='text-2xl cursor-pointer pt-8' onClick={() => navigate(path!)}>
             {title}
         </h1>
     );
 
     return (
         <Card
-            className='m-4 flex p-2 border-2 shadow-none'
+            className='m-4 flex border-2 shadow-none w-160 h-50 overflow-hidden text-ellipsis whitespace-nowrap'
             title={heading}
             footer={footer}
             header={image}>
