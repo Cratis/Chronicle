@@ -28,4 +28,11 @@ internal sealed class EventStores(IStorage storage) : IEventStores
             .ObserveEventStores()
             .CompletedBy(callContext.CancellationToken)
             .Select(_ => _.Select(e => e.Value));
+
+    /// <inheritdoc/>
+    public Task Ensure(EnsureEventStore command)
+    {
+        storage.GetEventStore(command.Name);
+        return Task.CompletedTask;
+    }
 }

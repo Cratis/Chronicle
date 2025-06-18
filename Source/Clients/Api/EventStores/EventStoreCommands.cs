@@ -1,0 +1,23 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Contracts;
+
+namespace Cratis.Chronicle.Api.EventStores;
+
+/// <summary>
+/// Represents the API for commands related to the event store.
+/// </summary>
+/// <param name="eventStores"><see cref="IEventStores"/> service to work with.</param>
+[Route("/api/event-stores")]
+public class EventStoreCommands(IEventStores eventStores) : ControllerBase
+{
+    /// <summary>
+    /// Add an event store.
+    /// </summary>
+    /// <param name="command"><see cref="AddEventStore"/> command.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("add")]
+    public Task AddEventStore([FromBody] AddEventStore command) =>
+        eventStores.Ensure(new() { Name = command.Name });
+}

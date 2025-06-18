@@ -7,11 +7,19 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
+import { AddEventStore as AddEventStoreCommand } from 'Api/EventStores';
 
 export const AddEventStore = () => {
     const [name, setName] = useState('');
+    const [addEventStore] = AddEventStoreCommand.use();
 
     const { closeDialog } = useDialogContext();
+
+    const add = async () => {
+        addEventStore.name = name;
+        await addEventStore.execute();
+        closeDialog(DialogResult.Ok);
+    };
 
     return (
         <Dialog header={strings.home.dialogs.addEventStore.title} visible={true} style={{ width: '20vw' }} modal onHide={() => closeDialog(DialogResult.Cancelled)}>
@@ -25,7 +33,7 @@ export const AddEventStore = () => {
             </div>
 
             <div className="card flex flex-wrap justify-content-center gap-3 mt-8">
-                <Button label={strings.general.buttons.ok} icon="pi pi-check" onClick={() => closeDialog(DialogResult.Ok)} autoFocus />
+                <Button label={strings.general.buttons.ok} icon="pi pi-check" onClick={() => add()} autoFocus />
                 <Button label={strings.general.buttons.cancel} icon="pi pi-times" severity='secondary' onClick={() => closeDialog(DialogResult.Cancelled)} />
             </div>
         </Dialog>
