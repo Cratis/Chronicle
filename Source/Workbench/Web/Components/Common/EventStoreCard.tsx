@@ -5,7 +5,7 @@ import { Image } from 'primereact/image';
 import { Card } from 'primereact/card';
 import { useNavigate } from 'react-router-dom';
 
-export interface IStoreCard {
+export interface IEventStoreCard {
     logo?: string;
     path?: string;
     title?: string;
@@ -13,7 +13,7 @@ export interface IStoreCard {
     footer?: React.ReactNode;
 }
 
-export function StoreCard(props: IStoreCard) {
+export function EventStoreCard(props: IEventStoreCard) {
     const { logo, title, path, footer, description } = props;
     const navigate = useNavigate();
 
@@ -30,15 +30,12 @@ export function StoreCard(props: IStoreCard) {
     );
 
     return (
-        <div className='m-4'>
-            <Card
-                className='flex p-2 border-2 shadow-none'
-                title={heading}
-                footer={footer}
-                header={image}
-            >
-                {description}
-            </Card>
-        </div>
+        <Card
+            className='m-4 flex p-2 border-2 shadow-none'
+            title={heading}
+            footer={footer}
+            header={image}>
+            {description}
+        </Card>
     );
 }

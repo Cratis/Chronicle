@@ -5,5 +5,5 @@ export * from './CardFooter';
 export * from './ErrorBoundary';
 export * from './Page';
 export * from './QueryModal';
-export * from './StoreCard';
+export * from './EventStoreCard';
 export * from './Typography';

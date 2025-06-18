@@ -41,7 +41,7 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
                     ? css.sidebarClosed
                     : ''
                     }`}>
-                <header className={css.appHeader}>
+                <header className='appHeader'>
                     <TopBar />
                 </header>
 
@@ -59,12 +59,12 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
                     </div>
                 </aside>
 
-                <main className={css.appOutlet}>
+                <main className='appOutlet'>
                     <ErrorBoundary>
                         <Outlet />
                     </ErrorBoundary>
                 </main>
-                <footer className={css.appFooter}>
+                <footer className='appFooter'>
                     <Footer />
                 </footer>
             </div>

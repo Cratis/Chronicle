@@ -15,6 +15,15 @@
             }
         }
     },
+    "home": {
+        "selectHeader": "Select Event Store",
+        "dialogs": {
+            "addEventStore": {
+                "title": "Add Event Store",
+                "name": "Name"
+            }
+        }
+    },
     "mainMenu": {
         "recommendations": "Recommendations",
         "jobs": "Jobs",

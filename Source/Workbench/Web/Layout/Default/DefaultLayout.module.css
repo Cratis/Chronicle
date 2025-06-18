@@ -1,17 +1,6 @@
 /* Copyright (c) Cratis. All rights reserved.
    Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-.appHeader {
-    height: var(--topbar-height);
-    top: 0;
-    left: 0;
-    position: fixed;
-    background-color: var(--cratis-topbar-bg);
-    border-bottom: 1px solid var(--cratis-layout-border-color);
-    right: 0;
-    z-index:100;
-}
-
 .appLeftSidebar {
     width: var(--sidebar-width);
     bottom: 0;
@@ -35,27 +24,7 @@
     width: var(--sidebar-closed-width);
 }
 
-.appOutlet {
-    width: calc(100vw);
-    height: calc(100vh - var(--topbar-height) - var(--footer-height));
-    margin-top: var(--topbar-height);
-    padding-left: var(--sidebar-width);
-    margin-bottom: var(--footer-height);
-    overflow: auto;
-    transition: padding-left 0.3s;
-    color: var(--surface-900);
-}
-
 .sidebarClosed .appOutlet,
 .sidebarHidden .appOutlet {
     padding-left: calc(4.5rem + 3px);
-}
-
-.appFooter {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: var(--footer-height);
-    background-color: var(--surface-a);
 }
