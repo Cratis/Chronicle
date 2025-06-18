@@ -78,7 +78,7 @@ export const Sequences = () => {
             query={AppendedEvents}
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.sequences.empty}
-            dataKey='metadata.sequenceNumber'
+            dataKey={sequenceNumberPath}
             defaultFilters={filters}
             globalFilterFields={['metadata.type.id']}
             detailsComponent={EventDetails}>
