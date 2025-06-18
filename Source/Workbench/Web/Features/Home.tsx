@@ -6,10 +6,11 @@ import { EventStoreCard } from 'Components/Common/EventStoreCard';
 import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
-import { Card } from 'primereact/card';
 import css from './Home.module.css';
 import { useDialog } from '@cratis/applications.react/dialogs';
 import { AddEventStore } from './AddEventStore';
+import { Button } from 'primereact/button';
+import { ImPlus } from "react-icons/im";
 
 export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
     const basePath = useRelativePath('event-store');
@@ -32,11 +33,11 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                         );
                     })}
 
-                    <Card className={`m-4 flex p-2 border-2 shadow-none ${css.addCard}`}>
-                        <a href="#" onClick={() => showAddEventStoreDialog()}>
-                            +
-                        </a>
-                    </Card>
+                    <div className='m-4 flex'>
+                        <Button className={css.addCard} onClick={() => showAddEventStoreDialog()}>
+                            <ImPlus/>
+                        </Button>
+                    </div>
                 </div>
             </main>
             <AddEventStoreDialog/>

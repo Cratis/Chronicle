@@ -13,7 +13,4 @@ export class HomeViewModel {
     }
 
     eventStores: string[] = [];
-
-    addEventStore() {
-    }
 }

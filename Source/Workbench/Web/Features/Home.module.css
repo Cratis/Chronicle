@@ -3,8 +3,5 @@
 
 .addCard {
     border: 2px dashed var(--highlight-text-color);
-    font-size: 15rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    font-size: 120px;
 }

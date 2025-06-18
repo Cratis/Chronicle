@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Image } from 'primereact/image';
 import { Card } from 'primereact/card';
 import { useNavigate } from 'react-router-dom';
+import { ImDatabase } from "react-icons/im";
 
 export interface IEventStoreCard {
     logo?: string;
@@ -14,17 +14,16 @@ export interface IEventStoreCard {
 }
 
 export function EventStoreCard(props: IEventStoreCard) {
-    const { logo, title, path, footer, description } = props;
+    const { title, path, footer, description } = props;
     const navigate = useNavigate();
 
     const image = (
-        <div className='w-24 h-24 '>
-            <Image alt='Card' src={logo} />
+        <div className='p-4' style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+            <ImDatabase size={48} />
         </div>
     );
     const heading = (
-        <h1 className='text-2xl cursor-pointer' onClick={() => navigate(path!)}>
-            {' '}
+        <h1 className='text-2xl cursor-pointer pt-6' onClick={() => navigate(path!)}>
             {title}
         </h1>
     );
