@@ -51,6 +51,8 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
         if (_isTransactional)
         {
         }
+
+        // Convert to append many operation
         return new AppendManyResult();
     }
 }

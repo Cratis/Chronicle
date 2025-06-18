@@ -46,6 +46,7 @@ public class AggregateRootFactory(
             aggregateRoot,
             unitOfWork,
             EventSequenceNumber.First);
+
         var mutator = await mutatorFactory.Create<TAggregateRoot>(context);
 
         await mutator.Rehydrate();

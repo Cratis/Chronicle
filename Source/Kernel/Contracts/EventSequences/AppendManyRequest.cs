@@ -52,7 +52,7 @@ public class AppendManyRequest : IEventSequenceRequest
     public Identity CausedBy { get; set; }
 
     /// <summary>
-    /// Gets or sets the concurrency scopes.
+    /// Gets or sets the concurrency scopes per event source id.
     /// </summary>
     [ProtoMember(8)]
     public IDictionary<string, ConcurrencyScope> ConcurrencyScopes { get; set; }

@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Events.Constraints;
+using Cratis.Chronicle.Grains.EventSequences.Concurrency;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Monads;
@@ -61,6 +62,7 @@ public class EventSequence(
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
+    IConcurrencyValidator ConcurrencyValidator => new ConcurrencyValidator(EventSequenceStorage);
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -207,6 +209,7 @@ public class EventSequence(
             };
         }
 
+        // Todo: Check concurrency scopes for alle event source ids
         var results = new List<AppendResult>();
         foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
         {
