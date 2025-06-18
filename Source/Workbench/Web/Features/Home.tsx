@@ -17,30 +17,28 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
     const [AddEventStoreDialog, showAddEventStoreDialog] = useDialog(AddEventStore);
 
     return (
-        <div>
-            <main>
-                <h2 className='text-4xl m-3'>Select Event Store</h2>
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 '>
-                    {viewModel.eventStores.map((eventStore) => {
-                        return (
-                            <EventStoreCard
-                                key={eventStore}
-                                title={eventStore}
-                                path={`${basePath}/${eventStore}/Default`}
-                                footer={<CardFooter />}
-                                description=''
-                            />
-                        );
-                    })}
+        <div style={{ top: 0, position: 'fixed' }} className='m-4'>
+            <h2 className='text-4xl m-3'>Select Event Store</h2>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 '>
+                {viewModel.eventStores.map((eventStore) => {
+                    return (
+                        <EventStoreCard
+                            key={eventStore}
+                            title={eventStore}
+                            path={`${basePath}/${eventStore}/Default`}
+                            footer={<CardFooter />}
+                            description=''
+                        />
+                    );
+                })}
 
-                    <div className='m-4 flex'>
-                        <Button className={css.addCard} onClick={() => showAddEventStoreDialog()}>
-                            <ImPlus/>
-                        </Button>
-                    </div>
+                <div className='m-4 flex'>
+                    <Button className={css.addCard} onClick={() => showAddEventStoreDialog()}>
+                        <ImPlus />
+                    </Button>
                 </div>
-            </main>
-            <AddEventStoreDialog/>
+            </div>
+            <AddEventStoreDialog />
         </div>
     );
 });
