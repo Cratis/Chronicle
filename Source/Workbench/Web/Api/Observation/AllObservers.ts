@@ -12,7 +12,7 @@ import Handlebars from 'handlebars';
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/all-observers/observe');
 
 class AllObserversSortBy {
-    private _observerId: SortingActionsForObservableQuery<ObserverInformation[]>;
+    private _id: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _eventSequenceId: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _type: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _eventTypes: SortingActionsForObservableQuery<ObserverInformation[]>;
@@ -22,7 +22,7 @@ class AllObserversSortBy {
     private _isSubscribed: SortingActionsForObservableQuery<ObserverInformation[]>;
 
     constructor(readonly query: AllObservers) {
-        this._observerId = new SortingActionsForObservableQuery<ObserverInformation[]>('observerId', query);
+        this._id = new SortingActionsForObservableQuery<ObserverInformation[]>('id', query);
         this._eventSequenceId = new SortingActionsForObservableQuery<ObserverInformation[]>('eventSequenceId', query);
         this._type = new SortingActionsForObservableQuery<ObserverInformation[]>('type', query);
         this._eventTypes = new SortingActionsForObservableQuery<ObserverInformation[]>('eventTypes', query);
@@ -32,8 +32,8 @@ class AllObserversSortBy {
         this._isSubscribed = new SortingActionsForObservableQuery<ObserverInformation[]>('isSubscribed', query);
     }
 
-    get observerId(): SortingActionsForObservableQuery<ObserverInformation[]> {
-        return this._observerId;
+    get id(): SortingActionsForObservableQuery<ObserverInformation[]> {
+        return this._id;
     }
     get eventSequenceId(): SortingActionsForObservableQuery<ObserverInformation[]> {
         return this._eventSequenceId;
@@ -59,7 +59,7 @@ class AllObserversSortBy {
 }
 
 class AllObserversSortByWithoutQuery {
-    private _observerId: SortingActions  = new SortingActions('observerId');
+    private _id: SortingActions  = new SortingActions('id');
     private _eventSequenceId: SortingActions  = new SortingActions('eventSequenceId');
     private _type: SortingActions  = new SortingActions('type');
     private _eventTypes: SortingActions  = new SortingActions('eventTypes');
@@ -68,8 +68,8 @@ class AllObserversSortByWithoutQuery {
     private _runningState: SortingActions  = new SortingActions('runningState');
     private _isSubscribed: SortingActions  = new SortingActions('isSubscribed');
 
-    get observerId(): SortingActions {
-        return this._observerId;
+    get id(): SortingActions {
+        return this._id;
     }
     get eventSequenceId(): SortingActions {
         return this._eventSequenceId;

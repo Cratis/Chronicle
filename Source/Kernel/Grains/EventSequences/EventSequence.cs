@@ -468,7 +468,7 @@ public class EventSequence(
         var observers = await ObserverStorage.GetForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
-            var key = new ObserverKey(observer.ObserverId, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            var key = new ObserverKey(observer.Id, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
             await GrainFactory.GetGrain<IObserver>(key).ReplayPartition(eventSourceId);
         }
     }

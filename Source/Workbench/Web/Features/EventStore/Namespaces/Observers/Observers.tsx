@@ -53,7 +53,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             emptyMessage={strings.eventStore.namespaces.observers.empty}
             defaultFilters={defaultFilters}
             globalFilterFields={['runningState']}
-            dataKey='observerId'
+            dataKey='id'
             onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}>
             <DataPage.MenuItems>
                 <MenuItem
@@ -63,7 +63,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     command={() => viewModel.replay()} />
             </DataPage.MenuItems>
             <DataPage.Columns>
-                <Column field='observerId' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
                 <Column
                     field='type'
                     header={strings.eventStore.namespaces.observers.columns.observerType}
