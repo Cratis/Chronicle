@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 using Orleans.TestKit;
 using Catch = Cratis.Specifications.Catch;
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;

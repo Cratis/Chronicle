@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 using context = Cratis.Chronicle.InProcess.Integration.for_JobsManager.when_starting.job_with_single_step.and_job_is_stopped_and_then_deleted.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.when_starting.job_with_single_step;

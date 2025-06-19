@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Storage.Jobs;
-using Catch = Cratis.Chronicle.Monads.Catch;
+using Catch = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;
 

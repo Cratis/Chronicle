@@ -8,6 +8,7 @@
         <ServerGarbageCollection>true</ServerGarbageCollection>
         <NoWarn>$(NoWarn);RCS1093</NoWarn>
         <IsPackable>false</IsPackable>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
     <!-- 3rd party package references -->

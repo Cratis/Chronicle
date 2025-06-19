@@ -4,14 +4,14 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Orleans.TestKit;
-using Catch = Cratis.Chronicle.Monads.Catch;
+using Catch = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager.given;
 

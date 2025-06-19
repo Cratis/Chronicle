@@ -3,7 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Reactive;
+using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Observation;
 

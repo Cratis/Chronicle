@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation;

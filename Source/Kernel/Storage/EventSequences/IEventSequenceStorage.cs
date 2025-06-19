@@ -6,7 +6,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.EventSequences;
 

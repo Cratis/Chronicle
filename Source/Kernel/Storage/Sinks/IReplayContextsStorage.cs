@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Models;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 

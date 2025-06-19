@@ -4,9 +4,9 @@
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Collections;
+using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 

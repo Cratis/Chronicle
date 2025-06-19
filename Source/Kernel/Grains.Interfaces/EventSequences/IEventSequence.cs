@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
