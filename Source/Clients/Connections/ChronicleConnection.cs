@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
 {
     readonly ChronicleUrl _url;
     readonly int _connectTimeout;

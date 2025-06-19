@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;

@@ -6,17 +6,26 @@
     justify-content: space-between;
     align-items: center;
     height: var(--topbar-height);
+    color: var(--highlight-text-color);
 }
 
 .leftSide {
-    flex: 0 0  var(--sidebar-width);
+    flex: 0 0 var(--sidebar-width);
 }
 
 .sidebarToggle {
     width: var(--sidebar-closed-width);
-    position:absolute;
+    position: absolute;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
+.hamburgerMenuButton {
+  outline: none !important;
+}
+
+.hamburgerMenuButton:focus,
+.hamburgerMenuButton:active {
+  box-shadow: none !important;
+}

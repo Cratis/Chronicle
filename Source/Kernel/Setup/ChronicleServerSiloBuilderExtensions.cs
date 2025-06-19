@@ -86,7 +86,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             return new Cratis.Chronicle.Contracts.Services(
-                new Cratis.Chronicle.Services.EventStores(storage),
+                new Cratis.Chronicle.Services.EventStores(grainFactory, storage),
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),

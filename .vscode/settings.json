@@ -117,6 +117,7 @@
         "Testcontainers",
         "tinycolor",
         "Tmpfs",
+        "topbar",
         "treenode",
         "treetable",
         "tseslint",

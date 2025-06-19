@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <summary>
 /// Represents the information about an observer.
 /// </summary>
-/// <param name="ObserverId">The unique identifier of the observer.</param>
+/// <param name="Id">The unique identifier of the observer.</param>
 /// <param name="EventSequenceId">The event sequence the observer is observing.</param>
 /// <param name="Type">The type of observer.</param>
 /// <param name="EventTypes">The types of events the observer is observing.</param>
@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <param name="RunningState">The running state of the observer.</param>
 /// <param name="IsSubscribed">A value indicating whether the observer is subscribed to its handler.</param>
 public record ObserverInformation(
-    string ObserverId,
+    string Id,
     string EventSequenceId,
     ObserverType Type,
     IEnumerable<EventType> EventTypes,

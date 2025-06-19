@@ -3,7 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.Projections;

@@ -17,7 +17,7 @@ internal static class ObserverInformationConverters
     /// <returns>The API representation of the observer information.</returns>
     public static ObserverInformation ToApi(this Contracts.Observation.ObserverInformation observerInformation) =>
         new(
-            observerInformation.ObserverId,
+            observerInformation.Id,
             observerInformation.EventSequenceId,
             (ObserverType)(int)observerInformation.Type,
             observerInformation.EventTypes.ToApi(),

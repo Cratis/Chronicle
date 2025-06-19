@@ -29,7 +29,7 @@ export class ObserversViewModel {
 
     async replay() {
         if (this.selectedObserver) {
-            const observerId = this.selectedObserver.observerId;
+            const observerId = this.selectedObserver.id;
             const result = await this._dialogs.showConfirmation('Replay?', `Are you sure you want to replay ${observerId}?`, DialogButtons.YesNo);
             if (result == DialogResult.Yes) {
                 this._replay.eventStore = this._params.eventStore!;

@@ -54,6 +54,7 @@
         "**/*.tsx"
     ],
     "exclude": [
+        "**/for_*/**",
         "vite.config.ts"
     ],
     "references": [
