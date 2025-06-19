@@ -258,20 +258,41 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumber(
         IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null)
+        EventSourceId? eventSourceId = null,
+        EventSourceType? eventSourceType = null,
+        EventStreamId? eventStreamId = null,
+        EventStreamType? eventStreamType = null)
     {
         logger.GettingTailSequenceNumber(eventSequenceId);
 
         var collection = _collection;
         var filters = new List<FilterDefinition<Event>>();
-        if (eventTypes?.Any() ?? false)
+
+        if (eventTypes?.Any() == true)
         {
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
+
         if (eventSourceId?.IsSpecified == true)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
         }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceType, eventSourceType));
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamType, eventStreamType));
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamId, eventStreamId));
+        }
+
         if (filters.Count == 0)
         {
             filters.Add(FilterDefinition<Event>.Empty);

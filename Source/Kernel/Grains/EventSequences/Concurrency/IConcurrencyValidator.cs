@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Grains.EventSequences.Concurrency;
 
@@ -12,6 +12,18 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency;
 /// </summary>
 public interface IConcurrencyValidator
 {
+    /// <summary>
+    /// Validates a single <see cref="ConcurrencyScope"/>;
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
+    /// <param name="scope">The <see cref="ConcurrencyScope"/>.</param>
+    /// <returns><see cref="Option{TValue}"/> of <see cref="ConcurrencyViolation"/>.</returns>
     Task<Option<ConcurrencyViolation>> Validate(EventSourceId eventSourceId, ConcurrencyScope scope);
-    Task<IDictionary<EventSourceId, ConcurrencyViolation>> Validate(IDictionary<EventSourceId, ConcurrencyScope> scopes);
+
+    /// <summary>
+    /// Validates multiple <see cref="ConcurrencyScopes"/>.
+    /// </summary>
+    /// <param name="scopes">The <see cref="ConcurrencyScopes"/>.</param>
+    /// <returns><see cref="ConcurrencyViolations"/>.</returns>
+    Task<ConcurrencyViolations> Validate(ConcurrencyScopes scopes);
 }
