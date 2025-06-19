@@ -8,7 +8,6 @@ namespace Cratis.Chronicle.Api.EventStores;
 /// <summary>
 /// Represents the API for commands related to the event store.
 /// </summary>
-/// <param name="eventStores"><see cref="IEventStores"/> service to work with.</param>
 [Route("/api/event-stores")]
 public class EventStoreCommands : ControllerBase
 {
@@ -30,5 +29,5 @@ public class EventStoreCommands : ControllerBase
     /// <returns>Awaitable task.</returns>
     [HttpPost("add")]
     public Task AddEventStore([FromBody] AddEventStore command) =>
-        eventStores.Ensure(new() { Name = command.Name });
+        _eventStores.Ensure(new() { Name = command.Name });
 }
