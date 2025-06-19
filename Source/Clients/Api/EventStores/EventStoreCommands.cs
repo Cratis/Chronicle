@@ -10,8 +10,19 @@ namespace Cratis.Chronicle.Api.EventStores;
 /// </summary>
 /// <param name="eventStores"><see cref="IEventStores"/> service to work with.</param>
 [Route("/api/event-stores")]
-public class EventStoreCommands(IEventStores eventStores) : ControllerBase
+public class EventStoreCommands : ControllerBase
 {
+    readonly IEventStores _eventStores;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventStoreCommands"/> class.
+    /// </summary>
+    /// <param name="eventStores">The <see cref="IEventStores"/> contract.</param>
+    internal EventStoreCommands(IEventStores eventStores)
+    {
+        _eventStores = eventStores;
+    }
+
     /// <summary>
     /// Add an event store.
     /// </summary>
