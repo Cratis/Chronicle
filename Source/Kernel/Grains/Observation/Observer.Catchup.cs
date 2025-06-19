@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Grains.Observation;
 

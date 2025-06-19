@@ -5,8 +5,8 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Reactive;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;

@@ -3,8 +3,8 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Identities;
-using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
+using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Identities;

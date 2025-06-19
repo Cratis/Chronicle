@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
-using Cratis.Chronicle.Monads;
+using Cratis.Monads;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.Jobs;

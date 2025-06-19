@@ -3,7 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Reactive;
+using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Jobs;
 
