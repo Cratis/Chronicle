@@ -12,8 +12,9 @@ namespace Cratis.Chronicle.Services;
 /// <summary>.
 /// Represents an implementation of <see cref="IEventStores"/>.
 /// </summary>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
-internal sealed class EventStores(IStorage storage) : IEventStores
+internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage) : IEventStores
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetEventStores()
@@ -30,9 +31,10 @@ internal sealed class EventStores(IStorage storage) : IEventStores
             .Select(_ => _.Select(e => e.Value));
 
     /// <inheritdoc/>
-    public Task Ensure(EnsureEventStore command)
+    public async Task Ensure(EnsureEventStore command)
     {
-        storage.GetEventStore(command.Name);
-        return Task.CompletedTask;
+        _ = storage.GetEventStore(command.Name);
+        var namespaces = grainFactory.GetGrain<Grains.Namespaces.INamespaces>(command.Name);
+        await namespaces.EnsureDefault();
     }
 }
