@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
-using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_KeyResolvers;

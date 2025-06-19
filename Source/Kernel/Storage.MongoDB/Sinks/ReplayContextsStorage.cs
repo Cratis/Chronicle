@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Models;
-using Cratis.Chronicle.Monads;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Monads;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;

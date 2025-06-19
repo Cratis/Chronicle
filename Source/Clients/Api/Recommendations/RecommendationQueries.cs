@@ -4,7 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Api.EventStores;
 using Cratis.Chronicle.Contracts.Recommendations;
-using Cratis.Chronicle.Reactive;
+using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Recommendations;
 

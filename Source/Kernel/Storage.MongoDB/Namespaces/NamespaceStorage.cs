@@ -3,8 +3,8 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 

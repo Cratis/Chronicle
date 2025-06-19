@@ -4,8 +4,8 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Reactive;
 using Cratis.Chronicle.Storage;
+using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Observation;

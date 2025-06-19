@@ -5,7 +5,7 @@ using System;
 using System.Reactive.Subjects;
 using System.Security.Cryptography.Xml;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Reactive;
+using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.EventStores;
 

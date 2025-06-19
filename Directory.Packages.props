@@ -7,7 +7,7 @@
         <!-- System -->
         <PackageVersion Include="System.Reactive" Version="6.0.1" />
         <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-        <PackageVersion Include="System.Text.Json" Version="9.0.5" />
+        <PackageVersion Include="System.Text.Json" Version="9.0.6" />
         <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
         <!-- Microsoft -->
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
@@ -17,8 +17,8 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.6" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.6.0" />
         <!-- Cratis -->
-        <PackageVersion Include="Cratis.Fundamentals" Version="6.4.0" />
-        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.4.0" />
+        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.0" />
+        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.0" />
         <PackageVersion Include="Cratis.Applications" Version="16.0.0" />
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.0" />
         <PackageVersion Include="Cratis.Applications.Orleans" Version="16.0.0" />
