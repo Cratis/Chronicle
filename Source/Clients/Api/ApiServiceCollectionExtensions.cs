@@ -59,37 +59,14 @@ public static class ApiServiceCollectionExtensions
         var hasServices = services.Any(s => s.ServiceType == typeof(IServices));
         if (!hasServices || useGrpc)
         {
-            services.AddSingleton<IChronicleConnection>(sp =>
+            services.AddCratisChronicleConnection(urlFactory: sp =>
             {
-                var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
                 var options = sp.GetRequiredService<IOptions<ChronicleApiOptions>>();
-                var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
-                var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
-                return new ChronicleConnection(
-                    options.Value.ChronicleUrl,
-                    options.Value.ConnectTimeout,
-                    connectionLifecycle,
-                    new Cratis.Tasks.TaskFactory(),
-                    correlationIdAccessor,
-                    sp.GetRequiredService<ILogger<ChronicleConnection>>(),
-                    lifetime.ApplicationStopping);
+                return options.Value.ChronicleUrl;
             });
-            services.AddSingleton(sp => (sp.GetRequiredService<IChronicleConnection>() as IChronicleServicesAccessor)!.Services);
         }
 
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventStores);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Namespaces);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Recommendations);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Identities);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventSequences);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventTypes);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Constraints);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Observers);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().FailedPartitions);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reactors);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reducers);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Projections);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Jobs);
+        services.AddCratisChronicleServices();
 
         services.AddSingleton<IControllerActivator, CustomControllerActivator>();
 
