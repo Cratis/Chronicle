@@ -163,6 +163,11 @@ public class EventSequence(
             }
 
             var (compliantEvent, constraintContext) = getValidAndCompliantEvent.AsT0;
+            var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
+            if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
+            {
+                return AppendResult.Failed(correlationId, concurrencyViolation);
+            }
 
             return await AppendValidAndCompliantEvent(
                 eventSourceType,
@@ -209,7 +214,12 @@ public class EventSequence(
             };
         }
 
-        // Todo: Check concurrency scopes for alle event source ids
+        var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
+        if (concurrencyViolations.HasViolations)
+        {
+            return AppendManyResult.Failed(correlationId, concurrencyViolations);
+        }
+
         var results = new List<AppendResult>();
         foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
         {

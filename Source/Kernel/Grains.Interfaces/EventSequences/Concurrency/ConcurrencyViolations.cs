@@ -11,4 +11,15 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency;
 /// </summary>
 /// <param name="violations">The <see cref="ConcurrencyViolation"/> violations.</param>
 public class ConcurrencyViolations(IDictionary<EventSourceId, ConcurrencyViolation> violations)
-    : ReadOnlyDictionary<EventSourceId, ConcurrencyViolation>(violations);
+    : ReadOnlyDictionary<EventSourceId, ConcurrencyViolation>(violations)
+{
+    /// <summary>
+    /// Gets an empty <see cref="ConcurrencyViolations"/>.
+    /// </summary>
+    public static readonly ConcurrencyViolations None = new(new Dictionary<EventSourceId, ConcurrencyViolation>());
+
+    /// <summary>
+    /// Gets a value indicating whether there are any <see cref="ConcurrencyViolation"/>.
+    /// </summary>
+    public bool HasViolations => Count > 0;
+}

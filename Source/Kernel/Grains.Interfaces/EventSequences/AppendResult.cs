@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Events.Constraints;
 using Cratis.Chronicle.Grains.EventSequences.Concurrency;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -35,7 +36,7 @@ public class AppendResult
     /// <summary>
     /// Gets whether there are any concurrency violations that occurred.
     /// </summary>
-    public bool HasConcurrencyViolations => ConcurrencyViolations.Any();
+    public bool HasConcurrencyViolations => ConcurrencyViolation.HasValue;
 
     /// <summary>
     /// Gets whether there are any errors that occurred.
@@ -53,9 +54,9 @@ public class AppendResult
     public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
-    /// Gets or sets the concurrency violations that occurred during the operation.
+    /// Gets or sets the concurrency violation that occurred during the operation.
     /// </summary>
-    public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
+    public Option<ConcurrencyViolation> ConcurrencyViolation { get; init; } = Option<ConcurrencyViolation>.None();
 
     /// <summary>
     /// Create a successful result.
@@ -85,12 +86,12 @@ public class AppendResult
     /// Create a failed result with concurrency violations.
     /// </summary>
     /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
-    /// <param name="violations">The violations.</param>
+    /// <param name="violation">The violation.</param>
     /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
-    public static AppendResult Failed(CorrelationId correlationId, IEnumerable<ConcurrencyViolation> violations) => new()
+    public static AppendResult Failed(CorrelationId correlationId, ConcurrencyViolation violation) => new()
     {
         CorrelationId = correlationId,
-        ConcurrencyViolations = violations.ToList()
+        ConcurrencyViolation = violation
     };
 
     /// <summary>

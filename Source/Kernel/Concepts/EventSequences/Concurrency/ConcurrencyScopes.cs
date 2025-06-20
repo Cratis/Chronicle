@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.ObjectModel;
 using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Concepts.EventSequences.Concurrency;
@@ -8,7 +9,9 @@ namespace Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 /// <summary>
 /// Represents a concurrency scope for an event sequence append many operation.
 /// </summary>
-public class ConcurrencyScopes : Dictionary<EventSourceId, ConcurrencyScope>
+/// <param name="scopes">The scopes.</param>
+public class ConcurrencyScopes(IDictionary<EventSourceId, ConcurrencyScope> scopes)
+    : ReadOnlyDictionary<EventSourceId, ConcurrencyScope>(scopes)
 {
     /// <summary>
     /// Gets the <see cref="ConcurrencyScope"/> for the <see cref="EventSourceId"/>.

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Concepts;
 
 namespace Cratis.Chronicle.Services.EventSequences.Concurrency;
 
@@ -33,16 +32,10 @@ internal static class ConcurrencyScopeConverters
     /// <param name="scopes"><see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScopeMany"/> to convert.</param>
     /// <returns>A converted <see cref="ConcurrencyScope"/>.</returns>
     public static ConcurrencyScopes ToChronicle(
-        this IDictionary<string, Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes)
-    {
-        var result = new ConcurrencyScopes();
-        foreach (var (eventSourceId, scope) in scopes)
-        {
-            result.Add(eventSourceId, scope.ToChronicle());
-        }
-
-        return result;
-    }
+        this IDictionary<string, Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes) =>
+        new(scopes.ToDictionary(
+            eventSourceIdAndScope => new EventSourceId(eventSourceIdAndScope.Key),
+            eventSourceIdAndScope => eventSourceIdAndScope.Value.ToChronicle()));
 
     static T? ToMaybeConcept<T>(string? value, Func<string, T> toConcept)
         where T : ConceptAs<string>

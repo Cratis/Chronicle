@@ -18,12 +18,12 @@ public interface IConcurrencyValidator
     /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
     /// <param name="scope">The <see cref="ConcurrencyScope"/>.</param>
     /// <returns><see cref="Option{TValue}"/> of <see cref="ConcurrencyViolation"/>.</returns>
-    Task<Option<ConcurrencyViolation>> Validate(EventSourceId eventSourceId, ConcurrencyScope scope);
+    ValueTask<Option<ConcurrencyViolation>> Validate(EventSourceId eventSourceId, ConcurrencyScope scope);
 
     /// <summary>
     /// Validates multiple <see cref="ConcurrencyScopes"/>.
     /// </summary>
     /// <param name="scopes">The <see cref="ConcurrencyScopes"/>.</param>
     /// <returns><see cref="ConcurrencyViolations"/>.</returns>
-    Task<ConcurrencyViolations> Validate(ConcurrencyScopes scopes);
+    ValueTask<ConcurrencyViolations> Validate(ConcurrencyScopes scopes);
 }

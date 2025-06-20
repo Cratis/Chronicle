@@ -52,6 +52,8 @@ public class AggregateRootContext(
     /// <inheritdoc/>
     public EventSequenceNumber NextSequenceNumber { get; set; } = nextSequenceNumber;
 
+    public EventSequenceNumber TailEventSequenceNumber { get; }
+
     /// <inheritdoc/>
     public bool HasEvents { get; set; } = nextSequenceNumber != EventSequenceNumber.First;
 }

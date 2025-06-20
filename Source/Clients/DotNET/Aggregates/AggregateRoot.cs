@@ -27,7 +27,7 @@ public class AggregateRoot : IAggregateRoot
     /// </summary>
     protected bool IsNew => !_context.HasEvents;
 
-    public EventSequenceNumber TailEventSequenceNumber => _context.;
+    public EventSequenceNumber TailEventSequenceNumber => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task Apply(object @event) => await _mutation.Apply(@event);

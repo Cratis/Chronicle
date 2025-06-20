@@ -15,8 +15,13 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency;
 public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage) : IConcurrencyValidator
 {
     /// <inheritdoc/>
-    public async Task<Option<ConcurrencyViolation>> Validate(EventSourceId eventSourceId, ConcurrencyScope scope)
+    public async ValueTask<Option<ConcurrencyViolation>> Validate(EventSourceId eventSourceId, ConcurrencyScope scope)
     {
+        if (!scope.ShouldBeValidated)
+        {
+            return Option<ConcurrencyViolation>.None();
+        }
+
         var tailSequenceNumber = await eventSequenceStorage.GetTailSequenceNumber(
             scope.EventTypes,
             scope.EventSourceId ? eventSourceId : null,
@@ -30,8 +35,13 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage) : 
     }
 
     /// <inheritdoc/>
-    public async Task<ConcurrencyViolations> Validate(ConcurrencyScopes scopes)
+    public async ValueTask<ConcurrencyViolations> Validate(ConcurrencyScopes scopes)
     {
+        if (scopes.All(_ => !_.Value.ShouldBeValidated))
+        {
+            return ConcurrencyViolations.None;
+        }
+
         var validationTasks = scopes.Select(async eventSourceIdAndScope =>
         {
             var (eventSourceId, scope) = eventSourceIdAndScope;

@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Events.Constraints;
+using Cratis.Chronicle.Grains.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -46,8 +47,11 @@ public class AppendManyResult
     /// Gets any exception messages that might have occurred.
     /// </summary>
     public IEnumerable<AppendError> Errors { get; init; } = [];
-    
-    // TODO: ConcurrencyViolations
+
+    /// <summary>
+    /// Gets the <see cref="ConcurrencyViolations"/>.
+    /// </summary>
+    public ConcurrencyViolations ConcurrencyViolations { get; init; } = ConcurrencyViolations.None;
 
     /// <summary>
     /// Create a successful result.
@@ -71,5 +75,17 @@ public class AppendManyResult
     {
         CorrelationId = correlationId,
         ConstraintViolations = violations.ToImmutableList()
+    };
+
+    /// <summary>
+    /// Create a failed result with constraint violations.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="violations">The violations.</param>
+    /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
+    public static AppendManyResult Failed(CorrelationId correlationId, ConcurrencyViolations violations) => new()
+    {
+        CorrelationId = correlationId,
+        ConcurrencyViolations = violations
     };
 }
