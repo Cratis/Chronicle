@@ -32,9 +32,9 @@ public static class ServiceCollectionExtensions
         {
             url ??= urlFactory?.Invoke(sp) ?? ChronicleUrl.Default;
 
-            var logger = sp.GetRequiredService<ILogger>();
+            var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
-            logger.LogInformation("Creating Chronicle connection with connection string: {ConnectionString}", url);
+            logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", url);
 #pragma warning restore CA1848 // Use the LoggerMessage delegates
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
