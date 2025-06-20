@@ -6,20 +6,14 @@ using ProtoBuf;
 namespace Cratis.Chronicle.Contracts;
 
 /// <summary>
-/// Represents the request for ensuring a namespace exists within an event store.
+/// Represents the request for ensuring an event store exists.
 /// </summary>
 [ProtoContract]
-public record EnsureNamespace
+public record EnsureEventStore
 {
     /// <summary>
     /// The event store to ensure namespaces for.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
-
-    /// <summary>
-    /// The name of the namespace.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; set; }
 }

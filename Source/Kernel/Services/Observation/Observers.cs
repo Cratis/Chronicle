@@ -37,7 +37,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var subscribed = await observer.IsSubscribed();
         return new ObserverInformation
         {
-            ObserverId = request.ObserverId,
+            Id = request.ObserverId,
             EventSequenceId = state.EventSequenceId,
             Type = state.Type.ToContract(),
             EventTypes = state.EventTypes.ToContract(),

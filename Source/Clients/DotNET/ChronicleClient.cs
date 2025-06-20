@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;

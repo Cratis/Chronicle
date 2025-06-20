@@ -16,7 +16,7 @@ public class ObserverInformation
     /// Gets or sets the unique identifier of the observer.
     /// </summary>
     [ProtoMember(1)]
-    public string ObserverId { get; set; }
+    public string Id { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence the observer is observing.

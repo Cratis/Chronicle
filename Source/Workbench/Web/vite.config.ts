@@ -7,6 +7,7 @@ import { defineConfig } from 'vitest/config';
 import react from "@vitejs/plugin-react";
 import path from 'path';
 import { EmitMetadataPlugin } from '@cratis/applications.vite';
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
     optimizeDeps: {
@@ -59,6 +60,7 @@ export default defineConfig({
     },
     plugins: [
         react(),
+        tailwindcss(),
         EmitMetadataPlugin() as any
     ],
     server: {

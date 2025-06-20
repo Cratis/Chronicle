@@ -27,7 +27,7 @@ internal static class ObserverInformationConverters
     public static ObserverInformation ToContract(this Concepts.Observation.ObserverInformation information) =>
         new()
         {
-            ObserverId = information.ObserverId,
+            Id = information.Id,
             EventSequenceId = information.EventSequenceId,
             Type = information.Type.ToContract(),
             EventTypes = information.EventTypes.ToContract(),

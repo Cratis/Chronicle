@@ -15,7 +15,7 @@ public interface INamespaces
     /// <summary>
     /// Ensure a namespace exists.
     /// </summary>
-    /// <param name="command">The <see cref="Ensure"/> command.</param>
+    /// <param name="command">The <see cref="EnsureNamespace"/> command.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task Ensure(EnsureNamespace command);

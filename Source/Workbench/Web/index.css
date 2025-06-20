@@ -1,0 +1,64 @@
+@import url(allotment/dist/style.css);
+@import "tailwindcss";
+@import 'primereact/resources/themes/lara-dark-blue/theme.css';
+
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color-scheme: light;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  --topbar-height: 4rem;
+  --sidebar-width: 280px;
+  --sidebar-closed-width: calc(4.5rem + 2px);
+  --footer-height: 0px;
+  --focus-border: var(--primary-color);
+
+  --cratis-sidebar-namespace-bg: var(--gray-600);
+  --cratis-sidebar-space-textColor: var(--gray-300);
+  --cratis-sidebar-bg: var(--gray-800);
+  --cratis-sidebar-textColor: var(--gray-300);
+  --cratis-sidebar-menuitem-active-bg: var(--gray-700);
+  --cratis-sidebar-menuitem-active-textColor: var(--highlight-text-color);
+  --cratis-topbar-bg: var(--gray-800);
+  --cratis-layout-border-color: var(--surface-border);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--surface-ground);
+  color: var(--highlight-text-color);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+.highlight {
+    background-color: var(--highlight-bg);
+    color: var(--highlight-text-color);
+}
+
+.contentBackground {
+    background-color: var(--surface-0);
+}
+
+.panel {
+    background: var(--surface-card);
+    border: 1px solid var(--shade600);
+    border-radius: var(--border-radius);
+    color: var(--menu-text-color);
+}

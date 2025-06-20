@@ -15,6 +15,15 @@
             }
         }
     },
+    "home": {
+        "selectHeader": "Select Event Store",
+        "dialogs": {
+            "addEventStore": {
+                "title": "Add Event Store",
+                "name": "Name"
+            }
+        }
+    },
     "mainMenu": {
         "recommendations": "Recommendations",
         "jobs": "Jobs",
@@ -119,8 +128,16 @@
                 "empty": "No events found",
                 "columns": {
                     "sequenceNumber": "Sequence number",
+                    "eventSourceId": "Event Source Id",
                     "eventType": "Event Type",
                     "occurred": "Occurred"
+                },
+                "filters": {
+                    "placeholders": {
+                        "eventType": "Event type",
+                        "eventSourceId": "Event source",
+                        "occurred": "Occurred"
+                    }
                 }
             },
             "observers": {

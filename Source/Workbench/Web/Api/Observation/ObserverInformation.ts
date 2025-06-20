@@ -12,7 +12,7 @@ import { ObserverType } from './ObserverType';
 export class ObserverInformation {
 
     @field(String)
-    observerId!: string;
+    id!: string;
 
     @field(String)
     eventSequenceId!: string;

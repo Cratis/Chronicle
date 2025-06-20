@@ -26,4 +26,12 @@ public interface IEventStores
     /// <returns>Observable of all event stores.</returns>
     [Operation]
     IObservable<IEnumerable<string>> ObserveEventStores(CallContext callContext = default);
+
+    /// <summary>
+    /// Ensure an event store exists.
+    /// </summary>
+    /// <param name="command">The ensure command.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task Ensure(EnsureEventStore command);
 }
