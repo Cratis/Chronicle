@@ -233,66 +233,66 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/applications.react.mvvm@npm:16.0.0":
-  version: 16.0.0
-  resolution: "@cratis/applications.react.mvvm@npm:16.0.0"
+"@cratis/applications.react.mvvm@npm:^16.0.1":
+  version: 16.0.1
+  resolution: "@cratis/applications.react.mvvm@npm:16.0.1"
   dependencies:
-    "@cratis/applications": "npm:16.0.0"
-    "@cratis/applications.react": "npm:16.0.0"
-    "@cratis/fundamentals": "npm:6.4.0"
-    mobx: "npm:6.13.7"
-    mobx-react: "npm:9.2.0"
-    react: "npm:19.1.0"
-    react-dom: "npm:19.1.0"
-    react-router-dom: "npm:7.6.1"
-    reflect-metadata: "npm:0.2.2"
-    rxjs: "npm:7.8.2"
-    tsyringe: "npm:4.10.0"
-  checksum: 10/af1c6ba68f9f0916fa2090dde75e9ef631e8cdddeb2dc123ad6c061476e2465019034880221c3e454c830ebf9712e94fbcf2fc1cc0daacabee789d497b444ae9
+    "@cratis/applications": "npm:16.0.1"
+    "@cratis/applications.react": "npm:16.0.1"
+    "@cratis/fundamentals": "npm:^6.5.0"
+    mobx: "npm:^6.13.7"
+    mobx-react: "npm:^9.2.0"
+    react: "npm:^19.1.0"
+    react-dom: "npm:^19.1.0"
+    react-router-dom: "npm:^7.6.2"
+    reflect-metadata: "npm:^0.2.2"
+    rxjs: "npm:^7.8.2"
+    tsyringe: "npm:^4.10.0"
+  checksum: 10/c3a08142d2dddbf96df99ada0997038ae3d25a4c53b19a0d05eb7d2535813ad71d44c38279fe1bb3589e2b4bd15a84f29a555d7a10db0d3599039e85cc71b590
   languageName: node
   linkType: hard
 
-"@cratis/applications.react@npm:16.0.0":
-  version: 16.0.0
-  resolution: "@cratis/applications.react@npm:16.0.0"
+"@cratis/applications.react@npm:16.0.1, @cratis/applications.react@npm:^16.0.1":
+  version: 16.0.1
+  resolution: "@cratis/applications.react@npm:16.0.1"
   dependencies:
-    "@cratis/applications": "npm:16.0.0"
-    "@cratis/fundamentals": "npm:6.4.0"
-    handlebars: "npm:4.7.8"
-    react: "npm:19.1.0"
-    tsyringe: "npm:4.10.0"
-  checksum: 10/5204f944a3eb30c77b94155d7639f4e50603c42dab22c88fc7eb9bdfd3d1205436246e2e2eb4138056ee49232115fd884da1dd39ecccc91f2de8a144ffdccae3
+    "@cratis/applications": "npm:16.0.1"
+    "@cratis/fundamentals": "npm:^6.5.0"
+    handlebars: "npm:^4.7.8"
+    react: "npm:^19.1.0"
+    tsyringe: "npm:^4.10.0"
+  checksum: 10/187a5cca6fc1862a0e4528e740007caa3b951c63eb7add502d3e79ffd35bbd4153c7f8eb3c42469b142980f26c7cbe6a1dd4bbe71804b234b8bbb00a432c1664
   languageName: node
   linkType: hard
 
-"@cratis/applications.vite@npm:16.0.0":
-  version: 16.0.0
-  resolution: "@cratis/applications.vite@npm:16.0.0"
+"@cratis/applications.vite@npm:^16.0.1":
+  version: 16.0.1
+  resolution: "@cratis/applications.vite@npm:16.0.1"
   dependencies:
-    "@cratis/applications": "npm:16.0.0"
-    "@cratis/fundamentals": "npm:6.4.0"
-    handlebars: "npm:4.7.8"
-    react: "npm:19.1.0"
-  checksum: 10/57ebe7f35f568eecbe1f2453f1a4f7c251b6876e230a2a77a8bcb145803f685561064d182c4628a83224d00947e817792d305ab3a04132d1505ad61177502668
+    "@cratis/applications": "npm:16.0.1"
+    "@cratis/fundamentals": "npm:^6.5.0"
+    handlebars: "npm:^4.7.8"
+    react: "npm:^19.1.0"
+  checksum: 10/c30546440fc68104991499e4de66b3f84d44356a05ad6491899df011bae4a4df167def0195127abff57b442a258abf7cb0582aa0f3040afe5fbf569948ccc679
   languageName: node
   linkType: hard
 
-"@cratis/applications@npm:16.0.0":
-  version: 16.0.0
-  resolution: "@cratis/applications@npm:16.0.0"
+"@cratis/applications@npm:16.0.1, @cratis/applications@npm:^16.0.1":
+  version: 16.0.1
+  resolution: "@cratis/applications@npm:16.0.1"
   dependencies:
-    "@cratis/fundamentals": "npm:6.4.0"
-    handlebars: "npm:4.7.8"
-  checksum: 10/25f6fa413084cce0563f0ba25e38bd574888b661f499eb49362c7866a41eff68c4cce46e7e495512b63951dd049dfd09a87e9be7d674b4c615860ba8311d059a
+    "@cratis/fundamentals": "npm:^6.5.0"
+    handlebars: "npm:^4.7.8"
+  checksum: 10/f44f1abe502009ad366bdfe1a50d11f6068a42f733653bb149e0df618130b7d5b08048646a9d9e6d460ef52847036e348eacd5cdb2119135228d9d03a66fd782
   languageName: node
   linkType: hard
 
-"@cratis/fundamentals@npm:6.4.0":
-  version: 6.4.0
-  resolution: "@cratis/fundamentals@npm:6.4.0"
+"@cratis/fundamentals@npm:^6.5.0":
+  version: 6.5.1
+  resolution: "@cratis/fundamentals@npm:6.5.1"
   dependencies:
-    reflect-metadata: "npm:0.2.2"
-  checksum: 10/599dd6a1c9cbd8b0dcd36953078a9494849bf4c9c79545df48f9c5ef13afde904d127ab3fda73778111a6e2ee325d2b5cd1a232fbb15ddcb82996ea621b20432
+    reflect-metadata: "npm:^0.2.2"
+  checksum: 10/28205b2f2b31e06e90f4090c5d3a892a2ece8405931ea45b368b881767976444975fd82d41523e2c9827bfac8acc45514a8acacd906a70b7216f5bd395ced072
   languageName: node
   linkType: hard
 
@@ -1674,7 +1674,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"allotment@npm:1.20.4":
+"allotment@npm:^1.20.4":
   version: 1.20.4
   resolution: "allotment@npm:1.20.4"
   dependencies:
@@ -2377,7 +2377,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"echarts@npm:5.6.0":
+"echarts@npm:^5.6.0":
   version: 5.6.0
   resolution: "echarts@npm:5.6.0"
   dependencies:
@@ -3380,7 +3380,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"handlebars@npm:4.7.8":
+"handlebars@npm:^4.7.8":
   version: 4.7.8
   resolution: "handlebars@npm:4.7.8"
   dependencies:
@@ -4478,7 +4478,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx-react@npm:9.2.0":
+"mobx-react@npm:^9.2.0":
   version: 9.2.0
   resolution: "mobx-react@npm:9.2.0"
   dependencies:
@@ -4495,7 +4495,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx@npm:6.13.7":
+"mobx@npm:^6.13.7":
   version: 6.13.7
   resolution: "mobx@npm:6.13.7"
   checksum: 10/5e27d8934e7ce820f436cf189a11ce94dc8c76a7b33b68ce476f46b88258be2c3f37830b13f2817a0f273666aea0fd7d530ff1676467862516ba22343040a192
@@ -4932,14 +4932,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"primeicons@npm:7.0.0":
+"primeicons@npm:^7.0.0":
   version: 7.0.0
   resolution: "primeicons@npm:7.0.0"
   checksum: 10/ff1d698a4d5932105393cd3288c6b1fd92ad30b6fbce1b49de86bcc1917d74d6769c12061d43aa8657fe52ac79d9336527f0708d8c5a0347a1ddcd3e47d0eb73
   languageName: node
   linkType: hard
 
-"primereact@npm:10.9.6":
+"primereact@npm:^10.9.6":
   version: 10.9.6
   resolution: "primereact@npm:10.9.6"
   dependencies:
@@ -5007,7 +5007,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:19.1.0":
+"react-dom@npm:^19.1.0":
   version: 19.1.0
   resolution: "react-dom@npm:19.1.0"
   dependencies:
@@ -5018,7 +5018,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-icons@npm:5.5.0":
+"react-icons@npm:^5.5.0":
   version: 5.5.0
   resolution: "react-icons@npm:5.5.0"
   peerDependencies:
@@ -5041,19 +5041,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:7.6.1":
-  version: 7.6.1
-  resolution: "react-router-dom@npm:7.6.1"
-  dependencies:
-    react-router: "npm:7.6.1"
-  peerDependencies:
-    react: ">=18"
-    react-dom: ">=18"
-  checksum: 10/807d6fc6924c63bce49a1e2483f79a8e27924db3ac664f9773f36687c52f909ab140f32305c0a8cfa543dba2b34aa5478c2bcff8bf8c801de02b56d98efa9de7
-  languageName: node
-  linkType: hard
-
-"react-router-dom@npm:7.6.2":
+"react-router-dom@npm:^7.6.2":
   version: 7.6.2
   resolution: "react-router-dom@npm:7.6.2"
   dependencies:
@@ -5062,22 +5050,6 @@ __metadata:
     react: ">=18"
     react-dom: ">=18"
   checksum: 10/e793578cced33fce83ed8341a70e2238bd247cdc648a105d600e53551ad56fddab8c186d3711c1c46203f77ec6c3f9617a57465494597eadc165c55ef573ab51
-  languageName: node
-  linkType: hard
-
-"react-router@npm:7.6.1":
-  version: 7.6.1
-  resolution: "react-router@npm:7.6.1"
-  dependencies:
-    cookie: "npm:^1.0.1"
-    set-cookie-parser: "npm:^2.6.0"
-  peerDependencies:
-    react: ">=18"
-    react-dom: ">=18"
-  peerDependenciesMeta:
-    react-dom:
-      optional: true
-  checksum: 10/90d3038db6d9c0d48bc932b8698c287a80759629ecef65f1ead32fadd78ef17895c7402832d3c94b47c45f10f8478b79551a647360415887f2f3a8fae10aca30
   languageName: node
   linkType: hard
 
@@ -5112,7 +5084,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:19.1.0":
+"react@npm:^19.1.0":
   version: 19.1.0
   resolution: "react@npm:19.1.0"
   checksum: 10/d0180689826fd9de87e839c365f6f361c561daea397d61d724687cae88f432a307d1c0f53a0ee95ddbe3352c10dac41d7ff1ad85530fb24951b27a39e5398db4
@@ -5133,7 +5105,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"reflect-metadata@npm:0.2.2":
+"reflect-metadata@npm:^0.2.2":
   version: 0.2.2
   resolution: "reflect-metadata@npm:0.2.2"
   checksum: 10/1c93f9ac790fea1c852fde80c91b2760420069f4862f28e6fae0c00c6937a56508716b0ed2419ab02869dd488d123c4ab92d062ae84e8739ea7417fae10c4745
@@ -5341,7 +5313,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rxjs@npm:7.8.2":
+"rxjs@npm:^7.8.2":
   version: 7.8.2
   resolution: "rxjs@npm:7.8.2"
   dependencies:
@@ -6051,7 +6023,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsyringe@npm:4.10.0":
+"tsyringe@npm:^4.10.0":
   version: 4.10.0
   resolution: "tsyringe@npm:4.10.0"
   dependencies:
@@ -6632,10 +6604,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/applications": "npm:16.0.0"
-    "@cratis/applications.react": "npm:16.0.0"
-    "@cratis/applications.react.mvvm": "npm:16.0.0"
-    "@cratis/applications.vite": "npm:16.0.0"
+    "@cratis/applications": "npm:^16.0.1"
+    "@cratis/applications.react": "npm:^16.0.1"
+    "@cratis/applications.react.mvvm": "npm:^16.0.1"
+    "@cratis/applications.vite": "npm:^16.0.1"
     "@tailwindcss/postcss": "npm:4.1.10"
     "@tailwindcss/vite": "npm:4.1.10"
     "@types/chai": "npm:5.2.2"
@@ -6650,11 +6622,11 @@ __metadata:
     "@typescript-eslint/parser": "npm:8.34.1"
     "@vitejs/plugin-react": "npm:4.5.2"
     "@vitest/coverage-v8": "npm:3.2.4"
-    allotment: "npm:1.20.4"
+    allotment: "npm:^1.20.4"
     autoprefixer: "npm:10.4.21"
     chai: "npm:5.2.0"
     chai-as-promised: "npm:8.0.1"
-    echarts: "npm:5.6.0"
+    echarts: "npm:^5.6.0"
     eslint: "npm:9.29.0"
     eslint-config-prettier: "npm:10.1.5"
     eslint-plugin-header: "npm:3.1.1"
@@ -6666,23 +6638,16 @@ __metadata:
     eslint-plugin-react-refresh: "npm:0.4.20"
     globals: "npm:16.2.0"
     hash-files: "npm:1.1.1"
-    mobx: "npm:6.13.7"
-    mobx-react: "npm:9.2.0"
     mocha: "npm:11.7.0"
-    primeicons: "npm:7.0.0"
-    primereact: "npm:10.9.6"
-    react: "npm:19.1.0"
-    react-dom: "npm:19.1.0"
-    react-icons: "npm:5.5.0"
-    react-router-dom: "npm:7.6.2"
-    reflect-metadata: "npm:0.2.2"
+    primeicons: "npm:^7.0.0"
+    primereact: "npm:^10.9.6"
+    react-icons: "npm:^5.5.0"
     sinon: "npm:21.0.0"
     sinon-chai: "npm:4.0.0"
     tailwindcss: "npm:4.1.10"
     ts-deepmerge: "npm:7.0.3"
     ts-node: "npm:10.9.2"
     tsconfig-paths: "npm:4.2.0"
-    tsyringe: "npm:4.10.0"
     typescript: "npm:5.8.3"
     typescript-eslint: "npm:8.34.1"
     usehooks-ts: "npm:3.1.1"
