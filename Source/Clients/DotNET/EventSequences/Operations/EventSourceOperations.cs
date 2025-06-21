@@ -18,13 +18,21 @@ public class EventSourceOperations : IEventSourceOperations
     public IEnumerable<IEventSequenceOperation> Operations => _operations;
 
     /// <inheritdoc/>
-    public ConcurrencyScope ConcurrencyScope => ConcurrencyScope.NotSet;
+    public ConcurrencyScope ConcurrencyScope { get; private set; } = ConcurrencyScope.NotSet;
+
+    /// <inheritdoc/>
+    public EventSourceOperations WithConcurrencyScope(ConcurrencyScope concurrencyScope)
+    {
+        ConcurrencyScope = concurrencyScope;
+        return this;
+    }
 
     /// <inheritdoc/>
     public EventSourceOperations WithConcurrencyScope(Action<ConcurrencyScopeBuilder> configure)
     {
         var builder = new ConcurrencyScopeBuilder();
         configure(builder);
+        ConcurrencyScope = builder.Build();
         return this;
     }
 

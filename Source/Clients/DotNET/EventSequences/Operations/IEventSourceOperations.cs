@@ -23,6 +23,13 @@ public interface IEventSourceOperations
     ConcurrencyScope ConcurrencyScope { get; }
 
     /// <summary>
+    /// Configures the concurrency scope for the operations with a specific scope.
+    /// </summary>
+    /// <param name="concurrencyScope">The concurrency scope to set.</param>
+    /// <returns>The current instance of <see cref="EventSourceOperations"/>.</returns>
+    EventSourceOperations WithConcurrencyScope(ConcurrencyScope concurrencyScope);
+
+    /// <summary>
     /// Configures the concurrency scope for the operations.
     /// </summary>
     /// <param name="configure">Action to configure the concurrency scope.</param>

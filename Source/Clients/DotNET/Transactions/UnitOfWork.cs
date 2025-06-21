@@ -1,14 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Operations;
-using Cratis.Collections;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -23,8 +22,7 @@ public class UnitOfWork(
     Action<IUnitOfWork> onCompleted,
     IEventStore eventStore) : IUnitOfWork
 {
-    readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
-    readonly ConcurrentBag<AppendError> _appendErrors = [];
+    AppendManyResult _appendManyResult = new();
     EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
@@ -38,7 +36,7 @@ public class UnitOfWork(
     public CorrelationId CorrelationId => correlationId;
 
     /// <inheritdoc/>
-    public bool IsSuccess => _constraintViolations.IsEmpty && _appendErrors.IsEmpty;
+    public bool IsSuccess => _appendManyResult.IsSuccess;
 
     /// <inheritdoc/>
     public void AddEvent(
@@ -48,14 +46,14 @@ public class UnitOfWork(
         Causation causation,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default)
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var eventSequence = eventStore.GetEventSequence(eventSequenceId);
         _eventSequenceOperations ??= new EventSequenceOperations(eventSequence);
-        _eventSequenceOperations.ForEventSourceId(eventSourceId, builder => builder
-            .WithConcurrencyScope(scope =>
-            {
-            })
+        _eventSequenceOperations = _eventSequenceOperations
+            .ForEventSourceId(eventSourceId, builder => builder
+            .WithConcurrencyScope(concurrencyScope ?? ConcurrencyScope.NotSet)
             .Append(
                 @event,
                 causation,
@@ -65,14 +63,14 @@ public class UnitOfWork(
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _constraintViolations];
+    public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _appendManyResult.ConstraintViolations];
 
     /// <inheritdoc/>
     public IEnumerable<object> GetEvents() =>
         _eventSequenceOperations?.GetAppendedEvents() ?? [];
 
     /// <inheritdoc/>
-    public IEnumerable<AppendError> GetAppendErrors() => [.. _appendErrors];
+    public IEnumerable<AppendError> GetAppendErrors() => [.. _appendManyResult.Errors];
 
     /// <inheritdoc/>
     public async Task Commit()
@@ -83,8 +81,7 @@ public class UnitOfWork(
         {
             var result = await _eventSequenceOperations.Perform();
             _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
-            result.ConstraintViolations.ForEach(_constraintViolations.Add);
-            result.Errors.ForEach(_appendErrors.Add);
+            _appendManyResult = _appendManyResult.MergeWith(result);
         }
 
         _isCommitted = true;
@@ -97,7 +94,7 @@ public class UnitOfWork(
         ThrowIfUnitOfWorkIsCompleted();
         _isRolledBack = true;
         _eventSequenceOperations?.Clear();
-        _constraintViolations.Clear();
+        _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
 
         _onCompleted(this);
         return Task.CompletedTask;
