@@ -56,7 +56,12 @@ public class UnitOfWork(
             .WithConcurrencyScope(scope =>
             {
             })
-            .Append(@event, causation));
+            .Append(
+                @event,
+                causation,
+                eventStreamType,
+                eventStreamId,
+                eventSourceType));
     }
 
     /// <inheritdoc/>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences.Operations;
@@ -28,11 +29,20 @@ public class EventSourceOperations : IEventSourceOperations
     }
 
     /// <inheritdoc/>
-    public EventSourceOperations Append(object @event, Causation? causation = default)
+    public EventSourceOperations Append(
+        object @event,
+        Causation? causation = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default)
     {
         _operations.Add(new AppendOperation(@event, causation));
         return this;
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<T> GetOperationsOfType<T>()
+        where T : IEventSequenceOperation => _operations.OfType<T>().ToArray();
 
     /// <inheritdoc/>
     public IEnumerable<object> GetAppendedEvents() =>

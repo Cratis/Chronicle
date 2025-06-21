@@ -27,12 +27,6 @@ public interface IEventSequenceOperations
     EventSequenceOperations WithCausation(Causation causation);
 
     /// <summary>
-    /// Marks the operation as transactional.
-    /// </summary>
-    /// <returns>The current instance of <see cref="EventSequenceOperations"/>.</returns>
-    EventSequenceOperations Transactional();
-
-    /// <summary>
     /// Gets the events that have been appended in the operation builders.
     /// </summary>
     /// <returns>Collection of events.</returns>

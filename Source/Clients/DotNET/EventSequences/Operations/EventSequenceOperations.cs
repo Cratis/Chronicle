@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.EventSequences.Operations;
 public class EventSequenceOperations(IEventSequence eventSequence) : IEventSequenceOperations
 {
     readonly Dictionary<EventSourceId, EventSourceOperations> _eventSourceBuilders = [];
-    bool _isTransactional;
     Causation? _causation;
 
     /// <inheritdoc/>
@@ -39,13 +38,6 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     }
 
     /// <inheritdoc/>
-    public EventSequenceOperations Transactional()
-    {
-        _isTransactional = true;
-        return this;
-    }
-
-    /// <inheritdoc/>
     public IEnumerable<object> GetAppendedEvents() =>
         _eventSourceBuilders.Values
             .SelectMany(builder => builder.GetAppendedEvents())
@@ -55,15 +47,26 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     public void Clear()
     {
         _eventSourceBuilders.Clear();
-        _isTransactional = false;
         _causation = null;
     }
 
     /// <inheritdoc/>
     public Task<AppendManyResult> Perform()
     {
-        if (_isTransactional)
+        foreach (var (eventSourceId, operations) in _eventSourceBuilders)
         {
+            var appendOperations = operations.GetOperationsOfType<AppendOperation>();
+            if (appendOperations.Any())
+            {
+                var events = appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation ?? Causation.Unknown())
+                {
+                    EventStreamType = op.EventStreamType ?? EventStreamType.All,
+                    EventStreamId = op.EventStreamId ?? EventStreamId.Default,
+                    EventSourceType = op.EventSourceType ?? EventSourceType.Default
+                }).ToArray();
+
+                var result = eventSequence.AppendMany(events);
+            }
         }
 
         // Convert to append many operation
