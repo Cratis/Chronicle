@@ -33,8 +33,19 @@ public interface IEventSequenceOperations
     EventSequenceOperations Transactional();
 
     /// <summary>
+    /// Gets the events that have been appended in the operation builders.
+    /// </summary>
+    /// <returns>Collection of events.</returns>
+    IEnumerable<object> GetAppendedEvents();
+
+    /// <summary>
+    /// Clears all operations that has been added.
+    /// </summary>
+    void Clear();
+
+    /// <summary>
     /// Performs the operation, appending events as specified in the builders.
     /// </summary>
     /// <returns>An instance of <see cref="AppendManyResult"/> representing the result of the operation.</returns>
-    AppendManyResult Perform();
+    Task<AppendManyResult> Perform();
 }

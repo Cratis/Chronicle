@@ -37,10 +37,8 @@ public interface IEventSourceOperations
     EventSourceOperations Append(object @event, Causation? causation = default);
 
     /// <summary>
-    /// Appends multiple events to the operation.
+    /// Gets the events that have been appended in the operation builders.
     /// </summary>
-    /// <param name="events">The events to append.</param>
-    /// <param name="causation">Optional causation for the events.</param>
-    /// <returns>The current instance of <see cref="EventSourceOperations"/>.</returns>
-    EventSourceOperations AppendMany(IEnumerable<object> events, Causation? causation = default);
+    /// <returns>Collection of events.</returns>
+    IEnumerable<object> GetAppendedEvents();
 }

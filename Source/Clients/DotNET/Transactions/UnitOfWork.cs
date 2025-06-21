@@ -7,6 +7,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Operations;
 using Cratis.Collections;
 
 namespace Cratis.Chronicle.Transactions;
@@ -22,15 +23,13 @@ public class UnitOfWork(
     Action<IUnitOfWork> onCompleted,
     IEventStore eventStore) : IUnitOfWork
 {
-    readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceIdWithSequenceNumber>> _events = [];
     readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
     readonly ConcurrentBag<AppendError> _appendErrors = [];
-
-    EventSequenceNumber? _lastCommittedEventSequenceNumber;
+    EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
-    EventSequenceNumber _currentSequenceNumber = EventSequenceNumber.First;
+    EventSequenceOperations? _eventSequenceOperations;
 
     /// <inheritdoc/>
     public bool IsCompleted => _isCommitted || _isRolledBack;
@@ -51,19 +50,13 @@ public class UnitOfWork(
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default)
     {
-        if (!_events.TryGetValue(eventSequenceId, out var events))
-        {
-            _events[eventSequenceId] = events = [];
-        }
-
-        events.Add(new(_currentSequenceNumber, eventSourceId, @event, causation)
-        {
-            EventStreamType = eventStreamType ?? EventStreamType.All,
-            EventStreamId = eventStreamId ?? EventStreamId.Default,
-            EventSourceType = eventSourceType ?? EventSourceType.Default
-        });
-
-        _currentSequenceNumber++;
+        var eventSequence = eventStore.GetEventSequence(eventSequenceId);
+        _eventSequenceOperations ??= new EventSequenceOperations(eventSequence);
+        _eventSequenceOperations.ForEventSourceId(eventSourceId, builder => builder
+            .WithConcurrencyScope(scope =>
+            {
+            })
+            .Append(@event, causation));
     }
 
     /// <inheritdoc/>
@@ -71,9 +64,7 @@ public class UnitOfWork(
 
     /// <inheritdoc/>
     public IEnumerable<object> GetEvents() =>
-        _events.Values.SelectMany(_ => _)
-            .OrderBy(_ => _.SequenceNumber.Value)
-            .Select(_ => _.Event).ToArray();
+        _eventSequenceOperations?.GetAppendedEvents() ?? [];
 
     /// <inheritdoc/>
     public IEnumerable<AppendError> GetAppendErrors() => [.. _appendErrors];
@@ -83,23 +74,12 @@ public class UnitOfWork(
     {
         ThrowIfUnitOfWorkIsCompleted();
 
-        foreach (var (eventSequenceId, events) in _events)
+        if (_eventSequenceOperations is not null)
         {
-            var sorted = events
-                            .OrderBy(_ => _.SequenceNumber)
-                            .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation)
-                            {
-                                EventStreamType = e.EventStreamType,
-                                EventStreamId = e.EventStreamId,
-                                EventSourceType = e.EventSourceType
-                            })
-                            .ToArray();
-
-            var eventSequence = eventStore.GetEventSequence(eventSequenceId);
-            var result = await eventSequence.AppendMany(sorted, correlationId);
+            var result = await _eventSequenceOperations.Perform();
+            _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
             result.ConstraintViolations.ForEach(_constraintViolations.Add);
             result.Errors.ForEach(_appendErrors.Add);
-            _lastCommittedEventSequenceNumber = result.SequenceNumbers.OrderBy(_ => _.Value).LastOrDefault();
         }
 
         _isCommitted = true;
@@ -111,7 +91,7 @@ public class UnitOfWork(
     {
         ThrowIfUnitOfWorkIsCompleted();
         _isRolledBack = true;
-        _events.Clear();
+        _eventSequenceOperations?.Clear();
         _constraintViolations.Clear();
 
         _onCompleted(this);

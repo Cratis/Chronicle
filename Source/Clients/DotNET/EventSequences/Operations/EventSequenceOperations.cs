@@ -46,13 +46,27 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     }
 
     /// <inheritdoc/>
-    public AppendManyResult Perform()
+    public IEnumerable<object> GetAppendedEvents() =>
+        _eventSourceBuilders.Values
+            .SelectMany(builder => builder.GetAppendedEvents())
+            .ToArray();
+
+    /// <inheritdoc/>
+    public void Clear()
+    {
+        _eventSourceBuilders.Clear();
+        _isTransactional = false;
+        _causation = null;
+    }
+
+    /// <inheritdoc/>
+    public Task<AppendManyResult> Perform()
     {
         if (_isTransactional)
         {
         }
 
         // Convert to append many operation
-        return new AppendManyResult();
+        return Task.FromResult(new AppendManyResult());
     }
 }

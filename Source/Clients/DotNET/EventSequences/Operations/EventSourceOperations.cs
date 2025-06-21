@@ -35,9 +35,6 @@ public class EventSourceOperations : IEventSourceOperations
     }
 
     /// <inheritdoc/>
-    public EventSourceOperations AppendMany(IEnumerable<object> events, Causation? causation = default)
-    {
-        _operations.Add(new AppendManyOperation(events, causation));
-        return this;
-    }
+    public IEnumerable<object> GetAppendedEvents() =>
+        _operations.OfType<AppendOperation>().Select(op => op.Event).ToArray();
 }
