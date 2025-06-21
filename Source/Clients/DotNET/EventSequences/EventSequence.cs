@@ -7,6 +7,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Transactions;
 
@@ -57,7 +58,8 @@ public class EventSequence(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default)
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var eventClrType = @event.GetType();
         eventStreamType ??= EventStreamType.All;
@@ -101,7 +103,8 @@ public class EventSequence(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default)
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -121,7 +124,10 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default)
+    public async Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -200,7 +206,7 @@ public class EventSequence(
     public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber() => throw new NotImplementedException();
+    public Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();

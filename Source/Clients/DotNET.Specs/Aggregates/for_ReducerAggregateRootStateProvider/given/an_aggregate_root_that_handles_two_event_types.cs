@@ -30,6 +30,7 @@ public class an_aggregate_root_that_handles_two_event_types : a_reducer_aggregat
             _eventSequence,
             _aggregateRoot,
             _unitOfWork,
+            EventSequenceNumber.First,
             EventSequenceNumber.First);
 
         _eventTypes = new EventType[]

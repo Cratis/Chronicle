@@ -28,6 +28,7 @@ public class a_stateless_aggregate_root : all_dependencies
             _eventSequence,
             _aggregateRoot,
             _unitOfWork,
+            EventSequenceNumber.First,
             EventSequenceNumber.First);
 
         _aggregateRoot._context = _aggregateRootContext;

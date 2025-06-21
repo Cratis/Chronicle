@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Events.Constraints;
+using Cratis.Chronicle.Grains.EventSequences.Concurrency;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -24,12 +26,17 @@ public class AppendResult
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
     /// </summary>
-    public bool IsSuccess => !HasConstraintViolations && !HasErrors;
+    public bool IsSuccess => !HasConstraintViolations && !HasConcurrencyViolations && !HasErrors;
 
     /// <summary>
-    /// Gets whether there are any violations that occurred.
+    /// Gets whether there are any constraint violations that occurred.
     /// </summary>
     public bool HasConstraintViolations => ConstraintViolations.Any();
+
+    /// <summary>
+    /// Gets whether there are any concurrency violations that occurred.
+    /// </summary>
+    public bool HasConcurrencyViolations => ConcurrencyViolation.HasValue;
 
     /// <summary>
     /// Gets whether there are any errors that occurred.
@@ -45,6 +52,11 @@ public class AppendResult
     /// Gets any exception messages that might have occurred.
     /// </summary>
     public IEnumerable<AppendError> Errors { get; init; } = [];
+
+    /// <summary>
+    /// Gets or sets the concurrency violation that occurred during the operation.
+    /// </summary>
+    public Option<ConcurrencyViolation> ConcurrencyViolation { get; init; } = Option<ConcurrencyViolation>.None();
 
     /// <summary>
     /// Create a successful result.
@@ -68,6 +80,18 @@ public class AppendResult
     {
         CorrelationId = correlationId,
         ConstraintViolations = violations.ToList()
+    };
+
+    /// <summary>
+    /// Create a failed result with concurrency violations.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="violation">The violation.</param>
+    /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
+    public static AppendResult Failed(CorrelationId correlationId, ConcurrencyViolation violation) => new()
+    {
+        CorrelationId = correlationId,
+        ConcurrencyViolation = violation
     };
 
     /// <summary>

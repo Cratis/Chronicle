@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Execution;
 
 namespace Cratis.Chronicle.XUnit.Events;
@@ -37,7 +38,8 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default) => Task.FromResult(AppendResult.Success(correlationId ?? CorrelationId.New(), EventSequenceNumber.Unavailable));
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default) => Task.FromResult(AppendResult.Success(correlationId ?? CorrelationId.New(), EventSequenceNumber.Unavailable));
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(
@@ -46,10 +48,14 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
+    public Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScopes = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
@@ -73,7 +79,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber() => Task.FromResult(EventSequenceNumber.First);
+    public Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default) => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => Task.FromResult(EventSequenceNumber.First);
