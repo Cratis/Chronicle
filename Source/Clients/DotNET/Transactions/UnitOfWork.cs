@@ -85,24 +85,6 @@ public class UnitOfWork(
 
         foreach (var (eventSequenceId, events) in _events)
         {
-            /*
-            {
-                "<eventSourceId>": {
-                    "concurrencyScope": undefined | {
-                        "eventSequenceNumber": 42,
-                        "eventSourceId": true | false,
-                        "eventStreamType": "All",
-                        "eventStreamId": "Default",
-                        "eventSourceType": "Default"
-                    },
-                    "events": [
-                        { "event": "event-1", "causation": { "correlationId": "correlation-id-1" } },
-                        { "event": "event-2", "causation": { "correlationId": "correlation-id-2" } }
-                    ]
-                }
-            }
-            */
-
             var sorted = events
                             .OrderBy(_ => _.SequenceNumber)
                             .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation)
