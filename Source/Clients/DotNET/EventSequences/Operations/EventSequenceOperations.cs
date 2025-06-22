@@ -16,6 +16,9 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     Causation? _causation;
 
     /// <inheritdoc/>
+    public IEventSequence EventSequence => eventSequence;
+
+    /// <inheritdoc/>
     public EventSequenceOperations ForEventSourceId(
         EventSourceId eventSourceId,
         Action<EventSourceOperations> configure)
