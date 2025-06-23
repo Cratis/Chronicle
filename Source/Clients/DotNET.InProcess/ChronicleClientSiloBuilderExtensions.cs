@@ -32,7 +32,11 @@ public static class ChronicleClientSiloBuilderExtensions
     /// </summary>
     public static readonly string[] DefaultSectionPaths = ["Cratis", "Chronicle"];
 
+#if NET9_0
     static readonly Lock _eventStoreInitLock = new();
+#else
+    static readonly object _eventStoreInitLock = new();
+#endif
 
     /// <summary>
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.
