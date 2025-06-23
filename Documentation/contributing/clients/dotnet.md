@@ -17,3 +17,8 @@ customization for those who need it.
 
 The .NET client is repacked. It hides the [contracts](../kernel/contracts.md) and
 also includes the `Connection` project.
+
+## Using statements
+
+- Common usings are provided in `GlobalUsings.cs` files, don't add any using statements already in this file.
+- Include using statements not covered by any `GlobalUsing.cs` definitions.
