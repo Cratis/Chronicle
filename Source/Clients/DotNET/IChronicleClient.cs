@@ -25,11 +25,12 @@ public interface IChronicleClient
     /// </summary>
     /// <param name="name">Name of the event store to get.</param>
     /// <param name="namespace">Optional namespace.</param>
+    /// <param name="skipDiscovery">Whether to skip discovery.</param>
     /// <returns><see cref="IEventStore"/>.</returns>
     /// <remarks>
     /// If no namespace is specified, the default namespace will be used.
     /// </remarks>
-    IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = default);
+    Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = default, bool skipDiscovery = false);
 
     /// <summary>
     /// List all the event stores.
