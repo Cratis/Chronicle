@@ -63,7 +63,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             options.Url,
             options.ConnectTimeout,
             connectionLifecycle,
-            new Cratis.Tasks.TaskFactory(),
+            new Tasks.TaskFactory(),
             options.CorrelationIdAccessor,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
             CancellationToken.None);
@@ -98,7 +98,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public IEventStore GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = null)
+    public async Task<IEventStore> GetEventStore(
+        EventStoreName name,
+        EventStoreNamespaceName? @namespace = null,
+        bool skipDiscovery = false)
     {
         @namespace ??= EventStoreNamespaceName.Default;
         var key = new EventStoreKey(name, @namespace);
@@ -122,6 +125,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.ServiceProvider,
             Options.JsonSerializerOptions,
             Options.LoggerFactory);
+
+        if (Options.AutoDiscoverAndRegister && !skipDiscovery)
+        {
+            await eventStore.DiscoverAll();
+            await eventStore.RegisterAll();
+        }
 
         _eventStores[key] = eventStore;
         return eventStore;

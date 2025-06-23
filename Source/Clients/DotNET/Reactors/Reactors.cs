@@ -22,8 +22,7 @@ public class Reactors : IReactors
 {
 #if NET9_0
     static readonly Lock _registerLock = new();
-#endif
-#if NET8_0
+#else
     static readonly object _registerLock = new();
 #endif
     readonly IEventStore _eventStore;
