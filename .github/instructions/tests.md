@@ -86,6 +86,7 @@ public class when_adding : Specification
 - Folder: `for_<Unit>`.
 - Class: Single condition - `when_<action>[_and_<aspect>]`. Not limited to `and`, use any preposition that makes sense (e.g. with, without)
 - Method: `should_<expected_result>`
+- Fields and properties should follow expected C# naming. Fields should be `_<field name>` using camel-case.
 
 ## Aspects of same behavior
 
