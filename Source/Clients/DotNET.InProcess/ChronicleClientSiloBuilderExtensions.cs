@@ -32,6 +32,8 @@ public static class ChronicleClientSiloBuilderExtensions
     /// </summary>
     public static readonly string[] DefaultSectionPaths = ["Cratis", "Chronicle"];
 
+    static readonly Lock _eventStoreInitLock = new();
+
     /// <summary>
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.
     /// </summary>
@@ -44,6 +46,11 @@ public static class ChronicleClientSiloBuilderExtensions
         Action<IChronicleBuilder>? configureChronicle = default,
         string? configSection = default)
     {
+        // We disable the AspNet client registration.
+        // The AspNetCore client uses an `IHostedService` to register the client, which then runs before the Silo is ready.
+        // Leading to crashing the entire process.
+        ChronicleClientStartupTask.RegistrationEnabled = false;
+
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
 
@@ -64,11 +71,6 @@ public static class ChronicleClientSiloBuilderExtensions
         Action<ChronicleOrleansInProcessOptions> configureOptions,
         Action<IChronicleBuilder>? configureChronicle = default)
     {
-        // We disable the AspNet client registration.
-        // The AspNetCore client uses an `IHostedService` to register the client, which then runs before the Silo is ready.
-        // Leading to crashing the entire process.
-        ChronicleClientStartupTask.RegistrationEnabled = false;
-
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
         ConfigureChronicle(builder, configureChronicle);
 
@@ -135,9 +137,12 @@ public static class ChronicleClientSiloBuilderExtensions
 
             services.AddSingleton(sp =>
             {
-                var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
-                var client = sp.GetRequiredService<IChronicleClient>();
-                return client.GetEventStore(options.EventStoreName);
+                lock (_eventStoreInitLock)
+                {
+                    var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
+                    var client = sp.GetRequiredService<IChronicleClient>();
+                    return client.GetEventStore(options.EventStoreName, skipDiscovery: true).GetAwaiter().GetResult();
+                }
             });
 
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Connection);

@@ -18,6 +18,7 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class ChronicleClientServiceCollectionExtensions
 {
+    static readonly Lock _eventStoreInitLock = new();
     static readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -51,22 +52,26 @@ public static class ChronicleClientServiceCollectionExtensions
 
         services.AddScoped(sp =>
         {
-            var namespaceName = EventStoreNamespaceName.Default;
-
-            var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
-            if (sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.Request.Headers.TryGetValue(options.NamespaceHttpHeader, out var values) ?? false)
+            lock (_eventStoreInitLock)
             {
-                namespaceName = values.ToString();
-            }
+                var namespaceName = EventStoreNamespaceName.Default;
 
-            if (_eventStores.TryGetValue(namespaceName, out var eventStore))
-            {
-                return eventStore;
-            }
+                var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
+                if (sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.Request.Headers.TryGetValue(options.NamespaceHttpHeader, out var values) ?? false)
+                {
+                    namespaceName = values.ToString();
+                }
 
-            var client = sp.GetRequiredService<IChronicleClient>();
-            eventStore = client.GetEventStore(options.EventStore, namespaceName);
-            return _eventStores[namespaceName] = eventStore;
+                if (_eventStores.TryGetValue(namespaceName, out var eventStore))
+                {
+                    return eventStore;
+                }
+
+                var client = sp.GetRequiredService<IChronicleClient>();
+
+                eventStore = client.GetEventStore(options.EventStore, namespaceName, skipDiscovery: true).GetAwaiter().GetResult();
+                return _eventStores[namespaceName] = eventStore;
+            }
         });
 
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Constraints);

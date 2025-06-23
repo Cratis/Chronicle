@@ -27,7 +27,7 @@ public class ChronicleClientStartupTask(IChronicleClient chronicleClient, IOptio
             return;
         }
 
-        var eventStore = chronicleClient.GetEventStore(options.Value.EventStore);
+        var eventStore = await chronicleClient.GetEventStore(options.Value.EventStore);
         await eventStore.DiscoverAll();
         await eventStore.RegisterAll();
     }
