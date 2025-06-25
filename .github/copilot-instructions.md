@@ -10,6 +10,7 @@
 - Honor the existing code style and conventions in the project.
 - Honor the .editorconfig file for formatting and style rules.
 - Never use `private` access modifier, as C# defaults to `private`.
+- Fields and properties should should be prefixed with _ e.g. `_<field name>` using camelCase.
 
 ## Testing
 
