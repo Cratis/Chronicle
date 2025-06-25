@@ -74,6 +74,7 @@ public class when_adding : Specification
 ## Using statements
 
 - Common usings are provided in `GlobalUsings.Specs.cs` (e.g., `using Xunit;`, `using NSubstitute;`), don't add any using statements already in this file.
+- Don't add using statement for namespace of the system under test.
 
 ## Integration Tests
 

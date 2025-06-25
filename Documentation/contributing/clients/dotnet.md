@@ -22,3 +22,4 @@ also includes the `Connection` project.
 
 - Common usings are provided in `GlobalUsings.cs` files, don't add any using statements already in this file.
 - Include using statements not covered by any `GlobalUsing.cs` definitions.
+- Don't add any `System` using statements.
