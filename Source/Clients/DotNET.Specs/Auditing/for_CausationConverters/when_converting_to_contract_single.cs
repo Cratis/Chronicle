@@ -5,23 +5,23 @@ namespace Cratis.Chronicle.Auditing.for_CausationConverters;
 
 public class when_converting_to_contract_single : Specification
 {
-    Causation causation;
-    Contracts.Auditing.Causation result;
-    DateTimeOffset occurred;
-    CausationType type;
-    IDictionary<string, string> properties;
+    Causation _causation;
+    Contracts.Auditing.Causation _result;
+    DateTimeOffset _occurred;
+    CausationType _type;
+    IDictionary<string, string> _properties;
 
     void Establish()
     {
-        occurred = DateTimeOffset.UtcNow;
-        type = CausationType.Root;
-        properties = new Dictionary<string, string> { { "key", "value" } };
-        causation = new(occurred, type, properties);
+        _occurred = DateTimeOffset.UtcNow;
+        _type = CausationType.Root;
+        _properties = new Dictionary<string, string> { { "key", "value" } };
+        _causation = new(_occurred, _type, _properties);
     }
 
-    void Because() => result = causation.ToContract();
+    void Because() => _result = _causation.ToContract();
 
-    [Fact] void should_map_occurred() => ((DateTimeOffset)result.Occurred).ShouldEqual(occurred);
-    [Fact] void should_map_type() => result.Type.ShouldEqual(type.Value);
-    [Fact] void should_map_properties() => result.Properties.ShouldEqual(properties);
+    [Fact] void should_map_occurred() => ((DateTimeOffset)_result.Occurred).ShouldEqual(_occurred);
+    [Fact] void should_map_type() => _result.Type.ShouldEqual(_type.Value);
+    [Fact] void should_map_properties() => _result.Properties.ShouldEqual(_properties);
 }

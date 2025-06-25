@@ -5,16 +5,16 @@ namespace Cratis.Chronicle.Auditing.for_CausationConverters.given;
 
 public class a_causation : Specification
 {
-    protected DateTimeOffset occurred;
-    protected CausationType type;
-    protected IDictionary<string, string> properties;
-    protected Causation causation;
+    protected DateTimeOffset _occurred;
+    protected CausationType _type;
+    protected IDictionary<string, string> _properties;
+    protected Causation _causation;
 
     void Establish()
     {
-        occurred = DateTimeOffset.UtcNow;
-        type = CausationType.Root;
-        properties = new Dictionary<string, string> { { "key", "value" } };
-        causation = new(occurred, type, properties);
+        _occurred = DateTimeOffset.UtcNow;
+        _type = CausationType.Root;
+        _properties = new Dictionary<string, string> { { "key", "value" } };
+        _causation = new(_occurred, _type, _properties);
     }
 }

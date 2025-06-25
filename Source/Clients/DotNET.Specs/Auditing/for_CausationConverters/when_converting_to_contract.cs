@@ -5,24 +5,24 @@ namespace Cratis.Chronicle.Auditing.for_CausationConverters;
 
 public class when_converting_to_contract : Specification
 {
-    IEnumerable<Causation> causations;
-    IList<Contracts.Auditing.Causation> result;
-    DateTimeOffset occurred;
-    CausationType type;
-    IDictionary<string, string> properties;
+    IEnumerable<Causation> _causations;
+    IList<Contracts.Auditing.Causation> _result;
+    DateTimeOffset _occurred;
+    CausationType _type;
+    IDictionary<string, string> _properties;
 
     void Establish()
     {
-        occurred = DateTimeOffset.UtcNow;
-        type = CausationType.Root;
-        properties = new Dictionary<string, string> { { "key", "value" } };
-        causations = [new Causation(occurred, type, properties)];
+        _occurred = DateTimeOffset.UtcNow;
+        _type = CausationType.Root;
+        _properties = new Dictionary<string, string> { { "key", "value" } };
+        _causations = [new Causation(_occurred, _type, _properties)];
     }
 
-    void Because() => result = causations.ToContract();
+    void Because() => _result = _causations.ToContract();
 
-    [Fact] void should_return_a_list_with_same_count() => result.Count.ShouldEqual(1);
-    [Fact] void should_map_occurred() => ((DateTimeOffset)result[0].Occurred).ShouldEqual(occurred);
-    [Fact] void should_map_type() => result[0].Type.ShouldEqual(type.Value);
-    [Fact] void should_map_properties() => result[0].Properties.ShouldEqual(properties);
+    [Fact] void should_return_a_list_with_same_count() => _result.Count.ShouldEqual(1);
+    [Fact] void should_map_occurred() => ((DateTimeOffset)_result[0].Occurred).ShouldEqual(_occurred);
+    [Fact] void should_map_type() => _result[0].Type.ShouldEqual(_type.Value);
+    [Fact] void should_map_properties() => _result[0].Properties.ShouldEqual(_properties);
 }
