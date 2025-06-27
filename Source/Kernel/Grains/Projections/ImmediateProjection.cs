@@ -119,7 +119,7 @@ public class ImmediateProjection(
 
             _initialState = state;
             var jsonObject = expandoObjectConverter.ToJsonObject(state, _projection!.Model.Schema);
-            return new(jsonObject, affectedProperties, projectedEventsCount);
+            return new(jsonObject, affectedProperties, projectedEventsCount, _lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
         {

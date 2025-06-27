@@ -7,61 +7,6 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 
-/*
-const MyComponent = () => {
-    const [readModel] = MyReadModel.use();
-    const [command] = MyCommand.use();
-
-    const buttonClick = () => {
-        command.from(readModel);
-
-    };
-};
-
-var evt = new Event();
-
-var appendManyOperation = eventLog
-    .ForEventSourceId(eventSourceId, builder =>  builder
-        .ConcurrencyScope(b => b
-            .WithEventStreamType(EventStreamType.Default)
-            .WithEventStreamId(EventStreamId.Default)
-            .WithEventSourceId()
-            .WithEventTypes(new[] { EventType.MyEventType })
-
-        .Append(evt);
-        .Append(evt);
-        .Append(evt);
-        .Append(evt))
-    .ForEventSourceId(eventSourceId, builder =>  builder
-        .ConcurrencyScope(b => b
-            .WithEventStreamType(EventStreamType.Default)
-            .WithEventStreamId(EventStreamId.Default)
-            .WithEventTypes(new[] { EventType.MyEventType })
-        .Append(evt);
-        .Append(evt);
-        .Append(evt);
-        .Append(evt));
-
-appendManyOperation.Perform();
-
-using (var uow = Uow.Begin())
-{
-    uow.Add(appendManyOperation);
-}
-
-await eventLog.Append(evt, concurrencyScope: concurrencyScope);
-await eventLog.Append(evt, concurrencyScope: builder => builder.WithEventSourceId(...).With...());
-await eventLog.Append(evt, concurrencyScope: ConcurrencyScope.None);
-await eventLog.Append(evt); // Use default concurrency scope - event sequence number is fetched from event store before appending and put into the concurrency scope.
-
-Configurable concurrency strategy defaults:
-- none
-- optimistic concurrency scope based on event sequence number, event source id (Strategy)
-
-AggregateRoot:
-- Dynamically pick up what properties to use based on e.g. EventSourceType used or not
-*/
-
 /// <summary>
 /// Defines the client event sequence.
 /// </summary>

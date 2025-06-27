@@ -3,8 +3,6 @@
 
 #pragma warning disable SA1402 // File may only contain a single type
 
-using Cratis.Chronicle.Events;
-
 namespace Cratis.Chronicle.Aggregates;
 
 /// <summary>
@@ -26,8 +24,6 @@ public class AggregateRoot : IAggregateRoot
     /// Gets a value indicating whether the aggregate root is new.
     /// </summary>
     protected bool IsNew => !_context.HasEvents;
-
-    public EventSequenceNumber TailEventSequenceNumber => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task Apply(object @event) => await _mutation.Apply(@event);

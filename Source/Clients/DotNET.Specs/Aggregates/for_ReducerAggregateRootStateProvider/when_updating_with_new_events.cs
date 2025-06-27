@@ -25,8 +25,8 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
 
         _events =
         [
-            AppendedEvent.EmptyWithEventType(FirstEventType.EventTypeId),
-            AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
+            new FirstEventType("Something"),
+            new SecondEventType("Something else")
         ];
 
         _invoker

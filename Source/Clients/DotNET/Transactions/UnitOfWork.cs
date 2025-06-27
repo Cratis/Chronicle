@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Collections;
+using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSequences.Operations;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -22,15 +22,12 @@ public class UnitOfWork(
     Action<IUnitOfWork> onCompleted,
     IEventStore eventStore) : IUnitOfWork
 {
-    readonly ConcurrentDictionary<EventSequenceId, ConcurrentBag<EventForEventSourceIdWithSequenceNumber>> _events = [];
-    readonly ConcurrentBag<ConstraintViolation> _constraintViolations = [];
-    readonly ConcurrentBag<AppendError> _appendErrors = [];
-
-    EventSequenceNumber? _lastCommittedEventSequenceNumber;
+    AppendManyResult _appendManyResult = new();
+    EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
-    EventSequenceNumber _currentSequenceNumber = EventSequenceNumber.First;
+    EventSequenceOperations? _eventSequenceOperations;
 
     /// <inheritdoc/>
     public bool IsCompleted => _isCommitted || _isRolledBack;
@@ -39,7 +36,7 @@ public class UnitOfWork(
     public CorrelationId CorrelationId => correlationId;
 
     /// <inheritdoc/>
-    public bool IsSuccess => _constraintViolations.IsEmpty && _appendErrors.IsEmpty;
+    public bool IsSuccess => _appendManyResult.IsSuccess;
 
     /// <inheritdoc/>
     public void AddEvent(
@@ -49,75 +46,42 @@ public class UnitOfWork(
         Causation causation,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default)
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
-        if (!_events.TryGetValue(eventSequenceId, out var events))
-        {
-            _events[eventSequenceId] = events = [];
-        }
-
-        events.Add(new(_currentSequenceNumber, eventSourceId, @event, causation)
-        {
-            EventStreamType = eventStreamType ?? EventStreamType.All,
-            EventStreamId = eventStreamId ?? EventStreamId.Default,
-            EventSourceType = eventSourceType ?? EventSourceType.Default
-        });
-
-        _currentSequenceNumber++;
+        var eventSequence = eventStore.GetEventSequence(eventSequenceId);
+        _eventSequenceOperations ??= new EventSequenceOperations(eventSequence);
+        _eventSequenceOperations = _eventSequenceOperations
+            .ForEventSourceId(eventSourceId, builder => builder
+            .WithConcurrencyScope(concurrencyScope ?? ConcurrencyScope.NotSet)
+            .Append(
+                @event,
+                causation,
+                eventStreamType,
+                eventStreamId,
+                eventSourceType));
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _constraintViolations];
+    public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _appendManyResult.ConstraintViolations];
 
     /// <inheritdoc/>
     public IEnumerable<object> GetEvents() =>
-        _events.Values.SelectMany(_ => _)
-            .OrderBy(_ => _.SequenceNumber.Value)
-            .Select(_ => _.Event).ToArray();
+        _eventSequenceOperations?.GetAppendedEvents() ?? [];
 
     /// <inheritdoc/>
-    public IEnumerable<AppendError> GetAppendErrors() => [.. _appendErrors];
+    public IEnumerable<AppendError> GetAppendErrors() => [.. _appendManyResult.Errors];
 
     /// <inheritdoc/>
     public async Task Commit()
     {
         ThrowIfUnitOfWorkIsCompleted();
 
-        foreach (var (eventSequenceId, events) in _events)
+        if (_eventSequenceOperations is not null)
         {
-            /*
-            {
-                "<eventSourceId>": {
-                    "concurrencyScope": undefined | {
-                        "eventSequenceNumber": 42,
-                        "eventSourceId": true | false,
-                        "eventStreamType": "All",
-                        "eventStreamId": "Default",
-                        "eventSourceType": "Default"
-                    },
-                    "events": [
-                        { "event": "event-1", "causation": { "correlationId": "correlation-id-1" } },
-                        { "event": "event-2", "causation": { "correlationId": "correlation-id-2" } }
-                    ]
-                }
-            }
-            */
-
-            var sorted = events
-                            .OrderBy(_ => _.SequenceNumber)
-                            .Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, e.Causation)
-                            {
-                                EventStreamType = e.EventStreamType,
-                                EventStreamId = e.EventStreamId,
-                                EventSourceType = e.EventSourceType
-                            })
-                            .ToArray();
-
-            var eventSequence = eventStore.GetEventSequence(eventSequenceId);
-            var result = await eventSequence.AppendMany(sorted, correlationId);
-            result.ConstraintViolations.ForEach(_constraintViolations.Add);
-            result.Errors.ForEach(_appendErrors.Add);
-            _lastCommittedEventSequenceNumber = result.SequenceNumbers.OrderBy(_ => _.Value).LastOrDefault();
+            var result = await _eventSequenceOperations.Perform();
+            _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
+            _appendManyResult = _appendManyResult.MergeWith(result);
         }
 
         _isCommitted = true;
@@ -129,8 +93,8 @@ public class UnitOfWork(
     {
         ThrowIfUnitOfWorkIsCompleted();
         _isRolledBack = true;
-        _events.Clear();
-        _constraintViolations.Clear();
+        _eventSequenceOperations?.Clear();
+        _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);
 
         _onCompleted(this);
         return Task.CompletedTask;

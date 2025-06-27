@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.EventSequences.Operations;
 public interface IEventSequenceOperations
 {
     /// <summary>
+    /// Gets the event sequence that these operations are associated with.
+    /// </summary>
+    IEventSequence EventSequence { get;  }
+
+    /// <summary>
     /// Configures operations for a specific event source identified by <paramref name="eventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId">The identifier of the event source.</param>
@@ -27,14 +32,19 @@ public interface IEventSequenceOperations
     EventSequenceOperations WithCausation(Causation causation);
 
     /// <summary>
-    /// Marks the operation as transactional.
+    /// Gets the events that have been appended in the operation builders.
     /// </summary>
-    /// <returns>The current instance of <see cref="EventSequenceOperations"/>.</returns>
-    EventSequenceOperations Transactional();
+    /// <returns>Collection of events.</returns>
+    IEnumerable<object> GetAppendedEvents();
+
+    /// <summary>
+    /// Clears all operations that has been added.
+    /// </summary>
+    void Clear();
 
     /// <summary>
     /// Performs the operation, appending events as specified in the builders.
     /// </summary>
     /// <returns>An instance of <see cref="AppendManyResult"/> representing the result of the operation.</returns>
-    AppendManyResult Perform();
+    Task<AppendManyResult> Perform();
 }

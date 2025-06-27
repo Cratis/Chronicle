@@ -13,8 +13,10 @@ namespace Cratis.Chronicle.EventSequences.Operations;
 public class EventSequenceOperations(IEventSequence eventSequence) : IEventSequenceOperations
 {
     readonly Dictionary<EventSourceId, EventSourceOperations> _eventSourceBuilders = [];
-    bool _isTransactional;
     Causation? _causation;
+
+    /// <inheritdoc/>
+    public IEventSequence EventSequence => eventSequence;
 
     /// <inheritdoc/>
     public EventSequenceOperations ForEventSourceId(
@@ -39,20 +41,38 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     }
 
     /// <inheritdoc/>
-    public EventSequenceOperations Transactional()
+    public IEnumerable<object> GetAppendedEvents() =>
+        _eventSourceBuilders.Values
+            .SelectMany(builder => builder.GetAppendedEvents())
+            .ToArray();
+
+    /// <inheritdoc/>
+    public void Clear()
     {
-        _isTransactional = true;
-        return this;
+        _eventSourceBuilders.Clear();
+        _causation = null;
     }
 
     /// <inheritdoc/>
-    public AppendManyResult Perform()
+    public Task<AppendManyResult> Perform()
     {
-        if (_isTransactional)
+        foreach (var (eventSourceId, operations) in _eventSourceBuilders)
         {
+            var appendOperations = operations.GetOperationsOfType<AppendOperation>();
+            if (appendOperations.Any())
+            {
+                var events = appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation ?? Causation.Unknown())
+                {
+                    EventStreamType = op.EventStreamType ?? EventStreamType.All,
+                    EventStreamId = op.EventStreamId ?? EventStreamId.Default,
+                    EventSourceType = op.EventSourceType ?? EventSourceType.Default
+                }).ToArray();
+
+                var result = eventSequence.AppendMany(events);
+            }
         }
 
         // Convert to append many operation
-        return new AppendManyResult();
+        return Task.FromResult(new AppendManyResult());
     }
 }

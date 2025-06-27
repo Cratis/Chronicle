@@ -10,7 +10,17 @@
 - Honor the existing code style and conventions in the project.
 - Honor the .editorconfig file for formatting and style rules.
 - Never use `private` access modifier, as C# defaults to `private`.
+- Fields and properties should should be prefixed with _ e.g. `_<field name>` using camelCase.
 
 ## Testing
 
 - [How to Write Specs](./instructions/tests.md)
+
+## Header
+
+All files should start with the following header:
+
+```csharp
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+```

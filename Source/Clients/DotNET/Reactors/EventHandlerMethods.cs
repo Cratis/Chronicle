@@ -4,7 +4,7 @@
 using System.Reflection;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Conventions;
+namespace Cratis.Chronicle.Reactors;
 
 /// <summary>
 /// Extension methods for working with event handler methods.

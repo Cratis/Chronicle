@@ -8,7 +8,6 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
-using Cratis.Chronicle.EventSequences.Operations;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Transactions;
 
