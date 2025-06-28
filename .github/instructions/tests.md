@@ -50,20 +50,43 @@ public class when_adding : Specification
 
 - Establish method can also be async if it needs to perform tasks that are async.
 
-## Context
+## Naming
+
+- Use clear, descriptive names for test classes and methods.
+- Folder: `for_<Unit>`.
+- Class: Single condition - `when_<action>[_and_<aspect>]`. Not limited to `and`, use any preposition that makes sense (e.g. with, without)
+- Method: `should_<expected_result>`
+
+## Aspects of same behavior
+
+- Behavior that can have multiple aspects or perspectives of a functionality should have the `when_<action></action>` statement as a folder name, then the specific aspect/perspective/condition would typically be called `and_*.cs` or similar.
+- When multiple aspects, file names would be `and_<aspect>`, but not limited to - use any prepositions that makes sense as well as prefix
+
+## Behaviors
+
+- Capture the behavior in naming, not just necessarily use names that reflect the code or method name, it should be meaningful as to what the code is doing and trying to accomplish
+- Every method should be tested separately, never write a single file for an entire unit under test.
+- Keep a single behavior or aspect of a behavior in a single file.
+
+## Namespaces
+
+- The namespace should start with the same as the unit having specs for it.
+- Do not include `.Specs` in the namespace.
+
+## Reusable Context
 
 - Context can be encapsulated into reusable contexts that can be leveraged between specs.
 - Next to the specs, create a folder called `given` and add a specific context that describes what the context is, typically starting with `a_` or `an_`.
 - Namespace should include `given` in the name.
 - Members that are to be reused should be protected.
 - Members are initializes in the same manner as specs without a shared context using the `Establish` method.
-- Specs should then inherit from the context by doing `given.a_specific_context`, example: `public class when_performing_a_behavior : given.a_specific_context`
+- When there is a need for a reusable context, specs should then inherit from the context by doing `given.a_specific_context`, example: `public class when_performing_a_behavior : given.a_specific_context`
 - Remember the inheritance rule, `Specification` must be in the inheritance chain at the root.
 - Contexts can share other contexts which.
 
-## Behavior
+## Substitutes
 
-- Capture the behavior in naming, not just necessarily use names that reflect the code or method name, it should be meaningful as to what the code is doing and trying to accomplish
+- Concrete classes that are not abstract can't be substituted using NSubstitute. Create proper instances of them.
 
 ## Test Utilities
 
@@ -80,24 +103,3 @@ public class when_adding : Specification
 
 - Use fixtures like `OrleansFixture` for integration scenarios.
 - Use extension methods in `XUnit.Integration/EventsShouldExtensions.cs` for event log assertions.
-
-## Naming
-
-- Use clear, descriptive names for test classes and methods.
-- Folder: `for_<Unit>`.
-- Class: Single condition - `when_<action>[_and_<aspect>]`. Not limited to `and`, use any preposition that makes sense (e.g. with, without)
-- Method: `should_<expected_result>`
-
-## Aspects of same behavior
-
-- Behavior that can have multiple aspects or perspectives of a functionality should have the `when_<action></action>` statement as a folder name, then the specific aspect/perspective/condition would typically be called `and_*.cs` or similar.
-- When multiple aspects, file names would be `and_<aspect>`, but not limited to - use any prepositions that makes sense as well as prefix
-
-## Namespaces
-
-- The namespace should start with the same as the unit having specs for it.
-- Do not include `.Specs` in the namespace.
-
-## Substitutes
-
-- Concrete classes that are not abstract can't be substituted using NSubstitute. Create proper instances of them.
