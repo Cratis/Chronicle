@@ -59,14 +59,14 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Build root
-        run: dotnet build -f net9.0 --configuration Debug
+        run: dotnet build
 
       - name: Clean output for repackaged clients
-        run: dotnet clean -f net9.0
+        run: dotnet clean
         working-directory: ./Source/Clients
 
       - name: Build repackaged clients
-        run: dotnet build -f net9.0 --configuration Debug -p:Repack=true -maxcpucount:1
+        run: dotnet build -p:Repack=true -maxcpucount:1
         working-directory: ./Source/Clients
 
   specs:
