@@ -54,25 +54,23 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     }
 
     /// <inheritdoc/>
-    public Task<AppendManyResult> Perform()
+    public async Task<AppendManyResult> Perform()
     {
+        var events = new List<EventForEventSourceId>();
+
         foreach (var (eventSourceId, operations) in _eventSourceBuilders)
         {
             var appendOperations = operations.GetOperationsOfType<AppendOperation>();
             if (appendOperations.Any())
             {
-                var events = appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation ?? Causation.Unknown())
+                events.AddRange(appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation ?? Causation.Unknown())
                 {
                     EventStreamType = op.EventStreamType ?? EventStreamType.All,
                     EventStreamId = op.EventStreamId ?? EventStreamId.Default,
                     EventSourceType = op.EventSourceType ?? EventSourceType.Default
-                }).ToArray();
-
-                var result = eventSequence.AppendMany(events);
+                }));
             }
         }
-
-        // Convert to append many operation
-        return Task.FromResult(new AppendManyResult());
+        return await eventSequence.AppendMany(events);
     }
 }
