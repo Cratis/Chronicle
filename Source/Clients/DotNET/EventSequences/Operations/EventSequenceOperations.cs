@@ -54,7 +54,7 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     }
 
     /// <inheritdoc/>
-    public async Task<AppendManyResult> Perform()
+    public Task<AppendManyResult> Perform()
     {
         var events = new List<EventForEventSourceId>();
 
@@ -71,6 +71,6 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                 }));
             }
         }
-        return await eventSequence.AppendMany(events);
+        return eventSequence.AppendMany(events);
     }
 }

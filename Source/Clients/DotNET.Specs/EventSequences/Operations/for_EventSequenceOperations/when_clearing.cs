@@ -14,12 +14,12 @@ public class when_clearing : given.event_sequence_operations_without_any_operati
     {
         eventSourceId = EventSourceId.New();
         appendedEvent = new object();
-        operations
+        _operations
             .ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent))
             .WithCausation(CausationHelpers.New());
     }
 
-    void Because() => operations.Clear();
+    void Because() => _operations.Clear();
 
-    [Fact] void should_clear_all_event_source_builders() => operations.GetAppendedEvents().ShouldBeEmpty();
+    [Fact] void should_clear_all_event_source_builders() => _operations.GetAppendedEvents().ShouldBeEmpty();
 }

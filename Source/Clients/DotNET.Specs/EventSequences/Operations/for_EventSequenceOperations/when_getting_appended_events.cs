@@ -15,10 +15,10 @@ public class when_getting_appended_events : given.event_sequence_operations_with
     {
         eventSourceId = EventSourceId.New();
         appendedEvent = new object();
-        operations.ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent));
+        _operations.ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent));
     }
 
-    void Because() => result = operations.GetAppendedEvents();
+    void Because() => result = _operations.GetAppendedEvents();
 
     [Fact] void should_return_all_appended_events() => result.ShouldContain(appendedEvent);
 }

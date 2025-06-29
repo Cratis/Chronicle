@@ -14,17 +14,17 @@ public class and_causation_is_set : given.event_sequence_operations_without_any_
 
     void Establish()
     {
-        eventSequence = Substitute.For<IEventSequence>();
-        operations = new(eventSequence);
+        _eventSequence = Substitute.For<IEventSequence>();
+        _operations = new(_eventSequence);
         eventSourceId = EventSourceId.New();
         appendedEvent = new object();
         causation = CausationHelpers.New();
-        operations
+        _operations
             .ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent))
             .WithCausation(causation);
     }
 
-    void Because() => operations.Perform().GetAwaiter().GetResult();
+    Task Because() => _operations.Perform();
 
-    [Fact] void should_use_causation_for_event() => eventSequence.Received().AppendMany(Arg.Is<IEnumerable<EventForEventSourceId>>(events => events.All(e => e.Causation == causation)));
+    [Fact] void should_use_causation_for_event() => _eventSequence.Received().AppendMany(Arg.Is<IEnumerable<EventForEventSourceId>>(events => events.All(e => e.Causation == causation)));
 }

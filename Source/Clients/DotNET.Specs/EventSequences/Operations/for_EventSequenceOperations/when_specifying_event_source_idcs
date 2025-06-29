@@ -5,21 +5,21 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperations;
 
-public class when_using_ForEventSourceId : given.event_sequence_operations_without_any_operations
+public class when_specifying_event_source_id : given.event_sequence_operations_without_any_operations
 {
     EventSourceId eventSourceId;
     bool configured;
 
     void Establish()
     {
-        eventSequence = Substitute.For<IEventSequence>();
-        operations = new(eventSequence);
+        _eventSequence = Substitute.For<IEventSequence>();
+        _operations = new(_eventSequence);
         eventSourceId = EventSourceId.New();
         configured = false;
     }
 
-    void Because() => operations.ForEventSourceId(eventSourceId, _ => configured = true);
+    void Because() => _operations.ForEventSourceId(eventSourceId, _ => configured = true);
 
     [Fact] void should_add_and_configure_new_event_source_operations() => configured.ShouldBeTrue();
-    [Fact] void should_return_self() => operations.ForEventSourceId(eventSourceId, _ => { }).ShouldEqual(operations);
+    [Fact] void should_return_self() => _operations.ForEventSourceId(eventSourceId, _ => { }).ShouldEqual(_operations);
 }

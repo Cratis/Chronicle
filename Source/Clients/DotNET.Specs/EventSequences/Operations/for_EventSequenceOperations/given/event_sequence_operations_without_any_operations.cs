@@ -5,13 +5,19 @@ namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperations
 
 public class event_sequence_operations_without_any_operations : Specification
 {
-    protected EventSequenceOperations operations;
-    protected IEventSequence eventSequence;
+    protected EventSequenceOperations _operations;
+    protected IEventSequence _eventSequence;
+    protected AppendManyResult _appendManyResult;
 
 
     void Establish()
     {
-        eventSequence = Substitute.For<IEventSequence>();
-        operations = new(eventSequence);
+        _eventSequence = Substitute.For<IEventSequence>();
+        _appendManyResult = new();
+        _eventSequence
+            .AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
+            .Returns(_appendManyResult);
+
+        _operations = new(_eventSequence);
     }
 }

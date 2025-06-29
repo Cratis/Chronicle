@@ -13,15 +13,13 @@ public class without_any_causation_set : given.event_sequence_operations_without
 
     void Establish()
     {
-        eventSequence = Substitute.For<IEventSequence>();
-        operations = new(eventSequence);
         eventSourceId = EventSourceId.New();
         appendedEvent = new object();
-        operations.ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent));
+        _operations.ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent));
     }
 
-    void Because() => result = operations.Perform().GetAwaiter().GetResult();
+    async Task Because() => result = await _operations.Perform();
 
-    [Fact] void should_call_append_many_on_event_sequence() => eventSequence.Received().AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>());
+    [Fact] void should_call_append_many_on_event_sequence() => _eventSequence.Received().AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>());
     [Fact] void should_return_append_many_result() => result.ShouldNotBeNull();
 }
