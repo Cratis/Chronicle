@@ -50,6 +50,10 @@ public class when_adding : Specification
 
 - Establish method can also be async if it needs to perform tasks that are async.
 
+## What to specify
+
+- Write specs that verifies what is promised from the signature of methods, not based on its implementation - we want to catch problems with the implementation.
+
 ## Naming
 
 - Use clear, descriptive names for test classes and methods.
