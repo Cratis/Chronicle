@@ -7,7 +7,7 @@ using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Transactions.for_UnitOfWork.given;
 
-public class a_unit_of_work_and_events_and_constraint_violations_and_errors : a_unit_of_work
+public class a_unit_of_work_with_two_events_for_different_event_source_ids_added_to_it : a_unit_of_work
 {
     protected EventSourceId _firstEventEventSourceId;
     protected EventSourceId _secondEventEventSourceId;

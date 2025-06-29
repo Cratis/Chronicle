@@ -16,6 +16,3 @@ public class and_it_is_already_committed : given.a_unit_of_work
 
     [Fact] void should_throw_already_committed() => _exception.ShouldBeOfExactType<UnitOfWorkIsAlreadyCommitted>();
 }
-
-
-
