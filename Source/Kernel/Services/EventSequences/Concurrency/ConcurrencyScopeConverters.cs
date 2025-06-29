@@ -7,17 +7,17 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 namespace Cratis.Chronicle.Services.EventSequences.Concurrency;
 
 /// <summary>
-/// Represents methods for converting between <see cref="ConcurrencyScope"/> and <see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope"/>.
+/// Represents methods for converting between <see cref="ConcurrencyScope"/> and <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/>.
 /// </summary>
 internal static class ConcurrencyScopeConverters
 {
     /// <summary>
-    /// Convert to a Chronicle representation of <see cref="ConcurrencyScope"/> from a contract version of <see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope"/>.
+    /// Convert to a Chronicle representation of <see cref="ConcurrencyScope"/> from a contract version of <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/>.
     /// </summary>
-    /// <param name="scope"><see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope"/> to convert.</param>
+    /// <param name="scope"><see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/> to convert.</param>
     /// <returns>A converted <see cref="ConcurrencyScope"/>.</returns>
     public static ConcurrencyScope ToChronicle(
-        this Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope scope) =>
+        this Contracts.EventSequences.Concurrency.ConcurrencyScope scope) =>
         new(
             scope.EventSequenceNumber,
             scope.EventSourceId,
@@ -27,12 +27,12 @@ internal static class ConcurrencyScopeConverters
             scope.EventTypes?.Select(EventType.Parse));
 
     /// <summary>
-    /// Convert to a Chronicle representation of <see cref="ConcurrencyScopes"/> from a contract version of <see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScopeMany"/>.
+    /// Convert to a Chronicle representation of <see cref="ConcurrencyScopes"/> from a contract version of <see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/>.
     /// </summary>
-    /// <param name="scopes"><see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScopeMany"/> to convert.</param>
+    /// <param name="scopes"><see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/> to convert.</param>
     /// <returns>A converted <see cref="ConcurrencyScope"/>.</returns>
     public static ConcurrencyScopes ToChronicle(
-        this IDictionary<string, Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes) =>
+        this IDictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes) =>
         new(scopes.ToDictionary(
             eventSourceIdAndScope => new EventSourceId(eventSourceIdAndScope.Key),
             eventSourceIdAndScope => eventSourceIdAndScope.Value.ToChronicle()));
