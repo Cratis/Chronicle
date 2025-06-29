@@ -61,10 +61,16 @@ public interface IUnitOfWork : IDisposable
     IEnumerable<object> GetEvents();
 
     /// <summary>
-    /// Gets the constraint violations that have occurred in the <see cref="IUnitOfWork"/>.
+    /// Gets any constraint violations that occurred in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of <see cref="ConstraintViolation"/>.</returns>
     IEnumerable<ConstraintViolation> GetConstraintViolations();
+
+    /// <summary>
+    /// Gets any concurrency violations thar occurred in the <see cref="IUnitOfWork"/>.
+    /// </summary>
+    /// <returns>A collection of <see cref="ConcurrencyViolation"/>.</returns>
+    IEnumerable<ConcurrencyViolation> GetConcurrencyViolations();
 
     /// <summary>
     /// Get any errors that have occurred while attempting to commit in the <see cref="IUnitOfWork"/>.
