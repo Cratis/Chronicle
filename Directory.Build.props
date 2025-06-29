@@ -32,11 +32,11 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(SolutionPath)' == ''">
-        <TargetFrameworks>net9.0</TargetFrameworks>
+    <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(SolutionPath)' != ''">
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
