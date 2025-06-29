@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 296 |
+| Number of items that remain open | 297 |
 | Number of items closed | 538 |
-| Total number of items created | 834 |
+| Total number of items created | 835 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Add OpenTelemetry tracing context to appending of events and also let this flow further into observers | https://github.com/Cratis/Chronicle/issues/1923 | None | [einari](https://github.com/einari) | None | None | None |
 | [Design] - DSL for projections | https://github.com/Cratis/Chronicle/issues/1915 | None | [einari](https://github.com/einari) | None | None | None |
 | Chronicle should not decide casing on read models, event types or other artifacts given to it by the client | https://github.com/Cratis/Chronicle/issues/1914 | None | [einari](https://github.com/einari) | None | None | None |
 | Sequence Query editor in Workbench | https://github.com/Cratis/Chronicle/issues/1911 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
@@ -346,5 +347,4 @@
 | Get rid of the boot procedure concept. | https://github.com/Cratis/Chronicle/issues/997 | None | [einari](https://github.com/einari) | None | 271 days, 0:35:01 | None |
 | Move identities from cluster shared to being per event store per tenant | https://github.com/Cratis/Chronicle/issues/991 | None | [einari](https://github.com/einari) | None | 279 days, 22:24:28 | None |
 | Only allow converters defined by Cratis for Json sent to the Kernel | https://github.com/Cratis/Chronicle/issues/990 | None | [einari](https://github.com/einari) | None | 494 days, 18:56:48 | None |
-| Improve convention based method invocations by using delegates as supported signatures | https://github.com/Cratis/Chronicle/issues/989 | None | [einari](https://github.com/einari) | None | None | None |
-| Change from Immediate Projection to enabling any projection to not materialize | https://github.com/Cratis/Chronicle/issues/988 | None | [einari](https:/
+| Improve convention based method invocations by using delegates as supported signatures | https://github.com/Cratis/Chronicle/issues/989 

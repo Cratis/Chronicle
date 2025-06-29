@@ -17,14 +17,14 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.6" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.6.0" />
         <!-- Cratis -->
-        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.0" />
-        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.0" />
-        <PackageVersion Include="Cratis.Applications" Version="16.0.0" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.0" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="16.0.0" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="16.0.0" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="16.0.0" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="16.0.0" />
+        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.1" />
+        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.1" />
+        <PackageVersion Include="Cratis.Applications" Version="16.0.2" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.2" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="16.0.2" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="16.0.2" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="16.0.2" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="16.0.2" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.1.2" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.1.2" />
