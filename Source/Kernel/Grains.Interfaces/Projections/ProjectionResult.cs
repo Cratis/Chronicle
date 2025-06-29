@@ -19,5 +19,5 @@ public record ProjectionResult(JsonObject Model, IEnumerable<PropertyPath> Affec
     /// <summary>
     /// Represents an empty <see cref="ProjectionResult"/>.
     /// </summary>
-    public static readonly ProjectionResult Empty = new([], [], 0);
+    public static readonly ProjectionResult Empty = new([], [], 0, EventSequenceNumber.Unavailable);
 }
