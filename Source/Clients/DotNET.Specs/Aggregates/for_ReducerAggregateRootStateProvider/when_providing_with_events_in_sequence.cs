@@ -13,10 +13,11 @@ public class when_providing_with_events_in_sequence : given.an_aggregate_root_th
     void Establish()
     {
         _state = new(Guid.NewGuid().ToString());
-        _reducer.OnNext(events, null, _serviceProvider).Returns(new ReduceResult(_state, 2, [], string.Empty));
+        _reducer.OnNext(_events, null, _serviceProvider).Returns(new ReduceResult(_state, 2, [], string.Empty));
     }
 
     async Task Because() => _result = await _provider.Provide();
 
     [Fact] void should_return_the_state() => _result.ShouldEqual(_state);
+    [Fact] void should_set_the_tail_event_sequence_number() => _aggregateRootContext.TailEventSequenceNumber.ShouldEqual(_events[^1].Metadata.SequenceNumber);
 }

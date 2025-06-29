@@ -6,6 +6,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -42,6 +43,7 @@ public interface IUnitOfWork : IDisposable
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> for the event, will default to the All stream if not set.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> for the event, will default to Default is not set.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> for the event, will default to Default is not set.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> for the event, will default to NotSet if not set.</param>
     void AddEvent(
         EventSequenceId eventSequenceId,
         EventSourceId eventSourceId,
@@ -49,7 +51,8 @@ public interface IUnitOfWork : IDisposable
         Causation causation,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default);
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.
@@ -58,10 +61,16 @@ public interface IUnitOfWork : IDisposable
     IEnumerable<object> GetEvents();
 
     /// <summary>
-    /// Gets the constraint violations that have occurred in the <see cref="IUnitOfWork"/>.
+    /// Gets any constraint violations that occurred in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of <see cref="ConstraintViolation"/>.</returns>
     IEnumerable<ConstraintViolation> GetConstraintViolations();
+
+    /// <summary>
+    /// Gets any concurrency violations thar occurred in the <see cref="IUnitOfWork"/>.
+    /// </summary>
+    /// <returns>A collection of <see cref="ConcurrencyViolation"/>.</returns>
+    IEnumerable<ConcurrencyViolation> GetConcurrencyViolations();
 
     /// <summary>
     /// Get any errors that have occurred while attempting to commit in the <see cref="IUnitOfWork"/>.

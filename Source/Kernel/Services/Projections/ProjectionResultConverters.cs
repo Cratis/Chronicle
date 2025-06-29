@@ -22,6 +22,7 @@ internal static class ProjectionResultConverters
         {
             Model = JsonSerializer.Serialize(result.Model, Globals.JsonSerializerOptions),
             AffectedProperties = result.AffectedProperties.Select(_ => _.ToString()).ToList(),
-            ProjectedEventsCount = result.ProjectedEventsCount
+            ProjectedEventsCount = result.ProjectedEventsCount,
+            LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber.Value
         };
 }

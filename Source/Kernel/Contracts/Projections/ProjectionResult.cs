@@ -28,4 +28,10 @@ public class ProjectionResult
     /// </summary>
     [ProtoMember(3)]
     public int ProjectedEventsCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last handled event sequence number.
+    /// </summary>
+    [ProtoMember(4)]
+    public ulong LastHandledEventSequenceNumber { get; set; }
 }

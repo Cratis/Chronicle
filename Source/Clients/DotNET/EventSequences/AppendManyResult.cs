@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -25,12 +26,17 @@ public record AppendManyResult
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
     /// </summary>
-    public bool IsSuccess => !HasConstraintViolations && !HasErrors;
+    public bool IsSuccess => !HasConstraintViolations && !HasErrors && !HasConcurrencyViolations;
 
     /// <summary>
     /// Gets whether or not there are any violations that occurred.
     /// </summary>
     public bool HasConstraintViolations => ConstraintViolations.Any();
+
+    /// <summary>
+    /// Gets whether or not there are any concurrency violations that occurred.
+    /// </summary>
+    public bool HasConcurrencyViolations => ConcurrencyViolations.Any();
 
     /// <summary>
     /// Gets whether or not there are any errors that occurred.
@@ -41,6 +47,11 @@ public record AppendManyResult
     /// Gets any violations that occurred during the operation.
     /// </summary>
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
+
+    /// <summary>
+    /// Gets any concurrency violations that occurred during the operation.
+    /// </summary>
+    public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
@@ -58,4 +69,19 @@ public record AppendManyResult
         CorrelationId = correlationId,
         SequenceNumbers = sequenceNumbers.ToImmutableList()
     };
+
+    /// <summary>
+    /// Merges another <see cref="AppendManyResult"/> with this one, creating a new merged result.
+    /// </summary>
+    /// <param name="other">The other <see cref="AppendManyResult"/> to merge.</param>
+    /// <returns>A new <see cref="AppendManyResult"/> that combines the results of both.</returns>
+    public AppendManyResult MergeWith(AppendManyResult other) =>
+        new()
+        {
+            CorrelationId = other.CorrelationId,
+            SequenceNumbers = SequenceNumbers.Concat(other.SequenceNumbers).ToImmutableList(),
+            ConstraintViolations = ConstraintViolations.Concat(other.ConstraintViolations).ToImmutableList(),
+            ConcurrencyViolations = ConcurrencyViolations.Concat(other.ConcurrencyViolations).ToImmutableList(),
+            Errors = Errors.Concat(other.Errors).ToImmutableList()
+        };
 }
