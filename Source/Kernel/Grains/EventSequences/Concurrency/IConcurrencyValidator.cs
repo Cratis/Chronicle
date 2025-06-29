@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency;
 public interface IConcurrencyValidator
 {
     /// <summary>
-    /// Validates a single <see cref="ConcurrencyScope"/>;
+    /// Validates a single <see cref="ConcurrencyScope"/>.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
     /// <param name="scope">The <see cref="ConcurrencyScope"/>.</param>
