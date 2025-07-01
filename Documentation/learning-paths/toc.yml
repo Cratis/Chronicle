@@ -1,9 +1,7 @@
 - name: Running Chronicle in local development
   href:
-- name: Get started from console app
-  href:
-- name: Get started from ASP.NET Core App
-  href:
+- name: Get started
+  href: ./get-started/toc.yml
 - name: Create an event type
   href:
 - name: Create and append an event
