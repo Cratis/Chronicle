@@ -1,5 +1,6 @@
 - name: Configuration
 - name: Configuring observers
 - name: Configuring storage
+- name: Configuring events behaviors
 - name: Feature toggling
 - name: Monitoring
