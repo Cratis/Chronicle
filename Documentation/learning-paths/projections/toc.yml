@@ -1,0 +1,8 @@
+- name: Simple auto projections
+- name: Mapping properties manually
+- name: Mapping properties to event context
+- name: Set initial values
+- name: Use functions for properties
+- name: Add children
+- name: Join other streams
+- name: Setting properties for all event types

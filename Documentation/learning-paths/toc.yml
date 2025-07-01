@@ -1,0 +1,36 @@
+- name: Running Chronicle in local development
+  href:
+- name: Get started from console app
+  href:
+- name: Get started from ASP.NET Core App
+  href:
+- name: Create an event type
+  href:
+- name: Create and append an event
+  href:
+- name: Use a Reactor for reacting to events in the event log
+  href:
+- name: Use a Reducer for creating read models
+  href:
+- name: Use a Projection for creating read models
+  href: ./projections/toc.yml
+- name: Add rule for data integrity
+  href: ./rules/toc.yml
+- name: Add a constraint for data integrity
+  href:
+- name: Working with aggregates
+  href:
+- name: Working with other event sequences
+  href:
+- name: Working with namespaces
+  href:
+- name: Failed Partitions
+  href:
+- name: Identities
+  href:
+- name: Creating and using custom causations
+  href:
+- name: Writing tests
+  href: ./testing/toc.yml
+- name: Kernel
+  href:
