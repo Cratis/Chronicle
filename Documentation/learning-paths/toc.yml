@@ -12,7 +12,7 @@
   href:
 - name: Use a Projection for creating read models
   href: ./projections/toc.yml
-- name: Add rule for data integrity
+- name: Using rules
   href: ./rules/toc.yml
 - name: Add a constraint for data integrity
   href:
@@ -31,4 +31,5 @@
 - name: Writing tests
   href: ./testing/toc.yml
 - name: Kernel
-  href:
+  href: ./kernel/toc.yml
+- name: Workbench

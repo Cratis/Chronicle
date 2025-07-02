@@ -6,3 +6,5 @@
 - name: Add children
 - name: Join other streams
 - name: Setting properties for all event types
+- name: Immediate projections
+- name: Watching projections
