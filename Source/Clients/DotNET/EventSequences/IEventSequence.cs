@@ -125,7 +125,7 @@ public interface IEventSequence
     /// </summary>
     /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
-    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
+    /// <param name="concurrencyScopes">Optional <see cref="IDictionary{TKey, TValue}"/> of <see cref="EventSourceId"/> and <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to an empty dictionary.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
@@ -133,7 +133,7 @@ public interface IEventSequence
     Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
-        ConcurrencyScope? concurrencyScope = default);
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

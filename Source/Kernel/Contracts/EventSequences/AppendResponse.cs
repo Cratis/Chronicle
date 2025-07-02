@@ -42,6 +42,6 @@ public class AppendResponse
     /// <summary>
     /// Gets concurrency violations.
     /// </summary>
-    [ProtoMember(5, IsRequired = true)]
-    public IList<ConcurrencyViolation> ConcurrencyViolations { get; set; } = [];
+    [ProtoMember(5)]
+    public ConcurrencyViolation? ConcurrencyViolation { get; set; }
 }

@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -25,7 +26,8 @@ internal static class AppendResultConverters
             CorrelationId = result.CorrelationId,
             SequenceNumber = result.SequenceNumber,
             ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
-            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList()
+            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
+            ConcurrencyViolation = result.ConcurrencyViolation?.ToClient()
         };
     }
 
@@ -41,7 +43,10 @@ internal static class AppendResultConverters
             CorrelationId = result.CorrelationId,
             SequenceNumbers = result.SequenceNumbers.Select(_ => (EventSequenceNumber)_).ToImmutableList(),
             ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
-            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList()
+            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
+            ConcurrencyViolations = result.ConcurrencyViolations.ToImmutableDictionary(
+                kvp => (EventSourceId)kvp.Key,
+                kvp => kvp.Value.ToClient())
         };
     }
 }

@@ -51,7 +51,7 @@ public record AppendManyResult
     /// <summary>
     /// Gets any concurrency violations that occurred during the operation.
     /// </summary>
-    public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
+    public IDictionary<EventSourceId, ConcurrencyViolation> ConcurrencyViolations { get; init; } = new Dictionary<EventSourceId, ConcurrencyViolation>();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
@@ -69,19 +69,4 @@ public record AppendManyResult
         CorrelationId = correlationId,
         SequenceNumbers = sequenceNumbers.ToImmutableList()
     };
-
-    /// <summary>
-    /// Merges another <see cref="AppendManyResult"/> with this one, creating a new merged result.
-    /// </summary>
-    /// <param name="other">The other <see cref="AppendManyResult"/> to merge.</param>
-    /// <returns>A new <see cref="AppendManyResult"/> that combines the results of both.</returns>
-    public AppendManyResult MergeWith(AppendManyResult other) =>
-        new()
-        {
-            CorrelationId = other.CorrelationId,
-            SequenceNumbers = SequenceNumbers.Concat(other.SequenceNumbers).ToImmutableList(),
-            ConstraintViolations = ConstraintViolations.Concat(other.ConstraintViolations).ToImmutableList(),
-            ConcurrencyViolations = ConcurrencyViolations.Concat(other.ConcurrencyViolations).ToImmutableList(),
-            Errors = Errors.Concat(other.Errors).ToImmutableList()
-        };
 }

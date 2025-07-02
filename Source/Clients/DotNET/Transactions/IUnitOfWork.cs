@@ -70,7 +70,7 @@ public interface IUnitOfWork : IDisposable
     /// Gets any concurrency violations thar occurred in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of <see cref="ConcurrencyViolation"/>.</returns>
-    IEnumerable<ConcurrencyViolation> GetConcurrencyViolations();
+    IDictionary<EventSourceId, ConcurrencyViolation> GetConcurrencyViolations();
 
     /// <summary>
     /// Get any errors that have occurred while attempting to commit in the <see cref="IUnitOfWork"/>.

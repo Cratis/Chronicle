@@ -57,6 +57,9 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     public Task<AppendManyResult> Perform()
     {
         var events = new List<EventForEventSourceId>();
+        var concurrencyScopes = _eventSourceBuilders.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value.ConcurrencyScope);
 
         foreach (var (eventSourceId, operations) in _eventSourceBuilders)
         {
@@ -71,6 +74,6 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                 }));
             }
         }
-        return eventSequence.AppendMany(events);
+        return eventSequence.AppendMany(events, concurrencyScopes: concurrencyScopes);
     }
 }

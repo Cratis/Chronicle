@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Services.Events.Constraints;
+using Cratis.Chronicle.Services.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Services.EventSequences;
 
@@ -23,7 +24,8 @@ internal static class AppendResultConverters
             CorrelationId = result.CorrelationId,
             SequenceNumber = result.SequenceNumber,
             ConstraintViolations = result.ConstraintViolations.Select(_ => _.ToContract()).ToList(),
-            Errors = result.Errors.Select(_ => _.Value).ToList()
+            Errors = result.Errors.Select(_ => _.Value).ToList(),
+            ConcurrencyViolation = result.ConcurrencyViolation?.ToContract()
         };
 
     /// <summary>
@@ -37,6 +39,9 @@ internal static class AppendResultConverters
             CorrelationId = result.CorrelationId,
             SequenceNumbers = result.SequenceNumbers.Select(_ => _.Value).ToList(),
             ConstraintViolations = result.ConstraintViolations.Select(_ => _.ToContract()).ToList(),
-            Errors = result.Errors.Select(_ => _.Value).ToList()
+            Errors = result.Errors.Select(_ => _.Value).ToList(),
+            ConcurrencyViolations = result.ConcurrencyViolations.ToDictionary(
+                kvp => kvp.Key.Value,
+                kvp => kvp.Value.ToContract())
         };
 }

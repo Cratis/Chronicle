@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -12,11 +13,17 @@ public class and_it_has_concurrency_violations : given.a_unit_of_work_with_two_e
     protected override AppendManyResult GetAppendResult() => new()
     {
         CorrelationId = _correlationId,
-        ConcurrencyViolations =
-            [
-                new ConcurrencyViolation(EventSequenceId.Log, new object()),
-                new ConcurrencyViolation(EventSequenceId.Log, new object())
-            ]
+        ConcurrencyViolations = new Dictionary<EventSourceId, ConcurrencyViolation>
+            {
+                {
+                    "event-source-id-1",
+                    new ConcurrencyViolation(42ul, 43ul)
+                },
+                {
+                    "event-source-id-2",
+                    new ConcurrencyViolation(44ul, 45ul)
+                }
+            },
     };
 
     async Task Because() => await _unitOfWork.Commit();

@@ -35,7 +35,7 @@ public record AppendResult
     /// <summary>
     /// Gets whether or not there are any concurrency violations that occurred.
     /// </summary>
-    public bool HasConcurrencyViolations => ConcurrencyViolations.Any();
+    public bool HasConcurrencyViolations => ConcurrencyViolation is not null;
 
     /// <summary>
     /// Gets whether or not there are any errors that occurred.
@@ -48,9 +48,9 @@ public record AppendResult
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
-    /// Gets any concurrency violations that occurred during the operation.
+    /// Gets any concurrency violation that occurred during the operation.
     /// </summary>
-    public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
+    public ConcurrencyViolation? ConcurrencyViolation { get; init; }
 
     /// <summary>
     /// Gets any exception messages that might have occurred.

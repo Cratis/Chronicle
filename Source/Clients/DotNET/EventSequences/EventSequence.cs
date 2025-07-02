@@ -90,7 +90,8 @@ public class EventSequence(
             },
             Content = content.ToJsonString(),
             Causation = causationChain,
-            CausedBy = identity.ToContract()
+            CausedBy = identity.ToContract(),
+            ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.NotSet.ToContract()
         });
 
         return ResolveViolationMessages(response.ToClient());
@@ -120,14 +121,17 @@ public class EventSequence(
             };
         }).ToList();
 
-        return await AppendManyImplementation(eventsToAppend, correlationId ?? correlationIdAccessor.Current);
+        return await AppendManyImplementation(
+            eventsToAppend,
+            correlationId ?? correlationIdAccessor.Current,
+            new Dictionary<EventSourceId, ConcurrencyScope>() { { eventSourceId, concurrencyScope ?? ConcurrencyScope.NotSet } });
     }
 
     /// <inheritdoc/>
     public async Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
-        ConcurrencyScope? concurrencyScope = default)
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -143,7 +147,10 @@ public class EventSequence(
             };
         }).ToList();
 
-        return await AppendManyImplementation(eventsToAppend, correlationId ?? correlationIdAccessor.Current);
+        return await AppendManyImplementation(
+            eventsToAppend,
+            correlationId ?? correlationIdAccessor.Current,
+            concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
     }
 
     /// <inheritdoc/>
@@ -225,7 +232,7 @@ public class EventSequence(
         }
     }
 
-    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend, CorrelationId correlationId)
+    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend, CorrelationId correlationId, IDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes)
     {
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
@@ -237,7 +244,8 @@ public class EventSequence(
             CorrelationId = correlationId,
             Events = eventsToAppend,
             Causation = causationChain,
-            CausedBy = identity.ToContract()
+            CausedBy = identity.ToContract(),
+            ConcurrencyScopes = concurrencyScopes.ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
         });
 
         return ResolveViolationMessages(response.ToClient());

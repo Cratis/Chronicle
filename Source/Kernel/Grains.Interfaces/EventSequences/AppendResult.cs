@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Events.Constraints;
 using Cratis.Chronicle.Grains.EventSequences.Concurrency;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -36,7 +35,7 @@ public class AppendResult
     /// <summary>
     /// Gets whether there are any concurrency violations that occurred.
     /// </summary>
-    public bool HasConcurrencyViolations => ConcurrencyViolation.HasValue;
+    public bool HasConcurrencyViolations => ConcurrencyViolation is not null;
 
     /// <summary>
     /// Gets whether there are any errors that occurred.
@@ -56,7 +55,7 @@ public class AppendResult
     /// <summary>
     /// Gets or sets the concurrency violation that occurred during the operation.
     /// </summary>
-    public Option<ConcurrencyViolation> ConcurrencyViolation { get; init; } = Option<ConcurrencyViolation>.None();
+    public ConcurrencyViolation? ConcurrencyViolation { get; init; }
 
     /// <summary>
     /// Create a successful result.

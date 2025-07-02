@@ -66,7 +66,7 @@ public class UnitOfWork(
     public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _appendManyResult.ConstraintViolations];
 
     /// <inheritdoc/>
-    public IEnumerable<ConcurrencyViolation> GetConcurrencyViolations() => [.. _appendManyResult.ConcurrencyViolations];
+    public IDictionary<EventSourceId, ConcurrencyViolation> GetConcurrencyViolations() => _appendManyResult.ConcurrencyViolations;
 
     /// <inheritdoc/>
     public IEnumerable<object> GetEvents() =>
@@ -84,7 +84,7 @@ public class UnitOfWork(
         {
             var result = await _eventSequenceOperations.Perform();
             _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
-            _appendManyResult = _appendManyResult.MergeWith(result);
+            _appendManyResult = result;
         }
 
         _isCommitted = true;
