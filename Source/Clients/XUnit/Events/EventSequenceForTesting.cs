@@ -55,7 +55,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
-        ConcurrencyScope? concurrencyScope = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
 
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
