@@ -9,7 +9,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Grains.EventSequences.Concurrency;
 
 /// <summary>
-/// Represents an imlementation <see cref="IConcurrencyValidator"/>.
+/// Represents an implementation <see cref="IConcurrencyValidator"/>.
 /// </summary>
 /// <param name="eventSequenceStorage">The <see cref="IEventSequenceStorage"/>.</param>
 public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage) : IConcurrencyValidator
