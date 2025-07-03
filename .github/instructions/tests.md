@@ -63,7 +63,7 @@ public class when_adding : Specification
 
 ## Aspects of same behavior
 
-- Behavior that can have multiple aspects or perspectives of a functionality should have the `when_<action></action>` statement as a folder name, then the specific aspect/perspective/condition would typically be called `and_*.cs` or similar.
+- Behavior that can have multiple aspects or perspectives of a functionality should have the `when_<action>` statement as a folder name, then the specific aspect/perspective/condition would typically be called `and_*.cs` or similar.
 - When multiple aspects, file names would be `and_<aspect>`, but not limited to - use any prepositions that makes sense as well as prefix
 
 ## Behaviors
