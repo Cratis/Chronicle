@@ -79,7 +79,12 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default) => Task.FromResult(EventSequenceNumber.First);
+    public Task<EventSequenceNumber> GetTailSequenceNumber(
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default) => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => Task.FromResult(EventSequenceNumber.First);

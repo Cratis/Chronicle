@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -213,7 +214,27 @@ public class EventSequence(
     public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default) => throw new NotImplementedException();
+    public async Task<EventSequenceNumber> GetTailSequenceNumber(
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default)
+    {
+        var request = new GetTailSequenceNumberRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId?.Value ?? default,
+            EventSourceType = eventSourceType?.Value ?? default,
+            EventStreamType = eventStreamType?.Value ?? default,
+            EventStreamId = eventStreamId?.Value ?? default,
+            EventTypes = eventTypes?.ToContract() ?? []
+        };
+        var sequenceNumber = await _servicesAccessor.Services.EventSequences.GetTailSequenceNumber(request);
+        return sequenceNumber.SequenceNumber;
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();

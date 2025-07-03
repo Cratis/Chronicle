@@ -64,8 +64,17 @@ public interface IEventSequence
     /// Get the sequence number of the last (tail) event in the sequence.
     /// </summary>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. If not specified, it will return the tail sequence number for all event sources.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to get for. If not specified, it will return the tail sequence number for all event source types.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to get for. If not specified, it will return the tail sequence number for all event stream types.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to get for. If not specified, it will return the tail sequence number for all event streams.</param>
+    /// <param name="eventTypes">Optional collection of <see cref="EventType"/> to filter by. If not specified, it will return the tail sequence number for all.</param>
     /// <returns>Tail sequence number.</returns>
-    Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default);
+    Task<EventSequenceNumber> GetTailSequenceNumber(
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default);
 
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence for a specific observer.

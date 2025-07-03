@@ -67,7 +67,13 @@ internal sealed class EventSequences(
     public async Task<GetTailSequenceNumberResponse> GetTailSequenceNumber(GetTailSequenceNumberRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequenceStorage(request);
-        var tail = await eventSequence.GetTailSequenceNumber();
+        var tail = await eventSequence.GetTailSequenceNumber(
+            request.EventTypes.ToChronicle(),
+            request.EventSourceId is null ? null : (EventSourceId)request.EventSourceId,
+            request.EventSourceType is null ? null : (EventSourceType)request.EventSourceType,
+            request.EventStreamId is null ? null : (EventStreamId)request.EventStreamId,
+            request.EventStreamType is null ? null : (EventStreamType)request.EventStreamType);
+
         return new() { SequenceNumber = tail };
     }
 
