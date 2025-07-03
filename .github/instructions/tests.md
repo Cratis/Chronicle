@@ -19,7 +19,7 @@ Keep tests focused, isolated, and descriptive!
 
 ## Base class
 
-- At the root in inheritance, `Specification` must be the base class.
+- At the root of inheritance, `Specification` must be the base class.
 
 ## Test Class Pattern
 
