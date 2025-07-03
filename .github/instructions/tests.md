@@ -6,7 +6,7 @@ Keep tests focused, isolated, and descriptive!
 ## Test Frameworks & Conventions
 
 - **Frameworks:**
-  - Uses [Xunit](https://xunit.net/) for test execution.
+  - Uses [Xunit](https://xunit.net/) as test framework and execution.
   - Uses [NSubstitute](https://nsubstitute.github.io/) for mocking.
   - Uses [Cratis Specifications](https://github.com/Cratis/Specifications/blob/main/README.md) for BDD style specification by example testing.
 
