@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency.for_ConcurrencyVali
 public class and_all_scopes_should_not_be_validated : given.a_concurrency_validator
 {
     ConcurrencyScopes _scopes;
-    ConcurrencyViolations _result;
+    IEnumerable<ConcurrencyViolation> _result;
 
     void Establish()
     {
@@ -25,6 +25,6 @@ public class and_all_scopes_should_not_be_validated : given.a_concurrency_valida
 
     async Task Because() => _result = await _validator.Validate(_scopes);
 
-    [Fact] void should_return_no_violations() => _result.ShouldEqual(ConcurrencyViolations.None);
+    [Fact] void should_return_no_violations() => _result.ShouldBeEmpty();
     [Fact] void should_not_call_storage() => _eventSequenceStorage.DidNotReceive().GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>(), Arg.Any<EventSourceType>(), Arg.Any<EventStreamId>(), Arg.Any<EventStreamType>());
 }

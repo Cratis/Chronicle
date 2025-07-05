@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency.for_ConcurrencyVali
 public class and_no_violations_occur : given.a_concurrency_validator
 {
     ConcurrencyScopes _scopes;
-    ConcurrencyViolations _result;
+    IEnumerable<ConcurrencyViolation> _result;
     EventSourceId _eventSourceId1;
     EventSourceId _eventSourceId2;
 
@@ -41,7 +41,7 @@ public class and_no_violations_occur : given.a_concurrency_validator
 
     async Task Because() => _result = await _validator.Validate(_scopes);
 
-    [Fact] void should_return_no_violations() => _result.HasViolations.ShouldBeFalse();
+    [Fact] void should_return_no_violations() => _result.ShouldBeEmpty();
     [Fact] void should_call_storage_for_first_event_source() => _eventSequenceStorage.Received(1).GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), _eventSourceId1, Arg.Any<EventSourceType>(), Arg.Any<EventStreamId>(), Arg.Any<EventStreamType>());
     [Fact] void should_call_storage_for_second_event_source() => _eventSequenceStorage.Received(1).GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), _eventSourceId2, Arg.Any<EventSourceType>(), Arg.Any<EventStreamId>(), Arg.Any<EventStreamType>());
 }

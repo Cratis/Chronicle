@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency.for_ConcurrencyVali
 public class and_one_violation_occurs : given.a_concurrency_validator
 {
     ConcurrencyScopes _scopes;
-    ConcurrencyViolations _result;
+    IEnumerable<ConcurrencyViolation> _result;
     EventSourceId _eventSourceId1;
     EventSourceId _eventSourceId2;
 
@@ -41,14 +41,14 @@ public class and_one_violation_occurs : given.a_concurrency_validator
 
     async Task Because() => _result = await _validator.Validate(_scopes);
 
-    [Fact] void should_return_one_violation() => _result.Count.ShouldEqual(1);
-    [Fact] void should_have_violation_for_first_event_source() => _result.ContainsKey(_eventSourceId1).ShouldBeTrue();
-    [Fact] void should_not_have_violation_for_second_event_source() => _result.ContainsKey(_eventSourceId2).ShouldBeFalse();
+    [Fact] void should_return_one_violation() => _result.Count().ShouldEqual(1);
+    [Fact] void should_have_violation_for_first_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId1).ShouldBeTrue();
+    [Fact] void should_not_have_violation_for_second_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId1).ShouldBeFalse();
 
     [Fact]
     void should_have_correct_violation_details()
     {
-        var violation = _result[_eventSourceId1];
+        var violation = _result.First(_ => _.EventSourceId == _eventSourceId1);
         violation.ExpectedSequenceNumber.Value.ShouldEqual(42UL);
         violation.ActualSequenceNumber.Value.ShouldEqual(45UL);
     }

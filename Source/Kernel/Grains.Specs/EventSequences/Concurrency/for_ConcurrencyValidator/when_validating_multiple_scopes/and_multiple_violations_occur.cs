@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.EventSequences.Concurrency.for_ConcurrencyVali
 public class and_multiple_violations_occur : given.a_concurrency_validator
 {
     ConcurrencyScopes _scopes;
-    ConcurrencyViolations _result;
+    IEnumerable<ConcurrencyViolation> _result;
     EventSourceId _eventSourceId1;
     EventSourceId _eventSourceId2;
     EventSourceId _eventSourceId3;
@@ -51,8 +51,8 @@ public class and_multiple_violations_occur : given.a_concurrency_validator
 
     async Task Because() => _result = await _validator.Validate(_scopes);
 
-    [Fact] void should_return_two_violations() => _result.Count.ShouldEqual(2);
-    [Fact] void should_have_violation_for_first_event_source() => _result.ContainsKey(_eventSourceId1).ShouldBeTrue();
-    [Fact] void should_not_have_violation_for_second_event_source() => _result.ContainsKey(_eventSourceId2).ShouldBeFalse();
-    [Fact] void should_have_violation_for_third_event_source() => _result.ContainsKey(_eventSourceId3).ShouldBeTrue();
+    [Fact] void should_return_two_violations() => _result.Count().ShouldEqual(2);
+    [Fact] void should_have_violation_for_first_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId1).ShouldBeTrue();
+    [Fact] void should_not_have_violation_for_second_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId2).ShouldBeFalse();
+    [Fact] void should_have_violation_for_third_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId3).ShouldBeTrue();
 }
