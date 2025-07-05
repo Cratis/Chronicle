@@ -51,7 +51,7 @@ public record AppendManyResult
     /// <summary>
     /// Gets any concurrency violations that occurred during the operation.
     /// </summary>
-    public IDictionary<EventSourceId, ConcurrencyViolation> ConcurrencyViolations { get; init; } = new Dictionary<EventSourceId, ConcurrencyViolation>();
+    public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
 
     /// <summary>
     /// Gets any exception messages that might have occurred.

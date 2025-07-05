@@ -43,5 +43,5 @@ public class AppendManyResponse
     /// Gets concurrency violations.
     /// </summary>
     [ProtoMember(5, IsRequired = true)]
-    public IDictionary<string, ConcurrencyViolation> ConcurrencyViolations { get; set; } = new Dictionary<string, ConcurrencyViolation>();
+    public IList<ConcurrencyViolation> ConcurrencyViolations { get; set; } = [];
 }

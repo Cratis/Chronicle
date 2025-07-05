@@ -31,24 +31,24 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage) : 
 
         return tailSequenceNumber <= scope.SequenceNumber
             ? Option<ConcurrencyViolation>.None()
-            : new ConcurrencyViolation(scope.SequenceNumber, tailSequenceNumber);
+            : new ConcurrencyViolation(eventSourceId, scope.SequenceNumber, tailSequenceNumber);
     }
 
     /// <inheritdoc/>
-    public async ValueTask<ConcurrencyViolations> Validate(ConcurrencyScopes scopes)
+    public async ValueTask<IEnumerable<ConcurrencyViolation>> Validate(ConcurrencyScopes scopes)
     {
-        if (scopes.All(_ => !_.Value.ShouldBeValidated))
+        if (scopes.Scopes.All(_ => !_.Value.ShouldBeValidated))
         {
-            return ConcurrencyViolations.None;
+            return [];
         }
 
-        var validationTasks = scopes.Select(async eventSourceIdAndScope =>
+        var validationTasks = scopes.Scopes.Select(async eventSourceIdAndScope =>
         {
             var (eventSourceId, scope) = eventSourceIdAndScope;
-            return (EventSourceId: eventSourceId, Result: await Validate(eventSourceId, scope));
+            return await Validate(eventSourceId, scope);
         });
         var validations = await Task.WhenAll(validationTasks);
-        var violations = validations.Where(validation => validation.Result.HasValue);
-        return new ConcurrencyViolations(violations.ToDictionary(kvp => kvp.EventSourceId, kvp => kvp.Result.AsT0));
+        var violations = validations.Where(validation => validation.IsT0).Select(validation => validation.AsT0);
+        return violations.ToArray();
     }
 }

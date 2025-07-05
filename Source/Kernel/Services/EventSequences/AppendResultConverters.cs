@@ -40,8 +40,6 @@ internal static class AppendResultConverters
             SequenceNumbers = result.SequenceNumbers.Select(_ => _.Value).ToList(),
             ConstraintViolations = result.ConstraintViolations.Select(_ => _.ToContract()).ToList(),
             Errors = result.Errors.Select(_ => _.Value).ToList(),
-            ConcurrencyViolations = result.ConcurrencyViolations.ToDictionary(
-                kvp => kvp.Key.Value,
-                kvp => kvp.Value.ToContract())
+            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToContract()).ToList()
         };
 }

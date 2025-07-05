@@ -24,6 +24,6 @@ public interface IConcurrencyValidator
     /// Validates multiple <see cref="ConcurrencyScopes"/>.
     /// </summary>
     /// <param name="scopes">The <see cref="ConcurrencyScopes"/>.</param>
-    /// <returns><see cref="ConcurrencyViolations"/>.</returns>
-    ValueTask<ConcurrencyViolations> Validate(ConcurrencyScopes scopes);
+    /// <returns>Collection of <see cref="ConcurrencyViolation"/>.</returns>
+    ValueTask<IEnumerable<ConcurrencyViolation>> Validate(ConcurrencyScopes scopes);
 }

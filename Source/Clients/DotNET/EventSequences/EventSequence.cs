@@ -257,7 +257,7 @@ public class EventSequence(
     {
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
-        var response = await _servicesAccessor.Services.EventSequences.AppendMany(new()
+        var request = new AppendManyRequest()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -267,7 +267,8 @@ public class EventSequence(
             Causation = causationChain,
             CausedBy = identity.ToContract(),
             ConcurrencyScopes = concurrencyScopes.ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
-        });
+        };
+        var response = await _servicesAccessor.Services.EventSequences.AppendMany(request);
 
         return ResolveViolationMessages(response.ToClient());
     }

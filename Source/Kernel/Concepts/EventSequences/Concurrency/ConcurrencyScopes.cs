@@ -9,10 +9,13 @@ namespace Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 /// Represents a concurrency scope for an event sequence append many operation.
 /// </summary>
 /// <param name="scopes">The scopes.</param>
-[GenerateSerializer, Alias(nameof(ConcurrencyScopes))]
 public class ConcurrencyScopes(IDictionary<EventSourceId, ConcurrencyScope> scopes)
-    : Dictionary<EventSourceId, ConcurrencyScope>(scopes)
 {
+    /// <summary>
+    /// Gets the scopes.
+    /// </summary>
+    public IDictionary<EventSourceId, ConcurrencyScope> Scopes { get; } = new Dictionary<EventSourceId, ConcurrencyScope>(scopes);
+
     /// <summary>
     /// Gets the <see cref="ConcurrencyScope"/> for the <see cref="EventSourceId"/>.
     /// If there is no <see cref="ConcurrencyScope"/> then <see cref="ConcurrencyScope.None"/> will be returned.
@@ -20,5 +23,5 @@ public class ConcurrencyScopes(IDictionary<EventSourceId, ConcurrencyScope> scop
     /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
     /// <returns>The <see cref="ConcurrencyScope"/>.</returns>
     public ConcurrencyScope GetFor(EventSourceId eventSourceId) =>
-        TryGetValue(eventSourceId, out var scope) ? scope : ConcurrencyScope.None;
+        Scopes.TryGetValue(eventSourceId, out var scope) ? scope : ConcurrencyScope.None;
 }

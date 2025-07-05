@@ -215,7 +215,7 @@ public class EventSequence(
         }
 
         var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
-        if (concurrencyViolations.HasViolations)
+        if (concurrencyViolations.Any())
         {
             return AppendManyResult.Failed(correlationId, concurrencyViolations);
         }

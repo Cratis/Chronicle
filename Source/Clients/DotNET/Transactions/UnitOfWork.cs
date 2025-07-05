@@ -66,7 +66,7 @@ public class UnitOfWork(
     public IEnumerable<ConstraintViolation> GetConstraintViolations() => [.. _appendManyResult.ConstraintViolations];
 
     /// <inheritdoc/>
-    public IDictionary<EventSourceId, ConcurrencyViolation> GetConcurrencyViolations() => _appendManyResult.ConcurrencyViolations;
+    public IEnumerable<ConcurrencyViolation> GetConcurrencyViolations() => _appendManyResult.ConcurrencyViolations;
 
     /// <inheritdoc/>
     public IEnumerable<object> GetEvents() =>
