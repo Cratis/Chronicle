@@ -40,7 +40,8 @@ public class UnitOfWorkIncomingCallFilter(
                 eventStore.GetEventSequence(EventSequenceId.Log),
                 aggregate,
                 unitOfWork,
-                aggregateContextHolder.Context?.NextSequenceNumber ?? EventSequenceNumber.First);
+                aggregateContextHolder.Context?.NextSequenceNumber ?? EventSequenceNumber.First,
+                aggregateContextHolder.Context?.TailEventSequenceNumber ?? EventSequenceNumber.Unavailable);
 
             await aggregateContextHolder.SetContext(aggregateRootContext);
         }

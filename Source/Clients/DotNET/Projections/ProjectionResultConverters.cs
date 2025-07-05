@@ -23,7 +23,8 @@ internal static class ProjectionResultConverters
         new(
             JsonSerializer.Deserialize<TModel>(result.Model, Globals.JsonSerializerOptions)!,
             result.AffectedProperties.Select(_ => (PropertyPath)_),
-            result.ProjectedEventsCount);
+            result.ProjectedEventsCount,
+            result.LastHandledEventSequenceNumber);
 
     /// <summary>
     /// Convert to client representation.
@@ -35,7 +36,8 @@ internal static class ProjectionResultConverters
         new(
             JsonSerializer.Deserialize(result.Model, modelType, Globals.JsonSerializerOptions)!,
             result.AffectedProperties.Select(_ => (PropertyPath)_),
-            result.ProjectedEventsCount);
+            result.ProjectedEventsCount,
+            result.LastHandledEventSequenceNumber);
 
     /// <summary>
     /// Convert to the raw client representation.
@@ -46,5 +48,6 @@ internal static class ProjectionResultConverters
         new(
             (JsonObject)JsonNode.Parse(result.Model)!,
             result.AffectedProperties.Select(_ => (PropertyPath)_),
-            result.ProjectedEventsCount);
+            result.ProjectedEventsCount,
+            result.LastHandledEventSequenceNumber);
 }

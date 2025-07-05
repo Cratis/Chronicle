@@ -87,7 +87,7 @@ public class ImmediateProjection(
             {
                 logger.UsingCachedModelInstance();
                 var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _projection!.Model.Schema);
-                return new(initialStateAsJson, [], 0);
+                return new(initialStateAsJson, [], 0, tail);
             }
 
             if (!_projection!.EventTypes.Any())
@@ -119,7 +119,7 @@ public class ImmediateProjection(
 
             _initialState = state;
             var jsonObject = expandoObjectConverter.ToJsonObject(state, _projection!.Model.Schema);
-            return new(jsonObject, affectedProperties, projectedEventsCount);
+            return new(jsonObject, affectedProperties, projectedEventsCount, _lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
         {
@@ -147,7 +147,7 @@ public class ImmediateProjection(
         var result = await HandleEvents(affectedProperties, initialState, eventsToApply);
         _initialState = result.State;
         var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _projection!.Model.Schema);
-        return new(jsonObject, affectedProperties, result.ProjectedEventsCount);
+        return new(jsonObject, affectedProperties, result.ProjectedEventsCount, result.Tail);
     }
 
     /// <inheritdoc/>
@@ -164,10 +164,11 @@ public class ImmediateProjection(
             : new ExpandoObject());
     }
 
-    async Task<(int ProjectedEventsCount, ExpandoObject State)> HandleEvents(HashSet<PropertyPath> affectedProperties, ExpandoObject initialState, AppendedEvent[] events)
+    async Task<(int ProjectedEventsCount, ExpandoObject State, EventSequenceNumber Tail)> HandleEvents(HashSet<PropertyPath> affectedProperties, ExpandoObject initialState, AppendedEvent[] events)
     {
         var projectedEventsCount = 0;
         var state = initialState;
+        var eventSequenceNumber = EventSequenceNumber.Unavailable;
 
         foreach (var @event in events)
         {
@@ -183,12 +184,13 @@ public class ImmediateProjection(
 
             await HandleEventFor(_projection!, context);
 
+            eventSequenceNumber = @event.Metadata.SequenceNumber;
             projectedEventsCount++;
 
             state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState, affectedProperties);
         }
 
-        return (projectedEventsCount, state);
+        return (projectedEventsCount, state, eventSequenceNumber);
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)

@@ -38,7 +38,8 @@ public static class AggregateRootTestFactory
             eventSequence,
             aggregateRoot,
             unitOfWork,
-            EventSequenceNumber.First);
+            EventSequenceNumber.First,
+            EventSequenceNumber.Unavailable);
 
         var mutator = new AggregateRootMutatorForTesting();
         var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence);
@@ -72,7 +73,8 @@ public static class AggregateRootTestFactory
             eventSequence,
             aggregateRoot,
             unitOfWork,
-            EventSequenceNumber.First);
+            EventSequenceNumber.First,
+            EventSequenceNumber.Unavailable);
 
         var mutator = new AggregateRootMutatorForTesting();
         var mutation = new AggregateRootMutation(aggregateRootContext, mutator, eventSequence);

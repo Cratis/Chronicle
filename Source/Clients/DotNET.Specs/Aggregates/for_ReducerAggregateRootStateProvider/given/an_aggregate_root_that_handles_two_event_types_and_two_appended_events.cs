@@ -8,19 +8,19 @@ namespace Cratis.Chronicle.Aggregates.for_ReducerAggregateRootStateProvider.give
 
 public class an_aggregate_root_that_handles_two_event_types_and_two_appended_events : an_aggregate_root_that_handles_two_event_types
 {
-    protected IImmutableList<AppendedEvent> events;
+    protected IImmutableList<AppendedEvent> _events;
 
     void Establish()
     {
-        events = new[]
+        _events = new[]
         {
-            AppendedEvent.EmptyWithEventType(FirstEventType.EventTypeId),
-            AppendedEvent.EmptyWithEventType(SecondEventType.EventTypeId)
+            AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(FirstEventType.EventTypeId, 42),
+            AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(SecondEventType.EventTypeId, 47)
         }.ToImmutableList();
         _eventSequence.GetForEventSourceIdAndEventTypes(
             _eventSourceId,
             _eventTypes,
             _aggregateRootContext.EventStreamType,
-            _aggregateRootContext.EventStreamId).Returns(events);
+            _aggregateRootContext.EventStreamId).Returns(_events);
     }
 }
