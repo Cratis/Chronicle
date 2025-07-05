@@ -17,6 +17,7 @@ internal static class ConcurrencyViolationConverters
     /// <returns>Converted client version.</returns>
     internal static ConcurrencyViolation ToClient(this Contracts.EventSequences.Concurrency.ConcurrencyViolation violation) =>
         new(
+            EventSourceId: violation.EventSourceId,
             ExpectedEventSequenceNumber: (EventSequenceNumber)violation.ExpectedSequenceNumber,
             ActualEventSequenceNumber: (EventSequenceNumber)violation.ActualSequenceNumber);
 }

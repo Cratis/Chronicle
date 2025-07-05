@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// <summary>
 /// Represents a concurrency violation that occurred during an append operation.
 /// </summary>
+/// <param name="EventSourceId">The <see cref="EventSourceId"/> of the event source where the violation occurred.</param>
 /// <param name="ExpectedEventSequenceNumber">The expected <see cref="EventSequenceNumber"/>.</param>
 /// <param name="ActualEventSequenceNumber">The actual <see cref="EventSequenceNumber"/>.</param>
-public record ConcurrencyViolation(EventSequenceNumber ExpectedEventSequenceNumber, EventSequenceNumber ActualEventSequenceNumber);
+public record ConcurrencyViolation(EventSourceId EventSourceId, EventSequenceNumber ExpectedEventSequenceNumber, EventSequenceNumber ActualEventSequenceNumber);
