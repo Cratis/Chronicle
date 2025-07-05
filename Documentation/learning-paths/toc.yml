@@ -1,15 +1,15 @@
 - name: Running Chronicle in local development
-  href:
+  href: ./running-chronicle.md
 - name: Get started
   href: ./get-started/toc.yml
 - name: Create an event type
-  href:
+  href: event-types.md
 - name: Create and append an event
-  href:
+  href: appending-events.md
 - name: Use a Reactor for reacting to events in the event log
-  href:
+  href: reactors.md
 - name: Use a Reducer for creating read models
-  href:
+  href: reducers.md
 - name: Use a Projection for creating read models
   href: ./projections/toc.yml
 - name: Using rules
