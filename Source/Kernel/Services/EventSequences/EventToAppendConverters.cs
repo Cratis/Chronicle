@@ -19,6 +19,11 @@ internal static class EventToAppendConverters
     /// </summary>
     /// <param name="eventToAppend"><see cref="Contracts.Events.EventToAppend"/> to convert from.</param>
     /// <returns>A converted <see cref="EventToAppend"/>.</returns>
+    /// <remarks>
+    /// Note: This method uses JsonSerializer directly for basic data transformation between contracts and Kernel.
+    /// For client-side event deserialization with proper event handling,
+    /// use the client-side EventSerializer. Consider implementing Kernel-side event serialization for consistency.
+    /// </remarks>
     public static EventToAppend ToChronicle(this Contracts.Events.EventToAppend eventToAppend) =>
         new(
             eventToAppend.EventSourceType,
