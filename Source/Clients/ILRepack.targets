@@ -66,7 +66,7 @@
         LogFile="$(OutputPath)/ILRepack.log"
         TargetKind="SameAsPrimaryAssembly"/>
 
-    <Exec Command="dotnet run -f net9.0 $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
-    <Exec Command="dotnet run -f net9.0 $(TargetPath) &quot;$(InternalAssemblyPaths)&quot; &quot;$(ExplicitPublicTypes)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
+    <Exec Command="dotnet run -f $(TargetFramework) $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
+    <Exec Command="dotnet run -f $(TargetFramework) $(TargetPath) &quot;$(InternalAssemblyPaths)&quot; &quot;$(ExplicitPublicTypes)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
   </Target>
 </Project>
