@@ -86,7 +86,10 @@ public class ReducerInvoker : IReducerInvoker
                         // Asynchronous method
                         await task;
 
-                        if (task.GetType() == typeof(Task))
+                        if (task.GetType() == typeof(Task) ||
+                            (task.GetType().IsGenericType &&
+                             task.GetType().GetGenericTypeDefinition() == typeof(Task<>) &&
+                             task.GetType().GetGenericArguments()[0].Name == "VoidTaskResult"))
                         {
                             // Task (void) - indicates deletion
                             initialReadModelContent = null;
