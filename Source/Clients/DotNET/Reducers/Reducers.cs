@@ -48,10 +48,30 @@ public class Reducers(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<Reducers> logger) : IReducers
 {
+#if NET9_0
+    static readonly Lock _registerLock = new();
+#else
+    static readonly object _registerLock = new();
+#endif
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     IEnumerable<Type> _aggregateRootStateTypes = [];
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
+    
+    bool _registered;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Reducers"/> class.
+    /// </summary>
+    public Reducers()
+    {
+        eventStore.Connection.Lifecycle.OnConnected += Register;
+        eventStore.Connection.Lifecycle.OnDisconnected += () =>
+        {
+            _registered = false;
+            return Task.CompletedTask;
+        };
+    }
 
     /// <inheritdoc/>
     public Task Discover()
@@ -77,11 +97,25 @@ public class Reducers(
     /// <inheritdoc/>
     public async Task Register()
     {
-        logger.RegisterReducers();
-
-        foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
+        if (_registered)
         {
-            RegisterReducer(handler);
+            return;
+        }
+
+        lock (_registerLock)
+        {
+            if (_registered)
+            {
+                return;
+            }
+
+            logger.RegisterReducers();
+
+            foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
+            {
+                RegisterReducer(handler);
+            }
+            _registered = true;
         }
         await Task.CompletedTask;
     }
