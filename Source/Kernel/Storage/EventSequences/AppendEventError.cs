@@ -6,12 +6,12 @@ using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Storage.EventSequences;
 
 /// <summary>
-/// The different append event result error types.
+/// Base class for append event errors.
 /// </summary>
-public enum AppendEventError
-{
-    /// <summary>
-    /// The <see cref="EventSequenceNumber"/> was duplicated.
-    /// </summary>
-    DuplicateEventSequenceNumber = 0
-}
+public abstract record AppendEventError;
+
+/// <summary>
+/// Error indicating a duplicate event sequence number was encountered.
+/// </summary>
+/// <param name="NextAvailableSequenceNumber">The next available sequence number that can be used.</param>
+public record DuplicateEventSequenceNumberError(EventSequenceNumber NextAvailableSequenceNumber) : AppendEventError;

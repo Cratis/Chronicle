@@ -151,7 +151,14 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            return AppendEventError.DuplicateEventSequenceNumber;
+            // Get the highest sequence number in the collection and add 1 to get the next available
+            var highest = await _collection.Find(FilterDefinition<Event>.Empty)
+                                          .SortByDescendingSequenceNumber()
+                                          .Limit(1)
+                                          .SingleOrDefaultAsync()
+                                          .ConfigureAwait(false);
+            var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
+            return new DuplicateEventSequenceNumberError(nextAvailableSequenceNumber);
         }
     }
 
