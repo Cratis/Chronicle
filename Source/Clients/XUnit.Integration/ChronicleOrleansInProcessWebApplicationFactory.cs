@@ -67,8 +67,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 silo
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
-                        options => options.EventStoreName = Constants.EventStore,
-                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
+                        options => options.EventStoreName = fixture.GetEventStoreName(),
+                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, fixture.GetEventStoreName()));
             })
             .UseConsoleLifetime();
 

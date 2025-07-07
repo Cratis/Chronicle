@@ -65,7 +65,7 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     /// <summary>
     /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
     /// </summary>
-    internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
+    internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(GetEventStoreName());
 
     /// <summary>
     /// Sets the name of the fixture.
@@ -114,5 +114,11 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     /// </summary>
     /// <param name="id">The event sequence ID.</param>
     /// <returns>The <see cref="EventSequenceKey"/>.</returns>
-    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
+    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, GetEventStoreName(), Concepts.EventStoreNamespaceName.Default);
+
+    /// <summary>
+    /// Gets the event store name for this fixture.
+    /// </summary>
+    /// <returns>The event store name.</returns>
+    string GetEventStoreName();
 }
