@@ -68,7 +68,7 @@ jobs:
         run: dotnet publish -c Release -f net9.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
 
   dotnet-arm64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm64
 
     steps:
       - name: Checkout code
