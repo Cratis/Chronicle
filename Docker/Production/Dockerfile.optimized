@@ -1,0 +1,61 @@
+# syntax=docker/dockerfile:1
+
+####################################
+# Cratis Chronicle Server
+# Multi-stage optimized build
+####################################
+
+# Build stage - use full SDK for building
+FROM mcr.microsoft.com/dotnet/sdk:9.0.100-bookworm-slim AS build
+WORKDIR /src
+
+# Copy project files first for better layer caching
+COPY Directory.Build.props Directory.Packages.props global.json ./
+COPY Source/Kernel/Server/Server.csproj Source/Kernel/Server/
+COPY Source/ Source/
+
+# Restore dependencies
+RUN dotnet restore Source/Kernel/Server/Server.csproj
+
+# Build and publish optimized application
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then ARCH="x64"; else ARCH="arm64"; fi && \
+    dotnet publish Source/Kernel/Server/Server.csproj \
+    -c Release \
+    -r linux-$ARCH \
+    -o /app \
+    --no-restore \
+    --self-contained true \
+    -p:PublishTrimmed=true \
+    -p:PublishSingleFile=true \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
+    -p:DebugType=None \
+    -p:DebugSymbols=false \
+    -p:PublishReadyToRun=false \
+    -p:RunCodeAnalysis=false && \
+    # Remove unnecessary files
+    find /app -name "*.pdb" -delete && \
+    find /app -name "*.xml" -delete && \
+    find /app -name "*.Development.*" -delete && \
+    rm -rf /app/runtimes/*/native/*-symbols.* && \
+    rm -rf /app/cs /app/de /app/es /app/fr /app/it /app/ja /app/ko /app/pl /app/pt* /app/ru /app/tr /app/zh* && \
+    rm -rf /app/ar /app/az /app/bg /app/bn* /app/da /app/el /app/fa /app/fi* /app/he /app/hr /app/hu /app/hy /app/id /app/is /app/ku /app/lv /app/ms* /app/mt /app/nb* /app/nl /app/ro /app/sk /app/sl /app/sr* /app/sv /app/th* /app/uk /app/uz* /app/vi
+
+# Runtime stage - use distroless for minimal attack surface
+FROM gcr.io/distroless/base-debian12:nonroot
+ARG VERSION
+
+WORKDIR /app
+
+# Copy application from build stage
+COPY --from=build /app .
+
+# Copy pre-built workbench (built outside Docker)
+COPY ./Source/Workbench/Web/wwwroot wwwroot
+
+# Create non-root user and set ownership
+USER nonroot:nonroot
+
+EXPOSE 8080 11111 30000 35000
+
+ENTRYPOINT ["./Cratis.Chronicle.Server"]

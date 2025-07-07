@@ -12,3 +12,47 @@ Dockerfile
 **/Dockerfile
 appsettings.json
 appsettings.Development.json
+
+# Git and development files
+.git
+.gitignore
+.gitattributes
+README.md
+*.md
+LICENSE
+
+# IDE files
+*.sln.DotSettings*
+omnisharp.json
+.vs/
+.idea/
+
+# Test and spec files
+**/*.Specs/
+Integration/
+**/Tests/
+**/*.Tests/
+specs.runsettings
+integration.runsettings
+
+# Development tools
+dotnet-install.sh
+dockerize.sh
+
+# Temporary and cache files
+**/tmp/
+**/.tmp/
+**/.cache/
+**/temp/
+
+# Documentation
+Documentation/
+*.pdf
+*.png
+*.svg
+logo.*
+full-logo.*
+
+# Nuget packages
+**/packages/
+**/.nuget/

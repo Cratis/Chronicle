@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+
+####################################
+# Cratis Chronicle Server
+# Optimized production image with minimal layers
+####################################
+
+FROM mcr.microsoft.com/dotnet/runtime:9.0.0-alpine3.20 AS optimized
+ARG CONFIGURATION=Release
+ARG VERSION
+
+WORKDIR /app
+
+EXPOSE 8080 11111 30000 35000
+
+# Copy and process files in minimal layers
+COPY Docker/copy-server-files.sh ./copy-server-files.sh
+COPY ./Source/Kernel/Server/out ./out
+COPY ./Source/Workbench/Web/wwwroot wwwroot
+
+# Optimize everything in one layer to minimize image size
+RUN chmod +x ./copy-server-files.sh && \
+    # Copy architecture-specific files
+    if [ "$(uname -m)" = "x86_64" ]; then ARCH_FOLDER="x64"; else ARCH_FOLDER="arm64"; fi && \
+    cp ./out/$ARCH_FOLDER/*.dll . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/*.json . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/*.so . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/Cratis.Chronicle.Server . 2>/dev/null || true && \
+    # Remove development and debug files
+    rm -f appsettings.Development.json chronicle.json && \
+    find . -name "*.pdb" -delete && \
+    find . -name "*.xml" -delete && \
+    # Remove documentation assemblies to save space
+    rm -f Microsoft.CodeAnalysis*.dll Swashbuckle*.dll System.ComponentModel.Composition.dll && \
+    # Remove unused locale directories
+    find . -maxdepth 1 -type d -name "[a-z][a-z]" -exec rm -rf {} + && \
+    find . -maxdepth 1 -type d -name "[a-z][a-z]-*" -exec rm -rf {} + && \
+    # Clean up build artifacts
+    rm -rf ./out ./copy-server-files.sh && \
+    # Create non-root user
+    addgroup -g 1000 chronicle && \
+    adduser -D -s /bin/sh -u 1000 -G chronicle chronicle && \
+    chown -R chronicle:chronicle /app
+
+USER chronicle
+
+ENTRYPOINT ["./Cratis.Chronicle.Server"]
