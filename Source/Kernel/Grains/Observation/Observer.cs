@@ -13,6 +13,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -112,7 +113,17 @@ public partial class Observer(
 
         logger.Subscribing();
 
-        State = State with { Type = type, EventTypes = eventTypes };
+        var isReplayable = true;
+        object? actualSubscriberArgs = subscriberArgs;
+
+        // Check if subscriberArgs contains IsReplayable information
+        if (subscriberArgs is ReactorObserverSubscriptionArgs reactorArgs)
+        {
+            isReplayable = reactorArgs.IsReplayable;
+            actualSubscriberArgs = reactorArgs.ConnectedClient;
+        }
+
+        State = State with { Type = type, EventTypes = eventTypes, IsReplayable = isReplayable };
 
         _subscription = new(
             _observerId,
@@ -120,7 +131,8 @@ public partial class Observer(
             eventTypes,
             typeof(TObserverSubscriber),
             siloAddress,
-            subscriberArgs);
+            actualSubscriberArgs,
+            isReplayable);
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())

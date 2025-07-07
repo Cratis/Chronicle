@@ -13,6 +13,11 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Replay()
     {
+        if (!State.IsReplayable)
+        {
+            return;
+        }
+
         if (State.RunningState != ObserverRunningState.Replaying)
         {
             await TransitionTo<Replay>();
@@ -25,6 +30,11 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber)
     {
+        if (!State.IsReplayable)
+        {
+            return;
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, State.Type, partition, EventSequenceNumber.First, sequenceNumber, State.EventTypes));

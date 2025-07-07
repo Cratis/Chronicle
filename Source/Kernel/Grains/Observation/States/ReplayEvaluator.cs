@@ -24,6 +24,11 @@ public class ReplayEvaluator(
     /// <inheritdoc/>
     public async Task<bool> Evaluate(ReplayEvaluationContext context)
     {
+        if (!context.State.IsReplayable)
+        {
+            return false;
+        }
+
         if (!NeedsToReplay(context))
         {
             return false;
