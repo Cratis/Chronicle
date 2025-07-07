@@ -82,6 +82,10 @@
         <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
         <PackageVersion Include="Grpc.Net.Client" Version="2.71.0" />
         <PackageVersion Include="mongodb.driver" Version="3.4.0" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.6" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.6" />
+        <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.5" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.1" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="9.0.0" />
         <PackageVersion Include="automapper" Version="14.0.0" />
