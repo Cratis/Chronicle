@@ -124,8 +124,19 @@ public class Sink(
 
     async Task EnsureTableExists()
     {
-        var createTableSql = schemaGenerator.GenerateCreateTableSql(model);
-        await dbContext.Database.ExecuteSqlRawAsync(createTableSql);
+        var modelManager = new DynamicModelManager(dbContext, GetStorageOptions());
+        await modelManager.EnsureProjectionTableExists(model);
+    }
+
+    SqlStorageOptions GetStorageOptions()
+    {
+        // In a real implementation, this would be injected
+        // For now, we'll create a basic configuration
+        return new SqlStorageOptions
+        {
+            ProviderType = SqlProviderType.SqlServer, // This should be configurable
+            Schema = "dbo"
+        };
     }
 
     async Task DeleteRecord(Key key)
