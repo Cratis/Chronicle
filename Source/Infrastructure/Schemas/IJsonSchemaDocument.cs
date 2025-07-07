@@ -23,7 +23,7 @@ public interface IJsonSchemaDocument
     /// <summary>
     /// Gets extension data for the schema.
     /// </summary>
-    IDictionary<string, object?> ExtensionData { get; }
+    IDictionary<string, object?> ExtensionData { get; set; }
 
     /// <summary>
     /// Gets the properties defined in this schema.

@@ -23,6 +23,7 @@ public class DotNet9JsonSchemaDocument : IJsonSchemaDocument
         _schema = schema;
         _extensionData = new Dictionary<string, object?>();
         _properties = new Dictionary<string, IJsonSchemaProperty>();
+        ExtensionData = _extensionData;
 
         ParseSchema();
     }
@@ -34,7 +35,7 @@ public class DotNet9JsonSchemaDocument : IJsonSchemaDocument
     public string ToJson() => _schema.ToString();
 
     /// <inheritdoc/>
-    public IDictionary<string, object?> ExtensionData => _extensionData;
+    public IDictionary<string, object?> ExtensionData { get; set; }
 
     /// <inheritdoc/>
     public IDictionary<string, IJsonSchemaProperty> Properties => _properties;

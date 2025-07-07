@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Strings;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
@@ -10,9 +9,9 @@ public class when_getting_flattened_properties_for_class_without_inheritance : g
 {
     record SimpleType(int SomeInteger, string SomeString);
 
-    JsonSchema schema;
+    IJsonSchemaDocument schema;
 
-    IEnumerable<JsonSchemaProperty> result;
+    IEnumerable<IJsonSchemaProperty> result;
 
     void Establish() => schema = generator.Generate(typeof(SimpleType));
 
