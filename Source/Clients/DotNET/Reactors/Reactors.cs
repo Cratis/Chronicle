@@ -163,6 +163,27 @@ public class Reactors : IReactors
         return handler.GetState();
     }
 
+    /// <inheritdoc/>
+    public Task Replay<TReactor>()
+        where TReactor : IReactor
+    {
+        var reactorType = typeof(TReactor);
+        var handler = _handlers[reactorType];
+        return Replay(handler.Id);
+    }
+
+    /// <inheritdoc/>
+    public Task Replay(ReactorId reactorId)
+    {
+        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ObserverId = reactorId,
+            EventSequenceId = string.Empty
+        });
+    }
+
     static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
