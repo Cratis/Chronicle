@@ -56,16 +56,16 @@ public class ChangesetConverter(
     {
         var tableName = GetTableName();
         var keyColumnName = GetKeyColumnName();
-        
+
         // For now, we'll serialize the entire state as JSON
         // In a more sophisticated implementation, we'd map individual properties to columns
         var jsonData = System.Text.Json.JsonSerializer.Serialize(state);
-        
-        var sql = $@"
-            INSERT INTO {tableName} ({keyColumnName}, Data, LastUpdated)
-            VALUES (@key, @data, @lastUpdated)";
-            
-        return new SqlOperation(sql, key.Value, jsonData, DateTime.UtcNow);
+
+        var sql = @"
+            INSERT INTO {0} ({1}, Data, LastUpdated)
+            VALUES (@key, @data, @lastUpdated)".Replace("{0}", tableName).Replace("{1}", keyColumnName);
+
+        return SqlOperation.Create(sql, key.Value, jsonData, DateTime.UtcNow);
     }
 
     SqlOperation? GenerateUpdateSqlForChange(Key key, Change change)
@@ -86,17 +86,17 @@ public class ChangesetConverter(
     {
         var tableName = GetTableName();
         var keyColumnName = GetKeyColumnName();
-        
+
         // For simplicity, we'll update the entire JSON blob
         // In practice, we might want to update specific columns based on the properties changed
         var jsonData = System.Text.Json.JsonSerializer.Serialize(propertiesChanged.State);
-        
-        var sql = $@"
-            UPDATE {tableName} 
+
+        var sql = @"
+            UPDATE {0} 
             SET Data = @data, LastUpdated = @lastUpdated
-            WHERE {keyColumnName} = @key";
-            
-        return new SqlOperation(sql, jsonData, DateTime.UtcNow, key.Value);
+            WHERE {1} = @key".Replace("{0}", tableName).Replace("{1}", keyColumnName);
+
+        return SqlOperation.Create(sql, jsonData, DateTime.UtcNow, key.Value);
     }
 
     SqlOperation GenerateUpdateForChildAdded(Key key, ChildAdded childAdded)
@@ -105,13 +105,13 @@ public class ChangesetConverter(
         // For now, we'll treat it as a general update
         var tableName = GetTableName();
         var keyColumnName = GetKeyColumnName();
-        
-        var sql = $@"
-            UPDATE {tableName} 
+
+        var sql = @"
+            UPDATE {0} 
             SET LastUpdated = @lastUpdated
-            WHERE {keyColumnName} = @key";
-            
-        return new SqlOperation(sql, DateTime.UtcNow, key.Value);
+            WHERE {1} = @key".Replace("{0}", tableName).Replace("{1}", keyColumnName);
+
+        return SqlOperation.Create(sql, DateTime.UtcNow, key.Value);
     }
 
     SqlOperation GenerateUpdateForChildRemoved(Key key, ChildRemoved childRemoved)
@@ -119,18 +119,18 @@ public class ChangesetConverter(
         // Similar to child added - would need JSON manipulation
         var tableName = GetTableName();
         var keyColumnName = GetKeyColumnName();
-        
-        var sql = $@"
-            UPDATE {tableName} 
+
+        var sql = @"
+            UPDATE {0} 
             SET LastUpdated = @lastUpdated
-            WHERE {keyColumnName} = @key";
-            
-        return new SqlOperation(sql, DateTime.UtcNow, key.Value);
+            WHERE {1} = @key".Replace("{0}", tableName).Replace("{1}", keyColumnName);
+
+        return SqlOperation.Create(sql, DateTime.UtcNow, key.Value);
     }
 
     string GetTableName()
     {
-        return $"projection_{model.Name.Value.Replace("-", "_").Replace(".", "_")}";
+        return $"projection_{model.Name.Value.Replace('-', '_').Replace('.', '_')}";
     }
 
     string GetKeyColumnName()

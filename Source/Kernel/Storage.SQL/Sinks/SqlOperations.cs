@@ -19,10 +19,3 @@ public record SqlOperations(IEnumerable<SqlOperation> Operations)
     /// </summary>
     public static readonly SqlOperations Empty = new([]);
 }
-
-/// <summary>
-/// Represents a single SQL operation.
-/// </summary>
-/// <param name="Sql">The SQL statement to execute.</param>
-/// <param name="Parameters">Parameters for the SQL statement.</param>
-public record SqlOperation(string Sql, params object[] Parameters);

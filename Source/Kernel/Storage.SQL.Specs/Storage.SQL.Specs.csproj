@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.SQL.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.SQL</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Microsoft.NET.Test.SDK" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage.SQL/Storage.SQL.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+    </ItemGroup>
+</Project>

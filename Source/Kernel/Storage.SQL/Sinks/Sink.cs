@@ -7,8 +7,9 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.SQL.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.SQL.Sinks;
@@ -23,11 +24,13 @@ namespace Cratis.Chronicle.Storage.SQL.Sinks;
 /// <param name="dbContext">The <see cref="DbContext"/> for database operations.</param>
 /// <param name="changesetConverter">The <see cref="IChangesetConverter"/> for converting changesets.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between objects.</param>
+/// <param name="schemaGenerator">The <see cref="SqlSchemaGenerator"/> for generating SQL DDL.</param>
 public class Sink(
     Model model,
     DbContext dbContext,
     IChangesetConverter changesetConverter,
-    IExpandoObjectConverter expandoObjectConverter) : ISink
+    IExpandoObjectConverter expandoObjectConverter,
+    SqlSchemaGenerator schemaGenerator) : ISink
 {
     /// <inheritdoc/>
     public SinkTypeName Name => "SQL";
@@ -40,38 +43,36 @@ public class Sink(
     {
         var tableName = GetTableName();
         var keyColumnName = GetKeyColumnName();
-        
+
         var sql = $"SELECT * FROM {tableName} WHERE {keyColumnName} = @key";
-        
-        // This is a simplified implementation - in practice we'd need more sophisticated
-        // dynamic query building based on the model schema
+
         var connection = dbContext.Database.GetDbConnection();
         await dbContext.Database.OpenConnectionAsync();
-        
-        using var command = connection.CreateCommand();
+
+        await using var command = connection.CreateCommand();
         command.CommandText = sql;
-        
+
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@key";
         parameter.Value = key.Value;
         command.Parameters.Add(parameter);
-        
-        using var reader = await command.ExecuteReaderAsync();
+
+        await using var reader = await command.ExecuteReaderAsync();
         if (await reader.ReadAsync())
         {
             var result = new ExpandoObject();
             var dictionary = (IDictionary<string, object?>)result;
-            
+
             for (var i = 0; i < reader.FieldCount; i++)
             {
                 var columnName = reader.GetName(i);
-                var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                var value = await reader.IsDBNullAsync(i) ? null : reader.GetValue(i);
                 dictionary[columnName] = value;
             }
-            
+
             return result;
         }
-        
+
         return null;
     }
 
@@ -88,7 +89,7 @@ public class Sink(
         }
 
         var changes = await changesetConverter.ConvertToSqlOperations(key, changeset, eventSequenceNumber);
-        
+
         if (!changes.HasChanges)
             return;
 
@@ -123,9 +124,7 @@ public class Sink(
 
     async Task EnsureTableExists()
     {
-        var tableName = GetTableName();
-        var createTableSql = GenerateCreateTableSql();
-        
+        var createTableSql = schemaGenerator.GenerateCreateTableSql(model);
         await dbContext.Database.ExecuteSqlRawAsync(createTableSql);
     }
 
@@ -134,7 +133,7 @@ public class Sink(
         var tableName = GetTableName();
         var keyColumnName = GetKeyColumnName();
         var sql = $"DELETE FROM {tableName} WHERE {keyColumnName} = @key";
-        
+
         await dbContext.Database.ExecuteSqlRawAsync(sql, key.Value);
     }
 
@@ -148,29 +147,13 @@ public class Sink(
 
     string GetTableName()
     {
-        // In a real implementation, this would be configurable and support namespacing
-        return $"projection_{model.Name.Value.Replace("-", "_").Replace(".", "_")}";
+        // This could be made configurable to support different schemas/namespaces
+        return $"projection_{model.Name.Value.Replace('-', '_').Replace('.', '_')}";
     }
 
     string GetKeyColumnName()
     {
         // This could be configurable based on the model schema
         return "Id";
-    }
-
-    string GenerateCreateTableSql()
-    {
-        // This is a simplified implementation - in practice we'd analyze the JSON schema
-        // and generate appropriate column definitions
-        var tableName = GetTableName();
-        var keyColumnName = GetKeyColumnName();
-        
-        return $@"
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{tableName}' AND xtype='U')
-            CREATE TABLE {tableName} (
-                {keyColumnName} NVARCHAR(255) PRIMARY KEY,
-                Data NVARCHAR(MAX),
-                LastUpdated DATETIME2 DEFAULT GETUTCDATE()
-            )";
     }
 }
