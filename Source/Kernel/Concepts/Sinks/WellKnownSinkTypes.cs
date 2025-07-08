@@ -22,4 +22,9 @@ public static class WellKnownSinkTypes
     /// Gets the identifier of the MongoDB projection sink.
     /// </summary>
     public static readonly SinkTypeId MongoDB = "22202c41-2be1-4547-9c00-f0b1f797fd75";
+
+    /// <summary>
+    /// Gets the identifier of the SQL projection sink.
+    /// </summary>
+    public static readonly SinkTypeId SQL = "f8b8c8d4-3e4a-4b7c-9c1e-2f3a4b5c6d7e";
 }
