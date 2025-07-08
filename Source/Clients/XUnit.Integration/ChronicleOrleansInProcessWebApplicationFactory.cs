@@ -20,26 +20,15 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
-public class ChronicleOrleansInProcessWebApplicationFactory<TStartup> : ChronicleWebApplicationFactory<TStartup>
+public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
+    IChronicleSetupFixture fixture,
+    Action<IServiceCollection> configureServices,
+    ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
-    readonly IChronicleSetupFixture _fixture;
-    readonly Action<IServiceCollection> _configureServices;
+    readonly IChronicleSetupFixture _fixture = fixture;
+    readonly Action<IServiceCollection> _configureServices = configureServices;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleOrleansInProcessWebApplicationFactory{TStartup}"/> class.
-    /// </summary>
-    /// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
-    /// <param name="configureServices">Action to configure the services.</param>
-    /// <param name="contentRoot">The content root path.</param>
-    public ChronicleOrleansInProcessWebApplicationFactory(
-        IChronicleSetupFixture fixture,
-        Action<IServiceCollection> configureServices,
-        ContentRoot contentRoot) : base(fixture, contentRoot)
-    {
-        _fixture = fixture;
-        _configureServices = configureServices;
-    }
     /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
     {

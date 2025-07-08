@@ -196,6 +196,12 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
     public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => _createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
 
+    /// <summary>
+    /// Gets the event store name for this fixture.
+    /// </summary>
+    /// <returns>The event store name.</returns>
+    public string GetEventStoreName() => Constants.GetEventStore(ChronicleFixture.UniqueId);
+
     /// <inheritdoc/>
     public virtual void Dispose()
     {
@@ -316,12 +322,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
             _isInitialized = true;
         }
     }
-
-    /// <summary>
-    /// Gets the event store name for this fixture.
-    /// </summary>
-    /// <returns>The event store name.</returns>
-    public string GetEventStoreName() => Constants.GetEventStore(ChronicleFixture.UniqueId);
 
     IEnumerable<Type> GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
     {

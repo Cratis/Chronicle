@@ -52,18 +52,6 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     public IServiceProvider Services { get; }
 
     /// <summary>
-    /// Sets the name of the fixture.
-    /// </summary>
-    /// <param name="name">Name for the fixture.</param>
-    public void SetName(string name);
-
-    /// <summary>
-    /// Gets the event store name for this fixture.
-    /// </summary>
-    /// <returns>The event store name.</returns>
-    string GetEventStoreName();
-
-    /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
     /// </summary>
     internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
@@ -78,6 +66,18 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
     /// </summary>
     internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(GetEventStoreName());
+
+    /// <summary>
+    /// Sets the name of the fixture.
+    /// </summary>
+    /// <param name="name">Name for the fixture.</param>
+    public void SetName(string name);
+
+    /// <summary>
+    /// Gets the event store name for this fixture.
+    /// </summary>
+    /// <returns>The event store name.</returns>
+    string GetEventStoreName();
 
     /// <summary>
     /// Internal: Gets the <see cref="IEventStoreNamespaceStorage"/> for the event store namespace.
