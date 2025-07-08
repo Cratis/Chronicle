@@ -80,12 +80,6 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(GetEventStoreName());
 
     /// <summary>
-    /// Sets the name of the fixture.
-    /// </summary>
-    /// <param name="name">Name for the fixture.</param>
-    public void SetName(string name);
-
-    /// <summary>
     /// Internal: Gets the <see cref="IEventStoreNamespaceStorage"/> for the event store namespace.
     /// </summary>
     /// <param name="namespaceName">The namespace name.</param>
