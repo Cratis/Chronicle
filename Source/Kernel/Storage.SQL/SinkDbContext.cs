@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Cratis.Chronicle.Storage.SQL;
 
 /// <summary>
-/// Represents the DbContext for sink projection data storage.
+/// Represents the DbContext for sink data storage.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="SinkProjectionDbContext"/> class.
+/// Initializes a new instance of the <see cref="SinkDbContext"/> class.
 /// </remarks>
 /// <param name="options">The <see cref="DbContextOptions"/> for the context.</param>
-public class SinkProjectionDbContext(DbContextOptions<SinkProjectionDbContext> options) : DbContext(options)
+public class SinkDbContext(DbContextOptions<SinkDbContext> options) : DbContext(options)
 {
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

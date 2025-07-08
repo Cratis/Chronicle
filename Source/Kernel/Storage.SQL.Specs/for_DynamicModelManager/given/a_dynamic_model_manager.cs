@@ -10,15 +10,15 @@ public class a_dynamic_model_manager : Specification
 {
     protected DynamicModelManager manager;
     protected SqlStorageOptions storageOptions;
-    protected SinkProjectionDbContext context;
+    protected SinkDbContext context;
 
     void Establish()
     {
-        var options = new DbContextOptionsBuilder<SinkProjectionDbContext>()
+        var options = new DbContextOptionsBuilder<SinkDbContext>()
             .UseInMemoryDatabase(databaseName: "test-db")
             .Options;
 
-        context = new SinkProjectionDbContext(options);
+        context = new SinkDbContext(options);
         
         storageOptions = new SqlStorageOptions
         {

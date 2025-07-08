@@ -24,7 +24,7 @@ public static class SqlStorageBuilderExtensions
     {
         services.Configure(configureOptions);
         
-        services.AddDbContextFactory<SinkProjectionDbContext>((serviceProvider, options) =>
+        services.AddDbContextFactory<SinkDbContext>((serviceProvider, options) =>
         {
             var sqlOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SqlStorageOptions>>().Value;
             
