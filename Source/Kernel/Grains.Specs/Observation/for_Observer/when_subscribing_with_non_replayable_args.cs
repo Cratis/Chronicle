@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 
@@ -11,8 +10,7 @@ public class when_subscribing_with_non_replayable_args : given.an_observer_with_
 {
     async Task Establish()
     {
-        var args = new ReactorObserverSubscriptionArgs(null, false);
-        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero, args);
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero, null, false);
         _storageStats.ResetCounts();
     }
 
