@@ -23,11 +23,6 @@ public abstract class ChronicleFixture : IChronicleFixture
     MongoDBDatabase? _readModels;
 
     /// <summary>
-    /// Gets the unique identifier for this fixture instance.
-    /// </summary>
-    public string UniqueId { get; } = Guid.NewGuid().ToString("D")[..8];
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
     /// </summary>
     /// <param name="createMongoDBContainer">The factory for the mongodb container.</param>
@@ -40,6 +35,11 @@ public abstract class ChronicleFixture : IChronicleFixture
         MongoDBContainer = createMongoDBContainer(Network);
         StartContainer(MongoDBContainer).GetAwaiter().GetResult();
     }
+
+    /// <summary>
+    /// Gets the unique identifier for this fixture instance.
+    /// </summary>
+    public string UniqueId { get; } = Guid.NewGuid().ToString("D")[..8];
 
     /// <summary>
     /// Get the MongoDB container.

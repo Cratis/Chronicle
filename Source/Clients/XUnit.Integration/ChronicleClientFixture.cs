@@ -317,6 +317,12 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
     }
 
+    /// <summary>
+    /// Gets the event store name for this fixture.
+    /// </summary>
+    /// <returns>The event store name.</returns>
+    public string GetEventStoreName() => Constants.GetEventStore(ChronicleFixture.UniqueId);
+
     IEnumerable<Type> GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
     {
         if (!AutoDiscoverArtifacts)
@@ -326,9 +332,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         _defaultClientArtifactsProvider.Initialize();
         return getTypes(_defaultClientArtifactsProvider);
     }
-
-    /// <inheritdoc/>
-    string IChronicleSetupFixture.GetEventStoreName() => Constants.GetEventStore(ChronicleFixture.UniqueId);
 }
 
 /// <summary>
