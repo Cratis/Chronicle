@@ -44,21 +44,37 @@ public class SqlSchemaGenerator
             sql.AppendLine("BEGIN");
             sql.AppendLine($"CREATE TABLE [{_schema}].[{tableName}] (");
         }
-        else // PostgreSQL
+        else if (_providerType == SqlProviderType.PostgreSQL)
         {
             sql.AppendLine($@"CREATE TABLE IF NOT EXISTS ""{_schema}"".""{tableName}"" (");
         }
+        else // SQLite
+        {
+            sql.AppendLine($@"CREATE TABLE IF NOT EXISTS ""{tableName}"" (");
+        }
 
-        sql.AppendLine("    Id NVARCHAR(255) PRIMARY KEY,");
+        // SQLite doesn't support NVARCHAR, use TEXT instead
+        var idType = _providerType == SqlProviderType.SQLite ? "TEXT" : "NVARCHAR(255)";
+        var timestampDefault = _providerType switch
+        {
+            SqlProviderType.SqlServer => "DEFAULT GETUTCDATE()",
+            SqlProviderType.PostgreSQL => "DEFAULT CURRENT_TIMESTAMP",
+            SqlProviderType.SQLite => "DEFAULT (datetime('now'))",
+            _ => "DEFAULT CURRENT_TIMESTAMP"
+        };
+        
+        sql.AppendLine($"    Id {idType} PRIMARY KEY,");
         sql.AppendLine("    EventSequenceNumber BIGINT NOT NULL,");
-        sql.AppendLine("    LastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,");
+        sql.AppendLine($"    LastUpdated TIMESTAMP {timestampDefault},");
         
         foreach (var column in columns)
         {
             sql.AppendLine($"    {column},");
         }
         
-        sql.AppendLine("    Data NVARCHAR(MAX)"); // Fallback JSON storage
+        // SQLite doesn't support NVARCHAR(MAX), use TEXT instead
+        var dataType = _providerType == SqlProviderType.SQLite ? "TEXT" : "NVARCHAR(MAX)";
+        sql.AppendLine($"    Data {dataType}"); // Fallback JSON storage
         sql.AppendLine(")");
         
         if (_providerType == SqlProviderType.SqlServer)
@@ -85,7 +101,8 @@ public class SqlSchemaGenerator
             
             if (columnType != null)
             {
-                columns.Add($"[{columnName}] {columnType}");
+                var identifier = _providerType == SqlProviderType.SQLite ? $"\"{columnName}\"" : $"[{columnName}]";
+                columns.Add($"{identifier} {columnType}");
             }
         }
         
@@ -96,10 +113,22 @@ public class SqlSchemaGenerator
     {
         return propertySchema.Type switch
         {
-            JsonObjectType.String => _providerType == SqlProviderType.SqlServer ? "NVARCHAR(450)" : "VARCHAR(450)",
-            JsonObjectType.Integer => _providerType == SqlProviderType.SqlServer ? "BIGINT" : "BIGINT",
-            JsonObjectType.Number => _providerType == SqlProviderType.SqlServer ? "DECIMAL(18,6)" : "DECIMAL(18,6)",
-            JsonObjectType.Boolean => _providerType == SqlProviderType.SqlServer ? "BIT" : "BOOLEAN",
+            JsonObjectType.String => _providerType switch
+            {
+                SqlProviderType.SqlServer => "NVARCHAR(450)",
+                SqlProviderType.PostgreSQL => "VARCHAR(450)",
+                SqlProviderType.SQLite => "TEXT",
+                _ => "VARCHAR(450)"
+            },
+            JsonObjectType.Integer => "BIGINT",
+            JsonObjectType.Number => _providerType == SqlProviderType.SQLite ? "REAL" : "DECIMAL(18,6)",
+            JsonObjectType.Boolean => _providerType switch
+            {
+                SqlProviderType.SqlServer => "BIT",
+                SqlProviderType.PostgreSQL => "BOOLEAN",
+                SqlProviderType.SQLite => "INTEGER",
+                _ => "BOOLEAN"
+            },
             JsonObjectType.Object => null, // Store as JSON in main Data column
             JsonObjectType.Array => null, // Store as JSON in main Data column
             _ => null

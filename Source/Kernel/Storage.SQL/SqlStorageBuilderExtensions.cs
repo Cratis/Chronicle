@@ -24,7 +24,7 @@ public static class SqlStorageBuilderExtensions
     {
         services.Configure(configureOptions);
         
-        services.AddDbContextFactory<ProjectionDbContext>((serviceProvider, options) =>
+        services.AddDbContextFactory<SinkProjectionDbContext>((serviceProvider, options) =>
         {
             var sqlOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SqlStorageOptions>>().Value;
             
@@ -36,6 +36,10 @@ public static class SqlStorageBuilderExtensions
                     
                 case SqlProviderType.PostgreSQL:
                     options.UseNpgsql(sqlOptions.ConnectionString);
+                    break;
+
+                case SqlProviderType.SQLite:
+                    options.UseSqlite(sqlOptions.ConnectionString);
                     break;
                     
                 default:
@@ -83,6 +87,26 @@ public static class SqlStorageBuilderExtensions
         return services.AddSqlStorage(options =>
         {
             options.ProviderType = SqlProviderType.PostgreSQL;
+            options.ConnectionString = connectionString;
+            configureOptions?.Invoke(options);
+        });
+    }
+
+    /// <summary>
+    /// Add SQLite storage support to Chronicle.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="connectionString">SQLite connection string.</param>
+    /// <param name="configureOptions">Action to configure additional SQL storage options.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddSqliteStorage(
+        this IServiceCollection services,
+        string connectionString,
+        Action<SqlStorageOptions>? configureOptions = null)
+    {
+        return services.AddSqlStorage(options =>
+        {
+            options.ProviderType = SqlProviderType.SQLite;
             options.ConnectionString = connectionString;
             configureOptions?.Invoke(options);
         });

@@ -47,5 +47,10 @@ public enum SqlProviderType
     /// <summary>
     /// PostgreSQL.
     /// </summary>
-    PostgreSQL
+    PostgreSQL,
+
+    /// <summary>
+    /// SQLite.
+    /// </summary>
+    SQLite
 }

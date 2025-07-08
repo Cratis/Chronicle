@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Storage.SQL.Sinks;
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting objects.</param>
 /// <param name="sqlOptions">The SQL storage options.</param>
 public class SinkFactory(
-    IDbContextFactory<ProjectionDbContext> dbContextFactory,
+    IDbContextFactory<SinkProjectionDbContext> dbContextFactory,
     IExpandoObjectConverter expandoObjectConverter,
     IOptions<SqlStorageOptions> sqlOptions) : ISinkFactory
 {
