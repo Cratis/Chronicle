@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 124 days, 12:46:26 | 2 days, 19:57:57 | 247 days, 11:21:17 |
-| Time to close | 260 days, 18:34:24 | 111 days, 16:03:16 | 793 days, 20:56:47 |
+| Time to close | 261 days, 5:32:37 | 111 days, 23:21:39 | 793 days, 16:11:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 296 |
-| Number of items closed | 542 |
+| Number of items that remain open | 295 |
+| Number of items closed | 543 |
 | Total number of items created | 838 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -228,7 +228,7 @@
 | Hook up integration tests with GitHub Actions | https://github.com/Cratis/Chronicle/issues/1330 | None | [einari](https://github.com/einari) | None | 46 days, 13:27:21 | None |
 | .WithInitialValues() does not seem to populate empty collections in MongoDB - the fields are just missing | https://github.com/Cratis/Chronicle/issues/1329 | None | [einari](https://github.com/einari) | None | 4:41:02 | None |
 | Change CorrelationId to be a Guid - for consistency with Open Telemetry | https://github.com/Cratis/Chronicle/issues/1327 | None | [einari](https://github.com/einari) | None | 17 days, 4:34:38 | None |
-| EventStore.RegisterAll called twice, once through EventStore.RegisterAll explicitly and once through the ConnectionLifecycle | https://github.com/Cratis/Chronicle/issues/1324 | None | [woksin](https://github.com/woksin) | 11:15:40 | None | None |
+| EventStore.RegisterAll called twice, once through EventStore.RegisterAll explicitly and once through the ConnectionLifecycle | https://github.com/Cratis/Chronicle/issues/1324 | [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | 11:15:40 | None | None |
 | Add EventSourceId for the event that caused unique constraint | https://github.com/Cratis/Chronicle/issues/1323 | None | [einari](https://github.com/einari) | None | 1 day, 2:34:28 | None |
 | Implement ImmutableList serializer for Orleans | https://github.com/Cratis/Chronicle/issues/1322 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Reactions need to collect errors from the UnitOfWork and report back for "failed partitions" | https://github.com/Cratis/Chronicle/issues/1321 | None | [einari](https://github.com/einari) | None | None | None |
@@ -312,7 +312,7 @@
 | Move away from Guids representing projections | https://github.com/Cratis/Chronicle/issues/1195 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | None | 37 days, 18:07:19 | None |
 | Add global exception handler | https://github.com/Cratis/Chronicle/issues/1175 | None | [einari](https://github.com/einari) | None | None | None |
 | Optimize the Docker image sizes | https://github.com/Cratis/Chronicle/issues/1096 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
-| Leverage the Arm64 runner during build pipelines | https://github.com/Cratis/Chronicle/issues/1095 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Leverage the Arm64 runner during build pipelines | https://github.com/Cratis/Chronicle/issues/1095 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 508 days, 23:22:41 | None |
 | Add retry policies for client observers and reducers | https://github.com/Cratis/Chronicle/issues/1091 | None | [einari](https://github.com/einari) | None | 405 days, 1:23:38 | None |
 | Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | None | [einari](https://github.com/einari) | None | 449 days, 2:17:39 | None |
 | Support unmanaged observers / reactors | https://github.com/Cratis/Chronicle/issues/1067 | None | [einari](https://github.com/einari) | None | None | None |
@@ -344,5 +344,4 @@
 | IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | None | None |
 | Projection fail with children and there are no instances of the events defined in root From definitions. | https://github.com/Cratis/Chronicle/issues/1007 | None | [einari](https://github.com/einari) | None | None | None |
-| Idempotency: Add sequence number on read model for what event that last updated (reducer, projections) | https://github.com/Cratis/Chronicle/issues/1005 | None | [einari](https://github.com/einari) | None | 389 days, 20:03:36 | None |
-| Add su
+| Idempotency: Add sequence number on read model for what event that last updated (reducer, projections) | https://github.com/Cratis/Chronicle/issues/1005 | None | [einari](https://github.com/einari)
