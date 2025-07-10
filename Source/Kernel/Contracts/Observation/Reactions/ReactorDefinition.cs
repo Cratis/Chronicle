@@ -28,4 +28,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
     public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the reactor supports replay scenarios.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool IsReplayable { get; set; } = true;
 }
