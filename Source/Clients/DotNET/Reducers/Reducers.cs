@@ -159,6 +159,27 @@ public class Reducers(
         return handler.GetState();
     }
 
+    /// <inheritdoc/>
+    public Task Replay<TReducer>()
+        where TReducer : IReducer
+    {
+        var reducerType = typeof(TReducer);
+        var handler = _handlersByType[reducerType];
+        return Replay(handler.Id);
+    }
+
+    /// <inheritdoc/>
+    public Task Replay(ReducerId reducerId)
+    {
+        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ObserverId = reducerId,
+            EventSequenceId = string.Empty
+        });
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
     {
         var handler = new ReducerHandler(
