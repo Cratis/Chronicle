@@ -50,10 +50,10 @@ public class all_dependencies : Specification
         _observers = Substitute.For<IObservers>();
         _services = Substitute.For<IServices>();
         _services.Observers.Returns(_observers);
-        _servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
-        _servicesAccessor.Services.Returns(_services);
 
-        var connection = Substitute.For<IChronicleConnection>();
+        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _servicesAccessor = connection as IChronicleServicesAccessor;
+        _servicesAccessor.Services.Returns(_services);
         _eventStore.Connection.Returns(connection);
 
         _handlersByType = new Dictionary<Type, IProjectionHandler>();

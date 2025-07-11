@@ -8,11 +8,11 @@ namespace Cratis.Chronicle.Reactors.for_Reactors;
 public class when_replaying_by_reactor_type : given.all_dependencies
 {
     readonly ReactorId _reactorId = "73c0c8ed-f2cd-49a2-b5b9-f2f4e1b7b5d4";
-    ReactorHandler _handler;
+    IReactorHandler _handler;
 
     void Establish()
     {
-        _handler = Substitute.For<ReactorHandler>();
+        _handler = Substitute.For<IReactorHandler>();
         _handler.Id.Returns(_reactorId);
 
         _handlers[typeof(MyReactor)] = _handler;

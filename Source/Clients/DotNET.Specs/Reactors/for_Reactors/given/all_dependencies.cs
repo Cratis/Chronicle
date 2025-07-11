@@ -25,7 +25,7 @@ public class all_dependencies : Specification
     protected IServices _services;
     protected IObservers _observers;
     protected IConnectionLifecycle _connectionLifecycle;
-    protected Dictionary<Type, ReactorHandler> _handlers;
+    protected Dictionary<Type, IReactorHandler> _handlers;
     protected Reactors _reactors;
 
     void Establish()
@@ -47,14 +47,15 @@ public class all_dependencies : Specification
         _observers = Substitute.For<IObservers>();
         _services = Substitute.For<IServices>();
         _services.Observers.Returns(_observers);
-        _servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
-        _servicesAccessor.Services.Returns(_services);
 
-        var connection = Substitute.For<IChronicleConnection>();
+        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _servicesAccessor = connection as IChronicleServicesAccessor;
+        _servicesAccessor.Services.Returns(_services);
+        _eventStore.Connection.Returns(connection);
         connection.Lifecycle.Returns(_connectionLifecycle);
         _eventStore.Connection.Returns(connection);
 
-        _handlers = new Dictionary<Type, ReactorHandler>();
+        _handlers = new();
 
         _clientArtifactsProvider.Reactors.Returns([]);
 
