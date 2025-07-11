@@ -6,6 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.for_Reactors.given;
@@ -25,6 +26,7 @@ public class all_dependencies : Specification
     protected IServices _services;
     protected IObservers _observers;
     protected IConnectionLifecycle _connectionLifecycle;
+    protected IIdentityProvider _identityProvider;
     protected Dictionary<Type, IReactorHandler> _handlers;
     protected Reactors _reactors;
 
@@ -55,6 +57,8 @@ public class all_dependencies : Specification
         connection.Lifecycle.Returns(_connectionLifecycle);
         _eventStore.Connection.Returns(connection);
 
+        _identityProvider = Substitute.For<IIdentityProvider>();
+
         _handlers = new();
 
         _clientArtifactsProvider.Reactors.Returns([]);
@@ -67,6 +71,7 @@ public class all_dependencies : Specification
             _middlewares,
             _eventSerializer,
             _causationManager,
+            _identityProvider,
             _logger,
             _loggerFactory);
 

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,7 @@ public class all_dependencies : Specification
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
     protected IObservers _observers;
+    protected IIdentityProvider _identityProvider;
     protected Dictionary<Type, IReducerHandler> _handlersByType;
     protected Dictionary<Type, IReducerHandler> _handlersByModelType;
     protected Reducers _reducers;
@@ -62,6 +64,8 @@ public class all_dependencies : Specification
         _clientArtifacts.Reducers.Returns([]);
         _clientArtifacts.AggregateRootStateTypes.Returns([]);
 
+        _identityProvider = Substitute.For<IIdentityProvider>();
+
         _reducers = new Reducers(
             _eventStore,
             _clientArtifacts,
@@ -72,6 +76,7 @@ public class all_dependencies : Specification
             _modelNameResolver,
             _jsonSchemaGenerator,
             _jsonSerializerOptions,
+            _identityProvider,
             _logger);
 
         // Use reflection to set the private handler fields
