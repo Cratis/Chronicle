@@ -1,14 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation.Jobs;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 
-public class when_receiving_reminder_for_failed_partition : given.an_observer
+public class when_receiving_reminder_for_failed_partition : given.an_observer_with_subscription
 {
     const string _partition = "SomePartition";
     FailedPartition _failedPartition;
@@ -16,23 +15,21 @@ public class when_receiving_reminder_for_failed_partition : given.an_observer
 
     void Establish()
     {
-        _failedPartition = new FailedPartition(_partition, []);
-        _failedPartitionsState.Partitions.Returns([_failedPartition]);
-        _failedPartitionsState.TryGet(_partition, out Arg.Any<FailedPartition>()).Returns(callInfo =>
+        _failedPartition = new()
         {
-            callInfo[1] = _failedPartition;
-            return true;
-        });
-        
+            Partition = (Key)_partition
+        };
+        _failedPartitionsState.Partitions = [_failedPartition];
         _reminder = Substitute.For<IGrainReminder>();
         _reminder.ReminderName.Returns(_partition);
     }
 
-    async Task Because() => await _observer.ReceiveReminder(_partition, new TickStatus(DateTime.UtcNow, TimeSpan.Zero, TimeSpan.Zero));
+    async Task Because() => await _observer.ReceiveReminder(_partition, default);
 
-    [Fact] void should_start_recover_job() => _jobsManager.Received(1)
+    [Fact]
+    void should_start_recover_job() => _jobsManager.Received(1)
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(
             Arg.Is<RetryFailedPartitionRequest>(_ =>
                 _.ObserverKey == _observerKey &&
-                _.Partition == _partition));
+                _.Key == (Key)_partition));
 }
