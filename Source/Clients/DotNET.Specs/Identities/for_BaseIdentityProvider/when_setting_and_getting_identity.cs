@@ -1,13 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Identities;
-
 namespace Cratis.Chronicle.Identities.for_BaseIdentityProvider;
 
 public class when_setting_and_getting_identity : Specification
 {
-    BaseIdentityProvider provider;
+    IIdentityProvider provider;
     Identity original_identity;
     Identity retrieved_identity;
 
