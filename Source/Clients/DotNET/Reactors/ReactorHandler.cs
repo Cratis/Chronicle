@@ -21,12 +21,14 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the Reactor is for.</param>
 /// <param name="reactorInvoker">The actual invoker.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+/// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
 public class ReactorHandler(
     IEventStore eventStore,
     ReactorId reactorId,
     EventSequenceId eventSequenceId,
     IReactorInvoker reactorInvoker,
-    ICausationManager causationManager) : IDisposable
+    ICausationManager causationManager,
+    IIdentityProvider identityProvider) : IDisposable
 {
     /// <summary>
     /// The Reactor id causation property.
@@ -90,7 +92,7 @@ public class ReactorHandler(
     /// <returns>Awaitable task.</returns>
     public async Task OnNext(EventMetadata metadata, EventContext context, object content, IServiceProvider serviceProvider)
     {
-        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+        identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
         causationManager.Add(CausationType, new Dictionary<string, string>
         {
@@ -103,7 +105,7 @@ public class ReactorHandler(
 
         await reactorInvoker.Invoke(serviceProvider, content, context);
 
-        BaseIdentityProvider.ClearCurrentIdentity();
+        identityProvider.ClearCurrentIdentity();
     }
 
     /// <summary>
