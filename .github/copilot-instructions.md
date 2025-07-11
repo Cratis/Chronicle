@@ -11,6 +11,7 @@
 - Use namespaces that match the folder structure.
 - Use file-scoped namespace declarations.
 - Use single-line using directives.
+- For types that does not have an implementation, don't add a body (e.g., `public interface IMyInterface;`).
 
 ## Naming Conventions
 
