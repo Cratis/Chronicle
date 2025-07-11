@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ public class Reactors : IReactors
     readonly IReactorMiddlewares _middlewares;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
+    readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
@@ -49,6 +51,7 @@ public class Reactors : IReactors
     /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -59,6 +62,7 @@ public class Reactors : IReactors
         IReactorMiddlewares middlewares,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
+        IIdentityProvider identityProvider,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -70,6 +74,7 @@ public class Reactors : IReactors
         _middlewares = middlewares;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
+        _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
         eventStore.Connection.Lifecycle.OnConnected += Register;
@@ -199,7 +204,8 @@ public class Reactors : IReactors
             reactorType.GetReactorId(),
             reactorType.GetEventSequenceId(),
             new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
-            _causationManager);
+            _causationManager,
+            _identityProvider);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>

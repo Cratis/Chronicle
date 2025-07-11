@@ -35,6 +35,7 @@ namespace Cratis.Chronicle.Reducers;
 /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
 /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
+/// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class Reducers(
     IEventStore eventStore,
@@ -46,6 +47,7 @@ public class Reducers(
     IModelNameResolver modelNameResolver,
     IJsonSchemaGenerator jsonSchemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
+    IIdentityProvider identityProvider,
     ILogger<Reducers> logger) : IReducers
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -269,7 +271,7 @@ public class Reducers(
         try
         {
             await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
-            BaseIdentityProvider.SetCurrentIdentity(Identity.System);
+            identityProvider.SetCurrentIdentity(Identity.System);
             var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
             var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
