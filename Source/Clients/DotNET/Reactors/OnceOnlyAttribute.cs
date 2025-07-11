@@ -7,6 +7,4 @@ namespace Cratis.Chronicle.Reactors;
 /// Attribute used to mark reactor methods that should only be called once and never on replay.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public sealed class OnceOnlyAttribute : Attribute
-{
-}
+public sealed class OnceOnlyAttribute : Attribute;
