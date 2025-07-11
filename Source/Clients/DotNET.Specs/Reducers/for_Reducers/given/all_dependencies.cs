@@ -6,9 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Sinks;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
 
@@ -38,7 +36,7 @@ public class all_dependencies : Specification
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns((EventStoreName)"test-event-store");
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
-        
+
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _reducerValidator = Substitute.For<IReducerValidator>();
@@ -48,23 +46,22 @@ public class all_dependencies : Specification
         _jsonSchemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         _jsonSerializerOptions = new();
         _logger = Substitute.For<ILogger<Reducers>>();
-        
+
         _observers = Substitute.For<IObservers>();
         _services = Substitute.For<IServices>();
         _services.Observers.Returns(_observers);
         _servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
         _servicesAccessor.Services.Returns(_services);
-        
+
         var connection = Substitute.For<IChronicleConnection>();
         _eventStore.Connection.Returns(connection);
-        _eventStore.Connection.Returns(_servicesAccessor);
-        
+
         _handlersByType = new Dictionary<Type, IReducerHandler>();
         _handlersByModelType = new Dictionary<Type, IReducerHandler>();
-        
+
         _clientArtifacts.Reducers.Returns([]);
         _clientArtifacts.AggregateRootStateTypes.Returns([]);
-        
+
         _reducers = new Reducers(
             _eventStore,
             _clientArtifacts,
@@ -76,11 +73,11 @@ public class all_dependencies : Specification
             _jsonSchemaGenerator,
             _jsonSerializerOptions,
             _logger);
-            
+
         // Use reflection to set the private handler fields
         var handlersByTypeField = typeof(Reducers).GetField("_handlersByType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         handlersByTypeField?.SetValue(_reducers, _handlersByType);
-        
+
         var handlersByModelTypeField = typeof(Reducers).GetField("_handlersByModelType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         handlersByModelTypeField?.SetValue(_reducers, _handlersByModelType);
     }

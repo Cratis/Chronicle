@@ -36,7 +36,7 @@ public class all_dependencies : Specification
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns((EventStoreName)"test-event-store");
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
-        
+
         _eventTypes = Substitute.For<IEventTypes>();
         _projectionWatcherManager = Substitute.For<IProjectionWatcherManager>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
@@ -46,22 +46,21 @@ public class all_dependencies : Specification
         _eventSerializer = Substitute.For<IEventSerializer>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _jsonSerializerOptions = new();
-        
+
         _observers = Substitute.For<IObservers>();
         _services = Substitute.For<IServices>();
         _services.Observers.Returns(_observers);
         _servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
         _servicesAccessor.Services.Returns(_services);
-        
+
         var connection = Substitute.For<IChronicleConnection>();
         _eventStore.Connection.Returns(connection);
-        _eventStore.Connection.Returns(_servicesAccessor);
-        
+
         _handlersByType = new Dictionary<Type, IProjectionHandler>();
         _handlersByModelType = new Dictionary<Type, IProjectionHandler>();
-        
+
         _clientArtifacts.Projections.Returns([]);
-        
+
         _projections = new Projections(
             _eventStore,
             _eventTypes,
@@ -72,11 +71,11 @@ public class all_dependencies : Specification
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
-            
+
         // Use reflection to set the private handler fields
         var handlersByTypeField = typeof(Projections).GetField("_handlersByType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         handlersByTypeField?.SetValue(_projections, _handlersByType);
-        
+
         var handlersByModelTypeField = typeof(Projections).GetField("_handlersByModelType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         handlersByModelTypeField?.SetValue(_projections, _handlersByModelType);
     }

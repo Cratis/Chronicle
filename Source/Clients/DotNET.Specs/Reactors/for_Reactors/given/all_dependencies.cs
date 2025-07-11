@@ -33,7 +33,7 @@ public class all_dependencies : Specification
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns((EventStoreName)"test-event-store");
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
-        
+
         _eventTypes = Substitute.For<IEventTypes>();
         _clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
         _serviceProvider = Substitute.For<IServiceProvider>();
@@ -42,23 +42,22 @@ public class all_dependencies : Specification
         _causationManager = Substitute.For<ICausationManager>();
         _logger = Substitute.For<ILogger<Reactors>>();
         _loggerFactory = Substitute.For<ILoggerFactory>();
-        
+
         _connectionLifecycle = Substitute.For<IConnectionLifecycle>();
         _observers = Substitute.For<IObservers>();
         _services = Substitute.For<IServices>();
         _services.Observers.Returns(_observers);
         _servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
         _servicesAccessor.Services.Returns(_services);
-        
+
         var connection = Substitute.For<IChronicleConnection>();
         connection.Lifecycle.Returns(_connectionLifecycle);
         _eventStore.Connection.Returns(connection);
-        _eventStore.Connection.Returns(_servicesAccessor);
-        
+
         _handlers = new Dictionary<Type, ReactorHandler>();
-        
+
         _clientArtifactsProvider.Reactors.Returns([]);
-        
+
         _reactors = new Reactors(
             _eventStore,
             _eventTypes,
@@ -69,7 +68,7 @@ public class all_dependencies : Specification
             _causationManager,
             _logger,
             _loggerFactory);
-            
+
         // Use reflection to set the private _handlers field
         var handlersField = typeof(Reactors).GetField("_handlers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         handlersField?.SetValue(_reactors, _handlers);
