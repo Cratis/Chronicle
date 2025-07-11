@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.InProcess;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.InProcess.for_InProcessConnectionLifecycle;
@@ -41,5 +40,5 @@ public class when_registering_event_handlers : Specification
 
     [Fact] void should_not_trigger_events_for_in_process_lifecycle() => inProcessCallCount.ShouldEqual(0);
     [Fact] void should_trigger_events_for_regular_lifecycle() => regularCallCount.ShouldEqual(1);
-    [Fact] void should_mark_both_as_connected() => inProcessLifecycle.IsConnected.ShouldBeTrue() && regularLifecycle.IsConnected.ShouldBeTrue();
+    [Fact] void should_mark_both_as_connected() => (inProcessLifecycle.IsConnected && regularLifecycle.IsConnected).ShouldBeTrue();
 }

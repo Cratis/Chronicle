@@ -17,6 +17,6 @@ public class when_replaying_and_observer_is_not_replayable : given.an_observer_w
 
     Task Because() => _observer.Replay();
 
-    [Fact] void should_not_change_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Routing);
+    [Fact] void should_not_change_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }
