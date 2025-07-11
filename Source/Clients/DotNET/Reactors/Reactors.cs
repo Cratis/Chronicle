@@ -34,7 +34,7 @@ public class Reactors : IReactors
     readonly ICausationManager _causationManager;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
-    readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
+    readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
     readonly IChronicleServicesAccessor _servicesAccessor;
 
     bool _registered;
@@ -119,7 +119,7 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task<ReactorHandler> Register<TReactor>()
+    public Task<IReactorHandler> Register<TReactor>()
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
@@ -132,11 +132,11 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public ReactorHandler GetHandlerFor<TReactor>()
+    public IReactorHandler GetHandlerFor<TReactor>()
         where TReactor : IReactor => _handlers[typeof(TReactor)];
 
     /// <inheritdoc/>
-    public ReactorHandler GetHandlerById(ReactorId id)
+    public IReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
         ThrowIfUnknownReactorId(reactorHandler, id);
@@ -184,7 +184,7 @@ public class Reactors : IReactors
         });
     }
 
-    static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
+    static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
         {
@@ -192,7 +192,7 @@ public class Reactors : IReactors
         }
     }
 
-    ReactorHandler CreateHandlerFor(Type reactorType)
+    IReactorHandler CreateHandlerFor(Type reactorType)
     {
         var handler = new ReactorHandler(
             _eventStore,
@@ -210,7 +210,7 @@ public class Reactors : IReactors
         return handler;
     }
 
-    void RegisterReactor(ReactorHandler handler)
+    void RegisterReactor(IReactorHandler handler)
     {
         _logger.RegisteringReactor(handler.Id);
         var registration = new RegisterReactor
@@ -242,7 +242,7 @@ public class Reactors : IReactors
             .Subscribe(_ => { }, messages.Dispose);
     }
 
-    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
+    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
     {
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
