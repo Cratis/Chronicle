@@ -13,3 +13,7 @@
 ## Testing
 
 - [How to Write Specs](./instructions/tests.md)
+
+## Things to not touch
+
+- Do not change the `global.json` file unless explicitly asked.
