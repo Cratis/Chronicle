@@ -23,47 +23,54 @@ namespace Cratis.Chronicle.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducers"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Reducers"/> class.
-/// </remarks>
-/// <param name="eventStore"><see cref="IEventStore"/> the reducers belong to.</param>
-/// <param name="clientArtifacts"><see cref="IClientArtifactsProvider"/> for discovery.</param>
-/// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
-/// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
-/// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
-/// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
-/// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
-/// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
-/// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class Reducers(
-    IEventStore eventStore,
-    IClientArtifactsProvider clientArtifacts,
-    IServiceProvider serviceProvider,
-    IReducerValidator reducerValidator,
-    IEventTypes eventTypes,
-    IEventSerializer eventSerializer,
-    IModelNameResolver modelNameResolver,
-    IJsonSchemaGenerator jsonSchemaGenerator,
-    JsonSerializerOptions jsonSerializerOptions,
-    ILogger<Reducers> logger) : IReducers
+public class Reducers : IReducers
 {
 #if NET9_0
     static readonly Lock _registerLock = new();
 #else
     static readonly object _registerLock = new();
 #endif
-    readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+    readonly IChronicleServicesAccessor _servicesAccessor;
+    readonly IEventStore _eventStore;
+    readonly IClientArtifactsProvider _clientArtifacts;
+    readonly IServiceProvider _serviceProvider;
+    readonly IReducerValidator _reducerValidator;
+    readonly IEventTypes _eventTypes;
+    readonly IEventSerializer _eventSerializer;
+    readonly IModelNameResolver _modelNameResolver;
+    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly ILogger<Reducers> _logger;
     IEnumerable<Type> _aggregateRootStateTypes = [];
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
-    
+
     bool _registered;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reducers"/> class.
     /// </summary>
-    public Reducers()
+    /// <param name="eventStore"><see cref="IEventStore"/> the reducers belong to.</param>
+    /// <param name="clientArtifacts"><see cref="IClientArtifactsProvider"/> for discovery.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
+    /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
+    /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
+    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
+    /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
+    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public Reducers(
+        IEventStore eventStore,
+        IClientArtifactsProvider clientArtifacts,
+        IServiceProvider serviceProvider,
+        IReducerValidator reducerValidator,
+        IEventTypes eventTypes,
+        IEventSerializer eventSerializer,
+        IModelNameResolver modelNameResolver,
+        IJsonSchemaGenerator jsonSchemaGenerator,
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<Reducers> logger)
     {
         eventStore.Connection.Lifecycle.OnConnected += Register;
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -71,19 +78,30 @@ public class Reducers(
             _registered = false;
             return Task.CompletedTask;
         };
+        _eventStore = eventStore;
+        _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+        _clientArtifacts = clientArtifacts;
+        _serviceProvider = serviceProvider;
+        _reducerValidator = reducerValidator;
+        _eventTypes = eventTypes;
+        _eventSerializer = eventSerializer;
+        _modelNameResolver = modelNameResolver;
+        _jsonSchemaGenerator = jsonSchemaGenerator;
+        _jsonSerializerOptions = jsonSerializerOptions;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public Task Discover()
     {
-        _aggregateRootStateTypes = clientArtifacts.AggregateRootStateTypes;
-        _handlersByType = clientArtifacts.Reducers
+        _aggregateRootStateTypes = _clientArtifacts.AggregateRootStateTypes;
+        _handlersByType = _clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _,
                                 reducerType =>
                                 {
                                     var readModelType = reducerType.GetReadModelType();
-                                    reducerValidator.Validate(reducerType);
+                                    _reducerValidator.Validate(reducerType);
                                     var eventSequenceId = reducerType.GetEventSequenceId();
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
@@ -109,7 +127,7 @@ public class Reducers(
                 return;
             }
 
-            logger.RegisterReducers();
+            _logger.RegisterReducers();
 
             foreach (var handler in _handlersByModelType.Values.Where(_ => _.IsActive))
             {
@@ -194,14 +212,14 @@ public class Reducers(
     ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
     {
         var handler = new ReducerHandler(
-            eventStore,
+            _eventStore,
             reducerType.GetReducerId(),
             reducerType.GetEventSequenceId(),
             new ReducerInvoker(
-                eventTypes,
+                _eventTypes,
                 reducerType,
                 modelType),
-            eventSerializer,
+            _eventSerializer,
             ShouldReducerBeActive(reducerType, modelType));
 
         CancellationTokenRegistration? register = null;
@@ -217,15 +235,15 @@ public class Reducers(
 
     void RegisterReducer(IReducerHandler handler)
     {
-        logger.RegisterReducer(
+        _logger.RegisterReducer(
             handler.Id,
             handler.EventSequenceId);
 
         var registration = new RegisterReducer
         {
-            ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
+            ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
             Reducer = new ReducerDefinition
             {
                 ReducerId = handler.Id,
@@ -233,8 +251,8 @@ public class Reducers(
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
                 Model = new Contracts.Models.ModelDefinition
                 {
-                    Name = modelNameResolver.GetNameFor(handler.ReadModelType),
-                    Schema = jsonSchemaGenerator.Generate(handler.ReadModelType).ToJson()
+                    Name = _modelNameResolver.GetNameFor(handler.ReadModelType),
+                    Schema = _jsonSchemaGenerator.Generate(handler.ReadModelType).ToJson()
                 },
                 Sink = new SinkDefinition
                 {
@@ -254,7 +272,7 @@ public class Reducers(
             .Select(events => Observable.FromAsync(async () =>
             {
                 await ObserverMethod(messages, handler, events);
-                logger.EventHandlingCompleted(handler.Id);
+                _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
             .Subscribe(_ => { }, messages.Dispose);
@@ -281,15 +299,15 @@ public class Reducers(
 
         try
         {
-            await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
+            await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
             BaseIdentityProvider.SetCurrentIdentity(Identity.System);
-            var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
+            var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, _jsonSerializerOptions);
             var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
             lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
             if (reduceResult.IsSuccess)
             {
-                modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
+                modelState = JsonSerializer.Serialize(reduceResult.ModelState, _jsonSerializerOptions);
             }
             else
             {
@@ -300,7 +318,7 @@ public class Reducers(
         }
         catch (Exception ex)
         {
-            logger.ErrorWhileHandlingEvents(ex, appendedEvents[0].Context.SequenceNumber, appendedEvents[^1].Context.SequenceNumber, handler.Id);
+            _logger.ErrorWhileHandlingEvents(ex, appendedEvents[0].Context.SequenceNumber, appendedEvents[^1].Context.SequenceNumber, handler.Id);
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
             state = ObservationState.Failed;
