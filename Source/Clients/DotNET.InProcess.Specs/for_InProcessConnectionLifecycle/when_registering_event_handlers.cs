@@ -15,10 +15,9 @@ public class when_registering_event_handlers : Specification
 
     void Establish()
     {
-        inProcessLifecycle = new InProcessConnectionLifecycle(NullLogger<InProcessConnectionLifecycle>.Instance);
-        regularLifecycle = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
+        inProcessLifecycle = new();
+        regularLifecycle = new(NullLogger<ConnectionLifecycle>.Instance);
 
-        // Simulate EventTypes or other components subscribing to OnConnected
         inProcessLifecycle.OnConnected += () =>
         {
             inProcessCallCount++;
