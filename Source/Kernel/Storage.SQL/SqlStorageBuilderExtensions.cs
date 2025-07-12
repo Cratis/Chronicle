@@ -23,17 +23,17 @@ public static class SqlStorageBuilderExtensions
         Action<SqlStorageOptions> configureOptions)
     {
         services.Configure(configureOptions);
-        
+
         services.AddDbContextFactory<SinkDbContext>((serviceProvider, options) =>
         {
             var sqlOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SqlStorageOptions>>().Value;
-            
+
             switch (sqlOptions.ProviderType)
             {
                 case SqlProviderType.SqlServer:
                     options.UseSqlServer(sqlOptions.ConnectionString);
                     break;
-                    
+
                 case SqlProviderType.PostgreSQL:
                     options.UseNpgsql(sqlOptions.ConnectionString);
                     break;
@@ -41,14 +41,14 @@ public static class SqlStorageBuilderExtensions
                 case SqlProviderType.SQLite:
                     options.UseSqlite(sqlOptions.ConnectionString);
                     break;
-                    
+
                 default:
                     throw new NotSupportedException($"SQL provider type {sqlOptions.ProviderType} is not supported");
             }
         });
-        
+
         services.AddTransient<SinkFactory>();
-        
+
         return services;
     }
 

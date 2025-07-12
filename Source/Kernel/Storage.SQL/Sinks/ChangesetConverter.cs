@@ -92,7 +92,7 @@ public class ChangesetConverter(
         var jsonData = System.Text.Json.JsonSerializer.Serialize(propertiesChanged.State);
 
         var sql = @"
-            UPDATE {0} 
+            UPDATE {0}
             SET Data = @data, LastUpdated = @lastUpdated
             WHERE {1} = @key".Replace("{0}", tableName).Replace("{1}", keyColumnName);
 
@@ -107,7 +107,7 @@ public class ChangesetConverter(
         var keyColumnName = GetKeyColumnName();
 
         var sql = @"
-            UPDATE {0} 
+            UPDATE {0}
             SET LastUpdated = @lastUpdated
             WHERE {1} = @key".Replace("{0}", tableName).Replace("{1}", keyColumnName);
 
@@ -121,7 +121,7 @@ public class ChangesetConverter(
         var keyColumnName = GetKeyColumnName();
 
         var sql = @"
-            UPDATE {0} 
+            UPDATE {0}
             SET LastUpdated = @lastUpdated
             WHERE {1} = @key".Replace("{0}", tableName).Replace("{1}", keyColumnName);
 

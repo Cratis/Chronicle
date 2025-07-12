@@ -18,7 +18,7 @@ public class SinkDbContext(DbContextOptions<SinkDbContext> options) : DbContext(
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // We'll configure the model dynamically based on projection schemas
         // For now, this is left empty as tables will be created dynamically
     }

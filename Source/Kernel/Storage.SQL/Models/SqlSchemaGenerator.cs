@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using Cratis.Chronicle.Concepts.Models;
 using NJsonSchema;
-using System.Text;
 
 namespace Cratis.Chronicle.Storage.SQL.Models;
 
@@ -35,14 +35,15 @@ public class SqlSchemaGenerator
     {
         var tableName = GetTableName(model.Name);
         var columns = GenerateColumns(model.Schema);
-        
+
         var sql = new StringBuilder();
-        
+
         if (_providerType == SqlProviderType.SqlServer)
         {
-            sql.AppendLine($@"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{tableName}' AND schema_id = SCHEMA_ID('{_schema}'))");
-            sql.AppendLine("BEGIN");
-            sql.AppendLine($"CREATE TABLE [{_schema}].[{tableName}] (");
+            sql
+                .AppendLine($@"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{tableName}' AND schema_id = SCHEMA_ID('{_schema}'))")
+                .AppendLine("BEGIN")
+                .AppendLine($"CREATE TABLE [{_schema}].[{tableName}] (");
         }
         else if (_providerType == SqlProviderType.PostgreSQL)
         {
@@ -62,21 +63,23 @@ public class SqlSchemaGenerator
             SqlProviderType.SQLite => "DEFAULT (datetime('now'))",
             _ => "DEFAULT CURRENT_TIMESTAMP"
         };
-        
-        sql.AppendLine($"    Id {idType} PRIMARY KEY,");
-        sql.AppendLine("    EventSequenceNumber BIGINT NOT NULL,");
-        sql.AppendLine($"    LastUpdated TIMESTAMP {timestampDefault},");
-        
+
+        sql
+            .AppendLine($"    Id {idType} PRIMARY KEY,")
+            .AppendLine("    EventSequenceNumber BIGINT NOT NULL,")
+            .AppendLine($"    LastUpdated TIMESTAMP {timestampDefault},");
+
         foreach (var column in columns)
         {
             sql.AppendLine($"    {column},");
         }
-        
+
         // SQLite doesn't support NVARCHAR(MAX), use TEXT instead
         var dataType = _providerType == SqlProviderType.SQLite ? "TEXT" : "NVARCHAR(MAX)";
-        sql.AppendLine($"    Data {dataType}"); // Fallback JSON storage
-        sql.AppendLine(")");
-        
+        sql
+            .AppendLine($"    Data {dataType}") // Fallback JSON storage
+            .AppendLine(")");
+
         if (_providerType == SqlProviderType.SqlServer)
         {
             sql.AppendLine("END");
@@ -93,19 +96,19 @@ public class SqlSchemaGenerator
     public IEnumerable<string> GenerateColumns(JsonSchema schema)
     {
         var columns = new List<string>();
-        
+
         foreach (var property in schema.Properties)
         {
             var columnName = GetColumnName(property.Key);
             var columnType = GetSqlType(property.Value);
-            
+
             if (columnType != null)
             {
                 var identifier = _providerType == SqlProviderType.SQLite ? $"\"{columnName}\"" : $"[{columnName}]";
                 columns.Add($"{identifier} {columnType}");
             }
         }
-        
+
         return columns;
     }
 

@@ -33,24 +33,3 @@ public class SqlStorageOptions
     /// </summary>
     public bool AutoCreateSchema { get; set; } = true;
 }
-
-/// <summary>
-/// Supported SQL provider types.
-/// </summary>
-public enum SqlProviderType
-{
-    /// <summary>
-    /// Microsoft SQL Server.
-    /// </summary>
-    SqlServer,
-
-    /// <summary>
-    /// PostgreSQL.
-    /// </summary>
-    PostgreSQL,
-
-    /// <summary>
-    /// SQLite.
-    /// </summary>
-    SQLite
-}
