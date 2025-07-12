@@ -170,7 +170,7 @@ public class EventSequence(
             EventTypes = eventTypes?.ToContract() ?? []
         });
 
-        return result.Events.ToClient();
+        return await result.Events.ToClient(eventSerializer);
     }
 
     /// <inheritdoc/>
@@ -193,7 +193,7 @@ public class EventSequence(
             EventTypes = eventTypes.ToContract()
         });
 
-        return result.Events.ToClient();
+        return await result.Events.ToClient(eventSerializer);
     }
 
     /// <inheritdoc/>

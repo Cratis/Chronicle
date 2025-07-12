@@ -162,7 +162,7 @@ public class Projections(
             EventSequenceId = EventSequenceId.Log,
             ModelKey = modelKey,
             SessionId = sessionId,
-            Events = eventsToApply.ToContract()
+            Events = await eventsToApply.ToContract(eventSerializer)
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
