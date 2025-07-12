@@ -24,7 +24,7 @@ public class InProcessConnectionLifecycle : IConnectionLifecycle
     public event Disconnected OnDisconnected = () => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public bool IsConnected { get; private set; } = true; // In-process is always "connected"
+    public bool IsConnected { get; private set; }
 
     /// <inheritdoc/>
     public ConnectionId ConnectionId { get; private set; } = ConnectionId.New();
