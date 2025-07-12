@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1
+
+####################################
+# Cratis Chronicle Server
+# Alpine-based optimized image
+####################################
+
+# Use Alpine-based .NET runtime for smaller size
+FROM mcr.microsoft.com/dotnet/runtime:9.0.0-alpine3.20
+ARG CONFIGURATION=Release
+ARG VERSION
+
+WORKDIR /app
+
+EXPOSE 8080 11111 30000 35000
+
+# Copy build scripts and make executable
+COPY Docker/copy-server-files.sh ./copy-server-files.sh
+RUN chmod +x ./copy-server-files.sh
+
+# Copy application and workbench files
+COPY ./Source/Kernel/Server/out ./out
+COPY ./Source/Workbench/Web/wwwroot wwwroot
+
+# Extract and optimize application files in one layer
+RUN if [ "$(uname -m)" = "x86_64" ]; then ARCH_FOLDER="x64"; else ARCH_FOLDER="arm64"; fi && \
+    cp ./out/$ARCH_FOLDER/*.dll . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/*.json . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/*.xml . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/*.so . 2>/dev/null || true && \
+    cp ./out/$ARCH_FOLDER/Cratis.Chronicle.Server . 2>/dev/null || true && \
+    # Remove debug and development files
+    rm -f appsettings.Development.json && \
+    rm -f ./chronicle.json && \
+    # Remove debug symbols and documentation
+    find . -name "*.pdb" -delete && \
+    find . -name "*.xml" -delete && \
+    # Remove unnecessary locale folders (keeping only en)
+    rm -rf ./cs ./de ./es ./fr ./it ./ja ./ko ./pl ./pt* ./ru ./tr ./zh* && \
+    rm -rf ./ar ./az ./bg ./bn* ./da ./el ./fa ./fi* ./he ./hr ./hu ./hy ./id ./is ./ku ./lv ./ms* ./mt ./nb* ./nl ./ro ./sk ./sl ./sr* ./sv ./th* ./uk ./uz* ./vi && \
+    # Clean up build artifacts
+    rm -rf ./out ./copy-server-files.sh
+
+# Create non-root user for security (Alpine syntax)
+RUN addgroup -g 1000 chronicle && \
+    adduser -D -s /bin/sh -u 1000 -G chronicle chronicle && \
+    chown -R chronicle:chronicle /app
+
+USER chronicle
+
+ENTRYPOINT ["./Cratis.Chronicle.Server"]

@@ -2,10 +2,10 @@
 
 ####################################
 # Cratis Chronicle Server
-# Optimized production image
+# Optimized production image (Debian-based)
 ####################################
 
-FROM mcr.microsoft.com/dotnet/runtime:9.0.0-bookworm-slim
+FROM mcr.microsoft.com/dotnet/runtime:9.0.0-bookworm-slim AS optimized
 ARG CONFIGURATION=Release
 ARG VERSION
 
@@ -13,7 +13,7 @@ WORKDIR /app
 
 EXPOSE 8080 11111 30000 35000
 
-# Copy and process files in minimal layers for better optimization
+# Copy and process files in minimal layers
 COPY Docker/copy-server-files.sh ./copy-server-files.sh
 COPY ./Source/Kernel/Server/out ./out
 COPY ./Source/Workbench/Web/wwwroot wwwroot

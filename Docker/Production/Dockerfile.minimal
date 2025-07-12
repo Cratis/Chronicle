@@ -2,10 +2,10 @@
 
 ####################################
 # Cratis Chronicle Server
-# Optimized production image
+# Optimized production image with minimal layers
 ####################################
 
-FROM mcr.microsoft.com/dotnet/runtime:9.0.0-bookworm-slim
+FROM mcr.microsoft.com/dotnet/runtime:9.0.0-alpine3.20 AS optimized
 ARG CONFIGURATION=Release
 ARG VERSION
 
@@ -13,7 +13,7 @@ WORKDIR /app
 
 EXPOSE 8080 11111 30000 35000
 
-# Copy and process files in minimal layers for better optimization
+# Copy and process files in minimal layers
 COPY Docker/copy-server-files.sh ./copy-server-files.sh
 COPY ./Source/Kernel/Server/out ./out
 COPY ./Source/Workbench/Web/wwwroot wwwroot
@@ -30,20 +30,16 @@ RUN chmod +x ./copy-server-files.sh && \
     rm -f appsettings.Development.json chronicle.json && \
     find . -name "*.pdb" -delete && \
     find . -name "*.xml" -delete && \
-    # Remove documentation assemblies to save space (but keep essential ones)
-    rm -f Microsoft.CodeAnalysis*.dll System.ComponentModel.Composition.dll && \
-    # Remove unused locale directories (more comprehensive)
-    find . -maxdepth 1 -type d -name "[a-z][a-z]" ! -name "en" -exec rm -rf {} + 2>/dev/null || true && \
-    find . -maxdepth 1 -type d -name "[a-z][a-z]-*" ! -name "en-*" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove documentation assemblies to save space
+    rm -f Microsoft.CodeAnalysis*.dll Swashbuckle*.dll System.ComponentModel.Composition.dll && \
+    # Remove unused locale directories
+    find . -maxdepth 1 -type d -name "[a-z][a-z]" -exec rm -rf {} + && \
+    find . -maxdepth 1 -type d -name "[a-z][a-z]-*" -exec rm -rf {} + && \
     # Clean up build artifacts
     rm -rf ./out ./copy-server-files.sh && \
-    # Remove unnecessary system packages and clean apt cache
-    apt-get update && apt-get remove -y --purge --auto-remove \
-        apt-utils \
-        && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
     # Create non-root user
-    groupadd -r chronicle && \
-    useradd -r -g chronicle chronicle && \
+    addgroup -g 1000 chronicle && \
+    adduser -D -s /bin/sh -u 1000 -G chronicle chronicle && \
     chown -R chronicle:chronicle /app
 
 USER chronicle
