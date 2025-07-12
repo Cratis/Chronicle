@@ -40,6 +40,7 @@ public class Reducers : IReducers
     readonly IModelNameResolver _modelNameResolver;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
     IEnumerable<Type> _aggregateRootStateTypes = [];
     Dictionary<Type, IReducerHandler> _handlersByType = new();
@@ -59,6 +60,7 @@ public class Reducers : IReducers
     /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Reducers(
         IEventStore eventStore,
@@ -70,6 +72,7 @@ public class Reducers : IReducers
         IModelNameResolver modelNameResolver,
         IJsonSchemaGenerator jsonSchemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
+        IIdentityProvider identityProvider,
         ILogger<Reducers> logger)
     {
         eventStore.Connection.Lifecycle.OnConnected += Register;
@@ -88,6 +91,7 @@ public class Reducers : IReducers
         _modelNameResolver = modelNameResolver;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _identityProvider = identityProvider;
         _logger = logger;
     }
 
@@ -209,6 +213,27 @@ public class Reducers : IReducers
         return handler.GetState();
     }
 
+    /// <inheritdoc/>
+    public Task Replay<TReducer>()
+        where TReducer : IReducer
+    {
+        var reducerType = typeof(TReducer);
+        var handler = _handlersByType[reducerType];
+        return Replay(handler.Id);
+    }
+
+    /// <inheritdoc/>
+    public Task Replay(ReducerId reducerId)
+    {
+        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ObserverId = reducerId,
+            EventSequenceId = string.Empty
+        });
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
     {
         var handler = new ReducerHandler(
@@ -300,7 +325,7 @@ public class Reducers : IReducers
         try
         {
             await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-            BaseIdentityProvider.SetCurrentIdentity(Identity.System);
+            _identityProvider.SetCurrentIdentity(Identity.System);
             var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, _jsonSerializerOptions);
             var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
