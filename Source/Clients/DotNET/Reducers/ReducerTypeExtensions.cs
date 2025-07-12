@@ -32,8 +32,12 @@ public static class ReducerTypeExtensions
     /// </remarks>
     public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
     {
-        var isReducerMethod = methodInfo.ReturnType == readModelType ||
-                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType);
+        var returnType = methodInfo.ReturnType;
+        var isReducerMethod = returnType == readModelType ||
+                              returnType == typeof(Task<>).MakeGenericType(readModelType) ||
+                              returnType == typeof(Task) ||
+                              IsNullableType(returnType, readModelType) ||
+                              IsTaskWithNullableType(returnType, readModelType);
 
         if (!isReducerMethod) return false;
         var parameters = methodInfo.GetParameters();
@@ -114,5 +118,28 @@ public static class ReducerTypeExtensions
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
         var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
         return reducerAttribute?.IsActive ?? true;
+    }
+
+    static bool IsNullableType(Type returnType, Type readModelType)
+    {
+        // Check if it's a nullable reference type in a nullable context
+        if (returnType == readModelType)
+        {
+            return true; // This covers both nullable and non-nullable reference types
+        }
+
+        return false;
+    }
+
+    static bool IsTaskWithNullableType(Type returnType, Type readModelType)
+    {
+        // Check if it's Task<ReadModel?> where ReadModel is a reference type
+        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            var innerType = returnType.GetGenericArguments()[0];
+            return innerType == readModelType; // This covers both nullable and non-nullable reference types
+        }
+
+        return false;
     }
 }

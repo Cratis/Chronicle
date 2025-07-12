@@ -44,7 +44,16 @@ public class ReducerPipeline(
         if (result.ObserverResult.State != ObserverSubscriberState.Ok) return;
 
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
-        if (!objectComparer.Compare(initial, result.ModelState, out var differences))
+        
+        if (result.ModelState == null)
+        {
+            // Reducer returned null, indicating deletion
+            if (initial != null)
+            {
+                changeset.Add(new Removed(initial));
+            }
+        }
+        else if (!objectComparer.Compare(initial, result.ModelState, out var differences))
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }
