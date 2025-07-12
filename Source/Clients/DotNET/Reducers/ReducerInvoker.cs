@@ -63,27 +63,23 @@ public class ReducerInvoker : IReducerInvoker
 
                     if (parameters.Length == 3)
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent, eventAndContext.Context]);
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent, eventAndContext.Context])!;
                     }
                     else
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent]);
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent])!;
                     }
 
-                    // Handle different return types
                     if (returnValue == null)
                     {
-                        // Method returned null, indicating deletion
                         initialReadModelContent = null;
                     }
                     else if (returnValue.GetType() == ReadModelType)
                     {
-                        // Synchronous method returned ReadModel or ReadModel?
                         initialReadModelContent = returnValue;
                     }
                     else if (returnValue is Task task)
                     {
-                        // Asynchronous method
                         await task;
 
                         if (task.GetType() == typeof(Task) ||
@@ -91,12 +87,10 @@ public class ReducerInvoker : IReducerInvoker
                              task.GetType().GetGenericTypeDefinition() == typeof(Task<>) &&
                              task.GetType().GetGenericArguments()[0].Name == "VoidTaskResult"))
                         {
-                            // Task (void) - indicates deletion
                             initialReadModelContent = null;
                         }
                         else
                         {
-                            // Task<ReadModel> or Task<ReadModel?>
                             initialReadModelContent = task.GetType().GetProperty(nameof(Task<int>.Result))?.GetValue(task);
                         }
                     }
