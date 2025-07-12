@@ -96,7 +96,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumberError>> Append(
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -133,7 +133,7 @@ public class EventSequenceStorage(
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
-            return Result<AppendedEvent, DuplicateEventSequenceNumberError>.Success(new AppendedEvent(
+            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
                     eventSourceType,
@@ -158,7 +158,7 @@ public class EventSequenceStorage(
                                           .SingleOrDefaultAsync()
                                           .ConfigureAwait(false);
             var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
-            return new DuplicateEventSequenceNumberError(nextAvailableSequenceNumber);
+            return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
         }
     }
 

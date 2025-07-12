@@ -9,4 +9,4 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// Error indicating a duplicate event sequence number was encountered.
 /// </summary>
 /// <param name="NextAvailableSequenceNumber">The next available sequence number that can be used.</param>
-public record DuplicateEventSequenceNumberError(EventSequenceNumber NextAvailableSequenceNumber);
+public record DuplicateEventSequenceNumber(EventSequenceNumber NextAvailableSequenceNumber);
