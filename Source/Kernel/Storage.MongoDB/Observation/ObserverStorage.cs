@@ -74,7 +74,8 @@ public class ObserverStorage(IEventStoreNamespaceDatabase database) : IObserverS
             ObserverRunningState.Unknown,
             new HashSet<Key>(),
             new HashSet<Key>(),
-            false);
+            false,
+            true);
     }
 
     /// <inheritdoc/>

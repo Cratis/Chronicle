@@ -211,6 +211,27 @@ public class Projections(
     }
 
     /// <inheritdoc/>
+    public Task Replay<TProjection>()
+        where TProjection : IProjection
+    {
+        var projectionType = typeof(TProjection);
+        var handler = _handlersByType[projectionType];
+        return Replay(handler.Id);
+    }
+
+    /// <inheritdoc/>
+    public Task Replay(ProjectionId projectionId)
+    {
+        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ObserverId = projectionId,
+            EventSequenceId = string.Empty
+        });
+    }
+
+    /// <inheritdoc/>
     public Task Discover()
     {
         _definitionsByType = FindAllProjectionDefinitions(

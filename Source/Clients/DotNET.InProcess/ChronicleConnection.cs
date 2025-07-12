@@ -24,7 +24,7 @@ internal class ChronicleConnection(
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
     IServices? _services;
-    Cratis.Chronicle.Services.Clients.ConnectionService? _connectionService;
+    Services.Clients.ConnectionService? _connectionService;
 
     /// <inheritdoc/>
     IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
@@ -60,7 +60,7 @@ internal class ChronicleConnection(
 
     void Connect()
     {
-        _connectionService = new Cratis.Chronicle.Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Cratis.Chronicle.Services.Clients.ConnectionService>());
+        _connectionService = new Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Services.Clients.ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

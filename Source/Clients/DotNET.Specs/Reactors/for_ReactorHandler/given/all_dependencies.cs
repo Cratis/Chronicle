@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Reactors.for_ReactorHandler.given;
 
@@ -13,6 +14,7 @@ public class all_dependencies : Specification
     protected EventSequenceId _eventSequenceId;
     protected IReactorInvoker _reactorInvoker;
     protected ICausationManager _causationManager;
+    protected IIdentityProvider _identityProvider;
     protected IServiceProvider _serviceProvider;
 
     void Establish()
@@ -22,6 +24,7 @@ public class all_dependencies : Specification
         _eventSequenceId = Guid.NewGuid().ToString();
         _reactorInvoker = Substitute.For<IReactorInvoker>();
         _causationManager = Substitute.For<ICausationManager>();
+        _identityProvider = Substitute.For<IIdentityProvider>();
         _serviceProvider = Substitute.For<IServiceProvider>();
     }
 }

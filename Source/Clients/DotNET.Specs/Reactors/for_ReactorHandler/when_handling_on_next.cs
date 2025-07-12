@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Reactors.for_ReactorHandler;
 
@@ -35,4 +36,6 @@ public class when_handling_on_next : given.a_reactor_handler
     [Fact] void should_add_causation_with_event_sequence_id() => causation_properties[ReactorHandler.CausationEventSequenceIdProperty].ShouldEqual(_eventSequenceId.ToString());
     [Fact] void should_add_causation_with_event_sequence_number() => causation_properties[ReactorHandler.CausationEventSequenceNumberProperty].ShouldEqual(metadata.SequenceNumber.Value.ToString());
     [Fact] void should_invoke_observer_invoker() => _reactorInvoker.Received(1).Invoke(_serviceProvider, event_content, context);
+    [Fact] void should_set_current_identity() => _identityProvider.Received(1).SetCurrentIdentity(Arg.Is<Identity>(i => i.Subject == Identity.System.Subject && i.OnBehalfOf == context.CausedBy));
+    [Fact] void should_clear_current_identity() => _identityProvider.Received(1).ClearCurrentIdentity();
 }

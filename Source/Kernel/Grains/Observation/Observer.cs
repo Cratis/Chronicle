@@ -105,14 +105,15 @@ public partial class Observer(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
-        object? subscriberArgs = null)
+        object? subscriberArgs = null,
+        bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         logger.Subscribing();
 
-        State = State with { Type = type, EventTypes = eventTypes };
+        State = State with { Type = type, EventTypes = eventTypes, IsReplayable = isReplayable };
 
         _subscription = new(
             _observerId,
@@ -120,7 +121,8 @@ public partial class Observer(
             eventTypes,
             typeof(TObserverSubscriber),
             siloAddress,
-            subscriberArgs);
+            subscriberArgs,
+            isReplayable);
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())

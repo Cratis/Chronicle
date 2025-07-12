@@ -138,6 +138,21 @@ public interface IProjections
         where TProjection : IProjection;
 
     /// <summary>
+    /// Replay a specific projection.
+    /// </summary>
+    /// <typeparam name="TProjection">Type of projection to replay.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task Replay<TProjection>()
+        where TProjection : IProjection;
+
+    /// <summary>
+    /// Replay a specific projection by its identifier.
+    /// </summary>
+    /// <param name="projectionId"><see cref="ProjectionId"/> to replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Replay(ProjectionId projectionId);
+
+    /// <summary>
     /// Discover all projections from entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>

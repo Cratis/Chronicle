@@ -15,18 +15,20 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <param name="SubscriberType">Type that is subscribing.</param>
 /// <param name="SiloAddress">The <see cref="SiloAddress"/> for the subscriber.</param>
 /// <param name="Arguments">Optional arguments for the subscriber.</param>
+/// <param name="IsReplayable">Whether the observer supports replay scenarios.</param>
 public record ObserverSubscription(
     ObserverId ObserverId,
     ObserverKey ObserverKey,
     IEnumerable<EventType> EventTypes,
     Type SubscriberType,
     SiloAddress SiloAddress,
-    object? Arguments = null)
+    object? Arguments = null,
+    bool IsReplayable = true)
 {
     /// <summary>
     /// Gets a subscription representing no subscription.
     /// </summary>
-    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, [], typeof(NullObserverSubscriber), SiloAddress.Zero, null);
+    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, [], typeof(NullObserverSubscriber), SiloAddress.Zero, null, true);
 
     /// <summary>
     /// Check whether the subscription is subscribed.

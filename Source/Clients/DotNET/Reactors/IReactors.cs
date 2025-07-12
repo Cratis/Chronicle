@@ -27,7 +27,7 @@ public interface IReactors
     /// </summary>
     /// <typeparam name="TReactor">The reactor type.</typeparam>
     /// <returns>Awaitable task.</returns>
-    Task<ReactorHandler> Register<TReactor>()
+    Task<IReactorHandler> Register<TReactor>()
         where TReactor : IReactor;
 
     /// <summary>
@@ -35,7 +35,7 @@ public interface IReactors
     /// </summary>
     /// <typeparam name="TReactor">The reactor type.</typeparam>
     /// <returns><see cref="ReactorHandler"/> instance.</returns>
-    ReactorHandler GetHandlerFor<TReactor>()
+    IReactorHandler GetHandlerFor<TReactor>()
         where TReactor : IReactor;
 
     /// <summary>
@@ -43,7 +43,7 @@ public interface IReactors
     /// </summary>
     /// <param name="id"><see cref="ReactorId"/> to get for.</param>
     /// <returns><see cref="ReactorHandler"/> instance.</returns>
-    ReactorHandler GetHandlerById(ReactorId id);
+    IReactorHandler GetHandlerById(ReactorId id);
 
     /// <summary>
     /// Get any failed partitions for a specific reactor.
@@ -66,4 +66,19 @@ public interface IReactors
     /// <returns><see cref="ReactorState"/>.</returns>
     Task<ReactorState> GetStateFor<TReactor>()
         where TReactor : IReactor;
+
+    /// <summary>
+    /// Replay a specific reactor.
+    /// </summary>
+    /// <typeparam name="TReactor">Type of reactor to replay.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task Replay<TReactor>()
+        where TReactor : IReactor;
+
+    /// <summary>
+    /// Replay a specific reactor by its identifier.
+    /// </summary>
+    /// <param name="reactorId"><see cref="ReactorId"/> to replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Replay(ReactorId reactorId);
 }

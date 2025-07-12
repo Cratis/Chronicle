@@ -24,7 +24,7 @@ public class ReplayEvaluator(
     /// <inheritdoc/>
     public async Task<bool> Evaluate(ReplayEvaluationContext context)
     {
-        if (!NeedsToReplay(context))
+        if (!CanReplay(context))
         {
             return false;
         }
@@ -47,6 +47,9 @@ public class ReplayEvaluator(
 
         return false;
     }
+
+    static bool CanReplay(ReplayEvaluationContext context) =>
+        context.State.IsReplayable && NeedsToReplay(context);
 
     static bool NeedsToReplay(ReplayEvaluationContext context) =>
         HasDefinitionChanged(context) && HasEventsInSequence(context);

@@ -12,5 +12,6 @@ public class a_reactor_handler : all_dependencies
         _reactorId,
         _eventSequenceId,
         _reactorInvoker,
-        _causationManager);
+        _causationManager,
+        _identityProvider);
 }

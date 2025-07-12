@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -32,9 +33,10 @@ public class Reactors : IReactors
     readonly IReactorMiddlewares _middlewares;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
+    readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
-    readonly IDictionary<Type, ReactorHandler> _handlers = new Dictionary<Type, ReactorHandler>();
+    readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
     readonly IChronicleServicesAccessor _servicesAccessor;
 
     bool _registered;
@@ -49,6 +51,7 @@ public class Reactors : IReactors
     /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -59,6 +62,7 @@ public class Reactors : IReactors
         IReactorMiddlewares middlewares,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
+        IIdentityProvider identityProvider,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -70,6 +74,7 @@ public class Reactors : IReactors
         _middlewares = middlewares;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
+        _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
         eventStore.Connection.Lifecycle.OnConnected += Register;
@@ -119,7 +124,7 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task<ReactorHandler> Register<TReactor>()
+    public Task<IReactorHandler> Register<TReactor>()
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
@@ -132,11 +137,11 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public ReactorHandler GetHandlerFor<TReactor>()
+    public IReactorHandler GetHandlerFor<TReactor>()
         where TReactor : IReactor => _handlers[typeof(TReactor)];
 
     /// <inheritdoc/>
-    public ReactorHandler GetHandlerById(ReactorId id)
+    public IReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
         ThrowIfUnknownReactorId(reactorHandler, id);
@@ -163,7 +168,28 @@ public class Reactors : IReactors
         return handler.GetState();
     }
 
-    static void ThrowIfUnknownReactorId(ReactorHandler? handler, ReactorId reactorId)
+    /// <inheritdoc/>
+    public Task Replay<TReactor>()
+        where TReactor : IReactor
+    {
+        var reactorType = typeof(TReactor);
+        var handler = _handlers[reactorType];
+        return Replay(handler.Id);
+    }
+
+    /// <inheritdoc/>
+    public Task Replay(ReactorId reactorId)
+    {
+        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ObserverId = reactorId,
+            EventSequenceId = string.Empty
+        });
+    }
+
+    static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
         {
@@ -171,14 +197,15 @@ public class Reactors : IReactors
         }
     }
 
-    ReactorHandler CreateHandlerFor(Type reactorType)
+    IReactorHandler CreateHandlerFor(Type reactorType)
     {
         var handler = new ReactorHandler(
             _eventStore,
             reactorType.GetReactorId(),
             reactorType.GetEventSequenceId(),
             new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
-            _causationManager);
+            _causationManager,
+            _identityProvider);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
@@ -189,7 +216,7 @@ public class Reactors : IReactors
         return handler;
     }
 
-    void RegisterReactor(ReactorHandler handler)
+    void RegisterReactor(IReactorHandler handler)
     {
         _logger.RegisteringReactor(handler.Id);
         var registration = new RegisterReactor
@@ -221,7 +248,7 @@ public class Reactors : IReactors
             .Subscribe(_ => { }, messages.Dispose);
     }
 
-    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorHandler handler, EventsToObserve events)
+    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
     {
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();

@@ -97,7 +97,6 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
-        await RemoveReminder(failedPartition.Partition.ToString());
         await _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(new(_observerKey, State.Type, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, State.EventTypes));
     }
 }
