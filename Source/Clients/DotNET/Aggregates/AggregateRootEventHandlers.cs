@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Cratis.Chronicle.Conventions;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reactors;
 
 namespace Cratis.Chronicle.Aggregates;
 

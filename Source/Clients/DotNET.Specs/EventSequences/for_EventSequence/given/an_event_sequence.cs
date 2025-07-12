@@ -18,6 +18,7 @@ public class an_event_sequence : all_dependencies
             _constraints,
             _eventSerializer,
             _correlationIdAccessor,
+            _concurrencyScopeStrategies,
             _causationManager,
             _unitOfWorkManager,
             _identityProvider);

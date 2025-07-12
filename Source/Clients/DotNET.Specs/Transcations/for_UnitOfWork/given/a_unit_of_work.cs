@@ -12,6 +12,8 @@ public class a_unit_of_work : Specification
     protected CorrelationId _correlationId;
     protected IEventSequence _eventSequence;
     protected bool _onCompletedCalled;
+    protected IEnumerable<EventForEventSourceId> _eventsAppended;
+    protected AppendManyResult _appendResult;
 
     void Establish()
     {
@@ -20,7 +22,18 @@ public class a_unit_of_work : Specification
         _eventStore.GetEventSequence(EventSequenceId.Log).Returns(_eventSequence);
         _correlationId = CorrelationId.New();
         _unitOfWork = new(_correlationId, OnUnitOfWorkCompleted, _eventStore);
+
+        _appendResult = GetAppendResult();
+        _eventSequence
+            .AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<CorrelationId>())
+            .Returns(callInfo =>
+            {
+                _eventsAppended = callInfo.Arg<IEnumerable<EventForEventSourceId>>();
+                return _appendResult;
+            });
     }
+
+    protected virtual AppendManyResult GetAppendResult() => new();
 
     protected virtual void OnUnitOfWorkCompleted(IUnitOfWork unitOfWork)
     {

@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Monads;
 using Orleans.Concurrency;
@@ -56,7 +57,10 @@ public interface IEventSequence : IGrainWithStringKey
     /// <p>If no event is found, it will return <see cref="EventSequenceNumber.Unavailable"/>.</p>
     /// </returns>
     [AlwaysInterleave]
-    Task<Result<EventSequenceNumber, GetSequenceNumberError>> GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+    Task<Result<EventSequenceNumber, GetSequenceNumberError>> GetNextSequenceNumberGreaterOrEqualTo(
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<EventType>? eventTypes = null,
+        EventSourceId? eventSourceId = null);
 
     /// <summary>
     /// Append a single event to the event store.
@@ -70,8 +74,19 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
+    /// <param name="concurrencyScope">The <see cref="ConcurrencyScope"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendResult> Append(EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, JsonObject content, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task<AppendResult> Append(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        ConcurrencyScope concurrencyScope);
 
     /// <summary>
     /// Append a single event to the event store.
@@ -80,8 +95,14 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the events, defined by <see cref="Identity"/>.</param>
+    /// <param name="concurrencyScopes">The <see cref="ConcurrencyScopes"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<AppendManyResult> AppendMany(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task<AppendManyResult> AppendMany(
+        IEnumerable<EventToAppend> events,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        ConcurrencyScopes concurrencyScopes);
 
     /// <summary>
     /// Compensate a specific event in the event store.
@@ -97,7 +118,13 @@ public interface IEventSequence : IGrainWithStringKey
     /// The type of the event has to be the same as the original event at the sequence number.
     /// Its generational information is taken into account when compensating.
     /// </remarks>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task Compensate(
+        EventSequenceNumber sequenceNumber,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy);
 
     /// <summary>
     /// Redact an event at a specific sequence number.
@@ -108,7 +135,12 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the redaction, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task Redact(
+        EventSequenceNumber sequenceNumber,
+        RedactionReason reason,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
@@ -120,5 +152,11 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the redaction, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+    Task Redact(
+        EventSourceId eventSourceId,
+        RedactionReason reason,
+        IEnumerable<EventType> eventTypes,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy);
 }

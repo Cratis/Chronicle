@@ -38,13 +38,14 @@ public static class SerializationConfigurationExtensions
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddAppendedEventSerializer(this IServiceCollection services)
+    public static IServiceCollection AddCustomSerializers(this IServiceCollection services)
     {
         services.AddSerializer(builder =>
         {
             builder.Services
                 .AddCompleteSerializer<AppendedEventSerializer>()
-                .AddCompleteSerializer<OneOfSerializer>();
+                .AddCompleteSerializer<OneOfSerializer>()
+                .AddCompleteSerializer<ConcurrencyScopesSerializer>();
         });
         return services;
     }
@@ -81,7 +82,7 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
         services.AddConceptSerializer();
-        services.AddAppendedEventSerializer();
+        services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),

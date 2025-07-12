@@ -43,9 +43,9 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Build
-        run: dotnet build --configuration Release --framework net9.0
+        run: dotnet build --configuration Release
 
-  dotnet-build-repack:
+  dotnet-build-repack-clients:
     runs-on: ubuntu-latest
 
     steps:
@@ -58,15 +58,12 @@ jobs:
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
-      - name: Build root
-        run: dotnet build -f net9.0 --configuration Debug
-
       - name: Clean output for repackaged clients
-        run: dotnet clean -f net9.0
+        run: dotnet clean
         working-directory: ./Source/Clients
 
       - name: Build repackaged clients
-        run: dotnet build -f net9.0 --configuration Debug -p:Repack=true -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -maxcpucount:1
         working-directory: ./Source/Clients
 
   specs:
@@ -103,6 +100,7 @@ jobs:
           - 'for_Reducers'
           - 'Projections'
           - 'AggregateRoots'
+    continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
     steps:

@@ -12,4 +12,14 @@ namespace Cratis.Chronicle.Auditing;
 public record Causation(
     DateTimeOffset Occurred,
     CausationType Type,
-    IDictionary<string, string> Properties);
+    IDictionary<string, string> Properties)
+{
+    /// <summary>
+    /// Creates an unknown causation instance.
+    /// </summary>
+    /// <returns>A new instance of <see cref="Causation"/> with the current time, type set to <see cref="CausationType.Unknown"/>, and an empty properties dictionary.</returns>
+    public static Causation Unknown() => new(
+        DateTimeOffset.UtcNow,
+        CausationType.Unknown,
+        new Dictionary<string, string>());
+}

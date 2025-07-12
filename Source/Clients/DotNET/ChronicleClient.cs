@@ -6,6 +6,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IChronicleConnection _connection;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
+    readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -57,6 +59,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var result = Initialize();
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
+        _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
 
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
@@ -81,6 +84,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var result = Initialize();
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
+        _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
@@ -118,6 +122,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _connection,
             Options.ArtifactsProvider,
             Options.CorrelationIdAccessor,
+            _concurrencyScopeStrategies,
             CausationManager,
             Options.IdentityProvider,
             _jsonSchemaGenerator,
@@ -143,7 +148,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return eventStores.Select(_ => (EventStoreName)_).ToArray();
     }
 
-    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator) Initialize()
+    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies) Initialize()
     {
         var causationManager = new CausationManager();
         causationManager.DefineRoot(new Dictionary<string, string>
@@ -160,8 +165,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, Options.ServiceProvider),
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, Options.ServiceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver);
+        var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, Options.ServiceProvider);
 
-        return (causationManager, jsonSchemaGenerator);
+        return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
     }
 
     record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);
