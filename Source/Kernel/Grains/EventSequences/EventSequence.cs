@@ -312,7 +312,7 @@ public class EventSequence(
     {
         try
         {
-            Result<AppendedEvent, AppendEventError>? appendResult = null;
+            Result<AppendedEvent, DuplicateEventSequenceNumberError>? appendResult = null;
 
             var identity = await IdentityStorage.GetFor(causedBy);
             do
@@ -421,7 +421,7 @@ public class EventSequence(
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
     }
 
-    async Task HandleFailedAppendResult(Result<AppendedEvent, AppendEventError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
+    async Task HandleFailedAppendResult(Result<AppendedEvent, DuplicateEventSequenceNumberError>? appendResult, EventType eventType, EventSourceId eventSourceId, string eventName)
     {
         if (appendResult is null)
         {
@@ -433,7 +433,7 @@ public class EventSequence(
             errorType => errorType switch
             {
                 DuplicateEventSequenceNumberError duplicateError => HandleAppendedDuplicateEvent(eventType, eventSourceId, eventName, duplicateError.NextAvailableSequenceNumber),
-                _ => Task.FromException(new UnknownAppendEventErrorType(errorType))
+                _ => Task.FromException(new FailedAppendingEvent())
             });
     }
 

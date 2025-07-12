@@ -96,7 +96,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AppendedEvent, AppendEventError>> Append(
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumberError>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -133,7 +133,7 @@ public class EventSequenceStorage(
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
-            return Result<AppendedEvent, AppendEventError>.Success(new AppendedEvent(
+            return Result<AppendedEvent, DuplicateEventSequenceNumberError>.Success(new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
                     eventSourceType,
