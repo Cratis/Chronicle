@@ -9,22 +9,35 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public static class Constants
 {
     /// <summary>
-    /// Gets the name of the event store.
+    /// Gets the prefix for the event store names.
     /// </summary>
-    public const string EventStore = "testing";
+    public const string EventStorePrefix = "testing";
 
     /// <summary>
-    /// Gets the name of the read models database.
+    /// Gets the name of the event store for the specified unique identifier.
     /// </summary>
-    public const string ReadModelsDatabaseName = EventStore;
+    /// <param name="uniqueId">The unique identifier for the fixture.</param>
+    /// <returns>The event store name.</returns>
+    public static string GetEventStore(string uniqueId) => $"{EventStorePrefix}{uniqueId}";
 
     /// <summary>
-    /// Gets the name of the event store database.
+    /// Gets the name of the read models database for the specified unique identifier.
     /// </summary>
-    public const string EventStoreDatabaseName = $"{EventStore}+es";
+    /// <param name="uniqueId">The unique identifier for the fixture.</param>
+    /// <returns>The read models database name.</returns>
+    public static string GetReadModelsDatabaseName(string uniqueId) => GetEventStore(uniqueId);
 
     /// <summary>
-    /// Gets the name of the event store namespace database.
+    /// Gets the name of the event store database for the specified unique identifier.
     /// </summary>
-    public const string EventStoreNamespaceDatabaseName = $"{EventStore}+es+Default";
+    /// <param name="uniqueId">The unique identifier for the fixture.</param>
+    /// <returns>The event store database name.</returns>
+    public static string GetEventStoreDatabaseName(string uniqueId) => $"{GetEventStore(uniqueId)}-es";
+
+    /// <summary>
+    /// Gets the name of the event store namespace database for the specified unique identifier.
+    /// </summary>
+    /// <param name="uniqueId">The unique identifier for the fixture.</param>
+    /// <returns>The event store namespace database name.</returns>
+    public static string GetEventStoreNamespaceDatabaseName(string uniqueId) => $"{GetEventStore(uniqueId)}-es+Default";
 }
