@@ -27,16 +27,10 @@
         <NoWarn>NU1507</NoWarn>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)'==''">
-        <Configuration>Debug</Configuration>
-    </PropertyGroup>
-
     <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(SolutionPath)' == ''">
-        <TargetFrameworks>net9.0</TargetFrameworks>
+        <IsPackaging Condition="'$(IsPackaging)' == ''">false</IsPackaging>
+        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net9.0</TargetFramework>
+        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>

@@ -13,4 +13,15 @@ public interface IIdentityProvider
     /// </summary>
     /// <returns>The <see cref="Identity"/>.</returns>
     Identity GetCurrent();
+
+    /// <summary>
+    /// Sets the current identity.
+    /// </summary>
+    /// <param name="identity">Identity to set.</param>
+    void SetCurrentIdentity(Identity identity);
+
+    /// <summary>
+    /// Clears the current identity.
+    /// </summary>
+    void ClearCurrentIdentity();
 }
