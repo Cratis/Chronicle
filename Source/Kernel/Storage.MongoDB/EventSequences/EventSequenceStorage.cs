@@ -96,7 +96,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AppendedEvent, AppendEventError>> Append(
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -133,7 +133,7 @@ public class EventSequenceStorage(
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
-            return Result<AppendedEvent, AppendEventError>.Success(new AppendedEvent(
+            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(sequenceNumber, eventType),
                 new(
                     eventSourceType,
@@ -151,7 +151,14 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            return AppendEventError.DuplicateEventSequenceNumber;
+            // Get the highest sequence number in the collection and add 1 to get the next available
+            var highest = await _collection.Find(FilterDefinition<Event>.Empty)
+                                          .SortByDescendingSequenceNumber()
+                                          .Limit(1)
+                                          .SingleOrDefaultAsync()
+                                          .ConfigureAwait(false);
+            var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
+            return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
         }
     }
 

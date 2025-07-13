@@ -4,7 +4,6 @@
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -133,8 +132,8 @@ public static class ChronicleClientSiloBuilderExtensions
 
                 var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
-                var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
-                var connection = new Cratis.Chronicle.InProcess.ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
+                var connectionLifecycle = new InProcessConnectionLifecycle();
+                var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                 connection.SetServices(services);
                 return new ChronicleClient(connection, options);
             });
