@@ -10,4 +10,4 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// </summary>
 /// <param name="ObserverResult">The <see cref="ObserverSubscriberResult"/> to use.</param>
 /// <param name="ModelState">The resulting model state.</param>
-public record ReducerSubscriberResult(ObserverSubscriberResult ObserverResult, ExpandoObject ModelState);
+public record ReducerSubscriberResult(ObserverSubscriberResult ObserverResult, ExpandoObject? ModelState);
