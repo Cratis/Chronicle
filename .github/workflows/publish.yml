@@ -154,7 +154,7 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-publish-output
         with:
-          path: ./**/bin/**
+          path: ./**/bin/**/*.*
           key: ${{ env.DOTNET_PUBLISH_CACHE }}
 
       - name: Build
@@ -183,7 +183,7 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-publish-repackaged-output
         with:
-          path: ./**/bin/**
+          path: ./**/bin/**/*.*
           key: ${{ env.DOTNET_PUBLISH_REPACKAGED_CACHE }}
 
       - name: Build repackaged clients
