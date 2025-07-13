@@ -49,6 +49,7 @@ public class ReducerInvoker : IReducerInvoker
         var actualReducer = serviceProvider.GetRequiredService(_targetType);
 
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
+        var currentModelState = initialReadModelContent;
 
         foreach (var eventAndContext in eventsAndContexts)
         {
@@ -63,20 +64,20 @@ public class ReducerInvoker : IReducerInvoker
 
                     if (parameters.Length == 3)
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent, eventAndContext.Context])!;
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, currentModelState, eventAndContext.Context])!;
                     }
                     else
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent])!;
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, currentModelState])!;
                     }
 
                     if (returnValue == null)
                     {
-                        initialReadModelContent = null;
+                        currentModelState = null;
                     }
                     else if (returnValue.GetType() == ReadModelType)
                     {
-                        initialReadModelContent = returnValue;
+                        currentModelState = returnValue;
                     }
                     else if (returnValue is Task task)
                     {
@@ -87,11 +88,11 @@ public class ReducerInvoker : IReducerInvoker
                              task.GetType().GetGenericTypeDefinition() == typeof(Task<>) &&
                              task.GetType().GetGenericArguments()[0].Name == "VoidTaskResult"))
                         {
-                            initialReadModelContent = null;
+                            currentModelState = null;
                         }
                         else
                         {
-                            initialReadModelContent = task.GetType().GetProperty(nameof(Task<int>.Result))?.GetValue(task);
+                            currentModelState = task.GetType().GetProperty(nameof(Task<int>.Result))?.GetValue(task);
                         }
                     }
 
@@ -101,7 +102,7 @@ public class ReducerInvoker : IReducerInvoker
             catch (Exception ex)
             {
                 return new ReduceResult(
-                            initialReadModelContent,
+                            currentModelState,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                             ex.GetAllMessages(),
                             ex.StackTrace ?? string.Empty);
@@ -109,7 +110,7 @@ public class ReducerInvoker : IReducerInvoker
         }
 
         return new ReduceResult(
-                initialReadModelContent,
+                currentModelState,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
                 string.Empty);

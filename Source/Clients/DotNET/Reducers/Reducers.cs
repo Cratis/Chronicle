@@ -255,7 +255,9 @@ public class Reducers(
             lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
             if (reduceResult.IsSuccess)
             {
-                modelState = JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
+                modelState = reduceResult.ModelState is null ?
+                    null :
+                    JsonSerializer.Serialize(reduceResult.ModelState, jsonSerializerOptions);
             }
             else
             {

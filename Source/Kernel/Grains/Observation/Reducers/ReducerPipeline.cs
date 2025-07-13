@@ -41,13 +41,12 @@ public class ReducerPipeline(
         var initial = await Sink.FindOrDefault(context.Key);
 
         var result = await reducer(context.Events, initial);
+
         if (result.ObserverResult.State != ObserverSubscriberState.Ok) return;
 
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
-        
         if (result.ModelState == null)
         {
-            // Reducer returned null, indicating deletion
             if (initial != null)
             {
                 changeset.Add(new Removed(initial));
