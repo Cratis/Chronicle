@@ -39,7 +39,7 @@
 
     <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
         <Message Text="Generating gRPC clients" Importance="high" />
-        <Exec Command="dotnet run -f $(TargetFramework) &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+        <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
     </Target>
 
     <ItemGroup>

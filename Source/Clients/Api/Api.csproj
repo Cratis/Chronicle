@@ -78,7 +78,7 @@
 
     <Target Name="EmbedXmlDocs" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
         <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
-        <Exec Command="dotnet run -f $(TargetFramework) $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
+        <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
     </Target>
 
     <ItemGroup>
