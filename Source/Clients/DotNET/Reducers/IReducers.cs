@@ -103,4 +103,19 @@ public interface IReducers
     /// <returns><see cref="ReducerState"/>.</returns>
     Task<ReducerState> GetStateFor<TReducer>()
         where TReducer : IReducer;
+
+    /// <summary>
+    /// Replay a specific reducer.
+    /// </summary>
+    /// <typeparam name="TReducer">Type of reducer to replay.</typeparam>
+    /// <returns>Awaitable task.</returns>
+    Task Replay<TReducer>()
+        where TReducer : IReducer;
+
+    /// <summary>
+    /// Replay a specific reducer by its identifier.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Replay(ReducerId reducerId);
 }
