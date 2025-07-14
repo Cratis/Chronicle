@@ -7,23 +7,23 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 
 public class when_setting_handled_state : given.an_observer
 {
-    static Exception error;
-    static EventSequenceNumber eventSequenceNumber;
+    static Exception _error;
+    static EventSequenceNumber _eventSequenceNumber;
 
-    static ObserverState initialState;
+    static ObserverState _initialState;
 
     void Establish()
     {
-        eventSequenceNumber = 5;
-        initialState = _stateStorage.State;
+        _eventSequenceNumber = 5;
+        _initialState = _stateStorage.State;
     }
 
-    async Task Because() => error = await Catch.Exception(() => _observer.SetHandledStats(eventSequenceNumber));
+    async Task Because() => _error = await Catch.Exception(() => _observer.SetHandledStats(_eventSequenceNumber));
 
-    [Fact] void should_not_fail() => error.ShouldBeNull();
-    [Fact] void should_have_correct_state() => _stateStorage.State.ShouldEqual(initialState with
+    [Fact] void should_not_fail() => _error.ShouldBeNull();
+    [Fact] void should_have_correct_state() => _stateStorage.State.ShouldEqual(_initialState with
     {
-        LastHandledEventSequenceNumber = eventSequenceNumber
+        LastHandledEventSequenceNumber = _eventSequenceNumber
     });
     [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
 }
