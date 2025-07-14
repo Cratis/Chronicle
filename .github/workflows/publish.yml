@@ -6,8 +6,6 @@ env:
   DOTNET_VERSION: "9.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
-  DOTNET_PUBLISH_CACHE: "dotnet-publish-cache-${{ github.sha }}"
-  DOTNET_PUBLISH_REPACKAGED_CACHE: "dotnet-publish-repackaged-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
@@ -131,74 +129,9 @@ jobs:
         run: |
           yarn build
 
-  dotnet-publish:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: actions/cache@v3
-        id: workbench-output
-        with:
-          path: ./Source/Workbench/Web/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        id: dotnet-publish-output
-        with:
-          path: |
-            **/*.dll
-            **/*.xml
-            **/*.json
-          key: ${{ env.DOTNET_PUBLISH_CACHE }}
-
-      - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true
-
-  dotnet-publish-repackaged:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: actions/cache@v3
-        id: workbench-output
-        with:
-          path: ./Source/Workbench/Web/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        id: dotnet-publish-repackaged-output
-        with:
-          path: |
-            **/*.dll
-            **/*.xml
-            **/*.json
-          key: ${{ env.DOTNET_PUBLISH_REPACKAGED_CACHE }}
-
-      - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -maxcpucount:1
-        working-directory: ./Source/Clients
-
   release:
     runs-on: ubuntu-latest
-    needs: [workbench, dotnet-x64, dotnet-arm64, dotnet-publish, dotnet-publish-repackaged]
+    needs: [dotnet-x64, dotnet-arm64, workbench]
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
@@ -236,24 +169,15 @@ jobs:
             ${{ env.DOTNET8_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
-        id: dotnet-publish-repackaged-output
-        with:
-          path: |
-            **/*.dll
-            **/*.xml
-            **/*.json
-          key: ${{ env.DOTNET_PUBLISH_CACHE }}
-      - uses: actions/cache@v3
-        id: dotnet-publish-output
-        with:
-          path: |
-            **/*.dll
-            **/*.xml
-            **/*.json
-          key: ${{ env.DOTNET_PUBLISH_REPACKAGED_CACHE }}
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
+
+      - name: Build
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true
+
+      - name: Build repackaged clients
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -maxcpucount:1
+        working-directory: ./Source/Clients
 
       - name: Create NuGet packages
         run: dotnet pack -p:IsPackaging=true --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
