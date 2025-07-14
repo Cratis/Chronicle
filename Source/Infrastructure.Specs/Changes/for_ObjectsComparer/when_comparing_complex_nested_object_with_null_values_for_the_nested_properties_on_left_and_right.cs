@@ -8,19 +8,19 @@ public class when_comparing_complex_nested_object_with_null_values_for_the_neste
     record TopLevel(SecondLevel? Second);
     record SecondLevel(string StringValue, int IntValue);
 
-    TopLevel left;
-    TopLevel right;
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    TopLevel _left;
+    TopLevel _right;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(null);
-        right = new(null);
+        _left = new(null);
+        _right = new(null);
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
-    [Fact] void should_not_have_any_differences() => differences.ShouldBeEmpty();
+    [Fact] void should_be_considered_equal() => _result.ShouldBeTrue();
+    [Fact] void should_not_have_any_differences() => _differences.ShouldBeEmpty();
 }

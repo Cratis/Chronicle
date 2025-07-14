@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
-public class when_adding_this_accessor_as_segment_using_operator : Specification
+public class when_adding_this_accessor : Specification
 {
     const string FirstSegment = "FirstSegment";
     const string SecondSegment = "SecondSegment";
@@ -13,7 +13,7 @@ public class when_adding_this_accessor_as_segment_using_operator : Specification
 
     void Establish() => _initial = new PropertyPath($"{FirstSegment}.{SecondSegment}");
 
-    void Because() => _result = _initial + new ThisAccessor();
+    void Because() => _result = _initial.AddThisAccessor();
 
-    [Fact] void should_have_last_segment_be_array_index() => _result.LastSegment.ShouldBeOfExactType<ThisAccessor>();
+    [Fact] void should_have_last_segment_be_this_accessor() => _result.LastSegment.ShouldBeOfExactType<ThisAccessor>();
 }

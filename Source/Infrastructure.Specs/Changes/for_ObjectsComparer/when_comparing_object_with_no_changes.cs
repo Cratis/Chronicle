@@ -7,21 +7,21 @@ public class when_comparing_object_with_no_changes : given.an_object_comparer
 {
     record TheType(string StringValue, int IntValue);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
+    bool _result;
 
-    IEnumerable<PropertyDifference> differences;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new TheType("FortyTwo", 42);
-        right = new TheType("FortyTwo", 42);
+        _left = new TheType("FortyTwo", 42);
+        _right = new TheType("FortyTwo", 42);
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
-    [Fact] void should_not_have_any_differences() => differences.ShouldBeEmpty();
+    [Fact] void should_be_considered_equal() => _result.ShouldBeTrue();
+    [Fact] void should_not_have_any_differences() => _differences.ShouldBeEmpty();
 }

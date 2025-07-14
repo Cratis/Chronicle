@@ -5,24 +5,24 @@ namespace Cratis.Chronicle.Net.for_RoundRobinLoadBalancerStrategy;
 
 public class when_getting_next_four_times_with_max_of_three : Specification
 {
-    RoundRobinLoadBalancerStrategy strategy;
-    int first;
-    int second;
-    int third;
-    int forth;
+    RoundRobinLoadBalancerStrategy _strategy;
+    int _first;
+    int _second;
+    int _third;
+    int _forth;
 
-    void Establish() => strategy = new();
+    void Establish() => _strategy = new();
 
     void Because()
     {
-        first = strategy.GetNext(3);
-        second = strategy.GetNext(3);
-        third = strategy.GetNext(3);
-        forth = strategy.GetNext(3);
+        _first = _strategy.GetNext(3);
+        _second = _strategy.GetNext(3);
+        _third = _strategy.GetNext(3);
+        _forth = _strategy.GetNext(3);
     }
 
-    [Fact] void first_should_be_0() => first.ShouldEqual(0);
-    [Fact] void second_should_be_1() => second.ShouldEqual(1);
-    [Fact] void third_should_be_2() => third.ShouldEqual(2);
-    [Fact] void forth_should_be_0() => forth.ShouldEqual(0);
+    [Fact] void first_should_be_0() => _first.ShouldEqual(0);
+    [Fact] void second_should_be_1() => _second.ShouldEqual(1);
+    [Fact] void third_should_be_2() => _third.ShouldEqual(2);
+    [Fact] void forth_should_be_0() => _forth.ShouldEqual(0);
 }
