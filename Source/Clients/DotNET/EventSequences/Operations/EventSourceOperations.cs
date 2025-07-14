@@ -44,7 +44,12 @@ public class EventSourceOperations : IEventSourceOperations
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default)
     {
-        _operations.Add(new AppendOperation(@event, causation));
+        _operations.Add(new AppendOperation(
+            @event,
+            causation,
+            eventStreamType ?? EventStreamType.All,
+            eventStreamId ?? EventStreamId.Default,
+            eventSourceType ?? EventSourceType.Default));
         return this;
     }
 
