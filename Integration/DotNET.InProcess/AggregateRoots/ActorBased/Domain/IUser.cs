@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
 
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.Domain.Interfaces;
+namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Domain;
 
 public interface IUser : IIntegrationTestAggregateRoot<UserInternalState>
 {

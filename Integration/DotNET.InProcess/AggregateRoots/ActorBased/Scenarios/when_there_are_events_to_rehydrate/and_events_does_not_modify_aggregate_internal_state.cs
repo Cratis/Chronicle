@@ -1,16 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Domain;
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Domain.Interfaces;
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Events;
-using context = Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios.when_there_are_events_to_rehydrate.and_events_does_not_modify_aggregate_internal_state.context;
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios.when_there_are_events_to_rehydrate;
+using context = Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Scenarios.when_there_are_events_to_rehydrate.and_events_does_not_modify_aggregate_internal_state.context;
+
+namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Scenarios.when_there_are_events_to_rehydrate;
 
 [Collection(ChronicleCollection.Name)]
 public class and_events_does_not_modify_aggregate_internal_state(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.context_for_aggregate_root<IUser, UserInternalState>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.an_aggregate_root_with_state<IUser, UserInternalState>(chronicleInProcessFixture)
     {
         UserId _userId;
 

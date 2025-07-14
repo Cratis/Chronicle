@@ -3,6 +3,6 @@
 
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
 
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.Domain.Interfaces;
+namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots;
 
 public record UserInternalState(StateProperty<UserName> Name, StateProperty<bool> Deleted);
