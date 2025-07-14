@@ -28,7 +28,6 @@ public class all_dependencies : Specification
     protected ICorrelationIdAccessor _correlationIdAccessor;
     protected IConcurrencyScopeStrategies _concurrencyScopeStrategies;
 
-
     void Establish()
     {
         _eventTypes = Substitute.For<IEventTypes>();

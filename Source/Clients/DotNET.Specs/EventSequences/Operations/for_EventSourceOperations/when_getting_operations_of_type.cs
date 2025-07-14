@@ -19,10 +19,10 @@ public class when_getting_operations_of_type : a_new_event_source_operations
             .Append(_secondEvent);
     }
 
-    IEnumerable<AppendOperation> result;
-    void Because() => result = _operations.GetOperationsOfType<AppendOperation>();
+    IEnumerable<AppendOperation> _result;
+    void Because() => _result = _operations.GetOperationsOfType<AppendOperation>();
 
-    [Fact] void should_return_all_append_operations() => result.Count().ShouldEqual(2);
-    [Fact] void should_include_first_event() => result.Select(_ => _.Event).ShouldContain(_firstEvent);
-    [Fact] void should_include_second_event() => result.Select(_ => _.Event).ShouldContain(_secondEvent);
+    [Fact] void should_return_all_append_operations() => _result.Count().ShouldEqual(2);
+    [Fact] void should_include_first_event() => _result.Select(_ => _.Event).ShouldContain(_firstEvent);
+    [Fact] void should_include_second_event() => _result.Select(_ => _.Event).ShouldContain(_secondEvent);
 }

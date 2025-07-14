@@ -7,9 +7,9 @@ public class and_type_does_not_have_an_event_type_attribute_nor_is_it_a_base_typ
 {
     class MyEvent;
 
-    bool result;
+    bool _result;
 
-    void Because() => result = typeof(MyEvent).IsEventType([]);
+    void Because() => _result = typeof(MyEvent).IsEventType([]);
 
-    [Fact] void should_not_be_considered_an_event_type() => result.ShouldBeFalse();
+    [Fact] void should_not_be_considered_an_event_type() => _result.ShouldBeFalse();
 }

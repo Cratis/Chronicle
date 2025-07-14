@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_b
 
 public class with_message : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
-    const string _message = "Some message";
+    const string Message = "Some message";
 
     IConstraintDefinition _result;
     ConstraintViolation _violation;
@@ -14,10 +14,10 @@ public class with_message : given.a_unique_constraint_builder_with_owner_and_an_
     {
         _violation = new ConstraintViolation(_eventTypeId, EventSequenceNumber.First, "Some Constraint", "Error", []);
         _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
-        _constraintBuilder.WithMessage(_message);
+        _constraintBuilder.WithMessage(Message);
     }
 
     void Because() => _result = _constraintBuilder.Build();
 
-    [Fact] void should_set_message() => _result.MessageCallback(_violation).Value.ShouldEqual(_message);
+    [Fact] void should_set_message() => _result.MessageCallback(_violation).Value.ShouldEqual(Message);
 }

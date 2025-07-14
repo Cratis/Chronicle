@@ -17,10 +17,10 @@ public class when_getting_appended_events : a_new_event_source_operations
         _operations.Append(_firstEvent).Append(_secondEvent);
     }
 
-    IEnumerable<object> result;
-    void Because() => result = _operations.GetAppendedEvents();
+    IEnumerable<object> _result;
+    void Because() => _result = _operations.GetAppendedEvents();
 
-    [Fact] void should_return_all_appended_events() => result.Count().ShouldEqual(2);
-    [Fact] void should_include_first_event() => result.ShouldContain(_firstEvent);
-    [Fact] void should_include_second_event() => result.ShouldContain(_secondEvent);
+    [Fact] void should_return_all_appended_events() => _result.Count().ShouldEqual(2);
+    [Fact] void should_include_first_event() => _result.ShouldContain(_firstEvent);
+    [Fact] void should_include_second_event() => _result.ShouldContain(_secondEvent);
 }

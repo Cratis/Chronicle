@@ -12,7 +12,6 @@ public class and_aggregate_root_does_not_have_any_handle_methods : given.a_state
     [Fact] void should_not_handle_any_events() => _eventHandlers.DidNotReceive().Handle(Arg.Any<IAggregateRoot>(), Arg.Any<IEnumerable<EventAndContext>>());
 }
 
-
 public class and_aggregate_root_has_handle_methods : given.a_stateless_aggregate_root_mutator
 {
     string _event;

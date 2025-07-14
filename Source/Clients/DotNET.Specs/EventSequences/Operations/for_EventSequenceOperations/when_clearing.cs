@@ -7,15 +7,15 @@ namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperations
 
 public class when_clearing : given.event_sequence_operations_without_any_operations
 {
-    EventSourceId eventSourceId;
-    object appendedEvent;
+    EventSourceId _eventSourceId;
+    object _appendedEvent;
 
     void Establish()
     {
-        eventSourceId = EventSourceId.New();
-        appendedEvent = new object();
+        _eventSourceId = EventSourceId.New();
+        _appendedEvent = new object();
         _operations
-            .ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent))
+            .ForEventSourceId(_eventSourceId, builder => builder.Append(_appendedEvent))
             .WithCausation(CausationHelpers.New());
     }
 

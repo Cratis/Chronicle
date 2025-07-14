@@ -7,22 +7,22 @@ namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperationE
 
 public class when_building_operations_for_event_source_id : Specification
 {
-    IEventSequence event_sequence;
-    EventSourceId event_source_id;
-    Action<EventSourceOperations> configure;
-    EventSequenceOperations result;
-    EventSequenceOperations expected_operations;
+    IEventSequence _eventSequence;
+    EventSourceId _eventSourceId;
+    Action<EventSourceOperations> _configure;
+    EventSequenceOperations _result;
+    EventSequenceOperations _expectedOperations;
 
     void Establish()
     {
-        event_sequence = Substitute.For<IEventSequence>();
-        event_source_id = Guid.NewGuid().ToString();
-        configure = Substitute.For<Action<EventSourceOperations>>();
-        expected_operations = Substitute.For<EventSequenceOperations>(event_sequence);
+        _eventSequence = Substitute.For<IEventSequence>();
+        _eventSourceId = Guid.NewGuid().ToString();
+        _configure = Substitute.For<Action<EventSourceOperations>>();
+        _expectedOperations = Substitute.For<EventSequenceOperations>(_eventSequence);
     }
 
-    void Because() => result = event_sequence.ForEventSourceId(event_source_id, configure);
+    void Because() => _result = _eventSequence.ForEventSourceId(_eventSourceId, _configure);
 
-    [Fact] void should_return_event_sequence_operations() => result.ShouldNotBeNull();
-    [Fact] void should_return_operations_for_the_given_event_sequence() => result.EventSequence.ShouldEqual(event_sequence);
+    [Fact] void should_return_event_sequence_operations() => _result.ShouldNotBeNull();
+    [Fact] void should_return_operations_for_the_given_event_sequence() => _result.EventSequence.ShouldEqual(_eventSequence);
 }

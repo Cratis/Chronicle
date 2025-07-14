@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 
 public class MyRuleAttribute : RuleAttribute
 {
-    public const string error_message = "The Error Message";
+    public const string ErrorMessage = "The Error Message";
     public bool simple_is_valid_return = true;
     public bool simple_is_valid_called;
     public object value_validated;
@@ -15,7 +15,7 @@ public class MyRuleAttribute : RuleAttribute
     public ValidationResult complex_is_value_return = ValidationResult.Success;
     public bool complex_is_valid_called;
 
-    public override string FormatErrorMessage(string name) => error_message;
+    public override string FormatErrorMessage(string name) => ErrorMessage;
 
     protected override bool IsValid(object value)
     {

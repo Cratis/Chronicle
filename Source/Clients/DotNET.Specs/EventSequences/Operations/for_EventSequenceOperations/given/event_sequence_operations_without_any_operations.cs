@@ -9,7 +9,6 @@ public class event_sequence_operations_without_any_operations : Specification
     protected IEventSequence _eventSequence;
     protected AppendManyResult _appendManyResult;
 
-
     void Establish()
     {
         _eventSequence = Substitute.For<IEventSequence>();

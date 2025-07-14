@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Events.for_EventRedactedConverters;
 
 public class when_round_tripping : Specification
 {
-    const string eventTypeId = "some-event-type-id";
+    const string EventTypeId = "some-event-type-id";
     EventRedacted _original;
     EventRedacted _result;
     IEventTypes _eventTypes;
@@ -18,8 +18,8 @@ public class when_round_tripping : Specification
     {
         _eventTypes = Substitute.For<IEventTypes>();
         var eventType = typeof(string); // Use string as a dummy type
-        _eventTypes.GetClrTypeFor(eventTypeId).Returns(eventType);
-        _eventTypes.GetEventTypeFor(eventType).Returns(new EventType(eventTypeId, EventTypeGeneration.First));
+        _eventTypes.GetClrTypeFor(EventTypeId).Returns(eventType);
+        _eventTypes.GetEventTypeFor(eventType).Returns(new EventType(EventTypeId, EventTypeGeneration.First));
         _options = new JsonSerializerOptions { Converters = { new EventRedactedConverters(_eventTypes) } };
         var properties = new Dictionary<string, string> { { "key", "value" } };
         _original = new EventRedacted(

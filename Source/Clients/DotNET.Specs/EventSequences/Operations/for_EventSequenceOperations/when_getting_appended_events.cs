@@ -7,18 +7,18 @@ namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperations
 
 public class when_getting_appended_events : given.event_sequence_operations_without_any_operations
 {
-    EventSourceId eventSourceId;
-    object appendedEvent;
-    IEnumerable<object> result;
+    EventSourceId _eventSourceId;
+    object _appendedEvent;
+    IEnumerable<object> _result;
 
     void Establish()
     {
-        eventSourceId = EventSourceId.New();
-        appendedEvent = new object();
-        _operations.ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent));
+        _eventSourceId = EventSourceId.New();
+        _appendedEvent = new object();
+        _operations.ForEventSourceId(_eventSourceId, builder => builder.Append(_appendedEvent));
     }
 
-    void Because() => result = _operations.GetAppendedEvents();
+    void Because() => _result = _operations.GetAppendedEvents();
 
-    [Fact] void should_return_all_appended_events() => result.ShouldContain(appendedEvent);
+    [Fact] void should_return_all_appended_events() => _result.ShouldContain(_appendedEvent);
 }

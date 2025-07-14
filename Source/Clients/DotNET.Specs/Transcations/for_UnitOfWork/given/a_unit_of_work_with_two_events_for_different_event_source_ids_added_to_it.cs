@@ -29,7 +29,6 @@ public class a_unit_of_work_with_two_events_for_different_event_source_ids_added
         _unitOfWork.AddEvent(EventSequenceId.Log, _secondEventEventSourceId, _secondEvent, _secondEventCausation);
     }
 
-
     protected record FirstEvent();
     protected record SecondEvent();
 }

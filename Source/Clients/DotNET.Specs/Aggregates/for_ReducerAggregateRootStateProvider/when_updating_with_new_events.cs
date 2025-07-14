@@ -17,7 +17,6 @@ public class when_updating_with_new_events : given.an_aggregate_root_that_handle
     StateForAggregateRoot _initialStateInvokedWith;
     IEnumerable<object> _eventsInvokedWith;
 
-
     void Establish()
     {
         _initialState = new(Guid.NewGuid().ToString());
