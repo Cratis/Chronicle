@@ -120,6 +120,7 @@ public class EventStore : IEventStore
             new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
+            identityProvider,
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
@@ -135,6 +136,7 @@ public class EventStore : IEventStore
             modelNameResolver,
             schemaGenerator,
             jsonSerializerOptions,
+            identityProvider,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(

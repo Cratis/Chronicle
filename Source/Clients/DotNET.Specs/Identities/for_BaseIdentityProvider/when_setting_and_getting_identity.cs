@@ -5,23 +5,21 @@ namespace Cratis.Chronicle.Identities.for_BaseIdentityProvider;
 
 public class when_setting_and_getting_identity : Specification
 {
-    Identity _identity;
-    Identity _result;
+    IIdentityProvider provider;
+    Identity original_identity;
+    Identity retrieved_identity;
 
     void Establish()
     {
-        _identity = new Identity(
-            Guid.NewGuid().ToString(),
-            "Name",
-            "UserName",
-            null);
+        provider = new BaseIdentityProvider();
+        original_identity = new("test-subject", "Test User", "testuser");
     }
 
     void Because()
     {
-        BaseIdentityProvider.SetCurrentIdentity(_identity);
-        _result = ((IIdentityProvider)new BaseIdentityProvider()).GetCurrent();
+        provider.SetCurrentIdentity(original_identity);
+        retrieved_identity = provider.GetCurrent();
     }
 
-    [Fact] void should_return_the_set_identity() => _result.ShouldEqual(_identity);
+    [Fact] void should_return_the_set_identity() => retrieved_identity.ShouldEqual(original_identity);
 }

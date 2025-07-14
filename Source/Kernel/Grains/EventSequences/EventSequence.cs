@@ -338,7 +338,7 @@ public class EventSequence(
     {
         try
         {
-            Result<AppendedEvent, AppendEventError>? appendResult = null;
+            Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
 
             var identity = await IdentityStorage.GetFor(causedBy);
             do
@@ -458,7 +458,7 @@ public class EventSequence(
     }
 
     async Task HandleFailedAppendResult(
-        Result<AppendedEvent, AppendEventError>? appendResult,
+        Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult,
         EventType eventType,
         EventSourceId eventSourceId,
         string eventName)
@@ -472,12 +472,12 @@ public class EventSequence(
             evt => Task.CompletedTask,
             errorType => errorType switch
             {
-                AppendEventError.DuplicateEventSequenceNumber => HandleAppendedDuplicateEvent(eventType, eventSourceId, eventName),
-                _ => Task.FromException(new UnknownAppendEventErrorType(errorType))
+                DuplicateEventSequenceNumber duplicateError => HandleAppendedDuplicateEvent(eventType, eventSourceId, eventName, duplicateError.NextAvailableSequenceNumber),
+                _ => Task.FromException(new FailedAppendingEvent())
             });
     }
 
-    async Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName)
+    async Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEvent(
             _eventSequenceKey.EventStore,
@@ -487,7 +487,7 @@ public class EventSequence(
             eventSourceId,
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
-        State.SequenceNumber = (await EventSequenceStorage.GetTailSequenceNumber() ).Next();
+        State.SequenceNumber = nextAvailableSequenceNumber;
         await WriteStateAsync();
     }
 

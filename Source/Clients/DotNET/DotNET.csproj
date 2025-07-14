@@ -32,12 +32,14 @@
 
     <ItemGroup>
         <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
+    </ItemGroup>
+    <ItemGroup>
         <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
 
     <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
         <Message Text="Generating gRPC clients" Importance="high" />
-        <Exec Command="dotnet run -f net9.0 &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+        <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
     </Target>
 
     <ItemGroup>

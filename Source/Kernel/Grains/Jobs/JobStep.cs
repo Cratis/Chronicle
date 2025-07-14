@@ -318,9 +318,9 @@ public abstract class JobStep<TRequest, TResult, TState>(
             {
                 if (!jobStepResult.TryGetError(out var error))
                 {
-                    if ((await _job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
+                    if ((await _thisJobStep.ReportStatusChange(JobStepStatus.CompletedSuccessfully)).TryGetError(out var errorChangingStatus))
                     {
-                        logger.FailedReportJobStepSuccess(errorReportingSuccess);
+                        logger.PerformingWorkFailedPersistState(errorChangingStatus);
                         performWorkResult = performWorkResult with
                         {
                             Error = PerformWorkError.WorkerError
@@ -328,9 +328,9 @@ public abstract class JobStep<TRequest, TResult, TState>(
                         _ = await WriteStatusChange(JobStepStatus.Failed, ["Error reporting job step succeeded"]);
                     }
 
-                    if ((await _thisJobStep.ReportStatusChange(JobStepStatus.CompletedSuccessfully)).TryGetError(out var errorChangingStatus))
+                    if ((await _job.OnStepSucceeded(JobStepId, jobStepResult)).TryGetError(out var errorReportingSuccess))
                     {
-                        logger.PerformingWorkFailedPersistState(errorChangingStatus);
+                        logger.FailedReportJobStepSuccess(errorReportingSuccess);
                         performWorkResult = performWorkResult with
                         {
                             Error = PerformWorkError.WorkerError

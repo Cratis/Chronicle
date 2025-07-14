@@ -41,10 +41,18 @@ public class ReducerPipeline(
         var initial = await Sink.FindOrDefault(context.Key);
 
         var result = await reducer(context.Events, initial);
+
         if (result.ObserverResult.State != ObserverSubscriberState.Ok) return;
 
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
-        if (!objectComparer.Compare(initial, result.ModelState, out var differences))
+        if (result.ModelState == null)
+        {
+            if (initial != null)
+            {
+                changeset.Add(new Removed(initial));
+            }
+        }
+        else if (!objectComparer.Compare(initial, result.ModelState, out var differences))
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }
