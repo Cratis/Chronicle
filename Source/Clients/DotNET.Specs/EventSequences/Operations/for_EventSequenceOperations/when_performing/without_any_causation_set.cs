@@ -7,19 +7,19 @@ namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperations
 
 public class without_any_causation_set : given.event_sequence_operations_without_any_operations
 {
-    EventSourceId eventSourceId;
-    object appendedEvent;
-    AppendManyResult result;
+    EventSourceId _eventSourceId;
+    object _appendedEvent;
+    AppendManyResult _result;
 
     void Establish()
     {
-        eventSourceId = EventSourceId.New();
-        appendedEvent = new object();
-        _operations.ForEventSourceId(eventSourceId, builder => builder.Append(appendedEvent));
+        _eventSourceId = EventSourceId.New();
+        _appendedEvent = new object();
+        _operations.ForEventSourceId(_eventSourceId, builder => builder.Append(_appendedEvent));
     }
 
-    async Task Because() => result = await _operations.Perform();
+    async Task Because() => _result = await _operations.Perform();
 
     [Fact] void should_call_append_many_on_event_sequence() => _eventSequence.Received().AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>());
-    [Fact] void should_return_append_many_result() => result.ShouldNotBeNull();
+    [Fact] void should_return_append_many_result() => _result.ShouldNotBeNull();
 }

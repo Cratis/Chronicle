@@ -32,4 +32,5 @@ public class when_concurrent_changes_are_made_by_others(context context) : Given
     }
 
     [Fact] void should_fail_committing_unit_of_work() => Context.Result.IsSuccess.ShouldBeFalse();
+    [Fact] void should_have_concurrency_violation() => Context.Result.ConcurrencyViolations.Count().ShouldEqual(1);
 }
