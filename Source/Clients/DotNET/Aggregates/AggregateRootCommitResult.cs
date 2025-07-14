@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Aggregates;
@@ -24,9 +25,14 @@ public class AggregateRootCommitResult
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
+    /// Gets the concurrency violations that occurred during the commit.
+    /// </summary>
+    public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the commit was successful.
     /// </summary>
-    public bool IsSuccess => !ConstraintViolations.Any();
+    public bool IsSuccess => !ConstraintViolations.Any() && !ConcurrencyViolations.Any() && !Errors.Any();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
@@ -54,8 +60,9 @@ public class AggregateRootCommitResult
     public static AggregateRootCommitResult CreateFrom(IUnitOfWork unitOfWork) =>
         new()
         {
-            Events = unitOfWork.GetEvents(),
-            ConstraintViolations = unitOfWork.GetConstraintViolations(),
-            Errors = unitOfWork.GetAppendErrors()
+            Events = unitOfWork.GetEvents().ToArray(),
+            ConstraintViolations = unitOfWork.GetConstraintViolations().ToArray(),
+            ConcurrencyViolations = unitOfWork.GetConcurrencyViolations().ToArray(),
+            Errors = unitOfWork.GetAppendErrors().ToArray()
         };
 }
