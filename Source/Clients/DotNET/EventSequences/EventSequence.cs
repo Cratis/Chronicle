@@ -283,7 +283,9 @@ public class EventSequence(
             Events = eventsToAppend,
             Causation = causationChain,
             CausedBy = identity.ToContract(),
-            ConcurrencyScopes = concurrencyScopes.ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
+            ConcurrencyScopes = concurrencyScopes
+                .Where(kvp => kvp.Value is not null)
+                .ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
         };
         var response = await _servicesAccessor.Services.EventSequences.AppendMany(request);
 
