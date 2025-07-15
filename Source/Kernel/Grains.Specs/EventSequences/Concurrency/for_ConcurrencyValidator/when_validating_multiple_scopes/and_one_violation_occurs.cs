@@ -43,7 +43,7 @@ public class and_one_violation_occurs : given.a_concurrency_validator
 
     [Fact] void should_return_one_violation() => _result.Count().ShouldEqual(1);
     [Fact] void should_have_violation_for_first_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId1).ShouldBeTrue();
-    [Fact] void should_not_have_violation_for_second_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId1).ShouldBeFalse();
+    [Fact] void should_not_have_violation_for_second_event_source() => _result.Any(_ => _.EventSourceId == _eventSourceId2).ShouldBeFalse();
 
     [Fact]
     void should_have_correct_violation_details()
