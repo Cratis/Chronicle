@@ -12,7 +12,7 @@ public class with_identified_by_specified_and_three_events_with_two_having_child
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<IdentifiableChildrenProjection, ModelWithChildren>(chronicleInProcessFixture)
     {
-        string model_id;
+        string _modelId;
         public EventWithChildObject FirstEventAppended;
         public EventWithChildObject SecondEventAppended;
         public EventWithChildObject ThirdEventAppended;
@@ -22,10 +22,9 @@ public class with_identified_by_specified_and_three_events_with_two_having_child
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithChildObject)];
 
-
         void Establish()
         {
-            model_id = Guid.NewGuid().ToString();
+            _modelId = Guid.NewGuid().ToString();
 
             FirstEventAppended = EventWithChildObject.Create();
             FirstEventAppended = FirstEventAppended with

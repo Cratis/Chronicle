@@ -7,13 +7,13 @@ using Cratis.Chronicle.Reducers;
 namespace Cratis.Chronicle.InProcess.Integration.for_Reducers;
 
 [DependencyInjection.IgnoreConvention]
-public class SynchronousReducerHandlingDeleteAsNull : IReducerFor<SomeReadModel>
+public class AsynchronousReducerHandlingDeleteAsVoid : IReducerFor<SomeReadModel>
 {
-    public SomeReadModel? OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
+    public Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
     {
         input ??= new SomeReadModel(evt.Number);
-        return input with { Number = evt.Number };
+        return Task.FromResult(input with { Number = evt.Number });
     }
 
-    public SomeReadModel? OnSomeDeleteEvent(SomeDeleteEvent evt, SomeReadModel? input, EventContext ctx) => null;
+    public Task OnSomeDeleteEvent(SomeDeleteEvent evt, SomeReadModel? input, EventContext ctx) => Task.CompletedTask;
 }

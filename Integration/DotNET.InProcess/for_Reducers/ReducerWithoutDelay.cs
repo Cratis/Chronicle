@@ -18,7 +18,6 @@ public class ReducerWithoutDelay : IReducerFor<SomeReadModel>
         return Task.FromResult(input with { Number = evt.Number });
     }
 
-
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
