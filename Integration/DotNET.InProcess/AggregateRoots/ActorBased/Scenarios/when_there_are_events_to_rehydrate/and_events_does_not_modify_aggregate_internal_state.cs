@@ -42,5 +42,5 @@ public class and_events_does_not_modify_aggregate_internal_state(context context
     void should_not_be_deleted() => Context.ResultState.Deleted.ShouldEqual(new StateProperty<bool>(false, 0));
 
     [Fact]
-    void should_not_have_assigned_username() => Context.ResultState.Name.ShouldEqual(new StateProperty<UserName>(default, 0));
+    void should_not_have_assigned_username() => Context.ResultState.Name.ShouldEqual(new StateProperty<UserName>(default!, 0));
 }

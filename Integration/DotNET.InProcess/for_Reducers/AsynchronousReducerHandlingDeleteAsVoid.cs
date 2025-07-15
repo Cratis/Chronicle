@@ -12,7 +12,7 @@ public class AsynchronousReducerHandlingDeleteAsVoid : IReducerFor<SomeReadModel
     public Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
     {
         input ??= new SomeReadModel(evt.Number);
-        return Task.FromResult(input with { Number = evt.Number });
+        return Task.FromResult<SomeReadModel?>(input with { Number = evt.Number });
     }
 
     public Task OnSomeDeleteEvent(SomeDeleteEvent evt, SomeReadModel? input, EventContext ctx) => Task.CompletedTask;

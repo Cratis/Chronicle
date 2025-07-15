@@ -15,7 +15,7 @@ public class ReducerWithoutDelay : IReducerFor<SomeReadModel>
     {
         Interlocked.Increment(ref HandledEvents);
         input ??= new SomeReadModel(0);
-        return Task.FromResult(input with { Number = evt.Number });
+        return Task.FromResult<SomeReadModel?>(input with { Number = evt.Number });
     }
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
