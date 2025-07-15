@@ -22,14 +22,14 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
     IEventSequenceStorage _storage;
     KeyResolvers _keyResolvers;
 
-    static EventType root_event_type = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
-    const string parent_key = "61fcc353-3478-4cf9-a783-da508013b36f";
+    static EventType _rootEventType = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
+    const string ParentKey = "61fcc353-3478-4cf9-a783-da508013b36f";
 
     void Establish()
     {
         _keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
         _rootEvent = new(
-            new(1, root_event_type),
+            new(1, _rootEventType),
             new(
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
@@ -61,13 +61,13 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
                 Identity.System),
             new
             {
-                parentId = parent_key
+                parentId = ParentKey
             }.AsExpandoObject());
 
         _rootProjection = Substitute.For<IProjection>();
         _rootProjection.EventTypes.Returns(
         [
-            root_event_type
+            _rootEventType
         ]);
 
         _childProjection = Substitute.For<IProjection>();
@@ -76,8 +76,8 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
         _childProjection.ChildrenPropertyPath.Returns((PropertyPath)"children");
         _storage = Substitute.For<IEventSequenceStorage>();
 
-        _storage.TryGetLastInstanceOfAny(parent_key, [root_event_type.Id]).Returns(_rootEvent);
-        _rootProjection.GetKeyResolverFor(root_event_type).Returns(_ => (_, __) => Task.FromResult(new Key(parent_key, ArrayIndexers.NoIndexers)));
+        _storage.TryGetLastInstanceOfAny(ParentKey, [_rootEventType.Id]).Returns(_rootEvent);
+        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __) => Task.FromResult(new Key(ParentKey, ArrayIndexers.NoIndexers)));
     }
 
     async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
@@ -86,5 +86,5 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
         _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
         "childId")(_storage, _event);
 
-    [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(parent_key);
+    [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(ParentKey);
 }
