@@ -48,5 +48,5 @@ public record ConcurrencyScope(
     /// Gets a value indicating whether this <see cref="ConcurrencyScope"/> should be validated.
     /// </summary>
     /// <returns>true if it should be validated, false if not.</returns>
-    public bool ShouldBeValidated => this != NotSet && this != None && SequenceNumber.IsActualValue;
+    public bool ShouldBeValidated => this != NotSet && this != None;
 }
