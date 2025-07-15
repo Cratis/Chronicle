@@ -5,12 +5,12 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Domain;
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Events;
-using context = Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios.when_concurrent_changes_are_made_by_others.context;
+using context = Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios.when_concurrent_changes_are_made_by_others.and_there_are_already_events_for_the_aggregate_when_getting_it.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios;
+namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.Scenarios.when_concurrent_changes_are_made_by_others;
 
 [Collection(ChronicleCollection.Name)]
-public class when_concurrent_changes_are_made_by_others(context context) : Given<context>(context)
+public class and_there_are_already_events_for_the_aggregate_when_getting_it(context context) : Given<context>(context)
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.an_aggregate_root_with_state<User, UserInternalState>(chronicleInProcessFixture)
     {
