@@ -56,7 +56,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
-        _metrics = _meter.BeginScope(key, queueId);
+        _metrics = _meter.BeginScope(key!, queueId);
         return base.OnActivateAsync(cancellationToken);
     }
 

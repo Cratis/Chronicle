@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Setup.Serialization;
 public class ConcurrencyScopesSerializer(ICodecProvider codecProvider) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     /// <inheritdoc/>
-    public object DeepCopy(object input, CopyContext context)
+    public object? DeepCopy(object? input, CopyContext context)
     {
         if (input is not ConcurrencyScopes original)
         {
