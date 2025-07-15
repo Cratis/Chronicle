@@ -2,18 +2,19 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 124 days, 12:46:26 | 2 days, 19:57:57 | 247 days, 11:21:17 |
-| Time to close | 263 days, 17:56:49 | 116 days, 13:29:03 | 794 days, 1:41:40 |
+| Time to first response | 127 days, 5:50:55 | 3 days, 22:09:24 | 251 days, 1:34:12 |
+| Time to close | 270 days, 13:22:43 | 123 days, 0:34:12 | 818 days, 16:13:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 287 |
-| Number of items closed | 551 |
-| Total number of items created | 838 |
+| Number of items that remain open | 280 |
+| Number of items closed | 559 |
+| Total number of items created | 839 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Rename Schemas collection in MongoDB to be EventTypes | https://github.com/Cratis/Chronicle/issues/1948 | None | [einari](https://github.com/einari) | None | None | None |
 | Integration Specs should have an isolated database per fixture | https://github.com/Cratis/Chronicle/issues/1929 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Get rid of EventMetadata and move properties to EventContext | https://github.com/Cratis/Chronicle/issues/1926 | None | [einari](https://github.com/einari) | None | None | None |
 | Filtering of properties in Event Sequence table | https://github.com/Cratis/Chronicle/issues/1925 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
@@ -128,7 +129,7 @@
 | Integration tests for Reactors | https://github.com/Cratis/Chronicle/issues/1562 | None | [einari](https://github.com/einari) | None | None | None |
 | Client Reducers should register on reconnect | https://github.com/Cratis/Chronicle/issues/1561 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 228 days, 23:16:55 | None |
 | It should be possible to configure number of queues each event sequence gets | https://github.com/Cratis/Chronicle/issues/1560 | None | [einari](https://github.com/einari) | None | 87 days, 21:09:52 | None |
-| Create a common JobStep for Observers extracting out common things | https://github.com/Cratis/Chronicle/issues/1559 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | None | None |
+| Create a common JobStep for Observers extracting out common things | https://github.com/Cratis/Chronicle/issues/1559 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | 230 days, 6:41:22 | 230 days, 6:41:22 | None |
 | JobStep Resume does not do anything | https://github.com/Cratis/Chronicle/issues/1558 | None | [woksin](https://github.com/woksin) | None | 111 days, 8:44:53 | None |
 | Show number of handled events for every observer | https://github.com/Cratis/Chronicle/issues/1557 | None | [einari](https://github.com/einari) | None | None | None |
 | JobStep.PerformStep should return a Catch<JobStepResult> | https://github.com/Cratis/Chronicle/issues/1554 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 20 days, 22:16:50 | None |
@@ -188,7 +189,7 @@
 | Introduce a client project for adding Workbench to a process | https://github.com/Cratis/Chronicle/issues/1425 | None | [einari](https://github.com/einari) | None | 41 days, 6:23:28 | None |
 | Fix Compliance hookup for clients | https://github.com/Cratis/Chronicle/issues/1424 | None | [einari](https://github.com/einari) | None | None | None |
 | Upgrade styles for Prime React to be able to upgrade Prime React | https://github.com/Cratis/Chronicle/issues/1423 | None | [einari](https://github.com/einari) | None | 288 days, 8:09:23 | None |
-| Parallelize Observers on partition | https://github.com/Cratis/Chronicle/issues/1420 | None | [woksin](https://github.com/woksin) | None | None | None |
+| Parallelize Observers on partition | https://github.com/Cratis/Chronicle/issues/1420 | None | [woksin](https://github.com/woksin) | None | 297 days, 5:14:04 | None |
 | Improve Cratis.Chronicle.Storage.MongoDB.Sinks.Sink ApplyChanges | https://github.com/Cratis/Chronicle/issues/1419 | None | [woksin](https://github.com/woksin) | None | None | None |
 | ObserverManager.Notify calls multiple places uses non-task notification delegate | https://github.com/Cratis/Chronicle/issues/1418 | None | [woksin](https://github.com/woksin) | None | None | None |
 | There are lots of magic TimeSpan.From*** in the codebase, many of them should be configurable | https://github.com/Cratis/Chronicle/issues/1417 | None | [woksin](https://github.com/woksin) | None | None | None |
@@ -342,6 +343,5 @@
 | Import events in a specific format from the workbench | https://github.com/Cratis/Chronicle/issues/1011 | None | [einari](https://github.com/einari) | None | None | None |
 | Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
 | IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
-| Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | None | None |
-| Projection fail with children and there are no instances of the events defined in root From definitions. | https://github.com/Cratis/Chronicle/issues/1007 | None | [einari](https://github.com/einari) | None | None | None |
-| Idempotency: Add sequence number on read model for what event that last updated (reducer, projections)
+| Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | 616 days, 3:25:19 | None |
+| Projection fail with children and there are no instances of the events defined in root From definitions
