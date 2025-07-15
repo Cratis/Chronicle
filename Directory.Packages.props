@@ -26,19 +26,19 @@
         <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="16.0.2" />
         <PackageVersion Include="Cratis.Applications.Swagger" Version="16.0.2" />
         <!-- Orleans -->
-        <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.1.2" />
+        <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.0" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.1.2" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="9.1.2" />
         <PackageVersion Include="Microsoft.Orleans.Client" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Server" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Serialization" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Streaming" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="9.1.2" />
+        <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Serialization" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Streaming" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="9.2.0" />
         <PackageVersion Include="OrleansTestKit" Version="8.2.2" />
         <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
         <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.1.0" />
@@ -58,7 +58,7 @@
         <!-- Analysis -->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.14.0" />
         <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.1.2" />
+        <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.0" />
         <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
         <PackageVersion Include="Roslynator.Analyzers" Version="4.13.1" />
         <PackageVersion Include="Meziantou.Analyzer" Version="2.0.205" />
@@ -94,7 +94,7 @@
         <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
         <PackageVersion Include="Testcontainers" Version="4.6.0" />
         <PackageVersion Include="xunit" Version="2.9.3" />
-        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.1" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.2" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
         <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.14.1" />
     </ItemGroup>
