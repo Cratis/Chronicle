@@ -24,6 +24,7 @@ public class when_concurrent_changes_are_made_by_others(context context) : Given
 
         async Task Because()
         {
+            await EventStore.EventLog.Append(_userId.Value, new UserCreated(), eventStreamType: new User(null!).GetEventStreamType());
             var user = await AggregateRootFactory.Get<User>(_userId.Value);
             await EventStore.EventLog.Append(_userId.Value, new UserOnBoarded("Something"), eventStreamType: user.GetEventStreamType());
             await user.ChangeUserName("ConcurrentChange");
