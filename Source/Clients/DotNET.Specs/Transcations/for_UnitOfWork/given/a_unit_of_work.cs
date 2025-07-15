@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Transactions.for_UnitOfWork.given;
 
@@ -25,7 +27,10 @@ public class a_unit_of_work : Specification
 
         _appendResult = GetAppendResult();
         _eventSequence
-            .AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<CorrelationId>())
+            .AppendMany(
+                Arg.Any<IEnumerable<EventForEventSourceId>>(),
+                Arg.Any<CorrelationId>(),
+                Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>())
             .Returns(callInfo =>
             {
                 _eventsAppended = callInfo.Arg<IEnumerable<EventForEventSourceId>>();

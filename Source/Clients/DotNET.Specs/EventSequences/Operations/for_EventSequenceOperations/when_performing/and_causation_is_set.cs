@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences.Operations.for_EventSequenceOperations.when_performing;
 
@@ -38,5 +39,6 @@ public class and_causation_is_set : given.event_sequence_operations_without_any_
         e.Causation == _causation &&
         e.EventStreamType == _eventStreamType &&
         e.EventStreamId == _eventStreamId &&
-        e.EventSourceType == _eventSourceType)));
+        e.EventSourceType == _eventSourceType)),
+        concurrencyScopes: Arg.Any<Dictionary<EventSourceId, ConcurrencyScope>>());
 }
