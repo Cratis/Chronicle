@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1
+
+####################################
+# Cratis Chronicle Server
+# Optimized production image
+####################################
+
+# Use the smallest possible base image for .NET applications
+FROM mcr.microsoft.com/dotnet/runtime:9.0.0-bookworm-slim
+ARG CONFIGURATION=Release
+ARG VERSION
+
+WORKDIR /app
+
+# Install only essential system packages and clean up in the same layer
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+EXPOSE 8080 11111 30000 35000
+
+# Copy build scripts
+COPY Docker/copy-server-files.sh ./copy-server-files.sh
+RUN chmod +x ./copy-server-files.sh
+
+# Copy application and workbench files
+COPY ./Source/Kernel/Server/out ./out
+COPY ./Source/Workbench/Web/wwwroot wwwroot
+
+# Extract and optimize application files in one layer
+RUN ./copy-server-files.sh && \
+    # Remove debug and development files
+    rm -f appsettings.Development.json && \
+    rm -f ./chronicle.json && \
+    # Remove debug symbols
+    find . -name "*.pdb" -delete && \
+    # Remove XML documentation files
+    find . -name "*.xml" -delete && \
+    # Remove unnecessary locale folders (keeping only en)
+    rm -rf ./cs ./de ./es ./fr ./it ./ja ./ko ./pl ./pt* ./ru ./tr ./zh* && \
+    rm -rf ./ar ./az ./bg ./bn* ./da ./el ./fa ./fi* ./he ./hr ./hu ./hy ./id ./is ./ku ./lv ./ms* ./mt ./nb* ./nl ./ro ./sk ./sl ./sr* ./sv ./th* ./uk ./uz* ./vi && \
+    # Clean up build artifacts
+    rm -rf ./out ./copy-server-files.sh
+
+# Run as non-root user for security
+RUN groupadd -r chronicle && useradd -r -g chronicle chronicle
+RUN chown -R chronicle:chronicle /app
+USER chronicle
+
+ENTRYPOINT ["./Cratis.Chronicle.Server"]
