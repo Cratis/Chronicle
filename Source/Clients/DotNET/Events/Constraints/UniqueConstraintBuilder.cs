@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Strings;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IUniqueConstraintBuilder
 {
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
-    readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
+    readonly Dictionary<EventTypeId, IJsonSchemaDocument> _eventTypeSchemas = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
     EventTypeId? _removedWith;
@@ -105,12 +104,11 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
         }
     }
 
-    void ThrowIfPropertyIsMissing(EventType eventType, JsonSchema schema, IEnumerable<string> properties)
+    void ThrowIfPropertyIsMissing(EventType eventType, IJsonSchemaDocument schema, IEnumerable<string> properties)
     {
-        var schemaProperties = schema.GetFlattenedProperties();
         foreach (var property in properties)
         {
-            if (!schemaProperties.Any(_ => _.Name == property))
+            if (!schema.Properties.ContainsKey(property))
             {
                 throw new PropertyDoesNotExistOnEventType(eventType, property);
             }

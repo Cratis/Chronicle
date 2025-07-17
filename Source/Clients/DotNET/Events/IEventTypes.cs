@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Events;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events;
 
@@ -44,11 +44,11 @@ public interface IEventTypes
     Type GetClrTypeFor(EventTypeId eventTypeId);
 
     /// <summary>
-    /// Get the <see cref="JsonSchema"/> for an <see cref="EventTypeId"/>.
+    /// Get the <see cref="IJsonSchemaDocument"/> for an <see cref="EventTypeId"/>.
     /// </summary>
     /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
-    /// <returns><see cref="JsonSchema"/> for the event type.</returns>
-    JsonSchema GetSchemaFor(EventTypeId eventTypeId);
+    /// <returns><see cref="IJsonSchemaDocument"/> for the event type.</returns>
+    IJsonSchemaDocument GetSchemaFor(EventTypeId eventTypeId);
 
     /// <summary>
     /// Check if there is a registered <see cref="EventTypeId"/> for a specific <see cref="Type">Clr Type</see>.

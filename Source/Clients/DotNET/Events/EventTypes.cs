@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events;
 
@@ -15,7 +14,7 @@ namespace Cratis.Chronicle.Events;
 public class EventTypes : IEventTypes
 {
     readonly Dictionary<EventType, Type> _typesByEventType = [];
-    readonly Dictionary<EventType, JsonSchema> _schemasByEventType = [];
+    readonly Dictionary<EventType, IJsonSchemaDocument> _schemasByEventType = [];
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
@@ -90,7 +89,7 @@ public class EventTypes : IEventTypes
     public EventType GetEventTypeFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key;
 
     /// <inheritdoc/>
-    public JsonSchema GetSchemaFor(EventTypeId eventTypeId) => _schemasByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
+    public IJsonSchemaDocument GetSchemaFor(EventTypeId eventTypeId) => _schemasByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
 
     /// <inheritdoc/>
     public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);
