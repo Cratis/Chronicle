@@ -37,6 +37,11 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Gets the unique identifier for this fixture instance.
+    /// </summary>
+    public string UniqueId { get; } = Guid.NewGuid().ToString("D")[..8];
+
+    /// <summary>
     /// Get the MongoDB container.
     /// </summary>
     public IContainer MongoDBContainer { get; }
@@ -45,13 +50,13 @@ public abstract class ChronicleFixture : IChronicleFixture
     public INetwork Network { get; }
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName);
+    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.GetEventStoreDatabaseName(UniqueId));
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
+    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.GetEventStoreNamespaceDatabaseName(UniqueId));
 
     /// <inheritdoc/>
-    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
+    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.GetReadModelsDatabaseName(UniqueId));
 
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()

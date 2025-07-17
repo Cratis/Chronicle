@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public interface IChronicleFixture : IAsyncDisposable
 {
     /// <summary>
+    /// Gets the unique identifier for this fixture instance.
+    /// </summary>
+    string UniqueId { get; }
+
+    /// <summary>
     /// Get the container network.
     /// </summary>
     INetwork Network { get; }

@@ -18,9 +18,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Represents a web application factory for Chronicle In Process integration tests.
 /// </summary>
-/// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
-/// <param name="configureServices">Action to configure the services.</param>
-/// <param name="contentRoot">The content root path.</param>
+/// <param name="fixture">The fixture for Chronicle setup.</param>
+/// <param name="configureServices">Action to configure additional services.</param>
+/// <param name="contentRoot">The content root for the web application.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
 public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
@@ -29,6 +29,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
+    readonly IChronicleSetupFixture _fixture = fixture;
+    readonly Action<IServiceCollection> _configureServices = configureServices;
+
     /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
     {
@@ -58,7 +61,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
-                configureServices(services);
+                _configureServices(services);
             });
         builder.AddCratisChronicle();
 
@@ -67,8 +70,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 silo
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
-                        options => options.EventStoreName = Constants.EventStore,
-                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
+                        options => options.EventStoreName = _fixture.GetEventStoreName(),
+                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, _fixture.GetEventStoreName()));
             })
             .UseConsoleLifetime();
 
