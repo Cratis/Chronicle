@@ -29,12 +29,12 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage) : 
             scope.EventStreamId,
             scope.EventStreamType);
 
-        var violated = !(tailSequenceNumber.IsActualValue && scope.SequenceNumber.IsActualValue);
-        if (!violated)
+        if (!tailSequenceNumber.IsActualValue)
         {
-            violated = !(tailSequenceNumber <= scope.SequenceNumber);
+            return Option<ConcurrencyViolation>.None();
         }
 
+        var violated = !(tailSequenceNumber <= scope.SequenceNumber);
         return !violated
             ? Option<ConcurrencyViolation>.None()
             : new ConcurrencyViolation(eventSourceId, scope.SequenceNumber, tailSequenceNumber);
