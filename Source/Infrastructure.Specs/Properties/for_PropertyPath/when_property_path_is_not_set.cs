@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_property_path_is_not_set : Specification
 {
-    PropertyPath result;
+    PropertyPath _result;
 
-    void Because() => result = PropertyPath.NotSet;
+    void Because() => _result = PropertyPath.NotSet;
 
-    [Fact] void should_be_considered_not_set() => result.IsSet.ShouldBeFalse();
+    [Fact] void should_be_considered_not_set() => _result.IsSet.ShouldBeFalse();
 }

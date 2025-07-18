@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRootExtensions.when_getting_e
 
 public class and_aggregate_specifies_one : Specification
 {
-    EventStreamType result;
-    AggregateRootWithEventStreamType aggregate;
+    EventStreamType _result;
+    AggregateRootWithEventStreamType _aggregate;
 
-    void Establish() => aggregate = new();
+    void Establish() => _aggregate = new();
 
-    void Because() => result = aggregate.GetEventStreamType();
+    void Because() => _result = _aggregate.GetEventStreamType();
 
-    [Fact] public void should_return_the_specified_event_stream_type() => result.Value.ShouldEqual(AggregateRootWithEventStreamType.EventStreamType);
+    [Fact] public void should_return_the_specified_event_stream_type() => _result.Value.ShouldEqual(AggregateRootWithEventStreamType.EventStreamType);
 }

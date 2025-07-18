@@ -13,7 +13,6 @@ public class and_there_is_no_context : Specification
     IReplayContextsStorage _storage;
     Result<ReplayContext, GetContextError> _result;
 
-
     void Establish()
     {
         _storage = Substitute.For<IReplayContextsStorage>();

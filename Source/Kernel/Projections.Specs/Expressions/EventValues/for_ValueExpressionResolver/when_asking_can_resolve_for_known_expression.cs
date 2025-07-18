@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues.for_ValueExpressi
 
 public class when_asking_can_resolve_for_known_expression : Specification
 {
-    ValueExpressionResolver resolvers;
-    bool result;
+    ValueExpressionResolver _resolvers;
+    bool _result;
 
-    void Establish() => resolvers = new();
+    void Establish() => _resolvers = new();
 
-    void Because() => result = resolvers.CanResolve("$value(42)");
+    void Because() => _result = _resolvers.CanResolve("$value(42)");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

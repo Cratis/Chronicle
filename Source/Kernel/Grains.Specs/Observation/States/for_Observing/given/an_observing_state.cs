@@ -54,7 +54,6 @@ public class an_observing_state : Specification
         _queueSubscription = new(_observerKey, 0);
         _appendedEventsQueues.Subscribe(Arg.Any<ObserverKey>(), _eventTypes).Returns(_queueSubscription);
 
-
         _state = new Observing(
             _appendedEventsQueues,
             _eventStoreName,

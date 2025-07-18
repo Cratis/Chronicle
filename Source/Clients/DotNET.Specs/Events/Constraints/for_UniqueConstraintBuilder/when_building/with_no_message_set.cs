@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_b
 
 public class with_no_message_set : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
-    const string _message = "Some message";
+    const string Message = "Some message";
 
     IConstraintDefinition _result;
 
     void Establish()
     {
         _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
-        _constraintBuilder.WithMessage(_ => _message);
+        _constraintBuilder.WithMessage(_ => Message);
     }
 
     void Because() => _result = _constraintBuilder.Build();

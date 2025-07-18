@@ -6,16 +6,16 @@ namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 public class when_finding_unknown_object_by_key : Specification
 {
     record Item(string Key, string Value);
-    IEnumerable<Item> items;
-    Item result;
+    IEnumerable<Item> _items;
+    Item _result;
 
-    void Establish() => items =
+    void Establish() => _items =
     [
         new Item("First", "First Value"),
         new Item("Second", "Second Value")
     ];
 
-    void Because() => result = items.FindByKey(nameof(Item.Key), "Third");
+    void Because() => _result = _items.FindByKey(nameof(Item.Key), "Third");
 
-    [Fact] void should_return_null() => result.ShouldBeNull();
+    [Fact] void should_return_null() => _result.ShouldBeNull();
 }

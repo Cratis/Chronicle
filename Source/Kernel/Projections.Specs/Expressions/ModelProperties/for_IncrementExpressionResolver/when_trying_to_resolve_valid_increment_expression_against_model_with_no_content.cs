@@ -11,15 +11,15 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_Increment
 
 public class when_trying_to_resolve_valid_increment_expression_against_model_with_no_content : Specification
 {
-    IncrementExpressionResolver resolver;
-    AppendedEvent @event;
-    ExpandoObject target;
+    IncrementExpressionResolver _resolver;
+    AppendedEvent _event;
+    ExpandoObject _target;
 
     void Establish()
     {
-        target = new();
+        _target = new();
         var content = new ExpandoObject();
-        @event = new(
+        _event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -35,14 +35,14 @@ public class when_trying_to_resolve_valid_increment_expression_against_model_wit
                 [],
                 Identity.System),
             content);
-        resolver = new(new TypeFormats());
+        _resolver = new(new TypeFormats());
     }
 
     void Because()
     {
-        resolver.Resolve("targetProperty", new(), "$increment()")(@event, target, ArrayIndexers.NoIndexers);
-        resolver.Resolve("targetProperty", new(), "$increment()")(@event, target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), "$increment()")(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), "$increment()")(_event, _target, ArrayIndexers.NoIndexers);
     }
 
-    [Fact] void should_resolve_to_a_propertymapper_that_counts_increments_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(2d);
+    [Fact] void should_resolve_to_a_propertymapper_that_counts_increments_the_property() => ((double)((dynamic)_target).targetProperty).ShouldEqual(2d);
 }

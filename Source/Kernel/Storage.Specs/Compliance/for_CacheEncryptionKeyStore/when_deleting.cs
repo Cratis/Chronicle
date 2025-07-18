@@ -7,13 +7,13 @@ namespace Cratis.Chronicle.Storage.Compliance.for_CacheEncryptionKeyStore;
 
 public class when_deleting : given.a_cache_encryption_key_store
 {
-    static EncryptionKeyIdentifier identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
-    static EncryptionKey key = new([], []);
+    static EncryptionKeyIdentifier _identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
+    static EncryptionKey _key = new([], []);
 
-    Task Establish() => _store.SaveFor(string.Empty, string.Empty, identifier, key);
+    Task Establish() => _store.SaveFor(string.Empty, string.Empty, _identifier, _key);
 
-    Task Because() => _store.DeleteFor(string.Empty, string.Empty, identifier);
+    Task Because() => _store.DeleteFor(string.Empty, string.Empty, _identifier);
 
-    [Fact] void should_delete_key_from_actual_store() => _actualStore.Received(1).DeleteFor(string.Empty, string.Empty, identifier);
-    [Fact] async Task should_not_have_the_key_anymore() => (await _store.HasFor(string.Empty, string.Empty, identifier)).ShouldBeFalse();
+    [Fact] void should_delete_key_from_actual_store() => _actualStore.Received(1).DeleteFor(string.Empty, string.Empty, _identifier);
+    [Fact] async Task should_not_have_the_key_anymore() => (await _store.HasFor(string.Empty, string.Empty, _identifier)).ShouldBeFalse();
 }

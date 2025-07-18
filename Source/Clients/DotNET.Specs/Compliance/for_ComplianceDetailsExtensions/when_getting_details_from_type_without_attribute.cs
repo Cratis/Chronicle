@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Compliance.for_ComplianceDetailsExtensions;
 
 public class when_getting_details_from_type_without_attribute : Specification
 {
-    string result;
+    string _result;
 
-    void Because() => result = typeof(object).GetComplianceMetadataDetails();
+    void Because() => _result = typeof(object).GetComplianceMetadataDetails();
 
-    [Fact] void should_return_empty_string() => result.ShouldEqual(string.Empty);
+    [Fact] void should_return_empty_string() => _result.ShouldEqual(string.Empty);
 }

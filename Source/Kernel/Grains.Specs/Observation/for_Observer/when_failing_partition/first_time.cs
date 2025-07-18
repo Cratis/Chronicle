@@ -8,15 +8,15 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_failing_partitio
 
 public class first_time : given.an_observer
 {
-    const string _eventSourceId = "Something";
-    const string stack_trace = "This is the stack trace";
-    const string message = "Something went wrong";
+    const string EventSourceId = "Something";
+    const string StackTrace = "This is the stack trace";
+    const string Message = "Something went wrong";
 
-    async Task Because() => await _observer.PartitionFailed(_eventSourceId, 42UL, [message], stack_trace);
+    async Task Because() => await _observer.PartitionFailed(EventSourceId, 42UL, [Message], StackTrace);
 
     [Fact] void should_have_only_one_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
-    [Fact] void should_have_the_correct_partition() => _failedPartitionsState.Partitions.First().Partition.ShouldEqual((Key)_eventSourceId);
+    [Fact] void should_have_the_correct_partition() => _failedPartitionsState.Partitions.First().Partition.ShouldEqual((Key)EventSourceId);
     [Fact] void should_have_the_correct_tail() => _failedPartitionsState.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
-    [Fact] void should_have_the_correct_message() => _failedPartitionsState.Partitions.First().Attempts.First().Messages.First().ShouldEqual(message);
-    [Fact] void should_have_the_correct_stack_trace() => _failedPartitionsState.Partitions.First().Attempts.First().StackTrace.ShouldEqual(stack_trace);
+    [Fact] void should_have_the_correct_message() => _failedPartitionsState.Partitions.First().Attempts.First().Messages.First().ShouldEqual(Message);
+    [Fact] void should_have_the_correct_stack_trace() => _failedPartitionsState.Partitions.First().Attempts.First().StackTrace.ShouldEqual(StackTrace);
 }

@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.when_applying_fr
 
 public class and_issuing_event_with_type_that_is_not_included : given.an_observable_and_event_setup
 {
-    IObservable<ProjectionEventContext> filtered;
+    IObservable<ProjectionEventContext> _filtered;
 
     void Establish()
     {
-        filtered = _observable.WhereEventTypeEquals(new EventType("745a8adb-aec5-4bf7-af29-b23d14e5c7bc", 1));
-        filtered.Subscribe(_received.Add);
+        _filtered = _observable.WhereEventTypeEquals(new EventType("745a8adb-aec5-4bf7-af29-b23d14e5c7bc", 1));
+        _filtered.Subscribe(_received.Add);
     }
 
     void Because() => _observable.OnNext(_eventContext);

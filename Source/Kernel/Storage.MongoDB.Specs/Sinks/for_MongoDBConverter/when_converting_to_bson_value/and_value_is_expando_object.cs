@@ -8,17 +8,17 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_conve
 
 public class and_value_is_expando_object : given.a_mongodb_converter
 {
-    ExpandoObject value;
-    BsonValue result;
+    ExpandoObject _value;
+    BsonValue _result;
 
     void Establish()
     {
-        value = new ExpandoObject();
-        ((dynamic)value).SomeProperty = "Some value";
+        _value = new ExpandoObject();
+        ((dynamic)_value).SomeProperty = "Some value";
     }
 
-    void Because() => result = _converter.ToBsonValue(value);
+    void Because() => _result = _converter.ToBsonValue(_value);
 
-    [Fact] void should_return_a_bson_document() => result.ShouldNotBeNull();
-    [Fact] void should_have_the_correct_value() => result.AsBsonDocument["SomeProperty"].AsString.ShouldEqual("Some value");
+    [Fact] void should_return_a_bson_document() => _result.ShouldNotBeNull();
+    [Fact] void should_have_the_correct_value() => _result.AsBsonDocument["SomeProperty"].AsString.ShouldEqual("Some value");
 }

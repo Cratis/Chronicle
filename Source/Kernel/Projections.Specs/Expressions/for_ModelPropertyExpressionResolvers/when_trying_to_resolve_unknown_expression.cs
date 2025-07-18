@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Projections.Expressions.for_ModelPropertyExpressionRe
 
 public class when_trying_to_resolve_unknown_expression : given.model_property_expression_resolvers
 {
-    Exception result;
+    Exception _result;
 
-    void Because() => result = Catch.Exception(() => _resolvers.Resolve(string.Empty, new(), "$randomUnknownExpression"));
+    void Because() => _result = Catch.Exception(() => _resolvers.Resolve(string.Empty, new(), "$randomUnknownExpression"));
 
-    [Fact] void should_throw_unsupported_event_value_expression() => result.ShouldBeOfExactType<UnsupportedModelPropertyExpression>();
+    [Fact] void should_throw_unsupported_event_value_expression() => _result.ShouldBeOfExactType<UnsupportedModelPropertyExpression>();
 }

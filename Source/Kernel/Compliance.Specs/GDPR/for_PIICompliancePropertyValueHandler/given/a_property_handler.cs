@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler
 
 public class a_property_handler : Specification
 {
-    protected const string _identifier = "39b34712-ad8e-4cde-b879-2719c995aa49";
+    protected const string Identifier = "39b34712-ad8e-4cde-b879-2719c995aa49";
     protected PIICompliancePropertyValueHandler _handler;
 
     protected IEncryptionKeyStorage _keyStore;
@@ -21,6 +21,6 @@ public class a_property_handler : Specification
         _keyStore = Substitute.For<IEncryptionKeyStorage>();
         _encryption = Substitute.For<IEncryption>();
         _handler = new(_keyStore, _encryption);
-        _keyStore.GetFor(string.Empty, string.Empty, _identifier).Returns(Task.FromResult(_key));
+        _keyStore.GetFor(string.Empty, string.Empty, Identifier).Returns(Task.FromResult(_key));
     }
 }

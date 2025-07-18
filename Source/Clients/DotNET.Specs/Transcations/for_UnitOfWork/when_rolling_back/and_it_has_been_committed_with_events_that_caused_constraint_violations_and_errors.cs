@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Transactions.for_UnitOfWork.when_rolling_Back;
 
-public class and_it_has_been_committed_with_events_that_caused_constraint_violations_and_errors : given.a_unit_of_work_and_events_and_constraint_violations_and_errors
+public class and_it_has_been_committed_with_events_that_caused_constraint_violations_and_errors : given.a_unit_of_work_with_two_events_for_different_event_source_ids_added_to_it
 {
     async Task Because() => await _unitOfWork.Rollback();
 

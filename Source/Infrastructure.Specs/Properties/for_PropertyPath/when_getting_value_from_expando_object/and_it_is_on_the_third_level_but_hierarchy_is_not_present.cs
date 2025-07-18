@@ -7,17 +7,17 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class and_it_is_on_the_third_level_but_hierarchy_is_not_present : Specification
 {
-    ExpandoObject input;
-    PropertyPath property_path;
-    object result;
+    ExpandoObject _input;
+    PropertyPath _propertyPath;
+    object _result;
 
     void Establish()
     {
-        input = new ExpandoObject();
-        property_path = new("first_level.second_level.third_level");
+        _input = new ExpandoObject();
+        _propertyPath = new("first_level.second_level.third_level");
     }
 
-    void Because() => result = property_path.GetValue(input, ArrayIndexers.NoIndexers);
+    void Because() => _result = _propertyPath.GetValue(_input, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_return_null() => result.ShouldBeNull();
+    [Fact] void should_return_null() => _result.ShouldBeNull();
 }

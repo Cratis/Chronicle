@@ -10,13 +10,13 @@ public class when_getting_flattened_properties_for_class_without_inheritance : g
 {
     record SimpleType(int SomeInteger, string SomeString);
 
-    JsonSchema schema;
+    JsonSchema _schema;
 
-    IEnumerable<JsonSchemaProperty> result;
+    IEnumerable<JsonSchemaProperty> _result;
 
-    void Establish() => schema = generator.Generate(typeof(SimpleType));
+    void Establish() => _schema = generator.Generate(typeof(SimpleType));
 
-    void Because() => result = schema.GetFlattenedProperties();
+    void Because() => _result = _schema.GetFlattenedProperties();
 
-    [Fact] void should_get_the_properties_on_the_type() => result.Select(_ => _.Name).ShouldContainOnly(nameof(SimpleType.SomeInteger).ToCamelCase(), nameof(SimpleType.SomeString).ToCamelCase());
+    [Fact] void should_get_the_properties_on_the_type() => _result.Select(_ => _.Name).ShouldContainOnly(nameof(SimpleType.SomeInteger).ToCamelCase(), nameof(SimpleType.SomeString).ToCamelCase());
 }

@@ -8,26 +8,26 @@ namespace Cratis.Chronicle.Compliance.for_Encryption;
 
 public class when_encrypting_with_a_generated_key : Specification
 {
-    Encryption encryption;
-    EncryptionKey key;
-    byte[] before;
-    byte[] encrypted;
-    byte[] decrypted;
+    Encryption _encryption;
+    EncryptionKey _key;
+    byte[] _before;
+    byte[] _encrypted;
+    byte[] _decrypted;
 
     void Establish()
     {
-        encryption = new();
-        key = encryption.GenerateKey();
+        _encryption = new();
+        _key = _encryption.GenerateKey();
 
-        before = Encoding.UTF8.GetBytes("Hello world");
+        _before = Encoding.UTF8.GetBytes("Hello world");
     }
 
     void Because()
     {
-        encrypted = encryption.Encrypt(before, key);
-        decrypted = encryption.Decrypt(encrypted, key);
+        _encrypted = _encryption.Encrypt(_before, _key);
+        _decrypted = _encryption.Decrypt(_encrypted, _key);
     }
 
-    [Fact] void should_encrypt_to_something_that_is_not_equal_to_original() => encrypted.ShouldNotEqual(before);
-    [Fact] void should_decrypt_to_the_same_as_original() => decrypted.ShouldEqual(before);
+    [Fact] void should_encrypt_to_something_that_is_not_equal_to_original() => _encrypted.ShouldNotEqual(_before);
+    [Fact] void should_decrypt_to_the_same_as_original() => _decrypted.ShouldEqual(_before);
 }

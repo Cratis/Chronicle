@@ -7,22 +7,22 @@ namespace Cratis.Chronicle.Projections.for_Projection;
 
 public class when_getting_key_resolver_for_event_type : given.a_projection
 {
-    static EventType event_type = new("993888cc-a9c5-4d56-ae21-f732159feec7", 1);
-    KeyResolver expected;
-    KeyResolver result;
+    static EventType _eventType = new("993888cc-a9c5-4d56-ae21-f732159feec7", 1);
+    KeyResolver _expected;
+    KeyResolver _result;
 
     void Establish()
     {
-        expected = keyResolvers.FromEventSourceId;
+        _expected = keyResolvers.FromEventSourceId;
         projection.SetEventTypesWithKeyResolvers(
             [
-                    new EventTypeWithKeyResolver(event_type, expected)
+                    new EventTypeWithKeyResolver(_eventType, _expected)
             ],
-            [event_type],
+            [_eventType],
             new Dictionary<EventType, ProjectionOperationType>());
     }
 
-    void Because() => result = projection.GetKeyResolverFor(event_type);
+    void Because() => _result = projection.GetKeyResolverFor(_eventType);
 
-    [Fact] void should_return_the_key_resolver() => result.ShouldEqual(expected);
+    [Fact] void should_return_the_key_resolver() => _result.ShouldEqual(_expected);
 }

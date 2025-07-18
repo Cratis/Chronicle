@@ -38,7 +38,6 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleInProcessFixture chroni
         CountAfterSecondEvent = await _collection.CountDocumentsAsync(Builders<SomeReadModel>.Filter.Empty);
     }
 
-
     protected override void ConfigureServices(IServiceCollection services)
     {
         Reducer = new TReducer();

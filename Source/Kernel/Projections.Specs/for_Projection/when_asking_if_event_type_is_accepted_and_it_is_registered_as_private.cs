@@ -7,20 +7,20 @@ namespace Cratis.Chronicle.Projections.for_Projection;
 
 public class when_asking_if_event_type_is_accepted_and_it_is_registered_as_private : given.a_projection
 {
-    static EventType event_type = new("993888cc-a9c5-4d56-ae21-f732159feec7", 1);
-    bool result;
+    static EventType _eventType = new("993888cc-a9c5-4d56-ae21-f732159feec7", 1);
+    bool _result;
 
     void Establish()
     {
         projection.SetEventTypesWithKeyResolvers(
             [
-                new EventTypeWithKeyResolver(event_type, keyResolvers.FromEventSourceId)
+                new EventTypeWithKeyResolver(_eventType, keyResolvers.FromEventSourceId)
             ],
-            [event_type],
+            [_eventType],
             new Dictionary<EventType, ProjectionOperationType>());
     }
 
-    void Because() => result = projection.Accepts(new EventType(event_type.Id, event_type.Generation));
+    void Because() => _result = projection.Accepts(new EventType(_eventType.Id, _eventType.Generation));
 
-    [Fact] void should_accept_it() => result.ShouldBeTrue();
+    [Fact] void should_accept_it() => _result.ShouldBeTrue();
 }

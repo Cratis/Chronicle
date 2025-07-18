@@ -5,17 +5,17 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_b
 
 public class with_explicit_name_and_owner_is_not_specified : given.a_unique_constraint_builder_with_owner_and_an_event_type
 {
-    const string _name = "SomeName";
+    const string Name = "SomeName";
 
     IConstraintDefinition _result;
 
     void Establish()
     {
         _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
-        _constraintBuilder.WithName(_name);
+        _constraintBuilder.WithName(Name);
     }
 
     void Because() => _result = _constraintBuilder.Build();
 
-    [Fact] void should_set_name_to_owners_name() => _result.Name.Value.ShouldEqual(_name);
+    [Fact] void should_set_name_to_owners_name() => _result.Name.Value.ShouldEqual(Name);
 }

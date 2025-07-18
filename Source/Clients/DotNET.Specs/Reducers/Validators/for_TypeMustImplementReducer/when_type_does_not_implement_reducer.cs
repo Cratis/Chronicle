@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Reducers.Validators.for_TypeMustImplementReducer;
 
 public class when_type_does_not_implement_reducer : Specification
 {
-    Exception result;
+    Exception _result;
 
-    void Because() => result = Catch.Exception(() => TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(typeof(string)));
+    void Because() => _result = Catch.Exception(() => TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(typeof(string)));
 
-    [Fact] void should_throw_TypeDoesNotImplementReducer() => result.ShouldBeOfExactType<TypeMustImplementReducer>();
+    [Fact] void should_throw_TypeDoesNotImplementReducer() => _result.ShouldBeOfExactType<TypeMustImplementReducer>();
 }

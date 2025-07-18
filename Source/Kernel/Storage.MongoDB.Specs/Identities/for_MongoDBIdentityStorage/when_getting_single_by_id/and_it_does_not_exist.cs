@@ -7,9 +7,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class and_it_does_not_exist : given.no_identities_registered
 {
-    Identity result;
+    Identity _result;
 
-    async Task Because() => result = await store.GetSingleFor(Guid.NewGuid());
+    async Task Because() => _result = await store.GetSingleFor(Guid.NewGuid());
 
-    [Fact] void should_be_an_unknown_identity() => result.ShouldEqual(Identity.Unknown);
+    [Fact] void should_be_an_unknown_identity() => _result.ShouldEqual(Identity.Unknown);
 }

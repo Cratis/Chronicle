@@ -37,7 +37,7 @@ public class TheJobStep(
 
         return ValueTask.CompletedTask;
     }
-    protected override ValueTask<TheJobStepResult> CreateCancelledResultFromCurrentState(TheJobStepState currentState) => new(new TheJobStepResult());
+    protected override ValueTask<TheJobStepResult?> CreateCancelledResultFromCurrentState(TheJobStepState currentState) => new(new TheJobStepResult());
 
     protected override async Task<Catch<JobStepResult>> PerformStep(TheJobStepState currentState, CancellationToken cancellationToken)
     {

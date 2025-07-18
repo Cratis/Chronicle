@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Json;
 using Cratis.Models;
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle;
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like event types, Reactors, reducers, projections and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
 /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
 /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/> to use. Will revert to default if not configured.</param>
+/// <param name="concurrencyOptions">Optional <see cref="ConcurrencyOptions"/> to use. Will revert to default if not configured.</param>
 /// <param name="autoDiscoverAndRegister">Optional disable automatic discovery of artifacts and registering these.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
@@ -32,6 +34,7 @@ public class ChronicleOptions(
     IServiceProvider? serviceProvider = null,
     IClientArtifactsProvider? artifactsProvider = null,
     ICorrelationIdAccessor? correlationIdAccessor = null,
+    ConcurrencyOptions? concurrencyOptions = null,
     bool autoDiscoverAndRegister = true,
     int connectTimeout = 5,
     ILoggerFactory? loggerFactory = null)
@@ -87,6 +90,11 @@ public class ChronicleOptions(
     /// Gets the <see cref="ICorrelationIdAccessor"/> to use.
     /// </summary>
     public ICorrelationIdAccessor CorrelationIdAccessor { get; set; } = correlationIdAccessor ?? new CorrelationIdAccessor();
+
+    /// <summary>
+    /// Gets the <see cref="ConcurrencyOptions"/> to use for concurrency management.
+    /// </summary>
+    public ConcurrencyOptions ConcurrencyOptions { get; set; } = concurrencyOptions ?? new ConcurrencyOptions();
 
     /// <summary>
     /// Gets the <see cref="IModelNameConvention"/> to use.

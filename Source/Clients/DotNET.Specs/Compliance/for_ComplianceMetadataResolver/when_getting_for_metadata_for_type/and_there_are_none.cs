@@ -5,16 +5,16 @@ namespace Cratis.Chronicle.Compliance.for_ComplianceMetadataResolver.when_gettin
 
 public class and_there_are_none : Specification
 {
-    ComplianceMetadataResolver resolver;
-    Exception result;
+    ComplianceMetadataResolver _resolver;
+    Exception _result;
 
     void Establish() =>
-        resolver = new(
+        _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
 
-    void Because() => result = Catch.Exception(() => resolver.GetMetadataFor(typeof(object)));
+    void Because() => _result = Catch.Exception(() => _resolver.GetMetadataFor(typeof(object)));
 
-    [Fact] void should_throw_no_compliance_metadata_for_type() => result.ShouldBeOfExactType<NoComplianceMetadataForType>();
+    [Fact] void should_throw_no_compliance_metadata_for_type() => _result.ShouldBeOfExactType<NoComplianceMetadataForType>();
 }

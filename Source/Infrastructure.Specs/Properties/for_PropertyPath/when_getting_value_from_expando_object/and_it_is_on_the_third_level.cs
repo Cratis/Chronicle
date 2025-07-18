@@ -8,17 +8,17 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class and_it_is_on_the_third_level : Specification
 {
-    ExpandoObject input;
-    PropertyPath property_path;
-    object result;
+    ExpandoObject _input;
+    PropertyPath _propertyPath;
+    object _result;
 
     void Establish()
     {
-        input = new { first_level = new { second_level = new { third_level = 42 } } }.AsExpandoObject();
-        property_path = new("first_level.second_level.third_level");
+        _input = new { first_level = new { second_level = new { third_level = 42 } } }.AsExpandoObject();
+        _propertyPath = new("first_level.second_level.third_level");
     }
 
-    void Because() => result = property_path.GetValue(input, ArrayIndexers.NoIndexers);
+    void Because() => _result = _propertyPath.GetValue(_input, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_return_value() => result.ShouldEqual(42);
+    [Fact] void should_return_value() => _result.ShouldEqual(42);
 }

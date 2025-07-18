@@ -7,16 +7,16 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class and_it_does_not_exist : given.no_identities_registered
 {
-    Identity identity;
-    IdentityId identityId;
+    Identity _identity;
+    IdentityId _identityId;
 
-    void Establish() => identity = new Identity(string.Empty, string.Empty, "Some user name");
+    void Establish() => _identity = new Identity(string.Empty, string.Empty, "Some user name");
 
-    async Task Because() => identityId = await store.GetSingleFor(identity);
+    async Task Because() => _identityId = await store.GetSingleFor(_identity);
 
-    [Fact] void should_return_an_id() => identityId.ShouldNotBeNull();
+    [Fact] void should_return_an_id() => _identityId.ShouldNotBeNull();
     [Fact] void should_insert_the_identity() => _insertedIdentities.Count.ShouldEqual(1);
-    [Fact] void should_insert_the_identity_with_the_correct_subject() => _insertedIdentities[0].Subject.ShouldEqual(identity.Subject);
-    [Fact] void should_insert_the_identity_with_the_correct_name() => _insertedIdentities[0].Name.ShouldEqual(identity.Name);
-    [Fact] void should_insert_the_identity_with_the_correct_user_name() => _insertedIdentities[0].UserName.ShouldEqual(identity.UserName.ToLowerInvariant());
+    [Fact] void should_insert_the_identity_with_the_correct_subject() => _insertedIdentities[0].Subject.ShouldEqual(_identity.Subject);
+    [Fact] void should_insert_the_identity_with_the_correct_name() => _insertedIdentities[0].Name.ShouldEqual(_identity.Name);
+    [Fact] void should_insert_the_identity_with_the_correct_user_name() => _insertedIdentities[0].UserName.ShouldEqual(_identity.UserName.ToLowerInvariant());
 }

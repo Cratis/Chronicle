@@ -26,7 +26,7 @@ public record EventWithPropertiesForAllSupportedTypes(
     DoubleConcept DoubleConceptValue,
     GuidConcept GuidConceptValue)
 {
-    static Random random = new();
+    static Random _random = new();
 
     public static EventWithPropertiesForAllSupportedTypes CreateWithKnownValues() => new(
             KnownValues.StringValue,
@@ -48,21 +48,21 @@ public record EventWithPropertiesForAllSupportedTypes(
             KnownValues.GuidConceptValue);
 
     public static EventWithPropertiesForAllSupportedTypes CreateWithRandomValues() => new(
-        random.NextDouble().ToString(),
-        (random.Next() % 1) == 0,
-        random.Next(5000),
-        (float)Math.Round(random.NextSingle(), 3),
-        random.NextDouble(),
-        (EnumWithValues)random.Next((int)EnumWithValues.FirstValue, (int)EnumWithValues.ThirdValue),
+        _random.NextDouble().ToString(),
+        (_random.Next() % 1) == 0,
+        _random.Next(5000),
+        (float)Math.Round(_random.NextSingle(), 3),
+        _random.NextDouble(),
+        (EnumWithValues)_random.Next((int)EnumWithValues.FirstValue, (int)EnumWithValues.ThirdValue),
         Guid.NewGuid(),
-        DateTime.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
-        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
-        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))).RoundDownTicks(),
-        DateTimeOffset.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
-        random.NextDouble().ToString(),
-        (random.Next() % 1) == 0,
-        random.Next(5000),
-        (float)Math.Round(random.NextSingle(), 3),
-        random.NextDouble(),
+        DateTime.UtcNow.AddDays(_random.Next(60)).RoundDownTicks(),
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(_random.Next(60))),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(_random.Next(48))).RoundDownTicks(),
+        DateTimeOffset.UtcNow.AddDays(_random.Next(60)).RoundDownTicks(),
+        _random.NextDouble().ToString(),
+        (_random.Next() % 1) == 0,
+        _random.Next(5000),
+        (float)Math.Round(_random.NextSingle(), 3),
+        _random.NextDouble(),
         Guid.NewGuid());
 }

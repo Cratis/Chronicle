@@ -52,7 +52,7 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
     RecommendationKey GetRecommendationKey()
     {
         this.GetPrimaryKey(out var keyAsString);
-        var key = (RecommendationsManagerKey)keyAsString;
+        var key = (RecommendationsManagerKey)keyAsString!;
         return new RecommendationKey(key.EventStore, key.Namespace);
     }
 }

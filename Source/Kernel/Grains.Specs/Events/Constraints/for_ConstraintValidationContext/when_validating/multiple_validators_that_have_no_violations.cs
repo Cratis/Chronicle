@@ -7,7 +7,6 @@ public class multiple_validators_that_have_no_violations : given.a_constraint_va
 {
     ConstraintValidationResult _result;
 
-
     void Establish()
     {
         _firstValidator.Validate(Arg.Any<ConstraintValidationContext>()).Returns(new ConstraintValidationResult());

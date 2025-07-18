@@ -18,7 +18,6 @@ public class subtracting_from_properties(context context) : Given<context>(conte
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
-
         void Establish()
         {
             FirstEventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();

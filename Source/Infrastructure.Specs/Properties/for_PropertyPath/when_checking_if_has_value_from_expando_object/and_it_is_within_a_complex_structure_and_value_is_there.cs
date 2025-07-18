@@ -8,15 +8,15 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath.when_checking_if_has_valu
 
 public class and_it_is_within_a_complex_structure_and_value_is_there : Specification
 {
-    ExpandoObject input;
-    PropertyPath property_path;
-    bool result;
-    ArrayIndexer first_array_indexer;
-    ArrayIndexer second_array_indexer;
+    ExpandoObject _input;
+    PropertyPath _propertyPath;
+    bool _result;
+    ArrayIndexer _firstArrayIndexer;
+    ArrayIndexer _secondArrayIndexer;
 
     void Establish()
     {
-        input = new
+        _input = new
         {
             first_level = new
             {
@@ -40,12 +40,12 @@ public class and_it_is_within_a_complex_structure_and_value_is_there : Specifica
                 }
             }
         }.AsExpandoObject();
-        property_path = new("first_level.[second_level].third_level.[forth_level].fifth_level");
-        first_array_indexer = new("first_level.[second_level]", "identifier", "first");
-        second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
+        _propertyPath = new("first_level.[second_level].third_level.[forth_level].fifth_level");
+        _firstArrayIndexer = new("first_level.[second_level]", "identifier", "first");
+        _secondArrayIndexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
     }
 
-    void Because() => result = property_path.HasValue(input, new ArrayIndexers([first_array_indexer, second_array_indexer]));
+    void Because() => _result = _propertyPath.HasValue(_input, new ArrayIndexers([_firstArrayIndexer, _secondArrayIndexer]));
 
-    [Fact] void should_not_have_it() => result.ShouldBeTrue();
+    [Fact] void should_not_have_it() => _result.ShouldBeTrue();
 }

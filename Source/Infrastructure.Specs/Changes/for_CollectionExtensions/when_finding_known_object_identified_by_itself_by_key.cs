@@ -7,16 +7,16 @@ namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 
 public class when_finding_known_object_identified_by_itself_by_key : Specification
 {
-    IEnumerable<string> items;
-    string result;
+    IEnumerable<string> _items;
+    string _result;
 
-    void Establish() => items =
+    void Establish() => _items =
     [
         "First",
         "Second"
     ];
 
-    void Because() => result = items.FindByKey(PropertyPath.Root, "Second");
+    void Because() => _result = _items.FindByKey(PropertyPath.Root, "Second");
 
-    [Fact] void should_return_correct_item() => result.ShouldEqual(items.ToArray()[1]);
+    [Fact] void should_return_correct_item() => _result.ShouldEqual(_items.ToArray()[1]);
 }

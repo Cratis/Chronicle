@@ -14,9 +14,9 @@ public class and_signature_is_a_valid_synchronous_method_without_context_with_wr
         public object Something(ValidEvent @event, ReadModel current) => null!;
     }
 
-    bool result;
+    bool _result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), []);
+    void Because() => _result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), []);
 
-    [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
+    [Fact] void should_not_be_considered_a_reducer_method() => _result.ShouldBeFalse();
 }

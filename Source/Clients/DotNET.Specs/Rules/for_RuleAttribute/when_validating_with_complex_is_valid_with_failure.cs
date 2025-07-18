@@ -7,29 +7,29 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 
 public class when_validating_with_complex_is_valid_with_failure : given.a_validation_context
 {
-    const int value_to_validate = 42;
-    MyRuleAttribute rule;
-    ValidationResult result;
-    ValidationResult expected;
+    const int ValueToValidate = 42;
+    MyRuleAttribute _rule;
+    ValidationResult _result;
+    ValidationResult _expected;
 
     void Establish()
     {
-        rule = new();
-        expected = new ValidationResult("Some error", ["Member1", "Member2"]);
-        rule.complex_is_value_return = expected;
+        _rule = new();
+        _expected = new ValidationResult("Some error", ["Member1", "Member2"]);
+        _rule.complex_is_value_return = _expected;
     }
 
     void Because()
     {
         try
         {
-            rule.Validate(value_to_validate, _validationContext);
+            _rule.Validate(ValueToValidate, _validationContext);
         }
         catch (ValidationException ex)
         {
-            result = ex.ValidationResult;
+            _result = ex.ValidationResult;
         }
     }
 
-    [Fact] void should_return_expected_validation_result() => result.ShouldEqual(expected);
+    [Fact] void should_return_expected_validation_result() => _result.ShouldEqual(_expected);
 }

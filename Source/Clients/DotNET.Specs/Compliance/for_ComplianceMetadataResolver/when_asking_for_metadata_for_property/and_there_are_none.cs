@@ -14,16 +14,16 @@ public class and_there_are_none : Specification
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    ComplianceMetadataResolver resolver;
-    bool result;
+    ComplianceMetadataResolver _resolver;
+    bool _result;
 
     void Establish() =>
-        resolver = new(
+        _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
 
-    void Because() => result = resolver.HasMetadataFor(MyClass.SomethingProperty);
+    void Because() => _result = _resolver.HasMetadataFor(MyClass.SomethingProperty);
 
-    [Fact] void should_not_have_any() => result.ShouldBeFalse();
+    [Fact] void should_not_have_any() => _result.ShouldBeFalse();
 }

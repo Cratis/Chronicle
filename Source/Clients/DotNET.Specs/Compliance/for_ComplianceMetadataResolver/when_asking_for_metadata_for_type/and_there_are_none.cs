@@ -5,16 +5,16 @@ namespace Cratis.Chronicle.Compliance.for_ComplianceMetadataResolver.when_asking
 
 public class and_there_are_none : Specification
 {
-    ComplianceMetadataResolver resolver;
-    bool result;
+    ComplianceMetadataResolver _resolver;
+    bool _result;
 
     void Establish() =>
-        resolver = new(
+        _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
             new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
         );
 
-    void Because() => result = resolver.HasMetadataFor(typeof(object));
+    void Because() => _result = _resolver.HasMetadataFor(typeof(object));
 
-    [Fact] void should_not_have_any() => result.ShouldBeFalse();
+    [Fact] void should_not_have_any() => _result.ShouldBeFalse();
 }

@@ -31,6 +31,7 @@ public class a_stateful_aggregate_root : all_dependencies
             _eventSequence,
             _aggregateRoot,
             _unitOfWork,
+            EventSequenceNumber.First,
             EventSequenceNumber.First);
         _aggregateRoot._context = _aggregateRootContext;
         _aggregateRoot._mutation = _mutation;

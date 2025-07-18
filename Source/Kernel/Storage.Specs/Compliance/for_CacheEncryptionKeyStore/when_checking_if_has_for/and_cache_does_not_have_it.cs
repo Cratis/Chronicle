@@ -7,13 +7,13 @@ namespace Cratis.Chronicle.Storage.Compliance.for_CacheEncryptionKeyStore.when_c
 
 public class and_cache_does_not_have_it : given.a_cache_encryption_key_store
 {
-    static EncryptionKeyIdentifier identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
-    bool result;
+    static EncryptionKeyIdentifier _identifier = "5c6cce36-d60d-46db-9db2-e820559962db";
+    bool _result;
 
-    void Establish() => _actualStore.HasFor(string.Empty, string.Empty, identifier).Returns(true);
+    void Establish() => _actualStore.HasFor(string.Empty, string.Empty, _identifier).Returns(true);
 
-    async Task Because() => result = await _store.HasFor(string.Empty, string.Empty, identifier);
+    async Task Because() => _result = await _store.HasFor(string.Empty, string.Empty, _identifier);
 
-    [Fact] void should_ask_actual_store() => _actualStore.Received(1).HasFor(string.Empty, string.Empty, identifier);
-    [Fact] void should_return_result_from_actual_store() => result.ShouldBeTrue();
+    [Fact] void should_ask_actual_store() => _actualStore.Received(1).HasFor(string.Empty, string.Empty, _identifier);
+    [Fact] void should_return_result_from_actual_store() => _result.ShouldBeTrue();
 }

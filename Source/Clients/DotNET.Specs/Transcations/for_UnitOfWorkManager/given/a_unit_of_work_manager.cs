@@ -8,7 +8,6 @@ public class a_unit_of_work_manager : Specification
     protected IEventStore _eventStore;
     protected UnitOfWorkManager _manager;
 
-
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();

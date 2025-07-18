@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressi
 
 public class when_asking_can_resolve_for_valid_expression : given.a_resolver
 {
-    bool result;
+    bool _result;
 
-    void Because() => result = _resolver.CanResolve("$composite(prop1=value,prop2=value2)");
+    void Because() => _result = _resolver.CanResolve("$composite(prop1=value,prop2=value2)");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

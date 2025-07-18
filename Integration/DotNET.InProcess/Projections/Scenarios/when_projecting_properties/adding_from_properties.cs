@@ -18,7 +18,6 @@ public class adding_from_properties(context context) : Given<context>(context)
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
-
         void Establish()
         {
             FirstEventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();

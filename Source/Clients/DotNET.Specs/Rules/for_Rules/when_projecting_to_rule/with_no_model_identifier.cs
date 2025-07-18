@@ -10,37 +10,37 @@ namespace Cratis.Chronicle.Rules.for_Rules.when_projecting_to_rule;
 
 public class with_no_model_identifier : given.no_rules
 {
-    const string first_state_value = "Forty two";
-    const int second_state_value = 42;
-    const int complex_state_some_integer = 43;
-    const string complex_state_some_string = "Forty three";
+    const string FirstStateValue = "Forty two";
+    const int SecondStateValue = 42;
+    const int ComplexStateSomeInteger = 43;
+    const string ComplexStateSomeSring = "Forty three";
 
-    RuleWithState rule;
+    RuleWithState _rule;
 
     void Establish()
     {
-        rule = new();
-        _projections.HasFor(rule.GetRuleId().Value).Returns(true);
+        _rule = new();
+        _projections.HasFor(_rule.GetRuleId().Value).Returns(true);
 
         var jsonObject = new JsonObject
         {
-            [nameof(RuleWithState.FirstStateValue).ToCamelCase()] = first_state_value,
-            [nameof(RuleWithState.SecondStateValue).ToCamelCase()] = second_state_value,
+            [nameof(RuleWithState.FirstStateValue).ToCamelCase()] = FirstStateValue,
+            [nameof(RuleWithState.SecondStateValue).ToCamelCase()] = SecondStateValue,
             [nameof(RuleWithState.ComplexState).ToCamelCase()] = new JsonObject
             {
-                [nameof(ComplexState.SomeInteger).ToCamelCase()] = complex_state_some_integer,
-                [nameof(ComplexState.SomeString).ToCamelCase()] = complex_state_some_string
+                [nameof(ComplexState.SomeInteger).ToCamelCase()] = ComplexStateSomeInteger,
+                [nameof(ComplexState.SomeString).ToCamelCase()] = ComplexStateSomeSring
             }
         };
 
         _projections
-            .GetInstanceById(rule.GetRuleId().Value, Arg.Any<ModelKey>())
-            .Returns(Task.FromResult(new ProjectionResultRaw(jsonObject, [], 0)));
+            .GetInstanceById(_rule.GetRuleId().Value, Arg.Any<ModelKey>())
+            .Returns(Task.FromResult(new ProjectionResultRaw(jsonObject, [], 0, 42)));
     }
 
-    void Because() => rules.ProjectTo(rule);
+    void Because() => rules.ProjectTo(_rule);
 
-    [Fact] void should_set_first_state_value() => rule.FirstStateValue.ShouldEqual(first_state_value);
-    [Fact] void should_set_second_state_value() => rule.SecondStateValue.ShouldEqual(second_state_value);
-    [Fact] void should_set_complex_state() => rule.ComplexState.ShouldEqual(new ComplexState(complex_state_some_integer, complex_state_some_string));
+    [Fact] void should_set_first_state_value() => _rule.FirstStateValue.ShouldEqual(FirstStateValue);
+    [Fact] void should_set_second_state_value() => _rule.SecondStateValue.ShouldEqual(SecondStateValue);
+    [Fact] void should_set_complex_state() => _rule.ComplexState.ShouldEqual(new ComplexState(ComplexStateSomeInteger, ComplexStateSomeSring));
 }

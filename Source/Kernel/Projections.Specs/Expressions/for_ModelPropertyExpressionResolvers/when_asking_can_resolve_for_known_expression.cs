@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Projections.Expressions.for_ModelPropertyExpressionRe
 
 public class when_asking_can_resolve_for_known_expression : given.model_property_expression_resolvers
 {
-    bool result;
+    bool _result;
 
-    void Because() => result = _resolvers.CanResolve(string.Empty, "$add($eventSourceId)");
+    void Because() => _result = _resolvers.CanResolve(string.Empty, "$add($eventSourceId)");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

@@ -9,11 +9,11 @@ namespace Cratis.Chronicle.Projections.for_ProjectionExtensions.when_applying_fr
 
 public class when_projecting_to_root_property : given.an_observable_and_event_setup
 {
-    IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = [];
+    IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> _propertyMappers = [];
 
-    void Establish() => _observable.Project(string.Empty, "Id", property_mappers);
+    void Establish() => _observable.Project(string.Empty, "Id", _propertyMappers);
 
     void Because() => _observable.OnNext(_eventContext);
 
-    [Fact] void should_set_properties_on_changeset() => _changeset.Received(1).SetProperties(property_mappers, _eventContext.Key.ArrayIndexers);
+    [Fact] void should_set_properties_on_changeset() => _changeset.Received(1).SetProperties(_propertyMappers, _eventContext.Key.ArrayIndexers);
 }

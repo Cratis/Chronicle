@@ -12,7 +12,6 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
     protected Model _model;
     protected ModelName _modelName = "TheModel";
 
-
     void Establish()
     {
         _projection = Substitute.For<Chronicle.Projections.IProjection>();

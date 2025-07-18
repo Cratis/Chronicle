@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class and_it_exists : given.two_identities_registered
 {
-    Identity identity;
+    Identity _identity;
 
-    async Task Because() => identity = await store.GetSingleFor(first_identity_from_database.Id);
+    async Task Because() => _identity = await store.GetSingleFor(first_identity_from_database.Id);
 
-    [Fact] void should_return_an_identity() => identity.ShouldNotBeNull();
-    [Fact] void should_return_identity_with_expected_subject() => identity.Subject.ShouldEqual(first_identity_from_database.Subject);
-    [Fact] void should_return_identity_with_expected_name() => identity.Name.ShouldEqual(first_identity_from_database.Name);
-    [Fact] void should_return_identity_with_expected_user_name() => identity.UserName.ShouldEqual(first_identity_from_database.UserName);
+    [Fact] void should_return_an_identity() => _identity.ShouldNotBeNull();
+    [Fact] void should_return_identity_with_expected_subject() => _identity.Subject.ShouldEqual(first_identity_from_database.Subject);
+    [Fact] void should_return_identity_with_expected_name() => _identity.Name.ShouldEqual(first_identity_from_database.Name);
+    [Fact] void should_return_identity_with_expected_user_name() => _identity.UserName.ShouldEqual(first_identity_from_database.UserName);
 }

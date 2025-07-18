@@ -8,36 +8,36 @@ namespace Cratis.Chronicle.InProcess.for_InProcessConnectionLifecycle;
 
 public class when_registering_event_handlers : Specification
 {
-    InProcessConnectionLifecycle inProcessLifecycle;
-    ConnectionLifecycle regularLifecycle;
-    int inProcessCallCount;
-    int regularCallCount;
+    InProcessConnectionLifecycle _inProcessLifecycle;
+    ConnectionLifecycle _regularLifecycle;
+    int _inProcessCallCount;
+    int _regularCallCount;
 
     void Establish()
     {
-        inProcessLifecycle = new();
-        regularLifecycle = new(NullLogger<ConnectionLifecycle>.Instance);
+        _inProcessLifecycle = new();
+        _regularLifecycle = new(NullLogger<ConnectionLifecycle>.Instance);
 
-        inProcessLifecycle.OnConnected += () =>
+        _inProcessLifecycle.OnConnected += () =>
         {
-            inProcessCallCount++;
+            _inProcessCallCount++;
             return Task.CompletedTask;
         };
 
-        regularLifecycle.OnConnected += () =>
+        _regularLifecycle.OnConnected += () =>
         {
-            regularCallCount++;
+            _regularCallCount++;
             return Task.CompletedTask;
         };
     }
 
     async Task Because()
     {
-        await inProcessLifecycle.Connected();
-        await regularLifecycle.Connected();
+        await _inProcessLifecycle.Connected();
+        await _regularLifecycle.Connected();
     }
 
-    [Fact] void should_not_trigger_events_for_in_process_lifecycle() => inProcessCallCount.ShouldEqual(0);
-    [Fact] void should_trigger_events_for_regular_lifecycle() => regularCallCount.ShouldEqual(1);
-    [Fact] void should_mark_both_as_connected() => (inProcessLifecycle.IsConnected && regularLifecycle.IsConnected).ShouldBeTrue();
+    [Fact] void should_not_trigger_events_for_in_process_lifecycle() => _inProcessCallCount.ShouldEqual(0);
+    [Fact] void should_trigger_events_for_regular_lifecycle() => _regularCallCount.ShouldEqual(1);
+    [Fact] void should_mark_both_as_connected() => (_inProcessLifecycle.IsConnected && _regularLifecycle.IsConnected).ShouldBeTrue();
 }

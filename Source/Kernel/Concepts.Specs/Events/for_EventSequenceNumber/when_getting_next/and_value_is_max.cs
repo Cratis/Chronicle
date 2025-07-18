@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Concepts.Events.for_EventSequenceNumber.when_getting_
 
 public class and_value_is_max : Specification
 {
-    EventSequenceNumber result;
+    EventSequenceNumber _result;
 
-    void Because() => result = EventSequenceNumber.Max.Next();
+    void Because() => _result = EventSequenceNumber.Max.Next();
 
-    [Fact] void should_remain_max() => result.ShouldEqual(EventSequenceNumber.Max);
+    [Fact] void should_remain_max() => _result.ShouldEqual(EventSequenceNumber.Max);
 }

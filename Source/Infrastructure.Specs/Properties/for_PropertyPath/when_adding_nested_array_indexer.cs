@@ -7,19 +7,19 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_nested_array_indexer : Specification
 {
-    const string first_segment = "FirstSegment";
-    const string second_segment = "SecondSegment";
-    const string third_segment = "ThirdSegment";
-    const string forth_segment = "ForthSegment";
-    const string nested_addition = $"{third_segment}.{forth_segment}";
+    const string FirstSegment = "FirstSegment";
+    const string SecondSegment = "SecondSegment";
+    const string ThirdSegment = "ThirdSegment";
+    const string ForthSegment = "ForthSegment";
+    const string NestedAddition = $"{ThirdSegment}.{ForthSegment}";
 
-    PropertyPath initial;
-    PropertyPath result;
+    PropertyPath _initial;
+    PropertyPath _result;
 
-    void Establish() => initial = new PropertyPath($"{first_segment}.{second_segment}");
+    void Establish() => _initial = new PropertyPath($"{FirstSegment}.{SecondSegment}");
 
-    void Because() => result = initial.AddArrayIndex(nested_addition);
+    void Because() => _result = _initial.AddArrayIndex(NestedAddition);
 
-    [Fact] void should_have_last_segment_be_array_index() => result.LastSegment.ShouldBeOfExactType<ArrayProperty>();
-    [Fact] void should_have_last_segment_have_camel_case_identifier() => result.LastSegment.Value.ShouldEqual(forth_segment.ToCamelCase());
+    [Fact] void should_have_last_segment_be_array_index() => _result.LastSegment.ShouldBeOfExactType<ArrayProperty>();
+    [Fact] void should_have_last_segment_have_camel_case_identifier() => _result.LastSegment.Value.ShouldEqual(ForthSegment.ToCamelCase());
 }

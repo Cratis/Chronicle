@@ -16,9 +16,9 @@ public class and_signature_is_a_valid_asynchronous_method_with_context_for_an_in
         public Task<ReadModel> Something(InvalidEvent @event, ReadModel current, EventContext eventContext) => Task.FromResult(current);
     }
 
-    bool result;
+    bool _result;
 
-    void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), []);
+    void Because() => _result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), []);
 
-    [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
+    [Fact] void should_not_be_considered_a_reducer_method() => _result.ShouldBeFalse();
 }

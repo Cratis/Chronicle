@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues.for_EventSourceId
 
 public class when_asking_can_resolve_for_event_source_id : Specification
 {
-    EventSourceIdExpressionResolver resolvers;
-    bool result;
+    EventSourceIdExpressionResolver _resolvers;
+    bool _result;
 
-    void Establish() => resolvers = new EventSourceIdExpressionResolver();
+    void Establish() => _resolvers = new EventSourceIdExpressionResolver();
 
-    void Because() => result = resolvers.CanResolve("$eventSourceId");
+    void Because() => _result = _resolvers.CanResolve("$eventSourceId");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

@@ -20,6 +20,7 @@ public class when_creating_for_stateless_aggregate_root : given.an_aggregate_roo
         Substitute.For<IEventSequence>(),
         new StatelessAggregateRoot(),
         Substitute.For<IUnitOfWork>(),
+        EventSequenceNumber.First,
         EventSequenceNumber.First);
 
     async Task Because() => _result = await _factory.Create<StatelessAggregateRoot>(_context);

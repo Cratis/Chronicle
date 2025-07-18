@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
 public class when_asking_for_unknown_type : Specification
 {
-    Sinks sinks;
-    bool result;
+    Sinks _sinks;
+    bool _result;
 
-    void Establish() => sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([]));
+    void Establish() => _sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([]));
 
-    void Because() => result = sinks.HasType("bc5e82fd-9845-4464-9802-a7e21bd8a919");
+    void Because() => _result = _sinks.HasType("bc5e82fd-9845-4464-9802-a7e21bd8a919");
 
-    [Fact] void should_not_have_type() => result.ShouldBeFalse();
+    [Fact] void should_not_have_type() => _result.ShouldBeFalse();
 }

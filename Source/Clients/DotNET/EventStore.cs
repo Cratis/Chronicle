@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
@@ -31,6 +32,7 @@ public class EventStore : IEventStore
     readonly EventStoreName _eventStoreName;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
+    readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IEventSerializer _eventSerializer;
@@ -44,6 +46,7 @@ public class EventStore : IEventStore
     /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
+    /// <param name="concurrencyScopeStrategies"><see cref="IConcurrencyScopeStrategies"/> for managing concurrency scopes.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
@@ -57,6 +60,7 @@ public class EventStore : IEventStore
         IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
         ICorrelationIdAccessor correlationIdAccessor,
+        IConcurrencyScopeStrategies concurrencyScopeStrategies,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
@@ -74,6 +78,7 @@ public class EventStore : IEventStore
         Connection = connection;
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
+        _concurrencyScopeStrategies = concurrencyScopeStrategies;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
@@ -100,6 +105,7 @@ public class EventStore : IEventStore
             Constraints,
             _eventSerializer,
             correlationIdAccessor,
+            concurrencyScopeStrategies,
             causationManager,
             UnitOfWorkManager,
             identityProvider);
@@ -239,6 +245,7 @@ public class EventStore : IEventStore
             Constraints,
             _eventSerializer,
             _correlationIdAccessor,
+            _concurrencyScopeStrategies,
             _causationManager,
             UnitOfWorkManager,
             _identityProvider);

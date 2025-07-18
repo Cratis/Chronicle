@@ -9,27 +9,27 @@ public class and_key_is_the_same_but_class_object_is_different : given.an_object
 {
     record TheType(IDictionary<string, string> Dictionary);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(new Dictionary<string, string>
+        _left = new(new Dictionary<string, string>
         {
             { "Key",  "Value" }
         });
-        right = new(new Dictionary<string, string>
+        _right = new(new Dictionary<string, string>
         {
             { "Key",  "Something else" }
         });
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_not_be_equal() => result.ShouldBeFalse();
-    [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);
-    [Fact] void should_have_dictionary_property_as_difference() => differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Dictionary).ToCamelCase());
+    [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
+    [Fact] void should_only_have_one_property_difference() => _differences.Count().ShouldEqual(1);
+    [Fact] void should_have_dictionary_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Dictionary).ToCamelCase());
 }

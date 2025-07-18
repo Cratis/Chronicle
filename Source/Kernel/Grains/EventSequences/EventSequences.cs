@@ -21,7 +21,7 @@ public class EventSequences(ILogger<EventSequences> logger) : Grain, IEventSeque
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _ = this.GetPrimaryKeyLong(out var keyAsString);
-        _key = keyAsString;
+        _key = keyAsString!;
 
         return Task.CompletedTask;
     }

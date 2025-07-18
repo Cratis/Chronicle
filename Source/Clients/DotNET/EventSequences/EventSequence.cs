@@ -5,8 +5,10 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Transactions;
 
@@ -26,6 +28,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="constraints">Known <see cref="IConstraints"/>.</param>
 /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
+/// <param name="concurrencyScopeStrategies"><see cref="IConcurrencyScopeStrategies"/> for managing concurrency scopes.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
 /// <param name="unitOfWorkManager"><see cref="IUnitOfWorkManager"/> for working with the unit of work.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
@@ -38,6 +41,7 @@ public class EventSequence(
     IConstraints constraints,
     IEventSerializer eventSerializer,
     ICorrelationIdAccessor correlationIdAccessor,
+    IConcurrencyScopeStrategies concurrencyScopeStrategies,
     ICausationManager causationManager,
     IUnitOfWorkManager unitOfWorkManager,
     IIdentityProvider identityProvider) : IEventSequence
@@ -57,13 +61,21 @@ public class EventSequence(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default)
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var eventClrType = @event.GetType();
         eventStreamType ??= EventStreamType.All;
         eventStreamId ??= EventStreamId.Default;
         eventSourceType ??= EventSourceType.Default;
         correlationId ??= correlationIdAccessor.Current;
+        concurrencyScope ??= await concurrencyScopeStrategies
+            .GetFor(this)
+            .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+
+        concurrencyScope = concurrencyScope != ConcurrencyScope.NotSet
+            ? concurrencyScope
+            : default;
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
@@ -88,7 +100,8 @@ public class EventSequence(
             },
             Content = content.ToJsonString(),
             Causation = causationChain,
-            CausedBy = identity.ToContract()
+            CausedBy = identity.ToContract(),
+            ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract()
         });
 
         return ResolveViolationMessages(response.ToClient());
@@ -101,7 +114,8 @@ public class EventSequence(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        CorrelationId? correlationId = default)
+        CorrelationId? correlationId = default,
+        ConcurrencyScope? concurrencyScope = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -117,11 +131,25 @@ public class EventSequence(
             };
         }).ToList();
 
-        return await AppendManyImplementation(eventsToAppend, correlationId ?? correlationIdAccessor.Current);
+        concurrencyScope ??= await concurrencyScopeStrategies
+            .GetFor(this)
+            .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+
+        var concurrencyScopes = concurrencyScope != ConcurrencyScope.NotSet
+            ? new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } }
+            : new Dictionary<EventSourceId, ConcurrencyScope>();
+
+        return await AppendManyImplementation(
+            eventsToAppend,
+            correlationId ?? correlationIdAccessor.Current,
+            concurrencyScopes);
     }
 
     /// <inheritdoc/>
-    public async Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, CorrelationId? correlationId = default)
+    public async Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId = default,
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -137,7 +165,10 @@ public class EventSequence(
             };
         }).ToList();
 
-        return await AppendManyImplementation(eventsToAppend, correlationId ?? correlationIdAccessor.Current);
+        return await AppendManyImplementation(
+            eventsToAppend,
+            correlationId ?? correlationIdAccessor.Current,
+            concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
     }
 
     /// <inheritdoc/>
@@ -200,7 +231,27 @@ public class EventSequence(
     public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber() => throw new NotImplementedException();
+    public async Task<EventSequenceNumber> GetTailSequenceNumber(
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default)
+    {
+        var request = new GetTailSequenceNumberRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId?.Value ?? default,
+            EventSourceType = eventSourceType?.Value ?? default,
+            EventStreamType = eventStreamType?.Value ?? default,
+            EventStreamId = eventStreamId?.Value ?? default,
+            EventTypes = eventTypes?.ToContract() ?? []
+        };
+        var sequenceNumber = await _servicesAccessor.Services.EventSequences.GetTailSequenceNumber(request);
+        return sequenceNumber.SequenceNumber;
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();
@@ -219,11 +270,11 @@ public class EventSequence(
         }
     }
 
-    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend, CorrelationId correlationId)
+    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend, CorrelationId correlationId, IDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes)
     {
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
-        var response = await _servicesAccessor.Services.EventSequences.AppendMany(new()
+        var request = new AppendManyRequest()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -231,8 +282,12 @@ public class EventSequence(
             CorrelationId = correlationId,
             Events = eventsToAppend,
             Causation = causationChain,
-            CausedBy = identity.ToContract()
-        });
+            CausedBy = identity.ToContract(),
+            ConcurrencyScopes = concurrencyScopes
+                .Where(kvp => kvp.Value is not null)
+                .ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
+        };
+        var response = await _servicesAccessor.Services.EventSequences.AppendMany(request);
 
         return ResolveViolationMessages(response.ToClient());
     }

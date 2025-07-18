@@ -8,9 +8,9 @@ public class and_type_has_event_type_attribute : Specification
     [EventType("01547ac7-25f6-439b-bc20-2422479ef29a")]
     class MyEvent;
 
-    bool result;
+    bool _result;
 
-    void Because() => result = typeof(MyEvent).IsEventType([]);
+    void Because() => _result = typeof(MyEvent).IsEventType([]);
 
-    [Fact] void should_be_considered_an_event_type() => result.ShouldBeTrue();
+    [Fact] void should_be_considered_an_event_type() => _result.ShouldBeTrue();
 }

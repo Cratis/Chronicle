@@ -7,20 +7,20 @@ public class when_comparing_object_with_equal_guid_values : given.an_object_comp
 {
     record TheType(Guid TheGuid);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(Guid.Parse("240409fd-43db-4675-9345-025526c9c7e4"));
-        right = new(Guid.Parse("240409fd-43db-4675-9345-025526c9c7e4"));
+        _left = new(Guid.Parse("240409fd-43db-4675-9345-025526c9c7e4"));
+        _right = new(Guid.Parse("240409fd-43db-4675-9345-025526c9c7e4"));
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_equal() => result.ShouldBeTrue();
-    [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();
+    [Fact] void should_be_equal() => _result.ShouldBeTrue();
+    [Fact] void should_have_no_differences() => _differences.ShouldBeEmpty();
 }

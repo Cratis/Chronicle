@@ -7,19 +7,19 @@ public class when_comparing_object_with_generic_comparable_that_are_equal : give
 {
     record TheType(MyGenericComparable Comparable);
 
-    TheType left;
-    TheType right;
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    TheType _left;
+    TheType _right;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(new(0));
-        right = new(new(0));
+        _left = new(new(0));
+        _right = new(new(0));
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_equal() => result.ShouldBeTrue();
-    [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();
+    [Fact] void should_be_equal() => _result.ShouldBeTrue();
+    [Fact] void should_have_no_differences() => _differences.ShouldBeEmpty();
 }

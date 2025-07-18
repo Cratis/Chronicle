@@ -5,8 +5,8 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIIMetadataProvider.when_asking_i
 
 public class and_there_is_no_metadata : given.a_provider
 {
-    bool result;
-    void Because() => result = provider.CanProvide(typeof(object));
+    bool _result;
+    void Because() => _result = provider.CanProvide(typeof(object));
 
-    [Fact] void should_not_be_able_to_provide() => result.ShouldBeFalse();
+    [Fact] void should_not_be_able_to_provide() => _result.ShouldBeFalse();
 }

@@ -8,11 +8,11 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
 public class and_partition_is_failed : given.an_observer_with_subscription_for_specific_event_type
 {
-    const string _eventSourceId = "Something";
+    const string EventSourceId = "Something";
 
     void Establish()
     {
-        _failedPartitionsState.AddFailedPartition(_eventSourceId, 42UL, ["Something went wrong"], "This is the stack trace");
+        _failedPartitionsState.AddFailedPartition(EventSourceId, 42UL, ["Something went wrong"], "This is the stack trace");
         _stateStorage.State = _stateStorage.State with
         {
             NextEventSequenceNumber = 53UL,

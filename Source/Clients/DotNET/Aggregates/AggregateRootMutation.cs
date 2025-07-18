@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Aggregates;
 
@@ -55,6 +56,14 @@ public class AggregateRootMutation(
             { AggregateRootCausationTypeProperty, aggregateRootContext.AggregateRoot.GetType().AssemblyQualifiedName! },
             { CausationEventSequenceIdProperty, eventSequence.Id }
         });
+
+        var concurrencyScope = new ConcurrencyScope(
+            aggregateRootContext.TailEventSequenceNumber,
+            EventSourceId,
+            aggregateRootContext.EventStreamType,
+            aggregateRootContext.EventStreamId,
+            aggregateRootContext.EventSourceType);
+
         aggregateRootContext.UnitOfWOrk.AddEvent(
             eventSequence.Id,
             EventSourceId,
@@ -62,7 +71,8 @@ public class AggregateRootMutation(
             causation,
             aggregateRootContext.EventStreamType,
             aggregateRootContext.EventStreamId,
-            aggregateRootContext.EventSourceType);
+            aggregateRootContext.EventSourceType,
+            concurrencyScope);
         UncommittedEvents = UncommittedEvents.Add(@event);
 
         await mutator.Mutate(@event);

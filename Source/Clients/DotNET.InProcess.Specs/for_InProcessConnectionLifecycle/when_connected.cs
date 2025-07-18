@@ -5,21 +5,21 @@ namespace Cratis.Chronicle.InProcess.for_InProcessConnectionLifecycle;
 
 public class when_connected : Specification
 {
-    InProcessConnectionLifecycle lifecycle;
-    bool onConnectedCalled;
+    InProcessConnectionLifecycle _lifecycle;
+    bool _onConnectedCalled;
 
     void Establish()
     {
-        lifecycle = new();
-        lifecycle.OnConnected += () =>
+        _lifecycle = new();
+        _lifecycle.OnConnected += () =>
         {
-            onConnectedCalled = true;
+            _onConnectedCalled = true;
             return Task.CompletedTask;
         };
     }
 
-    async Task Because() => await lifecycle.Connected();
+    async Task Because() => await _lifecycle.Connected();
 
-    [Fact] void should_mark_as_connected() => lifecycle.IsConnected.ShouldBeTrue();
-    [Fact] void should_not_trigger_on_connected_events() => onConnectedCalled.ShouldBeFalse();
+    [Fact] void should_mark_as_connected() => _lifecycle.IsConnected.ShouldBeTrue();
+    [Fact] void should_not_trigger_on_connected_events() => _onConnectedCalled.ShouldBeFalse();
 }

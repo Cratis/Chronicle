@@ -80,7 +80,7 @@ public class Projections(
         var handler = _handlersByModelType[modelType];
         var result = await GetInstanceById(handler.Id, modelKey);
         var model = result.Model.Deserialize(modelType, jsonSerializerOptions)!;
-        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
+        return new(model, result.AffectedProperties, result.ProjectedEventsCount, result.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

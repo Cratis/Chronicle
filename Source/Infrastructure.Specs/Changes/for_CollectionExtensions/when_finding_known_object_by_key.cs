@@ -6,16 +6,16 @@ namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 public class when_finding_known_object_by_key : Specification
 {
     record Item(string Key, string Value);
-    IEnumerable<Item> items;
-    Item result;
+    IEnumerable<Item> _items;
+    Item _result;
 
-    void Establish() => items =
+    void Establish() => _items =
     [
         new Item("First", "First Value"),
         new Item("Second", "Second Value")
     ];
 
-    void Because() => result = items.FindByKey(nameof(Item.Key), "Second");
+    void Because() => _result = _items.FindByKey(nameof(Item.Key), "Second");
 
-    [Fact] void should_return_correct_item() => result.ShouldEqual(items.ToArray()[1]);
+    [Fact] void should_return_correct_item() => _result.ShouldEqual(_items.ToArray()[1]);
 }

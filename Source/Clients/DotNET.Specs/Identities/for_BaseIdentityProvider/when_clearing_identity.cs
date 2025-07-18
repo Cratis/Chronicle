@@ -5,22 +5,22 @@ namespace Cratis.Chronicle.Identities.for_BaseIdentityProvider;
 
 public class when_clearing_identity : Specification
 {
-    IIdentityProvider provider;
-    Identity original_identity;
-    Identity retrieved_identity;
+    IIdentityProvider _provider;
+    Identity _originalIdentity;
+    Identity _retrievedIdentity;
 
     void Establish()
     {
-        provider = new BaseIdentityProvider();
-        original_identity = new("test-subject", "Test User", "testuser");
-        provider.SetCurrentIdentity(original_identity);
+        _provider = new BaseIdentityProvider();
+        _originalIdentity = new("test-subject", "Test User", "testuser");
+        _provider.SetCurrentIdentity(_originalIdentity);
     }
 
     void Because()
     {
-        provider.ClearCurrentIdentity();
-        retrieved_identity = provider.GetCurrent();
+        _provider.ClearCurrentIdentity();
+        _retrievedIdentity = _provider.GetCurrent();
     }
 
-    [Fact] void should_return_system_identity() => retrieved_identity.ShouldEqual(Identity.System);
+    [Fact] void should_return_system_identity() => _retrievedIdentity.ShouldEqual(Identity.System);
 }

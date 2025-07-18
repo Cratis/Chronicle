@@ -8,18 +8,17 @@ namespace Cratis.Chronicle.Grains.Events.Constraints.for_UniqueEventTypeConstrai
 
 public class and_it_supports_event_type : given.a_unique_event_type_constraint_validator
 {
-    bool result;
+    bool _result;
 
     ConstraintValidationContext _context;
 
     EventType _eventType = new("SomeEvent", 1);
 
-
     void Establish() => _context = new([], EventSourceId.New(), _eventType.Id, new());
 
     protected override UniqueEventTypeConstraintDefinition Definition => new("SomeConstraint", _eventType.Id);
 
-    void Because() => result = _validator.CanValidate(_context);
+    void Because() => _result = _validator.CanValidate(_context);
 
-    [Fact] void should_be_able_to_validate() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_validate() => _result.ShouldBeTrue();
 }

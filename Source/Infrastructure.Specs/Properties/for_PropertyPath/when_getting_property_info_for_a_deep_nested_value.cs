@@ -8,9 +8,9 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 public class when_getting_property_info_for_a_deep_nested_value : Specification
 {
     record Context(DateTimeOffset Occurred);
-    PropertyInfo result;
+    PropertyInfo _result;
 
-    void Because() => result = new PropertyPath("occurred.year").GetPropertyInfoFor<Context>();
+    void Because() => _result = new PropertyPath("occurred.year").GetPropertyInfoFor<Context>();
 
-    [Fact] void should_return_property_info_for_last_segment() => result.Name.ShouldEqual("Year");
+    [Fact] void should_return_property_info_for_last_segment() => _result.Name.ShouldEqual("Year");
 }

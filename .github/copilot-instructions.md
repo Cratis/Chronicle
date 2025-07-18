@@ -14,6 +14,15 @@
 - Use single-line using directives.
 - For types that does not have an implementation, don't add a body (e.g., `public interface IMyInterface;`).
 
+## Header
+
+All files should start with the following header:
+
+```csharp
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+```
+
 ## Naming Conventions
 
 - Follow PascalCase for component names, method names, and public members.
@@ -44,3 +53,4 @@
 ## Things to not touch
 
 - Do not change the `global.json` file unless explicitly asked.
+

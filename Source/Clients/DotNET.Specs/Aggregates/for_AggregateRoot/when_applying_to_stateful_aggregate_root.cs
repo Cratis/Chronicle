@@ -5,16 +5,16 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRoot;
 
 public class when_applying_to_stateful_aggregate_root : given.a_stateful_aggregate_root
 {
-    FirstEventType event_to_apply;
-    StateForAggregateRoot state;
+    FirstEventType _eventToApply;
+    StateForAggregateRoot _state;
 
     void Establish()
     {
-        event_to_apply = new(Guid.NewGuid().ToString());
-        state = new StateForAggregateRoot(Guid.NewGuid().ToString());
+        _eventToApply = new(Guid.NewGuid().ToString());
+        _state = new StateForAggregateRoot(Guid.NewGuid().ToString());
     }
 
-    async Task Because() => await _aggregateRoot.Apply(event_to_apply);
+    async Task Because() => await _aggregateRoot.Apply(_eventToApply);
 
-    [Fact] void should_forward_to_mutation() => _mutation.Received(1).Apply(event_to_apply);
+    [Fact] void should_forward_to_mutation() => _mutation.Received(1).Apply(_eventToApply);
 }

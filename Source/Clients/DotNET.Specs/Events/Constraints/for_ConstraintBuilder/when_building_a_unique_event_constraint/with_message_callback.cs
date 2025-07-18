@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_ConstraintBuilder.when_buildin
 
 public class with_message_callback : given.a_constraint_builder_with_owner
 {
-    const string _message = "Some message";
+    const string Message = "Some message";
     IImmutableList<IConstraintDefinition> _result;
     EventTypeId _eventTypeId;
     ConstraintViolation _violation;
@@ -21,14 +21,14 @@ public class with_message_callback : given.a_constraint_builder_with_owner
 
     void Because()
     {
-        _constraintBuilder.Unique<SomeEvent>(_ => _message);
+        _constraintBuilder.Unique<SomeEvent>(_ => Message);
         _result = _constraintBuilder.Build();
     }
 
     [Fact] void should_have_the_correct_number_of_constraints() => _result.Count.ShouldEqual(1);
     [Fact] void should_have_the_correct_constraint() => _result[0].ShouldBeOfExactType<UniqueEventTypeConstraintDefinition>();
     [Fact] void should_have_the_correct_name() => _result[0].Name.Value.ShouldEqual(_eventTypeId.Value);
-    [Fact] void should_have_the_correct_message() => _result[0].MessageCallback(_violation).Value.ShouldEqual(_message);
+    [Fact] void should_have_the_correct_message() => _result[0].MessageCallback(_violation).Value.ShouldEqual(Message);
 
     record SomeEvent();
 }

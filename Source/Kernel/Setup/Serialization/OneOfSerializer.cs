@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Setup.Serialization;
 public class OneOfSerializer(ICodecProvider codecProvider) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     /// <inheritdoc/>
-    public object DeepCopy(object input, CopyContext context) => input;
+    public object? DeepCopy(object? input, CopyContext context) => input;
 
     /// <inheritdoc/>
     public bool IsSupportedType(Type type) => IsTypeAllowed(type) ?? false;

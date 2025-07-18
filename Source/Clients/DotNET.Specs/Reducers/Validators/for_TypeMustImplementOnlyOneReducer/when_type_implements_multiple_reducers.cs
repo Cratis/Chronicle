@@ -10,9 +10,9 @@ public class when_type_implements_multiple_reducers : Specification
         public ReducerId Id => throw new NotImplementedException();
     }
 
-    Exception result;
+    Exception _result;
 
-    void Because() => result = Catch.Exception(() => TypeMustImplementOnlyOneReducer.ThrowIfTypeImplementsMoreThanOneReducer(typeof(MyReducer)));
+    void Because() => _result = Catch.Exception(() => TypeMustImplementOnlyOneReducer.ThrowIfTypeImplementsMoreThanOneReducer(typeof(MyReducer)));
 
-    [Fact] void should_throw_an_exception() => result.ShouldBeOfExactType<TypeMustImplementOnlyOneReducer>();
+    [Fact] void should_throw_an_exception() => _result.ShouldBeOfExactType<TypeMustImplementOnlyOneReducer>();
 }

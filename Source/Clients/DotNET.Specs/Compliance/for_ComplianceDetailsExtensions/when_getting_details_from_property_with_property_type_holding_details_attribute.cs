@@ -7,9 +7,9 @@ namespace Cratis.Chronicle.Compliance.for_ComplianceDetailsExtensions;
 
 public class when_getting_details_from_property_with_property_type_holding_details_attribute : Specification
 {
-    const string details = "This is the details";
+    const string Details = "This is the details";
 
-    [ComplianceDetails(details)]
+    [ComplianceDetails(Details)]
     record SomeType();
 
     class MyClass
@@ -19,9 +19,9 @@ public class when_getting_details_from_property_with_property_type_holding_detai
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    string result;
+    string _result;
 
-    void Because() => result = MyClass.SomethingProperty.GetComplianceMetadataDetails();
+    void Because() => _result = MyClass.SomethingProperty.GetComplianceMetadataDetails();
 
-    [Fact] void should_return_the_details() => result.ShouldEqual(details);
+    [Fact] void should_return_the_details() => _result.ShouldEqual(Details);
 }

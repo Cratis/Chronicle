@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues.for_EventContextP
 
 public class when_asking_can_resolve_for_event_context_expression : Specification
 {
-    EventContextPropertyExpressionResolver resolver;
-    bool result;
+    EventContextPropertyExpressionResolver _resolver;
+    bool _result;
 
-    void Establish() => resolver = new();
+    void Establish() => _resolver = new();
 
-    void Because() => result = resolver.CanResolve("$eventContext(something)");
+    void Because() => _result = _resolver.CanResolve("$eventContext(something)");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

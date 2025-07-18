@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Grains.Observation.for_ObserverKeyHelper;
 
 public class when_converting_to_string : Specification
 {
-    ObserverKey input;
-    string result;
+    ObserverKey _input;
+    string _result;
 
-    void Establish() => input = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+    void Establish() => _input = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
 
-    void Because() => result = input.ToString();
+    void Because() => _result = _input.ToString();
 
-    [Fact] void should_combine_correctly() => result.ShouldEqual($"{input.ObserverId}{KeyHelper.Separator}{input.EventStore}{KeyHelper.Separator}{input.Namespace}{KeyHelper.Separator}{input.EventSequenceId}");
+    [Fact] void should_combine_correctly() => _result.ShouldEqual($"{_input.ObserverId}{KeyHelper.Separator}{_input.EventStore}{KeyHelper.Separator}{_input.Namespace}{KeyHelper.Separator}{_input.EventSequenceId}");
 }

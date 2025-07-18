@@ -14,7 +14,6 @@ public class when_providing : Specification
     IEventTypes _eventTypes;
     IImmutableList<IConstraintDefinition> _result;
 
-
     EventType _firstEventType;
     EventType _secondEventType;
 

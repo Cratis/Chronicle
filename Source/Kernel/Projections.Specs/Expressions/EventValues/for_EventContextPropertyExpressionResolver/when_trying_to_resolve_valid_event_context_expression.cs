@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues.for_EventContextP
 
 public class when_trying_to_resolve_valid_event_context_expression : given.an_appended_event
 {
-    EventContextPropertyExpressionResolver resolver;
-    object result;
+    EventContextPropertyExpressionResolver _resolver;
+    object _result;
 
-    void Establish() => resolver = new();
+    void Establish() => _resolver = new();
 
-    void Because() => result = resolver.Resolve("$eventContext(occurred)")(@event);
+    void Because() => _result = _resolver.Resolve("$eventContext(occurred)")(@event);
 
-    [Fact] void should_resolve_to_a_value_provider_that_gets_value_from_event_context() => ((DateTimeOffset)result).ShouldEqual(occurred);
+    [Fact] void should_resolve_to_a_value_provider_that_gets_value_from_event_context() => ((DateTimeOffset)_result).ShouldEqual(occurred);
 }

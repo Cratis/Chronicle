@@ -14,8 +14,9 @@ public class and_there_is_no_metadata : given.a_provider
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    Exception result;
-    void Because() => result = Catch.Exception(() => provider.Provide(MyClass.SomethingProperty));
+    Exception _result;
 
-    [Fact] void should_throw_no_compliance_metadata_for_property() => result.ShouldBeOfExactType<NoComplianceMetadataForProperty>();
+    void Because() => _result = Catch.Exception(() => provider.Provide(MyClass.SomethingProperty));
+
+    [Fact] void should_throw_no_compliance_metadata_for_property() => _result.ShouldBeOfExactType<NoComplianceMetadataForProperty>();
 }

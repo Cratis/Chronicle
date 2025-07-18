@@ -6,6 +6,5 @@ using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Grains.Recommendations.for_Recommendation.given;
 
-
 [DerivedType("c7eed5a9-1678-4fab-8303-0e5c01cdc3ea")]
 public record TheRequest(int SomeValue) : IRecommendationRequest;

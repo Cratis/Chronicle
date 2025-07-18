@@ -5,4 +5,4 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
-public record ModelWithCompositeKey(CompositeKey Id, DateTimeOffset LastUpdated, EventSequenceNumber __lastHandledEventSequenceNumber = default);
+public record ModelWithCompositeKey(CompositeKey Id, DateTimeOffset LastUpdated, EventSequenceNumber __lastHandledEventSequenceNumber = default!);

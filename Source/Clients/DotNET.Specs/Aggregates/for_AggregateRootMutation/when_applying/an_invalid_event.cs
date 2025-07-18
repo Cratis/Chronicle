@@ -11,5 +11,5 @@ public class an_invalid_event : given.an_aggregate_mutation
 
     async Task Because() => _result = await Catch.Exception(() => _mutation.Apply(new object()));
 
-    [Fact] void should_throw_missing_event_type_attribute() => _result.ShouldBeOfExactType<MissingEventTypeAttribute>();
+    [Fact] void should_throw_missing_event_type_attribute() => _result.ShouldBeOfExactType<TypeIsNotAnEventType>();
 }

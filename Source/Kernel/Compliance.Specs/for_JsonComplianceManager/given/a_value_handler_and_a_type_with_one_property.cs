@@ -14,7 +14,7 @@ public class a_value_handler_and_a_type_with_one_property : a_type_with_one_prop
 
     void Establish()
     {
-        schema.Properties.First()!.Value.ExtensionData = new Dictionary<string, object?>()
+        _schema.Properties.First()!.Value.ExtensionData = new Dictionary<string, object?>()
         {
             { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(_metadataType, string.Empty) } }
         };

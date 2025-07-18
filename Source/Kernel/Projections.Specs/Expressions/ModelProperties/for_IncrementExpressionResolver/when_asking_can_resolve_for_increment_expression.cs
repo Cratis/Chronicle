@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_Increment
 
 public class when_asking_can_resolve_for_increment_expression : Specification
 {
-    IncrementExpressionResolver resolver;
-    bool result;
+    IncrementExpressionResolver _resolver;
+    bool _result;
 
-    void Establish() => resolver = new(new TypeFormats());
+    void Establish() => _resolver = new(new TypeFormats());
 
-    void Because() => result = resolver.CanResolve(string.Empty, "$increment()");
+    void Because() => _result = _resolver.CanResolve(string.Empty, "$increment()");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

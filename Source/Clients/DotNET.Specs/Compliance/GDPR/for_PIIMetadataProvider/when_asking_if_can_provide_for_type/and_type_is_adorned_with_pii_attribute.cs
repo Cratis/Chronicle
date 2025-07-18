@@ -8,8 +8,9 @@ public class and_type_is_adorned_with_pii_attribute : given.a_provider
     [PII]
     class MyType;
 
-    bool result;
-    void Because() => result = provider.CanProvide(typeof(MyType));
+    bool _result;
 
-    [Fact] void should_be_able_to_provide() => result.ShouldBeTrue();
+    void Because() => _result = provider.CanProvide(typeof(MyType));
+
+    [Fact] void should_be_able_to_provide() => _result.ShouldBeTrue();
 }

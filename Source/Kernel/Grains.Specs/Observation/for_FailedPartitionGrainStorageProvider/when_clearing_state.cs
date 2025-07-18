@@ -6,10 +6,10 @@ namespace Cratis.Chronicle.Grains.Observation.for_FailedPartitionGrainStoragePro
 
 public class when_clearing_state : given.the_provider
 {
-    static Exception error;
+    static Exception _error;
 
-    async Task Because() => error = await Catch.Exception(() => provider.ClearStateAsync("name", GrainId.Create("type", "key"), new GrainState<FailedPartition>()));
+    async Task Because() => _error = await Catch.Exception(() => provider.ClearStateAsync("name", GrainId.Create("type", "key"), new GrainState<FailedPartition>()));
 
-    [Fact] void should_not_fail() => error.ShouldBeNull();
+    [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_not_do_anything() => storage.ReceivedCalls().ShouldBeEmpty();
 }

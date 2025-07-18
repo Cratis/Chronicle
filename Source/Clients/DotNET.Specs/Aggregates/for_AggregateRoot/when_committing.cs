@@ -5,18 +5,18 @@ namespace Cratis.Chronicle.Aggregates.for_AggregateRoot;
 
 public class when_committing : given.a_stateless_aggregate_root
 {
-    AggregateRootCommitResult expected_result;
-    AggregateRootCommitResult result;
+    AggregateRootCommitResult _expectedResult;
+    AggregateRootCommitResult _result;
 
     void Establish()
     {
-        expected_result = AggregateRootCommitResult.Successful();
-        _mutation.Commit().Returns(Task.FromResult(expected_result));
+        _expectedResult = AggregateRootCommitResult.Successful();
+        _mutation.Commit().Returns(Task.FromResult(_expectedResult));
     }
 
-    async Task Because() => result = await _aggregateRoot.Commit();
+    async Task Because() => _result = await _aggregateRoot.Commit();
 
     [Fact] void should_call_commit_on_mutation() => _mutation.Received(1).Commit();
-    [Fact] void should_return_the_result_from_mutation() => result.ShouldEqual(expected_result);
+    [Fact] void should_return_the_result_from_mutation() => _result.ShouldEqual(_expectedResult);
     [Fact] void dehydrate_mutator() => _mutator.Received(1).Dehydrate();
 }

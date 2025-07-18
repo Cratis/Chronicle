@@ -22,8 +22,8 @@ public class when_resolving_message_for_violation : given.two_constraints
             string.Empty,
             new()
             {
-                { _firstProperty, _firstPropertyValue },
-                { _secondProperty, _secondPropertyValue }
+                { FirstProperty, _firstPropertyValue },
+                { SecondProperty, _secondPropertyValue }
             });
     }
 

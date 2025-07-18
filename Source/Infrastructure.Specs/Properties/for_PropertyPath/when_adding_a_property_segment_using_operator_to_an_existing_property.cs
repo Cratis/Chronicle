@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_a_property_segment_using_operator_to_an_existing_property : Specification
 {
-    const string left = "left";
-    const string right = "right";
+    const string Left = "left";
+    const string Right = "right";
 
-    PropertyPath result;
+    PropertyPath _result;
 
-    void Because() => result = new PropertyPath(left) + new PropertyName(right);
+    void Because() => _result = new PropertyPath(Left) + new PropertyName(Right);
 
-    [Fact] void should_combine_with_dot_separator() => result.Path.ShouldEqual($"{left}.{right}");
+    [Fact] void should_combine_with_dot_separator() => _result.Path.ShouldEqual($"{Left}.{Right}");
 }

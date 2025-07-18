@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer;
 
 public class when_receiving_reminder_for_failed_partition : given.an_observer_with_subscription
 {
-    const string _partition = "SomePartition";
+    const string Partition = "SomePartition";
     FailedPartition _failedPartition;
     IGrainReminder _reminder;
 
@@ -17,19 +17,19 @@ public class when_receiving_reminder_for_failed_partition : given.an_observer_wi
     {
         _failedPartition = new()
         {
-            Partition = (Key)_partition
+            Partition = (Key)Partition
         };
         _failedPartitionsState.Partitions = [_failedPartition];
         _reminder = Substitute.For<IGrainReminder>();
-        _reminder.ReminderName.Returns(_partition);
+        _reminder.ReminderName.Returns(Partition);
     }
 
-    async Task Because() => await _observer.ReceiveReminder(_partition, default);
+    async Task Because() => await _observer.ReceiveReminder(Partition, default);
 
     [Fact]
     void should_start_recover_job() => _jobsManager.Received(1)
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(
             Arg.Is<RetryFailedPartitionRequest>(_ =>
                 _.ObserverKey == _observerKey &&
-                _.Key == (Key)_partition));
+                _.Key == (Key)Partition));
 }

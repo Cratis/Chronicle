@@ -19,7 +19,6 @@ public class when_adding_properties_and_there_are_changes_matching_some_of_the_p
     ChildAdded _secondChildAdded;
     List<PropertiesChanged<ExpandoObject>> _changes;
 
-
     void Establish()
     {
         _initialModelState = new ExpandoObject();

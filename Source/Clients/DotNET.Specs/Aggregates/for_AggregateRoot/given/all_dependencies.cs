@@ -14,7 +14,6 @@ public class all_dependencies : Specification
     protected IAggregateRootMutation _mutation;
     protected IAggregateRootMutator _mutator;
 
-
     void Establish()
     {
         _eventHandlers = Substitute.For<IAggregateRootEventHandlers>();

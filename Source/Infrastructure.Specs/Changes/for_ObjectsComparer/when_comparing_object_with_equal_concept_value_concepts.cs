@@ -8,20 +8,20 @@ public class when_comparing_object_with_equal_concept_value_concepts : given.an_
     record TheConcept(string Value) : ConceptAs<string>(Value);
     record TheType(TheConcept Concept);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(new("FortyTwo"));
-        right = new(new("FortyTwo"));
+        _left = new(new("FortyTwo"));
+        _right = new(new("FortyTwo"));
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_equal() => result.ShouldBeTrue();
-    [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();
+    [Fact] void should_be_equal() => _result.ShouldBeTrue();
+    [Fact] void should_have_no_differences() => _differences.ShouldBeEmpty();
 }
