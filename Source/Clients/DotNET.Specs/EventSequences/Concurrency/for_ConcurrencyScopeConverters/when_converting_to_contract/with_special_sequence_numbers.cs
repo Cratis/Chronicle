@@ -24,6 +24,6 @@ public class with_special_sequence_numbers : Specification
         _resultUnavailable = _scopeUnavailable.ToContract();
     }
 
-    [Fact] void should_set_max_sequence_number_correctly() => _resultMax.EventSequenceNumber.ShouldEqual(EventSequenceNumber.Max.Value);
-    [Fact] void should_set_unavailable_sequence_number_correctly() => _resultUnavailable.EventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable.Value);
+    [Fact] void should_set_max_sequence_number_correctly() => _resultMax.SequenceNumber.ShouldEqual(EventSequenceNumber.Max.Value);
+    [Fact] void should_set_unavailable_sequence_number_correctly() => _resultUnavailable.SequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable.Value);
 }

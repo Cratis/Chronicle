@@ -9,24 +9,26 @@ public class and_event_source_id_is_null : Specification
 {
     ConcurrencyScope _scope;
     Contracts.EventSequences.Concurrency.ConcurrencyScope _result;
+    EventType _eventType;
 
     void Establish()
     {
+        _eventType = new("SomeEventType", 1);
         _scope = new ConcurrencyScope(
             new EventSequenceNumber(42),
             EventSourceId: null,
             new EventStreamType("SomeStreamType"),
             new EventStreamId("some-stream-id"),
             new EventSourceType("SomeSourceType"),
-            [new EventType("SomeEventType", 1)]);
+            [_eventType]);
     }
 
     void Because() => _result = _scope.ToContract();
 
     [Fact] void should_set_event_source_id_to_false() => _result.EventSourceId.ShouldBeFalse();
-    [Fact] void should_set_sequence_number() => _result.EventSequenceNumber.ShouldEqual(42ul);
+    [Fact] void should_set_sequence_number() => _result.SequenceNumber.ShouldEqual(42ul);
     [Fact] void should_set_event_stream_type() => _result.EventStreamType.ShouldEqual("SomeStreamType");
     [Fact] void should_set_event_stream_id() => _result.EventStreamId.ShouldEqual("some-stream-id");
     [Fact] void should_set_event_source_type() => _result.EventSourceType.ShouldEqual("SomeSourceType");
-    [Fact] void should_set_event_types() => _result.EventTypes.ShouldContain("SomeEventType+1");
+    [Fact] void should_set_event_types() => _result.EventTypes.ShouldContain(et => et.Id == _eventType.Id && et.Generation == _eventType.Generation);
 }

@@ -19,12 +19,12 @@ internal static class ConcurrencyScopeConverters
     public static ConcurrencyScope ToChronicle(
         this Contracts.EventSequences.Concurrency.ConcurrencyScope scope) =>
         new(
-            scope.EventSequenceNumber,
+            scope.SequenceNumber,
             scope.EventSourceId,
             ToMaybeConcept<EventStreamType>(scope.EventStreamType, value => value),
             ToMaybeConcept<EventStreamId>(scope.EventStreamId, value => value),
             ToMaybeConcept<EventSourceType>(scope.EventSourceType, value => value),
-            scope.EventTypes?.Select(EventType.Parse));
+            scope.EventTypes?.ToChronicle());
 
     /// <summary>
     /// Convert to a Chronicle representation of <see cref="ConcurrencyScopes"/> from a contract version of <see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/>.

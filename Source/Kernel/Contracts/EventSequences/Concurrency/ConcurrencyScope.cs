@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Events;
 using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.EventSequences.Concurrency;
@@ -15,7 +16,7 @@ public class ConcurrencyScope
     /// Gets or sets the expected sequence number for the event sequence operation.
     /// </summary>
     [ProtoMember(1)]
-    public ulong EventSequenceNumber { get; set; }
+    public ulong SequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the value indicating whether to scope to the event source id.
@@ -45,5 +46,5 @@ public class ConcurrencyScope
     /// Gets or sets the optional collection of event types to scope to. If not set, it will not be used.
     /// </summary>
     [ProtoMember(6)]
-    public IList<string>? EventTypes { get; set; }
+    public IList<EventType>? EventTypes { get; set; }
 }
