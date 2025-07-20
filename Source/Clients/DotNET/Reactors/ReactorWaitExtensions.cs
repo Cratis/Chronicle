@@ -31,7 +31,7 @@ public static class ReactorWaitExtensions
         {
             var state = await reactor.GetState();
             currentRunningState = state.RunningState;
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
@@ -80,7 +80,7 @@ public static class ReactorWaitExtensions
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
             state = await reactor.GetState();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
@@ -98,7 +98,7 @@ public static class ReactorWaitExtensions
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
             failedPartitions = await reactor.GetFailedPartitions();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
         return failedPartitions;
     }
