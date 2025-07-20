@@ -7,14 +7,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class and_it_already_exists : given.two_identities_registered
 {
-    Identity identity;
-    IdentityId identityId;
+    Identity _identity;
+    IdentityId _identityId;
 
-    void Establish() => identity = new Identity(first_identity_from_database.Subject, first_identity_from_database.Name, first_identity_from_database.UserName);
+    void Establish() => _identity = new Identity(first_identity_from_database.Subject, first_identity_from_database.Name, first_identity_from_database.UserName);
 
-    async Task Because() => identityId = await store.GetSingleFor(identity);
+    async Task Because() => _identityId = await store.GetSingleFor(_identity);
 
-    [Fact] void should_return_an_id() => identityId.ShouldNotBeNull();
+    [Fact] void should_return_an_id() => _identityId.ShouldNotBeNull();
     [Fact] void should_not_insert_the_identity() => _insertedIdentities.Count.ShouldEqual(0);
-    [Fact] void should_return_the_correct_identity() => identityId.ShouldEqual(first_identity);
+    [Fact] void should_return_the_correct_identity() => _identityId.ShouldEqual(first_identity);
 }

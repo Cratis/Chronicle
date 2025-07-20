@@ -5,11 +5,11 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueAttributeExtensions.when
 
 public class and_attribute_does_not_have_message : Specification
 {
-    string result;
+    string _result;
 
-    void Because() => result = typeof(SomeType).GetConstraintMessage();
+    void Because() => _result = typeof(SomeType).GetConstraintMessage();
 
-    [Fact] void should_return_empty_message() => result.ShouldEqual(string.Empty);
+    [Fact] void should_return_empty_message() => _result.ShouldEqual(string.Empty);
 
     [Unique]
     record SomeType();

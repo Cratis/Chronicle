@@ -7,10 +7,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_conve
 
 public class with_three_levels_property : given.a_mongodb_converter
 {
-    MongoDBProperty result;
+    MongoDBProperty _result;
 
-    void Because() => result = _converter.ToMongoDBProperty(new PropertyPath("FirstLevel.SecondLevel.ThirdLevel"), ArrayIndexers.NoIndexers);
+    void Because() => _result = _converter.ToMongoDBProperty(new PropertyPath("FirstLevel.SecondLevel.ThirdLevel"), ArrayIndexers.NoIndexers);
 
-    [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("firstLevel.secondLevel.thirdLevel");
-    [Fact] void should_not_have_any_array_filters() => result.ArrayFilters.ShouldBeEmpty();
+    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("firstLevel.secondLevel.thirdLevel");
+    [Fact] void should_not_have_any_array_filters() => _result.ArrayFilters.ShouldBeEmpty();
 }

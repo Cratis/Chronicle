@@ -59,12 +59,12 @@ public static class EventTypeExtensions
     /// Validate if a type is an event type.
     /// </summary>
     /// <param name="type">Type to validate.</param>
-    /// <exception cref="MissingEventTypeAttribute">Thrown if type does not have the <see cref="EventTypeAttribute"/>.</exception>
+    /// <exception cref="TypeIsNotAnEventType">Thrown if the type is not an event type.</exception>
     public static void ValidateEventType(this Type type)
     {
         if (type.GetCustomAttribute<EventTypeAttribute>() == null)
         {
-            throw new MissingEventTypeAttribute(type);
+            throw new TypeIsNotAnEventType(type);
         }
     }
 
@@ -73,8 +73,11 @@ public static class EventTypeExtensions
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get for. </param>
     /// <returns>The <see cref="EventType"/>.</returns>
+    /// <exception cref="TypeIsNotAnEventType">Thrown if the type is not an event type.</exception>
     public static EventType GetEventType(this Type type)
     {
+        type.ValidateEventType();
+
         var attribute = type.GetCustomAttribute<EventTypeAttribute>()!;
         var id = attribute.Id.Value switch
         {

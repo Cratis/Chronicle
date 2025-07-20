@@ -10,16 +10,16 @@ namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
 public class when_adding_to_a_deep_nested_property_with_existing_value_from_an_event_value_provider : Specification
 {
-    PropertyMapper<AppendedEvent, ExpandoObject> property_mapper;
-    AppendedEvent @event;
-    ExpandoObject result;
-    AppendedEvent provided_event;
+    PropertyMapper<AppendedEvent, ExpandoObject> _propertyMapper;
+    AppendedEvent _event;
+    ExpandoObject _result;
+    AppendedEvent _providedEvent;
 
     void Establish()
     {
         dynamic content = new ExpandoObject();
-        result = new();
-        @event = new(
+        _result = new();
+        _event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -36,19 +36,19 @@ public class when_adding_to_a_deep_nested_property_with_existing_value_from_an_e
                 Identity.System),
             new ExpandoObject());
 
-        dynamic target = result;
+        dynamic target = _result;
         target.deep = new ExpandoObject();
         target.deep.nested = new ExpandoObject();
         target.deep.nested.property = 42d;
-        property_mapper = PropertyMappers.AddWithEventValueProvider("deep.nested.property", _ =>
+        _propertyMapper = PropertyMappers.AddWithEventValueProvider("deep.nested.property", _ =>
         {
-            provided_event = _;
+            _providedEvent = _;
             return 42d;
         });
     }
 
-    void Because() => property_mapper(@event, result, ArrayIndexers.NoIndexers);
+    void Because() => _propertyMapper(_event, _result, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_result_in_expected_value() => ((object)((dynamic)result).deep.nested.property).ShouldEqual(84d);
-    [Fact] void should_pass_the_event_to_the_value_provider() => provided_event.ShouldEqual(@event);
+    [Fact] void should_result_in_expected_value() => ((object)((dynamic)_result).deep.nested.property).ShouldEqual(84d);
+    [Fact] void should_pass_the_event_to_the_value_provider() => _providedEvent.ShouldEqual(_event);
 }

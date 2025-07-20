@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_a_property_to_an_empty_property_with_a_dictionary_type : Specification
 {
-    const string left = "";
-    const string right = "something";
+    const string Left = "";
+    const string Right = "something";
 
-    PropertyPath result;
+    PropertyPath _result;
 
-    void Because() => result = new PropertyPath(left).AddProperty(right, typeof(Dictionary<string, string>));
+    void Because() => _result = new PropertyPath(Left).AddProperty(Right, typeof(Dictionary<string, string>));
 
-    [Fact] void should_hold_only_property_added_on() => result.Path.ShouldEqual(right);
+    [Fact] void should_hold_only_property_added_on() => _result.Path.ShouldEqual(Right);
 }

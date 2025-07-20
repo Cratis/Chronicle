@@ -90,7 +90,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             ServiceProvider.GetService<ILogger<ObserverManager<IJobObserver>>>() ?? new NullLogger<ObserverManager<IJobObserver>>());
 
         JobId = this.GetPrimaryKey(out var keyExtension);
-        JobKey = keyExtension;
+        JobKey = keyExtension!;
         ThisJob = GrainFactory.GetReference<IJob<TRequest>>(this);
         State.Type = ServiceProvider.GetRequiredService<IJobTypes>().GetForOrThrow(this.GetGrainType());
         Storage = ServiceProvider.GetRequiredService<IStorage>()

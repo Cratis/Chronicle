@@ -7,18 +7,18 @@ namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager;
 
 public class when_applying_with_applicable_value_handler : given.a_value_handler_and_a_type_with_one_property
 {
-    const string _identifier = "9ae5067b-2920-4c97-a263-efe35bec2b43";
-    const string _changedValue = "FortyTwo";
+    const string Identifier = "9ae5067b-2920-4c97-a263-efe35bec2b43";
+    const string ChangedValue = "FortyTwo";
     JsonObject _result;
     JsonNode _propertyValue;
 
     void Establish()
     {
-        _propertyValue = JsonValue.Create(_changedValue);
-        _valueHandler.Apply(string.Empty, string.Empty, _identifier, Arg.Any<JsonNode>()).Returns(Task.FromResult(_propertyValue));
+        _propertyValue = JsonValue.Create(ChangedValue);
+        _valueHandler.Apply(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(Task.FromResult(_propertyValue));
     }
 
-    async Task Because() => _result = await _manager.Apply(string.Empty, string.Empty, schema, _identifier, input);
+    async Task Because() => _result = await _manager.Apply(string.Empty, string.Empty, _schema, Identifier, _input);
 
-    [Fact] void should_return_instance_with_altered_property() => _result[property_name].ShouldEqual(_propertyValue);
+    [Fact] void should_return_instance_with_altered_property() => _result[PropertyName].ShouldEqual(_propertyValue);
 }

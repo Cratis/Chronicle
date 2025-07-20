@@ -7,6 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Transactions;
 
@@ -25,7 +26,7 @@ public class all_dependencies : Specification
     internal IEventSequences _eventSequences;
     internal IServices services;
     protected ICorrelationIdAccessor _correlationIdAccessor;
-
+    protected IConcurrencyScopeStrategies _concurrencyScopeStrategies;
 
     void Establish()
     {
@@ -43,5 +44,6 @@ public class all_dependencies : Specification
         services.EventSequences.Returns(_eventSequences);
         _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
         _correlationIdAccessor.Current.Returns((CorrelationId)Guid.Empty);
+        _concurrencyScopeStrategies = Substitute.For<IConcurrencyScopeStrategies>();
     }
 }

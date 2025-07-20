@@ -47,7 +47,7 @@ internal static class EventContextConverters
         context.EventStore,
         context.Namespace,
         context.CorrelationId,
-        context.Causation.Select(_ => _.ToClient()),
+        context.Causation.Select(_ => _.ToClient()).ToArray(),
         context.CausedBy.ToClient(),
         context.ObservationState.ToClient());
 }

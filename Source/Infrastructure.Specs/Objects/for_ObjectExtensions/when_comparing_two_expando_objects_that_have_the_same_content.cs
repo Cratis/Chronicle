@@ -7,22 +7,22 @@ namespace Cratis.Chronicle.Objects.for_ObjectExtensions;
 
 public class when_comparing_two_expando_objects_that_have_the_same_content : Specification
 {
-    ExpandoObject left;
-    ExpandoObject right;
-    bool result;
+    ExpandoObject _left;
+    ExpandoObject _right;
+    bool _result;
 
     void Establish()
     {
-        left = new();
-        ((dynamic)left).Something = "Hello";
-        ((dynamic)left).Another = "World";
+        _left = new();
+        ((dynamic)_left).Something = "Hello";
+        ((dynamic)_left).Another = "World";
 
-        right = new();
-        ((dynamic)right).Something = "Hello";
-        ((dynamic)right).Another = "World";
+        _right = new();
+        ((dynamic)_right).Something = "Hello";
+        ((dynamic)_right).Another = "World";
     }
 
-    void Because() => result = left.IsEqualTo(right);
+    void Because() => _result = _left.IsEqualTo(_right);
 
-    [Fact] void should_be_equal() => result.ShouldBeTrue();
+    [Fact] void should_be_equal() => _result.ShouldBeTrue();
 }

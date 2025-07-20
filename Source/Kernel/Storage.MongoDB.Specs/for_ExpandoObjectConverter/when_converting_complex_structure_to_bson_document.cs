@@ -8,13 +8,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.for_ExpandoObjectConverter;
 
 public class when_converting_complex_structure_to_bson_document : given.an_expando_object_converter
 {
-    ExpandoObject source;
-    ExpandoObject child;
+    ExpandoObject _source;
+    ExpandoObject _child;
 
-    dynamic source_dynamic;
-    dynamic child_dynamic;
+    dynamic _sourceDynamic;
+    dynamic _childDynamic;
 
-    BsonDocument result;
+    BsonDocument _result;
 
     void Establish()
     {
@@ -67,66 +67,65 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
             { "first", complexType }
         };
 
-        source = expando;
-        source_dynamic = expando;
+        _source = expando;
+        _sourceDynamic = expando;
 
-        child = child_expando;
-        child_dynamic = child_expando;
+        _child = child_expando;
+        _childDynamic = child_expando;
     }
 
-    void Because() => result = converter.ToBsonDocument(source, schema);
+    void Because() => _result = converter.ToBsonDocument(_source, schema);
 
-    [Fact] void should_set_top_level_int_value_to_be_of_int_type() => result.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
-    [Fact] void should_set_top_level_int_value_to_hold_correct_value() => result.GetElement("intValue").Value.AsInt32.ShouldEqual((int)source_dynamic.intValue);
-    [Fact] void should_set_top_level_float_value_to_be_of_double_type() => result.GetElement("floatValue").Value.ShouldBeOfExactType<BsonDouble>();
-    [Fact] void should_set_top_level_float_value_to_hold_correct_value() => result.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)source_dynamic.floatValue);
-    [Fact] void should_set_top_level_double_value_to_be_of_double_type() => result.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
-    [Fact] void should_set_top_level_double_value_to_hold_correct_value() => result.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)source_dynamic.doubleValue);
-    [Fact] void should_set_top_level_enum_value_to_be_of_double_type() => result.GetElement("enumValue").Value.ShouldBeOfExactType<BsonInt32>();
-    [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => result.GetElement("enumValue").Value.AsInt32.ShouldEqual((int)source_dynamic.enumValue);
-    [Fact] void should_set_top_level_guid_value_to_be_of_binary_type() => result.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
-    [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => result.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)source_dynamic.guidValue));
-    [Fact] void should_set_top_level_date_time_value_to_be_of_date_time_type() => result.GetElement("dateTimeValue").Value.ShouldBeOfExactType<BsonDateTime>();
-    [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => result.GetElement("dateTimeValue").Value.ToUniversalTime().ShouldEqual(DateTime.Parse((string)source_dynamic.dateTimeValue).ToUniversalTime());
-    [Fact] void should_set_top_level_date_time_offset_value_to_be_of_date_time_type() => result.GetElement("dateTimeOffsetValue").Value.ShouldBeOfExactType<BsonDateTime>();
-    [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => DateTimeOffset.FromUnixTimeMilliseconds(((BsonDateTime)result.GetElement("dateTimeOffsetValue").Value).MillisecondsSinceEpoch).ShouldEqual(DateTimeOffset.Parse((string)source_dynamic.dateTimeOffsetValue));
-    [Fact] void should_set_top_level_date_only_value_to_be_of_date_time_type() => result.GetElement("dateOnlyValue").Value.ShouldBeOfExactType<BsonDateTime>();
-    [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => DateOnly.FromDateTime(result.GetElement("dateOnlyValue").Value.ToUniversalTime()).ShouldEqual(DateOnly.Parse((string)source_dynamic.dateOnlyValue));
-    [Fact] void should_set_top_level_time_only_value_to_be_of_date_time_type() => result.GetElement("timeOnlyValue").Value.ShouldBeOfExactType<BsonDateTime>();
-    [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => TimeOnly.FromDateTime(result.GetElement("timeOnlyValue").Value.ToUniversalTime()).ShouldEqual(TimeOnly.FromDateTime(DateTime.Parse((string)source_dynamic.timeOnlyValue)));
-    [Fact] void should_set_top_level_string_dictionary_first_item() => result.GetElement("stringDictionary").Value.AsBsonDocument.GetElement("first").Value.AsString.ShouldEqual((string)source_dynamic.stringDictionary["first"]);
-    [Fact] void should_set_top_level_string_dictionary_second_item() => result.GetElement("stringDictionary").Value.AsBsonDocument.GetElement("second").Value.AsString.ShouldEqual((string)source_dynamic.stringDictionary["second"]);
-    [Fact] void should_set_top_level_int_dictionary_first_item() => result.GetElement("intDictionary").Value.AsBsonDocument.GetElement("first").Value.AsInt32.ShouldEqual((int)source_dynamic.intDictionary["first"]);
-    [Fact] void should_set_top_level_int_dictionary_second_item() => result.GetElement("intDictionary").Value.AsBsonDocument.GetElement("second").Value.AsInt32.ShouldEqual((int)source_dynamic.intDictionary["second"]);
-    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_int_value() => result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)source_dynamic.complexTypeDictionary["first"].intValue);
-    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_float_value() => result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)source_dynamic.complexTypeDictionary["first"].floatValue);
-    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_double_value() => result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)source_dynamic.complexTypeDictionary["first"].doubleValue);
-    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_guid_value() => result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual((Guid)source_dynamic.complexTypeDictionary["first"].guidValue);
+    [Fact] void should_set_top_level_int_value_to_be_of_int_type() => _result.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
+    [Fact] void should_set_top_level_int_value_to_hold_correct_value() => _result.GetElement("intValue").Value.AsInt32.ShouldEqual((int)_sourceDynamic.intValue);
+    [Fact] void should_set_top_level_float_value_to_be_of_double_type() => _result.GetElement("floatValue").Value.ShouldBeOfExactType<BsonDouble>();
+    [Fact] void should_set_top_level_float_value_to_hold_correct_value() => _result.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)_sourceDynamic.floatValue);
+    [Fact] void should_set_top_level_double_value_to_be_of_double_type() => _result.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
+    [Fact] void should_set_top_level_double_value_to_hold_correct_value() => _result.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)_sourceDynamic.doubleValue);
+    [Fact] void should_set_top_level_enum_value_to_be_of_double_type() => _result.GetElement("enumValue").Value.ShouldBeOfExactType<BsonInt32>();
+    [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => _result.GetElement("enumValue").Value.AsInt32.ShouldEqual((int)_sourceDynamic.enumValue);
+    [Fact] void should_set_top_level_guid_value_to_be_of_binary_type() => _result.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
+    [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => _result.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)_sourceDynamic.guidValue));
+    [Fact] void should_set_top_level_date_time_value_to_be_of_date_time_type() => _result.GetElement("dateTimeValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => _result.GetElement("dateTimeValue").Value.ToUniversalTime().ShouldEqual(DateTime.Parse((string)_sourceDynamic.dateTimeValue).ToUniversalTime());
+    [Fact] void should_set_top_level_date_time_offset_value_to_be_of_date_time_type() => _result.GetElement("dateTimeOffsetValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => DateTimeOffset.FromUnixTimeMilliseconds(((BsonDateTime)_result.GetElement("dateTimeOffsetValue").Value).MillisecondsSinceEpoch).ShouldEqual(DateTimeOffset.Parse((string)_sourceDynamic.dateTimeOffsetValue));
+    [Fact] void should_set_top_level_date_only_value_to_be_of_date_time_type() => _result.GetElement("dateOnlyValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => DateOnly.FromDateTime(_result.GetElement("dateOnlyValue").Value.ToUniversalTime()).ShouldEqual(DateOnly.Parse((string)_sourceDynamic.dateOnlyValue));
+    [Fact] void should_set_top_level_time_only_value_to_be_of_date_time_type() => _result.GetElement("timeOnlyValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => TimeOnly.FromDateTime(_result.GetElement("timeOnlyValue").Value.ToUniversalTime()).ShouldEqual(TimeOnly.FromDateTime(DateTime.Parse((string)_sourceDynamic.timeOnlyValue)));
+    [Fact] void should_set_top_level_string_dictionary_first_item() => _result.GetElement("stringDictionary").Value.AsBsonDocument.GetElement("first").Value.AsString.ShouldEqual((string)_sourceDynamic.stringDictionary["first"]);
+    [Fact] void should_set_top_level_string_dictionary_second_item() => _result.GetElement("stringDictionary").Value.AsBsonDocument.GetElement("second").Value.AsString.ShouldEqual((string)_sourceDynamic.stringDictionary["second"]);
+    [Fact] void should_set_top_level_int_dictionary_first_item() => _result.GetElement("intDictionary").Value.AsBsonDocument.GetElement("first").Value.AsInt32.ShouldEqual((int)_sourceDynamic.intDictionary["first"]);
+    [Fact] void should_set_top_level_int_dictionary_second_item() => _result.GetElement("intDictionary").Value.AsBsonDocument.GetElement("second").Value.AsInt32.ShouldEqual((int)_sourceDynamic.intDictionary["second"]);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_int_value() => _result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)_sourceDynamic.complexTypeDictionary["first"].intValue);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_float_value() => _result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)_sourceDynamic.complexTypeDictionary["first"].floatValue);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_double_value() => _result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)_sourceDynamic.complexTypeDictionary["first"].doubleValue);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_guid_value() => _result.GetElement("complexTypeDictionary").Value.AsBsonDocument.GetElement("first").Value.AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual((Guid)_sourceDynamic.complexTypeDictionary["first"].guidValue);
 
+    [Fact] void should_reference_object_int_value_to_be_of_int_type() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
+    [Fact] void should_reference_object_int_value_to_hold_correct_value() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)_sourceDynamic.reference.intValue);
+    [Fact] void should_reference_object_float_value_to_be_of_double_type() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("floatValue").Value.ShouldBeOfExactType<BsonDouble>();
+    [Fact] void should_reference_object_float_value_to_hold_correct_value() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)_sourceDynamic.reference.floatValue);
+    [Fact] void should_reference_object_double_value_to_be_of_double_type() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
+    [Fact] void should_reference_object_double_value_to_hold_correct_value() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)_sourceDynamic.reference.doubleValue);
+    [Fact] void should_reference_object_guid_value_to_be_of_binary_type() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
+    [Fact] void should_reference_object_guid_value_to_hold_correct_value() => _result.GetElement("reference").Value.AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual((Guid)_sourceDynamic.reference.guidValue);
 
-    [Fact] void should_reference_object_int_value_to_be_of_int_type() => result.GetElement("reference").Value.AsBsonDocument.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
-    [Fact] void should_reference_object_int_value_to_hold_correct_value() => result.GetElement("reference").Value.AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)source_dynamic.reference.intValue);
-    [Fact] void should_reference_object_float_value_to_be_of_double_type() => result.GetElement("reference").Value.AsBsonDocument.GetElement("floatValue").Value.ShouldBeOfExactType<BsonDouble>();
-    [Fact] void should_reference_object_float_value_to_hold_correct_value() => result.GetElement("reference").Value.AsBsonDocument.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)source_dynamic.reference.floatValue);
-    [Fact] void should_reference_object_double_value_to_be_of_double_type() => result.GetElement("reference").Value.AsBsonDocument.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
-    [Fact] void should_reference_object_double_value_to_hold_correct_value() => result.GetElement("reference").Value.AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)source_dynamic.reference.doubleValue);
-    [Fact] void should_reference_object_guid_value_to_be_of_binary_type() => result.GetElement("reference").Value.AsBsonDocument.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
-    [Fact] void should_reference_object_guid_value_to_hold_correct_value() => result.GetElement("reference").Value.AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual((Guid)source_dynamic.reference.guidValue);
+    [Fact] void should_child_object_int_value_to_be_of_int_type() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
+    [Fact] void should_child_object_int_value_to_hold_correct_value() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)_childDynamic.intValue);
+    [Fact] void should_child_object_float_value_to_be_of_double_type() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("floatValue").Value.ShouldBeOfExactType<BsonDouble>();
+    [Fact] void should_child_object_float_value_to_hold_correct_value() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)_childDynamic.floatValue);
+    [Fact] void should_child_object_double_value_to_be_of_double_type() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
+    [Fact] void should_child_object_double_value_to_hold_correct_value() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)_childDynamic.doubleValue);
+    [Fact] void should_child_object_guid_value_to_be_of_binary_type() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
+    [Fact] void should_child_object_guid_value_to_hold_correct_value() => _result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)_childDynamic.guidValue));
 
-    [Fact] void should_child_object_int_value_to_be_of_int_type() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
-    [Fact] void should_child_object_int_value_to_hold_correct_value() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)child_dynamic.intValue);
-    [Fact] void should_child_object_float_value_to_be_of_double_type() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("floatValue").Value.ShouldBeOfExactType<BsonDouble>();
-    [Fact] void should_child_object_float_value_to_hold_correct_value() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)child_dynamic.floatValue);
-    [Fact] void should_child_object_double_value_to_be_of_double_type() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
-    [Fact] void should_child_object_double_value_to_hold_correct_value() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)child_dynamic.doubleValue);
-    [Fact] void should_child_object_guid_value_to_be_of_binary_type() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
-    [Fact] void should_child_object_guid_value_to_hold_correct_value() => result.GetElement("children").Value.AsBsonArray[0].AsBsonDocument.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)child_dynamic.guidValue));
+    [Fact] void should_have_first_integer_child_with_correct_value() => _result.GetElement("intChildren").Value.AsBsonArray[0].AsInt32.ShouldEqual((int)_sourceDynamic.intChildren[0]);
+    [Fact] void should_have_second_integer_child_with_correct_value() => _result.GetElement("intChildren").Value.AsBsonArray[1].AsInt32.ShouldEqual((int)_sourceDynamic.intChildren[1]);
+    [Fact] void should_have_third_integer_child_with_correct_value() => _result.GetElement("intChildren").Value.AsBsonArray[2].AsInt32.ShouldEqual((int)_sourceDynamic.intChildren[2]);
 
-    [Fact] void should_have_first_integer_child_with_correct_value() => result.GetElement("intChildren").Value.AsBsonArray[0].AsInt32.ShouldEqual((int)source_dynamic.intChildren[0]);
-    [Fact] void should_have_second_integer_child_with_correct_value() => result.GetElement("intChildren").Value.AsBsonArray[1].AsInt32.ShouldEqual((int)source_dynamic.intChildren[1]);
-    [Fact] void should_have_third_integer_child_with_correct_value() => result.GetElement("intChildren").Value.AsBsonArray[2].AsInt32.ShouldEqual((int)source_dynamic.intChildren[2]);
-
-    [Fact] void should_have_first_string_child_with_correct_value() => result.GetElement("stringChildren").Value.AsBsonArray[0].AsString.ShouldEqual((string)source_dynamic.stringChildren[0]);
-    [Fact] void should_have_second_string_child_with_correct_value() => result.GetElement("stringChildren").Value.AsBsonArray[1].AsString.ShouldEqual((string)source_dynamic.stringChildren[1]);
-    [Fact] void should_have_third_string_child_with_correct_value() => result.GetElement("stringChildren").Value.AsBsonArray[2].AsString.ShouldEqual((string)source_dynamic.stringChildren[2]);
+    [Fact] void should_have_first_string_child_with_correct_value() => _result.GetElement("stringChildren").Value.AsBsonArray[0].AsString.ShouldEqual((string)_sourceDynamic.stringChildren[0]);
+    [Fact] void should_have_second_string_child_with_correct_value() => _result.GetElement("stringChildren").Value.AsBsonArray[1].AsString.ShouldEqual((string)_sourceDynamic.stringChildren[1]);
+    [Fact] void should_have_third_string_child_with_correct_value() => _result.GetElement("stringChildren").Value.AsBsonArray[2].AsString.ShouldEqual((string)_sourceDynamic.stringChildren[2]);
 }

@@ -38,6 +38,10 @@ public class and_aggregate_root_has_handle_methods : given.a_stateless_aggregate
             .GetFromSequenceNumber(EventSequenceNumber.First, _eventSourceId, Arg.Any<IEnumerable<EventType>>())
             .Returns(_appendedEvents);
 
+        _eventSequence
+            .GetTailSequenceNumber(_eventSourceId)
+            .Returns(42UL);
+
         _eventSerializer
             .Deserialize(Arg.Any<AppendedEvent>())
             .Returns((callInfo) => callInfo.Arg<AppendedEvent>().Content);

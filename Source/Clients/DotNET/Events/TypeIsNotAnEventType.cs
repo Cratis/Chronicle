@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Events;
 /// Initializes a new instance of the <see cref="TypeIsNotAnEventType"/> class.
 /// </remarks>
 /// <param name="type">Type that is not an event type.</param>
-public class TypeIsNotAnEventType(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' is not an event type")
-{
-}
+public class TypeIsNotAnEventType(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' is not an event type. You need to add a [EventType] attribute to it.");

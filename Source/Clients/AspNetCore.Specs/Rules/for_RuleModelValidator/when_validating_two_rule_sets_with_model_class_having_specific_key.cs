@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.AspNetCore.Rules.for_Rules.for_RulesModelValidator;
 
 public class when_validating_two_rule_sets_with_model_class_having_specific_key : given.two_rule_sets
 {
-    const string key = "a2b5bd3b-bb16-428f-b9cb-2c27b337ceb7";
+    const string Key = "a2b5bd3b-bb16-428f-b9cb-2c27b337ceb7";
     ModelValidationContext _context;
     ModelMetadata _modelMetadata;
     IModelMetadataProvider _modelMetadataProvider;
@@ -22,7 +22,7 @@ public class when_validating_two_rule_sets_with_model_class_having_specific_key 
         _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ModelClassWithKey)));
         _model = new ModelClassWithKey
         {
-            Id = key
+            Id = Key
         };
         _context = new(
             new(),
@@ -34,6 +34,6 @@ public class when_validating_two_rule_sets_with_model_class_having_specific_key 
 
     void Because() => _result = _validator.Validate(_context);
 
-    [Fact] void should_project_to_first_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_firstRuleSet, key);
-    [Fact] void should_project_to_second_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_secondRuleSet, key);
+    [Fact] void should_project_to_first_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_firstRuleSet, Key);
+    [Fact] void should_project_to_second_rule_set_without_model_key() => _rules.Received(1).ProjectTo(_secondRuleSet, Key);
 }

@@ -10,20 +10,20 @@ namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager.given;
 public class a_type_with_one_property : Specification
 {
     record TypeHoldingValue(int Something);
-    protected const string property_name = nameof(TypeHoldingValue.Something);
-    protected const int value_in_type = 42;
-    protected JsonSchema schema;
-    protected JsonObject input;
+    protected const string PropertyName = nameof(TypeHoldingValue.Something);
+    protected const int ValueInType = 42;
+    protected JsonSchema _schema;
+    protected JsonObject _input;
 
     void Establish()
     {
-        var instance = new TypeHoldingValue(value_in_type);
+        var instance = new TypeHoldingValue(ValueInType);
         var settings = new SystemTextJsonSchemaGeneratorSettings();
         var generator = new JsonSchemaGenerator(settings);
-        schema = generator.Generate(instance.GetType());
-        input = new JsonObject
+        _schema = generator.Generate(instance.GetType());
+        _input = new JsonObject
         {
-            [property_name] = value_in_type
+            [PropertyName] = ValueInType
         };
     }
 }

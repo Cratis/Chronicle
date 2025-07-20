@@ -7,16 +7,16 @@ namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 
 public class when_checking_if_contains_unknown_object_identified_by_itself_by_key : Specification
 {
-    IEnumerable<string> items;
-    bool result;
+    IEnumerable<string> _items;
+    bool _result;
 
-    void Establish() => items =
+    void Establish() => _items =
     [
         "First",
         "Second"
     ];
 
-    void Because() => result = items.Contains(PropertyPath.Root, "Third");
+    void Because() => _result = _items.Contains(PropertyPath.Root, "Third");
 
-    [Fact] void should_not_contain_the_object() => result.ShouldBeFalse();
+    [Fact] void should_not_contain_the_object() => _result.ShouldBeFalse();
 }

@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Cratis.Chronicle.Conventions;
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

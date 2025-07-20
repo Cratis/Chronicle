@@ -14,9 +14,9 @@ public class when_converting_to_client : Specification
     const string SecondDetailsProperty = "Second details property";
     const string SecondDetailsValue = "Second details value";
 
-    ConstraintViolation result;
+    ConstraintViolation _result;
 
-    void Because() => result = new Contracts.Events.Constraints.ConstraintViolation
+    void Because() => _result = new Contracts.Events.Constraints.ConstraintViolation
     {
         EventTypeId = EventType,
         SequenceNumber = SequenceNumber,
@@ -29,12 +29,12 @@ public class when_converting_to_client : Specification
         }
     }.ToClient();
 
-    [Fact] void should_convert_event_type() => result.EventTypeId.Value.ShouldEqual(EventType);
-    [Fact] void should_convert_sequence_number() => result.SequenceNumber.Value.ShouldEqual(SequenceNumber);
-    [Fact] void should_convert_constraint_name() => result.ConstraintName.Value.ShouldEqual(ConstraintName);
-    [Fact] void should_convert_message() => result.Message.Value.ShouldEqual(Message);
+    [Fact] void should_convert_event_type() => _result.EventTypeId.Value.ShouldEqual(EventType);
+    [Fact] void should_convert_sequence_number() => _result.SequenceNumber.Value.ShouldEqual(SequenceNumber);
+    [Fact] void should_convert_constraint_name() => _result.ConstraintName.Value.ShouldEqual(ConstraintName);
+    [Fact] void should_convert_message() => _result.Message.Value.ShouldEqual(Message);
     [Fact]
-    void should_convert_details() => result.Details.ShouldContainOnly(
+    void should_convert_details() => _result.Details.ShouldContainOnly(
         new KeyValuePair<string, string>(FirstDetailsProperty, FirstDetailsValue),
         new KeyValuePair<string, string>(SecondDetailsProperty, SecondDetailsValue));
 }

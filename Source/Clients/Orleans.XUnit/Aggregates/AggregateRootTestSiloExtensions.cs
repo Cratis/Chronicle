@@ -52,7 +52,8 @@ public static class AggregateRootTestSiloExtensions
             eventLog,
             aggregateRoot,
             unitOfWork,
-            EventSequenceNumber.First));
+            EventSequenceNumber.First,
+            EventSequenceNumber.Unavailable));
 
         return aggregateRoot;
     }
@@ -91,7 +92,8 @@ public static class AggregateRootTestSiloExtensions
             eventLog,
             aggregateRoot,
             unitOfWork,
-            EventSequenceNumber.First));
+            EventSequenceNumber.First,
+            EventSequenceNumber.Unavailable));
 
         return aggregateRoot;
     }

@@ -7,20 +7,20 @@ public class when_comparing_object_with_collections_with_known_element_type_that
 {
     record TheType(IEnumerable<string> Collection);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new([null!]);
-        right = new([null!]);
+        _left = new([null!]);
+        _right = new([null!]);
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_equal() => result.ShouldBeTrue();
-    [Fact] void should_have_no_property_difference() => differences.Count().ShouldEqual(0);
+    [Fact] void should_be_equal() => _result.ShouldBeTrue();
+    [Fact] void should_have_no_property_difference() => _differences.Count().ShouldEqual(0);
 }

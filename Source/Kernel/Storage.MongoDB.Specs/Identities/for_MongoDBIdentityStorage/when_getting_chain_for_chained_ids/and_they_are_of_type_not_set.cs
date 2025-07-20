@@ -7,9 +7,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class and_they_are_of_type_not_set : given.no_identities_registered
 {
-    Identity result;
+    Identity _result;
 
-    async Task Because() => result = await store.GetFor(new[] { IdentityId.NotSet, IdentityId.NotSet }.AsEnumerable());
+    async Task Because() => _result = await store.GetFor(new[] { IdentityId.NotSet, IdentityId.NotSet }.AsEnumerable());
 
-    [Fact] void should_be_an_not_set_identity_with_not_set_behalf_of() => result.ShouldEqual(Identity.NotSet with { OnBehalfOf = Identity.NotSet });
+    [Fact] void should_be_an_not_set_identity_with_not_set_behalf_of() => _result.ShouldEqual(Identity.NotSet with { OnBehalfOf = Identity.NotSet });
 }
