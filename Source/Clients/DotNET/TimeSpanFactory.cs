@@ -20,7 +20,7 @@ public static class TimeSpanFactory
         {
             return Timeout.InfiniteTimeSpan;
         }
-        return TimeSpan.FromSeconds(10);
+        return TimeSpan.FromSeconds(5);
     }
 
     /// <summary>
