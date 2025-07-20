@@ -14,7 +14,6 @@ public class and_there_is_a_context : Specification
     ReplayContext _context;
     Result<ReplayContext, GetContextError> _result;
 
-
     void Establish()
     {
         _storage = Substitute.For<IReplayContextsStorage>();

@@ -23,7 +23,6 @@ public class ReducerThatCanFail(TaskCompletionSource tcs) : IReducerFor<SomeRead
             throw new Exception("Something went wrong");
         }
 
-
         Interlocked.Increment(ref HandledEvents);
         input ??= new SomeReadModel(0);
         return input with { Number = evt.Number };

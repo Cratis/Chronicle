@@ -12,29 +12,29 @@ public class and_there_are_two_projections : given.all_dependencies
     public record FirstModel();
     public record SecondModel();
 
-    IProjectionFor<FirstModel> first_projection;
-    IProjectionFor<SecondModel> second_projection;
+    IProjectionFor<FirstModel> _firstProjection;
+    IProjectionFor<SecondModel> _secondProjection;
 
-    Projections projections;
-    IEnumerable<ProjectionDefinition> result;
+    Projections _projections;
+    IEnumerable<ProjectionDefinition> _result;
 
     void Establish()
     {
-        first_projection = Substitute.For<IProjectionFor<FirstModel>>();
-        second_projection = Substitute.For<IProjectionFor<SecondModel>>();
+        _firstProjection = Substitute.For<IProjectionFor<FirstModel>>();
+        _secondProjection = Substitute.For<IProjectionFor<SecondModel>>();
 
         _clientArtifacts.Projections.Returns(
         [
-            first_projection.GetType(),
-            second_projection.GetType()
+            _firstProjection.GetType(),
+            _secondProjection.GetType()
         ]);
 
-        _serviceProvider.GetService(first_projection.GetType()).Returns(first_projection);
-        _serviceProvider.GetService(second_projection.GetType()).Returns(second_projection);
+        _serviceProvider.GetService(_firstProjection.GetType()).Returns(_firstProjection);
+        _serviceProvider.GetService(_secondProjection.GetType()).Returns(_secondProjection);
 
         _schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
 
-        projections = new Projections(
+        _projections = new Projections(
             _eventStore,
             _eventTypes,
             _projectionWatcherManager,
@@ -44,18 +44,18 @@ public class and_there_are_two_projections : given.all_dependencies
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
-        projections.SetRulesProjections(_rulesProjections);
+        _projections.SetRulesProjections(_rulesProjections);
 
         _rulesProjections.Discover().Returns(ImmutableList<ProjectionDefinition>.Empty);
     }
 
     async Task Because()
     {
-        await projections.Discover();
-        result = projections.Definitions;
+        await _projections.Discover();
+        _result = _projections.Definitions;
     }
 
-    [Fact] void should_return_two_definitions() => result.Count().ShouldEqual(2);
-    [Fact] void should_call_define_on_first_model_builder() => first_projection.Received(1).Define(Arg.Any<IProjectionBuilderFor<FirstModel>>());
-    [Fact] void should_call_define_on_second_model_builder() => second_projection.Received(1).Define(Arg.Any<IProjectionBuilderFor<SecondModel>>());
+    [Fact] void should_return_two_definitions() => _result.Count().ShouldEqual(2);
+    [Fact] void should_call_define_on_first_model_builder() => _firstProjection.Received(1).Define(Arg.Any<IProjectionBuilderFor<FirstModel>>());
+    [Fact] void should_call_define_on_second_model_builder() => _secondProjection.Received(1).Define(Arg.Any<IProjectionBuilderFor<SecondModel>>());
 }

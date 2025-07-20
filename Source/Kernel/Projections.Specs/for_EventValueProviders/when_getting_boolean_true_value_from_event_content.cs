@@ -10,17 +10,17 @@ namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 
 public class when_getting_boolean_true_value_from_event_content : Specification
 {
-    const bool expected = true;
-    ValueProvider<AppendedEvent> value_provider;
-    AppendedEvent @event;
-    object result;
+    const bool Expected = true;
+    ValueProvider<AppendedEvent> _valueProvider;
+    AppendedEvent _event;
+    object _result;
 
     void Establish()
     {
         var content = new ExpandoObject();
-        ((dynamic)content).propertySet = expected;
+        ((dynamic)content).propertySet = Expected;
 
-        @event = new(
+        _event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -36,10 +36,10 @@ public class when_getting_boolean_true_value_from_event_content : Specification
                 [],
                 Identity.System),
             content);
-        value_provider = EventValueProviders.EventContent("PropertySet");
+        _valueProvider = EventValueProviders.EventContent("PropertySet");
     }
 
-    void Because() => result = value_provider(@event);
+    void Because() => _result = _valueProvider(_event);
 
-    [Fact] void should_return_content_of_source_property() => result.ShouldEqual(expected);
+    [Fact] void should_return_content_of_source_property() => _result.ShouldEqual(Expected);
 }

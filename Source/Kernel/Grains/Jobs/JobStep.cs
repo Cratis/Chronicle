@@ -72,7 +72,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         await base.OnActivateAsync(cancellationToken);
 
         _ = this.GetPrimaryKey(out var key);
-        var jobStepKey = (JobStepKey)key;
+        var jobStepKey = (JobStepKey)key!;
         var grainType = this.GetGrainType();
         Name = GetType().Name;
         JobId = jobStepKey.JobId;

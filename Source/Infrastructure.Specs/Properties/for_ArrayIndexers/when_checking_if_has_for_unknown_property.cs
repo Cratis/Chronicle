@@ -5,8 +5,8 @@ namespace Cratis.Chronicle.Properties.for_ArrayIndexers;
 
 public class when_checking_if_has_for_unknown_property : given.no_array_indexers
 {
-    bool result;
-    void Because() => result = indexers.HasFor(string.Empty);
+    bool _result;
+    void Because() => _result = indexers.HasFor(string.Empty);
 
-    [Fact] void should_not_have_the_indexer() => result.ShouldBeFalse();
+    [Fact] void should_not_have_the_indexer() => _result.ShouldBeFalse();
 }

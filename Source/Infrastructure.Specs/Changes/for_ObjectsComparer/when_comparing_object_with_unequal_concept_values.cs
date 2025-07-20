@@ -10,21 +10,21 @@ public class when_comparing_object_with_unequal_concept_values : given.an_object
     record TheConcept(string Value) : ConceptAs<string>(Value);
     record TheType(TheConcept Concept);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(new("FortyTwo"));
-        right = new(new("FortyThree"));
+        _left = new(new("FortyTwo"));
+        _right = new(new("FortyThree"));
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_not_be_equal() => result.ShouldBeFalse();
-    [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);
-    [Fact] void should_have_concept_property_as_difference() => differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Concept).ToCamelCase());
+    [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
+    [Fact] void should_only_have_one_property_difference() => _differences.Count().ShouldEqual(1);
+    [Fact] void should_have_concept_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Concept).ToCamelCase());
 }

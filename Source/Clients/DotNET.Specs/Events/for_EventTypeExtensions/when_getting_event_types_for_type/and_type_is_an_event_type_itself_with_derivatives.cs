@@ -12,9 +12,9 @@ public class and_type_is_an_event_type_itself_with_derivatives : Specification
 
     class SecondDerivative : FirstDerivative;
 
-    IEnumerable<Type> result;
+    IEnumerable<Type> _result;
 
-    void Because() => result = typeof(MyEvent).GetEventTypes([typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative)]);
+    void Because() => _result = typeof(MyEvent).GetEventTypes([typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative)]);
 
-    [Fact] void should_return_the_expected_types() => result.ShouldContainOnly(typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative));
+    [Fact] void should_return_the_expected_types() => _result.ShouldContainOnly(typeof(MyEvent), typeof(FirstDerivative), typeof(SecondDerivative));
 }

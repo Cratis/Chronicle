@@ -5,16 +5,16 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIIMetadataProvider.when_providin
 
 public class and_there_is_metadata_and_details : given.a_provider
 {
-    const string details = "These are the details";
+    const string Details = "These are the details";
 
     [PII]
-    [ComplianceDetails(details)]
+    [ComplianceDetails(Details)]
     class MyType;
 
-    ComplianceMetadata result;
+    ComplianceMetadata _result;
 
-    void Because() => result = provider.Provide(typeof(MyType));
+    void Because() => _result = provider.Provide(typeof(MyType));
 
-    [Fact] void should_return_pii_metadata() => result.MetadataType.ShouldEqual(ComplianceMetadataType.PII);
-    [Fact] void should_return_metadata_with_details() => result.Details.ShouldEqual(details);
+    [Fact] void should_return_pii_metadata() => _result.MetadataType.ShouldEqual(ComplianceMetadataType.PII);
+    [Fact] void should_return_metadata_with_details() => _result.Details.ShouldEqual(Details);
 }

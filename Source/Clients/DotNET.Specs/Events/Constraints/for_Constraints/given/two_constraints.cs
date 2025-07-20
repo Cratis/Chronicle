@@ -9,10 +9,10 @@ public class two_constraints : no_constraints
 {
     protected static readonly ConstraintName _firstConstraintName = "FirstConstraint";
     protected static readonly ConstraintName _secondConstraintName = "SecondConstraint";
-    protected const string _firstEventTypeName = "FirstEventType";
-    protected const string _secondEventTypeName = "SecondEventType";
-    protected const string _firstProperty = "firstProperty";
-    protected const string _secondProperty = "secondProperty";
+    protected const string FirstEventTypeName = "FirstEventType";
+    protected const string SecondEventTypeName = "SecondEventType";
+    protected const string FirstProperty = "firstProperty";
+    protected const string SecondProperty = "secondProperty";
 
     protected IConstraintDefinition _firstConstraint;
     protected IConstraintDefinition _secondConstraint;
@@ -20,14 +20,14 @@ public class two_constraints : no_constraints
     async Task Establish()
     {
         _firstConstraint = new UniqueConstraintDefinition(_firstConstraintName,
-            _ => (ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}",
-            [new UniqueConstraintEventDefinition(_firstEventTypeName, [_firstProperty])],
+            _ => (ConstraintViolationMessage)$"First {{{FirstProperty}}} second {{{SecondProperty}}}",
+            [new UniqueConstraintEventDefinition(FirstEventTypeName, [FirstProperty])],
             null,
             false);
 
         _secondConstraint = new UniqueConstraintDefinition(_secondConstraintName,
-            _ => (ConstraintViolationMessage)$"First {{{_firstProperty}}} second {{{_secondProperty}}}",
-            [new UniqueConstraintEventDefinition(_secondEventTypeName, [_secondProperty])],
+            _ => (ConstraintViolationMessage)$"First {{{FirstProperty}}} second {{{SecondProperty}}}",
+            [new UniqueConstraintEventDefinition(SecondEventTypeName, [SecondProperty])],
             null,
             false);
 

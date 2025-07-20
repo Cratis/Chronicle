@@ -30,7 +30,7 @@ internal sealed class AppendedEventSerializer(
     IStorage storage) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     /// <inheritdoc/>
-    public object DeepCopy(object input, CopyContext context) => input;
+    public object? DeepCopy(object? input, CopyContext context) => input;
 
     /// <inheritdoc/>
     public bool IsSupportedType(Type type) => type == typeof(AppendedEvent);

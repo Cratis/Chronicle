@@ -8,13 +8,13 @@ namespace Cratis.Chronicle.Projections.for_Projections.when_discovering;
 
 public class and_there_are_no_projections : given.all_dependencies
 {
-    Projections projections;
-    IEnumerable<ProjectionDefinition> result;
+    Projections _projections;
+    IEnumerable<ProjectionDefinition> _result;
 
     void Establish()
     {
         _clientArtifacts.Projections.Returns([]);
-        projections = new Projections(
+        _projections = new Projections(
             _eventStore,
             _eventTypes,
             _projectionWatcherManager,
@@ -24,16 +24,16 @@ public class and_there_are_no_projections : given.all_dependencies
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
-        projections.SetRulesProjections(_rulesProjections);
+        _projections.SetRulesProjections(_rulesProjections);
 
         _rulesProjections.Discover().Returns(ImmutableList<ProjectionDefinition>.Empty);
     }
 
     async Task Because()
     {
-        await projections.Discover();
-        result = projections.Definitions;
+        await _projections.Discover();
+        _result = _projections.Definitions;
     }
 
-    [Fact] void should_return_empty_list() => result.ShouldBeEmpty();
+    [Fact] void should_return_empty_list() => _result.ShouldBeEmpty();
 }

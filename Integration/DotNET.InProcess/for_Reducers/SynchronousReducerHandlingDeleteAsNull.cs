@@ -17,29 +17,3 @@ public class SynchronousReducerHandlingDeleteAsNull : IReducerFor<SomeReadModel>
 
     public SomeReadModel? OnSomeDeleteEvent(SomeDeleteEvent evt, SomeReadModel? input, EventContext ctx) => null;
 }
-
-
-[DependencyInjection.IgnoreConvention]
-public class AsynchronousReducerHandlingDeleteAsNull : IReducerFor<SomeReadModel>
-{
-    public Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
-    {
-        input ??= new SomeReadModel(evt.Number);
-        return Task.FromResult(input with { Number = evt.Number });
-    }
-
-    public Task<SomeReadModel?> OnSomeDeleteEvent(SomeDeleteEvent evt, SomeReadModel? input, EventContext ctx) => Task.FromResult<SomeReadModel?>(null);
-}
-
-
-[DependencyInjection.IgnoreConvention]
-public class AsynchronousReducerHandlingDeleteAsVoid : IReducerFor<SomeReadModel>
-{
-    public Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
-    {
-        input ??= new SomeReadModel(evt.Number);
-        return Task.FromResult(input with { Number = evt.Number });
-    }
-
-    public Task OnSomeDeleteEvent(SomeDeleteEvent evt, SomeReadModel? input, EventContext ctx) => Task.CompletedTask;
-}

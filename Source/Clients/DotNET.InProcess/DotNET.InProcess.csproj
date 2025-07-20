@@ -10,7 +10,7 @@
 
     <Target Name="BuildDependencies">
         <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);TargetFrameworks=$(TargetFrameworks);Repack=$(Repack)" />
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)" />
     </Target>
 
     <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
@@ -30,13 +30,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="**/*.cs" Exclude="obj/**/*.cs"/>
-        <Compile Include="../../Kernel/Setup/**/*.cs" Exclude="../../Kernel/Setup/obj/**/*.cs"/>
-        <Compile Include="../../Kernel/Services/**/*.cs" Exclude="../../Kernel/Services/obj/**/*.cs"/>
+        <Compile Include="**/*.cs" Exclude="obj/**/*.cs" />
+        <Compile Include="../../Kernel/Setup/**/*.cs" Exclude="../../Kernel/Setup/obj/**/*.cs" />
+        <Compile Include="../../Kernel/Services/**/*.cs" Exclude="../../Kernel/Services/obj/**/*.cs" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' != 'true'">
@@ -45,9 +45,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
-        <ProjectReference Include="../Orleans/Orleans.csproj"/>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>

@@ -9,11 +9,11 @@ namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 
 public class when_accessing_event_source_id : Specification
 {
-    AppendedEvent @event;
-    object result;
+    AppendedEvent _event;
+    object _result;
 
     void Establish() =>
-            @event = new(
+            _event = new(
                 new(0,
                 new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
                 new(
@@ -30,7 +30,7 @@ public class when_accessing_event_source_id : Specification
                     Identity.System),
                 new ExpandoObject());
 
-    void Because() => result = EventValueProviders.EventSourceId(@event);
+    void Because() => _result = EventValueProviders.EventSourceId(_event);
 
-    [Fact] void should_return_the_guid_from_event_source_id_from_the_event() => result.ShouldEqual(@event.Context.EventSourceId.Value);
+    [Fact] void should_return_the_guid_from_event_source_id_from_the_event() => _result.ShouldEqual(_event.Context.EventSourceId.Value);
 }
