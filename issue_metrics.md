@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 127 days, 5:50:55 | 3 days, 22:09:24 | 251 days, 1:34:12 |
-| Time to close | 270 days, 13:22:43 | 123 days, 0:34:12 | 818 days, 16:13:54 |
+| Time to close | 271 days, 7:04:55 | 123 days, 1:53:22 | 817 days, 21:17:58 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 280 |
-| Number of items closed | 559 |
+| Number of items that remain open | 279 |
+| Number of items closed | 560 |
 | Total number of items created | 839 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -344,4 +344,4 @@
 | Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
 | IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | 616 days, 3:25:19 | None |
-| Projection fail with children and there are no instances of the events defined in root From definitions
+| Projection fail with children and there are no instances of the events defined in root From definitions.
