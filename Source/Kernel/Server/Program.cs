@@ -23,7 +23,7 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.Zero);
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
 builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
 
 var chronicleOptions = new ChronicleOptions();
@@ -98,7 +98,16 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 }
 app.MapGrpcServices();
 
-await app.RunAsync();
+
+using var cancellationToken = new CancellationTokenSource();
+Console.CancelKeyPress += (sender, eventArgs) =>
+{
+    Console.WriteLine("******* SHUTTING DOWN CHRONICLE SERVER *******");
+    cancellationToken.Cancel();
+    eventArgs.Cancel = true;
+};
+
+await app.RunAsync(cancellationToken.Token);
 
 static void PrintExceptionInfo(Exception exception)
 {

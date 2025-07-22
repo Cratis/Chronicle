@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Observation.States;
 
@@ -56,7 +57,18 @@ public class Observing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        await appendedEventsQueues.Unsubscribe(_subscription!);
-        return state;
+        if (_subscription is not null)
+        {
+            try
+            {
+                await appendedEventsQueues.Unsubscribe(_subscription);
+            }
+            catch (OrleansMessageRejectionException)
+            {
+                // This can happen when the silo is shutting down and the target grain is already deactivated.
+                // It's safe to ignore as the subscription will be gone anyway.
+            }
+        }
+        return await Task.FromResult(state);
     }
 }
