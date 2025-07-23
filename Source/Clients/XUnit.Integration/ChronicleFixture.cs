@@ -21,25 +21,35 @@ public abstract class ChronicleFixture : IChronicleFixture
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
+    IContainer? _container;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
     /// </summary>
-    /// <param name="createMongoDBContainer">The factory for the mongodb container.</param>
-    protected ChronicleFixture(Func<INetwork, IContainer> createMongoDBContainer)
+    protected ChronicleFixture()
     {
         Directory.CreateDirectory("backups");
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
-        MongoDBContainer = createMongoDBContainer(Network);
         StartContainer(MongoDBContainer).GetAwaiter().GetResult();
     }
 
     /// <summary>
     /// Get the MongoDB container.
     /// </summary>
-    public IContainer MongoDBContainer { get; }
+    public IContainer MongoDBContainer
+    {
+        get
+        {
+            if (_container is null)
+            {
+                _container = BuildContainer(Network);
+                StartContainer(_container).GetAwaiter().GetResult();
+            }
+            return _container;
+        }
+    }
 
     /// <inheritdoc/>
     public INetwork Network { get; }
@@ -56,7 +66,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
     {
-        await MongoDBContainer.DisposeAsync();
+        await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
+        await Network.DisposeAsync();
     }
 
     /// <inheritdoc/>
@@ -100,6 +111,13 @@ public abstract class ChronicleFixture : IChronicleFixture
             await mongoClient.DropDatabaseAsync(name);
         }
     }
+
+    /// <summary>
+    /// Builds the container with the specified network.
+    /// </summary>
+    /// <param name="network">The network to use.</param>
+    /// <returns>The built container.</returns>
+    protected abstract IContainer BuildContainer(INetwork network);
 
     static async Task StartContainer(IContainer container)
     {

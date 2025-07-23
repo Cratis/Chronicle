@@ -7,10 +7,18 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/Api/Api.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
+
+    <Target Name="BuildDocker" AfterTargets="Build">
+        <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net9.0/ $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
+        <Exec Command="docker build -t cratis/chronicle:local-development -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
+    </Target>
 
 </Project>
