@@ -15,5 +15,6 @@ public interface IReadModels
     /// <param name="request">The <see cref="RegisterRequest"/> holding all registrations.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
+    [Operation]
     Task Register(RegisterRequest request, CallContext context = default);
 }
