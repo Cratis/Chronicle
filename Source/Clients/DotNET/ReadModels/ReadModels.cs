@@ -22,7 +22,7 @@ public class ReadModels(
     IReducers reducers,
     IJsonSchemaGenerator schemaGenerator) : IReadModels
 {
-    readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore as IChronicleServicesAccessor)!;
+    readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
 
     /// <inheritdoc/>
     public async Task Register()
