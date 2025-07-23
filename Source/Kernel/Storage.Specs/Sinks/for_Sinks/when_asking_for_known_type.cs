@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
@@ -13,7 +13,7 @@ public class when_asking_for_known_type : Specification
     ISinkFactory _factory;
     ISink _store;
     bool _result;
-    Model _model;
+    ReadModelDefinition _model;
 
     void Establish()
     {

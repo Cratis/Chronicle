@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
@@ -59,7 +59,7 @@ public interface IProjection
     /// <summary>
     /// Gets the <see cref="Model"/> the projection targets.
     /// </summary>
-    Model Model { get; }
+    ReadModelDefinition Model { get; }
 
     /// <summary>
     /// Gets whether or not the projection is rewindable.

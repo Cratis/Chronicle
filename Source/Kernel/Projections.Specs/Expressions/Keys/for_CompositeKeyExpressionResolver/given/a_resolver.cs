@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,7 +14,7 @@ public class a_resolver : Specification
     protected CompositeKeyExpressionResolver _resolver;
     protected IEventValueProviderExpressionResolvers _eventValueProviderResolvers;
     protected IProjection _projection;
-    protected Model _model;
+    protected ReadModelDefinition _model;
 
     void Establish()
     {

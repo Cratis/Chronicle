@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Models;
 using Cratis.Chronicle.Contracts.Sinks;
 
 namespace Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -31,10 +30,10 @@ public class ReducerDefinition
     public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the <see cref="ModelDefinition"/> of the read model.
+    /// Gets or sets the read model the reducer is for.
     /// </summary>
     [ProtoMember(4)]
-    public ModelDefinition Model { get; set; }
+    public string ReadModel { get; set; }
 
     /// <summary>
     /// Gets or sets the projection sink definition.

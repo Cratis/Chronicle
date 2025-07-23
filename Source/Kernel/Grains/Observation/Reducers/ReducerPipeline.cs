@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;
@@ -15,16 +15,16 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReducerPipeline"/> class.
 /// </remarks>
-/// <param name="readModel">The <see cref="Model"/> the sink is for.</param>
+/// <param name="readModel">The <see cref="Concepts.ReadModels.ReadModelDefinition"/> the sink is for.</param>
 /// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 public class ReducerPipeline(
-    Model readModel,
+    ReadModelDefinition readModel,
     ISink sink,
     IObjectComparer objectComparer) : IReducerPipeline
 {
     /// <inheritdoc/>
-    public Model ReadModel { get; } = readModel;
+    public ReadModelDefinition ReadModel { get; } = readModel;
 
     /// <inheritdoc/>
     public ISink Sink { get; } = sink;

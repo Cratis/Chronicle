@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Json;
@@ -97,12 +97,12 @@ public class ProjectionFactory(
         }
     }
 
-    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
+    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, ReadModelDefinition model) =>
         projectionDefinition.InitialModelState.Count == 0 ?
             CreateInitialState(model) :
             expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
 
-    static ExpandoObject CreateInitialState(Model model)
+    static ExpandoObject CreateInitialState(ReadModelDefinition model)
     {
         // If there is no initial state, we create one with empty collections for all arrays.
         // This is to ensure that we can add to them without having to check for null.
@@ -124,8 +124,8 @@ public class ProjectionFactory(
         ProjectionPath path,
         bool isChild)
     {
-        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
-        var model = new Model(projectionDefinition.Model.Name, modelSchema);
+        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.ReadModel.Schema);
+        var model = new Model(projectionDefinition.ReadModel.Name, modelSchema);
         var hasIdProperty = modelSchema.GetFlattenedProperties().Any(_ => _.Name == "id");
         var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 

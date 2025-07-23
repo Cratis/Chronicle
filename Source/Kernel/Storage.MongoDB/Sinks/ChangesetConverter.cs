@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
@@ -20,12 +20,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChangesetConverter"/> class.
 /// </remarks>
-/// <param name="model">The <see cref="Model"/> the sink is for.</param>
+/// <param name="model">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 public class ChangesetConverter(
-    Model model,
+    ReadModelDefinition model,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter

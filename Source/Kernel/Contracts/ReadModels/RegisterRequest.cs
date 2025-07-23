@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Contracts.Projections;
+namespace Cratis.Chronicle.Contracts.ReadModels;
 
 /// <summary>
-/// Represents the request for registering projections.
+/// Represents the request for registering read models.
 /// </summary>
 [ProtoContract]
 public class RegisterRequest
@@ -16,8 +16,8 @@ public class RegisterRequest
     public string EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the collection of <see cref="ProjectionDefinition"/> instances to register.
+    /// Gets or sets the collection of <see cref="ReadModelDefinition"/> instances to register.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
-    public IList<ProjectionDefinition> Projections { get; set; } = [];
+    public IList<ReadModelDefinition> ReadModels { get; set; } = [];
 }

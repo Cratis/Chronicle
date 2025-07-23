@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -16,4 +16,4 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// prevent any changes to the target while replaying and keeping a system operational, at least from a read perspective.
 /// Once replay is done it should keep the "old" target around by renaming it a the <see cref="RevertModel"/>.
 /// </remarks>
-public record ReplayContext(ModelName Model, ModelName RevertModel, DateTimeOffset Started);
+public record ReplayContext(ReadModelName Model, ReadModelName RevertModel, DateTimeOffset Started);

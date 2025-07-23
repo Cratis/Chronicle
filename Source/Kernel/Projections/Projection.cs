@@ -6,7 +6,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
@@ -40,7 +40,7 @@ public class Projection : IProjection, IDisposable
         ExpandoObject initialModelState,
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
-        Model model,
+        ReadModelDefinition model,
         bool rewindable,
         IEnumerable<IProjection> childProjections)
     {
@@ -75,7 +75,7 @@ public class Projection : IProjection, IDisposable
     public PropertyPath ChildrenPropertyPath { get; }
 
     /// <inheritdoc/>
-    public Model Model { get; }
+    public ReadModelDefinition Model { get; }
 
     /// <inheritdoc/>
     public bool IsRewindable { get; }

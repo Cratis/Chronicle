@@ -122,6 +122,6 @@ public class ProjectionObserverSubscriber(
             projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
         }
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
-        _schema = await JsonSchema.FromJsonAsync(State.Model.Schema);
+        _schema = await JsonSchema.FromJsonAsync(State.ReadModel.Schema);
     }
 }

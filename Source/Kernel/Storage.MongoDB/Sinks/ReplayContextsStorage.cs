@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using MongoDB.Driver;
@@ -24,7 +24,7 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     }
 
     /// <inheritdoc/>
-    public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ModelName model)
+    public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ReadModelName model)
     {
         var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ModelName, model);
         var context = _collection.Find(filter).FirstOrDefault();
@@ -34,7 +34,7 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     }
 
     /// <inheritdoc/>
-    public Task Remove(ModelName model)
+    public Task Remove(ReadModelName model)
     {
         var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ModelName, model);
         return _collection.DeleteOneAsync(filter);

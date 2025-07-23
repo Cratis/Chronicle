@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Changes;
 using MongoDB.Driver;
 
@@ -19,15 +19,15 @@ public class ChangesetStorage(
     IEventStoreNamespaceDatabase eventStoreDatabase) : IChangesetStorage
 {
     /// <inheritdoc/>
-    public Task BeginReplay(ModelName model) =>
+    public Task BeginReplay(ReadModelName model) =>
         GetCollection(model).DeleteManyAsync(FilterDefinition<ModelChangeset>.Empty);
 
     /// <inheritdoc/>
-    public Task EndReplay(ModelName model) => Task.CompletedTask;
+    public Task EndReplay(ReadModelName model) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task Save(
-        ModelName model,
+        ReadModelName model,
         Key modelKey,
         EventType eventType,
         EventSequenceNumber sequenceNumber,
@@ -40,6 +40,6 @@ public class ChangesetStorage(
         await collection.InsertOneAsync(modelChangeset);
     }
 
-    IMongoCollection<ModelChangeset> GetCollection(ModelName model) =>
+    IMongoCollection<ModelChangeset> GetCollection(ReadModelName model) =>
         eventStoreDatabase.GetCollection<ModelChangeset>($"{model}-changes");
 }

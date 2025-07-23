@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Storage;
 using NJsonSchema;
@@ -29,10 +29,10 @@ public class ReducerPipelineFactory(
         ReducerDefinition definition)
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        var modelSchema = await JsonSchema.FromJsonAsync(definition.Model.Schema);
-        var model = new Model(definition.Model.Name, modelSchema);
+        var modelSchema = await JsonSchema.FromJsonAsync(definition.ReadModel.Schema);
+        var model = new Model(definition.ReadModel.Name, modelSchema);
         var sink = namespaceStorage.Sinks.GetFor(definition.Sink.TypeId, definition.Sink.ConfigurationId, model);
-        var readModel = new Model(definition.Model.Name, modelSchema);
+        var readModel = new Model(definition.ReadModel.Name, modelSchema);
         return new ReducerPipeline(readModel, sink, objectComparer);
     }
 }

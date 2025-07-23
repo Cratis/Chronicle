@@ -79,7 +79,7 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
         return new()
         {
             IdentifiedBy = _identifiedBy,
-            Model = new()
+            ReadModel = new()
             {
                 Name = _modelName,
                 Schema = _schemaGenerator.Generate(typeof(TChildModel)).ToJson()

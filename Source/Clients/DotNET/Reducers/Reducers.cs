@@ -274,7 +274,7 @@ public class Reducers : IReducers
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
-                Model = new Contracts.Models.ModelDefinition
+                Model = new Contracts.Models.ReadModelDefinition
                 {
                     Name = _modelNameResolver.GetNameFor(handler.ReadModelType),
                     Schema = _jsonSchemaGenerator.Generate(handler.ReadModelType).ToJson()

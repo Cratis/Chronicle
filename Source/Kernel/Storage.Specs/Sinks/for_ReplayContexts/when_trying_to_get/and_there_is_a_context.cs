@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts.when_trying_to_get;
 
 public class and_there_is_a_context : Specification
 {
-    static ModelName _model = "SomeModel";
+    static ReadModelName _model = "SomeModel";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
     ReplayContext _context;
