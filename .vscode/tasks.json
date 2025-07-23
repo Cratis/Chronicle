@@ -22,6 +22,19 @@
             "runOptions": {
                 "reevaluateOnRerun": false
             }
+        },
+        {
+            "label": "kill-testhost",
+            "command": "pkill",
+            "args": [
+                "-f",
+                "testhost"
+            ],
+            "type": "process",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         }
     ],
     "inputs": [
