@@ -43,7 +43,7 @@ public class ProjectionsService(
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
-        var readModelDefinitions = await grainFactory.GetGrain<IReadModelsManager>(eventStore).GetDefinitions();
+        var readModelDefinitions = await grainFactory.GetReadModelsManager(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
         var allNamespaces = await namespaces.GetAll();
         await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
