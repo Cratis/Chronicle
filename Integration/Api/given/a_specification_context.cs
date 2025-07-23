@@ -3,4 +3,4 @@
 
 namespace Cratis.Chronicle.Integration.Api.given;
 
-public class the_specification_context(ChronicleOutOfProcessFixture fixture) : IntegrationSpecificationContext<ChronicleOutOfProcessFixture, ApiWebApplicationFactory, Program>(fixture);
+public class a_specification_context(ChronicleOutOfProcessFixture fixture) : IntegrationSpecificationContext<ChronicleOutOfProcessFixture, ApiWebApplicationFactory, Program>(fixture);
