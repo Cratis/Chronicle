@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Models;
 using Cratis.Chronicle.Contracts.Sinks;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Observation.Reducers;
 

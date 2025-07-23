@@ -3,9 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Models;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Sinks;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
 

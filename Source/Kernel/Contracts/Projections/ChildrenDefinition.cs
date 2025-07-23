@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Models;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
 
