@@ -18,10 +18,17 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     public const int MongoDBPort = 27018;
 
+#if NET9_0
+    readonly Lock _containerLock = new();
+#else
+    readonly object _containerLock = new();
+#endif
+
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
     IContainer? _container;
+    bool _started;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
@@ -32,6 +39,7 @@ public abstract class ChronicleFixture : IChronicleFixture
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
+
         StartContainer(MongoDBContainer).GetAwaiter().GetResult();
     }
 
@@ -42,12 +50,15 @@ public abstract class ChronicleFixture : IChronicleFixture
     {
         get
         {
-            if (_container is null)
+            lock (_containerLock)
             {
-                _container = BuildContainer(Network);
-                StartContainer(_container).GetAwaiter().GetResult();
+                if (_container is null)
+                {
+                    _container = BuildContainer(Network);
+                    StartContainer(_container).GetAwaiter().GetResult();
+                }
+                return _container;
             }
-            return _container;
         }
     }
 
@@ -119,15 +130,19 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <returns>The built container.</returns>
     protected abstract IContainer BuildContainer(INetwork network);
 
-    static async Task StartContainer(IContainer container)
+    async Task StartContainer(IContainer container)
     {
+        if (_started) return;
+
         var retryCount = 0;
         Exception? failure;
         do
         {
             try
             {
+                await Console.Out.FlushAsync();
                 failure = null;
+
                 await container.StartAsync();
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
@@ -137,5 +152,9 @@ public abstract class ChronicleFixture : IChronicleFixture
             }
         }
         while (failure is not null && ++retryCount < 10);
+
+        _started = true;
+
+        Console.WriteLine("We have started the container successfully.");
     }
 }
