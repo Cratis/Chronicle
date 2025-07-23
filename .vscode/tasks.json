@@ -21,6 +21,10 @@
             "problemMatcher": "$msCompile",
             "runOptions": {
                 "reevaluateOnRerun": false
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
             }
         },
         {
@@ -30,11 +34,7 @@
                 "-f",
                 "testhost"
             ],
-            "type": "process",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
+            "type": "process"
         }
     ],
     "inputs": [
