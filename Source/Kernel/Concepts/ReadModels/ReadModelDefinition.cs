@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// </summary>
 /// <param name="Name">Name of the model.</param>
 /// <param name="Schema">The <see cref="JsonSchema"/> for the model.</param>
+[GenerateSerializer]
+[Alias(nameof(ReadModelDefinition))]
 public record ReadModelDefinition(ReadModelName Name, JsonSchema Schema);
