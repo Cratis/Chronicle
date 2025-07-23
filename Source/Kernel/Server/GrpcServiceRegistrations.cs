@@ -31,6 +31,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
+        services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
 
