@@ -20,7 +20,6 @@ public static class ReadModelGrainFactoryExtensions
     public static IReadModelsManager GetReadModelsManager(this IGrainFactory grainFactory, EventStoreName eventStoreName) =>
         grainFactory.GetGrain<IReadModelsManager>(eventStoreName);
 
-
     /// <summary>
     /// Get a specific read model by its name and event store.
     /// </summary>
