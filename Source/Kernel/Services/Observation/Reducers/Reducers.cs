@@ -146,9 +146,6 @@ internal sealed class Reducers(
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
                         await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-
-                        var modelSchema = await JsonSchema.FromJsonAsync(reducerDefinition.ReadModel.Schema);
-                        model = new Model(reducerDefinition.ReadModel.Name, modelSchema);
                     }
 
                     await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
