@@ -9,9 +9,8 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
-using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,7 +26,6 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
 /// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
@@ -37,7 +35,6 @@ public class Projections(
     IEventTypes eventTypes,
     IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
-    IJsonSchemaGenerator schemaGenerator,
     IModelNameResolver modelNameResolver,
     IEventSerializer eventSerializer,
     IServiceProvider serviceProvider,
@@ -61,6 +58,9 @@ public class Projections(
     public bool HasFor(Type modelType) => _handlersByModelType.ContainsKey(modelType);
 
     /// <inheritdoc/>
+    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByType.Values;
+
+    /// <inheritdoc/>
     public IProjectionHandler GetHandlerFor<TProjection>()
         where TProjection : IProjection => _handlersByType[typeof(TProjection)];
 
@@ -75,7 +75,7 @@ public class Projections(
     public ProjectionId GetProjectionIdForModel(Type modelType) => _handlersByModelType[modelType].Id;
 
     /// <inheritdoc/>
-    public async Task<ProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
+    public async Task<ProjectionResult> GetInstanceById(Type modelType, ReadModelKey modelKey)
     {
         var handler = _handlersByModelType[modelType];
         var result = await GetInstanceById(handler.Id, modelKey);
@@ -84,7 +84,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task<ProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey)
+    public async Task<ProjectionResult<TModel>> GetInstanceById<TModel>(ReadModelKey modelKey)
     {
         var handler = _handlersByModelType[typeof(TModel)];
         var request = new GetInstanceByIdRequest
@@ -101,7 +101,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task<ProjectionResultRaw> GetInstanceById(ProjectionId identifier, ModelKey modelKey)
+    public async Task<ProjectionResultRaw> GetInstanceById(ProjectionId identifier, ReadModelKey modelKey)
     {
         var handler = Definitions.Single(_ => _.Identifier == identifier);
         var request = new GetInstanceByIdRequest
@@ -121,7 +121,7 @@ public class Projections(
     public async Task<ProjectionResult> GetInstanceByIdForSession(
         ProjectionSessionId sessionId,
         Type modelType,
-        ModelKey modelKey)
+        ReadModelKey modelKey)
     {
         var handler = _handlersByModelType[modelType];
 
@@ -143,7 +143,7 @@ public class Projections(
     public async Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(
         ProjectionSessionId sessionId,
         Type modelType,
-        ModelKey modelKey,
+        ReadModelKey modelKey,
         IEnumerable<object> events)
     {
         var handler = _handlersByModelType[modelType];
@@ -170,7 +170,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task DehydrateSession(ProjectionSessionId sessionId, Type modelType, ModelKey modelKey)
+    public async Task DehydrateSession(ProjectionSessionId sessionId, Type modelType, ReadModelKey modelKey)
     {
         var handler = _handlersByModelType[modelType];
         var request = new DehydrateSessionRequest
@@ -237,14 +237,13 @@ public class Projections(
         _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
-            schemaGenerator,
             modelNameResolver,
             serviceProvider,
             jsonSerializerOptions);
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
-                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Value.EventSequenceId) as IProjectionHandler);
+                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
 
         _handlersByModelType = _handlersByType.ToDictionary(
             _ => _.Key.GetReadModelType(),
@@ -278,7 +277,6 @@ public class Projections(
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
-        IJsonSchemaGenerator schemaGenerator,
         IModelNameResolver modelNameResolver,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions) =>
@@ -296,7 +294,6 @@ public class Projections(
                                 _,
                                 modelNameResolver,
                                 eventTypes,
-                                schemaGenerator,
                                 serviceProvider,
                                 jsonSerializerOptions
                             ]) as ProjectionDefinition)!;
@@ -309,12 +306,11 @@ public class Projections(
             Type type,
             IModelNameResolver modelNameResolver,
             IEventTypes eventTypes,
-            IJsonSchemaGenerator schemaGenerator,
             IServiceProvider serviceProvider,
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(type.GetProjectionId(), modelNameResolver, eventTypes, schemaGenerator, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TModel>(type.GetProjectionId(), modelNameResolver, eventTypes, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

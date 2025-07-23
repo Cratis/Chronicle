@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
@@ -117,11 +118,12 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
         if (!projectionManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var projection))
         {
-            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
+            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
         }
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
-        _schema = await JsonSchema.FromJsonAsync(State.ReadModel.Schema);
+        _schema = readModel.Schema;
     }
 }

@@ -3,8 +3,8 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Rules;
@@ -42,7 +42,7 @@ public class Rules(
 
         var result = projections.GetInstanceById(
             identifier.Value,
-            modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!).GetAwaiter().GetResult();
+            modelIdentifier is null ? ReadModelKey.Unspecified : modelIdentifier.ToString()!).GetAwaiter().GetResult();
 
         var properties = rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty);
         properties = properties.Where(_ => _.CanWrite).ToArray();

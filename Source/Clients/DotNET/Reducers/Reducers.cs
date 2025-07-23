@@ -12,7 +12,6 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +37,6 @@ public class Reducers : IReducers
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
     readonly IModelNameResolver _modelNameResolver;
-    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
@@ -58,7 +56,6 @@ public class Reducers : IReducers
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -70,7 +67,6 @@ public class Reducers : IReducers
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IModelNameResolver modelNameResolver,
-        IJsonSchemaGenerator jsonSchemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
         IIdentityProvider identityProvider,
         ILogger<Reducers> logger)
@@ -89,7 +85,6 @@ public class Reducers : IReducers
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
         _modelNameResolver = modelNameResolver;
-        _jsonSchemaGenerator = jsonSchemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
         _identityProvider = identityProvider;
         _logger = logger;
@@ -234,7 +229,7 @@ public class Reducers : IReducers
         });
     }
 
-    ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
+    ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
         var handler = new ReducerHandler(
             _eventStore,
@@ -243,15 +238,16 @@ public class Reducers : IReducers
             new ReducerInvoker(
                 _eventTypes,
                 reducerType,
-                modelType),
+                readModelType,
+                _modelNameResolver.GetNameFor(readModelType)),
             _eventSerializer,
-            ShouldReducerBeActive(reducerType, modelType));
+            ShouldReducerBeActive(reducerType, readModelType));
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
             _handlersByType.Remove(reducerType);
-            _handlersByModelType.Remove(modelType);
+            _handlersByModelType.Remove(readModelType);
             register?.Dispose();
         });
 
@@ -274,11 +270,7 @@ public class Reducers : IReducers
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
-                Model = new Contracts.Models.ReadModelDefinition
-                {
-                    Name = _modelNameResolver.GetNameFor(handler.ReadModelType),
-                    Schema = _jsonSchemaGenerator.Generate(handler.ReadModelType).ToJson()
-                },
+                ReadModel = handler.ReadModelName,
                 Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB

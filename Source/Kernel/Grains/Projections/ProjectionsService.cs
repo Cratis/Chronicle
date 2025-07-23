@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -42,12 +43,16 @@ public class ProjectionsService(
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
+        var readModelDefinitions = await grainFactory.GetGrain<IReadModelsManager>(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
         var allNamespaces = await namespaces.GetAll();
-        await projections.Register(eventStore, definitions, allNamespaces);
+        await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
     }
 
     /// <inheritdoc/>
-    public Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        projections.AddNamespace(eventStore, @namespace);
+    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var readModelDefinitions = await grainFactory.GetGrain<IReadModelsManager>(eventStore).GetDefinitions();
+        await projections.AddNamespace(eventStore, @namespace, readModelDefinitions);
+    }
 }

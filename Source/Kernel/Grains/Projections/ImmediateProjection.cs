@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
@@ -54,9 +55,10 @@ public class ImmediateProjection(
     {
         _projectionKey = ImmediateProjectionKey.Parse(this.GetPrimaryKeyString());
 
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey.EventStore)).GetDefinition();
         if (!projectionManager.TryGet(_projectionKey.EventStore, _projectionKey.Namespace, _projectionKey.ProjectionId, out _projection))
         {
-            _projection = await projectionFactory.Create(_projectionKey.EventStore, _projectionKey.Namespace, State);
+            _projection = await projectionFactory.Create(_projectionKey.EventStore, _projectionKey.Namespace, State, readModel);
         }
 
         _eventSequenceStorage = storage

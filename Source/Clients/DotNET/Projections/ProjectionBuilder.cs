@@ -8,7 +8,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 using Cratis.Reflection;
 using Cratis.Strings;
@@ -26,12 +25,10 @@ namespace Cratis.Chronicle.Projections;
 /// Initializes a new instance of the <see cref="ProjectionBuilder{TModel, TBuilder}"/> class.
 /// </remarks>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 /// <param name="autoMap">Whether to automatically map properties.</param>
 public class ProjectionBuilder<TModel, TBuilder>(
     IEventTypes eventTypes,
-    IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
     bool autoMap) : IProjectionBuilder<TModel, TBuilder>
     where TBuilder : class
@@ -176,7 +173,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, schemaGenerator, jsonSerializerOptions, _autoMap);
+        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return (this as TBuilder)!;

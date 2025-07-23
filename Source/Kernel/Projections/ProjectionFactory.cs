@@ -5,9 +5,9 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
@@ -46,12 +46,13 @@ public class ProjectionFactory(
     ILogger<ProjectionFactory> logger) : IProjectionFactory
 {
     /// <inheritdoc/>
-    public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition)
+    public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
         return CreateProjectionFrom(
             eventSequenceStorage,
             definition,
+            readModelDefinition,
             PropertyPath.Root,
             PropertyPath.Root,
             ProjectionPath.GetRootFor(definition.Identifier),
@@ -119,26 +120,26 @@ public class ProjectionFactory(
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
+        ReadModelDefinition readModel,
         PropertyPath childrenAccessorProperty,
         PropertyPath identifiedByProperty,
         ProjectionPath path,
         bool isChild)
     {
-        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.ReadModel.Schema);
-        var model = new Model(projectionDefinition.ReadModel.Name, modelSchema);
-        var hasIdProperty = modelSchema.GetFlattenedProperties().Any(_ => _.Name == "id");
+        var hasIdProperty = readModel.Schema.GetFlattenedProperties().Any(_ => _.Name == "id");
         var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                 eventSequenceStorage,
                 kvp.Value,
+                readModel,
                 childrenAccessorProperty.AddArrayIndex(kvp.Key),
                 kvp.Value.IdentifiedBy,
                 $"{path} -> ChildrenAt({kvp.Key.Path})",
                 true));
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, modelSchema, model);
+        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, readModel.Schema, readModel);
 
         var projection = new Projection(
             projectionDefinition.EventSequenceId,
@@ -147,7 +148,7 @@ public class ProjectionFactory(
             initialState,
             path,
             childrenAccessorProperty,
-            model,
+            readModel,
             projectionDefinition.IsRewindable,
             childProjections);
 
@@ -156,7 +157,7 @@ public class ProjectionFactory(
 
         if (projectionDefinition.FromEventProperty is not null)
         {
-            var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
+            var schemaProperty = readModel.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
             schemaProperty ??= new JsonSchemaProperty
             {
                 Type = projection.Model.Schema.Type,

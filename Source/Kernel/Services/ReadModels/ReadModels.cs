@@ -9,8 +9,15 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <summary>
 /// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
-internal class ReadModels : IReadModels
+/// <param name="grainFactory">The grain factory.</param>
+internal sealed class ReadModels(IGrainFactory grainFactory) : IReadModels
 {
     /// <inheritdoc/>
-    public Task Register(RegisterRequest request, CallContext context = default) => throw new NotImplementedException();
+    public Task Register(RegisterRequest request, CallContext context = default)
+    {
+        var readModelsManager = grainFactory.GetGrain<Grains.ReadModels.IReadModelsManager>(request.EventStore);
+        var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle()).ToArray();
+        _ = Task.Run(() => readModelsManager.Register(readModelDefinitions));
+        return Task.CompletedTask;
+    }
 }
