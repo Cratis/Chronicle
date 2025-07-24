@@ -130,6 +130,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Docker daemon
+        uses: docker/setup-qemu-action@v3
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
@@ -141,6 +147,9 @@ jobs:
         with:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
+
+      - name: Prune Docker containers
+        run: docker container prune -f
 
       - name: Run API integration tests for .Net 9
         working-directory: ./Integration/Api
