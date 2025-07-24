@@ -140,7 +140,8 @@ public abstract class ChronicleFixture : IChronicleFixture
         {
             try
             {
-                Console.WriteLine("Starting the container...");
+                Console.WriteLine($"Starting container image '{container.Image}'...");
+
                 failure = null;
 
                 await container.StartAsync();
@@ -159,8 +160,14 @@ public abstract class ChronicleFixture : IChronicleFixture
         }
         while (failure is not null && ++retryCount < 10);
 
-        _started = true;
-
-        Console.WriteLine("We have started the container successfully.");
+        if (failure is not null)
+        {
+            Console.WriteLine($"Failed to start the container after {retryCount} attempts.");
+        }
+        else
+        {
+            _started = true;
+            Console.WriteLine("We have started the container successfully.");
+        }
     }
 }
