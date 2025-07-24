@@ -3,6 +3,7 @@
 
 using Cratis.Applications.Queries;
 using context = Cratis.Chronicle.Integration.Api.for_EventStoreQueries.when_getting_event_stores.context;
+
 namespace Cratis.Chronicle.Integration.Api.for_EventStoreQueries;
 
 [Collection(ChronicleCollection.Name)]
