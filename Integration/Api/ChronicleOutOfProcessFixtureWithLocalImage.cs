@@ -12,5 +12,5 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 {
     /// <inheritdoc/>
     protected override ContainerBuilder ConfigureImage(ContainerBuilder builder) =>
-        builder.WithImage("cratis/chronicle:local-development");
+        builder.WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development");
 }
