@@ -11,6 +11,13 @@ public interface IReadModels
     /// <summary>
     /// Register the read models in the system.
     /// </summary>
-    /// <returns>A task that completes when registration is done.</returns>
+    /// <returns>An awaitable task.</returns>
     Task Register();
+
+    /// <summary>
+    /// Register a specific read model type.
+    /// </summary>
+    /// <typeparam name="TReadModel">The type of the read model to register.</typeparam>
+    /// <returns>An awaitable task.</returns>
+    Task Register<TReadModel>();
 }

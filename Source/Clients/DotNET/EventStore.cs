@@ -152,7 +152,7 @@ public class EventStore : IEventStore
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
-        ReadModels = new ReadModels.ReadModels(this, projections, Reducers, schemaGenerator);
+        ReadModels = new ReadModels.ReadModels(this, projections, Reducers, modelNameResolver, schemaGenerator);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
