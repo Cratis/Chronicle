@@ -98,7 +98,6 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 }
 app.MapGrpcServices();
 
-
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
 {
