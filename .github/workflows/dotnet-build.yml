@@ -43,7 +43,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true
 
   dotnet-build-repack-clients:
     runs-on: ubuntu-latest
