@@ -145,11 +145,6 @@ public abstract class ChronicleFixture : IChronicleFixture
                 failure = null;
 
                 await container.StartAsync();
-
-                var logs = await container.GetLogsAsync();
-
-                Console.WriteLine(logs.Stdout);
-                Console.WriteLine(logs.Stderr);
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
             {
@@ -157,6 +152,10 @@ public abstract class ChronicleFixture : IChronicleFixture
                 failure = e;
                 await Task.Delay(2000);
             }
+
+            var logs = await container.GetLogsAsync();
+            Console.WriteLine(logs.Stdout);
+            Console.WriteLine(logs.Stderr);
         }
         while (failure is not null && ++retryCount < 10);
 
