@@ -140,13 +140,19 @@ public abstract class ChronicleFixture : IChronicleFixture
         {
             try
             {
-                await Console.Out.FlushAsync();
+                Console.WriteLine("Starting the container...");
                 failure = null;
 
                 await container.StartAsync();
+
+                var logs = await container.GetLogsAsync();
+
+                Console.WriteLine(logs.Stdout);
+                Console.WriteLine(logs.Stderr);
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
             {
+                Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;
                 await Task.Delay(2000);
             }
