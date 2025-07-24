@@ -138,12 +138,12 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task<IReducerHandler> Register<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>
-        where TModel : class
+    public Task<IReducerHandler> Register<TReducer, TReadModel>()
+        where TReducer : IReducerFor<TReadModel>
+        where TReadModel : class
     {
         var reducerType = typeof(TReducer);
-        var modelType = typeof(TModel);
+        var modelType = typeof(TReadModel);
         var handler = CreateHandlerFor(reducerType, modelType);
         RegisterReducer(handler);
         _handlersByType.Add(reducerType, handler);
