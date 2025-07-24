@@ -1,5 +1,7 @@
 <RunSettings>
   <RunConfiguration>
-    <TestCaseFilter>(FullyQualifiedName!~Cratis.Chronicle.InProcess.Integration)&(FullyQualifiedName!~Cratis.Chronicle.Integration)</TestCaseFilter>
+    <TestCaseFilter>
+        FullyQualifiedName!~Cratis.Chronicle.InProcess.Integration&amp;FullyQualifiedName!~Cratis.Chronicle.Integration
+    </TestCaseFilter>
   </RunConfiguration>
 </RunSettings>
