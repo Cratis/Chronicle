@@ -14,7 +14,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
-    <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableLocalDockerBuild)' == 'true'">
+    <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableLocalDockerBuild)' != 'true'">
         <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net9.0/ $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
