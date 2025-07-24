@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class with_auto_mapping(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AutoMappedPropertiesProjection, Model>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AutoMappedPropertiesProjection, ReadModel>(chronicleInProcessFixture)
     {
         public EventWithPropertiesForAllSupportedTypes EventAppended;
 

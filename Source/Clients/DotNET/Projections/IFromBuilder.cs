@@ -6,6 +6,6 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines the builder for building from expressions.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-public interface IFromBuilder<TModel, TEvent> : IModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>>;
+public interface IFromBuilder<TReadModel, TEvent> : IReadModelPropertiesBuilder<TReadModel, TEvent, IFromBuilder<TReadModel, TEvent>>;

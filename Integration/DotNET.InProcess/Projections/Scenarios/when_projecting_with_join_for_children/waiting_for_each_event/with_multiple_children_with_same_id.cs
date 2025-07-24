@@ -44,8 +44,8 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
 
         async Task Because()
         {
-            FirstGroup = await GetModel(FirstGroupId);
-            SecondGroup = await GetModel(SecondGroupId);
+            FirstGroup = await GetReadModel(FirstGroupId);
+            SecondGroup = await GetReadModel(SecondGroupId);
         }
     }
 

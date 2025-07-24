@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="MissingToExpressionForAllSet"/> class.
 /// </remarks>
-/// <param name="modelType">Type of model the expression is missing for.</param>
+/// <param name="readModelType">Type of read model the expression is missing for.</param>
 /// <param name="propertyPath">Path within the model the expression is missing for.</param>
-public class MissingAddWithExpression(Type modelType, PropertyPath propertyPath)
-    : Exception($"Property '{propertyPath}' on '{modelType.FullName}' is missing a `.With())` expression when adding.");
+public class MissingAddWithExpression(Type readModelType, PropertyPath propertyPath)
+    : Exception($"Property '{propertyPath}' on '{readModelType.FullName}' is missing a `.With())` expression when adding.");

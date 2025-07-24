@@ -182,10 +182,10 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetHandlerForReadModelType(Type modelType) => _handlersByModelType[modelType];
+    public IReducerHandler GetHandlerForReadModelType(Type readModelType) => _handlersByModelType[readModelType];
 
     /// <inheritdoc/>
-    public bool HasReducerFor(Type modelType) => _handlersByModelType.ContainsKey(modelType);
+    public bool HasReducerFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReducer>()

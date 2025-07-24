@@ -10,11 +10,11 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines the builder for building properties on a model.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
-public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
-    where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
+public interface IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
+    where TBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
 {
     /// <summary>
     /// Automatically map event properties to model properties on the events added.
@@ -79,7 +79,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder Increment<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Increment the value of a property on the model.
@@ -87,7 +87,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder Decrement<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Start building the add operation to a target property on the model.
@@ -95,7 +95,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
-    IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Start building the add operation to a target property on the model.
@@ -103,7 +103,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
-    ISubtractBuilder<TModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Start building the count operation to a target property on the model.
@@ -111,7 +111,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
-    TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    TBuilder Count<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Start building a child operation that add a child based on a property on the event.
@@ -120,7 +120,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <param name="eventProperty">Event property accessor for defining the source property.</param>
     /// <typeparam name="TChildModel">Type of child model.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Expression<Func<TEvent, TChildModel>> eventProperty);
+    TBuilder AddChild<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Expression<Func<TEvent, TChildModel>> eventProperty);
 
     /// <summary>
     /// Start building the add child operation to a target property holding an collection of a specific child model type.
@@ -129,26 +129,26 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <param name="builderCallback">Builder callback for building the composite key.</param>
     /// <typeparam name="TChildModel">Type of child model.</typeparam>
     /// <returns>Builder continuation.</returns>
-    TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback);
+    TBuilder AddChild<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback);
 
     /// <summary>
     /// Start building the set operation to a target property on the model.
     /// </summary>
     /// <param name="propertyPath">Model property path for defining the target property.</param>
-    /// <returns>The <see cref="ISetBuilder{TModel, TEvent, TBuilder}"/> to continue building on.</returns>
-    ISetBuilder<TModel, TEvent, TBuilder> Set(PropertyPath propertyPath);
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TBuilder}"/> to continue building on.</returns>
+    ISetBuilder<TReadModel, TEvent, TBuilder> Set(PropertyPath propertyPath);
 
     /// <summary>
     /// Start building the set operation to a target property on the model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-    /// <returns>The <see cref="ISetBuilder{TModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
-    ISetBuilder<TModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Start building the set operation to target the value instance itself.
     /// </summary>
-    /// <returns>The <see cref="ISetBuilder{TModel, TEvent, TBuilder}"/> to continue building on.</returns>
-    ISetBuilder<TModel, TEvent, TBuilder> SetThisValue();
+    /// <returns>The <see cref="ISetBuilder{TReadModel, TEvent, TBuilder}"/> to continue building on.</returns>
+    ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue();
 }

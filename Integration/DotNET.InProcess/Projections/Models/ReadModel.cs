@@ -6,7 +6,7 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Concepts;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
-public record Model(
+public record ReadModel(
     string StringValue,
     bool BoolValue,
     int IntValue,
@@ -29,7 +29,7 @@ public record Model(
 {
     static Random _random = new();
 
-    public static Model CreateWithKnownValues() => new(
+    public static ReadModel CreateWithKnownValues() => new(
             KnownValues.StringValue,
             KnownValues.BoolValue,
             KnownValues.IntValue,
@@ -49,7 +49,7 @@ public record Model(
             KnownValues.GuidConceptValue,
             DateTimeOffset.UtcNow);
 
-    public static Model CreateWithRandomValues() => new(
+    public static ReadModel CreateWithRandomValues() => new(
         _random.NextDouble().ToString(),
         (_random.Next() % 1) == 0,
         _random.Next(5000),

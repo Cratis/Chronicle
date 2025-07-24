@@ -114,7 +114,7 @@ public static class ChronicleClientSiloBuilderExtensions
             services.AddSingleton<IRules, Rules>();
 
             services.AddSingleton<IClientArtifactsProvider>(sp => new DefaultOrleansClientArtifactsProvider(sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider));
-            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ModelNameConvention);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ReadModelNameConvention);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
             services.AddHttpContextAccessor();

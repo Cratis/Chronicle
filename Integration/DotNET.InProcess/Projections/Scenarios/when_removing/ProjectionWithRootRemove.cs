@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_removing;
 
-public class ProjectionWithRootRemove : IProjectionFor<Model>
+public class ProjectionWithRootRemove : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .AutoMap()
         .From<EventWithPropertiesForAllSupportedTypes>()
         .RemovedWith<RemoveRoot>();

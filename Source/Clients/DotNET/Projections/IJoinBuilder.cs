@@ -8,9 +8,9 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines the builder for building join expressions for relationships.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-public interface IJoinBuilder<TModel, TEvent> : IModelPropertiesBuilder<TModel, TEvent, IJoinBuilder<TModel, TEvent>>
+public interface IJoinBuilder<TReadModel, TEvent> : IReadModelPropertiesBuilder<TReadModel, TEvent, IJoinBuilder<TReadModel, TEvent>>
 {
     /// <summary>
     /// Sets the property that defines the relationship from the models perspective.
@@ -18,5 +18,5 @@ public interface IJoinBuilder<TModel, TEvent> : IModelPropertiesBuilder<TModel, 
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="keyAccessor">Accessor for the property to use.</param>
     /// <returns>Builder continuation.</returns>
-    IJoinBuilder<TModel, TEvent> On<TProperty>(Expression<Func<TModel, TProperty>> keyAccessor);
+    IJoinBuilder<TReadModel, TEvent> On<TProperty>(Expression<Func<TReadModel, TProperty>> keyAccessor);
 }

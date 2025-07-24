@@ -7,9 +7,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.given;
 
-public class a_projection_and_events_appended_to_it<TProjection, TModel>(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
-    where TProjection : class, IProjectionFor<TModel>, new()
-    where TModel : class
+public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+    where TProjection : class, IProjectionFor<TReadModel>, new()
+    where TReadModel : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
     protected ChronicleInProcessFixture ChronicleInProcessFixture = chronicleInProcessFixture;
@@ -18,7 +18,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(Chronic
     public EventSourceId EventSourceId;
     public string ModelId;
 
-    public TModel Result;
+    public TReadModel Result;
     public AppendedEvent[] AppendedEvents;
     public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
     public override IEnumerable<Type> Projections => [typeof(TProjection)];
@@ -69,18 +69,18 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(Chronic
         }
     }
 
-    protected virtual Task<TModel> GetModelResult() => GetModel(ModelId);
+    protected virtual Task<TReadModel> GetReadModelResult() => GetReadModel(ModelId);
 
     protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
     {
         await Projection.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
-        Result = await GetModelResult();
+        Result = await GetReadModelResult();
     }
 
-    protected async Task<TModel> GetModel(EventSourceId eventSourceId)
+    protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId)
     {
-        var filter = Builders<TModel>.Filter.Eq(new StringFieldDefinition<TModel, string>("_id"), eventSourceId);
-        var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<TModel>().FindAsync(filter);
+        var filter = Builders<TReadModel>.Filter.Eq(new StringFieldDefinition<TReadModel, string>("_id"), eventSourceId);
+        var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<TReadModel>().FindAsync(filter);
         return result.FirstOrDefault();
     }
 }

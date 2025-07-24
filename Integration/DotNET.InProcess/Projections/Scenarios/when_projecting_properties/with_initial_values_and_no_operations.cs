@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class with_initial_values_and_no_operations(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithInitialValues, Model>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithInitialValues, ReadModel>(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EmptyEvent)];
 

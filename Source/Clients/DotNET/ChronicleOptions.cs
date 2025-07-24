@@ -99,7 +99,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IModelNameConvention"/> to use.
     /// </summary>
-    public IModelNameConvention ModelNameConvention { get; set; } = modelNameConvention ?? new DefaultModelNameConvention();
+    public IModelNameConvention ReadModelNameConvention { get; set; } = modelNameConvention ?? new DefaultModelNameConvention();
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.
