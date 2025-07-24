@@ -140,7 +140,7 @@ public abstract class ChronicleFixture : IChronicleFixture
         {
             try
             {
-                Console.WriteLine($"Starting container image '{container.Image}'...");
+                Console.WriteLine($"Starting container image '{container.Image.FullName}'...");
 
                 failure = null;
 
