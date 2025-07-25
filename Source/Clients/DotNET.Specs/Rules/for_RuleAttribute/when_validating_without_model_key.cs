@@ -5,18 +5,18 @@ namespace Cratis.Chronicle.Rules.for_Rules.for_RuleAttribute;
 
 public class when_validating_without_model_key : given.a_validation_context
 {
-    const int value_to_validate = 42;
-    MyRuleAttribute rule;
+    const int ValueToValidate = 42;
+    MyRuleAttribute _rule;
 
     void Establish()
     {
-        rule = new()
+        _rule = new()
         {
             IsModelKey = false
         };
     }
 
-    void Because() => rule.Validate(value_to_validate, _validationContext);
+    void Because() => _rule.Validate(ValueToValidate, _validationContext);
 
-    [Fact] void should_project_to_rule_without_model_key() => _rules.Received(1).ProjectTo(rule, null);
+    [Fact] void should_project_to_rule_without_model_key() => _rules.Received(1).ProjectTo(_rule, null);
 }

@@ -31,7 +31,7 @@ public static class ProjectionWaitExtensions
         {
             var state = await projection.GetState();
             currentRunningState = state.RunningState;
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
@@ -80,7 +80,7 @@ public static class ProjectionWaitExtensions
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
             state = await projection.GetState();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
@@ -98,7 +98,7 @@ public static class ProjectionWaitExtensions
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
             failedPartitions = await projection.GetFailedPartitions();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
         return failedPartitions;
     }

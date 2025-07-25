@@ -7,14 +7,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Identities.for_MongoDBIdentityStorage
 
 public class and_they_already_exists : given.two_identities_registered
 {
-    Identity identity;
+    Identity _identity;
 
-    async Task Because() => identity = await store.GetFor(new[] { first_identity, second_identity }.AsEnumerable());
+    async Task Because() => _identity = await store.GetFor(new[] { first_identity, second_identity }.AsEnumerable());
 
-    [Fact] void should_return_top_level_identity_with_expected_subject() => identity.Subject.ShouldEqual(first_identity_from_database.Subject);
-    [Fact] void should_return_top_level_identity_with_expected_name() => identity.Name.ShouldEqual(first_identity_from_database.Name);
-    [Fact] void should_return_top_level_identity_with_expected_user_name() => identity.UserName.ShouldEqual(first_identity_from_database.UserName);
-    [Fact] void should_return_behalf_of_identity_with_expected_subject() => identity.OnBehalfOf.Subject.ShouldEqual(second_identity_from_database.Subject);
-    [Fact] void should_return_behalf_of_identity_with_expected_name() => identity.OnBehalfOf.Name.ShouldEqual(second_identity_from_database.Name);
-    [Fact] void should_return_behalf_of_identity_with_expected_user_name() => identity.OnBehalfOf.UserName.ShouldEqual(second_identity_from_database.UserName);
+    [Fact] void should_return_top_level_identity_with_expected_subject() => _identity.Subject.ShouldEqual(first_identity_from_database.Subject);
+    [Fact] void should_return_top_level_identity_with_expected_name() => _identity.Name.ShouldEqual(first_identity_from_database.Name);
+    [Fact] void should_return_top_level_identity_with_expected_user_name() => _identity.UserName.ShouldEqual(first_identity_from_database.UserName);
+    [Fact] void should_return_behalf_of_identity_with_expected_subject() => _identity.OnBehalfOf.Subject.ShouldEqual(second_identity_from_database.Subject);
+    [Fact] void should_return_behalf_of_identity_with_expected_name() => _identity.OnBehalfOf.Name.ShouldEqual(second_identity_from_database.Name);
+    [Fact] void should_return_behalf_of_identity_with_expected_user_name() => _identity.OnBehalfOf.UserName.ShouldEqual(second_identity_from_database.UserName);
 }

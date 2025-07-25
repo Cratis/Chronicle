@@ -6,21 +6,21 @@ namespace Cratis.Chronicle.Grains.Observation.for_FailedPartitionGrainStoragePro
 
 public class when_reading_state : given.the_provider
 {
-    static GrainId grainId;
-    static IGrainState<FailedPartitions> state;
-    static ObserverKey observerKey;
+    static GrainId _grainId;
+    static IGrainState<FailedPartitions> _state;
+    static ObserverKey _observerKey;
 
     void Establish()
     {
-        grainId = GrainId.Create("type", "key");
-        state = new GrainState<FailedPartitions> { State = new(), ETag = "ETag", RecordExists = true };
-        observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
+        _grainId = GrainId.Create("type", "key");
+        _state = new GrainState<FailedPartitions> { State = new(), ETag = "ETag", RecordExists = true };
+        _observerKey = ObserverKey.Parse(_grainId.Key.ToString()!);
     }
 
-    Task Because() => provider.ReadStateAsync("name", grainId, state);
+    Task Because() => provider.ReadStateAsync("name", _grainId, _state);
 
-    [Fact] void should_get_event_store() => storage.Received(1).GetEventStore(observerKey.EventStore);
-    [Fact] void should_get_namespace() => eventStoreStorage.Received(1).GetNamespace(observerKey.Namespace);
+    [Fact] void should_get_event_store() => storage.Received(1).GetEventStore(_observerKey.EventStore);
+    [Fact] void should_get_namespace() => eventStoreStorage.Received(1).GetNamespace(_observerKey.Namespace);
     [Fact] void should_get_failed_partitions() => eventStoreNamespaceStorage.FailedPartitions.Received(1);
-    [Fact] void should_get_failed_partition_state() => _failedPartitionsStorage.Received(1).GetFor(observerKey.ObserverId);
+    [Fact] void should_get_failed_partition_state() => _failedPartitionsStorage.Received(1).GetFor(_observerKey.ObserverId);
 }

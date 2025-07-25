@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using NJsonSchema;
 
-
 namespace Cratis.Chronicle.Events.Constraints;
 
 public class when_providing : Specification

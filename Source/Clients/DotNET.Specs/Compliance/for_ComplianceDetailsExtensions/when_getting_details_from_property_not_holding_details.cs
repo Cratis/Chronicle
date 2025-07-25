@@ -14,9 +14,9 @@ public class when_getting_details_from_property_not_holding_details : Specificat
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    string result;
+    string _result;
 
-    void Because() => result = MyClass.SomethingProperty.GetComplianceMetadataDetails();
+    void Because() => _result = MyClass.SomethingProperty.GetComplianceMetadataDetails();
 
-    [Fact] void should_return_empty_string() => result.ShouldEqual(string.Empty);
+    [Fact] void should_return_empty_string() => _result.ShouldEqual(string.Empty);
 }

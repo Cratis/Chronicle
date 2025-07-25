@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Concepts.Events.for_EventSequenceNumber.when_adding_u
 
 public class and_value_is_unavailable : Specification
 {
-    EventSequenceNumber result;
+    EventSequenceNumber _result;
 
-    void Because() => result = EventSequenceNumber.Unavailable + 42UL;
+    void Because() => _result = EventSequenceNumber.Unavailable + 42UL;
 
-    [Fact] void should_remain_unavailable() => result.ShouldEqual(EventSequenceNumber.Unavailable);
+    [Fact] void should_remain_unavailable() => _result.ShouldEqual(EventSequenceNumber.Unavailable);
 }

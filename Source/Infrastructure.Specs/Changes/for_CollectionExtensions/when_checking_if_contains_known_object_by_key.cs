@@ -6,16 +6,16 @@ namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 public class when_checking_if_contains_known_object_by_key : Specification
 {
     record Item(string Key, string Value);
-    IEnumerable<Item> items;
-    bool result;
+    IEnumerable<Item> _items;
+    bool _result;
 
-    void Establish() => items =
+    void Establish() => _items =
     [
         new Item("First", "First Value"),
         new Item("Second", "Second Value")
     ];
 
-    void Because() => result = items.Contains(nameof(Item.Key), "Second");
+    void Because() => _result = _items.Contains(nameof(Item.Key), "Second");
 
-    [Fact] void should_contain_the_object() => result.ShouldBeTrue();
+    [Fact] void should_contain_the_object() => _result.ShouldBeTrue();
 }

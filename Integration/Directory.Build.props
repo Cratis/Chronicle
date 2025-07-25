@@ -2,8 +2,6 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
     <PropertyGroup>
         <IsTestProject>true</IsTestProject>
-        <Nullable>disable</Nullable>
-
         <IsPackable>false</IsPackable>
         <ImplicitUsings>true</ImplicitUsings>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -32,6 +30,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs" />
     </ItemGroup>
 </Project>

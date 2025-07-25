@@ -5,8 +5,8 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIIMetadataProvider.when_providin
 
 public class and_there_is_no_metadata : given.a_provider
 {
-    Exception result;
-    void Because() => result = Catch.Exception(() => provider.Provide(typeof(object)));
+    Exception _result;
+    void Because() => _result = Catch.Exception(() => provider.Provide(typeof(object)));
 
-    [Fact] void should_throw_no_compliance_metadata_for_type() => result.ShouldBeOfExactType<NoComplianceMetadataForType>();
+    [Fact] void should_throw_no_compliance_metadata_for_type() => _result.ShouldBeOfExactType<NoComplianceMetadataForType>();
 }

@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Aggregates;
 /// <param name="aggregateRoot">The <see cref="IAggregateRoot"/> for the context.</param>
 /// <param name="unitOfWork">The <see cref="IUnitOfWork"/> for the context.</param>
 /// <param name="nextSequenceNumber">The next <see cref="EventSequenceNumber"/>.</param>
+/// <param name="tailSequenceNumber">The tail <see cref="EventSequenceNumber"/> representing the tail of the aggregate roots event stream.</param>
 public class AggregateRootContext(
     EventSourceType eventSourceType,
     EventSourceId eventSourceId,
@@ -26,7 +27,8 @@ public class AggregateRootContext(
     IEventSequence eventSequence,
     IAggregateRoot aggregateRoot,
     IUnitOfWork unitOfWork,
-    EventSequenceNumber nextSequenceNumber) : IAggregateRootContext
+    EventSequenceNumber nextSequenceNumber,
+    EventSequenceNumber tailSequenceNumber) : IAggregateRootContext
 {
     /// <inheritdoc/>
     public EventSourceType EventSourceType { get; } = eventSourceType;
@@ -51,6 +53,9 @@ public class AggregateRootContext(
 
     /// <inheritdoc/>
     public EventSequenceNumber NextSequenceNumber { get; set; } = nextSequenceNumber;
+
+    /// <inheritdoc/>
+    public EventSequenceNumber TailEventSequenceNumber { get; set; } = tailSequenceNumber;
 
     /// <inheritdoc/>
     public bool HasEvents { get; set; } = nextSequenceNumber != EventSequenceNumber.First;

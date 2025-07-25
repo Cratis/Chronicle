@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Projections.Expressions.ModelProperties.for_CountExpr
 
 public class when_asking_can_resolve_for_count_expression : Specification
 {
-    CountExpressionResolver resolver;
-    bool result;
+    CountExpressionResolver _resolver;
+    bool _result;
 
-    void Establish() => resolver = new(new TypeFormats());
+    void Establish() => _resolver = new(new TypeFormats());
 
-    void Because() => result = resolver.CanResolve(string.Empty, "$count()");
+    void Because() => _result = _resolver.CanResolve(string.Empty, "$count()");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

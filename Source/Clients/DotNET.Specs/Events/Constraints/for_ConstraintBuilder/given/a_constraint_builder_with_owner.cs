@@ -5,7 +5,6 @@ using System.Text.Json;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintBuilder.given;
 
 public class a_constraint_builder_with_owner : Specification

@@ -20,6 +20,11 @@ public record EventSourceType(string Value) : ConceptAs<string>(Value)
     public static readonly EventSourceType Default = new("default");
 
     /// <summary>
+    /// Gets a value indicating whether this <see cref="EventSourceType"/> is <see cref="Default"/> or <see cref="Unspecified"/>.
+    /// </summary>
+    public bool IsDefaultOrUnspecified => this == Default || this == Unspecified;
+
+    /// <summary>
     /// Convert from a <see cref="string"/> to an <see cref="EventSourceType"/>.
     /// </summary>
     /// <param name="value">String to convert from.</param>

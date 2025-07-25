@@ -10,15 +10,15 @@ namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
 public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider : Specification
 {
-    PropertyMapper<AppendedEvent, ExpandoObject> property_mapper;
-    AppendedEvent @event;
-    ExpandoObject result;
-    AppendedEvent provided_event;
+    PropertyMapper<AppendedEvent, ExpandoObject> _propertyMapper;
+    AppendedEvent _event;
+    ExpandoObject _result;
+    AppendedEvent _providedEvent;
 
     void Establish()
     {
-        result = new();
-        @event = new(
+        _result = new();
+        _event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
@@ -35,15 +35,15 @@ public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider
                 Identity.System),
             new ExpandoObject());
 
-        property_mapper = PropertyMappers.FromEventValueProvider("deep.nested.property", _ =>
+        _propertyMapper = PropertyMappers.FromEventValueProvider("deep.nested.property", _ =>
         {
-            provided_event = _;
+            _providedEvent = _;
             return 42;
         });
     }
 
-    void Because() => property_mapper(@event, result, ArrayIndexers.NoIndexers);
+    void Because() => _propertyMapper(_event, _result, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_set_value_in_expected_property() => ((object)((dynamic)result).deep.nested.property).ShouldEqual(42);
-    [Fact] void should_pass_the_event_to_the_value_provider() => provided_event.ShouldEqual(@event);
+    [Fact] void should_set_value_in_expected_property() => ((object)((dynamic)_result).deep.nested.property).ShouldEqual(42);
+    [Fact] void should_pass_the_event_to_the_value_provider() => _providedEvent.ShouldEqual(_event);
 }

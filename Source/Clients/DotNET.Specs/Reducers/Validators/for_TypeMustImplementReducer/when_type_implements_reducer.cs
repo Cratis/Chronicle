@@ -10,9 +10,9 @@ public class when_type_implements_reducer : Specification
         public ReducerId Id => throw new NotImplementedException();
     }
 
-    Exception result;
+    Exception _result;
 
-    void Because() => result = Catch.Exception(() => TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(typeof(MyReducer)));
+    void Because() => _result = Catch.Exception(() => TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(typeof(MyReducer)));
 
-    [Fact] void should_not_throw_an_exception() => result.ShouldBeNull();
+    [Fact] void should_not_throw_an_exception() => _result.ShouldBeNull();
 }

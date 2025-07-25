@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_handling;
 
 public class and_partition_is_replaying : given.an_observer_with_subscription_for_specific_event_type
 {
-    const string _eventSourceId = "Something";
+    const string EventSourceId = "Something";
 
     void Establish()
     {
@@ -17,10 +17,10 @@ public class and_partition_is_replaying : given.an_observer_with_subscription_fo
             NextEventSequenceNumber = 53UL,
             LastHandledEventSequenceNumber = 54UL
         };
-        _stateStorage.State.ReplayingPartitions.Add(_eventSourceId);
+        _stateStorage.State.ReplayingPartitions.Add(EventSourceId);
     }
 
-    async Task Because() => await _observer.Handle(_eventSourceId, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
+    async Task Because() => await _observer.Handle(EventSourceId, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
 
     [Fact] void should_not_forward_to_subscriber() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_not_set_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)53UL);

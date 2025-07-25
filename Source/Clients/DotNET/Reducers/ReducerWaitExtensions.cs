@@ -31,7 +31,7 @@ public static class ReducerWaitExtensions
         {
             var state = await reducer.GetState();
             currentRunningState = state.RunningState;
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
@@ -80,7 +80,7 @@ public static class ReducerWaitExtensions
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
             state = await reducer.GetState();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 
@@ -98,7 +98,7 @@ public static class ReducerWaitExtensions
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
             failedPartitions = await reducer.GetFailedPartitions();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
         return failedPartitions;
     }

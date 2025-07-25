@@ -14,8 +14,9 @@ public class and_there_is_no_metadata : given.a_provider
         public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
-    bool result;
-    void Because() => result = provider.CanProvide(MyClass.SomethingProperty);
+    bool _result;
 
-    [Fact] void should_not_be_able_to_provide() => result.ShouldBeFalse();
+    void Because() => _result = provider.CanProvide(MyClass.SomethingProperty);
+
+    [Fact] void should_not_be_able_to_provide() => _result.ShouldBeFalse();
 }

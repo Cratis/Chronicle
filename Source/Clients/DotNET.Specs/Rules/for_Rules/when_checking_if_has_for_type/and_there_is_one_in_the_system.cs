@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Rules.for_Rules.when_checking_if_has_for_type;
 
 public class and_there_is_one_in_the_system : given.one_rule_for_type
 {
-    bool result;
+    bool _result;
 
-    void Because() => result = rules.HasFor(typeof(TypeForRules));
+    void Because() => _result = rules.HasFor(typeof(TypeForRules));
 
-    [Fact] void should_have_it() => result.ShouldBeTrue();
+    [Fact] void should_have_it() => _result.ShouldBeTrue();
 }

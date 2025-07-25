@@ -8,15 +8,15 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class and_it_is_within_a_complex_structure_with_multiple_arrays : Specification
 {
-    ExpandoObject input;
-    PropertyPath property_path;
-    object result;
-    ArrayIndexer first_array_indexer;
-    ArrayIndexer second_array_indexer;
+    ExpandoObject _input;
+    PropertyPath _propertyPath;
+    object _result;
+    ArrayIndexer _firstArrayIndexer;
+    ArrayIndexer _secondArrayIndexer;
 
     void Establish()
     {
-        input = new
+        _input = new
         {
             first_level = new
             {
@@ -40,12 +40,12 @@ public class and_it_is_within_a_complex_structure_with_multiple_arrays : Specifi
                 }
             }
         }.AsExpandoObject();
-        property_path = new("first_level.[second_level].third_level.[forth_level].fifth_level");
-        first_array_indexer = new("first_level.[second_level]", "identifier", "first");
-        second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
+        _propertyPath = new("first_level.[second_level].third_level.[forth_level].fifth_level");
+        _firstArrayIndexer = new("first_level.[second_level]", "identifier", "first");
+        _secondArrayIndexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
     }
 
-    void Because() => result = property_path.GetValue(input, new ArrayIndexers([first_array_indexer, second_array_indexer]));
+    void Because() => _result = _propertyPath.GetValue(_input, new ArrayIndexers([_firstArrayIndexer, _secondArrayIndexer]));
 
-    [Fact] void should_return_value() => result.ShouldEqual(42);
+    [Fact] void should_return_value() => _result.ShouldEqual(42);
 }

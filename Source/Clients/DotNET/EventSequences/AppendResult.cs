@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -24,12 +25,17 @@ public record AppendResult
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
     /// </summary>
-    public bool IsSuccess => !HasConstraintViolations && !HasErrors;
+    public bool IsSuccess => !HasConstraintViolations && !HasErrors && !HasConcurrencyViolations;
 
     /// <summary>
     /// Gets whether or not there are any violations that occurred.
     /// </summary>
     public bool HasConstraintViolations => ConstraintViolations.Any();
+
+    /// <summary>
+    /// Gets whether or not there are any concurrency violations that occurred.
+    /// </summary>
+    public bool HasConcurrencyViolations => ConcurrencyViolation is not null;
 
     /// <summary>
     /// Gets whether or not there are any errors that occurred.
@@ -40,6 +46,11 @@ public record AppendResult
     /// Gets any violations that occurred during the operation.
     /// </summary>
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
+
+    /// <summary>
+    /// Gets any concurrency violation that occurred during the operation.
+    /// </summary>
+    public ConcurrencyViolation? ConcurrencyViolation { get; init; }
 
     /// <summary>
     /// Gets any exception messages that might have occurred.

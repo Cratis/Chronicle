@@ -20,7 +20,7 @@ public class PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore) 
     public async Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier)
     {
         _ = this.GetPrimaryKey(out var primaryKeyExtension);
-        var primaryKey = (PIIManagerKey)primaryKeyExtension;
+        var primaryKey = (PIIManagerKey)primaryKeyExtension!;
 
         var key = encryption.GenerateKey();
         await keyStore.SaveFor(primaryKey.EventStore, primaryKey.Namespace, identifier, key);
@@ -30,7 +30,7 @@ public class PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore) 
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {
         _ = this.GetPrimaryKey(out var primaryKeyExtension);
-        var primaryKey = (PIIManagerKey)primaryKeyExtension;
+        var primaryKey = (PIIManagerKey)primaryKeyExtension!;
 
         await keyStore.DeleteFor(primaryKey.EventStore, primaryKey.Namespace, identifier);
     }

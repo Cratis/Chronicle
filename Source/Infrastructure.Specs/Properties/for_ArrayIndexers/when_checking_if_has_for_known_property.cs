@@ -5,8 +5,8 @@ namespace Cratis.Chronicle.Properties.for_ArrayIndexers;
 
 public class when_checking_if_has_for_known_property : given.two_array_indexers
 {
-    bool result;
-    void Because() => result = indexers.HasFor(second_indexer_property);
+    bool _result;
+    void Because() => _result = indexers.HasFor(second_indexer_property);
 
-    [Fact] void should_have_the_indexer() => result.ShouldBeTrue();
+    [Fact] void should_have_the_indexer() => _result.ShouldBeTrue();
 }

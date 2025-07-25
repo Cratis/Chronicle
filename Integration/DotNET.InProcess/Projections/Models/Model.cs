@@ -27,7 +27,7 @@ public record Model(
     DateTimeOffset LastUpdated,
     EventSequenceNumber? __lastHandledEventSequenceNumber = default)
 {
-    static Random random = new();
+    static Random _random = new();
 
     public static Model CreateWithKnownValues() => new(
             KnownValues.StringValue,
@@ -50,22 +50,22 @@ public record Model(
             DateTimeOffset.UtcNow);
 
     public static Model CreateWithRandomValues() => new(
-        random.NextDouble().ToString(),
-        (random.Next() % 1) == 0,
-        random.Next(5000),
-        random.NextSingle(),
-        random.NextDouble(),
-        (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
+        _random.NextDouble().ToString(),
+        (_random.Next() % 1) == 0,
+        _random.Next(5000),
+        _random.NextSingle(),
+        _random.NextDouble(),
+        (EnumWithValues)_random.Next((int)EnumWithValues.ThirdValue),
         Guid.NewGuid(),
-        DateTime.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
-        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
-        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))).RoundDownTicks(),
-        DateTimeOffset.UtcNow.AddDays(random.Next(60)).RoundDownTicks(),
-        random.NextDouble().ToString(),
-        (random.Next() % 1) == 0,
-        random.Next(5000),
-        random.NextSingle(),
-        random.NextDouble(),
+        DateTime.UtcNow.AddDays(_random.Next(60)).RoundDownTicks(),
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(_random.Next(60))),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(_random.Next(48))).RoundDownTicks(),
+        DateTimeOffset.UtcNow.AddDays(_random.Next(60)).RoundDownTicks(),
+        _random.NextDouble().ToString(),
+        (_random.Next() % 1) == 0,
+        _random.Next(5000),
+        _random.NextSingle(),
+        _random.NextDouble(),
         Guid.NewGuid(),
-        DateTimeOffset.UtcNow.AddDays(random.Next(60)).RoundDownTicks());
+        DateTimeOffset.UtcNow.AddDays(_random.Next(60)).RoundDownTicks());
 }

@@ -7,21 +7,21 @@ namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
 public class when_comparing_expando_objects_and_left_is_null_and_right_is_empty : given.an_object_comparer
 {
-    dynamic left;
-    dynamic right;
+    dynamic _left;
+    dynamic _right;
 
-    bool result;
+    bool _result;
 
-    IEnumerable<PropertyDifference> differences;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = null!;
-        right = new ExpandoObject();
+        _left = null!;
+        _right = new ExpandoObject();
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
-    [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();
+    [Fact] void should_be_considered_equal() => _result.ShouldBeTrue();
+    [Fact] void should_have_no_differences() => _differences.ShouldBeEmpty();
 }

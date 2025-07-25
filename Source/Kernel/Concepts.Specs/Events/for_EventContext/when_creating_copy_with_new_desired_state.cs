@@ -8,10 +8,10 @@ namespace Cratis.Chronicle.Concepts.Events.for_EventContext;
 
 public class when_creating_copy_with_new_desired_state : Specification
 {
-    EventContext original;
-    EventContext copy;
+    EventContext _original;
+    EventContext _copy;
 
-    void Establish() => original = new(
+    void Establish() => _original = new(
         EventSourceType.Default,
         Guid.NewGuid().ToString(),
         Guid.NewGuid().ToString(),
@@ -24,18 +24,18 @@ public class when_creating_copy_with_new_desired_state : Specification
         [new Causation(DateTimeOffset.UtcNow, "Something", new Dictionary<string, string>() { { "prop", "42" } })],
         Identity.System);
 
-    void Because() => copy = original.WithState(EventObservationState.Replay);
+    void Because() => _copy = _original.WithState(EventObservationState.Replay);
 
-    [Fact] void should_be_a_new_object() => copy.ShouldNotBeSame(original);
-    [Fact] void should_have_same_event_source_id() => copy.EventSourceId.ShouldEqual(original.EventSourceId);
-    [Fact] void should_have_same_event_stream_type() => copy.EventStreamType.ShouldEqual(original.EventStreamType);
-    [Fact] void should_have_same_event_stream_id() => copy.EventStreamId.ShouldEqual(original.EventStreamId);
-    [Fact] void should_have_same_event_sequence_number() => copy.SequenceNumber.ShouldEqual(original.SequenceNumber);
-    [Fact] void should_have_same_occurred() => copy.Occurred.ShouldEqual(original.Occurred);
-    [Fact] void should_have_same_event_store() => copy.EventStore.ShouldEqual(original.EventStore);
-    [Fact] void should_have_same_namespace() => copy.Namespace.ShouldEqual(original.Namespace);
-    [Fact] void should_have_same_correlation_id() => copy.CorrelationId.ShouldEqual(original.CorrelationId);
-    [Fact] void should_have_same_causation() => copy.Causation.ShouldEqual(original.Causation);
-    [Fact] void should_have_same_caused_by() => copy.CausedBy.ShouldEqual(original.CausedBy);
-    [Fact] void should_have_new_state() => copy.ObservationState.ShouldEqual(EventObservationState.Replay);
+    [Fact] void should_be_a_new_object() => _copy.ShouldNotBeSame(_original);
+    [Fact] void should_have_same_event_source_id() => _copy.EventSourceId.ShouldEqual(_original.EventSourceId);
+    [Fact] void should_have_same_event_stream_type() => _copy.EventStreamType.ShouldEqual(_original.EventStreamType);
+    [Fact] void should_have_same_event_stream_id() => _copy.EventStreamId.ShouldEqual(_original.EventStreamId);
+    [Fact] void should_have_same_event_sequence_number() => _copy.SequenceNumber.ShouldEqual(_original.SequenceNumber);
+    [Fact] void should_have_same_occurred() => _copy.Occurred.ShouldEqual(_original.Occurred);
+    [Fact] void should_have_same_event_store() => _copy.EventStore.ShouldEqual(_original.EventStore);
+    [Fact] void should_have_same_namespace() => _copy.Namespace.ShouldEqual(_original.Namespace);
+    [Fact] void should_have_same_correlation_id() => _copy.CorrelationId.ShouldEqual(_original.CorrelationId);
+    [Fact] void should_have_same_causation() => _copy.Causation.ShouldEqual(_original.Causation);
+    [Fact] void should_have_same_caused_by() => _copy.CausedBy.ShouldEqual(_original.CausedBy);
+    [Fact] void should_have_new_state() => _copy.ObservationState.ShouldEqual(EventObservationState.Replay);
 }

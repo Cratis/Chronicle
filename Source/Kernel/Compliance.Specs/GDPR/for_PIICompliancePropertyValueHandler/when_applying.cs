@@ -20,7 +20,7 @@ public class when_applying : given.a_property_handler
         _encryption.Encrypt(Arg.Any<byte[]>(), _key).Returns(_encryptedBytes);
     }
 
-    async Task Because() => _result = await _handler.Apply(string.Empty, string.Empty, _identifier, _input);
+    async Task Because() => _result = await _handler.Apply(string.Empty, string.Empty, Identifier, _input);
 
     [Fact] void should_return_encrypted_string() => _result.ToString().ShouldEqual(Convert.ToBase64String(_encryptedBytes));
 }

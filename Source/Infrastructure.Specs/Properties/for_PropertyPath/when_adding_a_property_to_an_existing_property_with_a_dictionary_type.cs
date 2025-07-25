@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_a_property_to_an_existing_property_with_a_dictionary_type : Specification
 {
-    const string left = "left";
-    const string right = "right";
+    const string Left = "left";
+    const string Right = "right";
 
-    PropertyPath result;
+    PropertyPath _result;
 
-    void Because() => result = new PropertyPath(left).AddProperty(right, typeof(Dictionary<string, string>));
+    void Because() => _result = new PropertyPath(Left).AddProperty(Right, typeof(Dictionary<string, string>));
 
-    [Fact] void should_combine_with_dot_separator() => result.Path.ShouldEqual($"{left}.{right}");
+    [Fact] void should_combine_with_dot_separator() => _result.Path.ShouldEqual($"{Left}.{Right}");
 }

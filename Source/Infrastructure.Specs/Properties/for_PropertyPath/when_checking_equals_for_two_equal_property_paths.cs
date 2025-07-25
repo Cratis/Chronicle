@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_checking_equals_for_two_equal_property_paths : Specification
 {
-    const string path = "some.[path]";
+    const string Path = "some.[path]";
 
-    PropertyPath left = new(path);
-    PropertyPath right = new(path);
+    PropertyPath _left = new(Path);
+    PropertyPath _right = new(Path);
 
-    bool result;
+    bool _result;
 
-    void Because() => result = left.Equals(right);
+    void Because() => _result = _left.Equals(_right);
 
-    [Fact] void should_be_equal() => result.ShouldBeTrue();
+    [Fact] void should_be_equal() => _result.ShouldBeTrue();
 }

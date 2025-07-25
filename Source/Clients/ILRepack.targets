@@ -1,72 +1,42 @@
-<?xml version="1.0" encoding="utf-8" ?>
+
 <!-- https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Repack)' == 'true'">
     <ItemGroup>
-        <InputAssemblies Include="$(TargetPath)"/>
-        <InputAssemblies Include="@(AssemblyToMerge)"/>
-        <InputAssemblies Include="@(InternalAssembly)"/>
-        <FullyQualifiedDoNotInternalize
-            Include="@(DoNotInternalize->'$(OutputPath)%(Identity)')"
-            Condition="'%(DoNotInternalize.Extension)' == '.dll'" />
+        <InputAssemblies Include="$(TargetPath)" />
+        <InputAssemblies Include="@(AssemblyToMerge)" />
+        <InputAssemblies Include="@(InternalAssembly)" />
+        <FullyQualifiedDoNotInternalize Include="@(DoNotInternalize-&gt;'$(OutputPath)%(Identity)')" Condition="'%(DoNotInternalize.Extension)' == '.dll'" />
 
-        <DoNotInternalizeTypes
-            Include="@(DoNotInternalize)"
-            Condition="'%(DoNotInternalize.Extension)' != '.dll'" />
+        <DoNotInternalizeTypes Include="@(DoNotInternalize)" Condition="'%(DoNotInternalize.Extension)' != '.dll'" />
 
-        <FilteredReferences
-            Include="@(ProjectReference->WithMetadataValue('PrivateAssets', 'all'))"
-            KeepMetadata="PrivateAssets;TargetPath" />
+        <FilteredReferences Include="@(ProjectReference-&gt;WithMetadataValue('PrivateAssets', 'all'))" KeepMetadata="PrivateAssets;TargetPath" />
 
-        <InternalizeAssemblies
-            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"/>
+        <InternalizeAssemblies Include="@(FilteredReferences-&gt;'$(OutputPath)Cratis.Chronicle.%(Filename).dll')" />
 
-        <InternalAssemblies
-            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
-            Exclude="@(FullyQualifiedDoNotInternalize)"/>
+        <InternalAssemblies Include="@(FilteredReferences-&gt;'$(OutputPath)Cratis.Chronicle.%(Filename).dll')" Exclude="@(FullyQualifiedDoNotInternalize)" />
 
-        <InputAssemblies
-            Include="@(FilteredReferences->'$(OutputPath)Cratis.Chronicle.%(Filename).dll')"
-            Exclude="@(AssemblyToExcludeFromMerge)"/>
+        <InputAssemblies Include="@(FilteredReferences-&gt;'$(OutputPath)Cratis.Chronicle.%(Filename).dll')" Exclude="@(AssemblyToExcludeFromMerge)" />
 
-        <AssembliesToFix
-            Include="@(InputAssemblies)"
-            Exclude="$(TargetPath)"/>
+        <AssembliesToFix Include="@(InputAssemblies)" Exclude="$(TargetPath)" />
 
         <LibraryPath Include="%(ReferencePathWithRefAssemblies.RelativeDir)" />
     </ItemGroup>
 
     <PropertyGroup>
-        <InternalNamespaces>@(InternalAssemblies->'%(Filename)', ';')</InternalNamespaces>
-        <InternalAssemblyNames>@(InternalAssemblies->'%(Filename)', ';')</InternalAssemblyNames>
-        <InternalAssemblyPaths>@(InternalAssemblies->'$(TargetDir)%(Filename)%(Extension)', ';')</InternalAssemblyPaths>
-        <ExplicitPublicTypes>@(DoNotInternalizeTypes->'%(Identity)', ';')</ExplicitPublicTypes>
-        <AssemblyNamesToFix>@(AssembliesToFix->'%(Filename)', ';')</AssemblyNamesToFix>
-        <RemoveReferences>@(RemoveReference->'%(Identity)', ';')</RemoveReferences>
-        <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' != ''">"&quot;$(ExplicitPublicTypes)&quot;"</ExplicitPublicTypesArgument>
+        <InternalNamespaces>@(InternalAssemblies-&gt;'%(Filename)', ';')</InternalNamespaces>
+        <InternalAssemblyNames>@(InternalAssemblies-&gt;'%(Filename)', ';')</InternalAssemblyNames>
+        <InternalAssemblyPaths>@(InternalAssemblies-&gt;'$(TargetDir)%(Filename)%(Extension)', ';')</InternalAssemblyPaths>
+        <ExplicitPublicTypes>@(DoNotInternalizeTypes-&gt;'%(Identity)', ';')</ExplicitPublicTypes>
+        <AssemblyNamesToFix>@(AssembliesToFix-&gt;'%(Filename)', ';')</AssemblyNamesToFix>
+        <RemoveReferences>@(RemoveReference-&gt;'%(Identity)', ';')</RemoveReferences>
+        <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' != ''">""$(ExplicitPublicTypes)""</ExplicitPublicTypesArgument>
         <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' == ''"></ExplicitPublicTypesArgument>
     </PropertyGroup>
 
-    <ILRepack
-        AllowDuplicateResources="false"
-        DebugInfo="true"
-        CopyAttributes="false"
-        ExcludeInternalizeSerializable="false"
-        InputAssemblies="@(InputAssemblies)"
-        InternalizeAssembly="@(InternalizeAssemblies)"
-        Internalize="true"
-        InternalizeExclude="@(DoNotInternalize)"
-        OutputFile="$(TargetPath)"
-        Parallel="true"
-        LibraryPath="@(LibraryPath)"
-        Verbose="false"
-        XmlDocumentation="true"
-        Union="true"
-        AllowedDuplicateNamespaces="Cratis.Chronicle.Projections"
-        LogFile="$(OutputPath)/ILRepack.log"
-        TargetKind="SameAsPrimaryAssembly"/>
+    <ILRepack AllowDuplicateResources="false" DebugInfo="true" CopyAttributes="false" ExcludeInternalizeSerializable="false" InputAssemblies="@(InputAssemblies)" InternalizeAssembly="@(InternalizeAssemblies)" Internalize="true" InternalizeExclude="@(DoNotInternalize)" OutputFile="$(TargetPath)" Parallel="true" LibraryPath="@(LibraryPath)" Verbose="false" XmlDocumentation="true" Union="true" AllowedDuplicateNamespaces="Cratis.Chronicle.Projections" LogFile="$(OutputPath)/ILRepack.log" TargetKind="SameAsPrimaryAssembly" />
 
-    <Exec Command="dotnet run -f $(TargetFramework) $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
-    <Exec Command="dotnet run -f $(TargetFramework) $(TargetPath) &quot;$(InternalAssemblyPaths)&quot; &quot;$(ExplicitPublicTypes)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
+    <Exec Command="dotnet run $(TargetPath) &quot;$(InternalAssemblyPaths)&quot; &quot;$(ExplicitPublicTypes)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
   </Target>
 </Project>

@@ -6,19 +6,19 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration"/>
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
-        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj" />
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj" />
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj" />
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -29,7 +29,7 @@
         <PackageReference Include="Testcontainers" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
-        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
-        <PackageReference Include="Cratis.Applications.MongoDB"/>
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Cratis.Applications.MongoDB" />
     </ItemGroup>
 </Project>

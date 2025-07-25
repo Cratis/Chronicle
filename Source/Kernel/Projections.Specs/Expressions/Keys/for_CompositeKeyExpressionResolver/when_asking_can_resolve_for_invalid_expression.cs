@@ -5,9 +5,9 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressi
 
 public class when_asking_can_resolve_for_invalid_expression : given.a_resolver
 {
-    bool result;
+    bool _result;
 
-    void Because() => result = _resolver.CanResolve("$unsupported");
+    void Because() => _result = _resolver.CanResolve("$unsupported");
 
-    [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
+    [Fact] void should_not_be_able_to_resolve() => _result.ShouldBeFalse();
 }

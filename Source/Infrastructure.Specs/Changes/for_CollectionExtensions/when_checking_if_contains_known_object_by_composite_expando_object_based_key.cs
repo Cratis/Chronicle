@@ -8,31 +8,31 @@ namespace Cratis.Chronicle.Changes.for_CollectionExtensions;
 public class when_checking_if_contains_known_object_by_composite_expando_object_based_key : Specification
 {
     record Item(ExpandoObject Key, string Value);
-    IEnumerable<Item> items;
-    bool result;
+    IEnumerable<Item> _items;
+    bool _result;
 
-    ExpandoObject first_key;
-    ExpandoObject second_key;
+    ExpandoObject _firstKey;
+    ExpandoObject _secondKey;
 
     void Establish()
     {
-        first_key = new ExpandoObject();
+        _firstKey = new ExpandoObject();
 
-        ((dynamic)first_key).FirstCompositeProperty = "FirstKey FirstProperty";
-        ((dynamic)first_key).SecondCompositeProperty = "FirstKey SecondProperty";
+        ((dynamic)_firstKey).FirstCompositeProperty = "FirstKey FirstProperty";
+        ((dynamic)_firstKey).SecondCompositeProperty = "FirstKey SecondProperty";
 
-        second_key = new ExpandoObject();
-        ((dynamic)second_key).FirstCompositeProperty = "SecondKey FirstProperty";
-        ((dynamic)second_key).SecondCompositeProperty = "SecondKey SecondProperty";
+        _secondKey = new ExpandoObject();
+        ((dynamic)_secondKey).FirstCompositeProperty = "SecondKey FirstProperty";
+        ((dynamic)_secondKey).SecondCompositeProperty = "SecondKey SecondProperty";
 
-        items =
+        _items =
         [
-            new Item(first_key, "First Value"),
-            new Item(second_key, "Second Value")
+            new Item(_firstKey, "First Value"),
+            new Item(_secondKey, "Second Value")
         ];
     }
 
-    void Because() => result = items.Contains(nameof(Item.Key), second_key);
+    void Because() => _result = _items.Contains(nameof(Item.Key), _secondKey);
 
-    [Fact] void should_contain_the_object() => result.ShouldBeTrue();
+    [Fact] void should_contain_the_object() => _result.ShouldBeTrue();
 }

@@ -80,7 +80,7 @@ public class Projections(
         var handler = _handlersByModelType[modelType];
         var result = await GetInstanceById(handler.Id, modelKey);
         var model = result.Model.Deserialize(modelType, jsonSerializerOptions)!;
-        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
+        return new(model, result.AffectedProperties, result.ProjectedEventsCount, result.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -208,6 +208,27 @@ public class Projections(
         var projectionType = typeof(TProjection);
         var handler = _handlersByModelType[projectionType];
         return handler.GetState();
+    }
+
+    /// <inheritdoc/>
+    public Task Replay<TProjection>()
+        where TProjection : IProjection
+    {
+        var projectionType = typeof(TProjection);
+        var handler = _handlersByType[projectionType];
+        return Replay(handler.Id);
+    }
+
+    /// <inheritdoc/>
+    public Task Replay(ProjectionId projectionId)
+    {
+        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ObserverId = projectionId,
+            EventSequenceId = string.Empty
+        });
     }
 
     /// <inheritdoc/>

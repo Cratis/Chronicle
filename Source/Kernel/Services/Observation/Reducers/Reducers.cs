@@ -74,7 +74,8 @@ internal sealed class Reducers(
                         _ => ObserverSubscriberState.None
                     };
 
-                    var modelAsJson = (result.ModelState is null) ? [] : JsonNode.Parse(result.ModelState)!.AsObject();
+                    var modelResult = (result.ModelState is null) ? null :
+                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ModelState)!.AsObject(), model.Schema);
 
                     var subscriberResult = new ReducerSubscriberResult(
                         new ObserverSubscriberResult(
@@ -82,7 +83,7 @@ internal sealed class Reducers(
                             result.LastSuccessfulObservation,
                             result.ExceptionMessages,
                             result.ExceptionStackTrace),
-                        expandoObjectConverter.ToExpandoObject(modelAsJson, model.Schema));
+                        modelResult);
 
                     if (reducerResultTcs.TryGetValue(result.Partition, out var tcs))
                     {

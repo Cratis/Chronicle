@@ -15,17 +15,16 @@ public class ReducerWithoutDelay : IReducerFor<SomeReadModel>
     {
         Interlocked.Increment(ref HandledEvents);
         input ??= new SomeReadModel(0);
-        return Task.FromResult(input with { Number = evt.Number });
+        return Task.FromResult<SomeReadModel?>(input with { Number = evt.Number });
     }
-
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (HandledEvents < count)
+        while (HandledEvents < count && !cts.IsCancellationRequested)
         {
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(100, cts.Token);
         }
     }
 }
