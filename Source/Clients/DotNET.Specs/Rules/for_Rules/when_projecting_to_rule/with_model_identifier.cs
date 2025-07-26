@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Models;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Rules.for_Rules.when_projecting_to_rule;
@@ -36,7 +36,7 @@ public class with_model_identifier : given.no_rules
         };
 
         _projections
-            .GetInstanceById(_rule.GetRuleId().Value, Arg.Any<ModelKey>())
+            .GetInstanceById(_rule.GetRuleId().Value, Arg.Any<ReadModelKey>())
             .Returns(Task.FromResult(new ProjectionResultRaw(jsonObject, [], 0, 42)));
     }
 

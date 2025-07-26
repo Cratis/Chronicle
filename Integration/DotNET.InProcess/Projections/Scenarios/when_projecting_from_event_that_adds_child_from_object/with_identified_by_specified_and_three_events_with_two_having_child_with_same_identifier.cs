@@ -17,8 +17,8 @@ public class with_identified_by_specified_and_three_events_with_two_having_child
         public EventWithChildObject SecondEventAppended;
         public EventWithChildObject ThirdEventAppended;
 
-        public Model FirstChild;
-        public Model SecondChild;
+        public ReadModel FirstChild;
+        public ReadModel SecondChild;
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithChildObject)];
 

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class adding_from_properties(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AddingFromPropertiesProjection, Model>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AddingFromPropertiesProjection, ReadModel>(chronicleInProcessFixture)
     {
         public EventWithPropertiesForAllSupportedTypes FirstEventAppended;
         public EventWithPropertiesForAllSupportedTypes SecondEventAppended;

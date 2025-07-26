@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class SubtractingFromPropertiesProjection : IProjectionFor<Model>
+public class SubtractingFromPropertiesProjection : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .From<EventWithPropertiesForAllSupportedTypes>(_ => _
             .Subtract(m => m.IntValue).With(e => e.IntValue)
             .Subtract(m => m.FloatValue).With(e => e.FloatValue)

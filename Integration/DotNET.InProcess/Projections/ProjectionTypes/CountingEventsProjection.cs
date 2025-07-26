@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class CountingEventsProjection : IProjectionFor<Model>
+public class CountingEventsProjection : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .From<EventWithPropertiesForAllSupportedTypes>(_ => _
             .Count(m => m.IntValue));
 }

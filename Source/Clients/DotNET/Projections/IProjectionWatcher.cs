@@ -22,11 +22,11 @@ public interface IProjectionWatcher
 /// <summary>
 /// Defines a watcher for a projection.
 /// </summary>
-/// <typeparam name="TModel">Type of model the watcher is for.</typeparam>
-public interface IProjectionWatcher<TModel> : IProjectionWatcher
+/// <typeparam name="TReadModel">Type of read model the watcher is for.</typeparam>
+public interface IProjectionWatcher<TReadModel> : IProjectionWatcher
 {
     /// <summary>
     /// Gets the observable for the projection.
     /// </summary>
-    IObservable<ProjectionChangeset<TModel>> Observable { get; }
+    IObservable<ProjectionChangeset<TReadModel>> Observable { get; }
 }

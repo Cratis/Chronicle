@@ -8,20 +8,20 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines the builder for building properties that can be set by all events.
 /// </summary>
-/// <typeparam name="TModel">Type of model to build for.</typeparam>
-public interface IFromEveryBuilder<TModel>
+/// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
+public interface IFromEveryBuilder<TReadModel>
 {
     /// <summary>
     /// Start building the set operation to a target property on the model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
-    /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-    /// <returns>The <see cref="IAllSetBuilder{TModel, TBuilder}"/> to build up the property expressions.</returns>
-    IAllSetBuilder<TModel, IFromEveryBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    /// <param name="readModelPropertyAccessor">Read model property accessor for defining the target property.</param>
+    /// <returns>The <see cref="IAllSetBuilder{TReadModel, TBuilder}"/> to build up the property expressions.</returns>
+    IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor);
 
     /// <summary>
     /// Instruct the all definition to include all child projections.
     /// </summary>
     /// <returns>Builder continuation.</returns>
-    IFromEveryBuilder<TModel> ExcludeChildProjections();
+    IFromEveryBuilder<TReadModel> ExcludeChildProjections();
 }

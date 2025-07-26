@@ -10,10 +10,10 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a builder for building set operations for properties - represented as expressions.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-public interface ISetBuilder<TModel, TEvent, TParentBuilder> : IPropertyExpressionBuilder
+public interface ISetBuilder<TReadModel, TEvent, TParentBuilder> : IPropertyExpressionBuilder
 {
     /// <summary>
     /// Straight map to a property on the event, based on the <see cref="PropertyPath"/>.
@@ -32,11 +32,11 @@ public interface ISetBuilder<TModel, TEvent, TParentBuilder> : IPropertyExpressi
 /// <summary>
 /// Defines a builder for building set operations for properties - represented as expressions.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-public interface ISetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder<TModel, TEvent, TParentBuilder>
+public interface ISetBuilder<TReadModel, TEvent, TProperty, TParentBuilder> : ISetBuilder<TReadModel, TEvent, TParentBuilder>
 {
     /// <summary>
     /// Set the property to a specific value.

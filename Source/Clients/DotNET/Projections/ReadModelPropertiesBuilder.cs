@@ -9,16 +9,16 @@ using Cratis.Strings;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IModelPropertiesBuilder{TModel, TEvent, TBuilder}"/>.
+/// Represents an implementation of <see cref="IReadModelPropertiesBuilder{TReadModel, TEvent, TBuilder}"/>.
 /// </summary>
-/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TModel}"/>.</param>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TReadModel}"/>.</param>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 /// <typeparam name="TParentBuilder">The type of parent builder.</typeparam>
-public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
-    : KeyAndParentKeyBuilder<TEvent, TBuilder>, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
-        where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
+public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder)
+    : KeyAndParentKeyBuilder<TEvent, TBuilder>, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
+        where TBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
         where TParentBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -33,7 +33,7 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IP
     public TBuilder AutoMap()
     {
         var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name.ToCamelCase());
-        var modelProperties = typeof(TModel).GetProperties().Select(_ => _.Name.ToCamelCase());
+        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => _.Name.ToCamelCase());
 
         foreach (var property in eventProperties.Intersect(modelProperties))
         {
@@ -44,82 +44,82 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IP
     }
 
     /// <inheritdoc/>
-    public TBuilder Increment<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
     {
         var propertyPath = modelPropertyAccessor.GetPropertyPath();
-        _propertyExpressions[propertyPath] = new IncrementBuilder<TModel, TEvent, TProperty>(propertyPath);
+        _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public TBuilder Decrement<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
     {
         var propertyPath = modelPropertyAccessor.GetPropertyPath();
-        _propertyExpressions[propertyPath] = new IncrementBuilder<TModel, TEvent, TProperty>(propertyPath);
+        _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
     {
         var propertyPath = modelPropertyAccessor.GetPropertyPath();
-        var addBuilder = new AddBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
         _propertyExpressions[propertyPath] = addBuilder;
         return addBuilder;
     }
 
     /// <inheritdoc/>
-    public ISubtractBuilder<TModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
     {
         var propertyPath = modelPropertyAccessor.GetPropertyPath();
-        var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
         _propertyExpressions[propertyPath] = subtractBuilder;
         return subtractBuilder;
     }
 
     /// <inheritdoc/>
-    public ISetBuilder<TModel, TEvent, TBuilder> Set(PropertyPath propertyPath)
+    public ISetBuilder<TReadModel, TEvent, TBuilder> Set(PropertyPath propertyPath)
     {
-        var propertyInfo = propertyPath.GetPropertyInfoFor<TModel>();
+        var propertyInfo = propertyPath.GetPropertyInfoFor<TReadModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
-        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
+        var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
     }
 
     /// <inheritdoc/>
-    public ISetBuilder<TModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
     {
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
         var propertyPath = modelPropertyAccessor.GetPropertyPath();
-        var setBuilder = new SetBuilder<TModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
+        var setBuilder = new SetBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
     }
 
     /// <inheritdoc/>
-    public ISetBuilder<TModel, TEvent, TBuilder> SetThisValue()
+    public ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue()
     {
         var propertyPath = new PropertyPath("$this");
-        var setBuilder = new SetBuilder<TModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, false);
+        var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, false);
         _propertyExpressions[propertyPath] = setBuilder;
         return setBuilder;
     }
 
     /// <inheritdoc/>
-    public TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public TBuilder Count<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
     {
         var propertyPath = modelPropertyAccessor.GetPropertyPath();
-        _propertyExpressions[propertyPath] = new CountBuilder<TModel, TEvent, TProperty>(propertyPath);
+        _propertyExpressions[propertyPath] = new CountBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Expression<Func<TEvent, TChildModel>> eventProperty)
+    public TBuilder AddChild<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Expression<Func<TEvent, TChildModel>> eventProperty)
     {
         var sourcePropertyInfo = eventProperty.GetPropertyInfo();
         if (sourcePropertyInfo.PropertyType.IsAPrimitiveType())
@@ -137,13 +137,13 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder>(IP
     }
 
     /// <inheritdoc/>
-    public TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback)
+    public TBuilder AddChild<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback)
     {
         projectionBuilder.Children(targetProperty, childrenBuilder =>
         {
             childrenBuilder.From<TEvent>(fromBuilder =>
             {
-                var builder = new AddChildBuilder<TModel, TChildModel, TEvent>(childrenBuilder, fromBuilder);
+                var builder = new AddChildBuilder<TReadModel, TChildModel, TEvent>(childrenBuilder, fromBuilder);
                 builderCallback(builder);
             });
         });

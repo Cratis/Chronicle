@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Services.Models;
 using Cratis.Chronicle.Services.Sinks;
 
 namespace Cratis.Chronicle.Services.Projections.Definitions;
@@ -26,7 +25,7 @@ internal static class ProjectionDefinitionConverters
         {
             EventSequenceId = definition.EventSequenceId,
             Identifier = definition.Identifier,
-            Model = definition.Model.ToContract(),
+            ReadModel = definition.ReadModel,
             IsActive = definition.IsActive,
             IsRewindable = definition.IsRewindable,
             InitialModelState = definition.InitialModelState.ToJsonString(),
@@ -53,7 +52,7 @@ internal static class ProjectionDefinitionConverters
         return new(
             contract.EventSequenceId,
             contract.Identifier,
-            contract.Model.ToChronicle(),
+            contract.ReadModel,
             contract.IsActive,
             contract.IsRewindable,
             (JsonObject)JsonNode.Parse(contract.InitialModelState)! ?? [],

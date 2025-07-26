@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class SetPropertiesProjection : IProjectionFor<Model>
+public class SetPropertiesProjection : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .From<EventWithPropertiesForAllSupportedTypes>(_ => _
             .Set(m => m.StringValue).To(e => e.StringValue)
             .Set(m => m.BoolValue).To(e => e.BoolValue)

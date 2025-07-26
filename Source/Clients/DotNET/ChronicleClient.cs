@@ -126,7 +126,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             CausationManager,
             Options.IdentityProvider,
             _jsonSchemaGenerator,
-            Options.ModelNameConvention,
+            Options.ReadModelNameConvention,
             Options.ServiceProvider,
             Options.JsonSerializerOptions,
             Options.LoggerFactory);

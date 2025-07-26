@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
@@ -21,13 +21,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Sink"/> class.
 /// </remarks>
-/// <param name="model">The <see cref="Model"/> the sink is for.</param>
+/// <param name="model">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
 /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
 /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 public class Sink(
-    Model model,
+    ReadModelDefinition model,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IChangesetConverter changesetConverter,

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Concepts.Projections;
 
@@ -20,7 +20,7 @@ public record ImmediateProjectionKey(
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
-    ModelKey ModelKey,
+    ReadModelKey ModelKey,
     ProjectionSessionId? SessionId = default)
 {
     /// <summary>

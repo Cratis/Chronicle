@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class AddingFromPropertiesProjection : IProjectionFor<Model>
+public class AddingFromPropertiesProjection : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .From<EventWithPropertiesForAllSupportedTypes>(_ => _
             .Add(m => m.IntValue).With(e => e.IntValue)
             .Add(m => m.FloatValue).With(e => e.FloatValue)

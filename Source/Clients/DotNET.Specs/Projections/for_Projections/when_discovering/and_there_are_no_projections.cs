@@ -19,7 +19,6 @@ public class and_there_are_no_projections : given.all_dependencies
             _eventTypes,
             _projectionWatcherManager,
             _clientArtifacts,
-            _schemaGenerator,
             _modelNameResolver,
             _eventSerializer,
             _serviceProvider,

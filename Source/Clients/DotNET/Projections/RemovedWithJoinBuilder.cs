@@ -6,11 +6,11 @@ using Cratis.Chronicle.Contracts.Projections;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IRemovedWithBuilder{TModel, TEvent, TBuilder}"/>.
+/// Represents an implementation of <see cref="IRemovedWithBuilder{TReadModel, TEvent, TBuilder}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-public class RemovedWithJoinBuilder<TModel, TEvent> : KeyBuilder<TEvent, RemovedWithJoinBuilder<TModel, TEvent>>, IRemovedWithJoinBuilder<TModel, TEvent, RemovedWithJoinBuilder<TModel, TEvent>>
+public class RemovedWithJoinBuilder<TReadModel, TEvent> : KeyBuilder<TEvent, RemovedWithJoinBuilder<TReadModel, TEvent>>, IRemovedWithJoinBuilder<TReadModel, TEvent, RemovedWithJoinBuilder<TReadModel, TEvent>>
 {
     /// <summary>
     /// Build the removed with join definition.

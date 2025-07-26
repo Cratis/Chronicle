@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Rules;
-using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 
 namespace Cratis.Chronicle.Projections.for_Projections.given;
@@ -16,7 +15,6 @@ public class all_dependencies : Specification
     protected IProjectionWatcherManager _projectionWatcherManager;
     protected IClientArtifactsProvider _clientArtifacts;
     internal IRulesProjections _rulesProjections;
-    protected IJsonSchemaGenerator _schemaGenerator;
     protected IModelNameResolver _modelNameResolver;
     protected IEventSerializer _eventSerializer;
     protected IServiceProvider _serviceProvider;
@@ -29,7 +27,6 @@ public class all_dependencies : Specification
         _projectionWatcherManager = Substitute.For<IProjectionWatcherManager>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _rulesProjections = Substitute.For<IRulesProjections>();
-        _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         _modelNameResolver = Substitute.For<IModelNameResolver>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _serviceProvider = Substitute.For<IServiceProvider>();

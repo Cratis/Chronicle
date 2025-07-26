@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
 using Cratis.Reflection;
 using FluentValidation;
@@ -64,7 +64,7 @@ public class RuleModelValidator(
         var parametersWithModelKey = type
             .GetConstructors()[0]
             .GetParameters()
-            .Where(_ => _.HasAttribute<ModelKeyAttribute>())
+            .Where(_ => _.HasAttribute<ReadModelKeyAttribute>())
             .ToArray();
 
         if (parametersWithModelKey.Length > 1)
@@ -86,7 +86,7 @@ public class RuleModelValidator(
         object? modelIdentifier = null;
         var propertiesWithModelKey = type
             .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(_ => _.HasAttribute<ModelKeyAttribute>())
+            .Where(_ => _.HasAttribute<ReadModelKeyAttribute>())
             .ToArray();
 
         if (propertiesWithModelKey.Length > 1)

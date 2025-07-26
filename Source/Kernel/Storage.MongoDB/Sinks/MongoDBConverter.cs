@@ -5,7 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Text;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Strings;
@@ -23,11 +23,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between <see cref="ExpandoObject"/> to <see cref="BsonDocument"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
-/// <param name="model"><see cref="Model"/> the converter is for.</param>
+/// <param name="model"><see cref="ReadModelDefinition"/> the converter is for.</param>
 public class MongoDBConverter(
     IExpandoObjectConverter expandoObjectConverter,
     ITypeFormats typeFormats,
-    Model model) : IMongoDBConverter
+    ReadModelDefinition model) : IMongoDBConverter
 {
     /// <inheritdoc/>
     public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)

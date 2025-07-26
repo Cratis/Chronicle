@@ -20,7 +20,7 @@ public record ProjectionResult(object Model, IEnumerable<PropertyPath> AffectedP
 /// <summary>
 /// Represents the result of an projection.
 /// </summary>
-/// <typeparam name="T">Type of model.</typeparam>
+/// <typeparam name="T">Type of read model.</typeparam>
 /// <param name="Model">The instance of the model.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>

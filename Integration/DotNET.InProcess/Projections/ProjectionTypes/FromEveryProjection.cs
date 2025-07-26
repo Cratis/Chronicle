@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class FromEveryProjection : IProjectionFor<Model>
+public class FromEveryProjection : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .FromEvery(_ => _
             .Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred))
         .From<EmptyEvent>(_ => { })

@@ -7,7 +7,7 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Events;
 
 [EventType]
-public record EventWithChildObject(Model Child)
+public record EventWithChildObject(ReadModel Child)
 {
-    public static EventWithChildObject Create() => new(Model.CreateWithRandomValues());
+    public static EventWithChildObject Create() => new(ReadModel.CreateWithRandomValues());
 }

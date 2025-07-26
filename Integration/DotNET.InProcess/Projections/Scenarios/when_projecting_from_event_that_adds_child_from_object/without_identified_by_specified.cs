@@ -14,8 +14,8 @@ public class without_identified_by_specified(context context) : Given<context>(c
     {
         public EventWithChildObject FirstEventAppended;
         public EventWithChildObject SecondEventAppended;
-        public Model FirstChild;
-        public Model SecondChild;
+        public ReadModel FirstChild;
+        public ReadModel SecondChild;
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithChildObject)];
 

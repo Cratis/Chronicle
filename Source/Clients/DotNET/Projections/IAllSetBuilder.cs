@@ -9,9 +9,9 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a builder for building set operations for properties that will be applied for all events the projection is projecting from - represented as expressions.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-public interface IAllSetBuilder<TModel, TParentBuilder> : IPropertyExpressionBuilder
+public interface IAllSetBuilder<TReadModel, TParentBuilder> : IPropertyExpressionBuilder
 {
     /// <summary>
     /// Map to the event source id on the metadata of the event.

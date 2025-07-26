@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class AutoMappedPropertiesProjection : IProjectionFor<Model>
+public class AutoMappedPropertiesProjection : IProjectionFor<ReadModel>
 {
-    public void Define(IProjectionBuilderFor<Model> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .AutoMap()
         .From<EventWithPropertiesForAllSupportedTypes>();
 }
