@@ -30,21 +30,36 @@ on:
         - info
         - warning
         - debug
-  pull_request:
-    types: [closed]
+  push:
     branches:
-      - "**"
-    paths:
-      - "**"
-      - "!Docker/BaseDevelopment/**"
+      - "main"
 
 permissions:
   contents: write
   deployments: write
 
 jobs:
-  dotnet-x64:
+  release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      publish: ${{ steps.release.outputs.should-publish }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Release
+        id: release
+        uses: cratis/release-action@v1
+        with:
+          version: ${{ github.event.inputs.version }}
+          release-notes: ${{ github.event.inputs.release-notes }}
+
+  dotnet-x64:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
 
     steps:
       - name: Checkout code
@@ -68,7 +83,9 @@ jobs:
         run: dotnet publish -c Release -f net9.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
 
   dotnet-arm64:
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
+    needs: [release]
 
     steps:
       - name: Checkout code
@@ -92,7 +109,9 @@ jobs:
         run: dotnet publish -c Release -f net9.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
 
   workbench:
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    needs: [release]
 
     steps:
       - name: Checkout code
@@ -128,24 +147,6 @@ jobs:
         working-directory: ./Source/Workbench/Web
         run: |
           yarn build
-
-  release:
-    runs-on: ubuntu-latest
-    needs: [dotnet-x64, dotnet-arm64, workbench]
-    outputs:
-      version: ${{ steps.release.outputs.version }}
-      publish: ${{ steps.release.outputs.should-publish }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Release
-        id: release
-        uses: cratis/release-action@v1
-        with:
-          version: ${{ github.event.inputs.version }}
-          release-notes: ${{ github.event.inputs.release-notes }}
 
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
