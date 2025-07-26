@@ -58,16 +58,8 @@ public class Observing(
     {
         if (_subscription is not null)
         {
-            try
-            {
-                await appendedEventsQueues.Unsubscribe(_subscription);
-            }
-            catch (OrleansMessageRejectionException)
-            {
-                // This can happen when the silo is shutting down and the target grain is already deactivated.
-                // It's safe to ignore as the subscription will be gone anyway.
-            }
+            await appendedEventsQueues.Unsubscribe(_subscription!);
         }
-        return await Task.FromResult(state);
+        return state;
     }
 }
