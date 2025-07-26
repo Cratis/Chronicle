@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using MongoDB.Driver;
@@ -50,14 +51,11 @@ public class a_projection_and_events_appended_to_it<TProjection, TModel>(Chronic
             LastEventSequenceNumber = appendResult.SequenceNumber;
         }
 
-        foreach (var @event in EventsWithEventSourceIdToAppend)
+        if (EventsWithEventSourceIdToAppend.Count > 0)
         {
-            appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
-            LastEventSequenceNumber = appendResult.SequenceNumber;
-            if (WaitForEachEvent)
-            {
-                await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
-            }
+            var appendManyResult = await EventStore.EventLog.AppendMany(EventsWithEventSourceIdToAppend.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())));
+            LastEventSequenceNumber = appendManyResult.SequenceNumbers.LastOrDefault();
+            await WaitForProjectionAndSetResult(LastEventSequenceNumber);
         }
 
         var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(EventSourceId, EventTypes.Select(_ => _.GetEventType()));
