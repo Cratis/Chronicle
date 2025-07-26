@@ -79,8 +79,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        await TransitionTo<Disconnected>();
-        await base.OnDeactivateAsync(reason, cancellationToken);
+        if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+        {
+            await TransitionTo<Disconnected>();
+            await base.OnDeactivateAsync(reason, cancellationToken);
+        }
     }
 
     /// <inheritdoc/>

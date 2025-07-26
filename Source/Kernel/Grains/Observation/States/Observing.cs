@@ -56,7 +56,10 @@ public class Observing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnLeave(ObserverState state)
     {
-        await appendedEventsQueues.Unsubscribe(_subscription!);
+        if (_subscription is not null)
+        {
+            await appendedEventsQueues.Unsubscribe(_subscription!);
+        }
         return state;
     }
 }
