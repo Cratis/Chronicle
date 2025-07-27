@@ -81,8 +81,8 @@ internal sealed class Reducers(
                         _ => ObserverSubscriberState.None
                     };
 
-                    var modelResult = (result.ModelState is null) ? null :
-                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ModelState)!.AsObject(), model.Schema);
+                    var modelResult = (result.ReadModelState is null) ? null :
+                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ReadModelState)!.AsObject(), model.Schema);
 
                     var subscriberResult = new ReducerSubscriberResult(
                         new ObserverSubscriberResult(

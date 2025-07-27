@@ -40,8 +40,8 @@ public class ReducerResult
     public string ExceptionStackTrace { get; set; }
 
     /// <summary>
-    /// Gets or sets the resulting state.
+    /// Gets or sets the resulting read model state as JSON.
     /// </summary>
     [ProtoMember(6)]
-    public string? ModelState { get; set; }
+    public string? ReadModelState { get; set; }
 }

@@ -324,9 +324,9 @@ public class Reducers : IReducers
             lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
             if (reduceResult.IsSuccess)
             {
-                modelState = reduceResult.ModelState is null ?
+                modelState = reduceResult.ReadModelState is null ?
                     null :
-                    JsonSerializer.Serialize(reduceResult.ModelState, _jsonSerializerOptions);
+                    JsonSerializer.Serialize(reduceResult.ReadModelState, _jsonSerializerOptions);
             }
             else
             {
@@ -346,7 +346,7 @@ public class Reducers : IReducers
         var result = new ReducerResult
         {
             Partition = operation.Partition,
-            ModelState = modelState,
+            ReadModelState = modelState,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,
             ExceptionMessages = exceptionMessages.ToList(),
