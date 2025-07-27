@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 127 days, 5:50:55 | 3 days, 22:09:24 | 251 days, 1:34:12 |
-| Time to close | 271 days, 7:04:55 | 123 days, 1:53:22 | 817 days, 21:17:58 |
+| Time to close | 271 days, 1:25:06 | 123 days, 3:12:33 | 817 days, 2:22:01 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 279 |
-| Number of items closed | 560 |
+| Number of items that remain open | 278 |
+| Number of items closed | 561 |
 | Total number of items created | 839 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -58,7 +58,7 @@
 | Monthly issue metrics report | https://github.com/Cratis/Chronicle/issues/1755 | None | [github-actions[bot]](https://github.com/github-actions[bot]) | None | 0:05:28 | None |
 | Add programatic support for replaying from the .NET client (Reactors, Reducers, Projections) | https://github.com/Cratis/Chronicle/issues/1754 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 125 days, 0:35:04 | None |
 | More efficient JobStorage queries | https://github.com/Cratis/Chronicle/issues/1753 | None | [woksin](https://github.com/woksin) | None | None | None |
-| Improve shutdown to be more graceful - or at least not "spew" out irrelevant error messages | https://github.com/Cratis/Chronicle/issues/1752 | None | [einari](https://github.com/einari) | 120 days, 10:52:32 | None | None |
+| Improve shutdown to be more graceful - or at least not "spew" out irrelevant error messages | https://github.com/Cratis/Chronicle/issues/1752 | None | [einari](https://github.com/einari) | 120 days, 10:52:32 | 138 days, 21:45:25 | None |
 | Add "rehydration" of reactors & reducers to fix wrong state on startup without client connecting | https://github.com/Cratis/Chronicle/issues/1751 | None | [einari](https://github.com/einari) | None | None | None |
 | Sink last handled event sequence number is wrong | https://github.com/Cratis/Chronicle/issues/1749 | None | [woksin](https://github.com/woksin) | None | None | None |
 | It should be possible to run replays without destroying any other jobs that are going on | https://github.com/Cratis/Chronicle/issues/1748 | None | [einari](https://github.com/einari) | None | None | None |
@@ -344,4 +344,4 @@
 | Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
 | IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | 616 days, 3:25:19 | None |
-| Projection fail with children and there are no instances of the events defined in root From definitions.
+| Projection fail with children and there are no instances of the events defined in root From
