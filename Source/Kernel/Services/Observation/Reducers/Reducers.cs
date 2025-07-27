@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
@@ -62,7 +63,13 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    registrationTcs.SetResult(register);
+                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
+                        result =>
+                        {
+                            model = result.Result;
+                            registrationTcs.SetResult(register);
+                        },
+                        TaskScheduler.Current);
                     break;
 
                 case ReducerResult result:
