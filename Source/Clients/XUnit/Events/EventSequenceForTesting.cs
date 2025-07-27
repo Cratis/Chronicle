@@ -71,7 +71,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default) =>
         Task.FromResult<IImmutableList<AppendedEvent>>(_events.Where(_ =>
-            _.Metadata.SequenceNumber >= sequenceNumber
+            _.Context.SequenceNumber >= sequenceNumber
             && (eventSourceId is null || _.Context.EventSourceId == eventSourceId)
             && eventTypes?.Contains(_.Metadata.Type) != false).ToImmutableList());
 

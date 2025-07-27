@@ -112,10 +112,10 @@ public class Projection : IProjection, IDisposable
     public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = [];
 
     /// <inheritdoc/>
-    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Metadata.Type.Id));
+    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Context.EventType.Id));
 
     /// <inheritdoc/>
-    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Metadata.Type.Id));
+    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Context.EventType.Id));
 
     /// <inheritdoc/>
     public void OnNext(ProjectionEventContext context)

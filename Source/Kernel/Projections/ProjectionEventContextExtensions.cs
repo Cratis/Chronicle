@@ -29,7 +29,7 @@ public static class ProjectionEventContextExtensions
     public static IObservable<ProjectionEventContext> WhereEventTypeEquals(
         this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
-        return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
+        return observable.Where(_ => _.Event.Context.EventType.Id == eventType.Id);
     }
 
     /// <summary>

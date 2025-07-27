@@ -20,7 +20,6 @@ internal static class AppendedEventConverters
     /// <returns>Converted contract version.</returns>
     public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
     {
-        Metadata = @event.Metadata.ToContract(),
         Context = @event.Context.ToContract(),
         Content = JsonSerializer.Serialize(@event.Content, Globals.JsonSerializerOptions)
     };
@@ -38,7 +37,6 @@ internal static class AppendedEventConverters
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
     /// <returns>Converted Chronicle version.</returns>
     public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event) => new(
-            @event.Metadata.ToChronicle(),
             @event.Context.ToChronicle(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, Globals.JsonSerializerOptions)!);
 }

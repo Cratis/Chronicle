@@ -19,5 +19,5 @@ public class when_providing_with_events_in_sequence : given.an_aggregate_root_th
     async Task Because() => _result = await _provider.Provide();
 
     [Fact] void should_return_the_state() => _result.ShouldEqual(_state);
-    [Fact] void should_set_the_tail_event_sequence_number() => _aggregateRootContext.TailEventSequenceNumber.ShouldEqual(_events[^1].Metadata.SequenceNumber);
+    [Fact] void should_set_the_tail_event_sequence_number() => _aggregateRootContext.TailEventSequenceNumber.ShouldEqual(_events[^1].Context.SequenceNumber);
 }

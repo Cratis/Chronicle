@@ -34,11 +34,11 @@ public partial class Observer
             return;
         }
 
-        if (!events.Any(_ => _subscription.EventTypes.Contains(_.Metadata.Type)))
+        if (!events.Any(_ => _subscription.EventTypes.Contains(_.Context.EventType)))
         {
             State = State with
             {
-                NextEventSequenceNumber = events.Last().Metadata.SequenceNumber.Next()
+                NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
             };
             await WriteStateAsync();
             return;
@@ -49,7 +49,7 @@ public partial class Observer
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        var eventsToHandle = events.Where(_ => _.Metadata.SequenceNumber >= tailEventSequenceNumber).ToArray();
+        var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
@@ -69,10 +69,10 @@ public partial class Observer
                     var firstEvent = eventsToHandle[0];
 
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                    tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
+                    tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var result = await subscriber.OnNext(partition, eventsToHandle, new(_subscription.Arguments));
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
-                        ? eventsToHandle.Count(_ => _.Metadata.SequenceNumber <= result.LastSuccessfulObservation)
+                        ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
 
                     if (result.State == ObserverSubscriberState.Failed)
@@ -82,7 +82,7 @@ public partial class Observer
                         exceptionStackTrace = result.ExceptionStackTrace;
                         tailEventSequenceNumber = result.HandledAnyEvents
                             ? result.LastSuccessfulObservation
-                            : firstEvent.Metadata.SequenceNumber;
+                            : firstEvent.Context.SequenceNumber;
                     }
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {

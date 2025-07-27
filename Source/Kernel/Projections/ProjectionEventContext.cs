@@ -26,12 +26,12 @@ public record ProjectionEventContext(
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
     /// </summary>
-    public EventType EventType => Event.Metadata.Type;
+    public EventType EventType => Event.Context.EventType;
 
     /// <summary>
     /// Gets the <see cref="EventSequenceNumber"/> of the <see cref="Event"/>.
     /// </summary>
-    public EventSequenceNumber EventSequenceNumber => Event.Metadata.SequenceNumber;
+    public EventSequenceNumber EventSequenceNumber => Event.Context.SequenceNumber;
 
     /// <summary>
     /// Whether the operation type is a join.
