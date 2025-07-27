@@ -1,3 +1,7 @@
+---
+applyTo: "**/*.Specs/**/*.cs"
+---
+
 # 🧪 How to Write Tests
 
 We call automated tests for specs or specifications based on Specification by Example related to BDD (Behavior Driven Development).
