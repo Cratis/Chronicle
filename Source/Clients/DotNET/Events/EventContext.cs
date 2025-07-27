@@ -42,9 +42,9 @@ public record EventContext(
     /// </summary>
     /// <returns>A new <see cref="EventContext"/>.</returns>
     public static readonly EventContext Empty = From(
-        EventType.Unknown,
         EventStoreName.NotSet,
         EventStoreNamespaceName.NotSet,
+        EventType.Unknown,
         EventSourceType.Default,
         Guid.Empty,
         EventStreamType.All,

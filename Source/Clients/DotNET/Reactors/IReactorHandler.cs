@@ -35,12 +35,11 @@ public interface IReactorHandler
     /// <summary>
     /// Handle next event.
     /// </summary>
-    /// <param name="metadata"><see cref="EventMetadata"/> for the event.</param>
     /// <param name="context"><see cref="EventContext"/> for the event.</param>
     /// <param name="content">Actual content.</param>
     /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reactor.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnNext(EventMetadata metadata, EventContext context, object content, IServiceProvider serviceProvider);
+    Task OnNext(EventContext context, object content, IServiceProvider serviceProvider);
 
     /// <summary>
     /// Get the current state of the Reactor.

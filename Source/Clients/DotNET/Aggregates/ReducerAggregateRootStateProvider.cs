@@ -30,7 +30,7 @@ public class ReducerAggregateRootStateProvider<TState>(
             aggregateRootContext.EventStreamType,
             aggregateRootContext.EventStreamId);
         var result = await reducer.OnNext(events, null, serviceProvider);
-        aggregateRootContext.TailEventSequenceNumber = events[^1].Metadata.SequenceNumber;
+        aggregateRootContext.TailEventSequenceNumber = events[^1].Context.SequenceNumber;
         return (TState?)result.ReadModelState;
     }
 
