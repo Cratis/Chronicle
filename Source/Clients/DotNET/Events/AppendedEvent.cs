@@ -8,10 +8,9 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents an event that has been appended to an event log.
 /// </summary>
-/// <param name="Metadata">The <see cref="EventMetadata"/>.</param>
 /// <param name="Context">The <see cref="EventContext"/>.</param>
 /// <param name="Content">The content in the form of an <see cref="ExpandoObject"/>.</param>
-public record AppendedEvent(EventMetadata Metadata, EventContext Context, ExpandoObject Content)
+public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
     /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event sequence number.
