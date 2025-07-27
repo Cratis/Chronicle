@@ -32,7 +32,7 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
             FirstGroupId = "462ec4f6-fd9e-4549-92b9-00b769636468";
             SecondGroupId = "02cf243d-d8b6-414e-a1e7-d631b656c976";
             EventSourceId = FirstGroupId;
-            ModelId = FirstGroupId;
+            ReadModelId = FirstGroupId;
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated(GroupName)));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated(GroupName2)));

@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TReadModel">Type of read model the projection is for.</typeparam>
 /// <param name="Namespace">The namespace for the event store.</param>
 /// <param name="ModelKey">The <see cref="ModelKey"/> for the model.</param>
-/// <param name="Model">The instance of the model.</param>
-public record ProjectionChangeset<TReadModel>(EventStoreNamespaceName Namespace, ReadModelKey ModelKey, TReadModel Model);
+/// <param name="ReadModel">The instance of the read model.</param>
+public record ProjectionChangeset<TReadModel>(EventStoreNamespaceName Namespace, ReadModelKey ModelKey, TReadModel ReadModel);

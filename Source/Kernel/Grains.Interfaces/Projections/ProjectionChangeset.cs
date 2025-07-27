@@ -11,6 +11,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// Represents the changeset for a projection.
 /// </summary>
 /// <param name="Namespace">The namespace for the event store.</param>
-/// <param name="ModelKey">The <see cref="ModelKey"/> for the model.</param>
-/// <param name="Model">The instance of the model.</param>
-public record ProjectionChangeset(EventStoreNamespaceName Namespace, ReadModelKey ModelKey, JsonObject Model);
+/// <param name="ReadModelKey">The <see cref="ReadModelKey"/> for the model.</param>
+/// <param name="ReadModel">The instance of the read model as JSON.</param>
+public record ProjectionChangeset(EventStoreNamespaceName Namespace, ReadModelKey ReadModelKey, JsonObject ReadModel);

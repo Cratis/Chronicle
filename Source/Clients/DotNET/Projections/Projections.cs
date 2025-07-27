@@ -79,7 +79,7 @@ public class Projections(
     {
         var handler = _handlersByModelType[readModelType];
         var result = await GetInstanceById(handler.Id, readModelKey);
-        var model = result.Model.Deserialize(readModelType, jsonSerializerOptions)!;
+        var model = result.ReadModel.Deserialize(readModelType, jsonSerializerOptions)!;
         return new(model, result.AffectedProperties, result.ProjectedEventsCount, result.LastHandledEventSequenceNumber);
     }
 
@@ -93,7 +93,7 @@ public class Projections(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
-            ModelKey = modelKey,
+            ReadModelKey = modelKey,
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
@@ -110,7 +110,7 @@ public class Projections(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
-            ModelKey = readModelKey,
+            ReadModelKey = readModelKey,
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
@@ -131,7 +131,7 @@ public class Projections(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
-            ModelKey = readModelKey,
+            ReadModelKey = readModelKey,
             SessionId = sessionId
         };
 
@@ -160,7 +160,7 @@ public class Projections(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
-            ModelKey = readModelKey,
+            ReadModelKey = readModelKey,
             SessionId = sessionId,
             Events = eventsToApply.ToContract()
         };
@@ -179,7 +179,7 @@ public class Projections(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log,
-            ModelKey = readModelKey,
+            ReadModelKey = readModelKey,
             SessionId = sessionId
         };
 

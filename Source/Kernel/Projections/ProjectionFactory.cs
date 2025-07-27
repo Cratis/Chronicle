@@ -28,7 +28,7 @@ namespace Cratis.Chronicle.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
 /// </remarks>
-/// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
+/// <param name="propertyMapperExpressionResolvers"><see cref="IReadModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
 /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="logger">The logger.</param>
 [Singleton]
 public class ProjectionFactory(
-    IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
+    IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
     IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
     IKeyExpressionResolvers keyExpressionResolvers,
     IExpandoObjectConverter expandoObjectConverter,

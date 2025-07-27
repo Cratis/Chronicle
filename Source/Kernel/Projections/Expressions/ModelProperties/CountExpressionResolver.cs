@@ -8,13 +8,13 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;
+namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties;
 
 /// <summary>
-/// Represents a <see cref="IModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
+/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
 /// </summary>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
-public partial class CountExpressionResolver(ITypeFormats typeFormats) : IModelPropertyExpressionResolver
+public partial class CountExpressionResolver(ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
     static readonly Regex _regularExpression = CountRegEx();
     readonly ITypeFormats _typeFormats = typeFormats;

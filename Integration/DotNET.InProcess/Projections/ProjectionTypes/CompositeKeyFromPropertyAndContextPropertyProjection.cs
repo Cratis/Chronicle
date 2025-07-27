@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 
-public class CompositeKeyFromPropertyAndContextPropertyProjection : IProjectionFor<ModelWithCompositeKey>
+public class CompositeKeyFromPropertyAndContextPropertyProjection : IProjectionFor<ReadModelWithCompositeKey>
 {
-    public void Define(IProjectionBuilderFor<ModelWithCompositeKey> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModelWithCompositeKey> builder) => builder
         .From<EventWithPropertiesForAllSupportedTypes>(_ => _
             .UsingCompositeKey<CompositeKey>(_ => _
                 .Set(k => k.First).To(e => e.StringValue)

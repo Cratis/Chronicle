@@ -100,7 +100,7 @@ public class ImmediateProjection(
 
             var affectedProperties = new HashSet<PropertyPath>();
 
-            var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
+            var modelKey = _projectionKey.ReadModelKey.IsSpecified ? (EventSourceId)_projectionKey.ReadModelKey.Value : null!;
             using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: _projection!.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState();

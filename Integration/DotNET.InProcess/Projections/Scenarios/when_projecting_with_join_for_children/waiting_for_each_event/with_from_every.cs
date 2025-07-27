@@ -21,7 +21,7 @@ public class with_from_every(context context) : Given<context>(context)
         public UserId UserId;
         public EventSourceId GroupId;
         public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(GroupCreated), typeof(UserAddedToGroup)];
-        public GroupWithLastUpdated Model;
+        public GroupWithLastUpdated ReadModel;
 
         void Establish()
         {
@@ -29,7 +29,7 @@ public class with_from_every(context context) : Given<context>(context)
             UserId = Guid.Parse("3c760aaf-2119-4336-8721-3f4c97e86a1b");
             GroupId = "462ec4f6-fd9e-4549-92b9-00b769636468";
             EventSourceId = GroupId;
-            ModelId = GroupId;
+            ReadModelId = GroupId;
 
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new GroupCreated(GroupName)));
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new UserAddedToGroup(UserId)));
@@ -39,9 +39,9 @@ public class with_from_every(context context) : Given<context>(context)
         async Task Because()
         {
             var result = await ChronicleFixture.ReadModels.Database.GetCollection<GroupWithLastUpdated>().FindAsync(_ => _.Id == UserId.ToString());
-            Model = await result.FirstOrDefaultAsync();
+            ReadModel = await result.FirstOrDefaultAsync();
         }
     }
 
-    [Fact] void should_not_create_instance_for_identity_of_joined_type() => Context.Model.ShouldBeNull();
+    [Fact] void should_not_create_instance_for_identity_of_joined_type() => Context.ReadModel.ShouldBeNull();
 }

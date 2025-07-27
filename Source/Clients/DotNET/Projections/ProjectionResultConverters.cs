@@ -21,7 +21,7 @@ internal static class ProjectionResultConverters
     /// <returns>Converted <see cref="ProjectionResult"/>.</returns>
     internal static ProjectionResult<TReadModel> ToClient<TReadModel>(this Contracts.Projections.ProjectionResult result) =>
         new(
-            JsonSerializer.Deserialize<TReadModel>(result.Model, Globals.JsonSerializerOptions)!,
+            JsonSerializer.Deserialize<TReadModel>(result.ReadModel, Globals.JsonSerializerOptions)!,
             result.AffectedProperties.Select(_ => (PropertyPath)_),
             result.ProjectedEventsCount,
             result.LastHandledEventSequenceNumber);
@@ -34,7 +34,7 @@ internal static class ProjectionResultConverters
     /// <returns>Converted <see cref="ProjectionResult"/>.</returns>
     internal static ProjectionResult ToClient(this Contracts.Projections.ProjectionResult result, Type readModelType) =>
         new(
-            JsonSerializer.Deserialize(result.Model, readModelType, Globals.JsonSerializerOptions)!,
+            JsonSerializer.Deserialize(result.ReadModel, readModelType, Globals.JsonSerializerOptions)!,
             result.AffectedProperties.Select(_ => (PropertyPath)_),
             result.ProjectedEventsCount,
             result.LastHandledEventSequenceNumber);
@@ -46,7 +46,7 @@ internal static class ProjectionResultConverters
     /// <returns>Converted <see cref="ProjectionResult"/>.</returns>
     internal static ProjectionResultRaw ToClient(this Contracts.Projections.ProjectionResult result) =>
         new(
-            (JsonObject)JsonNode.Parse(result.Model)!,
+            (JsonObject)JsonNode.Parse(result.ReadModel)!,
             result.AffectedProperties.Select(_ => (PropertyPath)_),
             result.ProjectedEventsCount,
             result.LastHandledEventSequenceNumber);

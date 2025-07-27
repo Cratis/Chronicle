@@ -17,7 +17,7 @@ public class ReplayedModelsStorage(IEventStoreNamespaceDatabase database) : IRep
     /// <inheritdoc/>
     public async Task Replayed(ObserverId observer, Chronicle.Storage.Sinks.ReplayContext context)
     {
-        var filter = Builders<ReplayedModel>.Filter.Eq(r => r.Model, context.Model) &
+        var filter = Builders<ReplayedModel>.Filter.Eq(r => r.ReadModel, context.ReadModel) &
                      Builders<ReplayedModel>.Filter.Eq(r => r.Observer, observer);
 
         var update = Builders<ReplayedModel>.Update.Push(r => r.Occurrences, new ReplayedModelOccurrence(context.Started, context.RevertModel));

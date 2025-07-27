@@ -20,13 +20,13 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     public Task Save(Chronicle.Storage.Sinks.ReplayContext context)
     {
         var storageContext = context.ToStorage();
-        return _collection.ReplaceOneAsync(_ => _.ModelName == storageContext.ModelName, storageContext, new ReplaceOptions { IsUpsert = true });
+        return _collection.ReplaceOneAsync(_ => _.ReadModelName == storageContext.ReadModelName, storageContext, new ReplaceOptions { IsUpsert = true });
     }
 
     /// <inheritdoc/>
     public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ReadModelName model)
     {
-        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ModelName, model);
+        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, model);
         var context = _collection.Find(filter).FirstOrDefault();
         return context == null ?
             Task.FromResult(Result.Failed<Chronicle.Storage.Sinks.ReplayContext, GetContextError>(GetContextError.NotFound)) :
@@ -36,7 +36,7 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     /// <inheritdoc/>
     public Task Remove(ReadModelName model)
     {
-        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ModelName, model);
+        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, model);
         return _collection.DeleteOneAsync(filter);
     }
 }

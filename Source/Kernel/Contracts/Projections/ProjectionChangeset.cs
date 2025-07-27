@@ -16,14 +16,14 @@ public class ProjectionChangeset
     public string Namespace { get; set; }
 
     /// <summary>
-    /// Gets or sets the key for the model that was affected.
+    /// Gets or sets the key for the read model that was affected.
     /// </summary>
     [ProtoMember(2)]
-    public string ModelKey { get; set; }
+    public string ReadModelKey { get; set; }
 
     /// <summary>
-    /// Gets or sets the model that was affected as JSON.
+    /// Gets or sets the read model that was affected as JSON.
     /// </summary>
     [ProtoMember(3)]
-    public string Model { get; set; }
+    public string ReadModel { get; set; }
 }

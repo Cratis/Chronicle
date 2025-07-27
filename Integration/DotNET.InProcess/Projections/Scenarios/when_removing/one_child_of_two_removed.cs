@@ -23,7 +23,7 @@ public class one_child_of_two_removed(context context) : Given<context>(context)
             FirstGroupId = Guid.NewGuid();
             SecondGroupId = Guid.NewGuid();
             EventSourceId = userId;
-            ModelId = userId.ToString();
+            ReadModelId = userId.ToString();
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated("SomeGroup")));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated("SomeOtherGroup")));

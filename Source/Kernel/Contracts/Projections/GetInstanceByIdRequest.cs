@@ -34,8 +34,8 @@ public class GetInstanceByIdRequest
     public string ProjectionId { get; set; }
 
     /// <summary>
-    /// Gets or sets the model key.
+    /// Gets or sets the read model key.
     /// </summary>
     [ProtoMember(5)]
-    public string ModelKey { get; set; }
+    public string ReadModelKey { get; set; }
 }

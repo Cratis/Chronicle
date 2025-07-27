@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using MongoDB.Driver;
@@ -17,7 +16,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public EventSourceId EventSourceId;
-    public string ModelId;
+    public string ReadModelId;
 
     public TReadModel Result;
     public AppendedEvent[] AppendedEvents;
@@ -36,7 +35,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     void Establish()
     {
         EventSourceId = Guid.NewGuid().ToString();
-        ModelId = EventSourceId;
+        ReadModelId = EventSourceId;
     }
 
     async Task Because()
@@ -70,7 +69,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
         }
     }
 
-    protected virtual Task<TReadModel> GetReadModelResult() => GetReadModel(ModelId);
+    protected virtual Task<TReadModel> GetReadModelResult() => GetReadModel(ReadModelId);
 
     protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
     {

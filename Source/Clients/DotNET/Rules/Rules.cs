@@ -49,7 +49,7 @@ public class Rules(
         foreach (var property in properties)
         {
             var name = property.Name.ToCamelCase();
-            var node = result.Model[name];
+            var node = result.ReadModel[name];
             if (node is not null)
             {
                 property.SetValue(rule, node.Deserialize(property.PropertyType, serializerOptions));

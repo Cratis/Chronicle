@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
+using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_watcher.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios;
@@ -43,5 +43,5 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         }
     }
 
-    [Fact] void should_receive_same_model() => Context.Result.ShouldEqual(Context.WatchResult.Model);
+    [Fact] void should_receive_same_model() => Context.Result.ShouldEqual(Context.WatchResult.ReadModel);
 }

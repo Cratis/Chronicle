@@ -13,7 +13,7 @@ public class ProjectionResult
     /// Gets or sets the result of the projection as JSON.
     /// </summary>
     [ProtoMember(1)]
-    public string Model { get; set; } = string.Empty;
+    public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the affected properties.

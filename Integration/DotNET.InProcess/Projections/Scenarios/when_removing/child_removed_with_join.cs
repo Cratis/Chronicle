@@ -29,7 +29,7 @@ public class child_removed_with_join(context context) : Given<context>(context)
             FirstGroupId = "449670b7-120c-4978-ba2e-8fbb12ff4fbc";
             SecondGroupId = "be7f5b19-8df3-4049-bb9c-78fb2fdf5cce";
             EventSourceId = "162784c6-6b64-4e0a-8710-191bc5a57788";
-            ModelId = userId.ToString();
+            ReadModelId = userId.ToString();
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated("SomeGroup")));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated("SomeOtherGroup")));

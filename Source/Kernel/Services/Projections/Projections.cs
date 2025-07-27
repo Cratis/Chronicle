@@ -41,7 +41,7 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey);
+            request.ReadModelKey);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
 
@@ -57,7 +57,7 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey,
+            request.ReadModelKey,
             request.SessionId);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
@@ -74,7 +74,7 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey,
+            request.ReadModelKey,
             request.SessionId);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
@@ -100,8 +100,8 @@ internal sealed class Projections(
                 observer.OnNext(new ProjectionChangeset
                 {
                     Namespace = changeset.Namespace,
-                    ModelKey = changeset.ModelKey,
-                    Model = changeset.Model.ToJsonString(jsonSerializerOptions)
+                    ReadModelKey = changeset.ReadModelKey,
+                    ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions)
                 });
 
                 return Task.CompletedTask;
@@ -122,7 +122,7 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey,
+            request.ReadModelKey,
             request.SessionId);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
