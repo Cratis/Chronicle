@@ -25,6 +25,7 @@ public class a_projection : Specification
             string.Empty,
             string.Empty,
             new ReadModelDefinition(string.Empty, new JsonSchema()),
+            new JsonSchema(),
             true,
             []);
         keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
