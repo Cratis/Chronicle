@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.Models;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_removing.one_child_of_two_removed.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_removing;

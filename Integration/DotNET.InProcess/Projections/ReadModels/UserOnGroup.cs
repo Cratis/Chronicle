@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
 
-namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.Models;
+namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
 
 public class UserOnGroup()
 {
