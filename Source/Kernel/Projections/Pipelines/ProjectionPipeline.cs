@@ -35,7 +35,7 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
-        await changesetStorage.BeginReplay(projection.Model.Name);
+        await changesetStorage.BeginReplay(projection.ReadModel.Name);
         await sink.BeginReplay(context);
     }
 
@@ -46,7 +46,7 @@ public class ProjectionPipeline(
     public async Task EndReplay(ReplayContext context)
     {
         await sink.EndReplay(context);
-        await changesetStorage.EndReplay(projection.Model.Name);
+        await changesetStorage.EndReplay(projection.ReadModel.Name);
     }
 
     /// <inheritdoc/>

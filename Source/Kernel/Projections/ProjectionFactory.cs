@@ -53,6 +53,7 @@ public class ProjectionFactory(
             eventSequenceStorage,
             definition,
             readModelDefinition,
+            readModelDefinition.Schema,
             PropertyPath.Root,
             PropertyPath.Root,
             ProjectionPath.GetRootFor(definition.Identifier),
@@ -98,18 +99,18 @@ public class ProjectionFactory(
         }
     }
 
-    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, ReadModelDefinition model) =>
+    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
-            CreateInitialState(model) :
-            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+            CreateInitialState(readModelSchema) :
+            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, readModelSchema);
 
-    static ExpandoObject CreateInitialState(ReadModelDefinition model)
+    static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
         // If there is no initial state, we create one with empty collections for all arrays.
         // This is to ensure that we can add to them without having to check for null.
         // And that any sinks don't fail when trying to access them.
         var initialState = new ExpandoObject();
-        foreach (var collection in model.Schema.GetFlattenedProperties().Where(_ => _.IsArray))
+        foreach (var collection in readModelSchema.GetFlattenedProperties().Where(_ => _.IsArray))
         {
             ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
         }
@@ -120,26 +121,32 @@ public class ProjectionFactory(
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
-        ReadModelDefinition readModel,
+        ReadModelDefinition rootReadModel,
+        JsonSchema currentReadModelSchema,
         PropertyPath childrenAccessorProperty,
         PropertyPath identifiedByProperty,
         ProjectionPath path,
         bool isChild)
     {
-        var hasIdProperty = readModel.Schema.GetFlattenedProperties().Any(_ => _.Name == "id");
+        var hasIdProperty = rootReadModel.Schema.GetFlattenedProperties().Any(_ => _.Name == "id");
         var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 
-        var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
+        var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
+        {
+            var childrenProperty = currentReadModelSchema.Properties[kvp.Key.LastSegment.Value]!;
+            return await CreateProjectionFrom(
                 eventSequenceStorage,
                 kvp.Value,
-                readModel,
+                rootReadModel,
+                childrenProperty.Item?.ActualSchema ?? currentReadModelSchema,
                 childrenAccessorProperty.AddArrayIndex(kvp.Key),
                 kvp.Value.IdentifiedBy,
                 $"{path} -> ChildrenAt({kvp.Key.Path})",
-                true));
+                true);
+        });
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, readModel.Schema, readModel);
+        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, currentReadModelSchema);
 
         var projection = new Projection(
             projectionDefinition.EventSequenceId,
@@ -148,7 +155,8 @@ public class ProjectionFactory(
             initialState,
             path,
             childrenAccessorProperty,
-            readModel,
+            rootReadModel,
+            currentReadModelSchema,
             projectionDefinition.IsRewindable,
             childProjections);
 
@@ -157,11 +165,11 @@ public class ProjectionFactory(
 
         if (projectionDefinition.FromEventProperty is not null)
         {
-            var schemaProperty = readModel.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
+            var schemaProperty = rootReadModel.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
             schemaProperty ??= new JsonSchemaProperty
             {
-                Type = projection.Model.Schema.Type,
-                Format = projection.Model.Schema.Format
+                Type = projection.TargetReadModelSchema.Type,
+                Format = projection.TargetReadModelSchema.Format
             };
 
             var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
@@ -314,13 +322,13 @@ public class ProjectionFactory(
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
     {
-        var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(propertyPath);
+        var schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(propertyPath);
         if (propertyPath.LastSegment is ThisAccessor)
         {
             schemaProperty = new JsonSchemaProperty
             {
-                Type = projection.Model.Schema.Type,
-                Format = projection.Model.Schema.Format
+                Type = projection.TargetReadModelSchema.Type,
+                Format = projection.TargetReadModelSchema.Format
             };
         }
 

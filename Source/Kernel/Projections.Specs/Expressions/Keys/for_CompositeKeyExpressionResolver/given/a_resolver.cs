@@ -21,7 +21,7 @@ public class a_resolver : Specification
         _model = new("Something", new JsonSchema());
         _projection = Substitute.For<IProjection>();
         _projection.Identifier.Returns((ProjectionId)Guid.NewGuid().ToString());
-        _projection.Model.Returns(_model);
+        _projection.ReadModel.Returns(_model);
         _eventValueProviderResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
         _resolver = new CompositeKeyExpressionResolver(_eventValueProviderResolvers, new KeyResolvers(NullLogger<KeyResolvers>.Instance));
     }

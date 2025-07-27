@@ -29,7 +29,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
         // TODO: Return the number of affected records and pass this along to the changeset storage
         await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Metadata.SequenceNumber);
         await changesetStorage.Save(
-            projection.Model.Name,
+            projection.ReadModel.Name,
             context.Key,
             context.Event.Metadata.Type,
             context.Event.Context.SequenceNumber,
