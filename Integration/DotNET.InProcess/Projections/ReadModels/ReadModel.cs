@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Concepts;
 
-namespace Cratis.Chronicle.InProcess.Integration.Projections.Models;
+namespace Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 
 public record ReadModel(
     string StringValue,

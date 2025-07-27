@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Models;
+using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 using MongoDB.Driver;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_properties.using_composite_key_from_property_and_context_property.context;
