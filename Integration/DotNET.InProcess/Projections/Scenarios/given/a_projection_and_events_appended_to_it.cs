@@ -51,11 +51,14 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
             LastEventSequenceNumber = appendResult.SequenceNumber;
         }
 
-        if (EventsWithEventSourceIdToAppend.Count > 0)
+        foreach (var @event in EventsWithEventSourceIdToAppend)
         {
-            var appendManyResult = await EventStore.EventLog.AppendMany(EventsWithEventSourceIdToAppend.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())));
-            LastEventSequenceNumber = appendManyResult.SequenceNumbers.LastOrDefault();
-            await WaitForProjectionAndSetResult(LastEventSequenceNumber);
+            appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
+            LastEventSequenceNumber = appendResult.SequenceNumber;
+            if (WaitForEachEvent)
+            {
+                await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
+            }
         }
 
         var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(EventSourceId, EventTypes.Select(_ => _.GetEventType()));
