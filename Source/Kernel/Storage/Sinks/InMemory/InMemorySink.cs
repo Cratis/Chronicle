@@ -6,7 +6,7 @@ using System.Text;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Schemas;
@@ -21,10 +21,10 @@ namespace Cratis.Chronicle.Storage.Sinks.InMemory;
 /// <remarks>
 /// Initializes a new instance of the <see cref="InMemorySink"/> class.
 /// </remarks>
-/// <param name="model">The target <see cref="Model"/>.</param>
+/// <param name="model">The target <see cref="ReadModelDefinition"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
 public class InMemorySink(
-    Model model,
+    ReadModelDefinition model,
     ITypeFormats typeFormats) : ISink, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];

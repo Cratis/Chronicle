@@ -24,7 +24,7 @@ public class and_event_joined_is_for_a_different_stream(context context) : Given
         {
             UserId = Guid.Parse("3c760aaf-2119-4336-8721-3f4c97e86a1b");
             EventSourceId = UserId.ToString();
-            ModelId = UserId.ToString();
+            ReadModelId = UserId.ToString();
             GroupId = "462ec4f6-fd9e-4549-92b9-00b769636468";
             const string otherUserId = "564ac42d-66ba-444f-b265-fd42e900df75";
 

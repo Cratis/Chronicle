@@ -3,8 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Auditing;
 using Cratis.Chronicle.Contracts.Identities;
-using Cratis.Chronicle.Contracts.Primitives;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Events;
 

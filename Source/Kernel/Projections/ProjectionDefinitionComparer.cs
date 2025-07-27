@@ -35,8 +35,8 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
 
         // Note: Ignore the model and initial model state as they are not relevant for comparison and also have potential for recursive comparison
         // that can potentially lead to a stack overflow.
-        first = first with { Model = null!, InitialModelState = null! };
-        second = second with { Model = null!, InitialModelState = null! };
+        first = first with { ReadModel = null!, InitialModelState = null! };
+        second = second with { ReadModel = null!, InitialModelState = null! };
 
         return objectComparer.Compare(first, second, out _)
             ? ProjectionDefinitionCompareResult.Same

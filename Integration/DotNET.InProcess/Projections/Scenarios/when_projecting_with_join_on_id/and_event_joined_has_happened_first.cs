@@ -29,7 +29,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
             EventsWithEventSourceIdToAppend.Add(new(BookId, new BookBorrowed(UserId)));
         }
 
-        protected override Task<BorrowedBook> GetModelResult()
+        protected override Task<BorrowedBook> GetReadModelResult()
         {
             var result = ChronicleFixture.ReadModels.Database.GetCollection<BorrowedBook>().Find(_ => _.Id == BookId);
             return result.FirstOrDefaultAsync();

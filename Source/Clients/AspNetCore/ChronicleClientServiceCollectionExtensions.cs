@@ -86,7 +86,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
-        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ModelNameConvention);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ReadModelNameConvention);
 
         // We're hardcoding the CorrelationId accessor here, as it is not available in the ChronicleAspNetCoreOptions anyways, and registering it dynamically causes a
         // circular dependency in the DI container.

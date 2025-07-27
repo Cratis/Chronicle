@@ -69,7 +69,17 @@ public static class WellKnownGrainStorageProviders
     public const string ReducersManager = "reducers-manager";
 
     /// <summary>
-    /// The name of the storage provider used for event types.
+    /// The name of the storage provider used for constraints.
     /// </summary>
     public const string Constraints = "constraints";
+
+    /// <summary>
+    /// The name of the storage provider used for read models.
+    /// </summary>
+    public const string ReadModels = "read-models";
+
+    /// <summary>
+    /// The name of the storage provider used for the read models manager.
+    /// </summary>
+    public const string ReadModelsManager = "read-models-manager";
 }

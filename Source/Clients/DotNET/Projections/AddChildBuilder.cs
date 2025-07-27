@@ -10,15 +10,15 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IAddChildBuilder{TChildModel, TEvent}"/>.
 /// </summary>
-/// <typeparam name="TParentModel">Parent model type.</typeparam>
+/// <typeparam name="TParentReadModel">Parent model type.</typeparam>
 /// <typeparam name="TChildModel">Child model type.</typeparam>
 /// <typeparam name="TEvent">Type of the event.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="AddChildBuilder{TParentModel, TChildModel, TEvent}"/> class.
+/// Initializes a new instance of the <see cref="AddChildBuilder{TParentReadModel, TChildModel, TEvent}"/> class.
 /// </remarks>
 /// <param name="childrenBuilder">The children builder to use internally.</param>
-/// <param name="fromBuilder">The <see cref="IFromBuilder{TModel, TEvent}"/> to build the internals of the child relationship.</param>
-public class AddChildBuilder<TParentModel, TChildModel, TEvent>(IChildrenBuilder<TParentModel, TChildModel> childrenBuilder, IFromBuilder<TChildModel, TEvent> fromBuilder) : IAddChildBuilder<TChildModel, TEvent>
+/// <param name="fromBuilder">The <see cref="IFromBuilder{TReadModel, TEvent}"/> to build the internals of the child relationship.</param>
+public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBuilder<TParentReadModel, TChildModel> childrenBuilder, IFromBuilder<TChildModel, TEvent> fromBuilder) : IAddChildBuilder<TChildModel, TEvent>
 {
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)

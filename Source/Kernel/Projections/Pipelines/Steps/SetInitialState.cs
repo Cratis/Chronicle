@@ -70,7 +70,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     }
 
     bool HasBeenInitialized(ExpandoObject initialState) =>
-        ((IDictionary<string, object?>)initialState).TryGetValue(WellKnownProperties.ModelInstanceInitialized, out var initialized) && initialized is bool initializedBool && initializedBool;
+        ((IDictionary<string, object?>)initialState).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is bool initializedBool && initializedBool;
 
     void SetKeyForInitialState(ExpandoObject initialState, Key key)
     {

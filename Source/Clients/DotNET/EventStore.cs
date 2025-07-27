@@ -15,6 +15,7 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
@@ -134,7 +135,6 @@ public class EventStore : IEventStore
             EventTypes,
             _eventSerializer,
             modelNameResolver,
-            schemaGenerator,
             jsonSerializerOptions,
             identityProvider,
             loggerFactory.CreateLogger<Reducers.Reducers>());
@@ -144,14 +144,15 @@ public class EventStore : IEventStore
             EventTypes,
             new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
-            schemaGenerator,
             modelNameResolver,
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
-        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, schemaGenerator, jsonSerializerOptions));
+        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, jsonSerializerOptions));
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
+
+        ReadModels = new ReadModels.ReadModels(this, projections, Reducers, modelNameResolver, schemaGenerator);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
@@ -205,15 +206,18 @@ public class EventStore : IEventStore
     public IFailedPartitions FailedPartitions { get; }
 
     /// <inheritdoc/>
+    public IReadModels ReadModels { get; }
+
+    /// <inheritdoc/>
     public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
 
         // We need to discover all event types first, as they are used by the other artifacts
         await EventTypes.Discover();
-        await Constraints.Discover();
 
         await Task.WhenAll(
+            Constraints.Discover(),
             Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover());
@@ -224,11 +228,13 @@ public class EventStore : IEventStore
     {
         _logger.RegisterAllArtifacts();
 
-        // We need to register event types first, as they are used by the other artifacts
-        await EventTypes.Register();
-        await Constraints.Register();
+        // We need to register event types and read models first, as they are used by the other artifacts
+        await Task.WhenAll(
+            EventTypes.Register(),
+            ReadModels.Register());
 
         await Task.WhenAll(
+            Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
             Projections.Register());

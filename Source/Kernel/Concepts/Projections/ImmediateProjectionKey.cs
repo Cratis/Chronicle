@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Concepts.Projections;
 
@@ -13,14 +13,14 @@ namespace Cratis.Chronicle.Concepts.Projections;
 /// <param name="EventStore">The event store name.</param>
 /// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
-/// <param name="ModelKey">The event source identifier.</param>
+/// <param name="ReadModelKey">The read model key.</param>
 /// <param name="SessionId">Optional projection session identifier.</param>
 public record ImmediateProjectionKey(
     ProjectionId ProjectionId,
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
-    ModelKey ModelKey,
+    ReadModelKey ReadModelKey,
     ProjectionSessionId? SessionId = default)
 {
     /// <summary>
@@ -34,10 +34,10 @@ public record ImmediateProjectionKey(
     {
         if (SessionId != default)
         {
-            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ModelKey, SessionId);
+            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKey, SessionId);
         }
 
-        return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ModelKey);
+        return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKey);
     }
 
     /// <summary>

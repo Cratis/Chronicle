@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -23,7 +23,7 @@ public interface ISinks
     /// </summary>
     /// <param name="typeId"><see cref="SinkTypeId"/> to get for.</param>
     /// /// <param name="configurationId"><see cref="SinkConfigurationId"/> to get for.</param>
-    /// <param name="model"><see cref="Model"/> to get for.</param>
+    /// <param name="model"><see cref="ReadModelDefinition"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
-    ISink GetFor(SinkTypeId typeId, SinkConfigurationId configurationId, Model model);
+    ISink GetFor(SinkTypeId typeId, SinkConfigurationId configurationId, ReadModelDefinition model);
 }

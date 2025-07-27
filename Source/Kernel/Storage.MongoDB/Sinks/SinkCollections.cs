@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <remarks>
 /// Initializes a new instance of the <see cref="SinkCollections"/> class.
 /// </remarks>
-/// <param name="model">The <see cref="Model"/> the context is for.</param>
+/// <param name="model">The <see cref="ReadModelDefinition"/> the context is for.</param>
 /// <param name="database">The <see cref="IMongoDatabase"/> to use.</param>
 public class SinkCollections(
-    Model model,
+    ReadModelDefinition model,
     IMongoDatabase database) : ISinkCollections
 {
     bool _isReplaying;

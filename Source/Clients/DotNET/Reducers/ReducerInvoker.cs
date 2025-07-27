@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ReadModels;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Reducers;
@@ -22,13 +23,16 @@ public class ReducerInvoker : IReducerInvoker
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>
+    /// <param name="readModelName">Name of the read model for the reducer.</param>
     public ReducerInvoker(
         IEventTypes eventTypes,
         Type targetType,
-        Type readModelType)
+        Type readModelType,
+        ReadModelName readModelName)
     {
         _targetType = targetType;
         ReadModelType = readModelType;
+        ReadModelName = readModelName;
         _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                                         .Where(_ => _.IsReducerMethod(readModelType, eventTypes.AllClrTypes))
                                         .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
@@ -42,6 +46,9 @@ public class ReducerInvoker : IReducerInvoker
 
     /// <inheritdoc/>
     public Type ReadModelType { get; }
+
+    /// <inheritdoc/>
+    public ReadModelName ReadModelName { get; }
 
     /// <inheritdoc/>
     public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)

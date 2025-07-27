@@ -24,6 +24,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
 
         async Task Establish()
         {
+            await EventStore.ReadModels.Register<SomeReadModel>();
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await reducer.WaitTillSubscribed();
 
@@ -50,7 +51,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
     }
 
     [Fact]
-    void should_have_reactor_observer_be_in_running_state() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
+    void should_be_in_running_state() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
 
     [Fact]
     void should_catch_up_all_events_added_while_disconnected() => Context.ReducerState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAfterDisconnect.Value);

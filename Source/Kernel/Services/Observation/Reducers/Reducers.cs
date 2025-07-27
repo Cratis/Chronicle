@@ -7,12 +7,13 @@ using System.Reactive.Linq;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
@@ -48,7 +49,7 @@ internal sealed class Reducers(
         ConcurrentDictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
         IReducer? clientObserver = null;
 
-        var model = new Model(ModelName.NotSet, new JsonSchema());
+        var model = new ReadModelDefinition(ReadModelName.NotSet, new JsonSchema());
 
         messages.Subscribe(message =>
         {
@@ -62,7 +63,13 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    registrationTcs.SetResult(register);
+                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
+                        result =>
+                        {
+                            model = result.Result;
+                            registrationTcs.SetResult(register);
+                        },
+                        TaskScheduler.Current);
                     break;
 
                 case ReducerResult result:
@@ -74,8 +81,8 @@ internal sealed class Reducers(
                         _ => ObserverSubscriberState.None
                     };
 
-                    var modelResult = (result.ModelState is null) ? null :
-                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ModelState)!.AsObject(), model.Schema);
+                    var modelResult = (result.ReadModelState is null) ? null :
+                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ReadModelState)!.AsObject(), model.Schema);
 
                     var subscriberResult = new ReducerSubscriberResult(
                         new ObserverSubscriberResult(
@@ -146,9 +153,6 @@ internal sealed class Reducers(
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
                         await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-
-                        var modelSchema = await JsonSchema.FromJsonAsync(reducerDefinition.Model.Schema);
-                        model = new Model(reducerDefinition.Model.Name, modelSchema);
                     }
 
                     await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);

@@ -7,32 +7,28 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Schemas;
+using Cratis.Models;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IChildrenBuilder{TModel, TChildModel}"/>.
+/// Represents an implementation of <see cref="IChildrenBuilder{TParentReadModel, TChildReadModel}"/>.
 /// </summary>
-/// <typeparam name="TParentModel">Parent model type.</typeparam>
-/// <typeparam name="TChildModel">Child model type.</typeparam>
-/// <remarks>
-/// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
-/// </remarks>
+/// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 /// <param name="autoMap">Whether to automatically map properties.</param>
-public class ChildrenBuilder<TParentModel, TChildModel>(
+/// <typeparam name="TParentReadModel">Parent model type.</typeparam>
+/// <typeparam name="TChildReadModel">Child model type.</typeparam>
+public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
+    IModelNameResolver modelNameResolver,
     IEventTypes eventTypes,
-    IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
     bool autoMap) :
-    ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>(eventTypes, schemaGenerator, jsonSerializerOptions, autoMap),
-    IChildrenBuilder<TParentModel, TChildModel>
+    ProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>(modelNameResolver, eventTypes, jsonSerializerOptions, autoMap),
+    IChildrenBuilder<TParentReadModel, TChildReadModel>
 {
-    readonly IJsonSchemaGenerator _schemaGenerator = schemaGenerator;
     PropertyPath _identifiedBy = PropertyPath.NotSet;
 
 #pragma warning disable IDE0052 // Remove unread private members
@@ -49,21 +45,21 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
     public PropertyPath GetIdentifiedBy() => _identifiedBy;
 
     /// <inheritdoc/>
-    public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath)
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy(PropertyPath propertyPath)
     {
         _identifiedBy = propertyPath;
         return this;
     }
 
     /// <inheritdoc/>
-    public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression)
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression)
     {
         _identifiedBy = propertyExpression.GetPropertyPath();
         return this;
     }
 
     /// <inheritdoc/>
-    public IChildrenBuilder<TParentModel, TChildModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildModel>> propertyExpression)
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildReadModel>> propertyExpression)
     {
         _fromEventPropertyEventType = typeof(TEvent).GetEventType().ToContract();
         _fromEventPropertyExpression = new EventContentPropertyExpression(propertyExpression.GetPropertyPath());
@@ -79,11 +75,7 @@ public class ChildrenBuilder<TParentModel, TChildModel>(
         return new()
         {
             IdentifiedBy = _identifiedBy,
-            Model = new()
-            {
-                Name = _modelName,
-                Schema = _schemaGenerator.Generate(typeof(TChildModel)).ToJson()
-            },
+            ReadModel = _readModelName,
             InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,
             Join = _joinDefinitions,

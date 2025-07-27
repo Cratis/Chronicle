@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,14 +13,24 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <param name="eventStore">The event store to use.</param>
 /// <param name="projectionId">The identifier of the projection.</param>
+/// <param name="readModelType">The type of the read model.</param>
+/// <param name="readModelName">The name of the read model.</param>
 /// <param name="eventSequenceId">The event sequence identifier.</param>
 public class ProjectionHandler(
     IEventStore eventStore,
     ProjectionId projectionId,
+    Type readModelType,
+    ReadModelName readModelName,
     EventSequenceId eventSequenceId) : IProjectionHandler
 {
     /// <inheritdoc/>
     public ProjectionId Id => projectionId;
+
+    /// <inheritdoc/>
+    public Type ReadModelType => readModelType;
+
+    /// <inheritdoc/>
+    public ReadModelName ReadModelName => readModelName;
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> GetFailedPartitions() =>

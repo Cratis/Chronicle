@@ -7,7 +7,6 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Schemas;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +21,6 @@ public class all_dependencies : Specification
     protected IEventTypes _eventTypes;
     protected IEventSerializer _eventSerializer;
     protected IModelNameResolver _modelNameResolver;
-    protected IJsonSchemaGenerator _jsonSchemaGenerator;
     protected JsonSerializerOptions _jsonSerializerOptions;
     protected ILogger<Reducers> _logger;
     protected IChronicleServicesAccessor _servicesAccessor;
@@ -45,7 +43,6 @@ public class all_dependencies : Specification
         _eventTypes = Substitute.For<IEventTypes>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _modelNameResolver = Substitute.For<IModelNameResolver>();
-        _jsonSchemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         _jsonSerializerOptions = new();
         _logger = Substitute.For<ILogger<Reducers>>();
 
@@ -74,7 +71,6 @@ public class all_dependencies : Specification
             _eventTypes,
             _eventSerializer,
             _modelNameResolver,
-            _jsonSchemaGenerator,
             _jsonSerializerOptions,
             _identityProvider,
             _logger);

@@ -3,8 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Events;
 
-using ProtoBuf;
-
 namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>

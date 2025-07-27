@@ -10,6 +10,7 @@ using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
+using NJsonSchema;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Serializers;
@@ -79,13 +80,14 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new RemovedWithDefinitionsConverter());
         options.Converters.Add(new RemovedWithJoinDefinitionsConverter());
         options.Converters.Add(new JobStateConverter());
+        options.Converters.Add(new JsonSchemaConverter());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
         options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
         services.AddConceptSerializer();
         services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
+            _ => _ == typeof(JsonObject) || _ == typeof(JsonSchema) || (_.Namespace?.StartsWith("Cratis") ?? false),
             options));
     }
 }

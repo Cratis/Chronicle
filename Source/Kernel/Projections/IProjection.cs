@@ -4,10 +4,11 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -57,9 +58,14 @@ public interface IProjection
     IProjection? Parent { get; }
 
     /// <summary>
-    /// Gets the <see cref="Model"/> the projection targets.
+    /// Gets the <see cref="ReadModelDefinition"/> for the root read model.
     /// </summary>
-    Model Model { get; }
+    ReadModelDefinition ReadModel { get; }
+
+    /// <summary>
+    /// Gets the <see cref="JsonSchema"/> representing the target for this projection.
+    /// </summary>
+    JsonSchema TargetReadModelSchema { get; }
 
     /// <summary>
     /// Gets whether or not the projection is rewindable.

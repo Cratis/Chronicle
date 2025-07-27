@@ -4,13 +4,14 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Reducers;
 
 /// <summary>
 /// Defines a system that handle events for a specific reducer.
 /// </summary>
-public interface IReducerHandler
+public interface IReducerHandler : IHaveReadModel
 {
     /// <summary>
     /// Gets the unique identifier of the reducer.
@@ -26,11 +27,6 @@ public interface IReducerHandler
     /// Gets the event types for the reducer.
     /// </summary>
     IEnumerable<EventType> EventTypes { get; }
-
-    /// <summary>
-    /// Gets the type of the read model.
-    /// </summary>
-    Type ReadModelType { get; }
 
     /// <summary>
     /// Gets whether the reducer should be actively running on the Kernel.

@@ -24,7 +24,7 @@ public class last_child_removed(context context) : Given<context>(context)
             var userId = new UserId(Guid.NewGuid());
             FirstGroupId = Guid.NewGuid();
             EventSourceId = userId.ToString();
-            ModelId = FirstGroupId;
+            ReadModelId = FirstGroupId;
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated("SomeGroup")));
             EventsWithEventSourceIdToAppend.Add(new(userId.ToString(), new UserCreated("Someone")));
@@ -42,5 +42,5 @@ public class last_child_removed(context context) : Given<context>(context)
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_no_children() => Context.Result.Users.ShouldBeEmpty();
     [Fact] void should_only_have_one_group() => Context.Groups.Length.ShouldEqual(1);
-    [Fact] void should_only_have_the_correct_group() => Context.Groups[0].Id.Value.ShouldEqual(Context.ModelId);
+    [Fact] void should_only_have_the_correct_group() => Context.Groups[0].Id.Value.ShouldEqual(Context.ReadModelId);
 }

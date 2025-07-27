@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Rules.for_Rules.when_projecting_to_rule;
 
@@ -17,5 +17,5 @@ public class without_state : given.no_rules
 
     void Because() => rules.ProjectTo(_rule, ModelIdentifier);
 
-    [Fact] void should_not_get_instance_from_immediate_projection() => _projections.DidNotReceive().GetInstanceById(_rule.GetRuleId().Value, Arg.Any<ModelKey>());
+    [Fact] void should_not_get_instance_from_immediate_projection() => _projections.DidNotReceive().GetInstanceById(_rule.GetRuleId().Value, Arg.Any<ReadModelKey>());
 }

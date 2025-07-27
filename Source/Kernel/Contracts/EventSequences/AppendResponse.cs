@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences.Concurrency;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.EventSequences;
 

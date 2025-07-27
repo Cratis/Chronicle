@@ -24,7 +24,8 @@ public class a_reducer_invoker_for<TReducer> : Specification
         _invoker = new ReducerInvoker(
             _eventTypes,
             typeof(TReducer),
-            typeof(ReadModel));
+            typeof(ReadModel),
+            nameof(ReadModel));
     }
 
     protected virtual IEnumerable<Type> GetEventTypes() => [];
