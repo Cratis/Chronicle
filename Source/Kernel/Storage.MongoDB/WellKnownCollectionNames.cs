@@ -44,9 +44,9 @@ public static class WellKnownCollectionNames
     public const string ConnectedClients = "connected-clients";
 
     /// <summary>
-    /// The collection that holds schemas.
+    /// The collection that holds event types.
     /// </summary>
-    public const string Schemas = "schemas";
+    public const string EventTypes = "event-types";
 
     /// <summary>
     /// The collection that holds failed partitions.

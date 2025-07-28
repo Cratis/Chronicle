@@ -144,7 +144,7 @@ public class EventTypesStorage(
         return schemas.Count == 1;
     }
 
-    IMongoCollection<EventSchemaMongoDB> GetCollection() => sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
+    IMongoCollection<EventSchemaMongoDB> GetCollection() => sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.EventTypes);
 
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventTypeGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
