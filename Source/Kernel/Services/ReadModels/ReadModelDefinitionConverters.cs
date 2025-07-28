@@ -18,10 +18,14 @@ internal static class ReadModelDefinitionConverters
     /// <returns>The converted <see cref="Contracts.ReadModels.ReadModelDefinition"/>.</returns>
     public static Contracts.ReadModels.ReadModelDefinition ToContract(this ReadModelDefinition definition)
     {
+        var latestGeneration = definition.LatestGeneration;
+        var latestSchema = definition.GetSchemaForLatestGeneration();
         return new()
         {
             Name = definition.Name,
-            Schema = definition.Schema.ToJson()
+            Owner = (Contracts.ReadModels.ReadModelOwner)(int)definition.Owner,
+            Generation = latestGeneration.Value,
+            Schema = latestSchema.ToJson()
         };
     }
 
@@ -32,9 +36,15 @@ internal static class ReadModelDefinitionConverters
     /// <returns>The converted <see cref="ReadModelDefinition"/>.</returns>
     public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract)
     {
+        var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
+
         return new(
             contract.Name,
-            JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult()
+            (ReadModelOwner)(int)contract.Owner,
+            new Dictionary<ReadModelGeneration, JsonSchema>
+            {
+                { (ReadModelGeneration)contract.Generation, schema }
+            }
         );
     }
 }

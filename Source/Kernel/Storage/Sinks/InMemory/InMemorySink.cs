@@ -131,7 +131,7 @@ public class InMemorySink(
             return stringBuilder.ToString();
         }
 
-        var targetType = model.Schema.GetTargetTypeForPropertyPath("id", typeFormats);
+        var targetType = model.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
         if (targetType is not null)
         {
             return TypeConversion.Convert(targetType, key.Value);

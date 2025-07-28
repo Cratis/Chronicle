@@ -50,7 +50,7 @@ public class Sink(
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            return expandoObjectConverter.ToExpandoObject(instance, model.Schema);
+            return expandoObjectConverter.ToExpandoObject(instance, model.GetSchemaForLatestGeneration());
         }
 
         return default;

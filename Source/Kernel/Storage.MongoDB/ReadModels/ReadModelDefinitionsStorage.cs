@@ -49,13 +49,18 @@ public class ReadModelDefinitionsStorage(
     /// <inheritdoc/>
     public Task Save(ReadModelDefinition definition)
     {
-        var readModel = new ReadModel(definition.Name.Value, definition.Schema.ToJson());
+        var readModel = new ReadModel(definition.Name.Value, definition.Owner, definition.Schemas.ToDictionary(_ => _.Key, _ => _.Value.ToJson()));
         return Collection.ReplaceOneAsync(rm => rm.Id == readModel.Id, readModel, new ReplaceOptions { IsUpsert = true });
     }
 
     async Task<ReadModelDefinition> CreateDefinitionFrom(ReadModel readModel)
     {
-        var schema = await JsonSchema.FromJsonAsync(readModel.Schema);
-        return new(readModel.Id, schema);
+        Dictionary<ReadModelGeneration, JsonSchema> schemas = new();
+        foreach (var schema in readModel.Schemas)
+        {
+            var generation = schema.Key;
+            schemas[generation] = await JsonSchema.FromJsonAsync(schema.Value);
+        }
+        return new(readModel.Id, readModel.Owner, schemas);
     }
 }

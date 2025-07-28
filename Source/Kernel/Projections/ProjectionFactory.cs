@@ -53,7 +53,7 @@ public class ProjectionFactory(
             eventSequenceStorage,
             definition,
             readModelDefinition,
-            readModelDefinition.Schema,
+            readModelDefinition.GetSchemaForLatestGeneration(),
             PropertyPath.Root,
             PropertyPath.Root,
             ProjectionPath.GetRootFor(definition.Identifier),
@@ -128,7 +128,7 @@ public class ProjectionFactory(
         ProjectionPath path,
         bool isChild)
     {
-        var hasIdProperty = rootReadModel.Schema.GetFlattenedProperties().Any(_ => _.Name == "id");
+        var hasIdProperty = rootReadModel.GetSchemaForLatestGeneration().GetFlattenedProperties().Any(_ => _.Name == "id");
         var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
@@ -165,7 +165,7 @@ public class ProjectionFactory(
 
         if (projectionDefinition.FromEventProperty is not null)
         {
-            var schemaProperty = rootReadModel.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
+            var schemaProperty = rootReadModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
             schemaProperty ??= new JsonSchemaProperty
             {
                 Type = projection.TargetReadModelSchema.Type,

@@ -29,7 +29,7 @@ public class a_mongodb_converter : Specification
 
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _typeFormats = Substitute.For<ITypeFormats>();
-        _model = new ReadModelDefinition(nameof(ReadModel), generator.Generate(typeof(ReadModel)));
+        _model = new ReadModelDefinition(nameof(ReadModel), ReadModelOwner.Client, generator.Generate(typeof(ReadModel)));
         _converter = new(_expandoObjectConverter, _typeFormats, _model);
     }
 }

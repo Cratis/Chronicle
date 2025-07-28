@@ -49,7 +49,7 @@ internal sealed class Reducers(
         ConcurrentDictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
         IReducer? clientObserver = null;
 
-        var model = new ReadModelDefinition(ReadModelName.NotSet, new JsonSchema());
+        var model = new ReadModelDefinition(ReadModelName.NotSet, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema>());
 
         messages.Subscribe(message =>
         {
@@ -82,7 +82,7 @@ internal sealed class Reducers(
                     };
 
                     var modelResult = (result.ReadModelState is null) ? null :
-                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ReadModelState)!.AsObject(), model.Schema);
+                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ReadModelState)!.AsObject(), model.GetSchemaForLatestGeneration());
 
                     var subscriberResult = new ReducerSubscriberResult(
                         new ObserverSubscriberResult(
@@ -136,7 +136,7 @@ internal sealed class Reducers(
                         (reduceOperation, tcs) =>
                         {
                             reducerResultTcs[reduceOperation.Partition] = tcs;
-                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.Schema).ToString();
+                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
                             var message = new ReduceOperationMessage()
                             {
                                 Partition = reduceOperation.Partition.Value.ToString()!,

@@ -46,7 +46,7 @@ public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressio
             }
             var actualProperty = identifiedByProperty + keyValue[0];
 
-            var schemaProperty = projection.ReadModel.Schema.GetSchemaPropertyForPropertyPath(actualProperty)!;
+            var schemaProperty = projection.ReadModel.Schemas.GetSchemaPropertyForPropertyPath(actualProperty)!;
             schemaProperty ??= new JsonSchemaProperty
             {
                 Type = JsonObjectType.String

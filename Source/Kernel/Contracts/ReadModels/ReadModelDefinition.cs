@@ -16,8 +16,20 @@ public class ReadModelDefinition
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the JSON schema for the model.
+    /// Gets or sets the owner of the read model.
     /// </summary>
     [ProtoMember(2)]
+    public ReadModelOwner Owner { get; set; } = ReadModelOwner.None;
+
+    /// <summary>
+    /// Gets or sets the generation of the model.
+    /// </summary>
+    [ProtoMember(3)]
+    public ulong Generation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the JSON schema for the model.
+    /// </summary>
+    [ProtoMember(4)]
     public string Schema { get; set; }
 }
