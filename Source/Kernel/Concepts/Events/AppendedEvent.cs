@@ -13,14 +13,20 @@ namespace Cratis.Chronicle.Concepts.Events;
 public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
     /// <summary>
-    /// Represents an empty <see cref="AppendedEvent"/> with a specific event sequence number.
+    /// Creates an empty <see cref="AppendedEvent"/> with no content and no context.
+    /// </summary>
+    /// <returns>An empty <see cref="AppendedEvent"/>.</returns>
+    public static AppendedEvent Empty() => new(EventContext.Empty, new ExpandoObject());
+
+    /// <summary>
+    /// Creates an empty <see cref="AppendedEvent"/> with a specific event sequence number.
     /// </summary>
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event sequence number.</returns>
     public static AppendedEvent EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) => new(EventContext.Empty with { SequenceNumber = eventSequenceNumber }, new ExpandoObject());
 
     /// <summary>
-    /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
+    /// Creates an empty <see cref="AppendedEvent"/> with a specific event type.
     /// </summary>
     /// <param name="eventType">Type of event it should be.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
