@@ -124,6 +124,6 @@ public class ProjectionObserverSubscriber(
             projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
         }
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
-        _schema = readModel.Schemas;
+        _schema = readModel.GetSchemaForLatestGeneration();
     }
 }

@@ -88,7 +88,7 @@ public class ImmediateProjection(
             if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
             {
                 logger.UsingCachedModelInstance();
-                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _projection!.ReadModel.Schemas);
+                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _projection!.ReadModel.GetSchemaForLatestGeneration());
                 return new(initialStateAsJson, [], 0, tail);
             }
 
@@ -120,7 +120,7 @@ public class ImmediateProjection(
             }
 
             _initialState = state;
-            var jsonObject = expandoObjectConverter.ToJsonObject(state, _projection!.ReadModel.Schemas);
+            var jsonObject = expandoObjectConverter.ToJsonObject(state, _projection!.ReadModel.GetSchemaForLatestGeneration());
             return new(jsonObject, affectedProperties, projectedEventsCount, _lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
@@ -148,7 +148,7 @@ public class ImmediateProjection(
         var initialState = _initialState ?? new ExpandoObject();
         var result = await HandleEvents(affectedProperties, initialState, eventsToApply);
         _initialState = result.State;
-        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _projection!.ReadModel.Schemas);
+        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _projection!.ReadModel.GetSchemaForLatestGeneration());
         return new(jsonObject, affectedProperties, result.ProjectedEventsCount, result.Tail);
     }
 
@@ -162,7 +162,7 @@ public class ImmediateProjection(
     ExpandoObject GetInitialState()
     {
         return _initialState ?? (State.InitialModelState is not null
-            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _projection!.ReadModel.Schemas)
+            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _projection!.ReadModel.GetSchemaForLatestGeneration())
             : new ExpandoObject());
     }
 

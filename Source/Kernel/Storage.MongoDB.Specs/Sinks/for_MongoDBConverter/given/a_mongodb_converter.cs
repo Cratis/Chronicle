@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
+using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
@@ -29,7 +30,13 @@ public class a_mongodb_converter : Specification
 
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _typeFormats = Substitute.For<ITypeFormats>();
-        _model = new ReadModelDefinition(nameof(ReadModel), ReadModelOwner.Client, generator.Generate(typeof(ReadModel)));
+        _model = new ReadModelDefinition(
+            nameof(ReadModel),
+            ReadModelOwner.Client,
+            new Dictionary<ReadModelGeneration, JsonSchema>
+            {
+                { ReadModelGeneration.First, generator.Generate(typeof(ReadModel)) },
+            });
         _converter = new(_expandoObjectConverter, _typeFormats, _model);
     }
 }
