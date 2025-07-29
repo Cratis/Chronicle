@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <summary>
 /// Represents the definition of a projection.
 /// </summary>
+/// <param name="Owner"><see cref="ProjectionOwner">Owner</see> of the projection.</param>
 /// <param name="EventSequenceId"><see cref="EventSequenceId">Event sequence identifier</see> the projection projects from.</param>
 /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
 /// <param name="ReadModel">The target read model.</param>
@@ -30,6 +31,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
 public record ProjectionDefinition(
+    ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
     ProjectionId Identifier,
     ReadModelName ReadModel,

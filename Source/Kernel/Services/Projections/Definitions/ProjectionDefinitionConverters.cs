@@ -23,6 +23,7 @@ internal static class ProjectionDefinitionConverters
     {
         return new()
         {
+            Owner = (Contracts.Projections.ProjectionOwner)(int)definition.Owner,
             EventSequenceId = definition.EventSequenceId,
             Identifier = definition.Identifier,
             ReadModel = definition.ReadModel,
@@ -50,6 +51,7 @@ internal static class ProjectionDefinitionConverters
     public static ProjectionDefinition ToChronicle(this Contracts.Projections.ProjectionDefinition contract)
     {
         return new(
+            (ProjectionOwner)(int)contract.Owner,
             contract.EventSequenceId,
             contract.Identifier,
             contract.ReadModel,

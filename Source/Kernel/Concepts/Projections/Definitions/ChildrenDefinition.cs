@@ -34,6 +34,7 @@ public record ChildrenDefinition(
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default) :
     ProjectionDefinition(
+        ProjectionOwner.None,
         EventSequences.EventSequenceId.Unspecified,
         ProjectionId.Unspecified,
         ReadModel,

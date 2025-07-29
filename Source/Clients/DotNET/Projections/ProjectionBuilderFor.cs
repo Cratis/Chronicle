@@ -76,6 +76,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
         var modelType = typeof(TReadModel);
         return new()
         {
+            Owner = ProjectionOwner.Client,
             EventSequenceId = _eventSequenceId,
             Identifier = _identifier,
             ReadModel = _readModelName,
