@@ -17,8 +17,8 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.7" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.7.0" />
         <!-- Cratis -->
-        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.1" />
-        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.1" />
+        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.2" />
+        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.2" />
         <PackageVersion Include="Cratis.Applications" Version="16.0.2" />
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.2" />
         <PackageVersion Include="Cratis.Applications.Orleans" Version="16.0.2" />
@@ -60,8 +60,8 @@
         <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
         <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.0" />
         <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
-        <PackageVersion Include="Roslynator.Analyzers" Version="4.13.1" />
-        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.205" />
+        <PackageVersion Include="Roslynator.Analyzers" Version="4.14.0" />
+        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.208" />
         <!-- Not categorized -->
         <PackageVersion Include="BenchmarkDotNet" Version="0.15.0" />
         <PackageVersion Include="castle.core" Version="5.2.1" />
