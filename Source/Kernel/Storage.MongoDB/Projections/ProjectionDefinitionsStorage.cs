@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using ProjectionDefinition = Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition;
 
@@ -24,18 +25,17 @@ public class ProjectionDefinitionsStorage(
     IEventStoreDatabase eventStoreDatabase,
     IJsonProjectionDefinitionSerializer projectionDefinitionSerializer) : IProjectionDefinitionsStorage
 {
-    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ProjectionDefinitions);
+    IMongoCollection<Projection> Collection => eventStoreDatabase.GetCollection<Projection>(WellKnownCollectionNames.ProjectionDefinitions);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        using var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
-        var definitionsAsBson = result.ToList();
-        return definitionsAsBson.Select(_ =>
+        using var result = await Collection.FindAsync(FilterDefinition<Projection>.Empty);
+        var projections = result.ToList();
+        return projections.Select(projection =>
         {
-            _.Remove("_id");
-            var definitionAsJson = _.ToJson();
-            return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
+            var definition = projection.Definitions.Last()!.Value;
+            return BsonSerializer.Deserialize<ProjectionDefinition>(definition);
         }).ToArray();
     }
 
@@ -58,13 +58,13 @@ public class ProjectionDefinitionsStorage(
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
-        var json = projectionDefinitionSerializer.Serialize(definition);
-        var document = BsonDocument.Parse(json.ToJsonString());
-        document["_id"] = definition.Identifier.Value;
-
+        var projection = new Projection(definition.Identifier, definition.Owner, new Dictionary<ProjectionGeneration, BsonDocument>
+        {
+            { ProjectionGeneration.First, definition.ToBsonDocument() }
+        });
         await Collection.ReplaceOneAsync(
             filter: new BsonDocument("_id", definition.Identifier.Value),
-            replacement: document,
+            replacement: projection,
             options: new ReplaceOptions { IsUpsert = true });
     }
 }

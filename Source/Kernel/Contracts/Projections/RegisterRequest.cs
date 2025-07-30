@@ -16,8 +16,14 @@ public class RegisterRequest
     public string EventStore { get; set; }
 
     /// <summary>
+    /// Gets or sets the owner of the projection.
+    /// </summary>
+    [ProtoMember(2)]
+    public ProjectionOwner Owner { get; set; } = ProjectionOwner.None;
+
+    /// <summary>
     /// Gets or sets the collection of <see cref="ProjectionDefinition"/> instances to register.
     /// </summary>
-    [ProtoMember(2, IsRequired = true)]
+    [ProtoMember(3, IsRequired = true)]
     public IList<ProjectionDefinition> Projections { get; set; } = [];
 }

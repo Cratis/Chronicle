@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Services.Sinks;
@@ -23,7 +24,6 @@ internal static class ProjectionDefinitionConverters
     {
         return new()
         {
-            Owner = (Contracts.Projections.ProjectionOwner)(int)definition.Owner,
             EventSequenceId = definition.EventSequenceId,
             Identifier = definition.Identifier,
             ReadModel = definition.ReadModel,
@@ -47,11 +47,12 @@ internal static class ProjectionDefinitionConverters
     /// Convert to Chronicle version of <see cref="ProjectionDefinition"/>.
     /// </summary>
     /// <param name="contract"><see cref="Contracts.Projections.ProjectionDefinition"/> to convert.</param>
+    /// <param name="owner"><see cref="ProjectionOwner"/> of the projection.</param>
     /// <returns>Converted Chronicle version.</returns>
-    public static ProjectionDefinition ToChronicle(this Contracts.Projections.ProjectionDefinition contract)
+    public static ProjectionDefinition ToChronicle(this Contracts.Projections.ProjectionDefinition contract, ProjectionOwner owner)
     {
         return new(
-            (ProjectionOwner)(int)contract.Owner,
+            owner,
             contract.EventSequenceId,
             contract.Identifier,
             contract.ReadModel,

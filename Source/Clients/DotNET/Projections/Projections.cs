@@ -264,6 +264,7 @@ public class Projections(
         await _servicesAccessor.Services.Projections.Register(new()
         {
             EventStore = eventStore.Name,
+            Owner = ProjectionOwner.Client,
             Projections = [.. Definitions]
         });
     }

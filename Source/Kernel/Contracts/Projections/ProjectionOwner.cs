@@ -19,7 +19,7 @@ public enum ProjectionOwner
     Client = 1,
 
     /// <summary>
-    /// The projection is owned by the kernel.
+    /// The projection is owned by the server.
     /// </summary>
-    Kernel = 2
+    Server = 2
 }

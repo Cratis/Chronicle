@@ -27,7 +27,7 @@ internal sealed class Projections(
     public Task Register(RegisterRequest request, CallContext context = default)
     {
         var projectionsManager = grainFactory.GetGrain<Grains.Projections.IProjectionsManager>(request.EventStore);
-        var projections = request.Projections.Select(_ => _.ToChronicle()).ToArray();
+        var projections = request.Projections.Select(_ => _.ToChronicle((Concepts.Projections.ProjectionOwner)(int)request.Owner)).ToArray();
 
         _ = Task.Run(() => projectionsManager.Register(projections));
         return Task.CompletedTask;

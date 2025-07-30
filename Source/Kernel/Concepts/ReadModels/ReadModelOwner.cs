@@ -19,7 +19,7 @@ public enum ReadModelOwner
     Client = 1,
 
     /// <summary>
-    /// The read model is owned by the kernel.
+    /// The read model is owned by the server.
     /// </summary>
-    Kernel = 2
+    Server = 2
 }

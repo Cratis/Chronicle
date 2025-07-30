@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Concepts.Projections.Definitions;
+namespace Cratis.Chronicle.Concepts.Projections;
 
 /// <summary>
 /// Represents the owner of a projection.
@@ -19,7 +19,12 @@ public enum ProjectionOwner
     Client = 1,
 
     /// <summary>
-    /// The projection is owned by the kernel.
+    /// The projection is owned by the server.
     /// </summary>
-    Kernel = 2
+    Server = 2,
+
+    /// <summary>
+    /// The projection is owned by a parent projection.
+    /// </summary>
+    Parent = 3
 }
