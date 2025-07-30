@@ -56,10 +56,10 @@ public class ReadModelDefinitionsStorage(
     async Task<ReadModelDefinition> CreateDefinitionFrom(ReadModel readModel)
     {
         Dictionary<ReadModelGeneration, JsonSchema> schemas = new();
-        foreach (var schema in readModel.Schemas)
+        foreach (var (key, schema) in readModel.Schemas)
         {
-            var generation = schema.Key;
-            schemas[generation] = await JsonSchema.FromJsonAsync(schema.Value);
+            var generation = key;
+            schemas[generation] = await JsonSchema.FromJsonAsync(schema);
         }
         return new(readModel.Id, readModel.Owner, schemas);
     }
