@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 276 |
+| Number of items that remain open | 277 |
 | Number of items closed | 564 |
-| Total number of items created | 840 |
+| Total number of items created | 841 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Support generational Projections with references to correct generation of ReadModel | https://github.com/Cratis/Chronicle/issues/1959 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Make event type storage generational within same document stored | https://github.com/Cratis/Chronicle/issues/1957 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Rename Schemas collection in MongoDB to be EventTypes | https://github.com/Cratis/Chronicle/issues/1948 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Integration Specs should have an isolated database per fixture | https://github.com/Cratis/Chronicle/issues/1929 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 19 days, 17:17:06 | None |
@@ -341,6 +342,4 @@
 | Create guidance on setting up Docker Compose correctly when not using development image | https://github.com/Cratis/Chronicle/issues/1017 | None | [einari](https://github.com/einari) | None | None | None |
 | Support resilient transactions when appending events | https://github.com/Cratis/Chronicle/issues/1014 | None | [einari](https://github.com/einari) | None | None | None |
 | Import compensations through the workbench with a specific format and preview of compensations before applying them | https://github.com/Cratis/Chronicle/issues/1012 | None | [einari](https://github.com/einari) | None | None | None |
-| Import events in a specific format from the workbench | https://github.com/Cratis/Chronicle/issues/1011 | None | [einari](https://github.com/einari) | None | None | None |
-| Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
-| IObserverMiddleware should have 
+| Import events in a specific format from the workbench | https://github.com/Cratis/Chronicle/issues/1011 | None | [einari](https://github
