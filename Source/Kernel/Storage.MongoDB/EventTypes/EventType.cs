@@ -18,4 +18,4 @@ public record EventType(
     EventTypeId Id,
     EventTypeOwner Owner,
     bool Tombstone,
-    IDictionary<EventTypeGeneration, BsonDocument> Schemas);
+    IDictionary<string, BsonDocument> Schemas);

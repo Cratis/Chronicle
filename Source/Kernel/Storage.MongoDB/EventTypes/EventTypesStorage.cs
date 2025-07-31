@@ -48,12 +48,13 @@ public class EventTypesStorage(
         // If this is a new generation, there must be an upcaster and downcaster associated with the schema
         // .. do not allow generational gaps
         // if (await HasFor(type.Id, type.Generation)) return;
+        var generationAsString = type.Generation.ToString();
         var existingEventType = _eventTypes
-            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(type.Generation));
+            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(generationAsString));
 
         if (existingEventType is not null)
         {
-            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation].ToJson());
+            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[generationAsString].ToJson());
             existingSchema.ResetFlattenedProperties();
             if (existingSchema.ToJson() == schema.ToJson())
             {
@@ -101,9 +102,10 @@ public class EventTypesStorage(
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
+        var generationAsString = generation.ToString();
+        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToEventSchema();
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToEventSchema();
         }
 
         var filter = GetFilterForSpecificEventType(type);
@@ -125,8 +127,9 @@ public class EventTypesStorage(
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
+        var generationAsString = generation.ToString();
 
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
+        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
         {
             return true;
         }

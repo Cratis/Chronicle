@@ -25,9 +25,9 @@ public static class EventSchemaExtensions
             schema.Type.Id,
             EventTypeOwner.Client,
             schema.Type.Tombstone,
-            new Dictionary<EventTypeGeneration, BsonDocument>
+            new Dictionary<string, BsonDocument>
             {
-                { schema.Type.Generation, BsonDocument.Parse(schema.Schema.ToJson()) }
+                { schema.Type.Generation.ToString(), BsonDocument.Parse(schema.Schema.ToJson()) }
             });
     }
 
