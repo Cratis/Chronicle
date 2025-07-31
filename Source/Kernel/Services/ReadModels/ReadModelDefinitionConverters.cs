@@ -33,14 +33,15 @@ internal static class ReadModelDefinitionConverters
     /// Converts a <see cref="Contracts.ReadModels.ReadModelDefinition"/> to a <see cref="ReadModelDefinition"/>.
     /// </summary>
     /// <param name="contract">The <see cref="Contracts.ReadModels.ReadModelDefinition"/> to convert.</param>
+    /// <param name="owner">The owner of the read model.</param>
     /// <returns>The converted <see cref="ReadModelDefinition"/>.</returns>
-    public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract)
+    public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner)
     {
         var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
 
         return new(
             contract.Name,
-            (ReadModelOwner)(int)contract.Owner,
+            (ReadModelOwner)(int)owner,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { (ReadModelGeneration)contract.Generation, schema }

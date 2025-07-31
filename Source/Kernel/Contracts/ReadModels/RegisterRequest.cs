@@ -16,8 +16,14 @@ public class RegisterRequest
     public string EventStore { get; set; }
 
     /// <summary>
+    /// Gets or sets the owner of the read model.
+    /// </summary>
+    [ProtoMember(2)]
+    public ReadModelOwner Owner { get; set; } = ReadModelOwner.None;
+
+    /// <summary>
     /// Gets or sets the collection of <see cref="ReadModelDefinition"/> instances to register.
     /// </summary>
-    [ProtoMember(2, IsRequired = true)]
+    [ProtoMember(3, IsRequired = true)]
     public IList<ReadModelDefinition> ReadModels { get; set; } = [];
 }

@@ -43,6 +43,7 @@ public class ReadModels(
         await _chronicleServicesAccessor.Services.ReadModels.Register(new RegisterRequest
         {
             EventStore = eventStore.Name,
+            Owner = ReadModelOwner.Client,
             ReadModels = readModelDefinitions
         });
     }
@@ -61,6 +62,7 @@ public class ReadModels(
         await _chronicleServicesAccessor.Services.ReadModels.Register(new RegisterRequest
         {
             EventStore = eventStore.Name,
+            Owner = ReadModelOwner.Client,
             ReadModels = readModelDefinitions
         });
     }

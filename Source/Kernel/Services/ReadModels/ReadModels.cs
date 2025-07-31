@@ -17,7 +17,7 @@ internal sealed class ReadModels(IGrainFactory grainFactory) : IReadModels
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-        var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle()).ToArray();
+        var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner)).ToArray();
         await readModelsManager.Register(readModelDefinitions);
     }
 }
