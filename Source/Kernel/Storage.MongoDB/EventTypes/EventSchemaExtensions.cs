@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
+using MongoDB.Bson;
 using NJsonSchema;
 
 namespace Cratis.Events.MongoDB.EventTypes;
@@ -24,9 +25,9 @@ public static class EventSchemaExtensions
             schema.Type.Id,
             EventTypeOwner.Client,
             schema.Type.Tombstone,
-            new Dictionary<EventTypeGeneration, string>
+            new Dictionary<EventTypeGeneration, BsonDocument>
             {
-                { schema.Type.Generation, schema.Schema.ToJson() }
+                { schema.Type.Generation, BsonDocument.Parse(schema.Schema.ToJson()) }
             });
     }
 
@@ -37,7 +38,7 @@ public static class EventSchemaExtensions
     /// <returns>Converted <see cref="EventTypeSchema"/>.</returns>
     public static EventTypeSchema ToEventSchema(this EventType schema)
     {
-        var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value).GetAwaiter().GetResult();
+        var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value.ToJson()).GetAwaiter().GetResult();
         result.EnsureComplianceMetadata();
         result.ResetFlattenedProperties();
         result.EnsureFlattenedProperties();

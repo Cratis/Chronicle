@@ -9,6 +9,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
@@ -52,7 +53,7 @@ public class EventTypesStorage(
 
         if (existingEventType is not null)
         {
-            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation]);
+            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation].ToJson());
             existingSchema.ResetFlattenedProperties();
             if (existingSchema.ToJson() == schema.ToJson())
             {

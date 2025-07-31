@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using MongoDB.Bson;
 
 namespace Cratis.Events.MongoDB.EventTypes;
 
@@ -17,4 +18,4 @@ public record EventType(
     EventTypeId Id,
     EventTypeOwner Owner,
     bool Tombstone,
-    IDictionary<EventTypeGeneration, string> Schemas);
+    IDictionary<EventTypeGeneration, BsonDocument> Schemas);
