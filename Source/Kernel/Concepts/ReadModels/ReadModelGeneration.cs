@@ -29,4 +29,23 @@ public record ReadModelGeneration(uint Value) : ConceptAs<uint>(Value)
     /// </summary>
     /// <param name="generation"><see cref="uint"/> to convert from.</param>
     public static implicit operator ReadModelGeneration(uint generation) => new(generation);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="ReadModelGeneration"/> to string.
+    /// </summary>
+    /// <param name="generation"><see cref="ReadModelGeneration"/> to convert from.</param>
+    public static implicit operator ReadModelGeneration(string generation)
+    {
+        if (string.IsNullOrEmpty(generation))
+        {
+            return Unspecified;
+        }
+
+        if (uint.TryParse(generation, out var value))
+        {
+            return new(value);
+        }
+
+        return Unspecified;
+    }
 }

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
@@ -49,7 +50,7 @@ public class ReadModelDefinitionsStorage(
     /// <inheritdoc/>
     public Task Save(ReadModelDefinition definition)
     {
-        var readModel = new ReadModel(definition.Name.Value, definition.Owner, definition.Schemas.ToDictionary(_ => _.Key, _ => _.Value.ToJson()));
+        var readModel = new ReadModel(definition.Name.Value, definition.Owner, definition.Schemas.ToDictionary(_ => _.Key.ToString(), _ => BsonDocument.Parse(_.Value.ToJson())));
         return Collection.ReplaceOneAsync(rm => rm.Id == readModel.Id, readModel, new ReplaceOptions { IsUpsert = true });
     }
 
@@ -58,8 +59,8 @@ public class ReadModelDefinitionsStorage(
         Dictionary<ReadModelGeneration, JsonSchema> schemas = new();
         foreach (var (key, schema) in readModel.Schemas)
         {
-            var generation = key;
-            schemas[generation] = await JsonSchema.FromJsonAsync(schema);
+            var generation = (ReadModelGeneration)key!;
+            schemas[generation] = await JsonSchema.FromJsonAsync(schema.ToJson());
         }
         return new(readModel.Id, readModel.Owner, schemas);
     }
