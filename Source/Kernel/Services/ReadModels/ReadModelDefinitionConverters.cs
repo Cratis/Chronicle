@@ -23,7 +23,6 @@ internal static class ReadModelDefinitionConverters
         return new()
         {
             Name = definition.Name,
-            Owner = (Contracts.ReadModels.ReadModelOwner)(int)definition.Owner,
             Generation = latestGeneration.Value,
             Schema = latestSchema.ToJson()
         };
