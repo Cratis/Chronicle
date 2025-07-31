@@ -40,30 +40,29 @@ public class ProjectionDefinitionsStorage(
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ProjectionId id) =>
-        Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
+    public Task<bool> Has(ProjectionId id) => Collection.Find(_ => _.Id == id).AnyAsync();
 
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
-        using var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
+        using var result = await Collection.FindAsync(_ => _.Id == id);
         var document = result.Single();
         return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
     }
 
     /// <inheritdoc/>
     public Task Delete(ProjectionId id) =>
-        Collection.DeleteOneAsync(new BsonDocument("_id", id.Value));
+        Collection.DeleteOneAsync(_ => _.Id == id);
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
-        var projection = new Projection(definition.Identifier, definition.Owner, new Dictionary<ProjectionGeneration, BsonDocument>
+        var projection = new Projection(definition.Identifier, definition.Owner, new Dictionary<string, BsonDocument>
         {
-            { ProjectionGeneration.First, definition.ToBsonDocument() }
+            { ProjectionGeneration.First.ToString(), BsonDocument.Parse(projectionDefinitionSerializer.Serialize(definition).ToJsonString()) }
         });
         await Collection.ReplaceOneAsync(
-            filter: new BsonDocument("_id", definition.Identifier.Value),
+            filter: _ => _.Id == definition.Identifier,
             replacement: projection,
             options: new ReplaceOptions { IsUpsert = true });
     }

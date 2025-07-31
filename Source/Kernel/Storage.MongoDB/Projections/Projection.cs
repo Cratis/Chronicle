@@ -12,4 +12,4 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="Id">The unique identifier of the projection.</param>
 /// <param name="Owner">The owner of the projection.</param>
 /// <param name="Definitions">The definitions per generation of the projection.</param>
-public record Projection(ProjectionId Id, ProjectionOwner Owner, IDictionary<ProjectionGeneration, BsonDocument> Definitions);
+public record Projection(ProjectionId Id, ProjectionOwner Owner, IDictionary<string, BsonDocument> Definitions);
