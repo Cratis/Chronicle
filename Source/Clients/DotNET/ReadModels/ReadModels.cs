@@ -37,6 +37,7 @@ public class ReadModels(
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
             Name = readModel.ReadModelName,
+            Generation = ReadModelGeneration.First,
             Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
         });
 
