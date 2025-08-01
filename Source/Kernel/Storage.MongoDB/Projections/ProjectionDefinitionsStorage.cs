@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -57,10 +58,14 @@ public class ProjectionDefinitionsStorage(
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
-        var projection = new Projection(definition.Identifier, definition.Owner, new Dictionary<string, BsonDocument>
-        {
-            { ProjectionGeneration.First.ToString(), BsonDocument.Parse(projectionDefinitionSerializer.Serialize(definition).ToJsonString()) }
-        });
+        var projection = new Projection(
+            definition.Identifier,
+            definition.Owner,
+            new(definition.ReadModel, ReadModelGeneration.First),
+            new Dictionary<string, BsonDocument>
+            {
+                { ProjectionGeneration.First.ToString(), BsonDocument.Parse(projectionDefinitionSerializer.Serialize(definition).ToJsonString()) }
+            });
         await Collection.ReplaceOneAsync(
             filter: _ => _.Id == definition.Identifier,
             replacement: projection,
