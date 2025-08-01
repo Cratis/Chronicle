@@ -22,12 +22,12 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        logger.ResolvingKey(context.Event.Metadata.SequenceNumber);
+        logger.ResolvingKey(context.Event.Context.SequenceNumber);
         if (context.EventType == "UserRemovedFromGroup")
         {
             Console.WriteLine("Hello world");
         }
-        var keyResolver = projection.GetKeyResolverFor(context.Event.Metadata.Type);
+        var keyResolver = projection.GetKeyResolverFor(context.Event.Context.EventType);
         var key = await keyResolver(eventSequenceStorage, context.Event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(projection, key);
         return context with { Key = key };

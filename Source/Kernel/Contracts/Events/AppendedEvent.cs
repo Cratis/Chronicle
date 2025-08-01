@@ -10,20 +10,14 @@ namespace Cratis.Chronicle.Contracts.Events;
 public class AppendedEvent
 {
     /// <summary>
-    /// Gets the metadata for the event.
-    /// </summary>
-    [ProtoMember(1)]
-    public EventMetadata Metadata { get; set; }
-
-    /// <summary>
     /// Gets the context for the event.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(1)]
     public EventContext Context { get; set; }
 
     /// <summary>
     /// The JSON representation content of the event.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string Content { get; set; }
 }

@@ -7,9 +7,13 @@
 import { field } from '@cratis/fundamentals';
 import { Guid } from '@cratis/fundamentals';
 import { Causation } from '../Auditing/Causation';
+import { EventType } from './EventType';
 import { Identity } from '../Identities/Identity';
 
 export class EventContext {
+
+    @field(EventType)
+    eventType!: EventType;
 
     @field(String)
     eventSourceType!: string;

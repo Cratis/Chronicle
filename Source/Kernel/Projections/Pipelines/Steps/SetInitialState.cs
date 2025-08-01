@@ -25,7 +25,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             return context;
         }
 
-        logger.GettingInitialValues(context.Event.Metadata.SequenceNumber);
+        logger.GettingInitialValues(context.Event.Context.SequenceNumber);
 
         // If we are joining, or adding a child - we do want to set initial state
         // We can then set a property __initialized to false if its not already

@@ -116,7 +116,7 @@ public class ImmediateProjection(
                 projectedEventsCount += result.ProjectedEventsCount;
                 state = result.State;
 
-                _lastHandledEventSequenceNumber = events[^1].Metadata.SequenceNumber;
+                _lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
             }
 
             _initialState = state;
@@ -175,18 +175,18 @@ public class ImmediateProjection(
         foreach (var @event in events)
         {
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
-            var keyResolver = _projection!.GetKeyResolverFor(@event.Metadata.Type);
+            var keyResolver = _projection!.GetKeyResolverFor(@event.Context.EventType);
             var key = await keyResolver(_eventSequenceStorage!, @event);
             var context = new ProjectionEventContext(
                 key,
                 @event,
                 changeset,
-                _projection.GetOperationTypeFor(@event.Metadata.Type),
+                _projection.GetOperationTypeFor(@event.Context.EventType),
                 false);
 
             await HandleEventFor(_projection!, context);
 
-            eventSequenceNumber = @event.Metadata.SequenceNumber;
+            eventSequenceNumber = @event.Context.SequenceNumber;
             projectedEventsCount++;
 
             state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState, affectedProperties);
@@ -197,7 +197,7 @@ public class ImmediateProjection(
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
     {
-        if (projection.Accepts(context.Event.Metadata.Type))
+        if (projection.Accepts(context.Event.Context.EventType))
         {
             projection.OnNext(context);
         }

@@ -39,8 +39,8 @@ public class when_next_event_is_of_interest : given.a_projection
         _objectsComparer.Compare(Arg.Any<ExpandoObject>(), Arg.Any<AppendedEvent>(), out Arg.Any<IEnumerable<PropertyDifference>>()).Returns(true);
 
         _firstEvent = new(
-            new(0, _eventA),
             new(
+                _eventA,
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
@@ -57,8 +57,8 @@ public class when_next_event_is_of_interest : given.a_projection
         _firstChangeset = new(_objectsComparer, _firstEvent, new());
 
         _secondEvent = new(
-            new(0, _eventB),
             new(
+                _eventB,
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
@@ -85,6 +85,6 @@ public class when_next_event_is_of_interest : given.a_projection
     }
 
     [Fact] void should_only_observe_one_event() => _observedEvents.Count.ShouldEqual(1);
-    [Fact] void should_observe_the_event_of_interest() => _observedEvents[0].Event.Metadata.Type.ShouldEqual(_eventB);
+    [Fact] void should_observe_the_event_of_interest() => _observedEvents[0].Event.Context.EventType.ShouldEqual(_eventB);
     [Fact] void should_pass_along_the_initial_state() => _observedEvents[0].Changeset.InitialState.ShouldEqual(_initialState);
 }

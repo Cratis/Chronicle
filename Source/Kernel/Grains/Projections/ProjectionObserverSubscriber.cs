@@ -92,7 +92,7 @@ public class ProjectionObserverSubscriber(
             {
                 changeset = await _pipeline.Handle(@event);
                 lastSuccessfullyObservedEvent = @event;
-                logger.SuccessfullyHandledEvent(@event.Metadata.SequenceNumber, _key);
+                logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }
 
             // Note: We don't want to send changesets if the projection is not active
@@ -103,14 +103,14 @@ public class ProjectionObserverSubscriber(
             }
 
             logger.SuccessfullyHandledAllEvents(_key);
-            return ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Metadata.SequenceNumber);
+            return ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber);
         }
         catch (Exception ex)
         {
-            logger.ErrorHandling(ex, _key, lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable);
+            logger.ErrorHandling(ex, _key, lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
             return new(
                 ObserverSubscriberState.Failed,
-                lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty);
         }

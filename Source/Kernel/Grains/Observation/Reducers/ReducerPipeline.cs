@@ -59,7 +59,7 @@ public class ReducerPipeline(
 
         if (changeset.HasChanges)
         {
-            await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Metadata.SequenceNumber);
+            await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber);
         }
     }
 }

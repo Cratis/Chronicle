@@ -21,8 +21,7 @@ namespace Cratis.Chronicle.XUnit.Events;
 public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEventSourceId[] events) : IEventSequence
 {
     readonly AppendedEvent[] _events = events.Select((@event, index) => new AppendedEvent(
-            new((ulong)index, eventTypes.GetEventTypeFor(@event.Event.GetType())),
-            EventContext.Empty with { EventSourceId = @event.EventSourceId },
+            EventContext.Empty with { EventType = eventTypes.GetEventTypeFor(@event.Event.GetType()), EventSourceId = @event.EventSourceId },
             @event.Event.AsExpandoObject(true))).ToArray();
 
     /// <inheritdoc/>
@@ -71,9 +70,9 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default) =>
         Task.FromResult<IImmutableList<AppendedEvent>>(_events.Where(_ =>
-            _.Metadata.SequenceNumber >= sequenceNumber
+            _.Context.SequenceNumber >= sequenceNumber
             && (eventSourceId is null || _.Context.EventSourceId == eventSourceId)
-            && eventTypes?.Contains(_.Metadata.Type) != false).ToImmutableList());
+            && eventTypes?.Contains(_.Context.EventType) != false).ToImmutableList());
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(EventSequenceNumber.First);

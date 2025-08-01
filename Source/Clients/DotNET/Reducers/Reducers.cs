@@ -305,11 +305,9 @@ public class Reducers : IReducers
 
         var appendedEvents = operation.Events.Select(@event =>
         {
-            var metadata = @event.Metadata.ToClient();
             var context = @event.Context.ToClient();
             var contentAsExpando = JsonSerializer.Deserialize<ExpandoObject>(@event.Content)!;
             return new AppendedEvent(
-                metadata,
                 context,
                 contentAsExpando);
         }).ToList();
