@@ -23,7 +23,7 @@ public class all_dependencies : Specification
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             },
         });
-        _namingPolicy = Substitute.For<INamingPolicy>();
+        _namingPolicy = new DefaultNamingPolicy();
         _eventTypes = Substitute.For<IEventTypes>();
     }
 }

@@ -42,7 +42,7 @@ public class all_dependencies : Specification
         _reducerValidator = Substitute.For<IReducerValidator>();
         _eventTypes = Substitute.For<IEventTypes>();
         _eventSerializer = Substitute.For<IEventSerializer>();
-        _namingPolicy = Substitute.For<INamingPolicy>();
+        _namingPolicy = new DefaultNamingPolicy();
         _jsonSerializerOptions = new();
         _logger = Substitute.For<ILogger<Reducers>>();
 

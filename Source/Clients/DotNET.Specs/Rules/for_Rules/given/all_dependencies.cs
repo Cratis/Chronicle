@@ -16,7 +16,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _namingPolicy = Substitute.For<INamingPolicy>();
+        _namingPolicy = new DefaultNamingPolicy();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _projections = Substitute.For<IProjections>();
         _jsonSerializerOptions = new JsonSerializerOptions

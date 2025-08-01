@@ -40,7 +40,7 @@ public class all_dependencies : Specification
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _rulesProjections = Substitute.For<IRulesProjections>();
         _eventSerializer = Substitute.For<IEventSerializer>();
-        _namingPolicy = Substitute.For<INamingPolicy>();
+        _namingPolicy = new DefaultNamingPolicy();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _jsonSerializerOptions = new();
 

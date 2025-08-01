@@ -30,6 +30,6 @@ public class all_dependencies : Specification
         _eventSerializer = Substitute.For<IEventSerializer>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _jsonSerializerOptions = new();
-        _namingPolicy = Substitute.For<INamingPolicy>();
+        _namingPolicy = new DefaultNamingPolicy();
     }
 }
