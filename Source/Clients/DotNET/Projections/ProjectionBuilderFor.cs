@@ -7,7 +7,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Sinks;
-using Cratis.Models;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -26,20 +25,18 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TReadModel}"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier for the projection.</param>
-    /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionBuilderFor(
         ProjectionId identifier,
-        IModelNameResolver modelNameResolver,
         INamingPolicy namingPolicy,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(modelNameResolver, namingPolicy, eventTypes, jsonSerializerOptions, false)
+        : base(namingPolicy, eventTypes, jsonSerializerOptions, false)
     {
         _identifier = identifier;
-        _readModelName = modelNameResolver.GetNameFor(typeof(TReadModel));
+        _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
     }
 
     /// <inheritdoc/>

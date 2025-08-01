@@ -21,7 +21,6 @@ using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Transactions;
-using Cratis.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -52,7 +51,6 @@ public class EventStore : IEventStore
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -67,7 +65,6 @@ public class EventStore : IEventStore
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
-        IModelNameConvention modelNameConvention,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions,
@@ -128,8 +125,6 @@ public class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
-        var modelNameResolver = new ModelNameResolver(modelNameConvention);
-
         Reducers = new Reducers.Reducers(
             this,
             clientArtifactsProvider,
@@ -137,7 +132,7 @@ public class EventStore : IEventStore
             new ReducerValidator(),
             EventTypes,
             _eventSerializer,
-            modelNameResolver,
+            namingPolicy,
             jsonSerializerOptions,
             identityProvider,
             loggerFactory.CreateLogger<Reducers.Reducers>());
@@ -147,7 +142,6 @@ public class EventStore : IEventStore
             EventTypes,
             new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
-            modelNameResolver,
             namingPolicy,
             _eventSerializer,
             serviceProvider,
@@ -156,13 +150,12 @@ public class EventStore : IEventStore
             serviceProvider,
             clientArtifactsProvider,
             EventTypes,
-            modelNameResolver,
             namingPolicy,
             jsonSerializerOptions));
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
-        ReadModels = new ReadModels.ReadModels(this, projections, Reducers, modelNameResolver, schemaGenerator);
+        ReadModels = new ReadModels.ReadModels(this, namingPolicy, projections, Reducers, schemaGenerator);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,

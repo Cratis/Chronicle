@@ -12,8 +12,8 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Sinks;
-using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -36,7 +36,7 @@ public class Reducers : IReducers
     readonly IReducerValidator _reducerValidator;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
-    readonly IModelNameResolver _modelNameResolver;
+    readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
@@ -55,7 +55,7 @@ public class Reducers : IReducers
     /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
-    /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -66,7 +66,7 @@ public class Reducers : IReducers
         IReducerValidator reducerValidator,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
-        IModelNameResolver modelNameResolver,
+        INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
         IIdentityProvider identityProvider,
         ILogger<Reducers> logger)
@@ -84,7 +84,7 @@ public class Reducers : IReducers
         _reducerValidator = reducerValidator;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
-        _modelNameResolver = modelNameResolver;
+        _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
         _identityProvider = identityProvider;
         _logger = logger;
@@ -239,7 +239,7 @@ public class Reducers : IReducers
                 _eventTypes,
                 reducerType,
                 readModelType,
-                _modelNameResolver.GetNameFor(readModelType)),
+                _namingPolicy.GetReadModelName(readModelType)),
             _eventSerializer,
             ShouldReducerBeActive(reducerType, readModelType));
 

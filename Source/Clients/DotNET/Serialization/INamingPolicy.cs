@@ -9,9 +9,16 @@ namespace Cratis.Chronicle.Serialization;
 public interface INamingPolicy
 {
     /// <summary>
-    /// Converts the specified name to the desired format.
+    /// Gets the read model name based on the naming policy.
+    /// </summary>
+    /// <param name="readModel">The read model type to convert.</param>
+    /// <returns>The converted name.</returns>
+    string GetReadModelName(Type readModel);
+
+    /// <summary>
+    /// Gets the property name based on the naming policy.
     /// </summary>
     /// <param name="name">The name to convert.</param>
     /// <returns>The converted name.</returns>
-    string ConvertName(string name);
+    string GetPropertyName(string name);
 }

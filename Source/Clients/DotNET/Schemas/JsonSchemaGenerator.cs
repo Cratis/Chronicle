@@ -54,7 +54,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
     void HandlePropertyNames(JsonSchema schema)
     {
-        var properties = schema.Properties.ToDictionary(kvp => _namingPolicy.ConvertName(kvp.Key), kvp => kvp.Value);
+        var properties = schema.Properties.ToDictionary(kvp => _namingPolicy.GetPropertyName(kvp.Key), kvp => kvp.Value);
         schema.Properties.Clear();
         foreach (var kvp in properties)
         {

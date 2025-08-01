@@ -33,8 +33,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder AutoMap()
     {
-        var eventProperties = typeof(TEvent).GetProperties().Select(_ => namingPolicy.ConvertName(_.Name));
-        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => namingPolicy.ConvertName(_.Name));
+        var eventProperties = typeof(TEvent).GetProperties().Select(_ => namingPolicy.GetPropertyName(_.Name));
+        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => namingPolicy.GetPropertyName(_.Name));
 
         foreach (var property in eventProperties.Intersect(modelProperties))
         {

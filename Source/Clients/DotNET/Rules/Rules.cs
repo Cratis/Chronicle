@@ -50,7 +50,7 @@ public class Rules(
         properties = properties.Where(_ => _.CanWrite).ToArray();
         foreach (var property in properties)
         {
-            var name = namingPolicy.ConvertName(property.Name);
+            var name = namingPolicy.GetPropertyName(property.Name);
             var node = result.ReadModel[name];
             if (node is not null)
             {

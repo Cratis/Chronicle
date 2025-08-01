@@ -6,7 +6,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
-using Cratis.Models;
+using Cratis.Chronicle.Serialization;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -14,15 +14,15 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="projections">Projections to use.</param>
 /// <param name="reducers">Reducers to use.</param>
-/// <param name="modelNameResolver">Model name resolver to use.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
 public class ReadModels(
     IEventStore eventStore,
+    INamingPolicy namingPolicy,
     IProjections projections,
     IReducers reducers,
-    IModelNameResolver modelNameResolver,
     IJsonSchemaGenerator schemaGenerator) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -36,7 +36,7 @@ public class ReadModels(
         readModels.AddRange(reducers.GetAllHandlers());
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
-            Name = readModel.ReadModelName,
+            Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
             Generation = ReadModelGeneration.First,
             Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
         });
@@ -56,7 +56,7 @@ public class ReadModels(
         {
             new()
             {
-                Name = modelNameResolver.GetNameFor(typeof(TReadModel)),
+                Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
             }
         };

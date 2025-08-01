@@ -8,7 +8,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Serialization;
-using Cratis.Models;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Chronicle.Projections;
@@ -16,7 +15,6 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IChildrenBuilder{TParentReadModel, TChildReadModel}"/>.
 /// </summary>
-/// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
@@ -24,12 +22,11 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TParentReadModel">Parent model type.</typeparam>
 /// <typeparam name="TChildReadModel">Child model type.</typeparam>
 public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
-    IModelNameResolver modelNameResolver,
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
     JsonSerializerOptions jsonSerializerOptions,
     bool autoMap) :
-    ProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>(modelNameResolver, namingPolicy, eventTypes, jsonSerializerOptions, autoMap),
+    ProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>(namingPolicy, eventTypes, jsonSerializerOptions, autoMap),
     IChildrenBuilder<TParentReadModel, TChildReadModel>
 {
     PropertyPath _identifiedBy = PropertyPath.NotSet;

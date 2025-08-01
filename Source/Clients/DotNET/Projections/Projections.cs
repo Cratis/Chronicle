@@ -12,7 +12,6 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Serialization;
-using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -27,7 +26,6 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
 /// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-/// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
@@ -37,7 +35,6 @@ public class Projections(
     IEventTypes eventTypes,
     IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
-    IModelNameResolver modelNameResolver,
     INamingPolicy namingPolicy,
     IEventSerializer eventSerializer,
     IServiceProvider serviceProvider,
@@ -240,7 +237,6 @@ public class Projections(
         _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
-            modelNameResolver,
             serviceProvider,
             jsonSerializerOptions);
 
@@ -281,7 +277,6 @@ public class Projections(
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
-        IModelNameResolver modelNameResolver,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions) =>
         clientArtifacts.Projections
@@ -296,7 +291,6 @@ public class Projections(
                             null,
                             [
                                 _,
-                                modelNameResolver,
                                 namingPolicy,
                                 eventTypes,
                                 serviceProvider,
@@ -309,14 +303,13 @@ public class Projections(
     {
         public static ProjectionDefinition CreateAndDefine(
             Type type,
-            IModelNameResolver modelNameResolver,
             INamingPolicy namingPolicy,
             IEventTypes eventTypes,
             IServiceProvider serviceProvider,
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TReadModel>)!;
-            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), modelNameResolver, namingPolicy, eventTypes, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), namingPolicy, eventTypes, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

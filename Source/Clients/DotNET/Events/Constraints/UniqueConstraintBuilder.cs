@@ -38,7 +38,7 @@ public class UniqueConstraintBuilder(
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On(EventType eventType, params string[] properties)
     {
-        properties = properties.Select(namingPolicy.ConvertName).ToArray();
+        properties = properties.Select(namingPolicy.GetPropertyName).ToArray();
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         ThrowIfEventTypeAlreadyAdded(eventType, properties);
         ThrowIfPropertyIsMissing(eventType, schema, properties);

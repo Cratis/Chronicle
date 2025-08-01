@@ -8,7 +8,6 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Serialization;
-using Cratis.Models;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Chronicle.Projections;
@@ -16,7 +15,6 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents a base projection builder.
 /// </summary>
-/// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
@@ -24,7 +22,6 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 public class ProjectionBuilder<TReadModel, TBuilder>(
-    IModelNameResolver modelNameResolver,
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
     JsonSerializerOptions jsonSerializerOptions,
@@ -43,7 +40,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected bool _autoMap = autoMap;
-    protected string _readModelName = modelNameResolver.GetNameFor(typeof(TReadModel));
+    protected string _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
 
     /// <inheritdoc/>
     public TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback)
@@ -171,7 +168,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TReadModel, TChildModel>(modelNameResolver, namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
+        var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return (this as TBuilder)!;
