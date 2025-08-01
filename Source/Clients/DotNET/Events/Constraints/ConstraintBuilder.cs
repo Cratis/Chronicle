@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Serialization;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -9,15 +10,19 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// Represents an implementation of <see cref="IConstraintBuilder"/>.
 /// </summary>
 /// <param name="eventTypes">Event types for the builder.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="owner">Optional owner of the constraint.</param>
-public class ConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IConstraintBuilder
+public class ConstraintBuilder(
+    IEventTypes eventTypes,
+    INamingPolicy namingPolicy,
+    Type? owner = default) : IConstraintBuilder
 {
     readonly List<IConstraintDefinition> _constraints = [];
 
     /// <inheritdoc/>
     public IConstraintBuilder Unique(Action<IUniqueConstraintBuilder> callback)
     {
-        var uniqueConstraintBuilder = new UniqueConstraintBuilder(eventTypes, owner);
+        var uniqueConstraintBuilder = new UniqueConstraintBuilder(eventTypes, namingPolicy, owner);
         callback(uniqueConstraintBuilder);
         AddConstraint(uniqueConstraintBuilder.Build());
         return this;

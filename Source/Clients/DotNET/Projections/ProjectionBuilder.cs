@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Serialization;
 using Cratis.Models;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Projections;
 /// Represents a base projection builder.
 /// </summary>
 /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 /// <param name="autoMap">Whether to automatically map properties.</param>
@@ -23,6 +25,7 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 public class ProjectionBuilder<TReadModel, TBuilder>(
     IModelNameResolver modelNameResolver,
+    INamingPolicy namingPolicy,
     IEventTypes eventTypes,
     JsonSerializerOptions jsonSerializerOptions,
     bool autoMap) : IProjectionBuilder<TReadModel, TBuilder>
@@ -69,7 +72,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
         var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).Select(eventTypes.GetEventTypeFor).ToArray();
 
-        var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this);
+        var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
         if (_autoMap)
         {
@@ -102,7 +105,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
             throw new TypeIsNotAnEventType(typeof(TEvent));
         }
 
-        var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this);
+        var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
         if (_autoMap)
         {
@@ -168,7 +171,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TReadModel, TChildModel>(modelNameResolver, eventTypes, jsonSerializerOptions, _autoMap);
+        var builder = new ChildrenBuilder<TReadModel, TChildModel>(modelNameResolver, namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return (this as TBuilder)!;

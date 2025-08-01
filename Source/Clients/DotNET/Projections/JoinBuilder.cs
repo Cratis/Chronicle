@@ -4,18 +4,20 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of the <see cref="IJoinBuilder{TReadModel, TEvent}"/>.
 /// </summary>
+/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilder{TReadModel, TParentBuilder}"/>.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
-/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilder{TReadModel, TParentBuilder}"/>.</param>
-public class JoinBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder)
-    : ReadModelPropertiesBuilder<TReadModel, TEvent, IJoinBuilder<TReadModel, TEvent>, TParentBuilder>(projectionBuilder), IJoinBuilder<TReadModel, TEvent>
+public class JoinBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder, INamingPolicy namingPolicy)
+    : ReadModelPropertiesBuilder<TReadModel, TEvent, IJoinBuilder<TReadModel, TEvent>, TParentBuilder>(projectionBuilder, namingPolicy), IJoinBuilder<TReadModel, TEvent>
         where TParentBuilder : class
 {
     readonly IProjectionBuilder<TReadModel, TParentBuilder> _projectionBuilder = projectionBuilder;

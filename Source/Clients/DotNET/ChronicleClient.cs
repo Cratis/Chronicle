@@ -127,6 +127,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.IdentityProvider,
             _jsonSchemaGenerator,
             Options.ReadModelNameConvention,
+            Options.NamingPolicy,
             Options.ServiceProvider,
             Options.JsonSerializerOptions,
             Options.LoggerFactory);
@@ -164,7 +165,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var complianceMetadataResolver = new ComplianceMetadataResolver(
             new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, Options.ServiceProvider),
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, Options.ServiceProvider));
-        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver);
+        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, Options.ServiceProvider);
 
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);

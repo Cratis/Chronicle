@@ -11,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
+using Cratis.Chronicle.Serialization;
 using Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +28,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
@@ -36,6 +38,7 @@ public class Projections(
     IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
     IModelNameResolver modelNameResolver,
+    INamingPolicy namingPolicy,
     IEventSerializer eventSerializer,
     IServiceProvider serviceProvider,
     JsonSerializerOptions jsonSerializerOptions) : IProjections
@@ -294,6 +297,7 @@ public class Projections(
                             [
                                 _,
                                 modelNameResolver,
+                                namingPolicy,
                                 eventTypes,
                                 serviceProvider,
                                 jsonSerializerOptions
@@ -306,12 +310,13 @@ public class Projections(
         public static ProjectionDefinition CreateAndDefine(
             Type type,
             IModelNameResolver modelNameResolver,
+            INamingPolicy namingPolicy,
             IEventTypes eventTypes,
             IServiceProvider serviceProvider,
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TReadModel>)!;
-            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), modelNameResolver, eventTypes, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), modelNameResolver, namingPolicy, eventTypes, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

@@ -19,6 +19,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Transactions;
 using Cratis.Models;
 using Microsoft.Extensions.Logging;
@@ -52,6 +53,7 @@ public class EventStore : IEventStore
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -66,6 +68,7 @@ public class EventStore : IEventStore
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
         IModelNameConvention modelNameConvention,
+        INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
@@ -93,8 +96,8 @@ public class EventStore : IEventStore
         Constraints = new Constraints(
             this,
             [
-                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, serviceProvider),
-                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, namingPolicy, serviceProvider),
+                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes, namingPolicy),
                 new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
             ]);
 
@@ -145,10 +148,17 @@ public class EventStore : IEventStore
             new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
             modelNameResolver,
+            namingPolicy,
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
-        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, jsonSerializerOptions));
+        projections.SetRulesProjections(new RulesProjections(
+            serviceProvider,
+            clientArtifactsProvider,
+            EventTypes,
+            modelNameResolver,
+            namingPolicy,
+            jsonSerializerOptions));
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 

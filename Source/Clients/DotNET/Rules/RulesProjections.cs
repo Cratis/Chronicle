@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Serialization;
 using Cratis.Models;
 
 namespace Cratis.Chronicle.Rules;
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Rules;
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
 /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
 [Singleton]
 internal class RulesProjections(
@@ -28,6 +30,7 @@ internal class RulesProjections(
     IClientArtifactsProvider clientArtifacts,
     IEventTypes eventTypes,
     IModelNameResolver modelNameResolver,
+    INamingPolicy namingPolicy,
     JsonSerializerOptions serializerOptions) : IRulesProjections
 {
     /// <inheritdoc/>
@@ -44,7 +47,7 @@ internal class RulesProjections(
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
         var identifier = rule.GetType().GetRuleId();
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(identifier.Value, modelNameResolver, eventTypes, serializerOptions);
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(identifier.Value, modelNameResolver, namingPolicy, eventTypes, serializerOptions);
 
         var ruleType = typeof(TTarget);
 

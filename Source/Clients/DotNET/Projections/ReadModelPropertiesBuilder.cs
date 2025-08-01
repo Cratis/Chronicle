@@ -3,8 +3,8 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Serialization;
 using Cratis.Reflection;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,11 +12,12 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an implementation of <see cref="IReadModelPropertiesBuilder{TReadModel, TEvent, TBuilder}"/>.
 /// </summary>
 /// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TReadModel}"/>.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 /// <typeparam name="TParentBuilder">The type of parent builder.</typeparam>
-public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder)
+public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder, INamingPolicy namingPolicy)
     : KeyAndParentKeyBuilder<TEvent, TBuilder>, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
         where TBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
         where TParentBuilder : class
@@ -32,8 +33,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder AutoMap()
     {
-        var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name.ToCamelCase());
-        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => _.Name.ToCamelCase());
+        var eventProperties = typeof(TEvent).GetProperties().Select(_ => namingPolicy.ConvertName(_.Name));
+        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => namingPolicy.ConvertName(_.Name));
 
         foreach (var property in eventProperties.Intersect(modelProperties))
         {

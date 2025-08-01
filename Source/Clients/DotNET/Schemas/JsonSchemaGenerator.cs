@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
-using Cratis.Strings;
+using Cratis.Chronicle.Serialization;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
@@ -17,12 +17,14 @@ namespace Cratis.Chronicle.Schemas;
 public class JsonSchemaGenerator : IJsonSchemaGenerator
 {
     readonly NJsonSchemaGenerator _generator;
+    readonly INamingPolicy _namingPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
     /// </summary>
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
-    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver)
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy)
     {
         var settings = new SystemTextJsonSchemaGeneratorSettings()
         {
@@ -36,6 +38,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         settings.SchemaProcessors.Add(new ComplianceMetadataSchemaProcessor(metadataResolver));
         settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(new TypeFormats()));
         _generator = new NJsonSchemaGenerator(settings);
+        _namingPolicy = namingPolicy;
     }
 
     /// <inheritdoc/>
@@ -45,13 +48,13 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         // Note: NJsonSchema will ignore the camel case instruction when a complex type with properties implements IEnumerable
         // All the properties within it will then just be as original.
-        ForceSchemaToBeCamelCase(schema);
+        HandlePropertyNames(schema);
         return schema;
     }
 
-    void ForceSchemaToBeCamelCase(JsonSchema schema)
+    void HandlePropertyNames(JsonSchema schema)
     {
-        var properties = schema.Properties.ToDictionary(kvp => kvp.Key.ToCamelCase(), kvp => kvp.Value);
+        var properties = schema.Properties.ToDictionary(kvp => _namingPolicy.ConvertName(kvp.Key), kvp => kvp.Value);
         schema.Properties.Clear();
         foreach (var kvp in properties)
         {
@@ -60,12 +63,12 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         foreach (var allOfSchema in schema.AllOf)
         {
-            ForceSchemaToBeCamelCase(allOfSchema);
+            HandlePropertyNames(allOfSchema);
         }
 
         if (schema.HasReference)
         {
-            ForceSchemaToBeCamelCase(schema.Reference!);
+            HandlePropertyNames(schema.Reference!);
         }
     }
 }

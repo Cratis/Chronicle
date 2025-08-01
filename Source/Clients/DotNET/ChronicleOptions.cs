@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Serialization;
 using Cratis.Json;
 using Cratis.Models;
 using Cratis.Types;
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <param name="url"><see cref="ChronicleUrl"/> to use.</param>
 /// <param name="modelNameConvention">Optional <see cref="IModelNameConvention"/> to use.</param>
+/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like event types, Reactors, reducers, projections and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
@@ -29,6 +31,7 @@ namespace Cratis.Chronicle;
 public class ChronicleOptions(
     ChronicleUrl url,
     IModelNameConvention? modelNameConvention = null,
+    INamingPolicy? namingPolicy = null,
     IIdentityProvider? identityProvider = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
     IServiceProvider? serviceProvider = null,
@@ -100,6 +103,11 @@ public class ChronicleOptions(
     /// Gets the <see cref="IModelNameConvention"/> to use.
     /// </summary>
     public IModelNameConvention ReadModelNameConvention { get; set; } = modelNameConvention ?? new DefaultModelNameConvention();
+
+    /// <summary>
+    /// Gets the <see cref="INamingPolicy"/> to use.
+    /// </summary>
+    public INamingPolicy NamingPolicy { get; set; } = namingPolicy ?? new CamelCaseNamingPolicy();
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.

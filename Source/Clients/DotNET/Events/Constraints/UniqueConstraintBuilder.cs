@@ -3,8 +3,8 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Serialization;
 using Cratis.Reflection;
-using Cratis.Strings;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -13,8 +13,12 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// Represents an implementation of <see cref="IUniqueConstraintBuilder"/>.
 /// </summary>
 /// <param name="eventTypes">Event types for the builder.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="owner">Optional owner of the constraint.</param>
-public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = default) : IUniqueConstraintBuilder
+public class UniqueConstraintBuilder(
+    IEventTypes eventTypes,
+    INamingPolicy namingPolicy,
+    Type? owner = default) : IUniqueConstraintBuilder
 {
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
     readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
@@ -34,7 +38,7 @@ public class UniqueConstraintBuilder(IEventTypes eventTypes, Type? owner = defau
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On(EventType eventType, params string[] properties)
     {
-        properties = properties.Select(_ => _.ToCamelCase()).ToArray();
+        properties = properties.Select(namingPolicy.ConvertName).ToArray();
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         ThrowIfEventTypeAlreadyAdded(eventType, properties);
         ThrowIfPropertyIsMissing(eventType, schema, properties);
