@@ -12,19 +12,19 @@ namespace Cratis.Chronicle.Projections;
 #pragma warning disable SA1402 // File may only contain a single type
 
 /// <summary>
-/// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.
+/// Represents an implementation of <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
+/// Initializes a new instance of the <see cref="SetBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/> class.
 /// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
 /// <param name="forceEventProperty">Whether or not to force this to have to map to a target property or not.</param>
-public class SetBuilder<TModel, TEvent, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, bool forceEventProperty = false)
-    : ISetBuilder<TModel, TEvent, TParentBuilder>
+public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, bool forceEventProperty = false)
+    : ISetBuilder<TReadModel, TEvent, TParentBuilder>
 {
 #pragma warning disable CA1051 // Visible instance fields
 #pragma warning disable SA1600 // Elements should be documented
@@ -62,7 +62,7 @@ public class SetBuilder<TModel, TEvent, TParentBuilder>(TParentBuilder parent, P
     {
         if (_expression is null)
         {
-            throw new MissingToExpression(typeof(TModel), typeof(TEvent), TargetProperty);
+            throw new MissingToExpression(typeof(TReadModel), typeof(TEvent), TargetProperty);
         }
     }
 
@@ -76,20 +76,20 @@ public class SetBuilder<TModel, TEvent, TParentBuilder>(TParentBuilder parent, P
 }
 
 /// <summary>
-/// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.
+/// Represents an implementation of <see cref="ISetBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
+/// Initializes a new instance of the <see cref="SetBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/> class.
 /// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
 /// <param name="forceEventProperty">Whether or not to force this to have to map to a target property or not.</param>
-public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, bool forceEventProperty = false)
-    : SetBuilder<TModel, TEvent, TParentBuilder>(parent, targetProperty, forceEventProperty), ISetBuilder<TModel, TEvent, TProperty, TParentBuilder>
+public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, bool forceEventProperty = false)
+    : SetBuilder<TReadModel, TEvent, TParentBuilder>(parent, targetProperty, forceEventProperty), ISetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
 {
     readonly TParentBuilder _parent = parent;
 

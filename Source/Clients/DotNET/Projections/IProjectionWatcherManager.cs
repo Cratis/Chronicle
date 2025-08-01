@@ -11,7 +11,7 @@ public interface IProjectionWatcherManager
     /// <summary>
     /// Gets a watcher for a specific model.
     /// </summary>
-    /// <typeparam name="TModel">Type of model the watcher is for.</typeparam>
-    /// <returns>An instance of <see cref="IProjectionWatcher{TModel}"/>.</returns>
-    IProjectionWatcher<TModel> GetWatcher<TModel>();
+    /// <typeparam name="TReadModel">Type of read model the watcher is for.</typeparam>
+    /// <returns>An instance of <see cref="IProjectionWatcher{TReadModel}"/>.</returns>
+    IProjectionWatcher<TReadModel> GetWatcher<TReadModel>();
 }

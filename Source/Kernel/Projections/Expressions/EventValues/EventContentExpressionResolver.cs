@@ -7,7 +7,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
-/// Represents a <see cref="IModelPropertyExpressionResolver"/> for resolving value from a property on the content of an <see cref="AppendedEvent"/>.
+/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for resolving value from a property on the content of an <see cref="AppendedEvent"/>.
 /// </summary>
 public class EventContentExpressionResolver : IEventValueProviderExpressionResolver
 {

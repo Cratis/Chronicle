@@ -6,13 +6,13 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a system that can define a projection.
 /// </summary>
-/// <typeparam name="TModel">Model type to target.</typeparam>
-public interface IProjectionFor<TModel> : IProjection
-    where TModel : class
+/// <typeparam name="TReadModel">Model type to target.</typeparam>
+public interface IProjectionFor<TReadModel> : IProjection
+    where TReadModel : class
 {
     /// <summary>
     /// /// Defines the projection.
     /// </summary>
-    /// <param name="builder"><see cref="IProjectionBuilderFor{TModel}"/> to use for building the definition.</param>
-    void Define(IProjectionBuilderFor<TModel> builder);
+    /// <param name="builder"><see cref="IProjectionBuilderFor{TReadModel}"/> to use for building the definition.</param>
+    void Define(IProjectionBuilderFor<TReadModel> builder);
 }

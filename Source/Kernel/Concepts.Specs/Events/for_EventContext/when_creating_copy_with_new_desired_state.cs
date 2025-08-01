@@ -12,6 +12,7 @@ public class when_creating_copy_with_new_desired_state : Specification
     EventContext _copy;
 
     void Establish() => _original = new(
+        EventType.Unknown,
         EventSourceType.Default,
         Guid.NewGuid().ToString(),
         Guid.NewGuid().ToString(),

@@ -10,11 +10,11 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <summary>
 /// Represents the result of an <see cref="IImmediateProjection"/>.
 /// </summary>
-/// <param name="Model">The Json representation of the model.</param>
+/// <param name="ReadModel">The Json representation of the read model.</param>
 /// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-public record ProjectionResult(JsonObject Model, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber)
+public record ProjectionResult(JsonObject ReadModel, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber)
 {
     /// <summary>
     /// Represents an empty <see cref="ProjectionResult"/>.

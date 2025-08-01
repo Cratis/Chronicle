@@ -4,8 +4,10 @@
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.XUnit.Events;
 using Cratis.Json;
+using Cratis.Models;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.XUnit;
@@ -29,7 +31,8 @@ public class Defaults
         JsonSchemaGenerator = new JsonSchemaGenerator(
             new ComplianceMetadataResolver(
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
-                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()));
+                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
+            new CamelCaseNamingPolicy(new ModelNameResolver(new DefaultModelNameConvention())));
 
         var assembliesProvider = new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance);
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);

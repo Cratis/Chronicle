@@ -15,11 +15,12 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Transactions;
-using Cratis.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -50,7 +51,7 @@ public class EventStore : IEventStore
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -64,7 +65,7 @@ public class EventStore : IEventStore
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
-        IModelNameConvention modelNameConvention,
+        INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
@@ -92,8 +93,8 @@ public class EventStore : IEventStore
         Constraints = new Constraints(
             this,
             [
-                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, serviceProvider),
-                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, namingPolicy, serviceProvider),
+                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes, namingPolicy),
                 new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
             ]);
 
@@ -124,8 +125,6 @@ public class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
-        var modelNameResolver = new ModelNameResolver(modelNameConvention);
-
         Reducers = new Reducers.Reducers(
             this,
             clientArtifactsProvider,
@@ -133,8 +132,7 @@ public class EventStore : IEventStore
             new ReducerValidator(),
             EventTypes,
             _eventSerializer,
-            modelNameResolver,
-            schemaGenerator,
+            namingPolicy,
             jsonSerializerOptions,
             identityProvider,
             loggerFactory.CreateLogger<Reducers.Reducers>());
@@ -144,14 +142,20 @@ public class EventStore : IEventStore
             EventTypes,
             new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
             clientArtifactsProvider,
-            schemaGenerator,
-            modelNameResolver,
+            namingPolicy,
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
-        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, schemaGenerator, jsonSerializerOptions));
+        projections.SetRulesProjections(new RulesProjections(
+            serviceProvider,
+            clientArtifactsProvider,
+            EventTypes,
+            namingPolicy,
+            jsonSerializerOptions));
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
+
+        ReadModels = new ReadModels.ReadModels(this, namingPolicy, projections, Reducers, schemaGenerator);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
@@ -205,15 +209,18 @@ public class EventStore : IEventStore
     public IFailedPartitions FailedPartitions { get; }
 
     /// <inheritdoc/>
+    public IReadModels ReadModels { get; }
+
+    /// <inheritdoc/>
     public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
 
         // We need to discover all event types first, as they are used by the other artifacts
         await EventTypes.Discover();
-        await Constraints.Discover();
 
         await Task.WhenAll(
+            Constraints.Discover(),
             Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover());
@@ -224,11 +231,13 @@ public class EventStore : IEventStore
     {
         _logger.RegisterAllArtifacts();
 
-        // We need to register event types first, as they are used by the other artifacts
-        await EventTypes.Register();
-        await Constraints.Register();
+        // We need to register event types and read models first, as they are used by the other artifacts
+        await Task.WhenAll(
+            EventTypes.Register(),
+            ReadModels.Register());
 
         await Task.WhenAll(
+            Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
             Projections.Register());

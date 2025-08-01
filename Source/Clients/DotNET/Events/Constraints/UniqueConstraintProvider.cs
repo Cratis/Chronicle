@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Serialization;
 using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -11,7 +12,11 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for providing client artifacts.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event types.</param>
-public class UniqueConstraintProvider(IClientArtifactsProvider clientArtifactsProvider, IEventTypes eventTypes) : ICanProvideConstraints
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+public class UniqueConstraintProvider(
+    IClientArtifactsProvider clientArtifactsProvider,
+    IEventTypes eventTypes,
+    INamingPolicy namingPolicy) : ICanProvideConstraints
 {
     /// <inheritdoc/>
     public IImmutableList<IConstraintDefinition> Provide()
@@ -32,7 +37,7 @@ public class UniqueConstraintProvider(IClientArtifactsProvider clientArtifactsPr
         var constraints = new List<IConstraintDefinition>();
         foreach (var constraint in uniqueConstraints)
         {
-            var builder = new ConstraintBuilder(eventTypes);
+            var builder = new ConstraintBuilder(eventTypes, namingPolicy);
             builder.Unique(unique =>
             {
                 unique.WithName(constraint.Key);

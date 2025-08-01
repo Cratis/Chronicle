@@ -48,5 +48,5 @@ public static class EventValueProviders
     /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> UniqueIdentifier() => @event => $"{@event.Metadata.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
+    public static ValueProvider<AppendedEvent> UniqueIdentifier() => @event => $"{@event.Context.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
 }

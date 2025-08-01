@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Models;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
 
@@ -20,10 +18,10 @@ public class ChildrenDefinition
     public string IdentifiedBy { get; set; }
 
     /// <summary>
-    /// Gets or sets the target <see cref="ModelDefinition"/>.
+    /// Gets or sets the target read model.
     /// </summary>
     [ProtoMember(2)]
-    public ModelDefinition Model { get; set; }
+    public string ReadModel { get; set; }
 
     /// <summary>
     /// Gets or sets the initial state to use for new instances of the model.

@@ -21,6 +21,7 @@ using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Events.MongoDB.EventTypes;
 using Cratis.Types;
@@ -83,6 +84,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModelDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

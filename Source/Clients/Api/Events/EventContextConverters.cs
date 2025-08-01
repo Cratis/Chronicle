@@ -17,6 +17,7 @@ internal static class EventContextConverters
     /// <param name="context">The contract <see cref="Contracts.Events.EventContext"/> to convert.</param>
     /// <returns>The converted <see cref="EventContext"/>.</returns>
     public static EventContext ToApi(this Contracts.Events.EventContext context) => new(
+        context.EventType.ToApi(),
         context.EventSourceType,
         context.EventSourceId,
         context.SequenceNumber,
@@ -34,6 +35,7 @@ internal static class EventContextConverters
     /// <returns>The converted <see cref="Contracts.Events.EventContext"/>.</returns>
     public static Contracts.Events.EventContext ToContract(this EventContext context) => new()
     {
+        EventType = context.EventType.ToContract(),
         EventSourceType = context.EventSourceType,
         EventSourceId = context.EventSourceId,
         SequenceNumber = context.SequenceNumber,

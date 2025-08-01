@@ -294,7 +294,7 @@ public class EventSequence(
             causation,
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow);
-        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Metadata.Type]);
+        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
 
     /// <inheritdoc/>

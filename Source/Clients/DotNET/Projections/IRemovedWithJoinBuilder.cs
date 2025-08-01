@@ -6,8 +6,8 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a builder for building out removed with join statements.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
-public interface IRemovedWithJoinBuilder<TModel, TEvent, TBuilder>
+public interface IRemovedWithJoinBuilder<TReadModel, TEvent, TBuilder>
     where TBuilder : class;

@@ -14,6 +14,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Execution;
 using Cratis.Tasks;
@@ -146,6 +147,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IReactors>(clientFactory),
                 callInvoker.CreateGrpcService<IReducers>(clientFactory),
                 callInvoker.CreateGrpcService<IProjections>(clientFactory),
+                callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
                 callInvoker.CreateGrpcService<IServer>(clientFactory));
 

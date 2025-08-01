@@ -13,7 +13,7 @@ using NJsonSchema;
 namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
-/// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.
+/// Represents an implementation of <see cref="IReadModelPropertyExpressionResolvers"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ITypeFormats"/> class.

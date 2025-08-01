@@ -19,9 +19,8 @@ public class when_subtracting_a_deep_nested_property_without_existing_value_from
     {
         _result = new();
         _event = new(
-            new(0,
-            new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,

@@ -76,6 +76,7 @@ public class StatelessAggregateRootMutator(
                         EventContext.From(
                             eventStore.Name,
                             eventStore.Namespace,
+                            eventStore.EventTypes.GetEventTypeFor(@event.GetType()),
                             aggregateRootContext.EventSourceType,
                             aggregateRootContext.EventSourceId,
                             aggregateRootContext.EventStreamType,

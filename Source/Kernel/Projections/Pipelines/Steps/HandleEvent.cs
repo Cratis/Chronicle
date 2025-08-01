@@ -17,16 +17,16 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ILogger<Han
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        logger.HandlingEvent(context.Event.Metadata.SequenceNumber);
-        var eventType = context.Event.Metadata.Type;
+        logger.HandlingEvent(context.Event.Context.SequenceNumber);
+        var eventType = context.Event.Context.EventType;
         if (projection.Accepts(eventType))
         {
-            logger.Projecting(context.Event.Metadata.SequenceNumber);
+            logger.Projecting(context.Event.Context.SequenceNumber);
             projection.OnNext(context);
         }
         else
         {
-            logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Identifier, projection.Path, eventType);
+            logger.EventNotAccepted(context.Event.Context.SequenceNumber, projection.Identifier, projection.Path, eventType);
         }
         foreach (var child in projection.ChildProjections)
         {

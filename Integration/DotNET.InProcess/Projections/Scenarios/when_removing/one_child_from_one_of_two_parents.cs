@@ -27,7 +27,7 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
             FirstGroupId = Guid.Parse("4b92abb1-ba70-44e7-8c46-6b20885b9648");
             SecondGroupId = Guid.Parse("3628222e-5539-4053-b3c6-10b84178a9e7");
             EventSourceId = userId.ToString();
-            ModelId = FirstGroupId;
+            ReadModelId = FirstGroupId;
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated("SomeGroup")));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated("SomeGroup")));

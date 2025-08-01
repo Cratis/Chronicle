@@ -25,6 +25,6 @@ public class with_synchronous_nullable_reducer : given.a_reducer_invoker_for<Syn
         _reduceResult = await _invoker.Invoke(_serviceProvider, _eventsAndContexts, new ReadModel());
     }
 
-    [Fact] void should_return_null_as_model_state() => _reduceResult.ModelState.ShouldBeNull();
+    [Fact] void should_return_null_as_model_state() => _reduceResult.ReadModelState.ShouldBeNull();
     [Fact] void should_be_successful() => _reduceResult.IsSuccess.ShouldBeTrue();
 }

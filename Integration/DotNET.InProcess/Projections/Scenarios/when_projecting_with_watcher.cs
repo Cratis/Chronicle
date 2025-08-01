@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
+using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_watcher.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios;
@@ -11,13 +11,13 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios;
 [Collection(ChronicleCollection.Name)]
 public class when_projecting_with_watcher(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AutoMappedPropertiesProjection, Model>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<AutoMappedPropertiesProjection, ReadModel>(chronicleInProcessFixture)
     {
         public EventWithPropertiesForAllSupportedTypes EventAppended;
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
-        public ProjectionChangeset<Model> WatchResult;
+        public ProjectionChangeset<ReadModel> WatchResult;
 
         TaskCompletionSource _tcs;
 #pragma warning disable CA2213 // Disposable fields should be disposed
@@ -29,7 +29,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
             EventsToAppend.Add(EventAppended);
-            _observable = EventStore.Projections.Watch<Model>().Subscribe(result =>
+            _observable = EventStore.Projections.Watch<ReadModel>().Subscribe(result =>
             {
                 WatchResult = result;
                 _tcs.SetResult();
@@ -43,5 +43,5 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         }
     }
 
-    [Fact] void should_receive_same_model() => Context.Result.ShouldEqual(Context.WatchResult.Model);
+    [Fact] void should_receive_same_model() => Context.Result.ShouldEqual(Context.WatchResult.ReadModel);
 }

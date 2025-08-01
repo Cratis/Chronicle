@@ -15,10 +15,10 @@ internal static class ProjectionChangesetConverters
     /// Convert to client representation.
     /// </summary>
     /// <param name="changeset">Contract representation of changeset.</param>
-    /// <typeparam name="TModel">Type of model it should convert to.</typeparam>
+    /// <typeparam name="TReadModel">Type of read model it should convert to.</typeparam>
     /// <returns>Converted <see cref="ProjectionChangeset{T}"/>.</returns>
-    internal static ProjectionChangeset<TModel> ToClient<TModel>(this Contracts.Projections.ProjectionChangeset changeset) => new(
+    internal static ProjectionChangeset<TReadModel> ToClient<TReadModel>(this Contracts.Projections.ProjectionChangeset changeset) => new(
             changeset.Namespace,
-            changeset.ModelKey,
-            JsonSerializer.Deserialize<TModel>(changeset.Model, Globals.JsonSerializerOptions)!);
+            changeset.ReadModelKey,
+            JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, Globals.JsonSerializerOptions)!);
 }

@@ -9,16 +9,16 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAllSetBuilder{TModel, TParentBuilder}"/>.
+/// Represents an implementation of <see cref="IAllSetBuilder{TReadModel, TParentBuilder}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
+/// Initializes a new instance of the <see cref="SetBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/> class.
 /// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
-public class AllSetBuilder<TModel, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : IAllSetBuilder<TModel, TParentBuilder>
+public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : IAllSetBuilder<TReadModel, TParentBuilder>
 {
     IEventValueExpression? _expression;
 
@@ -51,7 +51,7 @@ public class AllSetBuilder<TModel, TParentBuilder>(TParentBuilder parent, Proper
     {
         if (_expression is null)
         {
-            throw new MissingToExpressionForAllSet(typeof(TModel), TargetProperty);
+            throw new MissingToExpressionForAllSet(typeof(TReadModel), TargetProperty);
         }
     }
 }

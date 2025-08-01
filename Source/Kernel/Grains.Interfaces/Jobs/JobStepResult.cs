@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Json;
 using Cratis.Monads;
+
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
@@ -46,7 +47,7 @@ public class JobStepResult(Result<object?, PerformJobStepError> result)
     /// <param name="jsonSerializerOptions">The serializer settings used to deserialize the result object.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <returns>True if full result, false if partial or none result.</returns>
-    public bool TryGetFullResult<TResult>([NotNullWhen(true)]out TResult? result, [NotNullWhen(false)]out PerformJobStepError? error, JsonSerializerOptions? jsonSerializerOptions = null)
+    public bool TryGetFullResult<TResult>([NotNullWhen(true)] out TResult? result, [NotNullWhen(false)] out PerformJobStepError? error, JsonSerializerOptions? jsonSerializerOptions = null)
         where TResult : class
     {
         error = null;

@@ -14,7 +14,7 @@ public class when_getting_flattened_properties_for_class_without_inheritance : g
 
     IEnumerable<JsonSchemaProperty> _result;
 
-    void Establish() => _schema = generator.Generate(typeof(SimpleType));
+    void Establish() => _schema = _generator.Generate(typeof(SimpleType));
 
     void Because() => _result = _schema.GetFlattenedProperties();
 

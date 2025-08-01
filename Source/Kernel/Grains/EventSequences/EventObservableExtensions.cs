@@ -18,5 +18,5 @@ public static class EventObservableExtensions
     /// <param name="types">Collection of <see cref="EventType"/> to filter on.</param>
     /// <returns>A new <see cref="IObservable{EventContext}"/>.</returns>
     public static IObservable<IEnumerable<AppendedEvent>> WhereEventTypesAre(this IObservable<IEnumerable<AppendedEvent>> observable, params EventTypeId[] types) =>
-        observable.Where(events => events.Any(@event => types.Contains(@event.Metadata.Type.Id)));
+        observable.Where(events => events.Any(@event => types.Contains(@event.Context.EventType.Id)));
 }

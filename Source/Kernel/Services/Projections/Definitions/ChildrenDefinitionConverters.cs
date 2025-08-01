@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Services.Models;
 
 namespace Cratis.Chronicle.Services.Projections.Definitions;
 
@@ -24,7 +23,7 @@ internal static class ChildrenDefinitionConverters
         return new()
         {
             IdentifiedBy = definition.IdentifiedBy,
-            Model = definition.Model.ToContract(),
+            ReadModel = definition.ReadModel,
             InitialModelState = definition.InitialModelState.ToJsonString(),
             From = definition.From.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Join = definition.Join.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
@@ -45,7 +44,7 @@ internal static class ChildrenDefinitionConverters
     {
         return new(
             contract.IdentifiedBy,
-            contract.Model.ToChronicle(),
+            contract.ReadModel,
             (JsonObject)JsonNode.Parse(contract.InitialModelState)! ?? [],
             contract.From.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.Join.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),

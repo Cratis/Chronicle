@@ -28,7 +28,7 @@ public class ProjectionAggregateRootStateProvider<TState>(
 
         aggregateRootContext.TailEventSequenceNumber = result.LastHandledEventSequenceNumber;
 
-        return (TState?)result.Model;
+        return (TState?)result.ReadModel;
     }
 
     /// <inheritdoc/>
@@ -40,7 +40,7 @@ public class ProjectionAggregateRootStateProvider<TState>(
             aggregateRootContext.EventSourceId,
             events);
         aggregateRootContext.TailEventSequenceNumber = result.LastHandledEventSequenceNumber;
-        return (TState?)result.Model;
+        return (TState?)result.ReadModel;
     }
 
     /// <inheritdoc/>

@@ -229,7 +229,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var @event = events.First();
         foreach (var subscription in _subscriptions)
         {
-            if (!subscription.EventTypeIds.Contains(@event.Metadata.Type.Id))
+            if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
             {
                 continue;
             }
@@ -246,7 +246,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var tasks = new List<Task>();
             foreach (var subscription in _subscriptions)
             {
-                var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
+                var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id)).ToList();
                 if (actualEvents.Count == 0)
                 {
                     continue;

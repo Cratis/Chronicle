@@ -8,16 +8,16 @@ using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;
+namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties;
 
 /// <summary>
-/// Represents a <see cref="IModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
+/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="AddExpressionResolver"/> class.
 /// </remarks>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving.</param>
-public partial class AddExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IModelPropertyExpressionResolver
+public partial class AddExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IReadModelPropertyExpressionResolver
 {
     static readonly Regex _regularExpression = AddRegEx();
 

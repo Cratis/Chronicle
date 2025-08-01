@@ -5,8 +5,10 @@ using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using ProjectionDefinition = Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition;
 
@@ -24,47 +26,49 @@ public class ProjectionDefinitionsStorage(
     IEventStoreDatabase eventStoreDatabase,
     IJsonProjectionDefinitionSerializer projectionDefinitionSerializer) : IProjectionDefinitionsStorage
 {
-    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ProjectionDefinitions);
+    IMongoCollection<Projection> Collection => eventStoreDatabase.GetCollection<Projection>(WellKnownCollectionNames.ProjectionDefinitions);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        using var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
-        var definitionsAsBson = result.ToList();
-        return definitionsAsBson.Select(_ =>
+        using var result = await Collection.FindAsync(FilterDefinition<Projection>.Empty);
+        var projections = result.ToList();
+        return projections.Select(projection =>
         {
-            _.Remove("_id");
-            var definitionAsJson = _.ToJson();
-            return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
+            var definition = projection.Definitions.Last()!.Value;
+            return BsonSerializer.Deserialize<ProjectionDefinition>(definition);
         }).ToArray();
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ProjectionId id) =>
-        Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
+    public Task<bool> Has(ProjectionId id) => Collection.Find(_ => _.Id == id).AnyAsync();
 
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
-        using var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
+        using var result = await Collection.FindAsync(_ => _.Id == id);
         var document = result.Single();
-        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
+        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.Definitions.First().Value.ToJson())!);
     }
 
     /// <inheritdoc/>
     public Task Delete(ProjectionId id) =>
-        Collection.DeleteOneAsync(new BsonDocument("_id", id.Value));
+        Collection.DeleteOneAsync(_ => _.Id == id);
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
-        var json = projectionDefinitionSerializer.Serialize(definition);
-        var document = BsonDocument.Parse(json.ToJsonString());
-        document["_id"] = definition.Identifier.Value;
-
+        var projection = new Projection(
+            definition.Identifier,
+            definition.Owner,
+            new(definition.ReadModel, ReadModelGeneration.First),
+            new Dictionary<string, BsonDocument>
+            {
+                { ProjectionGeneration.First.ToString(), BsonDocument.Parse(projectionDefinitionSerializer.Serialize(definition).ToJsonString()) }
+            });
         await Collection.ReplaceOneAsync(
-            filter: new BsonDocument("_id", definition.Identifier.Value),
-            replacement: document,
+            filter: _ => _.Id == definition.Identifier,
+            replacement: projection,
             options: new ReplaceOptions { IsUpsert = true });
     }
 }

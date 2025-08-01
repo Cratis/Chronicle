@@ -134,8 +134,8 @@ public class EventSequenceStorage(
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
-                new(sequenceNumber, eventType),
                 new(
+                    eventType,
                     eventSourceType,
                     eventSourceId,
                     eventStreamType,
@@ -185,7 +185,7 @@ public class EventSequenceStorage(
         var collection = _collection;
 
         var @event = await GetEventAt(sequenceNumber);
-        if (@event.Metadata.Type == GlobalEventTypes.Redaction)
+        if (@event.Context.EventType == GlobalEventTypes.Redaction)
         {
             logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
             return @event;
@@ -217,14 +217,14 @@ public class EventSequenceStorage(
         {
             foreach (var @event in cursor.Current)
             {
-                if (@event.Metadata.Type.Id == GlobalEventTypes.Redaction)
+                if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
                 {
-                    logger.RedactionAlreadyApplied(eventSequenceId, @event.Metadata.SequenceNumber);
+                    logger.RedactionAlreadyApplied(eventSequenceId, @event.Context.SequenceNumber);
                     continue;
                 }
 
                 updates.Add(CreateRedactionUpdateModelFor(@event, reason, correlationId, causation, causedByChain, occurred));
-                affectedEventTypes.Add(@event.Metadata.Type);
+                affectedEventTypes.Add(@event.Context.EventType);
             }
 
             await collection.BulkWriteAsync(updates).ConfigureAwait(false);
@@ -591,7 +591,7 @@ public class EventSequenceStorage(
     {
         var content = new RedactionEventContent(
             reason,
-            @event.Metadata.Type.Id,
+            @event.Context.EventType.Id,
             occurred,
             correlationId,
             causation,
@@ -604,7 +604,7 @@ public class EventSequenceStorage(
                 };
 
         return new UpdateOneModel<Event>(
-            Builders<Event>.Filter.Eq(e => e.SequenceNumber, @event.Metadata.SequenceNumber),
+            Builders<Event>.Filter.Eq(e => e.SequenceNumber, @event.Context.SequenceNumber),
             Builders<Event>.Update
                 .Set(e => e.Type, GlobalEventTypes.Redaction)
                 .Set(e => e.Content, generationalContent));

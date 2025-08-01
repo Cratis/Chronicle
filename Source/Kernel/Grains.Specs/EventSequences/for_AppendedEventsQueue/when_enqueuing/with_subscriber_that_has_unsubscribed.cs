@@ -12,9 +12,16 @@ public class with_subscriber_that_has_unsubscribed : given.a_single_subscriber_w
 
     void Establish()
     {
-        _appendedEvent = AppendedEvent.EmptyWithEventType(_eventType);
+        _appendedEvent = AppendedEvent.Empty();
         _eventSourceId = Guid.NewGuid();
-        _appendedEvent = _appendedEvent with { Context = EventContext.Empty with { EventSourceId = _eventSourceId } };
+        _appendedEvent = _appendedEvent with
+        {
+            Context = EventContext.Empty with
+            {
+                EventType = _eventType,
+                EventSourceId = _eventSourceId
+            }
+        };
 
         _queue.Unsubscribe(_observerKey);
     }
@@ -23,9 +30,6 @@ public class with_subscriber_that_has_unsubscribed : given.a_single_subscriber_w
     {
         await _queue.Enqueue([_appendedEvent]);
         await _queue.AwaitQueueDepletion();
-
-        // waiting for queue depletion does not guarantee that the event was actually handled
-        await Task.Delay(100);
     }
 
     [Fact] void should_not_handle_any_events() => _handledEventsPerPartition.Count.ShouldEqual(0);

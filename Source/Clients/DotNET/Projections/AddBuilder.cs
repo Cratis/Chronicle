@@ -7,19 +7,19 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAddBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.
+/// Represents an implementation of <see cref="IAddBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="AddBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
+/// Initializes a new instance of the <see cref="AddBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/> class.
 /// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
-public class AddBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : IAddBuilder<TModel, TEvent, TProperty, TParentBuilder>
-    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
+public class AddBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : IAddBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
+    where TParentBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TParentBuilder>
 {
     string _expression = string.Empty;
 
@@ -45,7 +45,7 @@ public class AddBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilde
     {
         if (string.IsNullOrEmpty(_expression))
         {
-            throw new MissingAddWithExpression(typeof(TModel), TargetProperty);
+            throw new MissingAddWithExpression(typeof(TReadModel), TargetProperty);
         }
     }
 }

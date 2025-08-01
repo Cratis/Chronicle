@@ -171,7 +171,7 @@ public class HandleEventsForPartition(
                     var (eventObserverResult, handledEvents) = handledEventsResult;
                     if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
                     {
-                        handledCount = events.Current.Count(_ => _.Metadata.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
+                        handledCount = events.Current.Count(_ => _.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
                     }
                     switch (eventObserverResult.State)
                     {
@@ -186,8 +186,8 @@ public class HandleEventsForPartition(
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
                             lastEventSequenceNumberAttempted = eventObserverResult.HandledAnyEvents
-                                ? handledEvents.First(e => e.Metadata.SequenceNumber > eventObserverResult.LastSuccessfulObservation).Metadata.SequenceNumber
-                                : handledEvents[0].Metadata.SequenceNumber;
+                                ? handledEvents.First(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation).Context.SequenceNumber
+                                : handledEvents[0].Context.SequenceNumber;
                             if (eventObserverResult.HandledAnyEvents)
                             {
                                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);

@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
@@ -28,7 +28,7 @@ public class SinkFactory(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model)
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition model)
     {
         var mongoDBConverter = new MongoDBConverter(
             expandoObjectConverter,

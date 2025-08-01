@@ -38,7 +38,7 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
             {
                 var events = callInfo.Arg<IEnumerable<AppendedEvent>>();
                 _handledEvents.AddRange(events);
-                return ObserverSubscriberResult.Ok(events.Last().Metadata.SequenceNumber);
+                return ObserverSubscriberResult.Ok(events.Last().Context.SequenceNumber);
             });
     }
 

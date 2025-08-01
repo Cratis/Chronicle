@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
+using MongoDB.Bson;
 using NJsonSchema;
 
 namespace Cratis.Events.MongoDB.EventTypes;
@@ -14,37 +15,38 @@ namespace Cratis.Events.MongoDB.EventTypes;
 public static class EventSchemaExtensions
 {
     /// <summary>
-    /// Convert to a <see cref="EventSchemaMongoDB">MongoDB</see> representation.
+    /// Convert to a <see cref="EventType">MongoDB</see> representation.
     /// </summary>
     /// <param name="schema"><see cref="EventTypeSchema"/> to convert.</param>
-    /// <returns>Converted <see cref="EventSchemaMongoDB"/>.</returns>
-    public static EventSchemaMongoDB ToMongoDB(this EventTypeSchema schema)
+    /// <returns>Converted <see cref="EventType"/>.</returns>
+    public static EventType ToMongoDB(this EventTypeSchema schema)
     {
-        return new EventSchemaMongoDB
-        {
-            EventType = schema.Type.Id,
-            Generation = schema.Type.Generation,
-            Schema = schema.Schema.ToJson(),
-            Tombstone = schema.Type.Tombstone
-        };
+        return new EventType(
+            schema.Type.Id,
+            EventTypeOwner.Client,
+            schema.Type.Tombstone,
+            new Dictionary<string, BsonDocument>
+            {
+                { schema.Type.Generation.ToString(), BsonDocument.Parse(schema.Schema.ToJson()) }
+            });
     }
 
     /// <summary>
-    /// Convert to <see cref="EventTypeSchema"/> from <see cref="EventSchemaMongoDB"/>.
+    /// Convert to <see cref="EventTypeSchema"/> from <see cref="EventType"/>.
     /// </summary>
-    /// <param name="schema"><see cref="EventSchemaMongoDB"/> to convert from.</param>
+    /// <param name="schema"><see cref="EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventTypeSchema"/>.</returns>
-    public static EventTypeSchema ToEventSchema(this EventSchemaMongoDB schema)
+    public static EventTypeSchema ToEventSchema(this EventType schema)
     {
-        var result = JsonSchema.FromJsonAsync(schema.Schema).GetAwaiter().GetResult();
+        var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value.ToJson()).GetAwaiter().GetResult();
         result.EnsureComplianceMetadata();
         result.ResetFlattenedProperties();
         result.EnsureFlattenedProperties();
 
         return new EventTypeSchema(
-            new EventType(
-               schema.EventType,
-               schema.Generation,
+            new Chronicle.Concepts.Events.EventType(
+               schema.Id,
+               EventTypeGeneration.First,
                schema.Tombstone),
             result);
     }

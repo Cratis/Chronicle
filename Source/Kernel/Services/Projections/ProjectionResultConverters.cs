@@ -20,7 +20,7 @@ internal static class ProjectionResultConverters
     public static Contracts.Projections.ProjectionResult ToContract(this ProjectionResult result) =>
         new()
         {
-            Model = JsonSerializer.Serialize(result.Model, Globals.JsonSerializerOptions),
+            ReadModel = JsonSerializer.Serialize(result.ReadModel, Globals.JsonSerializerOptions),
             AffectedProperties = result.AffectedProperties.Select(_ => _.ToString()).ToList(),
             ProjectedEventsCount = result.ProjectedEventsCount,
             LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber.Value

@@ -10,5 +10,5 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionWatcherFactory(IEventStore eventStore) : IProjectionWatcherFactory
 {
     /// <inheritdoc/>
-    public IProjectionWatcher<TModel> Create<TModel>(Action stopped) => new ProjectionWatcher<TModel>(eventStore, () => { });
+    public IProjectionWatcher<TReadModel> Create<TReadModel>(Action stopped) => new ProjectionWatcher<TReadModel>(eventStore, () => { });
 }

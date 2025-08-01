@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Services.Models;
 using Cratis.Chronicle.Services.Sinks;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers;
@@ -22,7 +21,7 @@ internal static class ReducerDefinitionConverters
             reducerDefinition.ReducerId,
             reducerDefinition.EventSequenceId,
             reducerDefinition.EventTypes.Select(_ => _.ToChronicle()),
-            reducerDefinition.Model.ToChronicle(),
+            reducerDefinition.ReadModel,
             reducerDefinition.Sink.ToChronicle()
         );
 }

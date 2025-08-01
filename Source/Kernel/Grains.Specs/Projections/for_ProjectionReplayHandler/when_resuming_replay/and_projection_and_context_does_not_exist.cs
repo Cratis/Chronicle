@@ -12,7 +12,7 @@ public class and_projection_and_context_does_not_exist : given.a_projection_repl
     void Establish()
     {
         _replayContext = new ReplayContext(_modelName, "TheRevertModel", DateTimeOffset.UtcNow);
-        _replayContexts.TryGet(_replayContext.Model).Returns(GetContextError.NotFound);
+        _replayContexts.TryGet(_replayContext.ReadModel).Returns(GetContextError.NotFound);
     }
 
     Task Because() => _handler.EndReplayFor(_observerDetails);

@@ -30,7 +30,7 @@ public class ProjectionReplayHandler(
         async projection =>
         {
             var replayContexts = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts;
-            return await replayContexts.Establish(projection.Model.Name);
+            return await replayContexts.Establish(projection.ReadModel.Name);
         },
         (pipeline, _, context) => pipeline.BeginReplay(context));
 
@@ -40,7 +40,7 @@ public class ProjectionReplayHandler(
         async projection =>
         {
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-            return await namespaceStorage.ReplayContexts.TryGet(projection.Model.Name);
+            return await namespaceStorage.ReplayContexts.TryGet(projection.ReadModel.Name);
         },
         async (pipeline, projection, context) =>
         {
@@ -54,14 +54,14 @@ public class ProjectionReplayHandler(
         async projection =>
         {
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-            return await namespaceStorage.ReplayContexts.TryGet(projection.Model.Name);
+            return await namespaceStorage.ReplayContexts.TryGet(projection.ReadModel.Name);
         },
         async (pipeline, projection, context) =>
         {
             await pipeline.EndReplay(context);
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
             await namespaceStorage.ReplayedModels.Replayed(observerDetails.Key.ObserverId, context);
-            await namespaceStorage.ReplayContexts.Evict(projection.Model.Name);
+            await namespaceStorage.ReplayContexts.Evict(projection.ReadModel.Name);
         });
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;

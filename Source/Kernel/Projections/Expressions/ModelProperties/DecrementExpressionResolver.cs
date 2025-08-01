@@ -8,13 +8,13 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Expressions.ModelProperties;
+namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties;
 
 /// <summary>
-/// Represents a <see cref="IModelPropertyExpressionResolver"/> for decrementing a property on a model.
+/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for decrementing a property on a model.
 /// </summary>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
-public partial class DecrementExpressionResolver(ITypeFormats typeFormats) : IModelPropertyExpressionResolver
+public partial class DecrementExpressionResolver(ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
     static readonly Regex _regularExpression = IncrementRegEx();
     readonly ITypeFormats _typeFormats = typeFormats;

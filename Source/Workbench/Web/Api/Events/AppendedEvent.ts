@@ -6,12 +6,8 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { EventContext } from './EventContext';
-import { EventMetadata } from './EventMetadata';
 
 export class AppendedEvent {
-
-    @field(EventMetadata)
-    metadata!: EventMetadata;
 
     @field(EventContext)
     context!: EventContext;

@@ -8,31 +8,31 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents an event that has been appended to an event log.
 /// </summary>
-/// <param name="Metadata">The <see cref="EventMetadata"/>.</param>
 /// <param name="Context">The <see cref="EventContext"/>.</param>
 /// <param name="Content">The content in the form of an <see cref="ExpandoObject"/>.</param>
-public record AppendedEvent(EventMetadata Metadata, EventContext Context, ExpandoObject Content)
+public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
     /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event sequence number.
     /// </summary>
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event sequence number.</returns>
-    public static AppendedEvent EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) => new(EventMetadata.EmptyWithEventSequenceNumber(eventSequenceNumber), EventContext.Empty, new ExpandoObject());
+    public static AppendedEvent EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) =>
+        new(EventContext.Empty with { SequenceNumber = eventSequenceNumber }, new ExpandoObject());
 
     /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
     /// </summary>
     /// <param name="eventType">Type of event it should be.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
-    public static AppendedEvent EmptyWithEventType(EventType eventType) => new(new EventMetadata(EventSequenceNumber.First, eventType), EventContext.Empty, new ExpandoObject());
+    public static AppendedEvent EmptyWithEventType(EventType eventType) => new(EventContext.Empty with { EventType = eventType }, new ExpandoObject());
 
     /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
     /// </summary>
     /// <param name="content">The content for the event.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
-    public static AppendedEvent EmptyWithContent(ExpandoObject content) => new(new EventMetadata(EventSequenceNumber.First, new EventType(string.Empty, 0)), EventContext.Empty, content);
+    public static AppendedEvent EmptyWithContent(ExpandoObject content) => new(EventContext.Empty, content);
 
     /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
@@ -40,5 +40,6 @@ public record AppendedEvent(EventMetadata Metadata, EventContext Context, Expand
     /// <param name="eventType">Type of event it should be.</param>
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>///
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
-    public static AppendedEvent EmptyWithEventTypeAndEventSequenceNumber(EventType eventType, EventSequenceNumber eventSequenceNumber) => new(new EventMetadata(eventSequenceNumber, eventType), EventContext.Empty, new ExpandoObject());
+    public static AppendedEvent EmptyWithEventTypeAndEventSequenceNumber(EventType eventType, EventSequenceNumber eventSequenceNumber) =>
+        new(EventContext.Empty with { EventType = eventType, SequenceNumber = eventSequenceNumber }, new ExpandoObject());
 }

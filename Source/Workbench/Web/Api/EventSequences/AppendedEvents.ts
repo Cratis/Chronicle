@@ -12,19 +12,14 @@ import Handlebars from 'handlebars';
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}?eventSourceId={{eventSourceId}}');
 
 class AppendedEventsSortBy {
-    private _metadata: SortingActionsForQuery<AppendedEvent[]>;
     private _context: SortingActionsForQuery<AppendedEvent[]>;
     private _content: SortingActionsForQuery<AppendedEvent[]>;
 
     constructor(readonly query: AppendedEvents) {
-        this._metadata = new SortingActionsForQuery<AppendedEvent[]>('metadata', query);
         this._context = new SortingActionsForQuery<AppendedEvent[]>('context', query);
         this._content = new SortingActionsForQuery<AppendedEvent[]>('content', query);
     }
 
-    get metadata(): SortingActionsForQuery<AppendedEvent[]> {
-        return this._metadata;
-    }
     get context(): SortingActionsForQuery<AppendedEvent[]> {
         return this._context;
     }
@@ -34,13 +29,9 @@ class AppendedEventsSortBy {
 }
 
 class AppendedEventsSortByWithoutQuery {
-    private _metadata: SortingActions  = new SortingActions('metadata');
     private _context: SortingActions  = new SortingActions('context');
     private _content: SortingActions  = new SortingActions('content');
 
-    get metadata(): SortingActions {
-        return this._metadata;
-    }
     get context(): SortingActions {
         return this._context;
     }

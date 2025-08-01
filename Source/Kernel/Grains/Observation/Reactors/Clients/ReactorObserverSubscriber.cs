@@ -51,7 +51,7 @@ public class ReactorObserverSubscriber(
                 _key.ObserverId,
                 _key.EventStore,
                 _key.Namespace,
-                @event.Metadata.Type.Id,
+                @event.Context.EventType.Id,
                 _key.EventSequenceId,
                 @event.Context.SequenceNumber);
         }

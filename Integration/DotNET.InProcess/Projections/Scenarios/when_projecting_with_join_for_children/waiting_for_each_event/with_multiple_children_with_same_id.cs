@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.Models;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event.with_multiple_children_with_same_id.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event;
@@ -32,7 +32,7 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
             FirstGroupId = "462ec4f6-fd9e-4549-92b9-00b769636468";
             SecondGroupId = "02cf243d-d8b6-414e-a1e7-d631b656c976";
             EventSourceId = FirstGroupId;
-            ModelId = FirstGroupId;
+            ReadModelId = FirstGroupId;
 
             EventsWithEventSourceIdToAppend.Add(new(FirstGroupId, new GroupCreated(GroupName)));
             EventsWithEventSourceIdToAppend.Add(new(SecondGroupId, new GroupCreated(GroupName2)));
@@ -44,8 +44,8 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
 
         async Task Because()
         {
-            FirstGroup = await GetModel(FirstGroupId);
-            SecondGroup = await GetModel(SecondGroupId);
+            FirstGroup = await GetReadModel(FirstGroupId);
+            SecondGroup = await GetReadModel(SecondGroupId);
         }
     }
 
