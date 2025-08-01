@@ -8,6 +8,6 @@ public class a_unique_constraint_builder_without_owner : all_dependencies
     protected UniqueConstraintBuilder _constraintBuilder;
     void Establish()
     {
-        _constraintBuilder = new UniqueConstraintBuilder(_eventTypes);
+        _constraintBuilder = new UniqueConstraintBuilder(_eventTypes, _namingPolicy);
     }
 }

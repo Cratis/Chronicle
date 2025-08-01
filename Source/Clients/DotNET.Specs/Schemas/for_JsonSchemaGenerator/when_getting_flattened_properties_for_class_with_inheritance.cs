@@ -15,7 +15,7 @@ public class when_getting_flattened_properties_for_class_with_inheritance : give
 
     IEnumerable<JsonSchemaProperty> _result;
 
-    void Establish() => _schema = generator.Generate(typeof(SimpleType));
+    void Establish() => _schema = _generator.Generate(typeof(SimpleType));
 
     void Because() => _result = _schema.GetFlattenedProperties();
 

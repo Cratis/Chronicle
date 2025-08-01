@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
@@ -26,7 +27,7 @@ public class a_constraint_builder_with_owner : Specification
 
         _owner = typeof(Owner);
         _eventTypes = Substitute.For<IEventTypes>();
-        _constraintBuilder = new ConstraintBuilder(_eventTypes, _owner);
+        _constraintBuilder = new ConstraintBuilder(_eventTypes, new DefaultNamingPolicy(), _owner);
     }
 
     record Owner();

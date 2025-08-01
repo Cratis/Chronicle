@@ -7,7 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Rules;
-using Cratis.Models;
+using Cratis.Chronicle.Serialization;
 
 namespace Cratis.Chronicle.Projections.for_Projections.replay_tests.given;
 
@@ -17,8 +17,8 @@ public class all_dependencies : Specification
     protected IEventTypes _eventTypes;
     protected IProjectionWatcherManager _projectionWatcherManager;
     protected IClientArtifactsProvider _clientArtifacts;
+    protected INamingPolicy _namingPolicy;
     internal IRulesProjections _rulesProjections;
-    protected IModelNameResolver _modelNameResolver;
     protected IEventSerializer _eventSerializer;
     protected IServiceProvider _serviceProvider;
     protected JsonSerializerOptions _jsonSerializerOptions;
@@ -39,8 +39,8 @@ public class all_dependencies : Specification
         _projectionWatcherManager = Substitute.For<IProjectionWatcherManager>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _rulesProjections = Substitute.For<IRulesProjections>();
-        _modelNameResolver = Substitute.For<IModelNameResolver>();
         _eventSerializer = Substitute.For<IEventSerializer>();
+        _namingPolicy = Substitute.For<INamingPolicy>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _jsonSerializerOptions = new();
 
@@ -63,7 +63,7 @@ public class all_dependencies : Specification
             _eventTypes,
             _projectionWatcherManager,
             _clientArtifacts,
-            _modelNameResolver,
+            _namingPolicy,
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);

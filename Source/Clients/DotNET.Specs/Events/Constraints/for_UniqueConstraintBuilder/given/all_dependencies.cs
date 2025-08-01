@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
@@ -11,6 +12,7 @@ public class all_dependencies : Specification
 {
     protected IEventTypes _eventTypes;
     protected NJsonSchemaGenerator _generator;
+    protected INamingPolicy _namingPolicy;
 
     void Establish()
     {
@@ -21,7 +23,7 @@ public class all_dependencies : Specification
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             },
         });
-
+        _namingPolicy = Substitute.For<INamingPolicy>();
         _eventTypes = Substitute.For<IEventTypes>();
     }
 }

@@ -7,7 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
-using Cratis.Models;
+using Cratis.Chronicle.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reducers.for_Reducers.given;
@@ -20,7 +20,7 @@ public class all_dependencies : Specification
     protected IReducerValidator _reducerValidator;
     protected IEventTypes _eventTypes;
     protected IEventSerializer _eventSerializer;
-    protected IModelNameResolver _modelNameResolver;
+    protected INamingPolicy _namingPolicy;
     protected JsonSerializerOptions _jsonSerializerOptions;
     protected ILogger<Reducers> _logger;
     protected IChronicleServicesAccessor _servicesAccessor;
@@ -42,7 +42,7 @@ public class all_dependencies : Specification
         _reducerValidator = Substitute.For<IReducerValidator>();
         _eventTypes = Substitute.For<IEventTypes>();
         _eventSerializer = Substitute.For<IEventSerializer>();
-        _modelNameResolver = Substitute.For<IModelNameResolver>();
+        _namingPolicy = Substitute.For<INamingPolicy>();
         _jsonSerializerOptions = new();
         _logger = Substitute.For<ILogger<Reducers>>();
 
@@ -70,7 +70,7 @@ public class all_dependencies : Specification
             _reducerValidator,
             _eventTypes,
             _eventSerializer,
-            _modelNameResolver,
+            _namingPolicy,
             _jsonSerializerOptions,
             _identityProvider,
             _logger);
