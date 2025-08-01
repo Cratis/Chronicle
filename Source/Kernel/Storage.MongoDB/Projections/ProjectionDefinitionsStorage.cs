@@ -48,7 +48,7 @@ public class ProjectionDefinitionsStorage(
     {
         using var result = await Collection.FindAsync(_ => _.Id == id);
         var document = result.Single();
-        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
+        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.Definitions.First().Value.ToJson())!);
     }
 
     /// <inheritdoc/>
