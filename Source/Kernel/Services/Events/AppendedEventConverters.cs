@@ -18,6 +18,11 @@ internal static class AppendedEventConverters
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
+    /// <remarks>
+    /// Note: This method uses JsonSerializer directly for basic data transformation between Kernel and contracts.
+    /// For client-side event serialization with redaction and additional event information providers,
+    /// use the client-side EventSerializer. Consider implementing Kernel-side event serialization for consistency.
+    /// </remarks>
     public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
     {
         Metadata = @event.Metadata.ToContract(),
@@ -37,6 +42,11 @@ internal static class AppendedEventConverters
     /// </summary>
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
     /// <returns>Converted Chronicle version.</returns>
+    /// <remarks>
+    /// Note: This method uses JsonSerializer directly for basic data transformation between contracts and Kernel.
+    /// For client-side event deserialization with proper event handling,
+    /// use the client-side EventSerializer. Consider implementing Kernel-side event serialization for consistency.
+    /// </remarks>
     public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event) => new(
             @event.Metadata.ToChronicle(),
             @event.Context.ToChronicle(),
