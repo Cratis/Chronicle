@@ -77,6 +77,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             </DataPage.MenuItems>
             <DataPage.Columns>
                 <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                <Column field='eventSequenceId' header={strings.eventStore.namespaces.observers.columns.sequence} sortable />
                 <Column
                     field='type'
                     header={strings.eventStore.namespaces.observers.columns.observerType}
