@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
-using Cratis.Chronicle.Storage.Observation.Reactors;
+using Cratis.Chronicle.Storage;
 using Cratis.Types;
 using Microsoft.CodeAnalysis;
 
@@ -17,12 +17,12 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// </summary>
 /// <param name="types">The <see cref="ITypes"/> to use for discovering reactors.</param>
 /// <param name="localSiloDetails">The local silo details.</param>
-/// <param name="reactorDefinitionsStorage">The <see cref="IReactorDefinitionsStorage"/> to use for storing reactor definitions.</param>
+/// <param name="storage">The <see cref="IStorage"/> to use for working with underlying storage.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use for creating reactor grains.</param>
 public class Reactors(
     ITypes types,
     ILocalSiloDetails localSiloDetails,
-    IReactorDefinitionsStorage reactorDefinitionsStorage,
+    IStorage storage,
     IGrainFactory grainFactory) : IReactors
 {
     /// <inheritdoc/>
@@ -52,8 +52,7 @@ public class Reactors(
             EventSequenceId.System,
             typeof(TReactor).GetEventTypes().Select(et => new EventTypeWithKeyExpression(et, "$eventSourceId")),
             false);
-
-        await reactorDefinitionsStorage.Save(reactorDefinition);
+        await storage.GetEventStore(eventStore).Reactors.Save(reactorDefinition);
 
         var observer = grainFactory.GetGrain<IObserver>(key);
         await observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
