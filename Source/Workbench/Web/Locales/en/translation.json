@@ -149,6 +149,7 @@
                 "columns": {
                     "id": "Identifier",
                     "observerType": "Observer type",
+                    "owner": "Owner",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number"
                 },
@@ -157,6 +158,11 @@
                     "reactor": "Reactor",
                     "projection": "Projection",
                     "reducer": "Reducer"
+                },
+                "owners": {
+                    "none": "None",
+                    "client": "Client",
+                    "kernel": "Kernel"
                 },
                 "states": {
                     "unknown": "Unknown",

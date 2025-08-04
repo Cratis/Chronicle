@@ -61,6 +61,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
     /// <param name="type"><see cref="ObserverType"/>.</param>
+    /// <param name="owner"><see cref="ObserverOwner"/> of the observer.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
     /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
@@ -68,6 +69,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
+        ObserverOwner owner,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,

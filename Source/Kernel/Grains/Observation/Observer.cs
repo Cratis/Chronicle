@@ -106,6 +106,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
         ObserverType type,
+        ObserverOwner owner,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
@@ -116,7 +117,13 @@ public partial class Observer(
 
         logger.Subscribing();
 
-        State = State with { Type = type, EventTypes = eventTypes, IsReplayable = isReplayable };
+        State = State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = eventTypes,
+            IsReplayable = isReplayable
+        };
 
         _subscription = new(
             _observerId,

@@ -10,6 +10,7 @@ export * from './FailedPartition';
 export * from './FailedPartitionAttempt';
 export * from './GetObservers';
 export * from './ObserverInformation';
+export * from './ObserverOwner';
 export * from './ObserverRunningState';
 export * from './ObserverType';
 export * from './Replay';

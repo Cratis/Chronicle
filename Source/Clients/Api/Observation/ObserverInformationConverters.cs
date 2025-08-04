@@ -20,6 +20,7 @@ internal static class ObserverInformationConverters
             observerInformation.Id,
             observerInformation.EventSequenceId,
             (ObserverType)(int)observerInformation.Type,
+            (ObserverOwner)(int)observerInformation.Owner,
             observerInformation.EventTypes.ToApi(),
             observerInformation.NextEventSequenceNumber,
             observerInformation.LastHandledEventSequenceNumber,

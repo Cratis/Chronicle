@@ -30,6 +30,7 @@ internal static class ObserverInformationConverters
             Id = information.Id,
             EventSequenceId = information.EventSequenceId,
             Type = information.Type.ToContract(),
+            Owner = information.Owner.ToContract(),
             EventTypes = information.EventTypes.ToContract(),
             NextEventSequenceNumber = information.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = information.LastHandledEventSequenceNumber,
@@ -63,5 +64,18 @@ internal static class ObserverInformationConverters
             Concepts.Observation.ObserverRunningState.Replaying => ObserverRunningState.Replaying,
             Concepts.Observation.ObserverRunningState.Disconnected => ObserverRunningState.Disconnected,
             _ => ObserverRunningState.Unknown
+        };
+
+    /// <summary>
+    /// Convert to contract.
+    /// </summary>
+    /// <param name="owner"><see cref="Concepts.Observation.ObserverOwner"/> to convert from.</param>
+    /// <returns>Converted <see cref="ObserverOwner"/>.</returns>
+    public static ObserverOwner ToContract(this Concepts.Observation.ObserverOwner owner) =>
+        owner switch
+        {
+            Concepts.Observation.ObserverOwner.Client => ObserverOwner.Client,
+            Concepts.Observation.ObserverOwner.Kernel => ObserverOwner.Kernel,
+            _ => ObserverOwner.None
         };
 }

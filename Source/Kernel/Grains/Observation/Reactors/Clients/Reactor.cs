@@ -69,7 +69,13 @@ public class Reactor(
             _observer = GrainFactory.GetGrain<IObserver>(key);
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId!);
             var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
-            await _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, connectedClient, definition.IsReplayable);
+            await _observer.Subscribe<IReactorObserverSubscriber>(
+                ObserverType.Reactor,
+                ObserverOwner.Client,
+                eventTypes,
+                localSiloDetails.SiloAddress,
+                connectedClient,
+                definition.IsReplayable);
             _subscribed = true;
         }
     }

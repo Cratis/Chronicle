@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Storage;
 using Orleans.Storage;
 
-namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactors;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling reactor state storage.

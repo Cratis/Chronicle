@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Storage;
 
@@ -12,9 +13,11 @@ namespace Orleans.Hosting;
 /// Represents a startup task for Chronicle.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
+/// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
+    IReactors reactors,
     IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <inheritdoc/>
@@ -39,6 +42,8 @@ internal sealed class ChronicleServerStartupTask(
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
+                await reactors.DiscoverAndRegister(eventStore, namespaceName);
+
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();
             });
