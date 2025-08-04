@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.EventTypes.Kernel;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
@@ -13,10 +14,12 @@ namespace Orleans.Hosting;
 /// Represents a startup task for Chronicle.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
+/// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
 /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
+    IEventTypes eventTypes,
     IReactors reactors,
     IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
 {
@@ -31,6 +34,8 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        await eventTypes.DiscoverAndRegister();
+
         var eventStores = await storage.GetEventStores();
         foreach (var eventStore in eventStores)
         {
