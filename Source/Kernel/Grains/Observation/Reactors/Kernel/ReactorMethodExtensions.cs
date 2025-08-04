@@ -18,9 +18,14 @@ public static class ReactorMethodExtensions
     /// <param name="methods">The methods to inspect.</param>
     /// <returns>A collection of methods that represent events.</returns>
     public static IEnumerable<MethodInfo> GetEventMethods(this IEnumerable<MethodInfo> methods) => methods
-            .Where(method => method.GetParameters().Length == 2 &&
-                             method.GetParameters()[1].ParameterType == typeof(EventContext) &&
-                             method.ReturnType == typeof(Task))
+            .Where(method =>
+            {
+                var parameters = method.GetParameters();
+                return parameters.Length == 2 &&
+                       parameters[0].ParameterType.IsEventType() &&
+                       parameters[1].ParameterType == typeof(EventContext) &&
+                       method.ReturnType == typeof(Task);
+            })
             .ToArray();
 
     /// <summary>
@@ -54,5 +59,5 @@ public static class ReactorMethodExtensions
     /// <param name="reactorType">The reactor type to inspect.</param>
     /// <returns>A collection of event types.</returns>
     public static IEnumerable<EventType> GetEventTypes(this Type reactorType) =>
-        reactorType.GetEventMethods().Select(method => new EventType(method.GetEventType().Name, EventTypeGeneration.First)).ToArray();
+        reactorType.GetEventMethods().Select(method => method.GetParameters()[0].ParameterType.GetEventType()).ToArray();
 }
