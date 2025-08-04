@@ -41,6 +41,7 @@ public class Reactors(
             eventStore,
             namespaceName,
             EventSequenceId.System);
+
         var observer = grainFactory.GetGrain<IObserver>(key);
         await observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
             ObserverType.Reactor,
