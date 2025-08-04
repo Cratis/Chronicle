@@ -3,8 +3,10 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage;
+using Cratis.DependencyInjection;
 using Cratis.Reflection;
 using Cratis.Types;
+using NJsonSchema;
 using NJsonSchema.Generation;
 
 namespace Cratis.Chronicle.Grains.EventTypes.Kernel;
@@ -14,6 +16,7 @@ namespace Cratis.Chronicle.Grains.EventTypes.Kernel;
 /// </summary>
 /// <param name="types"><see cref="ITypes"/> for discovering event types.</param>
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
+[Singleton]
 public class EventTypes(
     ITypes types,
     IStorage storage) : IEventTypes
@@ -22,6 +25,10 @@ public class EventTypes(
     {
         AllowReferencesWithProperties = true,
     });
+    readonly Dictionary<Type, JsonSchema> _schemaByType = new();
+
+    /// <inheritdoc/>
+    public JsonSchema GetJsonSchema(Type eventType) => _schemaByType[eventType];
 
     /// <inheritdoc/>
     public async Task DiscoverAndRegister()
@@ -35,6 +42,7 @@ public class EventTypes(
             foreach (var eventType in eventTypes)
             {
                 var schema = _jsonSchemaGenerator.Generate(eventType);
+                _schemaByType[eventType] = schema;
                 await storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema);
             }
         }
