@@ -148,6 +148,7 @@
                 },
                 "columns": {
                     "id": "Identifier",
+                    "sequence": "Sequence",
                     "observerType": "Observer type",
                     "owner": "Owner",
                     "state": "State",
