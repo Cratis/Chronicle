@@ -3,9 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
@@ -13,8 +11,7 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// Represents an implementation of <see cref="IReactorObserverSubscriber{TReactor}"/> for kernel reactors.
 /// </summary>
 /// <typeparam name="TReactor">The type of reactor that will be used.</typeparam>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reactors)]
-public class ReactorObserverSubscriber<TReactor> : Grain<ReactorDefinition>, IReactorObserverSubscriber<TReactor>
+public class ReactorObserverSubscriber<TReactor> : Grain, IReactorObserverSubscriber<TReactor>
     where TReactor : IReactor
 {
     /// <inheritdoc/>
