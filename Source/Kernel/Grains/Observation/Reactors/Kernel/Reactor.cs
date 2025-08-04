@@ -4,6 +4,8 @@
 using System.Reflection;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Grains.EventTypes.Kernel;
+using Cratis.Chronicle.Json;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
@@ -11,10 +13,13 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// <summary>
 /// Represents a kernel reactor that will process events.
 /// </summary>
+/// <param name="eventTypes"><see cref="IEventTypes"/> for working with event types.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reactors)]
-public class Reactor : Grain<ReactorDefinition>, IReactor
+public class Reactor(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter) : Grain<ReactorDefinition>, IReactor
 {
     Dictionary<string, MethodInfo> _eventMethodsByEventType = new();
+    Dictionary<string, Type> _eventTypeByEventType = new();
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -23,6 +28,10 @@ public class Reactor : Grain<ReactorDefinition>, IReactor
         _eventMethodsByEventType = eventMethods.ToDictionary(
             method => method.GetEventType().Name,
             method => method);
+
+        _eventTypeByEventType = eventMethods.ToDictionary(
+            method => method.GetEventType().Name,
+            method => method.GetParameters()[0].ParameterType);
 
         return Task.CompletedTask;
     }
@@ -36,7 +45,9 @@ public class Reactor : Grain<ReactorDefinition>, IReactor
             {
                 try
                 {
-                    var task = (method.Invoke(this, [@event, @event.Context]) as Task)!;
+                    var eventType = _eventTypeByEventType[@event.Metadata.Type.Id];
+                    var content = expandoObjectConverter.ToJsonObject(@event.Content, eventTypes.GetJsonSchema(eventType));
+                    var task = (method.Invoke(this, [content, @event.Context]) as Task)!;
                     await task;
                 }
                 catch (Exception exception)
