@@ -41,7 +41,7 @@ const observerOwner = (observer: ObserverInformation) => {
     }
 
     return strings.eventStore.namespaces.observers.owners.none;
-}
+};
 
 const runningState = (observer: ObserverInformation) => {
     return getObserverRunningStateAsText(observer.runningState);
