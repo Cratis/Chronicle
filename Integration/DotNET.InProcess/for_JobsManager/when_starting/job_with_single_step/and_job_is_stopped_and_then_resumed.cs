@@ -22,11 +22,11 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
         async Task Because()
         {
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            TheJobStepProcessor.SetStartTask(taskCompletionSource.Task);
+            JobStepProcessor.SetStartTask(taskCompletionSource.Task);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             JobId = StartJobResult.AsT0;
             var job = await EventStore.Jobs.GetJob(JobId.Value);
-            await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
+            await JobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
             await EventStore.Jobs.WaitTillJobProgressStopped(JobId.Value);
@@ -58,8 +58,8 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
     public void should_have_job_progress_with_one_successful_step() => Context.CompletedJobState.Progress.SuccessfulSteps.ShouldEqual(1);
 
     [Fact]
-    public void should_perform_work_for_job_step_twice() => Context.TheJobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 2);
+    public void should_perform_work_for_job_step_twice() => Context.JobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 2);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }
