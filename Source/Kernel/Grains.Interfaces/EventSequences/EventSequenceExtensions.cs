@@ -3,15 +3,11 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Json;
-using Cratis.Monads;
-using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -37,13 +33,17 @@ public static class EventSequenceExtensions
         this IEventSequence eventSequence,
         EventSourceId eventSourceId,
         object @event,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        Identity causedBy,
+        CorrelationId? correlationId = default,
+        IEnumerable<Causation>? causation = default,
+        Identity? causedBy = default,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default)
     {
+        correlationId ??= CorrelationId.New();
+        causation ??= [];
+        causedBy ??= Identity.System;
+
         var eventType = @event.GetType().GetEventType();
         var content = (JsonSerializer.SerializeToNode(@event, Globals.JsonSerializerOptions) as JsonObject)!;
         return await eventSequence.Append(
