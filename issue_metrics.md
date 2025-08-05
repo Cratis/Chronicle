@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 271 days, 23:23:25 | 123 days, 17:56:37 | 822 days, 14:53:36 |
+| Time to close | 273 days, 14:14:47 | 124 days, 8:40:41 | 825 days, 13:01:45 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 278 |
-| Number of items closed | 564 |
+| Number of items that remain open | 277 |
+| Number of items closed | 565 |
 | Total number of items created | 842 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -342,4 +342,4 @@
 | Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/1018 | None | [einari](https://github.com/einari) | None | None | None |
 | Create guidance on setting up Docker Compose correctly when not using development image | https://github.com/Cratis/Chronicle/issues/1017 | None | [einari](https://github.com/einari) | None | None | None |
 | Support resilient transactions when appending events | https://github.com/Cratis/Chronicle/issues/1014 | None | [einari](https://github.com/einari) | None | None | None |
-| Import compensations through the workbench with a specific format and preview of compensations before applying them | https://github.com/Cratis/Chronicle/issues/1012 | None | [einari](
+| Import compensations through the workbench with a specific format and preview of compensations before applying them | https://github.com/Cratis/Chronicle/issues/1012 | None | [einari](h
