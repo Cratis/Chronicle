@@ -23,7 +23,7 @@ public class and_value_is_expando_object : given.a_mongodb_converter
 
         _bsonDocument = new()
         {
-            { "someProperty", "Some value" }
+            { "SomeProperty", "Some value" }
         };
         _expandoObjectConverter.ToBsonDocument(_value, _schemaProperty).Returns(_bsonDocument);
     }

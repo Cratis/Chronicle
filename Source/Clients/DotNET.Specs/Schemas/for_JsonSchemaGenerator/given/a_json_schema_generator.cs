@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Serialization;
-using Cratis.Models;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator.given;
 
@@ -11,7 +10,7 @@ public class a_json_schema_generator : Specification
 {
     protected TypeFormats _typeFormats;
     protected JsonSchemaGenerator _generator;
-    protected INamingPolicy _namingPolicy = new CamelCaseNamingPolicy(new ModelNameResolver(new DefaultModelNameConvention()));
+    protected INamingPolicy _namingPolicy = new DefaultNamingPolicy();
 
     void Establish()
     {

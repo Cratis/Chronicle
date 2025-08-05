@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_adding_on_using_event_type_directly;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_building;
 
