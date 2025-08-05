@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+
 namespace Cratis.Chronicle.Serialization;
 
 /// <summary>
@@ -8,6 +10,11 @@ namespace Cratis.Chronicle.Serialization;
 /// </summary>
 public interface INamingPolicy
 {
+    /// <summary>
+    /// Gets the JSON property naming policy.
+    /// </summary>
+    JsonNamingPolicy? JsonPropertyNamingPolicy { get; }
+
     /// <summary>
     /// Gets the read model name based on the naming policy.
     /// </summary>
