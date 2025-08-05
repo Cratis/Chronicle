@@ -15,6 +15,11 @@ public record EventStoreName(string Value) : ConceptAs<string>(Value)
     public static readonly EventStoreName NotSet = "[NotSet]";
 
     /// <summary>
+    /// Gets the system <see cref="EventStoreName"/>.
+    /// </summary>
+    public static readonly EventStoreName System = "System";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="EventStoreName"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> representation.</param>
