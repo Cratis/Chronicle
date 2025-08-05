@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Grains.EventTypes.Kernel;
+using Cratis.Chronicle.Json;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
@@ -10,6 +12,13 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// </summary>
 public interface IReactor
 {
+    /// <summary>
+    /// Initializes the reactor with the necessary event types and converters.
+    /// </summary>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for working with event types.</param>
+    /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
+    void Initialize(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter);
+
     /// <summary>
     /// Processes the next batch of events.
     /// </summary>

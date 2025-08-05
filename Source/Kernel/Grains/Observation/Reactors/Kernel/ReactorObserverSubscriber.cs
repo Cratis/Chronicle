@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Grains.EventTypes.Kernel;
+using Cratis.Chronicle.Json;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
@@ -10,14 +12,25 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// <summary>
 /// Represents an implementation of <see cref="IReactorObserverSubscriber{TReactor}"/> for kernel reactors.
 /// </summary>
+/// <param name="eventTypes">The <see cref="IEventTypes"/> for working with event types.</param>
+/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
 /// <typeparam name="TReactor">The type of reactor that will be used.</typeparam>
-public class ReactorObserverSubscriber<TReactor> : Grain, IReactorObserverSubscriber<TReactor>
+public class ReactorObserverSubscriber<TReactor>(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter) : Grain, IReactorObserverSubscriber<TReactor>
     where TReactor : IReactor
 {
+    TReactor? _reactor;
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _reactor = ServiceProvider.GetRequiredService<TReactor>();
+        _reactor.Initialize(eventTypes, expandoObjectConverter);
+        return base.OnActivateAsync(cancellationToken);
+    }
+
     /// <inheritdoc/>
     public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        var reactor = ServiceProvider.GetRequiredService<TReactor>();
-        return reactor.OnNext(events);
+        return _reactor?.OnNext(events) ?? Task.FromResult(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Reactor not initialized."));
     }
 }

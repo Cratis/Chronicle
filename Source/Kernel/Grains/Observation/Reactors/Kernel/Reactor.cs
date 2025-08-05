@@ -2,28 +2,30 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Grains.EventTypes.Kernel;
 using Cratis.Chronicle.Json;
-using Orleans.Providers;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
 /// <summary>
 /// Represents a kernel reactor that will process events.
 /// </summary>
-/// <param name="eventTypes"><see cref="IEventTypes"/> for working with event types.</param>
-/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reactors)]
-public class Reactor(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter) : Grain<ReactorDefinition>, IReactor
+public class Reactor : IReactor
 {
     Dictionary<string, MethodInfo> _eventMethodsByEventType = new();
     Dictionary<string, Type> _eventTypeByEventType = new();
+    IEventTypes _eventTypes = default!;
+    IExpandoObjectConverter _expandoObjectConverter = default!;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public void Initialize(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter)
     {
+        _eventTypes = eventTypes;
+        _expandoObjectConverter = expandoObjectConverter;
+
         var eventMethods = GetType().GetEventMethods();
         _eventMethodsByEventType = eventMethods.ToDictionary(
             method => method.GetEventType().Name,
@@ -32,8 +34,6 @@ public class Reactor(IEventTypes eventTypes, IExpandoObjectConverter expandoObje
         _eventTypeByEventType = eventMethods.ToDictionary(
             method => method.GetEventType().Name,
             method => method.GetParameters()[0].ParameterType);
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -46,7 +46,8 @@ public class Reactor(IEventTypes eventTypes, IExpandoObjectConverter expandoObje
                 try
                 {
                     var eventType = _eventTypeByEventType[@event.Metadata.Type.Id];
-                    var content = expandoObjectConverter.ToJsonObject(@event.Content, eventTypes.GetJsonSchema(eventType));
+                    var contentAsJson = _expandoObjectConverter.ToJsonObject(@event.Content, _eventTypes.GetJsonSchema(eventType));
+                    var content = contentAsJson.Deserialize(eventType, Globals.JsonSerializerOptions);
                     var task = (method.Invoke(this, [content, @event.Context]) as Task)!;
                     await task;
                 }
