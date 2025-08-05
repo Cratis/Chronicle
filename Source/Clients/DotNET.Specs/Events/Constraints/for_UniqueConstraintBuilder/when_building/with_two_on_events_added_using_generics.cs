@@ -29,9 +29,9 @@ public class with_two_on_events_added_using_generics : given.a_unique_constraint
 
     [Fact] void should_have_two_event_types_and_properties() => _result.EventsWithProperties.Count().ShouldEqual(2);
     [Fact] void should_have_first_event_type() => _result.EventsWithProperties.First().EventTypeId.ShouldEqual(_firstEventType.Id);
-    [Fact] void should_have_first_event_first_property() => _result.EventsWithProperties.First().Properties.ToArray()[0].ShouldEqual(nameof(EventWithStringProperty.SomeProperty).ToCamelCase());
-    [Fact] void should_have_first_event_second_property() => _result.EventsWithProperties.First().Properties.ToArray()[1].ShouldEqual(nameof(EventWithStringProperty.SomeOtherProperty).ToCamelCase());
+    [Fact] void should_have_first_event_first_property() => _result.EventsWithProperties.First().Properties.ToArray()[0].ShouldEqual(nameof(EventWithStringProperty.SomeProperty));
+    [Fact] void should_have_first_event_second_property() => _result.EventsWithProperties.First().Properties.ToArray()[1].ShouldEqual(nameof(EventWithStringProperty.SomeOtherProperty));
     [Fact] void should_have_second_event_type() => _result.EventsWithProperties.Last().EventTypeId.ShouldEqual(_secondEventType.Id);
-    [Fact] void should_have_second_event_first_property() => _result.EventsWithProperties.Last().Properties.ToArray()[0].ShouldEqual(nameof(AnotherEventWithStringProperty.SomeProperty).ToCamelCase());
-    [Fact] void should_have_second_event_second_property() => _result.EventsWithProperties.Last().Properties.ToArray()[1].ShouldEqual(nameof(AnotherEventWithStringProperty.SomeOtherProperty).ToCamelCase());
+    [Fact] void should_have_second_event_first_property() => _result.EventsWithProperties.Last().Properties.ToArray()[0].ShouldEqual(nameof(AnotherEventWithStringProperty.SomeProperty));
+    [Fact] void should_have_second_event_second_property() => _result.EventsWithProperties.Last().Properties.ToArray()[1].ShouldEqual(nameof(AnotherEventWithStringProperty.SomeOtherProperty));
 }

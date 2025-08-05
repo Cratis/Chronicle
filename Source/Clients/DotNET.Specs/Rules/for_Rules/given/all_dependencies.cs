@@ -19,9 +19,6 @@ public class all_dependencies : Specification
         _namingPolicy = new DefaultNamingPolicy();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _projections = Substitute.For<IProjections>();
-        _jsonSerializerOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
+        _jsonSerializerOptions = new JsonSerializerOptions();
     }
 }

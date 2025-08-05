@@ -24,5 +24,5 @@ public class and_property_type_does_not_exist : given.a_unique_constraint_builde
 
     [Fact] void should_throw_property_type_mismatch_in_unique_constraint() => _result.ShouldNotBeNull();
     [Fact] void should_have_event_type_in_exception() => _result.EventType.ShouldEqual(_eventType);
-    [Fact] void should_have_property_in_exception() => _result.Property.ShouldEqual("nonExistingProperty");
+    [Fact] void should_have_property_in_exception() => _result.Property.ShouldEqual("NonExistingProperty");
 }
