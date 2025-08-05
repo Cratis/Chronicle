@@ -29,11 +29,13 @@ public static class EventSequencesGrainFactoryExtensions
     /// Gets the system event sequence for a specific <see cref="EventStoreName"/> and <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use for getting the event sequence.</param>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> to get the event sequence for.</param>
-    /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> to get the event sequence for.</param>
+    /// <param name="eventStore">Optional <see cref="EventStoreName"/> to get the event sequence for. Defaults to System.</param>
+    /// <param name="namespaceName">Optional <see cref="EventStoreNamespaceName"/> to get the event sequence for. Defaults to Default.</param>
     /// <returns>An <see cref="IEventSequence"/> representing the system event sequence.</returns>
-    public static IEventSequence GetSystemEventSequence(this IGrainFactory grainFactory, EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    public static IEventSequence GetSystemEventSequence(this IGrainFactory grainFactory, EventStoreName? eventStore = default, EventStoreNamespaceName? namespaceName = default)
     {
+        eventStore ??= EventStoreName.System;
+        namespaceName ??= EventStoreNamespaceName.Default;
         var key = new EventSequenceKey(EventSequenceId.System, eventStore, namespaceName);
         return grainFactory.GetGrain<IEventSequence>(key);
     }
