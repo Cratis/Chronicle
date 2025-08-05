@@ -18,8 +18,8 @@ public class when_getting_from_event_content_nested_property : Specification
     void Establish()
     {
         var content = new ExpandoObject();
-        ((dynamic)content).nested = new ExpandoObject();
-        ((dynamic)content).nested.sourceString = Expected;
+        ((dynamic)content).Nested = new ExpandoObject();
+        ((dynamic)content).Nested.SourceString = Expected;
 
         _event = new(
             new(

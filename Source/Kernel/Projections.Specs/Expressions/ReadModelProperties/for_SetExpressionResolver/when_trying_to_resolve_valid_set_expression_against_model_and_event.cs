@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
-using Cratis.Strings;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties.for_SetExpressionResolver;
@@ -23,7 +22,7 @@ public class when_trying_to_resolve_valid_set_expression_against_model_and_event
         _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => _resolver.Resolve("targetProperty", new(), nameof(my_event.Something).ToCamelCase())(@event, _target, ArrayIndexers.NoIndexers);
+    void Because() => _resolver.Resolve("targetProperty", new(), nameof(my_event.Something))(@event, _target, ArrayIndexers.NoIndexers);
 
     [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)_target).targetProperty).ShouldEqual(my_event.Something);
 }
