@@ -13,7 +13,7 @@ internal static class JobStatusChangedConverters
     /// </summary>
     /// <param name="statusChanged"><see cref="Contracts.Jobs.JobStatusChanged"/> to convert from.</param>
     /// <returns>Converted <see cref="JobStatusChanged"/>.</returns>
-    public static JobStatusChanged ToContract(this Contracts.Jobs.JobStatusChanged statusChanged) =>
+    public static JobStatusChanged ToClient(this Contracts.Jobs.JobStatusChanged statusChanged) =>
         new()
         {
             Status = (JobStatus)(int)statusChanged.Status,
@@ -27,5 +27,5 @@ internal static class JobStatusChangedConverters
     /// </summary>
     /// <param name="statusChanged">Collection of <see cref="Contracts.Jobs.JobStatusChanged"/> to convert from.</param>
     /// <returns>Converted collection of <see cref="JobStatusChanged"/>.</returns>
-    public static IList<JobStatusChanged> ToContract(this IEnumerable<Contracts.Jobs.JobStatusChanged> statusChanged) => statusChanged.Select(_ => _.ToContract()).ToList();
+    public static IList<JobStatusChanged> ToClient(this IEnumerable<Contracts.Jobs.JobStatusChanged> statusChanged) => statusChanged.Select(_ => _.ToClient()).ToList();
 }
