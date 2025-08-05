@@ -106,13 +106,14 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
         ObserverType type,
-        ObserverOwner owner,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
+        var owner = GetOwner<TObserverSubscriber>();
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         logger.Subscribing();
@@ -216,6 +217,14 @@ public partial class Observer(
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
     }
+
+    ObserverOwner GetOwner<TObserverSubscriber>()
+        where TObserverSubscriber : IObserverSubscriber => typeof(TObserverSubscriber) switch
+        {
+            Type t when t.IsAssignableTo(typeof(IAmOwnedByClient)) => ObserverOwner.Client,
+            Type t when t.IsAssignableTo(typeof(IAmOwnedByKernel)) => ObserverOwner.Kernel,
+            _ => ObserverOwner.None
+        };
 
     async Task ResumeJobs()
     {

@@ -117,7 +117,6 @@ public class ProjectionsManager(
 
             await observer.Subscribe<IProjectionObserverSubscriber>(
                 ObserverType.Projection,
-                ObserverOwner.Kernel,
                 projection.EventTypes,
                 localSiloDetails.SiloAddress);
         }

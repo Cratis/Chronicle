@@ -7,5 +7,5 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// Defines a kernel observer subscriber that will receive all events it subscribes to.
 /// </summary>
 /// <typeparam name="TReactor">The type of reactor that will be used.</typeparam>
-public interface IReactorObserverSubscriber<TReactor> : IObserverSubscriber
+public interface IReactorObserverSubscriber<TReactor> : IObserverSubscriber, IAmOwnedByKernel
     where TReactor : IReactor;

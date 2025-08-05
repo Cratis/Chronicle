@@ -71,7 +71,6 @@ public class Reactor(
             var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
             await _observer.Subscribe<IReactorObserverSubscriber>(
                 ObserverType.Reactor,
-                ObserverOwner.Client,
                 eventTypes,
                 localSiloDetails.SiloAddress,
                 connectedClient,

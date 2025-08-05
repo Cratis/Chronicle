@@ -57,7 +57,6 @@ public class Reactors(
         var observer = grainFactory.GetGrain<IObserver>(key);
         await observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
             ObserverType.Reactor,
-            ObserverOwner.Kernel,
             typeof(TReactor).GetEventTypes(),
             localSiloDetails.SiloAddress,
             null,

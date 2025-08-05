@@ -73,7 +73,6 @@ public class Reducer(
 
             await _observer.Subscribe<IReducerObserverSubscriber>(
                 ObserverType.Reducer,
-                ObserverOwner.Client,
                 definition.EventTypes.Select(_ => _.EventType).ToArray(),
                 localSiloDetails.SiloAddress,
                 connectedClient);
