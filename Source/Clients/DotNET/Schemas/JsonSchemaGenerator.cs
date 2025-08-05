@@ -31,7 +31,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AllowReferencesWithProperties = true,
             SerializerOptions = new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
             }
         };
         settings.ReflectionService = new ReflectionService(settings.ReflectionService);
