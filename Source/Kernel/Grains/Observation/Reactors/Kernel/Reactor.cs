@@ -41,11 +41,11 @@ public class Reactor : IReactor
     {
         foreach (var @event in events)
         {
-            if (_eventMethodsByEventType.TryGetValue(@event.Metadata.Type.Id, out var method))
+            if (_eventMethodsByEventType.TryGetValue(@event.Context.EventType.Id, out var method))
             {
                 try
                 {
-                    var eventType = _eventTypeByEventType[@event.Metadata.Type.Id];
+                    var eventType = _eventTypeByEventType[@event.Context.EventType.Id];
                     var contentAsJson = _expandoObjectConverter.ToJsonObject(@event.Content, _eventTypes.GetJsonSchema(eventType));
                     var content = contentAsJson.Deserialize(eventType, Globals.JsonSerializerOptions);
                     var task = (method.Invoke(this, [content, @event.Context]) as Task)!;
