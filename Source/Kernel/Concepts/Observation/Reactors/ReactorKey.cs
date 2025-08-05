@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 namespace Cratis.Chronicle.Concepts.Observation.Reactors;
 
 /// <summary>
-/// Represents the compound key for a reducer.
+/// Represents the compound key for a reactor.
 /// </summary>
 /// <param name="ReactorId">The reducer identifier.</param>
 /// <param name="EventStore">The event store.</param>

@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 /// <summary>
 /// Defines a client reducer subscriber that will receive all events.
 /// </summary>
-public interface IReducerObserverSubscriber : IObserverSubscriber;
+public interface IReducerObserverSubscriber : IObserverSubscriber, IAmOwnedByClient;

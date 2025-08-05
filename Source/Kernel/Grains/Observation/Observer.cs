@@ -112,11 +112,19 @@ public partial class Observer(
         bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
+        var owner = GetOwner<TObserverSubscriber>();
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         logger.Subscribing();
 
-        State = State with { Type = type, EventTypes = eventTypes, IsReplayable = isReplayable };
+        State = State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = eventTypes,
+            IsReplayable = isReplayable
+        };
 
         _subscription = new(
             _observerId,
@@ -209,6 +217,14 @@ public partial class Observer(
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
     }
+
+    ObserverOwner GetOwner<TObserverSubscriber>()
+        where TObserverSubscriber : IObserverSubscriber => typeof(TObserverSubscriber) switch
+        {
+            Type t when t.IsAssignableTo(typeof(IAmOwnedByClient)) => ObserverOwner.Client,
+            Type t when t.IsAssignableTo(typeof(IAmOwnedByKernel)) => ObserverOwner.Kernel,
+            _ => ObserverOwner.None
+        };
 
     async Task ResumeJobs()
     {
