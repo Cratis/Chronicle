@@ -43,6 +43,8 @@ public class EventTypesStorage(
     /// <inheritdoc/>
     public async Task Register(Chronicle.Concepts.Events.EventType type, JsonSchema schema)
     {
+        logger.Registering(type.Id, type.Generation, eventStore);
+
         // If we have a schema for the event type on the given generation and the schemas differ - throw an exception (only in production)
         // .. if they're the same. Ignore saving.
         // If this is a new generation, there must be an upcaster and downcaster associated with the schema
@@ -71,7 +73,6 @@ public class EventTypesStorage(
         eventSchema.Schema.ResetFlattenedProperties();
 
         schema.EnsureFlattenedProperties();
-        logger.Registering(type.Id, type.Generation, eventStore);
 
         var mongoEventSchema = eventSchema.ToMongoDB();
         await GetCollection().ReplaceOneAsync(

@@ -13,7 +13,7 @@ internal static class JobProgressConverters
     /// </summary>
     /// <param name="jobProgress"><see cref="Contracts.Jobs.JobProgress"/> to convert from.</param>
     /// <returns>Converted <see cref="JobProgress"/>.</returns>
-    public static JobProgress ToContract(this Contracts.Jobs.JobProgress jobProgress) =>
+    public static JobProgress ToClient(this Contracts.Jobs.JobProgress jobProgress) =>
         new()
         {
             TotalSteps = jobProgress.TotalSteps,

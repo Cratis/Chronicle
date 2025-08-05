@@ -6,6 +6,7 @@
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
 import { EventType } from '../Events/EventType';
+import { ObserverOwner } from './ObserverOwner';
 import { ObserverRunningState } from './ObserverRunningState';
 import { ObserverType } from './ObserverType';
 
@@ -19,6 +20,9 @@ export class ObserverInformation {
 
     @field(Number)
     type!: ObserverType;
+
+    @field(Number)
+    owner!: ObserverOwner;
 
     @field(EventType, true)
     eventTypes!: EventType[];

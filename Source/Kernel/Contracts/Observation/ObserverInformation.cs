@@ -30,32 +30,38 @@ public class ObserverInformation
     public ObserverType Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the types of events the observer is observing.
+    /// Gets or sets the type of observer.
     /// </summary>
     [ProtoMember(4)]
+    public ObserverOwner Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the types of events the observer is observing.
+    /// </summary>
+    [ProtoMember(5)]
     public IEnumerable<EventType> EventTypes { get; set; }
 
     /// <summary>
     /// Gets or sets the next event sequence number the observer will observe.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(6)]
     public ulong NextEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence number the observer last handled.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(7)]
     public ulong LastHandledEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the running state of the observer.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(8)]
     public ObserverRunningState RunningState { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the observer is subscribed to its handler.
     /// </summary>
-    [ProtoMember(8)]
+    [ProtoMember(9)]
     public bool IsSubscribed { get; set; }
 }

@@ -9,7 +9,7 @@ import { ObserverType } from 'Api/Observation/ObserverType';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import strings from 'Strings';
-import { AllObservers, AllObserversArguments } from 'Api/Observation';
+import { AllObservers, AllObserversArguments, ObserverOwner } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { DataPage, MenuItem } from 'Components';
@@ -28,6 +28,19 @@ const observerType = (observer: ObserverInformation) => {
             return strings.eventStore.namespaces.observers.types.reducer;
     }
     return strings.eventStore.namespaces.observers.types.unknown;
+};
+
+const observerOwner = (observer: ObserverInformation) => {
+    switch (observer.owner) {
+        case ObserverOwner.none:
+            return strings.eventStore.namespaces.observers.owners.none;
+        case ObserverOwner.client:
+            return strings.eventStore.namespaces.observers.owners.client;
+        case ObserverOwner.kernel:
+            return strings.eventStore.namespaces.observers.owners.kernel;
+    }
+
+    return strings.eventStore.namespaces.observers.owners.none;
 };
 
 const runningState = (observer: ObserverInformation) => {
@@ -64,24 +77,28 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             </DataPage.MenuItems>
             <DataPage.Columns>
                 <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                <Column field='eventSequenceId' header={strings.eventStore.namespaces.observers.columns.sequence} sortable />
                 <Column
                     field='type'
                     header={strings.eventStore.namespaces.observers.columns.observerType}
                     sortable
                     body={observerType} />
-
+                <Column
+                    field='owner'
+                    header={strings.eventStore.namespaces.observers.columns.owner}
+                    sortable
+                    body={observerOwner} />
                 <Column
                     field='nextEventSequenceNumber'
                     dataType='numeric'
                     header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
                     sortable />
-
                 <Column
                     field='runningState'
                     dataType='numeric'
                     header={strings.eventStore.namespaces.observers.columns.state}
                     sortable
-                    body={runningState}/>
+                    body={runningState} />
             </DataPage.Columns>
         </DataPage>
     );

@@ -21,9 +21,9 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
 
         async Task Because()
         {
-            TheJobStepProcessor.SetNumJobStepsToComplete(1);
+            JobStepProcessor.SetNumJobStepsToComplete(1);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
-            await TheJobStepProcessor.WaitForStepsToBeCompleted();
+            await JobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
             var job = await EventStore.Jobs.GetJob(JobId.Value);
             var x = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully, TimeSpanFactory.FromSeconds(20));
@@ -52,8 +52,8 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
     public void should_have_job_progress_with_one_successful_step() => Context.CompletedJobState.Progress.SuccessfulSteps.ShouldEqual(1);
 
     [Fact]
-    public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
+    public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }

@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.DependencyInjection;
+
 namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;
 
 [Singleton, IgnoreConvention]

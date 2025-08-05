@@ -40,6 +40,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             Id = request.ObserverId,
             EventSequenceId = state.EventSequenceId,
             Type = state.Type.ToContract(),
+            Owner = state.Owner.ToContract(),
             EventTypes = state.EventTypes.ToContract(),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,

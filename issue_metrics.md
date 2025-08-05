@@ -2,14 +2,14 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 127 days, 5:50:55 | 3 days, 22:09:24 | 251 days, 1:34:12 |
-| Time to close | 271 days, 23:23:25 | 123 days, 17:56:37 | 822 days, 14:53:36 |
+| Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
+| Time to close | 273 days, 14:14:47 | 124 days, 8:40:41 | 825 days, 13:01:45 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 278 |
-| Number of items closed | 564 |
+| Number of items that remain open | 277 |
+| Number of items closed | 565 |
 | Total number of items created | 842 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -174,7 +174,7 @@
 | Add support for constraints scoped to a stream | https://github.com/Cratis/Chronicle/issues/1449 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for "closing the books" type of book keeping | https://github.com/Cratis/Chronicle/issues/1448 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for creating mementos from an aggregate root | https://github.com/Cratis/Chronicle/issues/1447 | None | [einari](https://github.com/einari) | None | None | None |
-| Add support for completing a stream | https://github.com/Cratis/Chronicle/issues/1446 | None | [einari](https://github.com/einari) | None | None | None |
+| Add support for completing a stream | https://github.com/Cratis/Chronicle/issues/1446 | None | [einari](https://github.com/einari) | 308 days, 13:38:35 | None | None |
 | Add the concept of stream that goes along with all events | https://github.com/Cratis/Chronicle/issues/1445 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 47 days, 7:19:58 | None |
 | Invalid path for reactors in client (Reactions) | https://github.com/Cratis/Chronicle/issues/1443 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 37 days, 2:01:24 | None |
 | Make it possible for event handling methods to be private | https://github.com/Cratis/Chronicle/issues/1442 | None | [einari](https://github.com/einari) | None | 4 days, 7:05:23 | None |
