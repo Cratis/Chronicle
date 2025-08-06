@@ -143,7 +143,7 @@ public class EventStore : IEventStore
         var projections = new Projections.Projections(
             this,
             EventTypes,
-            new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
+            new ProjectionWatcherManager(new ProjectionWatcherFactory(this, jsonSerializerOptions), this),
             clientArtifactsProvider,
             namingPolicy,
             _eventSerializer,

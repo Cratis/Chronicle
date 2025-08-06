@@ -53,7 +53,7 @@ public class JobStepResult(Result<object?, PerformJobStepError> result)
         error = null;
         if (_result.TryGetResult(out var fullResult))
         {
-            result = fullResult.DeserializeIfNecessary<TResult>()!;
+            result = fullResult.DeserializeIfNecessary<TResult>(jsonSerializerOptions)!;
             return true;
         }
 

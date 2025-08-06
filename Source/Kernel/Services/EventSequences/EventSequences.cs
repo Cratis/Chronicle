@@ -54,7 +54,7 @@ internal sealed class EventSequences(
     {
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.AppendMany(
-            request.Events.ToChronicle(),
+            request.Events.ToChronicle(jsonSerializerOptions),
             request.CorrelationId,
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle(),
@@ -93,7 +93,7 @@ internal sealed class EventSequences(
         while (await cursor.MoveNext())
         {
             var current = cursor.Current;
-            events.AddRange(current.ToContract());
+            events.AddRange(current.ToContract(jsonSerializerOptions));
         }
         return new()
         {
@@ -142,7 +142,7 @@ internal sealed class EventSequences(
         while (await cursor.MoveNext())
         {
             var current = cursor.Current;
-            events.AddRange(current.ToContract());
+            events.AddRange(current.ToContract(jsonSerializerOptions));
         }
 
         cursor.Dispose();

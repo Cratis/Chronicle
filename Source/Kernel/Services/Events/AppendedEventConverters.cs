@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Services.Events;
 
@@ -17,26 +16,30 @@ internal static class AppendedEventConverters
     /// Convert to contract version of <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to convert.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event) => new()
+    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new()
     {
         Context = @event.Context.ToContract(),
-        Content = JsonSerializer.Serialize(@event.Content, Globals.JsonSerializerOptions)
+        Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions)
     };
 
     /// <summary>
     /// Convert a collection of <see cref="AppendedEvent"/> to a collection of <see cref="Contracts.Events.AppendedEvent"/>.
     /// </summary>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to convert.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>Converted collection of <see cref="Contracts.Events.AppendedEvent"/>.</returns>
-    public static IEnumerable<Contracts.Events.AppendedEvent> ToContract(this IEnumerable<AppendedEvent> events) => events.Select(ToContract);
+    public static IEnumerable<Contracts.Events.AppendedEvent> ToContract(this IEnumerable<AppendedEvent> events, JsonSerializerOptions jsonSerializerOptions) =>
+        events.Select(e => e.ToContract(jsonSerializerOptions));
 
     /// <summary>
     /// Convert to Chronicle version of <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>Converted Chronicle version.</returns>
-    public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event) => new(
+    public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new(
             @event.Context.ToChronicle(),
-            JsonSerializer.Deserialize<ExpandoObject>(@event.Content, Globals.JsonSerializerOptions)!);
+            JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
 }

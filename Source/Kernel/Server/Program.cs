@@ -10,7 +10,6 @@ using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
-using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -73,7 +72,6 @@ builder.Host
    .ConfigureServices((context, services) =>
    {
        services
-          .AddSingleton(Globals.JsonSerializerOptions)
           .AddBindingsByConvention()
           .AddChronicleTelemetry(context.Configuration)
           .AddSelfBindings()

@@ -97,7 +97,7 @@ public class Projections(
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
-        return result.ToClient<TReadModel>();
+        return result.ToClient<TReadModel>(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -136,7 +136,7 @@ public class Projections(
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSession(request);
-        return result.ToClient(readModelType);
+        return result.ToClient(readModelType, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -166,7 +166,7 @@ public class Projections(
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
-        return result.ToClient(readModelType);
+        return result.ToClient(readModelType, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>

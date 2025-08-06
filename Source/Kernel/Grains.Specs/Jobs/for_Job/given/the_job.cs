@@ -37,8 +37,6 @@ public class the_job : Specification
         _jobStorage = Substitute.For<IJobStorage>();
         _jobStepStorage = Substitute.For<IJobStepStorage>();
 
-        _silo.AddService(Globals.JsonSerializerOptions);
-
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
 

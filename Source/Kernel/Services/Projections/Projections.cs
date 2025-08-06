@@ -46,7 +46,7 @@ internal sealed class Projections(
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
 
         var result = await projection.GetModelInstance();
-        return result.ToContract();
+        return result.ToContract(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -63,7 +63,7 @@ internal sealed class Projections(
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
 
         var result = await projection.GetModelInstance();
-        return result.ToContract();
+        return result.ToContract(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -81,7 +81,7 @@ internal sealed class Projections(
 
         var eventsToApply = request.Events.Select(_ => _.ToChronicle()).ToArray();
         var result = await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(eventsToApply);
-        return result.ToContract();
+        return result.ToContract(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>

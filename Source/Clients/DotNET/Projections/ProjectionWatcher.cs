@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 
@@ -17,6 +18,7 @@ public class ProjectionWatcher<TReadModel> : IProjectionWatcher<TReadModel>, IDi
     readonly Subject<ProjectionChangeset<TReadModel>> _observable;
     readonly IEventStore _eventStore;
     readonly IChronicleServicesAccessor _servicesAccessor;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     Action? _stopped;
     IObservable<ProjectionChangeset>? _serverObservable;
 
@@ -25,12 +27,14 @@ public class ProjectionWatcher<TReadModel> : IProjectionWatcher<TReadModel>, IDi
     /// </summary>
     /// <param name="eventStore"><see cref="IEventStore"/> the watcher is for.</param>
     /// <param name="stopped">Callback for when the watcher is stopped.</param>
-    public ProjectionWatcher(IEventStore eventStore, Action stopped)
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
+    public ProjectionWatcher(IEventStore eventStore, Action stopped, JsonSerializerOptions jsonSerializerOptions)
     {
         _observable = new Subject<ProjectionChangeset<TReadModel>>();
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventStore = eventStore;
         _stopped = stopped;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _eventStore.Connection.Lifecycle.OnConnected += ClientConnected;
     }
 
@@ -55,7 +59,7 @@ public class ProjectionWatcher<TReadModel> : IProjectionWatcher<TReadModel>, IDi
             EventStore = _eventStore.Name
         };
         _serverObservable = _servicesAccessor.Services.Projections.Watch(request);
-        _serverObservable.Subscribe(_ => _observable.OnNext(_.ToClient<TReadModel>()));
+        _serverObservable.Subscribe(_ => _observable.OnNext(_.ToClient<TReadModel>(_jsonSerializerOptions)));
     }
 
     /// <inheritdoc/>
