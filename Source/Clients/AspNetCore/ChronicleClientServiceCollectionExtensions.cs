@@ -91,7 +91,6 @@ public static class ChronicleClientServiceCollectionExtensions
         // We're hardcoding the CorrelationId accessor here, as it is not available in the ChronicleAspNetCoreOptions anyways, and registering it dynamically causes a
         // circular dependency in the DI container.
         services.AddSingleton<ICorrelationIdAccessor>(sp => new CorrelationIdAccessor());
-        services.AddSingleton(Globals.JsonSerializerOptions);
 
         return services;
     }
