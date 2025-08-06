@@ -73,7 +73,7 @@ public static class ChronicleClientServiceCollectionExtensions
 
                 var client = sp.GetRequiredService<IChronicleClient>();
 
-                eventStore = client.GetEventStore(options.EventStore, namespaceName, skipDiscovery: true).GetAwaiter().GetResult();
+                eventStore = client.GetEventStore(options.EventStore, namespaceName).GetAwaiter().GetResult();
                 return _eventStores[namespaceName] = eventStore;
             }
         });

@@ -137,7 +137,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 {
                     var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
                     var client = sp.GetRequiredService<IChronicleClient>();
-                    return client.GetEventStore(options.EventStoreName, skipDiscovery: true).GetAwaiter().GetResult();
+                    return client.GetEventStore(options.EventStoreName).GetAwaiter().GetResult();
                 }
             });
 

@@ -105,8 +105,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public async Task<IEventStore> GetEventStore(
         EventStoreName name,
-        EventStoreNamespaceName? @namespace = null,
-        bool skipDiscovery = false)
+        EventStoreNamespaceName? @namespace = null)
     {
         @namespace ??= EventStoreNamespaceName.Default;
         var key = new EventStoreKey(name, @namespace);
@@ -132,7 +131,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.JsonSerializerOptions,
             Options.LoggerFactory);
 
-        if (Options.AutoDiscoverAndRegister && !skipDiscovery)
+        if (Options.AutoDiscoverAndRegister)
         {
             await eventStore.DiscoverAll();
             await eventStore.RegisterAll();
