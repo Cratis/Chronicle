@@ -37,7 +37,7 @@
             "type": "process"
         },
         {
-            "label": "restart-docker",
+            "label": "restart",
             "command": "restart.sh",
             "args": [],
             "options": {
