@@ -54,6 +54,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
@@ -68,6 +69,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        ChronicleOptions options,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
     {
@@ -171,11 +173,14 @@ public class EventStore : IEventStore
             UnitOfWorkManager,
             serviceProvider);
 
-        Connection.Lifecycle.OnConnected += async () =>
+        if (options.AutoDiscoverAndRegister)
         {
-            await DiscoverAll();
-            await RegisterAll();
-        };
+            Connection.Lifecycle.OnConnected += async () =>
+            {
+                await DiscoverAll();
+                await RegisterAll();
+            };
+        }
     }
 
     /// <inheritdoc/>
