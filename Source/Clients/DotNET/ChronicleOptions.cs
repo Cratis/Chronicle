@@ -99,7 +99,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="INamingPolicy"/> to use.
     /// </summary>
-    public INamingPolicy NamingPolicy { get; set; } = namingPolicy ?? new CamelCaseNamingPolicy();
+    public INamingPolicy NamingPolicy { get; set; } = namingPolicy ?? new DefaultNamingPolicy();
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.
