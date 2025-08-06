@@ -3,8 +3,8 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Serialization;
 using Cratis.Reflection;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 

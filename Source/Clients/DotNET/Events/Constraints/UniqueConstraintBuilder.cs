@@ -3,8 +3,8 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Serialization;
 using Cratis.Reflection;
+using Cratis.Serialization;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;

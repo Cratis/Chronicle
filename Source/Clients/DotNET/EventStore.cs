@@ -19,8 +19,8 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Transactions;
+using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;

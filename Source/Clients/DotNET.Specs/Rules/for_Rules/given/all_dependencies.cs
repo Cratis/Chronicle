@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Rules.for_Rules.given;
 

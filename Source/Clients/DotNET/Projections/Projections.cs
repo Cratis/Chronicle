@@ -11,7 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;

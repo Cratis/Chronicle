@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Events.Constraints;

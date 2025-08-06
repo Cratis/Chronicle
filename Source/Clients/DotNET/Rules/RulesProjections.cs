@@ -7,7 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Rules;
 

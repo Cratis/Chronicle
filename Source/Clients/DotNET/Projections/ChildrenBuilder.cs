@@ -7,7 +7,7 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Chronicle.Projections;

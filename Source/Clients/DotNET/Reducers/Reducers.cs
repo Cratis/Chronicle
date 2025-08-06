@@ -12,8 +12,8 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Sinks;
+using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
