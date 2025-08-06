@@ -46,8 +46,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddAggregates()
             .AddCompliance()
             .AddCausation()
-            .AddCratisChronicleClient(configureChronicleOptions)
-            .AddHostedService<ChronicleClientStartupTask>();
+            .AddCratisChronicleClient(configureChronicleOptions);
         builder.Host.AddCratisChronicle(loggerFactory);
         return builder;
     }

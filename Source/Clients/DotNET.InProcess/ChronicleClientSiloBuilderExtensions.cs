@@ -11,7 +11,6 @@ using Cratis.Chronicle.InProcess;
 using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,11 +48,6 @@ public static class ChronicleClientSiloBuilderExtensions
         Action<IChronicleBuilder>? configureChronicle = default,
         string? configSection = default)
     {
-        // We disable the AspNet client registration.
-        // The AspNetCore client uses an `IHostedService` to register the client, which then runs before the Silo is ready.
-        // Leading to crashing the entire process.
-        ChronicleClientStartupTask.RegistrationEnabled = false;
-
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
 
@@ -102,7 +96,6 @@ public static class ChronicleClientSiloBuilderExtensions
         builder.AddActivityPropagation();
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
-        builder.AddStartupTask<ChronicleOrleansClientStartupTask>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();
