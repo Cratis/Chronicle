@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
-using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -74,7 +73,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="JsonSerializerOptions"/> to use.
     /// </summary>
-    public JsonSerializerOptions JsonSerializerOptions { get; set; } = jsonSerializerOptions ?? Globals.JsonSerializerOptions;
+    public JsonSerializerOptions JsonSerializerOptions { get; set; } = jsonSerializerOptions ?? new JsonSerializerOptions();
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> to use.

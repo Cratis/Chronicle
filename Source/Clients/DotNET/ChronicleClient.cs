@@ -8,6 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Schemas;
+using Cratis.Json;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
@@ -167,7 +168,22 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, Options.ServiceProvider);
 
+        InitializeJsonSerializationOptions();
+
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
+    }
+
+    void InitializeJsonSerializationOptions()
+    {
+        Options.JsonSerializerOptions.PropertyNamingPolicy = Options.NamingPolicy.JsonPropertyNamingPolicy;
+        Options.JsonSerializerOptions.Converters.Add(new EnumConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new EnumerableConceptAsJsonConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new TypeJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new UriJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
     }
 
     record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);

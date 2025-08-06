@@ -36,6 +36,7 @@ public class EventStore : IEventStore
     readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IEventSerializer _eventSerializer;
     readonly ILogger<EventStore> _logger;
 
@@ -74,6 +75,7 @@ public class EventStore : IEventStore
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _jsonSerializerOptions = jsonSerializerOptions;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
@@ -109,7 +111,8 @@ public class EventStore : IEventStore
             concurrencyScopeStrategies,
             causationManager,
             UnitOfWorkManager,
-            identityProvider);
+            identityProvider,
+            jsonSerializerOptions);
 
         Jobs = new Jobs.Jobs(this);
 
@@ -257,7 +260,8 @@ public class EventStore : IEventStore
             _concurrencyScopeStrategies,
             _causationManager,
             UnitOfWorkManager,
-            _identityProvider);
+            _identityProvider,
+            _jsonSerializerOptions);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
