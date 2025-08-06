@@ -35,6 +35,15 @@
                 "testhost"
             ],
             "type": "process"
+        },
+        {
+            "label": "restart-docker",
+            "command": "restart.sh",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}/Source/Kernel/Server"
+            },
+            "type": "process"
         }
     ],
     "inputs": [
