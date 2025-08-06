@@ -36,7 +36,6 @@ public class EventTypes : IEventTypes
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
-        eventStore.Connection.Lifecycle.OnConnected += Register;
     }
 
     /// <inheritdoc/>

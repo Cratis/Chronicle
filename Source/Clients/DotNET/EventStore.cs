@@ -170,6 +170,12 @@ public class EventStore : IEventStore
                 correlationIdAccessor),
             UnitOfWorkManager,
             serviceProvider);
+
+        Connection.Lifecycle.OnConnected += async () =>
+        {
+            await DiscoverAll();
+            await RegisterAll();
+        };
     }
 
     /// <inheritdoc/>

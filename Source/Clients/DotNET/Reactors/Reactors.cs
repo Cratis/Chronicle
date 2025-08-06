@@ -77,7 +77,6 @@ public class Reactors : IReactors
         _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
-        eventStore.Connection.Lifecycle.OnConnected += Register;
     }
 
     /// <inheritdoc/>

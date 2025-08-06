@@ -104,16 +104,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _keepAliveSubscription?.Dispose();
     }
 
-    void ConnectIfNotConnected()
+    /// <inheritdoc/>
+    public async Task Connect()
     {
-        if (!Lifecycle.IsConnected)
+        if (Lifecycle.IsConnected)
         {
-            Connect().GetAwaiter().GetResult();
+            return;
         }
-    }
 
-    async Task Connect()
-    {
         _logger.Connecting();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
@@ -162,6 +160,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         finally
         {
             StartWatchDog();
+        }
+    }
+
+    void ConnectIfNotConnected()
+    {
+        if (!Lifecycle.IsConnected)
+        {
+            Connect().GetAwaiter().GetResult();
         }
     }
 

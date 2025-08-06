@@ -71,7 +71,6 @@ public class Reducers : IReducers
         IIdentityProvider identityProvider,
         ILogger<Reducers> logger)
     {
-        eventStore.Connection.Lifecycle.OnConnected += Register;
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
             _registered = false;

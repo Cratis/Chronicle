@@ -44,7 +44,7 @@ public class ProjectionWatcher<TReadModel> : IProjectionWatcher<TReadModel>, IDi
     /// <inheritdoc/>
     public void Dispose()
     {
-        _eventStore.Connection.Lifecycle.OnConnected += ClientConnected;
+        _eventStore.Connection.Lifecycle.OnConnected -= ClientConnected;
         _stopped?.Invoke();
         _stopped = null;
         _observable.Dispose();
