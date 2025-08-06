@@ -40,8 +40,6 @@ public static class EventSchemaExtensions
     {
         var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value.ToJson()).GetAwaiter().GetResult();
         result.EnsureComplianceMetadata();
-        result.ResetFlattenedProperties();
-        result.EnsureFlattenedProperties();
 
         return new EventTypeSchema(
             new Chronicle.Concepts.Events.EventType(

@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB;
 using Microsoft.Extensions.Logging;
@@ -57,7 +56,6 @@ public class EventTypesStorage(
         if (existingEventType is not null)
         {
             var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[generationAsString].ToJson());
-            existingSchema.ResetFlattenedProperties();
             if (existingSchema.ToJson() == schema.ToJson())
             {
                 return;
@@ -70,9 +68,6 @@ public class EventTypesStorage(
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
         _eventTypes.Add(eventSchema.ToMongoDB());
-        eventSchema.Schema.ResetFlattenedProperties();
-
-        schema.EnsureFlattenedProperties();
 
         var mongoEventSchema = eventSchema.ToMongoDB();
         await GetCollection().ReplaceOneAsync(

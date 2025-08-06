@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 
@@ -40,6 +41,6 @@ public class a_watcher : Specification
         _eventStore.Connection.Returns(_connection);
         _projectionsService = Substitute.For<Contracts.Projections.IProjections>();
         _services.Projections.Returns(_projectionsService);
-        _watcher = new ProjectionWatcher<SomeModel>(_eventStore, () => _stopCount++);
+        _watcher = new ProjectionWatcher<SomeModel>(_eventStore, () => _stopCount++, JsonSerializerOptions.Default);
     }
 }

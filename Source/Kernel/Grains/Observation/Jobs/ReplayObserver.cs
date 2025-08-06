@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
@@ -18,10 +19,12 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// </remarks>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+/// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
 public class ReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
+    JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <inheritdoc/>
@@ -74,7 +77,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        State.HandleResult(result);
+        State.HandleResult(result, jsonSerializerOptions);
         return Task.CompletedTask;
     }
 

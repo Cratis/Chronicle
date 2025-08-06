@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Jobs;
@@ -12,8 +13,11 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
+/// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
-public class RetryFailedPartition(ILogger<RetryFailedPartition> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartition
+public class RetryFailedPartition(
+    JsonSerializerOptions jsonSerializerOptions,
+    ILogger<RetryFailedPartition> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartition
 {
     /// <inheritdoc/>
     protected override async Task OnCompleted()
@@ -53,7 +57,7 @@ public class RetryFailedPartition(ILogger<RetryFailedPartition> logger) : Job<Re
     /// <inheritdoc/>
     protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        State.HandleResult(result);
+        State.HandleResult(result, jsonSerializerOptions);
         return Task.CompletedTask;
     }
 
