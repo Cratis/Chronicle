@@ -51,7 +51,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisApplicationModelMeter();
-                services.AddSingleton(Globals.JsonSerializerOptions);
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
                 services.AddChronicleTelemetry(ctx.Configuration);
