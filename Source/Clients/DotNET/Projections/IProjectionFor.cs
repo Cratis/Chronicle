@@ -11,7 +11,7 @@ public interface IProjectionFor<TReadModel> : IProjection
     where TReadModel : class
 {
     /// <summary>
-    /// /// Defines the projection.
+    /// Defines the projection.
     /// </summary>
     /// <param name="builder"><see cref="IProjectionBuilderFor{TReadModel}"/> to use for building the definition.</param>
     void Define(IProjectionBuilderFor<TReadModel> builder);

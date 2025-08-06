@@ -13,9 +13,6 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-/// <remarks>
-/// /// Initializes a new instance of the <see cref="SubtractBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/> class.
-/// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
 public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : ISubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>

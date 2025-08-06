@@ -25,7 +25,7 @@ public record ReadModelGeneration(uint Value) : ConceptAs<uint>(Value)
     public static readonly ReadModelGeneration Unspecified = new(uint.MaxValue);
 
     /// <summary>
-    /// /// Implicitly convert from <see cref="uint"/> to <see cref="ReadModelGeneration"/>.
+    /// Implicitly convert from <see cref="uint"/> to <see cref="ReadModelGeneration"/>.
     /// </summary>
     /// <param name="generation"><see cref="uint"/> to convert from.</param>
     public static implicit operator ReadModelGeneration(uint generation) => new(generation);

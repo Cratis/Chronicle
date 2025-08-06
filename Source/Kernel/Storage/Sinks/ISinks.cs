@@ -22,7 +22,7 @@ public interface ISinks
     /// Get a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="typeId"><see cref="SinkTypeId"/> to get for.</param>
-    /// /// <param name="configurationId"><see cref="SinkConfigurationId"/> to get for.</param>
+    /// <param name="configurationId"><see cref="SinkConfigurationId"/> to get for.</param>
     /// <param name="model"><see cref="ReadModelDefinition"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
     ISink GetFor(SinkTypeId typeId, SinkConfigurationId configurationId, ReadModelDefinition model);

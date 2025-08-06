@@ -13,9 +13,6 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/>.
 /// </summary>
-/// <remarks>
-/// /// Initializes a new instance of the <see cref="SinkFactory"/> class.
-/// </remarks>
 /// <param name="database"><see cref="IDatabase"/> for accessing MongoDB.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>

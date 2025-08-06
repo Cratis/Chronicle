@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents the context in which an event exists in - typically what it was appended with.
 /// </summary>
-/// /// <param name="EventType">The <see cref="EventType"/> of the event.</param>
+/// <param name="EventType">The <see cref="EventType"/> of the event.</param>
 /// <param name="EventSourceType">The <see cref="EventSourceType"/>.</param>
 /// <param name="EventSourceId">The <see cref="EventSourceId"/>.</param>
 /// <param name="EventStreamType">The <see cref="EventStreamType"/>.</param>
