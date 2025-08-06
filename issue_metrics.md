@@ -8,12 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 277 |
+| Number of items that remain open | 279 |
 | Number of items closed | 565 |
-| Total number of items created | 842 |
+| Total number of items created | 844 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Add authorization on the Kernel side | https://github.com/Cratis/Chronicle/issues/1965 | None | [einari](https://github.com/einari) | None | None | None |
+| Add authentication & TLS for server and client | https://github.com/Cratis/Chronicle/issues/1964 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add generate test events in workbench. Leveraging LLM | https://github.com/Cratis/Chronicle/issues/1960 | None | [einari](https://github.com/einari) | None | None | None |
 | Support generational Projections with references to correct generation of ReadModel | https://github.com/Cratis/Chronicle/issues/1959 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Make event type storage generational within same document stored | https://github.com/Cratis/Chronicle/issues/1957 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
