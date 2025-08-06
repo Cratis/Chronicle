@@ -7,18 +7,18 @@
         <!-- System -->
         <PackageVersion Include="System.Reactive" Version="6.0.1" />
         <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-        <PackageVersion Include="System.Text.Json" Version="9.0.7" />
+        <PackageVersion Include="System.Text.Json" Version="9.0.8" />
         <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
         <!-- Microsoft -->
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
+        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.7" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.7.0" />
         <!-- Cratis -->
-        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.2" />
-        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.2" />
+        <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
+        <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.0.0" />
         <PackageVersion Include="Cratis.Applications" Version="16.0.2" />
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.2" />
         <PackageVersion Include="Cratis.Applications.Orleans" Version="16.0.2" />
@@ -102,8 +102,8 @@
     <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
     </ItemGroup>
 </Project>
