@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,14 +27,12 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     /// <param name="configureOptions">Optional <see cref="Action{T}"/> for configuring options.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
-    /// <param name="configureChronicleOptions">Optional <see cref="Action{T}"/> for configuring Chronicle options.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder AddCratisChronicle(
         this WebApplicationBuilder builder,
         Action<ChronicleAspNetCoreOptions>? configureOptions = default,
         string? configSection = default,
-        ILoggerFactory? loggerFactory = default,
-        Action<ChronicleOptions>? configureChronicleOptions = default)
+        ILoggerFactory? loggerFactory = default)
     {
         builder.Services.AddOptions(configureOptions);
         builder.Configuration.Bind(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths));
@@ -46,7 +43,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddAggregates()
             .AddCompliance()
             .AddCausation()
-            .AddCratisChronicleClient(configureChronicleOptions);
+            .AddCratisChronicleClient();
         builder.Host.AddCratisChronicle(loggerFactory);
         return builder;
     }

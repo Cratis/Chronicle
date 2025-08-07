@@ -29,29 +29,19 @@ public static class ChronicleClientServiceCollectionExtensions
     /// Add the <see cref="IChronicleClient"/> to the services.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="configureChronicleOptions">Optional <see cref="Action{T}"/> for configuring Chronicle options.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisChronicleClient(
-        this IServiceCollection services,
-        Action<ChronicleOptions>? configureChronicleOptions = default)
+    public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
-            var chronicleOptions = new ChronicleOptions(options.Url)
-            {
-                ServiceProvider = sp,
-                SoftwareVersion = options.SoftwareVersion,
-                SoftwareCommit = options.SoftwareCommit,
-                ProgramIdentifier = options.ProgramIdentifier,
-                IdentityProvider = new IdentityProvider(
-                    sp.GetRequiredService<IHttpContextAccessor>(),
-                    sp.GetRequiredService<ILogger<IdentityProvider>>()),
-                LoggerFactory = sp.GetRequiredService<ILoggerFactory>(),
-            };
-            configureChronicleOptions?.Invoke(chronicleOptions);
-            return new ChronicleClient(chronicleOptions);
+            options.ServiceProvider = sp;
+            options.IdentityProvider = new IdentityProvider(
+                                sp.GetRequiredService<IHttpContextAccessor>(),
+                                sp.GetRequiredService<ILogger<IdentityProvider>>());
+            options.LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            return new ChronicleClient(options);
         });
 
         services.AddScoped(sp =>
