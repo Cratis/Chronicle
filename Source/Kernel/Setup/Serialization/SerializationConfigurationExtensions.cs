@@ -98,7 +98,7 @@ public static class SerializationConfigurationExtensions
                 new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>()
             }
         };
-
+        services.AddSingleton(options);
         services.AddConceptSerializer();
         services.AddCustomSerializers();
         services.AddSerializer(
