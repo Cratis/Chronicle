@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
-using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
@@ -27,7 +26,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// Initializes a new instance of the <see cref="Storage"/> class.
 /// </remarks>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
-/// <param name="projectionSerializer"><see cref="IJsonProjectionDefinitionSerializer"/> for handling serialization of projection definitions.</param>
 /// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
 /// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
@@ -39,7 +37,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
     IDatabase database,
-    IJsonProjectionDefinitionSerializer projectionSerializer,
     IJsonReactorDefinitionSerializer reactorSerializer,
     IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
@@ -87,7 +84,6 @@ public class Storage(
         var eventStoreStorage = new EventStoreStorage(
             eventStore,
             database.GetEventStoreDatabase(eventStore),
-            projectionSerializer,
             reactorSerializer,
             reducerSerializer,
             complianceManager,

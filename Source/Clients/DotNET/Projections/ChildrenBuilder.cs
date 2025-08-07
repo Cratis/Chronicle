@@ -75,8 +75,6 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
         return new()
         {
             IdentifiedBy = _identifiedBy,
-            ReadModel = _readModelName,
-            InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),

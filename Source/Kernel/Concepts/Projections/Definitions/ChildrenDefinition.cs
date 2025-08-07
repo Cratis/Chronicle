@@ -13,8 +13,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// Represents the definition of a children projection.
 /// </summary>
 /// <param name="IdentifiedBy">Property on model that identifies the unique object, typically the key - or id (event source id).</param>
-/// <param name="ReadModel">The target read model.</param>
-/// <param name="InitialModelState">The initial values to use with the model for new instances.</param>
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Join">All the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
@@ -24,8 +22,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
-    ReadModelName ReadModel,
-    JsonObject InitialModelState,
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
@@ -37,10 +33,10 @@ public record ChildrenDefinition(
         ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,
         ProjectionId.Unspecified,
-        ReadModel,
+        ReadModelName.NotSet,
         true,
         false,
-        InitialModelState,
+        new JsonObject(),
         From,
         Join,
         Children,

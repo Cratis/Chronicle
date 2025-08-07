@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
 using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
-using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -38,7 +37,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
 /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
-/// <param name="projectionSerializer"><see cref="IJsonProjectionDefinitionSerializer"/> for handling serialization of projection definitions.</param>
 /// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
 /// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
@@ -51,7 +49,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
-    IJsonProjectionDefinitionSerializer projectionSerializer,
     IJsonReactorDefinitionSerializer reactorSerializer,
     IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
@@ -80,7 +77,7 @@ public class EventStoreStorage(
     public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase, reducerSerializer);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase, projectionSerializer);
+    public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage(eventStoreDatabase);

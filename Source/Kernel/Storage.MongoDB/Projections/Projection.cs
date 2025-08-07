@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections;
-using MongoDB.Bson;
+using Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 
@@ -13,4 +13,4 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="Owner">The owner of the projection.</param>
 /// <param name="ReadModel">The read model associated with the projection.</param>
 /// <param name="Definitions">The definitions per generation of the projection.</param>
-public record Projection(ProjectionId Id, ProjectionOwner Owner, Concepts.ReadModels.ReadModel ReadModel, IDictionary<string, BsonDocument> Definitions);
+public record Projection(ProjectionId Id, ProjectionOwner Owner, Concepts.ReadModels.ReadModel ReadModel, IDictionary<string, ProjectionDefinition> Definitions);
