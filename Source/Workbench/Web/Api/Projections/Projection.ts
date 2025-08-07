@@ -16,5 +16,5 @@ export class Projection {
     isActive!: boolean;
 
     @field(String)
-    modelName!: string;
+    readModelName!: string;
 }
