@@ -73,5 +73,22 @@ internal sealed class JobStateConverter : JsonConverter<JobState>
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, JobState value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, options);
+    public override void Write(Utf8JsonWriter writer, JobState value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        foreach (var property in value.GetType().GetProperties())
+        {
+            var propertyValue = property.GetValue(value);
+            if (propertyValue is null)
+            {
+                continue;
+            }
+
+            var propertyName = property.Name.ToCamelCase();
+            writer.WritePropertyName(propertyName);
+            JsonSerializer.Serialize(writer, propertyValue, options);
+        }
+
+        writer.WriteEndObject();
+    }
 }
