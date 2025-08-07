@@ -8,7 +8,6 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
-using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
@@ -27,7 +26,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 /// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
-/// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -38,7 +36,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class Storage(
     IDatabase database,
     IJsonReactorDefinitionSerializer reactorSerializer,
-    IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
@@ -85,7 +82,6 @@ public class Storage(
             eventStore,
             database.GetEventStoreDatabase(eventStore),
             reactorSerializer,
-            reducerSerializer,
             complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,
