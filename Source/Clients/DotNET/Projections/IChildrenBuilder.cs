@@ -17,7 +17,7 @@ public interface IChildrenBuilder
     bool HasIdentifiedBy { get; }
 
     /// <summary>
-    /// Gets the property path that identifies the child model in the collection within the parent.
+    /// Gets the property path that identifies the child read model in the collection within the parent.
     /// </summary>
     /// <returns><see cref="PropertyPath"/> for the identified by.</returns>
     PropertyPath GetIdentifiedBy();
@@ -31,14 +31,14 @@ public interface IChildrenBuilder
 public interface IChildrenBuilder<TParentReadModel, TChildReadModel> : IProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>, IChildrenBuilder
 {
     /// <summary>
-    /// Sets the property that identifies the child model in the collection within the parent.
+    /// Sets the property that identifies the child read model in the collection within the parent.
     /// </summary>
     /// <param name="propertyPath">The <see cref="PropertyPath"/>  that represents the property used to identify.</param>
     /// <returns>Builder continuation.</returns>
     IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy(PropertyPath propertyPath);
 
     /// <summary>
-    /// Sets the property that identifies the child model in the collection within the parent.
+    /// Sets the property that identifies the child read model in the collection within the parent.
     /// </summary>
     /// <param name="propertyExpression">The expression that represents the property used to identify.</param>
     /// <typeparam name="TProperty">Type of property.</typeparam>

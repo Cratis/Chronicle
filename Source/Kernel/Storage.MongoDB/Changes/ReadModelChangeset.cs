@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Storage.MongoDB.Changes;
 
 /// <summary>
-/// Represents a changeset for a model.
+/// Represents a changeset for a read model.
 /// </summary>
 /// <param name="Id">The unique identifier - composite key.</param>
 /// <param name="EventType">Type of event that caused the change.</param>
 /// <param name="Changes">The actual changes.</param>
-public record ModelChangeset(ModelChangeKey Id, EventType EventType, IEnumerable<Change> Changes);
+public record ReadModelChangeset(ReadModelChangeKey Id, EventType EventType, IEnumerable<Change> Changes);

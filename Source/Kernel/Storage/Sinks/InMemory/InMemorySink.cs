@@ -21,10 +21,10 @@ namespace Cratis.Chronicle.Storage.Sinks.InMemory;
 /// <remarks>
 /// Initializes a new instance of the <see cref="InMemorySink"/> class.
 /// </remarks>
-/// <param name="model">The target <see cref="ReadModelDefinition"/>.</param>
+/// <param name="readModel">The target <see cref="ReadModelDefinition"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
 public class InMemorySink(
-    ReadModelDefinition model,
+    ReadModelDefinition readModel,
     ITypeFormats typeFormats) : ISink, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
@@ -43,9 +43,9 @@ public class InMemorySink(
     public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
     /// <summary>
-    /// Remove any existing model by the given key.
+    /// Remove any existing read model by the given key.
     /// </summary>
-    /// <param name="key"><see cref="Key"/> for the model to remove.</param>
+    /// <param name="key"><see cref="Key"/> for the read model to remove.</param>
     public void RemoveAnyExisting(Key key)
     {
         var collection = Collection;
@@ -131,7 +131,7 @@ public class InMemorySink(
             return stringBuilder.ToString();
         }
 
-        var targetType = model.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
+        var targetType = readModel.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
         if (targetType is not null)
         {
             return TypeConversion.Convert(targetType, key.Value);

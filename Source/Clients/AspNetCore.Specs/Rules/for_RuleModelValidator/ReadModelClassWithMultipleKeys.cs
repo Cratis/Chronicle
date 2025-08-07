@@ -5,4 +5,11 @@ using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.AspNetCore.Rules.for_Rules.for_RulesModelValidator;
 
-public record ModelWithKey([ReadModelKey] string Id);
+public class ReadModelClassWithMultipleKeys
+{
+    [ReadModelKey]
+    public string Id { get; set; }
+
+    [ReadModelKey]
+    public string SecondId { get; set; }
+}

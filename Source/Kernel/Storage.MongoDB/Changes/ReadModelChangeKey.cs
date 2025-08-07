@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Storage.MongoDB.Changes;
 
 /// <summary>
-/// Represents the unique key for a model change.
+/// Represents the unique key for a read model change.
 /// </summary>
-/// <param name="Key">The model key.</param>
+/// <param name="Key">The read model key.</param>
 /// <param name="SequenceNumber">The sequence number of the event that caused the change.</param>
 /// <param name="CorrelationId">CorrelationId of the change.</param>
-public record ModelChangeKey(string Key, EventSequenceNumber SequenceNumber, CorrelationId CorrelationId);
+public record ReadModelChangeKey(string Key, EventSequenceNumber SequenceNumber, CorrelationId CorrelationId);

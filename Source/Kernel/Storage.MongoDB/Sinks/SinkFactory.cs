@@ -25,24 +25,24 @@ public class SinkFactory(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition model)
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
     {
         var mongoDBConverter = new MongoDBConverter(
             expandoObjectConverter,
             typeFormats,
-            model);
+            readModel);
 
         var mongoDBSinkCollections = new SinkCollections(
-            model,
+            readModel,
             database.GetReadModelDatabase(eventStore, @namespace));
         var mongoDBChangesetConverter = new ChangesetConverter(
-            model,
+            readModel,
             mongoDBConverter,
             mongoDBSinkCollections,
             expandoObjectConverter);
 
         return new Sink(
-            model,
+            readModel,
             mongoDBConverter,
             mongoDBSinkCollections,
             mongoDBChangesetConverter,

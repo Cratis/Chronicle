@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections;
 public interface IFromEveryBuilder<TReadModel>
 {
     /// <summary>
-    /// Start building the set operation to a target property on the model.
+    /// Start building the set operation to a target property on the read model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="readModelPropertyAccessor">Read model property accessor for defining the target property.</param>

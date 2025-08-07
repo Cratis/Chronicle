@@ -45,34 +45,34 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     }
 
     /// <inheritdoc/>
-    public TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
+    public TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
         _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
+    public TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
         _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
-    public IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
+    public IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
         var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
         _propertyExpressions[propertyPath] = addBuilder;
         return addBuilder;
     }
 
     /// <inheritdoc/>
-    public ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
+    public ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
         var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
         _propertyExpressions[propertyPath] = subtractBuilder;
         return subtractBuilder;
@@ -90,12 +90,12 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     }
 
     /// <inheritdoc/>
-    public ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
+    public ISetBuilder<TReadModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
         var setBuilder = new SetBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
 
@@ -112,9 +112,9 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     }
 
     /// <inheritdoc/>
-    public TBuilder Count<TProperty>(Expression<Func<TReadModel, TProperty>> modelPropertyAccessor)
+    public TBuilder Count<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = modelPropertyAccessor.GetPropertyPath();
+        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
         _propertyExpressions[propertyPath] = new CountBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }

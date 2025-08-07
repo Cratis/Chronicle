@@ -36,9 +36,9 @@ public class RuleModelValidator(
         {
             var type = context.ModelMetadata.ModelType;
 
-            var modelIdentifier = GetModelIdentifierIfAny(context, type);
+            var readModelIdentifier = GetReadModelIdentifierIfAny(context, type);
 
-            rules.ProjectTo(rule, modelIdentifier);
+            rules.ProjectTo(rule, readModelIdentifier);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
             var validationContext = Activator.CreateInstance(validationContextType, [context.Model!]) as IValidationContext;
             var result = (rule as IValidator)!.Validate(validationContext);
@@ -48,7 +48,7 @@ public class RuleModelValidator(
         return failures;
     }
 
-    object? GetModelIdentifierIfAny(ModelValidationContext context, Type type)
+    object? GetReadModelIdentifierIfAny(ModelValidationContext context, Type type)
     {
         if (type.IsRecord())
         {
@@ -60,7 +60,7 @@ public class RuleModelValidator(
 
     object? GetModelIdentifierIfAnyFromParameters(ModelValidationContext context, Type type)
     {
-        object? modelIdentifier = null;
+        object? readModelIdentifier = null;
         var parametersWithModelKey = type
             .GetConstructors()[0]
             .GetParameters()
@@ -75,15 +75,15 @@ public class RuleModelValidator(
         if (parametersWithModelKey.Length == 1)
         {
             var property = type.GetProperty(parametersWithModelKey[0].Name!, BindingFlags.Instance | BindingFlags.Public);
-            modelIdentifier = property!.GetValue(context.Model);
+            readModelIdentifier = property!.GetValue(context.Model);
         }
 
-        return modelIdentifier;
+        return readModelIdentifier;
     }
 
     object? GetModelIdentifierIfAnyFromProperties(ModelValidationContext context, Type type)
     {
-        object? modelIdentifier = null;
+        object? readModelIdentifier = null;
         var propertiesWithModelKey = type
             .GetProperties(BindingFlags.Instance | BindingFlags.Public)
             .Where(_ => _.HasAttribute<ReadModelKeyAttribute>())
@@ -96,9 +96,9 @@ public class RuleModelValidator(
 
         if (propertiesWithModelKey.Length == 1)
         {
-            modelIdentifier = propertiesWithModelKey[0].GetValue(context.Model);
+            readModelIdentifier = propertiesWithModelKey[0].GetValue(context.Model);
         }
 
-        return modelIdentifier;
+        return readModelIdentifier;
     }
 }

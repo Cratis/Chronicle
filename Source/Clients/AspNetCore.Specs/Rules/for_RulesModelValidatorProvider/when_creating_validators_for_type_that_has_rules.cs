@@ -18,13 +18,13 @@ public class when_creating_validators_for_type_that_has_rules : given.one_rule_f
 
     void Establish()
     {
-        _rules.HasFor(typeof(Model)).Returns(true);
-        _rules.GetFor(typeof(Model)).Returns(
+        _rules.HasFor(typeof(ReadModel)).Returns(true);
+        _rules.GetFor(typeof(ReadModel)).Returns(
         [
             typeof(FirstRule),
             typeof(SecondRule)
         ]);
-        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(Model)));
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ReadModel)));
         _context = new(_modelMetadata, []);
 
         _firstRule = new FirstRule();

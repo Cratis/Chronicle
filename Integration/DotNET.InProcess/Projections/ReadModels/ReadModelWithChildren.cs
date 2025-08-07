@@ -5,4 +5,4 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 
-public record ModelWithChildren(IEnumerable<ReadModel> Children, EventSequenceNumber __lastHandledEventSequenceNumber);
+public record ReadModelWithChildren(IEnumerable<ReadModel> Children, EventSequenceNumber __lastHandledEventSequenceNumber);
