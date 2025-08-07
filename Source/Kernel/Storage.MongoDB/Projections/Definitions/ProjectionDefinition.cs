@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
@@ -74,11 +73,6 @@ public class ProjectionDefinition
     /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
     public FromEveryDefinition FromEvery { get; set; } = new FromEveryDefinition();
-
-    /// <summary>
-    /// Gets or sets the <see cref="SinkDefinition"/>.
-    /// </summary>
-    public SinkDefinition Sink { get; set; } = SinkDefinition.None;
 
     /// <summary>
     /// Gets or sets all the <see cref="RemovedWithDefinition"/> for string representation of <see cref="EventType">event types</see>.

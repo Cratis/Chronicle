@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using MongoDB.Bson;
 using KernelDefs = Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -18,8 +19,9 @@ public static class ProjectionDefinitionConverters
     /// Converts a MongoDB ProjectionDefinition to a Kernel ProjectionDefinition.
     /// </summary>
     /// <param name="source">The MongoDB ProjectionDefinition to convert.</param>
+    /// <param name="sink">The sink definition to use.</param>
     /// <returns>A Kernel ProjectionDefinition.</returns>
-    public static KernelDefs.ProjectionDefinition ToKernel(this ProjectionDefinition source) =>
+    public static KernelDefs.ProjectionDefinition ToKernel(this ProjectionDefinition source, SinkDefinition sink) =>
         new(
             source.Owner,
             source.EventSequenceId,
@@ -39,7 +41,7 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Value.ToKernel()),
             source.FromDerivatives.Select(fd => fd.ToKernel()),
             source.FromEvery.ToKernel(),
-            source.Sink,
+            sink,
             source.RemovedWith.ToDictionary(
                 kv => EventType.Parse(kv.Key),
                 kv => kv.Value.ToKernel()),
@@ -76,7 +78,6 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Value.ToMongoDB()),
             FromDerivatives = source.FromDerivatives.Select(fd => fd.ToMongoDB()),
             FromEvery = source.FromEvery.ToMongoDB(),
-            Sink = source.Sink,
             RemovedWith = source.RemovedWith.ToDictionary(
                 kv => kv.Key.ToString(),
                 kv => kv.Value.ToMongoDB()),
