@@ -33,7 +33,7 @@ public class Sinks(
         ReadModelDefinition readModel)
     {
         ThrowIfUnknownSink(typeId);
-        var key = new SinkKey(typeId, configurationId, readModel);
+        var key = new SinkKey(typeId, configurationId, readModel.Name);
         if (_sinks.TryGetValue(key, out var store)) return store;
         return _sinks[key] = _factories[typeId].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
     }
@@ -46,5 +46,5 @@ public class Sinks(
         if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 
-    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelDefinition ReadModel);
+    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelName ReadModel);
 }
