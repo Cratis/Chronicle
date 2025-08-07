@@ -4,7 +4,6 @@
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Storage.Observation.Reducers;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
@@ -31,7 +30,7 @@ public class ReducerDefinitionsStorage(
 
     /// <inheritdoc/>
     public Task<bool> Has(ReducerId id) =>
-        Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
+        Collection.Find(r => r.Id == id).AnyAsync();
 
     /// <inheritdoc/>
     public async Task<Concepts.Observation.Reducers.ReducerDefinition> Get(ReducerId id)

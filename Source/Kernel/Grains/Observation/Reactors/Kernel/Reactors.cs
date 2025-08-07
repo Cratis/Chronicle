@@ -41,7 +41,7 @@ public class Reactors(
         where TReactor : IReactor
     {
         var key = new ObserverKey(
-            typeof(TReactor).Name,
+            $"$system.{typeof(TReactor).Name}",
             eventStore,
             namespaceName,
             EventSequenceId.System);

@@ -6,7 +6,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -36,7 +35,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
 /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
-/// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -47,7 +45,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
-    IJsonReactorDefinitionSerializer reactorSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
@@ -68,7 +65,7 @@ public class EventStoreStorage(
     public IEventTypesStorage EventTypes { get; } = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
 
     /// <inheritdoc/>
-    public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase, reactorSerializer);
+    public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase);
