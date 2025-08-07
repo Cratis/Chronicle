@@ -176,7 +176,7 @@
 | Add support for constraints scoped to a stream | https://github.com/Cratis/Chronicle/issues/1449 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for "closing the books" type of book keeping | https://github.com/Cratis/Chronicle/issues/1448 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for creating mementos from an aggregate root | https://github.com/Cratis/Chronicle/issues/1447 | None | [einari](https://github.com/einari) | None | None | None |
-| Add support for completing a stream | https://github.com/Cratis/Chronicle/issues/1446 | None | [einari](https://github.com/einari) | 308 days, 13:38:35 | None | None |
+| Add support for completing a stream | https://github.com/Cratis/Chronicle/issues/1446 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 308 days, 13:38:35 | None | None |
 | Add the concept of stream that goes along with all events | https://github.com/Cratis/Chronicle/issues/1445 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 47 days, 7:19:58 | None |
 | Invalid path for reactors in client (Reactions) | https://github.com/Cratis/Chronicle/issues/1443 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 37 days, 2:01:24 | None |
 | Make it possible for event handling methods to be private | https://github.com/Cratis/Chronicle/issues/1442 | None | [einari](https://github.com/einari) | None | 4 days, 7:05:23 | None |
