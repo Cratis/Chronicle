@@ -14,14 +14,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <remarks>
 /// Initializes a new instance of the <see cref="SinkCollections"/> class.
 /// </remarks>
-/// <param name="model">The <see cref="ReadModelDefinition"/> the context is for.</param>
+/// <param name="readModel">The <see cref="ReadModelDefinition"/> the context is for.</param>
 /// <param name="database">The <see cref="IMongoDatabase"/> to use.</param>
 public class SinkCollections(
-    ReadModelDefinition model,
+    ReadModelDefinition readModel,
     IMongoDatabase database) : ISinkCollections
 {
     bool _isReplaying;
-    string ReplayCollectionName => $"replay-{model.Name}";
+    string ReplayCollectionName => $"replay-{readModel.Name}";
 
     /// <inheritdoc/>
     public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
@@ -43,14 +43,14 @@ public class SinkCollections(
         var rewindName = ReplayCollectionName;
 
         var collectionNames = (await database.ListCollectionNamesAsync()).ToList();
-        if (collectionNames.Contains(model.Name))
+        if (collectionNames.Contains(readModel.Name))
         {
-            await database.RenameCollectionAsync(model.Name, context.RevertModel);
+            await database.RenameCollectionAsync(readModel.Name, context.RevertModel);
         }
 
         if (collectionNames.Contains(rewindName))
         {
-            await database.RenameCollectionAsync(rewindName, model.Name);
+            await database.RenameCollectionAsync(rewindName, readModel.Name);
         }
 
         _isReplaying = false;
@@ -64,5 +64,5 @@ public class SinkCollections(
     }
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? database.GetCollection<BsonDocument>(ReplayCollectionName) : database.GetCollection<BsonDocument>(model.Name);
+    public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? database.GetCollection<BsonDocument>(ReplayCollectionName) : database.GetCollection<BsonDocument>(readModel.Name);
 }
