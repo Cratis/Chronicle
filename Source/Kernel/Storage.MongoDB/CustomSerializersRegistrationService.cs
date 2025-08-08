@@ -6,7 +6,6 @@ using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Conventions;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -26,7 +25,6 @@ public class CustomSerializersRegistrationService(IServiceProvider serviceProvid
         {
             return Task.CompletedTask;
         }
-        AddConditionalCamelCaseConvention();
 
         foreach (var type in types.FindMultiple<IBsonSerializationProvider>().Where(IsEligibleForAutoRegistration))
         {
@@ -49,13 +47,4 @@ public class CustomSerializersRegistrationService(IServiceProvider serviceProvid
     static bool IsEligibleForAutoRegistration(Type type) => type.Assembly.FullName!.Contains("Cratis.Chronicle") &&
                                                             !type.IsGenericType &&
                                                             !type.HasAttribute<BsonSerializerDisableAutoRegistrationAttribute>();
-
-    void AddConditionalCamelCaseConvention()
-    {
-        var conventionPack = new ConventionPack
-        {
-            new CamelCaseElementNameConvention()
-        };
-        ConventionRegistry.Register("ConditionalCamelCase", conventionPack, type => type.Namespace?.StartsWith("Cratis.Chronicle") == true);
-    }
 }
