@@ -11,9 +11,9 @@
         <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
         <!-- Microsoft -->
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
+        <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.7" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.7.0" />
         <!-- Cratis -->
