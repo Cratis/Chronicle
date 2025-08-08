@@ -45,7 +45,11 @@ internal class ChronicleConnection(
     }
 
     /// <inheritdoc/>
-    Task IChronicleConnection.Connect() => Task.CompletedTask;
+    Task IChronicleConnection.Connect()
+    {
+        lifecycle.Connected();
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Set the services.
