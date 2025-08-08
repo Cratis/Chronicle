@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
@@ -39,7 +40,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             {
                 mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}";
                 mongo.Database = "orleans";
-            });
+            },
+            builder => builder.WithCamelCaseNamingPolicy());
         builder.ConfigureLogging(_ =>
         {
             _.ClearProviders();
