@@ -20,12 +20,14 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
 /// <param name="configureServices">Action to configure the services.</param>
+/// <param name="configureMongoDB">Action to configure MongoDB options.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
 public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     IChronicleSetupFixture fixture,
     Action<IServiceCollection> configureServices,
+    Action<IMongoDBBuilder> configureMongoDB,
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
@@ -41,7 +43,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}";
                 mongo.Database = "orleans";
             },
-            builder => builder.WithCamelCaseNamingPolicy());
+            configureMongoDB);
         builder.ConfigureLogging(_ =>
         {
             _.ClearProviders();
