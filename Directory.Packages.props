@@ -17,7 +17,7 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.7" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.7.0" />
         <!-- Cratis -->
-        <PackageVersion Include="Cratis.Fundamentals" Version="6.5.2" />
+        <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="6.5.2" />
         <PackageVersion Include="Cratis.Applications" Version="16.0.2" />
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.2" />
