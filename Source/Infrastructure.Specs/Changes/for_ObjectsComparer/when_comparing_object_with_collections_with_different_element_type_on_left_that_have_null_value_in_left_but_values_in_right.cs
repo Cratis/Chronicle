@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
@@ -26,5 +25,5 @@ public class when_comparing_object_with_collections_with_different_element_type_
 
     [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
     [Fact] void should_only_have_one_property_difference() => _differences.Count().ShouldEqual(1);
-    [Fact] void should_have_collection_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Collection).ToCamelCase());
+    [Fact] void should_have_collection_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Collection));
 }

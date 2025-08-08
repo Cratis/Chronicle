@@ -25,7 +25,7 @@ public class EventValueKeyExpressionResolver(IEventValueProviderExpressionResolv
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(identifiedByProperty)!;
+        var schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(identifiedByProperty)!;
         schemaProperty ??= new JsonSchemaProperty
         {
             Type = JsonObjectType.String

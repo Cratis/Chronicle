@@ -18,12 +18,12 @@ public class CompositeKeyBuilder<TKeyType, TEvent> : ICompositeKeyBuilder<TKeyTy
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
 
     /// <inheritdoc/>
-    public ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> modelPropertyAccessor)
+    public ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> readModelPropertyAccessor)
     {
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var setBuilder = new SetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>>(this, modelPropertyAccessor.GetPropertyPath(), !primitive);
+        var setBuilder = new SetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>>(this, readModelPropertyAccessor.GetPropertyPath(), !primitive);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }

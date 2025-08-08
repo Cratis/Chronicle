@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Models;
 using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
+using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_properties.using_key_from_property.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_properties;
@@ -11,16 +11,16 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class using_key_from_property(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<KeyFromPropertyProjection, Model>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<KeyFromPropertyProjection, ReadModel>(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
         void Establish()
         {
-            ModelId = Guid.NewGuid().ToString();
+            ReadModelId = Guid.NewGuid().ToString();
             EventsToAppend.Add(EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues() with
             {
-                StringValue = ModelId
+                StringValue = ReadModelId
             });
         }
     }

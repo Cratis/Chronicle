@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 
 namespace Cratis.Chronicle.Events.for_AppendedEventConverters;
 
@@ -13,17 +14,15 @@ public class when_converting_back_and_forth : Specification
 
     void Establish()
     {
-        var metadata = EventMetadata.EmptyWithEventSequenceNumber(42);
-        var context = EventContext.EmptyWithEventSourceId(Guid.NewGuid());
+        var context = EventContext.EmptyWithEventSourceId(Guid.NewGuid()) with { SequenceNumber = 42 };
         var content = new ExpandoObject();
-        _original = new(metadata, context, content);
+        _original = new(context, content);
 
-        _contract = _original.ToContract();
+        _contract = _original.ToContract(JsonSerializerOptions.Default);
     }
 
-    void Because() => _roundTripped = _contract.ToClient();
+    void Because() => _roundTripped = _contract.ToClient(JsonSerializerOptions.Default);
 
-    [Fact] void should_preserve_metadata() => _roundTripped.Metadata.ShouldEqual(_original.Metadata);
     [Fact] void should_preserve_context() => _roundTripped.Context.ShouldEqual(_original.Context);
     [Fact] void should_preserve_content() => _roundTripped.Content.ShouldEqual(_original.Content);
 }

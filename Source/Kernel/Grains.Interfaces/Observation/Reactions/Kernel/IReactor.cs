@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.EventTypes.Kernel;
 using Cratis.Chronicle.Json;
@@ -17,7 +18,8 @@ public interface IReactor
     /// </summary>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> for working with event types.</param>
     /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
-    void Initialize(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter);
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
+    void Initialize(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter, JsonSerializerOptions jsonSerializerOptions);
 
     /// <summary>
     /// Processes the next batch of events.

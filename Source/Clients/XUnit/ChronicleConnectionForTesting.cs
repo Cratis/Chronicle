@@ -26,6 +26,9 @@ internal sealed class ChronicleConnectionForTesting : IChronicleConnection, IChr
     IServices IChronicleServicesAccessor.Services => throw new NotImplementedException();
 
     /// <inheritdoc/>
+    public Task Connect() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public void Dispose()
     {
     }

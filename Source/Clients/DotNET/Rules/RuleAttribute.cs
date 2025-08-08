@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
-using Cratis.Chronicle.Models;
+using Cratis.Chronicle.ReadModels;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Rules;
@@ -19,7 +19,7 @@ public abstract class RuleAttribute : ValidationAttribute, IRule
     public RuleId Identifier => GetType().GetRuleId();
 
     /// <summary>
-    /// Gets whether or not value adorned represents the <see cref="ModelKey"/>.
+    /// Gets whether or not value adorned represents the <see cref="ReadModelKey"/>.
     /// </summary>
     public bool IsModelKey { get; set; }
 

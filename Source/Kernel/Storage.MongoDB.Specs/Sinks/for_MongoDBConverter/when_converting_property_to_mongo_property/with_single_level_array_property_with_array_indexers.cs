@@ -20,6 +20,6 @@ public class with_single_level_array_property_with_array_indexers : given.a_mong
 
     void Because() => _result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), _arrayIndexers);
 
-    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("arrayProperty.$[arrayProperty]");
-    [Fact] void should_have_array_filter_for_property() => _result.ArrayFilters.First().Document["arrayProperty.identifier"].ShouldEqual(new BsonBinaryData(_key, GuidRepresentation.Standard));
+    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("ArrayProperty.$[arrayProperty]");
+    [Fact] void should_have_array_filter_for_property() => _result.ArrayFilters.First().Document["arrayProperty.Identifier"].ShouldEqual(new BsonBinaryData(_key, GuidRepresentation.Standard));
 }

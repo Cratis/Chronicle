@@ -14,6 +14,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Execution;
 using Cratis.Tasks;
@@ -103,16 +104,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _keepAliveSubscription?.Dispose();
     }
 
-    void ConnectIfNotConnected()
+    /// <inheritdoc/>
+    public async Task Connect()
     {
-        if (!Lifecycle.IsConnected)
+        if (Lifecycle.IsConnected)
         {
-            Connect().GetAwaiter().GetResult();
+            return;
         }
-    }
 
-    async Task Connect()
-    {
         _logger.Connecting();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
@@ -146,6 +145,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IReactors>(clientFactory),
                 callInvoker.CreateGrpcService<IReducers>(clientFactory),
                 callInvoker.CreateGrpcService<IProjections>(clientFactory),
+                callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
                 callInvoker.CreateGrpcService<IServer>(clientFactory));
 
@@ -160,6 +160,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         finally
         {
             StartWatchDog();
+        }
+    }
+
+    void ConnectIfNotConnected()
+    {
+        if (!Lifecycle.IsConnected)
+        {
+            Connect().GetAwaiter().GetResult();
         }
     }
 

@@ -14,6 +14,8 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 public static class ProjectionWaitExtensions
 {
+    const int DefaultDelay = 50;
+
     /// <summary>
     /// Wait for the projection to reach a specific running state.
     /// </summary>
@@ -31,7 +33,7 @@ public static class ProjectionWaitExtensions
         {
             var state = await projection.GetState();
             currentRunningState = state.RunningState;
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -61,7 +63,7 @@ public static class ProjectionWaitExtensions
             {
                 break;
             }
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -80,7 +82,7 @@ public static class ProjectionWaitExtensions
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
             state = await projection.GetState();
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -98,7 +100,7 @@ public static class ProjectionWaitExtensions
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
             failedPartitions = await projection.GetFailedPartitions();
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
         return failedPartitions;
     }

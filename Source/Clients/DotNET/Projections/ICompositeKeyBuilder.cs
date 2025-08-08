@@ -16,9 +16,9 @@ public interface ICompositeKeyBuilder<TKeyType, TEvent>
     /// Start building the set operation to a target property on the model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
-    /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+    /// <param name="readModelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
-    ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> modelPropertyAccessor);
+    ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> readModelPropertyAccessor);
 
     /// <summary>
     /// Builds the composite key expression.

@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Types;
 
@@ -30,12 +30,12 @@ public class Sinks(
     public ISink GetFor(
         SinkTypeId typeId,
         SinkConfigurationId configurationId,
-        Model model)
+        ReadModelDefinition readModel)
     {
         ThrowIfUnknownSink(typeId);
-        var key = new SinkKey(typeId, configurationId, model);
+        var key = new SinkKey(typeId, configurationId, readModel.Name);
         if (_sinks.TryGetValue(key, out var store)) return store;
-        return _sinks[key] = _factories[typeId].CreateFor(eventStoreName, eventStoreNamespaceName, model);
+        return _sinks[key] = _factories[typeId].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
     }
 
     /// <inheritdoc/>
@@ -46,5 +46,5 @@ public class Sinks(
         if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 
-    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, Model Model);
+    sealed record SinkKey(SinkTypeId TypeId, SinkConfigurationId ConfigurationId, ReadModelName ReadModel);
 }

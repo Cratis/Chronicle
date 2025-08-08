@@ -21,11 +21,4 @@ public class with_multiple_constraints_with_same_name : given.a_constraint_build
 
     [Fact] void should_throw_duplicate_constraint_names() => _exception.ShouldNotBeNull();
     [Fact] void should_have_the_correct_constraint_names() => _exception.ConstraintNames.ShouldContainOnly(_firstName, _secondName);
-
-    IConstraintDefinition CreateConstraint(ConstraintName name)
-    {
-        var constraint = Substitute.For<IConstraintDefinition>();
-        constraint.Name.Returns(name);
-        return constraint;
-    }
 }

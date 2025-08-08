@@ -48,7 +48,7 @@ All files should start with the following header:
 
 ## Testing
 
-- Follow the following guide: [How to Write Specs](./instructions/tests.md)
+- Follow the following guide: [How to Write Specs](./instructions/tests.instructions.md)
 
 ## Things to not touch
 

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Grains.Projections;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Storage;
 
 namespace Orleans.Hosting;
@@ -44,6 +45,9 @@ internal sealed class ChronicleServerStartupTask(
         {
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await namespaces.EnsureDefault();
+
+            var readModelsManager = grainFactory.GetGrain<IReadModelsManager>(eventStore);
+            await readModelsManager.Ensure();
 
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await projectionsManager.Ensure();

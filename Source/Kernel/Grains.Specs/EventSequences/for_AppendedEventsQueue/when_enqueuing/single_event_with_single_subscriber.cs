@@ -13,18 +13,22 @@ public class single_event_with_single_subscriber : given.a_single_subscriber_wit
 
     void Establish()
     {
-        _appendedEvent = AppendedEvent.EmptyWithEventType(_eventType);
+        _appendedEvent = AppendedEvent.Empty();
         _eventSourceId = Guid.NewGuid();
-        _appendedEvent = _appendedEvent with { Context = EventContext.Empty with { EventSourceId = _eventSourceId } };
+        _appendedEvent = _appendedEvent with
+        {
+            Context = EventContext.Empty with
+            {
+                EventType = _eventType,
+                EventSourceId = _eventSourceId
+            }
+        };
     }
 
     async Task Because()
     {
         await _queue.Enqueue([_appendedEvent]);
         await _queue.AwaitQueueDepletion();
-
-        // waiting for queue depletion does not guarantee that the event was actually handled
-        await Task.Delay(100);
     }
 
     [Fact] void should_call_handle_on_observer_once() => _handledEventsPerPartition[_eventSourceId].Count.ShouldEqual(1);

@@ -75,17 +75,17 @@ public class ReactorHandler(
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public async Task OnNext(EventMetadata metadata, EventContext context, object content, IServiceProvider serviceProvider)
+    public async Task OnNext(EventContext context, object content, IServiceProvider serviceProvider)
     {
         identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
         causationManager.Add(CausationType, new Dictionary<string, string>
         {
             { CausationReactorIdProperty, Id.ToString() },
-            { CausationEventTypeIdProperty, metadata.Type.Id.ToString() },
-            { CausationEventTypeGenerationProperty, metadata.Type.Generation.ToString() },
+            { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
+            { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
             { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-            { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
+            { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
         });
 
         await reactorInvoker.Invoke(serviceProvider, content, context);

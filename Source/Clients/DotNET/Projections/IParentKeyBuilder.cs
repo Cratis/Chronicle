@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Projections;
 public interface IParentKeyBuilder<TEvent, TBuilder>
 {
     /// <summary>
-    /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+    /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent read model to
     /// work with.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
@@ -23,7 +23,7 @@ public interface IParentKeyBuilder<TEvent, TBuilder>
     TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
     /// <summary>
-    /// Define what composite key based on properties on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+    /// Define what composite key based on properties on the event represents the parent key. This is typically used in child relationships to identify the parent read model to
     /// work with.
     /// </summary>
     /// <typeparam name="TKeyType">Type of key.</typeparam>
@@ -32,7 +32,7 @@ public interface IParentKeyBuilder<TEvent, TBuilder>
     TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
 
     /// <summary>
-    /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent model to
+    /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent read model to
     /// work with.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>

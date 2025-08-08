@@ -17,7 +17,7 @@ public interface IChildrenBuilder
     bool HasIdentifiedBy { get; }
 
     /// <summary>
-    /// Gets the property path that identifies the child model in the collection within the parent.
+    /// Gets the property path that identifies the child read model in the collection within the parent.
     /// </summary>
     /// <returns><see cref="PropertyPath"/> for the identified by.</returns>
     PropertyPath GetIdentifiedBy();
@@ -26,24 +26,24 @@ public interface IChildrenBuilder
 /// <summary>
 /// Defines the builder for building out a child relationship on a model.
 /// </summary>
-/// <typeparam name="TParentModel">Parent model type.</typeparam>
-/// <typeparam name="TChildModel">Child model type.</typeparam>
-public interface IChildrenBuilder<TParentModel, TChildModel> : IProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>, IChildrenBuilder
+/// <typeparam name="TParentReadModel">Parent read model type.</typeparam>
+/// <typeparam name="TChildReadModel">Child read model type.</typeparam>
+public interface IChildrenBuilder<TParentReadModel, TChildReadModel> : IProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>, IChildrenBuilder
 {
     /// <summary>
-    /// Sets the property that identifies the child model in the collection within the parent.
+    /// Sets the property that identifies the child read model in the collection within the parent.
     /// </summary>
     /// <param name="propertyPath">The <see cref="PropertyPath"/>  that represents the property used to identify.</param>
     /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy(PropertyPath propertyPath);
+    IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy(PropertyPath propertyPath);
 
     /// <summary>
-    /// Sets the property that identifies the child model in the collection within the parent.
+    /// Sets the property that identifies the child read model in the collection within the parent.
     /// </summary>
     /// <param name="propertyExpression">The expression that represents the property used to identify.</param>
     /// <typeparam name="TProperty">Type of property.</typeparam>
     /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression);
+    IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression);
 
     /// <summary>
     /// Defines the event and property on it that the child should be created as a value from.
@@ -51,5 +51,5 @@ public interface IChildrenBuilder<TParentModel, TChildModel> : IProjectionBuilde
     /// <param name="propertyExpression">The expression that represents the property on the event to use.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildModel>> propertyExpression);
+    IChildrenBuilder<TParentReadModel, TChildReadModel> FromEventProperty<TEvent>(Expression<Func<TEvent, TChildReadModel>> propertyExpression);
 }

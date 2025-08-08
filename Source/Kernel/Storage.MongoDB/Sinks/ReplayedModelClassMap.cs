@@ -15,6 +15,6 @@ public class ReplayedModelClassMap : IBsonClassMapFor<ReplayedModel>
     public void Configure(BsonClassMap<ReplayedModel> classMap)
     {
         classMap.AutoMap();
-        classMap.MapIdProperty(_ => _.Model);
+        classMap.MapIdProperty(_ => _.ReadModel);
     }
 }

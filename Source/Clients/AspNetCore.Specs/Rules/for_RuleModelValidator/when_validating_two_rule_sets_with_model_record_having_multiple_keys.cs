@@ -14,14 +14,14 @@ public class when_validating_two_rule_sets_with_model_record_having_multiple_key
     ModelValidationContext _context;
     ModelMetadata _modelMetadata;
     IModelMetadataProvider _modelMetadataProvider;
-    ModelWithMultipleKeys _model;
+    ReadModelWithMultipleKeys _model;
     Exception _result;
 
     void Establish()
     {
         _modelMetadataProvider = Substitute.For<IModelMetadataProvider>();
-        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ModelWithMultipleKeys)));
-        _model = new ModelWithMultipleKeys(Key, Key);
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ReadModelWithMultipleKeys)));
+        _model = new ReadModelWithMultipleKeys(Key, Key);
         _context = new(
             new(),
             _modelMetadata,

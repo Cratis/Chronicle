@@ -8,7 +8,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Expressions.Keys;
 
 /// <summary>
-/// Represents an implementation of <see cref="IModelPropertyExpressionResolvers"/>.
+/// Represents an implementation of <see cref="IReadModelPropertyExpressionResolvers"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="KeyExpressionResolvers"/> class.

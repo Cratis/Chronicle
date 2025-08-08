@@ -2,6 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Networks;
+
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
@@ -14,13 +17,11 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
     /// </summary>
     public const string HostName = "chronicle";
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="ChronicleOutOfProcessFixture"/>.
-    /// </summary>
-    public ChronicleOutOfProcessFixture() : base(network =>
+    /// <inheritdoc/>
+    protected override IContainer BuildContainer(INetwork network)
     {
-        var builder = new ContainerBuilder()
-            .WithImage("cratis/chronicle:latest-development")
+        var builder = new ContainerBuilder();
+        builder = ConfigureImage(builder)
 
             // For some reason, this makes the container crash every time
             // .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
@@ -32,8 +33,18 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017));
+
         return builder.Build();
-    })
+    }
+
+    /// <summary>
+    /// Configures the container to use the specified image.
+    /// </summary>
+    /// <param name="builder"><see cref="ContainerBuilder"/> to configure.</param>
+    /// <returns>The configured <see cref="ContainerBuilder"/>.</returns>
+    protected virtual ContainerBuilder ConfigureImage(ContainerBuilder builder)
     {
+        builder.WithImage("cratis/chronicle:latest-development");
+        return builder;
     }
 }

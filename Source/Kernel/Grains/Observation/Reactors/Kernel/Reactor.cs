@@ -6,7 +6,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.EventTypes.Kernel;
 using Cratis.Chronicle.Json;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
@@ -19,12 +18,17 @@ public class Reactor : IReactor
     Dictionary<string, Type> _eventTypeByEventType = new();
     IEventTypes _eventTypes = default!;
     IExpandoObjectConverter _expandoObjectConverter = default!;
+    JsonSerializerOptions _jsonSerializerOptions = JsonSerializerOptions.Default;
 
     /// <inheritdoc/>
-    public void Initialize(IEventTypes eventTypes, IExpandoObjectConverter expandoObjectConverter)
+    public void Initialize(
+        IEventTypes eventTypes,
+        IExpandoObjectConverter expandoObjectConverter,
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _eventTypes = eventTypes;
         _expandoObjectConverter = expandoObjectConverter;
+        _jsonSerializerOptions = jsonSerializerOptions;
 
         var eventMethods = GetType().GetEventMethods();
         _eventMethodsByEventType = eventMethods.ToDictionary(
@@ -41,13 +45,13 @@ public class Reactor : IReactor
     {
         foreach (var @event in events)
         {
-            if (_eventMethodsByEventType.TryGetValue(@event.Metadata.Type.Id, out var method))
+            if (_eventMethodsByEventType.TryGetValue(@event.Context.EventType.Id, out var method))
             {
                 try
                 {
-                    var eventType = _eventTypeByEventType[@event.Metadata.Type.Id];
+                    var eventType = _eventTypeByEventType[@event.Context.EventType.Id];
                     var contentAsJson = _expandoObjectConverter.ToJsonObject(@event.Content, _eventTypes.GetJsonSchema(eventType));
-                    var content = contentAsJson.Deserialize(eventType, Globals.JsonSerializerOptions);
+                    var content = contentAsJson.Deserialize(eventType, _jsonSerializerOptions);
                     var task = (method.Invoke(this, [content, @event.Context]) as Task)!;
                     await task;
                 }

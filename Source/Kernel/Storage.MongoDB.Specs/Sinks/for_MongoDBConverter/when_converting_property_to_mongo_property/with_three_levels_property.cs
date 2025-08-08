@@ -11,6 +11,6 @@ public class with_three_levels_property : given.a_mongodb_converter
 
     void Because() => _result = _converter.ToMongoDBProperty(new PropertyPath("FirstLevel.SecondLevel.ThirdLevel"), ArrayIndexers.NoIndexers);
 
-    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("firstLevel.secondLevel.thirdLevel");
+    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("FirstLevel.SecondLevel.ThirdLevel");
     [Fact] void should_not_have_any_array_filters() => _result.ArrayFilters.ShouldBeEmpty();
 }

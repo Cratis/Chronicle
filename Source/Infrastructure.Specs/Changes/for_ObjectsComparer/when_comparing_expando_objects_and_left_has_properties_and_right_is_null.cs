@@ -25,8 +25,8 @@ public class when_comparing_expando_objects_and_left_has_properties_and_right_is
     void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
     [Fact] void should_not_be_considered_equal() => _result.ShouldBeFalse();
-    [Fact] void should_have_first_difference_be_the_string_value() => _differences.ToArray()[0].PropertyPath.Path.ShouldEqual("stringValue");
-    [Fact] void should_have_second_difference_be_the_int_value() => _differences.ToArray()[1].PropertyPath.Path.ShouldEqual("intValue");
+    [Fact] void should_have_first_difference_be_the_string_value() => _differences.ToArray()[0].PropertyPath.Path.ShouldEqual("StringValue");
+    [Fact] void should_have_second_difference_be_the_int_value() => _differences.ToArray()[1].PropertyPath.Path.ShouldEqual("IntValue");
     [Fact] void should_hold_null_as_changed_value_for_the_string_value() => _differences.ToArray()[0].Changed.ShouldBeNull();
     [Fact] void should_hold_null_as_changed_value_for_the_int_value() => _differences.ToArray()[1].Changed.ShouldBeNull();
 }

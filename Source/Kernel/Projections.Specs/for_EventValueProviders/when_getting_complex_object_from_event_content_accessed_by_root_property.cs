@@ -22,9 +22,8 @@ public class when_getting_complex_object_from_event_content_accessed_by_root_pro
         ((dynamic)content).complex_object.sourceString = Expected;
 
         _event = new(
-            new(0,
-            new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,

@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Services.EventSequences;
 
@@ -18,21 +17,23 @@ internal static class EventToAppendConverters
     /// Convert to a Chronicle representation of <see cref="Contracts.Events.EventToAppend"/>.
     /// </summary>
     /// <param name="eventToAppend"><see cref="Contracts.Events.EventToAppend"/> to convert from.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>A converted <see cref="EventToAppend"/>.</returns>
-    public static EventToAppend ToChronicle(this Contracts.Events.EventToAppend eventToAppend) =>
+    public static EventToAppend ToChronicle(this Contracts.Events.EventToAppend eventToAppend, JsonSerializerOptions jsonSerializerOptions) =>
         new(
             eventToAppend.EventSourceType,
             eventToAppend.EventSourceId,
             eventToAppend.EventStreamType,
             eventToAppend.EventStreamId,
             eventToAppend.EventType.ToChronicle(),
-            JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, Globals.JsonSerializerOptions)!.AsObject());
+            JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, jsonSerializerOptions)!.AsObject());
 
     /// <summary>
     /// Convert a collection to a Chronicle representation of <see cref="Contracts.Events.EventToAppend"/>.
     /// </summary>
     /// <param name="eventsToAppend">Collection of <see cref="Contracts.Events.EventToAppend"/> to convert from.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>A converted collection of <see cref="EventToAppend"/>.</returns>
-    public static IEnumerable<EventToAppend> ToChronicle(this IEnumerable<Contracts.Events.EventToAppend> eventsToAppend) =>
-        eventsToAppend.Select(_ => _.ToChronicle()).ToArray();
+    public static IEnumerable<EventToAppend> ToChronicle(this IEnumerable<Contracts.Events.EventToAppend> eventsToAppend, JsonSerializerOptions jsonSerializerOptions) =>
+        eventsToAppend.Select(_ => _.ToChronicle(jsonSerializerOptions)).ToArray();
 }

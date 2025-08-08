@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -13,10 +13,10 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
 {
-    readonly ConcurrentDictionary<ModelName, ReplayContext> _contexts = new();
+    readonly ConcurrentDictionary<ReadModelName, ReplayContext> _contexts = new();
 
     /// <inheritdoc/>
-    public async Task<ReplayContext> Establish(ModelName model)
+    public async Task<ReplayContext> Establish(ReadModelName model)
     {
         var replayStarted = DateTimeOffset.UtcNow;
         var rewoundCollectionsPrefix = $"{model}-";
@@ -28,7 +28,7 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     }
 
     /// <inheritdoc/>
-    public async Task<Result<ReplayContext, GetContextError>> TryGet(ModelName model)
+    public async Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelName model)
     {
         if (_contexts.TryGetValue(model, out var context))
         {
@@ -42,6 +42,6 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     }
 
     /// <inheritdoc/>
-    public Task Evict(ModelName model) =>
+    public Task Evict(ReadModelName model) =>
         storage.Remove(model);
 }

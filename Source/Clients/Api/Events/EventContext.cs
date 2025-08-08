@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Api.Events;
 /// <summary>
 /// Represents the context in which an event exists - typically what it was appended with.
 /// </summary>
+/// <param name="EventType">The type of the event.</param>
 /// <param name="EventSourceType">The type of the event source.</param>
 /// <param name="EventSourceId">The id of the event source.</param>
 /// <param name="SequenceNumber">The sequence number of the event as persisted in the event sequence.</param>
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Api.Events;
 /// <param name="Causation">A collection of causation for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
 public record EventContext(
+    EventType EventType,
     string EventSourceType,
     string EventSourceId,
     ulong SequenceNumber,

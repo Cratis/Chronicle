@@ -6,7 +6,6 @@ namespace Cratis.Chronicle.Api.Events;
 /// <summary>
 /// Represents an event that has been appended to an event log.
 /// </summary>
-/// <param name="Metadata">The metadata for the event.</param>
 /// <param name="Context">The context for the event.</param>
 /// <param name="Content">The JSON representation content of the event.</param>
-public record AppendedEvent(EventMetadata Metadata, EventContext Context, string Content);
+public record AppendedEvent(EventContext Context, string Content);

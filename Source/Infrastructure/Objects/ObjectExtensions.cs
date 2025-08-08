@@ -8,7 +8,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Concepts;
-using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Strings;
 
@@ -46,8 +45,8 @@ public static class ObjectExtensions
             return (T)ConceptFactory.CreateConceptInstance(valueType, source.GetConceptValue());
         }
 
-        var sourceAsString = JsonSerializer.Serialize(source, Globals.JsonSerializerOptions);
-        return (T)JsonSerializer.Deserialize(sourceAsString, valueType, Globals.JsonSerializerOptions)!;
+        var sourceAsString = JsonSerializer.Serialize(source);
+        return (T)JsonSerializer.Deserialize(sourceAsString, valueType)!;
     }
 
     /// <summary>

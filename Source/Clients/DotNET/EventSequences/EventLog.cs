@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
 /// <param name="unitOfWorkManager"><see cref="IUnitOfWorkManager"/> for working with the unit of work.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
+/// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 public class EventLog(
      EventStoreName eventStoreName,
      EventStoreNamespaceName @namespace,
@@ -39,7 +41,8 @@ public class EventLog(
      IConcurrencyScopeStrategies concurrencyScopeStrategies,
      ICausationManager causationManager,
      IUnitOfWorkManager unitOfWorkManager,
-     IIdentityProvider identityProvider) : EventSequence(
+     IIdentityProvider identityProvider,
+     JsonSerializerOptions jsonSerializerOptions) : EventSequence(
         eventStoreName,
         @namespace,
         EventSequenceId.Log,
@@ -51,4 +54,5 @@ public class EventLog(
         concurrencyScopeStrategies,
         causationManager,
         unitOfWorkManager,
-        identityProvider), IEventLog;
+        identityProvider,
+        jsonSerializerOptions), IEventLog;

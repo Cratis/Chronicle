@@ -11,36 +11,6 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public static class JsonSchemaExtensions
 {
-    const string FlattenedProperties = "x-flattened-properties";
-
-    /// <summary>
-    /// Ensure the flattened properties are available.
-    /// </summary>
-    /// <param name="schema"><see cref="JsonSchema"/> to ensure for.</param>
-    public static void EnsureFlattenedProperties(this JsonSchema schema)
-    {
-        lock (schema)
-        {
-            if (schema.ExtensionData?.ContainsKey(FlattenedProperties) != true || schema.ExtensionData?[FlattenedProperties] is not IEnumerable<JsonSchemaProperty>)
-            {
-                var properties = new List<JsonSchemaProperty>();
-                CollectPropertiesFrom(schema, properties);
-
-                schema.ExtensionData ??= new Dictionary<string, object?>();
-                schema.ExtensionData[FlattenedProperties] = properties.DistinctBy(_ => _.Name).ToArray().AsEnumerable();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reset the flattened properties.
-    /// </summary>
-    /// <param name="schema"><see cref="JsonSchema"/> to reset for.</param>
-    public static void ResetFlattenedProperties(this JsonSchema schema)
-    {
-        schema.ExtensionData?.Remove(FlattenedProperties);
-    }
-
     /// <summary>
     /// Get all actual properties from a schema, including any inherited properties from inherited schemas.
     /// </summary>
@@ -48,11 +18,9 @@ public static class JsonSchemaExtensions
     /// <returns>Collection of <see cref="JsonSchemaProperty"/>.</returns>
     public static IEnumerable<JsonSchemaProperty> GetFlattenedProperties(this JsonSchema schema)
     {
-        lock (schema)
-        {
-            EnsureFlattenedProperties(schema);
-            return (schema.ExtensionData![FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
-        }
+        var properties = new List<JsonSchemaProperty>();
+        CollectPropertiesFrom(schema, properties);
+        return properties;
     }
 
     /// <summary>

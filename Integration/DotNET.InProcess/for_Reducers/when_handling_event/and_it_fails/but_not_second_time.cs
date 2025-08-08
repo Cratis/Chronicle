@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
@@ -52,7 +53,7 @@ public class but_not_second_time(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain("RetryFailedPartition");
+    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain(nameof(RetryFailedPartition));
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ReducerState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);

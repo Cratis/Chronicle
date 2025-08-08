@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -18,11 +18,11 @@ public interface ISinkFactory
     SinkTypeId TypeId { get; }
 
     /// <summary>
-    /// Create a <see cref="ISink"/> for a specific <see cref="Model"/>.
+    /// Create a <see cref="ISink"/> for a specific <see cref="ReadModelDefinition"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sink is for.</param>
-    /// <param name="model"><see cref="Model"/> to create for.</param>
-    /// <returns>A new instance of <see cref="ISink"/> for the <see cref="Model"/>.</returns>
-    ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, Model model);
+    /// <param name="readModel"><see cref="ReadModelDefinition"/> to create for.</param>
+    /// <returns>A new instance of <see cref="ISink"/> for the <see cref="ReadModelDefinition"/>.</returns>
+    ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel);
 }

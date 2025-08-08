@@ -22,7 +22,7 @@ public class EventTypes : IEventTypes
     readonly IChronicleServicesAccessor _servicesAccessor;
 
     /// <summary>
-    /// /// Initializes a new instance of <see cref="EventTypes"/>.
+    /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
     /// <param name="eventStore">The <see cref="IEventStore"/> the event types belong to.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas from types.</param>
@@ -36,7 +36,6 @@ public class EventTypes : IEventTypes
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
-        eventStore.Connection.Lifecycle.OnConnected += Register;
     }
 
     /// <inheritdoc/>

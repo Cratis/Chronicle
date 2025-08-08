@@ -24,7 +24,7 @@ public class ReducerWithoutDelay : IReducerFor<SomeReadModel>
         using var cts = new CancellationTokenSource(timeout.Value);
         while (HandledEvents < count && !cts.IsCancellationRequested)
         {
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(50, cts.Token);
         }
     }
 }

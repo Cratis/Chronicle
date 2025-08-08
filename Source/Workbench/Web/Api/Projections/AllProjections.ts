@@ -14,12 +14,12 @@ const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/projec
 class AllProjectionsSortBy {
     private _id: SortingActionsForQuery<Projection[]>;
     private _isActive: SortingActionsForQuery<Projection[]>;
-    private _modelName: SortingActionsForQuery<Projection[]>;
+    private _readModelName: SortingActionsForQuery<Projection[]>;
 
     constructor(readonly query: AllProjections) {
         this._id = new SortingActionsForQuery<Projection[]>('id', query);
         this._isActive = new SortingActionsForQuery<Projection[]>('isActive', query);
-        this._modelName = new SortingActionsForQuery<Projection[]>('modelName', query);
+        this._readModelName = new SortingActionsForQuery<Projection[]>('readModelName', query);
     }
 
     get id(): SortingActionsForQuery<Projection[]> {
@@ -28,15 +28,15 @@ class AllProjectionsSortBy {
     get isActive(): SortingActionsForQuery<Projection[]> {
         return this._isActive;
     }
-    get modelName(): SortingActionsForQuery<Projection[]> {
-        return this._modelName;
+    get readModelName(): SortingActionsForQuery<Projection[]> {
+        return this._readModelName;
     }
 }
 
 class AllProjectionsSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
     private _isActive: SortingActions  = new SortingActions('isActive');
-    private _modelName: SortingActions  = new SortingActions('modelName');
+    private _readModelName: SortingActions  = new SortingActions('readModelName');
 
     get id(): SortingActions {
         return this._id;
@@ -44,8 +44,8 @@ class AllProjectionsSortByWithoutQuery {
     get isActive(): SortingActions {
         return this._isActive;
     }
-    get modelName(): SortingActions {
-        return this._modelName;
+    get readModelName(): SortingActions {
+        return this._readModelName;
     }
 }
 

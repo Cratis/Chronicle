@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 using NJsonSchema;
@@ -24,7 +24,8 @@ public class a_projection : Specification
             new ExpandoObject(),
             string.Empty,
             string.Empty,
-            new Model(string.Empty, new JsonSchema()),
+            new ReadModelDefinition(string.Empty, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema>()),
+            new JsonSchema(),
             true,
             []);
         keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);

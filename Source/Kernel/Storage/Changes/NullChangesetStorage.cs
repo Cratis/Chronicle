@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Changes;
 
@@ -15,11 +15,11 @@ namespace Cratis.Chronicle.Storage.Changes;
 public class NullChangesetStorage : IChangesetStorage
 {
     /// <inheritdoc/>
-    public Task BeginReplay(ModelName model) => Task.CompletedTask;
+    public Task BeginReplay(ReadModelName readModel) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndReplay(ModelName model) => Task.CompletedTask;
+    public Task EndReplay(ReadModelName readModel) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task Save(ModelName model, Key modelKey, EventType eventType, EventSequenceNumber sequenceNumber, CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> changeset) => Task.CompletedTask;
+    public Task Save(ReadModelName readModel, Key readModelKey, EventType eventType, EventSequenceNumber sequenceNumber, CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> changeset) => Task.CompletedTask;
 }

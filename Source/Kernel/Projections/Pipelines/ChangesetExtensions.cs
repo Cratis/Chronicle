@@ -25,7 +25,7 @@ public static class ChangesetExtensions
             new PropertiesChanged<ExpandoObject>(
                 changeset.CurrentState,
                 [
-                    new PropertyDifference(WellKnownProperties.ModelInstanceInitialized, null, isInitialized)
+                    new PropertyDifference(WellKnownProperties.ReadModelInstanceInitialized, null, isInitialized)
                 ]));
     }
 

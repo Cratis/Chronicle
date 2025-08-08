@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a system for handling projections.
 /// </summary>
-public interface IProjectionHandler
+public interface IProjectionHandler : IHaveReadModel
 {
     /// <summary>
     /// Gets the identifier of the projection.

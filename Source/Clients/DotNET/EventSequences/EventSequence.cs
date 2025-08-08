@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -32,6 +33,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
 /// <param name="unitOfWorkManager"><see cref="IUnitOfWorkManager"/> for working with the unit of work.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
+/// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -44,7 +46,8 @@ public class EventSequence(
     IConcurrencyScopeStrategies concurrencyScopeStrategies,
     ICausationManager causationManager,
     IUnitOfWorkManager unitOfWorkManager,
-    IIdentityProvider identityProvider) : IEventSequence
+    IIdentityProvider identityProvider,
+    JsonSerializerOptions jsonSerializerOptions) : IEventSequence
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
 
@@ -201,7 +204,7 @@ public class EventSequence(
             EventTypes = eventTypes?.ToContract() ?? []
         });
 
-        return result.Events.ToClient();
+        return result.Events.ToClient(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -224,7 +227,7 @@ public class EventSequence(
             EventTypes = eventTypes.ToContract()
         });
 
-        return result.Events.ToClient();
+        return result.Events.ToClient(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>

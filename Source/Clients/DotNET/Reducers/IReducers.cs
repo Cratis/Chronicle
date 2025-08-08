@@ -26,18 +26,18 @@ public interface IReducers
     /// Registers a <typeparamref name="TReducer"/> reducer with Chronicle.
     /// </summary>
     /// <typeparam name="TReducer">The reactor type.</typeparam>
-    /// <typeparam name="TModel">The model type the reducer is for.</typeparam>
+    /// <typeparam name="TReadModel">The model type the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    Task<IReducerHandler> Register<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>
-        where TModel : class;
+    Task<IReducerHandler> Register<TReducer, TReadModel>()
+        where TReducer : IReducerFor<TReadModel>
+        where TReadModel : class;
 
     /// <summary>
     /// Check if there is a reducer for a specific model type.
     /// </summary>
-    /// <param name="modelType">Model type to check for.</param>
+    /// <param name="readModelType">Model type to check for.</param>
     /// <returns>True if it has, false if not.</returns>
-    bool HasReducerFor(Type modelType);
+    bool HasReducerFor(Type readModelType);
 
     /// <summary>
     /// Get all registered handlers.
@@ -55,9 +55,9 @@ public interface IReducers
     /// <summary>
     /// Get a specific handler for a specific model type.
     /// </summary>
-    /// <param name="modelType">Model type to get for.</param>
+    /// <param name="readModelType">Model type to get for.</param>
     /// <returns><see cref="IReducerHandler"/> instance.</returns>
-    IReducerHandler GetHandlerForReadModelType(Type modelType);
+    IReducerHandler GetHandlerForReadModelType(Type readModelType);
 
     /// <summary>
     /// Gets a specific handler by its reducer type.

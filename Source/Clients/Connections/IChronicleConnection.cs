@@ -12,4 +12,10 @@ public interface IChronicleConnection : IDisposable
     /// Gets the <see cref="IConnectionLifecycle"/> service.
     /// </summary>
     IConnectionLifecycle Lifecycle { get; }
+
+    /// <summary>
+    /// Connects to the Chronicle Kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Connect();
 }

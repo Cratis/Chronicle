@@ -13,9 +13,16 @@ public class with_subscriber_that_throws_exception_on_first_handle : given.a_sin
 
     void Establish()
     {
-        _appendedEvent = AppendedEvent.EmptyWithEventType(_eventType);
+        _appendedEvent = AppendedEvent.Empty();
         _eventSourceId = Guid.NewGuid();
-        _appendedEvent = _appendedEvent with { Context = EventContext.Empty with { EventSourceId = _eventSourceId } };
+        _appendedEvent = _appendedEvent with
+        {
+            Context = EventContext.Empty with
+            {
+                EventType = _eventType,
+                EventSourceId = _eventSourceId
+            }
+        };
 
         var callCount = 0;
         _observer
@@ -36,9 +43,6 @@ public class with_subscriber_that_throws_exception_on_first_handle : given.a_sin
     {
         await _queue.Enqueue([_appendedEvent]);
         await _queue.AwaitQueueDepletion();
-
-        // waiting for queue depletion does not guarantee that the event was actually handled
-        await Task.Delay(100);
     }
 
     [Fact] void should_call_handle_on_observer_twice() => _handledEventsPerPartition[_eventSourceId].Count.ShouldEqual(2);

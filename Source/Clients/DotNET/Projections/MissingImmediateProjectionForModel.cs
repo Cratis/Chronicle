@@ -9,6 +9,6 @@ namespace Cratis.Chronicle.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="MissingImmediateProjectionForModel"/>.
 /// </remarks>
-/// <param name="modelType">Type of model.</param>
-public class MissingImmediateProjectionForModel(Type modelType)
-    : Exception($"Missing projection definition for model of type '{modelType.FullName}'. Implement one by implementing the interface IImmediateProjectionFor<{modelType.FullName}>.");
+/// <param name="readModelType">Type of read model.</param>
+public class MissingImmediateProjectionForModel(Type readModelType)
+    : Exception($"Missing projection definition for model of type '{readModelType.FullName}'. Implement one by implementing the interface IImmediateProjectionFor<{readModelType.FullName}>.");

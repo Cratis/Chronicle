@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintsByBuilderProvider;
 
@@ -13,7 +14,6 @@ public class when_providing_two_builders : Specification
     IClientArtifactsProvider _clientArtifactsProvider;
     IServiceProvider _serviceProvider;
     IEventTypes _eventTypes;
-
     IConstraintDefinition _firstConstraintFirstDefinition;
     IConstraintDefinition _firstConstraintSecondDefinition;
     IConstraintDefinition _secondConstraintFirstDefinition;
@@ -59,7 +59,7 @@ public class when_providing_two_builders : Specification
 
         _eventTypes = Substitute.For<IEventTypes>();
 
-        _provider = new ConstraintsByBuilderProvider(_clientArtifactsProvider, _eventTypes, _serviceProvider);
+        _provider = new ConstraintsByBuilderProvider(_clientArtifactsProvider, _eventTypes, new DefaultNamingPolicy(), _serviceProvider);
     }
 
     void Because() => _result = _provider.Provide();

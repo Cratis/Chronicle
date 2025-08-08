@@ -15,6 +15,7 @@ public class when_round_tripping_event_context_conversion : Specification
     {
         var properties = new Dictionary<string, string> { { "key", "value" } };
         _original = new(
+            new("SomeEventType", 1),
             "SomeSourceType",
             "SomeSourceId",
             "SomeStreamType",
@@ -32,6 +33,7 @@ public class when_round_tripping_event_context_conversion : Specification
 
     void Because() => _result = _original.ToContract().ToClient();
 
+    [Fact] void should_preserve_event_type() => _result.EventType.ShouldEqual(_original.EventType);
     [Fact] void should_preserve_event_source_type() => _result.EventSourceType.ShouldEqual(_original.EventSourceType);
     [Fact] void should_preserve_event_source_id() => _result.EventSourceId.ShouldEqual(_original.EventSourceId);
     [Fact] void should_preserve_event_stream_type() => _result.EventStreamType.ShouldEqual(_original.EventStreamType);

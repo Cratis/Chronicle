@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Changes;
 
@@ -15,32 +15,32 @@ namespace Cratis.Chronicle.Storage.Changes;
 public interface IChangesetStorage
 {
     /// <summary>
-    /// Begin replay of a specific <see cref="ModelName"/>.
+    /// Begin replay of a specific <see cref="ReadModelName"/>.
     /// </summary>
-    /// <param name="model">The <see cref="ModelName"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task BeginReplay(ModelName model);
+    Task BeginReplay(ReadModelName readModel);
 
     /// <summary>
-    /// Begin replay of a specific <see cref="ModelName"/>.
+    /// Begin replay of a specific <see cref="ReadModelName"/>.
     /// </summary>
-    /// <param name="model">The <see cref="ModelName"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task EndReplay(ModelName model);
+    Task EndReplay(ReadModelName readModel);
 
     /// <summary>
     /// Save changesets associated with a specific <see cref="CorrelationId"/>.
     /// </summary>
-    /// <param name="model">The <see cref="ModelName"/>.</param>
-    /// <param name="modelKey">The <see cref="Key"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
+    /// <param name="readModelKey">The <see cref="Key"/>.</param>
     /// <param name="eventType">The <see cref="EventType"/> that was at the root.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/>.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> to save for.</param>
     /// <param name="changeset">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(
-        ModelName model,
-        Key modelKey,
+        ReadModelName readModel,
+        Key readModelKey,
         EventType eventType,
         EventSequenceNumber sequenceNumber,
         CorrelationId correlationId,

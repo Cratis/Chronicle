@@ -12,9 +12,8 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
-using Cratis.Models;
+using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -37,8 +36,7 @@ public class Reducers : IReducers
     readonly IReducerValidator _reducerValidator;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
-    readonly IModelNameResolver _modelNameResolver;
-    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
+    readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
@@ -57,8 +55,7 @@ public class Reducers : IReducers
     /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
-    /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -69,13 +66,11 @@ public class Reducers : IReducers
         IReducerValidator reducerValidator,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
-        IModelNameResolver modelNameResolver,
-        IJsonSchemaGenerator jsonSchemaGenerator,
+        INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
         IIdentityProvider identityProvider,
         ILogger<Reducers> logger)
     {
-        eventStore.Connection.Lifecycle.OnConnected += Register;
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
             _registered = false;
@@ -88,8 +83,7 @@ public class Reducers : IReducers
         _reducerValidator = reducerValidator;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
-        _modelNameResolver = modelNameResolver;
-        _jsonSchemaGenerator = jsonSchemaGenerator;
+        _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
         _identityProvider = identityProvider;
         _logger = logger;
@@ -143,12 +137,12 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task<IReducerHandler> Register<TReducer, TModel>()
-        where TReducer : IReducerFor<TModel>
-        where TModel : class
+    public Task<IReducerHandler> Register<TReducer, TReadModel>()
+        where TReducer : IReducerFor<TReadModel>
+        where TReadModel : class
     {
         var reducerType = typeof(TReducer);
-        var modelType = typeof(TModel);
+        var modelType = typeof(TReadModel);
         var handler = CreateHandlerFor(reducerType, modelType);
         RegisterReducer(handler);
         _handlersByType.Add(reducerType, handler);
@@ -187,10 +181,10 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetHandlerForReadModelType(Type modelType) => _handlersByModelType[modelType];
+    public IReducerHandler GetHandlerForReadModelType(Type readModelType) => _handlersByModelType[readModelType];
 
     /// <inheritdoc/>
-    public bool HasReducerFor(Type modelType) => _handlersByModelType.ContainsKey(modelType);
+    public bool HasReducerFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReducer>()
@@ -234,7 +228,7 @@ public class Reducers : IReducers
         });
     }
 
-    ReducerHandler CreateHandlerFor(Type reducerType, Type modelType)
+    ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
         var handler = new ReducerHandler(
             _eventStore,
@@ -243,15 +237,16 @@ public class Reducers : IReducers
             new ReducerInvoker(
                 _eventTypes,
                 reducerType,
-                modelType),
+                readModelType,
+                _namingPolicy.GetReadModelName(readModelType)),
             _eventSerializer,
-            ShouldReducerBeActive(reducerType, modelType));
+            ShouldReducerBeActive(reducerType, readModelType));
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
             _handlersByType.Remove(reducerType);
-            _handlersByModelType.Remove(modelType);
+            _handlersByModelType.Remove(readModelType);
             register?.Dispose();
         });
 
@@ -274,11 +269,7 @@ public class Reducers : IReducers
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
-                Model = new Contracts.Models.ModelDefinition
-                {
-                    Name = _modelNameResolver.GetNameFor(handler.ReadModelType),
-                    Schema = _jsonSchemaGenerator.Generate(handler.ReadModelType).ToJson()
-                },
+                ReadModel = handler.ReadModelName,
                 Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
@@ -313,11 +304,9 @@ public class Reducers : IReducers
 
         var appendedEvents = operation.Events.Select(@event =>
         {
-            var metadata = @event.Metadata.ToClient();
             var context = @event.Context.ToClient();
             var contentAsExpando = JsonSerializer.Deserialize<ExpandoObject>(@event.Content)!;
             return new AppendedEvent(
-                metadata,
                 context,
                 contentAsExpando);
         }).ToList();
@@ -332,9 +321,9 @@ public class Reducers : IReducers
             lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
             if (reduceResult.IsSuccess)
             {
-                modelState = reduceResult.ModelState is null ?
+                modelState = reduceResult.ReadModelState is null ?
                     null :
-                    JsonSerializer.Serialize(reduceResult.ModelState, _jsonSerializerOptions);
+                    JsonSerializer.Serialize(reduceResult.ReadModelState, _jsonSerializerOptions);
             }
             else
             {
@@ -354,7 +343,7 @@ public class Reducers : IReducers
         var result = new ReducerResult
         {
             Partition = operation.Partition,
-            ModelState = modelState,
+            ReadModelState = modelState,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,
             ExceptionMessages = exceptionMessages.ToList(),

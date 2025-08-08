@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -26,10 +27,12 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
+    JsonSerializerOptions jsonSerializerOptions,
     ILogger<Reactors> logger) : IReactors
 {
     /// <inheritdoc/>
@@ -113,7 +116,7 @@ internal sealed class Reactors(
                     (partition, events, tcs) =>
                     {
                         reactorResultTcs[partition] = tcs;
-                        var eventsToObserve = events.Select(_ => _.ToContract()).ToArray();
+                        var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
                         observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
                     });
 

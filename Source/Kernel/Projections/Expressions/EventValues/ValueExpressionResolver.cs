@@ -8,7 +8,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 
 /// <summary>
-/// Represents a <see cref="IModelPropertyExpressionResolver"/> for resolving value to a constant.
+/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for resolving value to a constant.
 /// </summary>
 public partial class ValueExpressionResolver : IEventValueProviderExpressionResolver
 {

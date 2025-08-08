@@ -21,11 +21,11 @@ public class when_getting_target_type_for_enum_type : given.a_json_schema_genera
 
     void Establish()
     {
-        _schema = generator.Generate(typeof(TypeWithEnum));
+        _schema = _generator.Generate(typeof(TypeWithEnum));
         _property = _schema.ActualProperties.Values.First();
     }
 
-    void Because() => _type = _property.GetTargetTypeForJsonSchemaProperty(type_formats);
+    void Because() => _type = _property.GetTargetTypeForJsonSchemaProperty(_typeFormats);
 
     [Fact] void should_be_integer() => _type.ShouldEqual(typeof(int));
 }

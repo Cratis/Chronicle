@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Grains.Projections;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Services.Projections;
 
@@ -16,11 +15,12 @@ internal static class ProjectionResultConverters
     /// Convert to contract representation.
     /// </summary>
     /// <param name="result"><see cref="ProjectionResult"/> to convert from.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>Converted <see cref="Contracts.Projections.ProjectionResult"/>.</returns>
-    public static Contracts.Projections.ProjectionResult ToContract(this ProjectionResult result) =>
+    public static Contracts.Projections.ProjectionResult ToContract(this ProjectionResult result, JsonSerializerOptions jsonSerializerOptions) =>
         new()
         {
-            Model = JsonSerializer.Serialize(result.Model, Globals.JsonSerializerOptions),
+            ReadModel = JsonSerializer.Serialize(result.ReadModel, jsonSerializerOptions),
             AffectedProperties = result.AffectedProperties.Select(_ => _.ToString()).ToList(),
             ProjectedEventsCount = result.ProjectedEventsCount,
             LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber.Value

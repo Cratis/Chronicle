@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -41,6 +42,9 @@ public class ReducerHandler(
 
     /// <inheritdoc/>
     public Type ReadModelType => invoker.ReadModelType;
+
+    /// <inheritdoc/>
+    public ReadModelName ReadModelName => invoker.ReadModelName;
 
     /// <inheritdoc/>
     public bool IsActive { get; } = isActive;

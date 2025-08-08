@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Serialization;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -23,6 +24,7 @@ public class when_providing : Specification
     JsonSchema _secondEventWithFirstConstraintSchema;
     JsonSchema _firstEventWithSecondConstraintSchema;
     JsonSchema _secondEventWithSecondConstraintSchema;
+    INamingPolicy _namingPolicy;
 
     void Establish()
     {
@@ -57,7 +59,8 @@ public class when_providing : Specification
             typeof(SecondEventWithSecondConstraint)
         ]);
 
-        _provider = new UniqueConstraintProvider(_clientArtifactsProvider, _eventTypes);
+        _namingPolicy = new DefaultNamingPolicy();
+        _provider = new UniqueConstraintProvider(_clientArtifactsProvider, _eventTypes, _namingPolicy);
     }
 
     void Because() => _result = _provider.Provide();

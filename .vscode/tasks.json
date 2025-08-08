@@ -21,7 +21,29 @@
             "problemMatcher": "$msCompile",
             "runOptions": {
                 "reevaluateOnRerun": false
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
             }
+        },
+        {
+            "label": "kill-testhost",
+            "command": "pkill",
+            "args": [
+                "-f",
+                "testhost"
+            ],
+            "type": "process"
+        },
+        {
+            "label": "restart",
+            "command": "restart.sh",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}/Source/Kernel/Server"
+            },
+            "type": "process"
         }
     ],
     "inputs": [

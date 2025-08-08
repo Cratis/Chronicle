@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
 internal static partial class EventTypesStorageLogMessages
 {

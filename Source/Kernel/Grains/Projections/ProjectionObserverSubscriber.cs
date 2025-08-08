@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
@@ -91,7 +92,7 @@ public class ProjectionObserverSubscriber(
             {
                 changeset = await _pipeline.Handle(@event);
                 lastSuccessfullyObservedEvent = @event;
-                logger.SuccessfullyHandledEvent(@event.Metadata.SequenceNumber, _key);
+                logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }
 
             // Note: We don't want to send changesets if the projection is not active
@@ -102,14 +103,14 @@ public class ProjectionObserverSubscriber(
             }
 
             logger.SuccessfullyHandledAllEvents(_key);
-            return ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Metadata.SequenceNumber);
+            return ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber);
         }
         catch (Exception ex)
         {
-            logger.ErrorHandling(ex, _key, lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable);
+            logger.ErrorHandling(ex, _key, lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
             return new(
                 ObserverSubscriberState.Failed,
-                lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty);
         }
@@ -117,11 +118,12 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
         if (!projectionManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var projection))
         {
-            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State);
+            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
         }
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
-        _schema = await JsonSchema.FromJsonAsync(State.Model.Schema);
+        _schema = readModel.GetSchemaForLatestGeneration();
     }
 }

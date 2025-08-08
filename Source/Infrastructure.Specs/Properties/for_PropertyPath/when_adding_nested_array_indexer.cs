@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Strings;
-
 namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_nested_array_indexer : Specification
@@ -21,5 +19,5 @@ public class when_adding_nested_array_indexer : Specification
     void Because() => _result = _initial.AddArrayIndex(NestedAddition);
 
     [Fact] void should_have_last_segment_be_array_index() => _result.LastSegment.ShouldBeOfExactType<ArrayProperty>();
-    [Fact] void should_have_last_segment_have_camel_case_identifier() => _result.LastSegment.Value.ShouldEqual(ForthSegment.ToCamelCase());
+    [Fact] void should_have_last_segment_have_camel_case_identifier() => _result.LastSegment.Value.ShouldEqual(ForthSegment);
 }

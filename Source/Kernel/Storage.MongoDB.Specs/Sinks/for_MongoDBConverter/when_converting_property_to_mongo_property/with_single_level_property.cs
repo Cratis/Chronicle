@@ -11,6 +11,6 @@ public class with_single_level_property : given.a_mongodb_converter
 
     void Because() => _result = _converter.ToMongoDBProperty(new PropertyPath("SomeProperty"), ArrayIndexers.NoIndexers);
 
-    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("someProperty");
+    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("SomeProperty");
     [Fact] void should_not_have_any_array_filters() => _result.ArrayFilters.ShouldBeEmpty();
 }

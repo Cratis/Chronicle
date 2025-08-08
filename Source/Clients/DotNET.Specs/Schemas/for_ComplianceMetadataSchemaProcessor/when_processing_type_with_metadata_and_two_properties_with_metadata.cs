@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Compliance;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Schemas.for_ComplianceMetadataSchemaProcessor;
 
@@ -51,7 +50,7 @@ public class when_processing_type_with_metadata_and_two_properties_with_metadata
     ComplianceSchemaMetadata[] GetMetadata() => ((IEnumerable<ComplianceSchemaMetadata>)_context.Schema.ExtensionData[ComplianceJsonSchemaExtensions.ComplianceKey]).ToArray();
     ComplianceSchemaMetadata[] GetMetadataForProperty(string property)
     {
-        var propertySchema = _context.Schema.Properties.Single(_ => _.Key == property.ToCamelCase()).Value;
+        var propertySchema = _context.Schema.Properties.Single(_ => _.Key == property).Value;
         return ((IEnumerable<ComplianceSchemaMetadata>)propertySchema.ExtensionData[ComplianceJsonSchemaExtensions.ComplianceKey]).ToArray();
     }
 }

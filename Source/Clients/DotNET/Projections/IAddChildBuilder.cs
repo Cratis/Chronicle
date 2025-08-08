@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a builder for building an add child operation, typically used in to a from expression.
 /// </summary>
-/// <typeparam name="TChildModel">Child model type.</typeparam>
+/// <typeparam name="TChildModel">Child read model type.</typeparam>
 /// <typeparam name="TEvent">Type of event.</typeparam>
 public interface IAddChildBuilder<TChildModel, TEvent>
 {
@@ -30,7 +30,7 @@ public interface IAddChildBuilder<TChildModel, TEvent>
     IAddChildBuilder<TChildModel, TEvent> UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor);
 
     /// <summary>
-    /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+    /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent read model to
     /// work with.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
@@ -39,7 +39,7 @@ public interface IAddChildBuilder<TChildModel, TEvent>
     IAddChildBuilder<TChildModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
     /// <summary>
-    /// Define what composite key based on properties on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+    /// Define what composite key based on properties on the event represents the parent key. This is typically used in child relationships to identify the parent read model to
     /// work with.
     /// </summary>
     /// <typeparam name="TKeyType">Type of key.</typeparam>
@@ -48,7 +48,7 @@ public interface IAddChildBuilder<TChildModel, TEvent>
     IAddChildBuilder<TChildModel, TEvent> UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
 
     /// <summary>
-    /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent model to
+    /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent read model to
     /// work with.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>

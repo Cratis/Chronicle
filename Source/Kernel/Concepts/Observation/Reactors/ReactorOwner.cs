@@ -11,7 +11,7 @@ public enum ReactorOwner
     /// <summary>
     /// The reactor has no specific owner.
     /// </summary>
-    None = 0,
+    Unspecified = 0,
 
     /// <summary>
     /// The reactor is owned by a client.

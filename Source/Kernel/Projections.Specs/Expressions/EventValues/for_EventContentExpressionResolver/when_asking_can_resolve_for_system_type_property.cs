@@ -10,7 +10,7 @@ public class when_asking_can_resolve_for_system_type_property : Specification
 
     void Establish() => _resolvers = new EventContentExpressionResolver();
 
-    void Because() => _result = _resolvers.CanResolve("$someProperty");
+    void Because() => _result = _resolvers.CanResolve("$SomeProperty");
 
     [Fact] void should_not_be_able_to_resolve() => _result.ShouldBeFalse();
 }

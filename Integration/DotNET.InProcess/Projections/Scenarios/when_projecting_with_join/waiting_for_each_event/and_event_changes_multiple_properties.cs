@@ -25,7 +25,7 @@ public class and_event_changes_multiple_properties(context context) : Given<cont
             WaitForEachEvent = true;
             UserId = Guid.Parse("3c760aaf-2119-4336-8721-3f4c97e86a1b");
             EventSourceId = UserId.ToString();
-            ModelId = UserId.ToString();
+            ReadModelId = UserId.ToString();
             GroupId = "462ec4f6-fd9e-4549-92b9-00b769636468";
 
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new GroupCreated(GroupName)));

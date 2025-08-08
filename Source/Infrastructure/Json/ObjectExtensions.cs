@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Json;
+
 namespace Cratis.Chronicle.Json;
 
 /// <summary>
@@ -14,13 +14,12 @@ public static class ObjectExtensions
     /// Gets the object as <typeparamref name="TResult"/>, deserializing json if necessary.
     /// </summary>
     /// <param name="item">The object.</param>
-    /// <param name="jsonSerializerOptions">The optional <see cref="JsonSerializerOptions"/>.</param>
+    /// <param name="jsonSerializerOptions">The  <see cref="JsonSerializerOptions"/>.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <returns>The result.</returns>
-    public static TResult? DeserializeIfNecessary<TResult>(this object item, JsonSerializerOptions? jsonSerializerOptions = null)
+    public static TResult? DeserializeIfNecessary<TResult>(this object item, JsonSerializerOptions jsonSerializerOptions)
         where TResult : class
     {
-        jsonSerializerOptions ??= Globals.JsonSerializerOptions;
         switch (item)
         {
             case null:

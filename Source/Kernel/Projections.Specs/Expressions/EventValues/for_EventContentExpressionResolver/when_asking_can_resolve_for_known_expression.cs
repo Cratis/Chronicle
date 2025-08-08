@@ -10,7 +10,7 @@ public class when_asking_can_resolve_for_known_expression : Specification
 
     void Establish() => _resolvers = new EventContentExpressionResolver();
 
-    void Because() => _result = _resolvers.CanResolve("someProperty");
+    void Because() => _result = _resolvers.CanResolve("SomeProperty");
 
     [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

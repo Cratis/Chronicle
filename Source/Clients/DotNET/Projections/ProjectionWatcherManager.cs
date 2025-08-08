@@ -15,17 +15,17 @@ public class ProjectionWatcherManager(IProjectionWatcherFactory projectionWatche
     readonly ConcurrentDictionary<Type, IProjectionWatcher> _watchers = [];
 
     /// <inheritdoc/>
-    public IProjectionWatcher<TModel> GetWatcher<TModel>()
+    public IProjectionWatcher<TReadModel> GetWatcher<TReadModel>()
     {
-        if (!_watchers.TryGetValue(typeof(TModel), out var watcher))
+        if (!_watchers.TryGetValue(typeof(TReadModel), out var watcher))
         {
-            watcher = _watchers[typeof(TModel)] = projectionWatcherFactory.Create<TModel>(() => _watchers.TryRemove(typeof(TModel), out _));
+            watcher = _watchers[typeof(TReadModel)] = projectionWatcherFactory.Create<TReadModel>(() => _watchers.TryRemove(typeof(TReadModel), out _));
             if (eventStore.Connection.Lifecycle.IsConnected)
             {
                 watcher.Start();
             }
         }
 
-        return (watcher as IProjectionWatcher<TModel>)!;
+        return (watcher as IProjectionWatcher<TReadModel>)!;
     }
 }

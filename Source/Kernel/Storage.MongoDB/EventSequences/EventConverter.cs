@@ -46,8 +46,8 @@ public class EventConverter(
         var releasedContentAsExpandoObject = expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
 
         return new AppendedEvent(
-            new(@event.SequenceNumber, eventType),
             new(
+                eventType,
                 @event.EventSourceType,
                 @event.EventSourceId,
                 @event.EventStreamType,

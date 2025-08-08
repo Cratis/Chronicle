@@ -346,12 +346,12 @@ public partial class PropertyPath
         var match = ArrayIndexRegex!.Match(segment);
         if (match.Success)
         {
-            return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
+            return new ArrayProperty(match.Groups["property"].Value);
         }
         if (segment == ThisAccessorValue)
         {
             return new ThisAccessor();
         }
-        return new PropertyName(segment.ToCamelCase());
+        return new PropertyName(segment);
     }
 }
