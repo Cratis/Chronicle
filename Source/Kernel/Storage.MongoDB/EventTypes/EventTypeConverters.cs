@@ -10,9 +10,9 @@ using NJsonSchema;
 namespace Cratis.Events.MongoDB.EventTypes;
 
 /// <summary>
-/// Extension methods for working with <see cref="EventTypeSchema"/>.
+/// Converter methods for working with <see cref="EventTypeSchema"/> converting to and from MongoDB representations.
 /// </summary>
-public static class EventSchemaExtensions
+public static class EventTypeConverters
 {
     /// <summary>
     /// Convert to a <see cref="EventType">MongoDB</see> representation.
@@ -36,7 +36,7 @@ public static class EventSchemaExtensions
     /// </summary>
     /// <param name="schema"><see cref="EventType"/> to convert from.</param>
     /// <returns>Converted <see cref="EventTypeSchema"/>.</returns>
-    public static EventTypeSchema ToEventSchema(this EventType schema)
+    public static EventTypeSchema ToKernel(this EventType schema)
     {
         var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value.ToJson()).GetAwaiter().GetResult();
         result.EnsureComplianceMetadata();

@@ -81,7 +81,7 @@ public class EventTypesStorage(
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
-        return schemas.Select(_ => _.ToEventSchema());
+        return schemas.Select(_ => _.ToKernel());
     }
 
     /// <inheritdoc/>
@@ -91,7 +91,7 @@ public class EventTypesStorage(
         var filter = GetFilterForSpecificEventType(eventType.Id);
         using var result = await collection.FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        return schemas.Select(_ => _.ToEventSchema());
+        return schemas.Select(_ => _.ToKernel());
     }
 
     /// <inheritdoc/>
@@ -101,7 +101,7 @@ public class EventTypesStorage(
         var generationAsString = generation.ToString();
         if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToEventSchema();
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToKernel();
         }
 
         var filter = GetFilterForSpecificEventType(type);
@@ -116,7 +116,7 @@ public class EventTypesStorage(
                 generation);
         }
 
-        return schemas[0].ToEventSchema();
+        return schemas[0].ToKernel();
     }
 
     /// <inheritdoc/>
