@@ -7,7 +7,7 @@ using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
 
-namespace Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
 /// <summary>
 /// Converter methods for working with <see cref="EventTypeSchema"/> converting to and from MongoDB representations.

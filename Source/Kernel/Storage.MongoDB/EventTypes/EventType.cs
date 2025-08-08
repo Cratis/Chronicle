@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using MongoDB.Bson;
 
-namespace Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
 /// <summary>
 /// Represents the <see cref="EventTypeSchema"/> for MongoDB storage purpose.

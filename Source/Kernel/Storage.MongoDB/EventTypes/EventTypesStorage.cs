@@ -6,13 +6,12 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypesStorage"/>.
@@ -40,7 +39,7 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Register(Chronicle.Concepts.Events.EventType type, JsonSchema schema)
+    public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
@@ -85,7 +84,7 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Chronicle.Concepts.Events.EventType eventType)
+    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)
     {
         var collection = GetCollection();
         var filter = GetFilterForSpecificEventType(eventType.Id);
