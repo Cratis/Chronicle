@@ -47,7 +47,7 @@ internal class ChronicleConnection(
     /// <inheritdoc/>
     Task IChronicleConnection.Connect()
     {
-        lifecycle.Connected();
+        ConnectIfNotConnected();
         return Task.CompletedTask;
     }
 
@@ -67,13 +67,13 @@ internal class ChronicleConnection(
 
     void Connect()
     {
+        lifecycle.Connected();
         _connectionService = new Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Services.Clients.ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
-        lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
