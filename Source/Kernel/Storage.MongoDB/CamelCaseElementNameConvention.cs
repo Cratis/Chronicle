@@ -19,7 +19,7 @@ public class CamelCaseElementNameConvention(Func<Type, bool> predicate) : IMembe
     /// <inheritdoc/>
     public void Apply(BsonMemberMap memberMap)
     {
-        if (!predicate(memberMap.MemberType))
+        if (memberMap.MemberType.DeclaringType is not null && !predicate(memberMap.MemberType.DeclaringType))
         {
             return;
         }
