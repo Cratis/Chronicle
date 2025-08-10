@@ -81,17 +81,17 @@ public static class WellKnownCollectionNames
     /// <summary>
     /// The collection that holds reducer definitions.
     /// </summary>
-    public const string ReactorDefinitions = "reactor-definitions";
+    public const string ReactorDefinitions = "reactors";
 
     /// <summary>
     /// The collection that holds reducer definitions.
     /// </summary>
-    public const string ReducerDefinitions = "reducer-definitions";
+    public const string ReducerDefinitions = "reducers";
 
     /// <summary>
     /// The collection that holds projection definitions.
     /// </summary>
-    public const string ProjectionDefinitions = "projection-definitions";
+    public const string ProjectionDefinitions = "projections";
 
     /// <summary>
     /// The collection that holds the definitions of constraints.
@@ -111,5 +111,5 @@ public static class WellKnownCollectionNames
     /// <summary>
     /// The collection that holds read model definitions.
     /// </summary>
-    public const string ReadModelDefinitions = "read-model-definitions";
+    public const string ReadModelDefinitions = "read-model";
 }
