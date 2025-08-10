@@ -11,10 +11,17 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 public class ConventionPacks : ICanProvideMongoDBConventionPacks
 {
+    static readonly string[] _namespaces =
+    [
+        "Cratis.Chronicle.Storage",
+        "Cratis.Chronicle.Concepts",
+        "Cratis.Chronicle.Events"
+    ];
+
     /// <inheritdoc/>
     public IEnumerable<MongoDBConventionPackDefinition> Provide()
     {
-        var predicate = new Func<Type, bool>(type => type.Namespace?.StartsWith("Cratis.Chronicle.Storage.MongoDB") == true);
+        var predicate = new Func<Type, bool>(type => _namespaces.Any(n => type.Namespace?.StartsWith(n) == true));
         var conventionPack = new ConventionPack
         {
             new CamelCaseElementNameConvention(predicate)
