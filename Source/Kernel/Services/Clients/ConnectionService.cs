@@ -23,12 +23,12 @@ internal sealed class ConnectionService(
         ConnectRequest request,
         CallContext context = default)
     {
-        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         var subject = new Subject<ConnectionKeepAlive>();
 
         _ = Task.Run(
             async () =>
             {
+                var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
                 await connectedClients.OnClientConnected(
                     request.ConnectionId,
                     request.ClientVersion,
