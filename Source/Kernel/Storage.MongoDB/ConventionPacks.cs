@@ -14,11 +14,12 @@ public class ConventionPacks : ICanProvideMongoDBConventionPacks
     /// <inheritdoc/>
     public IEnumerable<MongoDBConventionPackDefinition> Provide()
     {
+        var predicate = new Func<Type, bool>(type => type.Namespace?.StartsWith("Cratis.Chronicle.Storage.MongoDB") == true);
         var conventionPack = new ConventionPack
         {
-            new CamelCaseElementNameConvention()
+            new CamelCaseElementNameConvention(predicate)
         };
-        ConventionRegistry.Register("ConditionalCamelCase", conventionPack, type => type.Namespace?.StartsWith("Cratis.Chronicle") == true);
+        ConventionRegistry.Register("CamelCase", conventionPack, predicate);
         return [new("CamelCase", conventionPack)];
     }
 }

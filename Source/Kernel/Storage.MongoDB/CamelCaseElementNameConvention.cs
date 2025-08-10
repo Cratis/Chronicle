@@ -10,11 +10,19 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <summary>
 /// Represents a convention that applies camel case naming to BSON element names for members in a specific namespace.
 /// </summary>
-public class CamelCaseElementNameConvention : IMemberMapConvention
+/// <param name="predicate">A function to determine if the convention should be applied to a given type.</param>
+public class CamelCaseElementNameConvention(Func<Type, bool> predicate) : IMemberMapConvention
 {
     /// <inheritdoc/>
     public string Name => "CamelCase";
 
     /// <inheritdoc/>
-    public void Apply(BsonMemberMap memberMap) => memberMap.SetElementName(memberMap.MemberName.ToCamelCase());
+    public void Apply(BsonMemberMap memberMap)
+    {
+        if (!predicate(memberMap.MemberType))
+        {
+            return;
+        }
+        memberMap.SetElementName(memberMap.MemberName.ToCamelCase());
+    }
 }
