@@ -131,9 +131,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
             Options.LoggerFactory);
-
-        await _connection.Connect();
         _eventStores[key] = eventStore;
+        await _connection.Connect();
         return eventStore;
     }
 
