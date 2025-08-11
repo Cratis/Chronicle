@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <param name="Id">The unique identifier of the observer.</param>
 /// <param name="EventSequenceId">The event sequence the observer is observing.</param>
 /// <param name="Type">The type of observer.</param>
+/// <param name="Owner">The owner of the observer.</param>
 /// <param name="EventTypes">The types of events the observer is observing.</param>
 /// <param name="NextEventSequenceNumber">The next event sequence number the observer will observe.</param>
 /// <param name="LastHandledEventSequenceNumber">The event sequence number the observer last handled.</param>
@@ -20,6 +21,7 @@ public record ObserverInformation(
     string Id,
     string EventSequenceId,
     ObserverType Type,
+    ObserverOwner Owner,
     IEnumerable<EventType> EventTypes,
     ulong NextEventSequenceNumber,
     ulong LastHandledEventSequenceNumber,

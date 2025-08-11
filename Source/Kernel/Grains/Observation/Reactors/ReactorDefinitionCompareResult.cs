@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 
-namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
+namespace Cratis.Chronicle.Grains.Observation.Reactors;
 
 /// <summary>
 /// Represents the result of comparing two <see cref="ReactorDefinition">reactor definitions</see>.

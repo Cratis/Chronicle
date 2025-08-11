@@ -15,6 +15,7 @@ class GetObserversSortBy {
     private _id: SortingActionsForQuery<ObserverInformation[]>;
     private _eventSequenceId: SortingActionsForQuery<ObserverInformation[]>;
     private _type: SortingActionsForQuery<ObserverInformation[]>;
+    private _owner: SortingActionsForQuery<ObserverInformation[]>;
     private _eventTypes: SortingActionsForQuery<ObserverInformation[]>;
     private _nextEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
     private _lastHandledEventSequenceNumber: SortingActionsForQuery<ObserverInformation[]>;
@@ -25,6 +26,7 @@ class GetObserversSortBy {
         this._id = new SortingActionsForQuery<ObserverInformation[]>('id', query);
         this._eventSequenceId = new SortingActionsForQuery<ObserverInformation[]>('eventSequenceId', query);
         this._type = new SortingActionsForQuery<ObserverInformation[]>('type', query);
+        this._owner = new SortingActionsForQuery<ObserverInformation[]>('owner', query);
         this._eventTypes = new SortingActionsForQuery<ObserverInformation[]>('eventTypes', query);
         this._nextEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('nextEventSequenceNumber', query);
         this._lastHandledEventSequenceNumber = new SortingActionsForQuery<ObserverInformation[]>('lastHandledEventSequenceNumber', query);
@@ -40,6 +42,9 @@ class GetObserversSortBy {
     }
     get type(): SortingActionsForQuery<ObserverInformation[]> {
         return this._type;
+    }
+    get owner(): SortingActionsForQuery<ObserverInformation[]> {
+        return this._owner;
     }
     get eventTypes(): SortingActionsForQuery<ObserverInformation[]> {
         return this._eventTypes;
@@ -62,6 +67,7 @@ class GetObserversSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
     private _eventSequenceId: SortingActions  = new SortingActions('eventSequenceId');
     private _type: SortingActions  = new SortingActions('type');
+    private _owner: SortingActions  = new SortingActions('owner');
     private _eventTypes: SortingActions  = new SortingActions('eventTypes');
     private _nextEventSequenceNumber: SortingActions  = new SortingActions('nextEventSequenceNumber');
     private _lastHandledEventSequenceNumber: SortingActions  = new SortingActions('lastHandledEventSequenceNumber');
@@ -76,6 +82,9 @@ class GetObserversSortByWithoutQuery {
     }
     get type(): SortingActions {
         return this._type;
+    }
+    get owner(): SortingActions {
+        return this._owner;
     }
     get eventTypes(): SortingActions {
         return this._eventTypes;

@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="EventTypes">The event types the observer is observing.</param>
 /// <param name="EventSequenceId">The <see cref="EventSequenceId"/> for the sequence being observed.</param>
 /// <param name="Type">The type of observer.</param>
+/// <param name="Owner">The owner of the observer.</param>
 /// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
 /// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
 /// <param name="ReplayingPartitions">The individual partitions that are being replayed.</param>
@@ -26,6 +27,7 @@ public record ObserverState(
     IEnumerable<EventType> EventTypes,
     EventSequenceId EventSequenceId,
     ObserverType Type,
+    ObserverOwner Owner,
     EventSequenceNumber LastHandledEventSequenceNumber,
     ObserverRunningState RunningState,
     ISet<Key> ReplayingPartitions,
@@ -44,6 +46,7 @@ public record ObserverState(
               [],
               EventSequenceId.Unspecified,
               ObserverType.Unknown,
+              ObserverOwner.None,
               EventSequenceNumber.Unavailable,
               ObserverRunningState.Unknown,
               new HashSet<Key>(),

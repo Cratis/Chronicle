@@ -15,8 +15,10 @@ export class NamespaceSelectorViewModel {
         @inject('props') private readonly _props: INamespaceSelectorProps) {
 
         _namespaces.currentNamespace.subscribe(namespace => {
-            this.currentNamespace = namespace;
-            this._props.onNamespaceSelected(namespace);
+            if (namespace) {
+                this.currentNamespace = namespace;
+                this._props.onNamespaceSelected(namespace);
+            }
         });
 
         _namespaces.namespaces.subscribe(namespaces => {

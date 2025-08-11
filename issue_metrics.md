@@ -2,18 +2,21 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 127 days, 5:50:55 | 3 days, 22:09:24 | 251 days, 1:34:12 |
-| Time to close | 271 days, 23:23:25 | 123 days, 17:56:37 | 822 days, 14:53:36 |
+| Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
+| Time to close | 273 days, 14:14:47 | 124 days, 8:40:41 | 825 days, 13:01:45 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 278 |
-| Number of items closed | 564 |
-| Total number of items created | 842 |
+| Number of items that remain open | 280 |
+| Number of items closed | 565 |
+| Total number of items created | 845 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Improve serialization when Appending events in the MongoDB Storage | https://github.com/Cratis/Chronicle/issues/1967 | None | [einari](https://github.com/einari) | None | None | None |
+| Add authorization on the Kernel side | https://github.com/Cratis/Chronicle/issues/1965 | None | [einari](https://github.com/einari) | None | None | None |
+| Add authentication & TLS for server and client | https://github.com/Cratis/Chronicle/issues/1964 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add generate test events in workbench. Leveraging LLM | https://github.com/Cratis/Chronicle/issues/1960 | None | [einari](https://github.com/einari) | None | None | None |
 | Support generational Projections with references to correct generation of ReadModel | https://github.com/Cratis/Chronicle/issues/1959 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Make event type storage generational within same document stored | https://github.com/Cratis/Chronicle/issues/1957 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
@@ -174,7 +177,7 @@
 | Add support for constraints scoped to a stream | https://github.com/Cratis/Chronicle/issues/1449 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for "closing the books" type of book keeping | https://github.com/Cratis/Chronicle/issues/1448 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for creating mementos from an aggregate root | https://github.com/Cratis/Chronicle/issues/1447 | None | [einari](https://github.com/einari) | None | None | None |
-| Add support for completing a stream | https://github.com/Cratis/Chronicle/issues/1446 | None | [einari](https://github.com/einari) | None | None | None |
+| Add support for completing a stream | https://github.com/Cratis/Chronicle/issues/1446 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 308 days, 13:38:35 | None | None |
 | Add the concept of stream that goes along with all events | https://github.com/Cratis/Chronicle/issues/1445 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 47 days, 7:19:58 | None |
 | Invalid path for reactors in client (Reactions) | https://github.com/Cratis/Chronicle/issues/1443 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 37 days, 2:01:24 | None |
 | Make it possible for event handling methods to be private | https://github.com/Cratis/Chronicle/issues/1442 | None | [einari](https://github.com/einari) | None | 4 days, 7:05:23 | None |
@@ -339,12 +342,4 @@
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
 | Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/1018 | None | [einari](https://github.com/einari) | None | None | None |
-| Create guidance on setting up Docker Compose correctly when not using development image | https://github.com/Cratis/Chronicle/issues/1017 | None | [einari](https://github.com/einari) | None | None | None |
-| Support resilient transactions when appending events | https://github.com/Cratis/Chronicle/issues/1014 | None | [einari](https://github.com/einari) | None | None | None |
-| Import compensations through the workbench with a specific format and preview of compensations before applying them | https://github.com/Cratis/Chronicle/issues/1012 | None | [einari](https://github.com/einari) | None | None | None |
-| Import events in a specific format from the workbench | https://github.com/Cratis/Chronicle/issues/1011 | None | [einari](https://github.com/einari) | None | None | None |
-| Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
-| IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
-| Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | 616 days, 3:25:19 | None |
-| Projection fail with children and there are no instances of the events defined in root From definitions.
+| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/1018 | None | [einari](https://github.com/einari) | None | None | No

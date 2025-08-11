@@ -18,6 +18,7 @@ internal static class ReactorDefinitionConverters
     public static ReactorDefinition ToChronicle(this Contracts.Observation.Reactors.ReactorDefinition reactorDefinition) =>
         new(
             reactorDefinition.ReactorId,
+            ReactorOwner.Client,
             reactorDefinition.EventSequenceId,
             reactorDefinition.EventTypes.Select(_ => _.ToChronicle()));
 }
