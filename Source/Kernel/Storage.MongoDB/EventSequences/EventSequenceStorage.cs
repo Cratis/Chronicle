@@ -34,7 +34,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
 /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
 /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
-/// /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
+/// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
+/// <param name="closedStreamsStorage"><see cref=""/></param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -46,11 +47,15 @@ public class EventSequenceStorage(
     IEventConverter converter,
     IEventTypesStorage eventTypesStorage,
     IIdentityStorage identityStorage,
+    IClosedStreamsStorage closedStreamsStorage,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
+
+    /// <inheritdoc/>
+    public IClosedStreamsStorage ClosedStreams => closedStreamsStorage;
 
     /// <inheritdoc/>
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
