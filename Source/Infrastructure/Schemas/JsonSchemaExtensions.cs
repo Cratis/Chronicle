@@ -43,6 +43,25 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
+    /// Gets the likely key property name from the schema based on property naming conventions (camel vs pascal) of existing properties.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <returns>The likely key property name.</returns>
+    public static string GetLikelyKeyPropertyName(this JsonSchema schema)
+    {
+        var properties = schema.GetFlattenedProperties().Select(_ => _.Name).ToList();
+        if (properties.Count == 0)
+        {
+            return null!;
+        }
+
+        var camelCaseCount = properties.Count(name => char.IsLower(name[0]));
+        var pascalCaseCount = properties.Count(name => char.IsUpper(name[0]));
+
+        return camelCaseCount > pascalCaseCount ? "id" : "Id";
+    }
+
+    /// <summary>
     /// Gets the schema for a property within the schema hierarchy based on a <see cref="PropertyPath"/>.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
