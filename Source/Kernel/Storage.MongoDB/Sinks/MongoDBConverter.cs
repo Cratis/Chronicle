@@ -82,11 +82,11 @@ public class MongoDBConverter(
     public BsonValue ToBsonValue(Key key)
     {
         var schema = readModel.GetSchemaForLatestGeneration();
-        var idProperty = schema.GetKeyProperty();
+        var idPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
 
         var bsonValue = key.Value is ExpandoObject ?
-                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(idProperty.Name)) :
-                ToBsonValue(key.Value, idProperty.Name);
+                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(idPropertyName)) :
+                ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
         return bsonValue == BsonNull.Value ? new BsonString(key.Value.ToString()) : bsonValue;
