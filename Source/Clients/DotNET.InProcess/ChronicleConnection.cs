@@ -34,7 +34,7 @@ internal class ChronicleConnection(
     {
         get
         {
-            ConnectIfNotConnected();
+            ConnectIfNotConnected().GetAwaiter().GetResult();
             return _services!;
         }
     }
@@ -42,12 +42,12 @@ internal class ChronicleConnection(
     /// <inheritdoc/>
     public void Dispose()
     {
+        lifecycle.Disconnected().GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
     Task IChronicleConnection.Connect()
     {
-        ConnectIfNotConnected();
         return Task.CompletedTask;
     }
 
@@ -57,23 +57,23 @@ internal class ChronicleConnection(
     /// <param name="services">Services to set.</param>
     internal void SetServices(IServices services) => _services = services;
 
-    void ConnectIfNotConnected()
+    async Task ConnectIfNotConnected()
     {
         if (!lifecycle.IsConnected)
         {
-            Connect();
+            await Connect();
         }
     }
 
-    void Connect()
+    async Task Connect()
     {
-        lifecycle.Connected();
         _connectionService = new Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Services.Clients.ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
+        await lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)
