@@ -128,8 +128,9 @@ public class ProjectionFactory(
         ProjectionPath path,
         bool isChild)
     {
-        var hasIdProperty = rootReadModel.GetSchemaForLatestGeneration().GetFlattenedProperties().Any(_ => _.Name == "id");
-        var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
+        var schema = rootReadModel.GetSchemaForLatestGeneration();
+        var hasIdProperty = schema.HasKeyProperty();
+        var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath(schema.GetKeyProperty().Name) : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
         {
