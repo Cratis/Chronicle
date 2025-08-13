@@ -23,10 +23,6 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
         logger.ResolvingKey(context.Event.Context.SequenceNumber);
-        if (context.EventType == "UserRemovedFromGroup")
-        {
-            Console.WriteLine("Hello world");
-        }
         var keyResolver = projection.GetKeyResolverFor(context.Event.Context.EventType);
         var key = await keyResolver(eventSequenceStorage, context.Event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(projection, key);
