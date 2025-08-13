@@ -86,7 +86,11 @@ public class ConnectedClients(
     public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Exists(_ => _.ConnectionId == connectionId));
 
     /// <inheritdoc/>
-    public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(_clients.First(_ => _.ConnectionId == connectionId));
+    public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId)
+    {
+        var connectedClient = _clients.FirstOrDefault(_ => _.ConnectionId == connectionId) ?? throw new ClientIsNotConnected(connectionId);
+        return Task.FromResult(connectedClient);
+    }
 
     async Task ReviseConnectedClients(CancellationToken cancellationToken)
     {
