@@ -197,6 +197,7 @@ public class ProjectionFactory(
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
                 projection,
+                currentReadModelSchema,
                 fromDefinition,
                 isChild);
         }
@@ -235,6 +236,7 @@ public class ProjectionFactory(
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
                         projection,
+                        currentReadModelSchema,
                         fromDerivativesDefinition.From,
                         isChild);
                 }
@@ -290,6 +292,7 @@ public class ProjectionFactory(
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,
         Projection projection,
+        JsonSchema currentReadModelSchema,
         FromDefinition fromDefinition,
         bool hasParent)
     {
@@ -301,7 +304,8 @@ public class ProjectionFactory(
             : projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key)).ToArray();
 
         // Include join expressions that join on the id property
-        joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == "id")];
+        var keyPropertyName = currentReadModelSchema.HasKeyProperty() ? currentReadModelSchema.GetKeyProperty().Name : currentReadModelSchema.GetLikelyKeyPropertyName();
+        joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == keyPropertyName)];
 
         if (joinExpressions.Length == 0)
         {

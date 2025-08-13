@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
                 context.Changeset.SetInitialized(true);
             }
 
-            SetKeyForInitialState(initialState, context.Key);
+            SetKeyForInitialState(projection, initialState, context.Key);
         }
         else if (!HasBeenInitialized(initialState))
         {
@@ -72,11 +73,12 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     bool HasBeenInitialized(ExpandoObject initialState) =>
         ((IDictionary<string, object?>)initialState).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is bool initializedBool && initializedBool;
 
-    void SetKeyForInitialState(ExpandoObject initialState, Key key)
+    void SetKeyForInitialState(EngineProjection projection, ExpandoObject initialState, Key key)
     {
         // TODO: We should improve how we work with Keys and not just "magic strings" like id or _id (MongoDB):
         // https://github.com/Cratis/Chronicle/issues/1387
         // https://github.com/Cratis/Chronicle/issues/1630
-        ((IDictionary<string, object?>)initialState)["id"] = key.Value;
+        var keyPropertyName = projection.TargetReadModelSchema.HasKeyProperty() ? projection.TargetReadModelSchema.GetKeyProperty().Name : projection.TargetReadModelSchema.GetLikelyKeyPropertyName();
+        ((IDictionary<string, object?>)initialState)[keyPropertyName] = key.Value;
     }
 }
