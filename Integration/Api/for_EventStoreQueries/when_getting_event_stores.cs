@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Queries;
+using Cratis.Chronicle.Api.EventStores;
 using context = Cratis.Chronicle.Integration.Api.for_EventStoreQueries.when_getting_event_stores.context;
 
 namespace Cratis.Chronicle.Integration.Api.for_EventStoreQueries;
@@ -15,6 +16,7 @@ public class when_getting_event_stores(context context) : Given<context>(context
 
         async Task Because()
         {
+            await Client.ExecuteCommand("/api/event-stores/add", new AddEventStore("testing"));
             Result = await Client.ExecuteQuery<IEnumerable<string>>("/api/event-stores");
         }
     }
