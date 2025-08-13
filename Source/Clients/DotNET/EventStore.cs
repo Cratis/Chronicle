@@ -175,11 +175,7 @@ public class EventStore : IEventStore
 
         if (autoDiscoverAndRegister)
         {
-            Connection.Lifecycle.OnConnected += async () =>
-            {
-                await DiscoverAll();
-                await RegisterAll();
-            };
+            Connection.Lifecycle.OnConnected += RegisterAll;
         }
     }
 
