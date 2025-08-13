@@ -24,6 +24,14 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
+    /// Checks if the schema has a key property.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <returns>Whether there is a key property.</returns>
+    public static bool HasKeyProperty(this JsonSchema schema) =>
+        schema.Properties.ContainsKey("id") || schema.Properties.ContainsKey("Id");
+
+    /// <summary>
     /// Gets the key property from the schema.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
@@ -31,7 +39,7 @@ public static class JsonSchemaExtensions
     public static JsonSchemaProperty GetKeyProperty(this JsonSchema schema)
     {
         var idPropertyName = schema.Properties.ContainsKey("id") ? "id" : "Id";
-        return schema.GetFlattenedProperties().SingleOrDefault(_ => _.Name == idPropertyName)!;
+        return schema.Properties[idPropertyName];
     }
 
     /// <summary>
