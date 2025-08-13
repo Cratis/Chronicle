@@ -24,6 +24,17 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
+    /// Gets the key property from the schema.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <returns>The key <see cref="JsonSchemaProperty"/>.</returns>
+    public static JsonSchemaProperty GetKeyProperty(this JsonSchema schema)
+    {
+        var idPropertyName = schema.Properties.ContainsKey("id") ? "id" : "Id";
+        return schema.GetFlattenedProperties().SingleOrDefault(_ => _.Name == idPropertyName)!;
+    }
+
+    /// <summary>
     /// Gets the schema for a property within the schema hierarchy based on a <see cref="PropertyPath"/>.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
