@@ -32,6 +32,9 @@ public class a_routing_state : Specification
         _observer = Substitute.For<IObserver>();
         _eventSequence = Substitute.For<IEventSequence>();
         _observerKey = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+        _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
+        _definitionState.State = ObserverDefinition.Empty;
+
         _state = new Routing(
             _observerKey,
             _definitionState,

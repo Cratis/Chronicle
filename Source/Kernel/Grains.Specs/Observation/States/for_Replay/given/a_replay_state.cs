@@ -36,7 +36,7 @@ public class a_replay_state : Specification
 
         _observerDefinition = ObserverDefinition.Empty;
         _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
-        _definitionState.State.Returns(_observerDefinition);
+        _definitionState.State.Returns(c => _observerDefinition);
 
         _state = new Replay(
             _observerKey,
