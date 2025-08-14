@@ -19,7 +19,9 @@ public static class ObserverDefinitionConverters
         new()
         {
             Id = definition.Identifier,
-            EventTypes = definition.EventTypes.Select(et => et.ToString()).ToArray(),
+            EventTypes = definition.EventTypes.ToDictionary(
+                et => et.ToString(),
+                et => "$eventSourceId"),
             EventSequenceId = definition.EventSequenceId,
             Type = definition.Type,
             Owner = definition.Owner,
@@ -34,7 +36,7 @@ public static class ObserverDefinitionConverters
     public static Chronicle.Storage.Observation.ObserverDefinition ToKernel(this ObserverDefinition definition) =>
         new(
             definition.Id,
-            definition.EventTypes.Select(EventType.Parse).ToArray(),
+            definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)).ToArray(),
             definition.EventSequenceId,
             definition.Type,
             definition.Owner,

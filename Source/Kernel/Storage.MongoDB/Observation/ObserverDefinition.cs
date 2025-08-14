@@ -20,7 +20,7 @@ public class ObserverDefinition
     /// <summary>
     /// Gets or sets the collection of <see cref="EventType"/> the observer is interested in.
     /// </summary>
-    public IEnumerable<string> EventTypes { get; set; } = [];
+    public IDictionary<string, string> EventTypes { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the <see cref="EventSequenceId"/> the observer is associated with.

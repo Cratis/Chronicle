@@ -51,7 +51,7 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
     {
         var eventTypeIds = eventTypes.Select(_ => _.Id.ToString()).ToArray();
         var result = await _collection
-            .FindAsync(_ => _.EventTypes.Any(_ => eventTypeIds.Contains(_)));
+            .FindAsync(_ => _.EventTypes.Keys.Any(_ => eventTypeIds.Contains(_)));
         return result.ToList().ToKernel();
     }
 }
