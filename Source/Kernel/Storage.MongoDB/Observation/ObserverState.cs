@@ -24,6 +24,11 @@ public class ObserverState
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
+    /// Gets or sets the next event sequence number.
+    /// </summary>
+    public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.First;
+
+    /// <summary>
     /// Gets or sets the current running state of the observer.
     /// </summary>
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;
@@ -42,9 +47,4 @@ public class ObserverState
     /// Gets a value indicating whether the observer is currently replaying events.
     /// </summary>
     public bool IsReplaying { get; set; }
-
-    /// <summary>
-    /// Gets a value indicating whether the observer can be replayed.
-    /// </summary>
-    public bool IsReplayable { get; set; }
 }

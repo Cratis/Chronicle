@@ -18,6 +18,7 @@ public static class ObserverStateConverters
         {
             Id = state.Identifier,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
             RunningState = state.RunningState,
             ReplayingPartitions = state.ReplayingPartitions,
             CatchingUpPartitions = state.CatchingUpPartitions,
@@ -37,8 +38,10 @@ public static class ObserverStateConverters
             state.ReplayingPartitions.ToHashSet(),
             state.CatchingUpPartitions.ToHashSet(),
             [],
-            state.IsReplaying
-        );
+            state.IsReplaying)
+        {
+            NextEventSequenceNumber = state.NextEventSequenceNumber
+        };
 
     /// <summary>
     /// Converts a MongoDB representation of an observer state with failed partitions to its kernel representation.
@@ -53,8 +56,10 @@ public static class ObserverStateConverters
             state.ReplayingPartitions.ToHashSet(),
             state.CatchingUpPartitions.ToHashSet(),
             state.FailedPartitions,
-            state.IsReplaying
-        );
+            state.IsReplaying)
+        {
+            NextEventSequenceNumber = state.NextEventSequenceNumber
+        };
 
     /// <summary>
     /// Converts a collection of MongoDB representations of observer states to their kernel representations.
