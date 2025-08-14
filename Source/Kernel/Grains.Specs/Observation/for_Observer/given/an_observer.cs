@@ -66,7 +66,14 @@ public class an_observer : Specification
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
         _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
-        _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(typeof(ObserverDefinition).FullName);
+        _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));
+        _definitionStorage.State = new ObserverDefinition
+        {
+            Identifier = _observerId,
+            IsReplayable = true,
+        };
+        await _definitionStorage.WriteStateAsync();
+
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
 
