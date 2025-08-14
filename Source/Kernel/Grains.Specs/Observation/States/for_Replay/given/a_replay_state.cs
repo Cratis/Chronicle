@@ -21,7 +21,9 @@ public class a_replay_state : Specification
     protected IJobsManager _jobsManager;
     protected ObserverSubscription _subscription;
     protected ObserverState _storedState;
+    protected ObserverDefinition _observerDefinition;
     protected ObserverState _resultingStoredState;
+    protected IPersistentState<ObserverDefinition> _definitionState;
     protected Replay _state;
     protected ObserverId _observerId;
 
@@ -31,8 +33,14 @@ public class a_replay_state : Specification
         _observerId = Guid.NewGuid().ToString();
         _observerKey = new(_observerId, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         _jobsManager = Substitute.For<IJobsManager>();
+
+        _observerDefinition = ObserverDefinition.Empty;
+        _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
+        _definitionState.State.Returns(_observerDefinition);
+
         _state = new Replay(
             _observerKey,
+            _definitionState,
             _jobsManager,
             Substitute.For<ILogger<Replay>>());
         _state.SetStateMachine(_observer);

@@ -158,6 +158,7 @@ public partial class Observer(
 
         new Routing(
             _observerKey,
+            observerDefinition,
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 

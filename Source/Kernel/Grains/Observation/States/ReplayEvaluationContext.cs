@@ -12,16 +12,16 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// </summary>
 /// <param name="Id">The <see cref="ObserverId"/> for the observer to evaluate.</param>
 /// <param name="Key">The <see cref="ObserverKey"/> for the observer to evaluate.</param>
-/// <param name="State">The <see cref="ObserverState"/> to evaluate.</param>
 /// <param name="Definition">The <see cref="ObserverDefinition"/> to evaluate.</param>
+/// <param name="State">The <see cref="ObserverState"/> to evaluate.</param>
 /// <param name="Subscription">The <see cref="ObserverSubscription"/> to evaluate against.</param>
 /// <param name="TailEventSequenceNumber">The tail <see cref="EventSequenceNumber"/> of the event sequence.</param>
 /// <param name="TailEventSequenceNumberForEventTypes">The tail <see cref="EventSequenceNumber"/> for the event types in the event sequence.</param>
 public record ReplayEvaluationContext(
     ObserverId Id,
     ObserverKey Key,
-    ObserverState State,
     ObserverDefinition Definition,
+    ObserverState State,
     ObserverSubscription Subscription,
     EventSequenceNumber TailEventSequenceNumber,
     EventSequenceNumber TailEventSequenceNumberForEventTypes);

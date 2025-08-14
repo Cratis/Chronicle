@@ -28,4 +28,12 @@ public record ObserverDefinition(
     /// Represents an empty observer definition.
     /// </summary>
     public static readonly ObserverDefinition Empty = new(ObserverId.Unspecified, [], EventSequenceId.Unspecified, ObserverType.Unknown, ObserverOwner.None, false);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverDefinition"/> class.
+    /// </summary>
+    public ObserverDefinition()
+        : this(ObserverId.Unspecified, [], EventSequenceId.Unspecified, ObserverType.Unknown, ObserverOwner.None, false)
+    {
+    }
 }

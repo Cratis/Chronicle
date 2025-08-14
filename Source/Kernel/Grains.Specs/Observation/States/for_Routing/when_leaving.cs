@@ -9,13 +9,6 @@ public class when_leaving : given.a_routing_state
 {
     async void Establish()
     {
-        _storedState = _storedState with
-        {
-            EventTypes =
-            [
-                new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventTypeGeneration.First)
-            ]
-        };
         _subscription = _subscription with
         {
             EventTypes =
@@ -33,7 +26,7 @@ public class when_leaving : given.a_routing_state
         _storedState = await _state.OnEnter(_storedState);
     }
 
-    async Task Because() => _resultingStoredState = await _state.OnLeave(_storedState);
+    async Task Because() => await _state.OnLeave(_storedState);
 
-    [Fact] void should_set_event_types_to_subscribers_event_types() => _resultingStoredState.EventTypes.ShouldEqual(_subscription.EventTypes);
+    [Fact] void should_set_event_types_to_subscribers_event_types() => _definitionState.State.EventTypes.ShouldEqual(_subscription.EventTypes);
 }

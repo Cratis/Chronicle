@@ -24,6 +24,11 @@ public class when_evaluating_and_observer_is_not_replayable : Specification
         var observerState = new ObserverState
         {
             Identifier = "test-observer",
+        };
+
+        var observerDefinition = new ObserverDefinition
+        {
+            Identifier = "test-observer",
             EventTypes = [EventType.Unknown],
             IsReplayable = false
         };
@@ -38,6 +43,7 @@ public class when_evaluating_and_observer_is_not_replayable : Specification
         _context = new ReplayEvaluationContext(
             "test-observer",
             new("test-observer", EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            observerDefinition,
             observerState,
             subscription,
             EventSequenceNumber.First,

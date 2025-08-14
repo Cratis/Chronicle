@@ -14,10 +14,12 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// Represents the subscribing state of an observer.
 /// </summary>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
+/// <param name="definitionState"><see cref="IPersistentState{ObserverDefinition}"/> for the observer's definition.</param>
 /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Routing(
     ObserverKey observerKey,
+    IPersistentState<ObserverDefinition> definitionState,
     IEventSequence eventSequence,
     ILogger<Routing> logger) : BaseObserverState
 {
@@ -35,6 +37,17 @@ public class Routing(
         typeof(Replay),
         typeof(Observing)
     }.ToImmutableList();
+
+    /// <inheritdoc/>
+    public override Task<ObserverState> OnLeave(ObserverState state)
+    {
+        definitionState.State = definitionState.State with
+        {
+            EventTypes = _subscription.EventTypes,
+        };
+
+        return base.OnLeave(state);
+    }
 
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)

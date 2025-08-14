@@ -85,8 +85,8 @@ public partial class Observer
         if (!await replayEvaluator.Evaluate(new(
                 State.Identifier,
                 _subscription.ObserverKey,
-                State,
                 Definition,
+                State,
                 _subscription,
                 tailSequenceNumber,
                 nextUnhandledEventSequenceNumber)))
