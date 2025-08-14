@@ -37,19 +37,6 @@ public class Routing(
     }.ToImmutableList();
 
     /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state)
-    {
-        if (_subscription.EventTypes.Any())
-        {
-            return Task.FromResult(state with
-            {
-                EventTypes = _subscription.EventTypes
-            });
-        }
-        return Task.FromResult(state);
-    }
-
-    /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         using var logScope = logger.BeginRoutingScope(state.Id, observerKey);

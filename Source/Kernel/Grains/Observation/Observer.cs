@@ -25,17 +25,17 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Observer"/> class.
-/// </remarks>
+/// <param name="observerDefinition"><see cref="IPersistentState{T}"/> for the observer definition.</param>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 public partial class Observer(
+    [PersistentState(nameof(ObserverDefinition), WellKnownGrainStorageProviders.ObserverDefinitions)]
+    IPersistentState<ObserverDefinition> observerDefinition,
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
@@ -55,6 +55,8 @@ public partial class Observer(
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
+
+    ObserverDefinition Definition => observerDefinition.State;
 
     FailedPartitions Failures => failures.State;
 
@@ -101,7 +103,7 @@ public partial class Observer(
     public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
+    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
 
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
@@ -118,13 +120,14 @@ public partial class Observer(
 
         logger.Subscribing();
 
-        State = State with
+        observerDefinition.State = observerDefinition.State with
         {
             Type = type,
             Owner = owner,
             EventTypes = eventTypes,
             IsReplayable = isReplayable
         };
+        await observerDefinition.WriteStateAsync();
 
         _subscription = new(
             _observerId,
@@ -157,6 +160,7 @@ public partial class Observer(
 
         new Replay(
             _observerKey,
+            Definition,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
 
@@ -165,6 +169,7 @@ public partial class Observer(
             _observerKey.EventStore,
             _observerKey.Namespace,
             _observerKey.EventSequenceId,
+            Definition,
             loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 

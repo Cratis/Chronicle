@@ -21,7 +21,7 @@ public partial class Observer
         var subscription = await GetSubscription();
         await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
-            new(_observerKey, State.Type, State.NextEventSequenceNumber, subscription.EventTypes),
+            new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
             requestPredicate: null,
             () =>
             {
@@ -110,7 +110,7 @@ public partial class Observer
         var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, State.Type, partition, nextEventSequenceNumber, State.EventTypes));
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
         await WriteStateAsync();
     }
 
