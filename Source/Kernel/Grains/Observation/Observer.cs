@@ -163,7 +163,7 @@ public partial class Observer(
 
         new Replay(
             _observerKey,
-            Definition,
+            observerDefinition,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
 
@@ -172,7 +172,7 @@ public partial class Observer(
             _observerKey.EventStore,
             _observerKey.Namespace,
             _observerKey.EventSequenceId,
-            Definition,
+            observerDefinition,
             loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 
