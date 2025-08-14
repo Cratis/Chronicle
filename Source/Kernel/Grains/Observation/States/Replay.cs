@@ -36,7 +36,7 @@ public class Replay(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = logger.BeginReplayScope(state.Id, observerKey);
+        using var scope = logger.BeginReplayScope(state.Identifier, observerKey);
         logger.Entering();
 
         var subscription = await Observer.GetSubscription();

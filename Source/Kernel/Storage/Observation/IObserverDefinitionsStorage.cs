@@ -49,6 +49,6 @@ public interface IObserverDefinitionsStorage
     /// Get all observers for specific event types.
     /// </summary>
     /// <param name="eventTypes">Collection of <see cref="EventType"/> to get for.</param>
-    /// <returns>Collection of <see cref="ObserverState"/> holding all information about the observers.</returns>
-    Task<IEnumerable<ObserverState>> GetForEventTypes(IEnumerable<EventType> eventTypes);
+    /// <returns>Collection of <see cref="ObserverDefinition"/> holding all information about the observers.</returns>
+    Task<IEnumerable<ObserverDefinition>> GetForEventTypes(IEnumerable<EventType> eventTypes);
 }

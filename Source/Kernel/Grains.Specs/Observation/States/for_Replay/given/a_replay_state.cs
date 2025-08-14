@@ -39,13 +39,13 @@ public class a_replay_state : Specification
 
         _storedState = new ObserverState
         {
-            Id = _observerId,
+            Identifier = _observerId,
             RunningState = ObserverRunningState.Unknown,
         };
 
         _subscription = new ObserverSubscription(
-            _storedState.Id,
-            new(_storedState.Id, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
+            _storedState.Identifier,
+            new(_storedState.Identifier, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log),
             [],
             typeof(object),
             SiloAddress.Zero,

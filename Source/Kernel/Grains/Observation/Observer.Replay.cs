@@ -83,7 +83,7 @@ public partial class Observer
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
         var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
         if (!await replayEvaluator.Evaluate(new(
-                State.Id,
+                State.Identifier,
                 _subscription.ObserverKey,
                 State,
                 Definition,

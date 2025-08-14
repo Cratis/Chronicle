@@ -47,13 +47,11 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
             options: new ReplaceOptions { IsUpsert = true });
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverState>> GetForEventTypes(IEnumerable<EventType> eventTypes)
+    public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>> GetForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        var eventTypeIds = eventTypes.Select(_ => _.Id).ToArray();
-        return await _collection
-            .Aggregate()
-            .Match(_ => _.EventTypes.Any(_ => eventTypeIds.Contains(_.Id)))
-            .JoinWithFailedPartitions()
-            .ToListAsync();
+        var eventTypeIds = eventTypes.Select(_ => _.Id.ToString()).ToArray();
+        var result = await _collection
+            .FindAsync(_ => _.EventTypes.Any(_ => eventTypeIds.Contains(_)));
+        return result.ToList().ToKernel();
     }
 }

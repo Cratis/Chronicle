@@ -10,12 +10,12 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <summary>
 /// Represents the definition of an observer.
 /// </summary>
-/// <param name="Identifier"><see cref="ObserverId"/> of the observer.</param>
-/// <param name="EventTypes">Collection of <see cref="EventType"/> the observer is interested in.</param>
-/// <param name="EventSequenceId"><see cref="EventSequenceId"/> the observer is associated with.</param>
-/// <param name="Type"><see cref="ObserverType"/> of the observer.</param>
-/// <param name="Owner"><see cref="ObserverOwner"/> of the observer.</param>
-/// <param name="IsReplayable">Whether the observer supports replay scenarios.</param>
+/// <param name="Identifier">The <see cref="ObserverId"/> representing the observer uniquely.</param>
+/// <param name="EventTypes">The list of <see cref="EventTypeId"/> representing the event types the observer is interested in.</param>
+/// <param name="EventSequenceId">The <see cref="EventSequenceId"/> representing the current event sequence the observer is on.</param>
+/// <param name="Type">The <see cref="ObserverType"/> representing the type of the observer.</param>
+/// <param name="Owner">The <see cref="ObserverOwner"/> representing the owner of the observer.</param>
+/// <param name="IsReplayable">A boolean indicating whether the observer is replayable.</param>
 public record ObserverDefinition(
     ObserverId Identifier,
     IEnumerable<EventType> EventTypes,

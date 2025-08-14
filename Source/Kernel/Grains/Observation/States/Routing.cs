@@ -39,7 +39,7 @@ public class Routing(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var logScope = logger.BeginRoutingScope(state.Id, observerKey);
+        using var logScope = logger.BeginRoutingScope(state.Identifier, observerKey);
         _subscription = await Observer.GetSubscription();
 
         logger.Entering();

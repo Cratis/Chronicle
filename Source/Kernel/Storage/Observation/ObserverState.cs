@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <summary>
 /// Represents the state used for an observer.
 /// </summary>
-/// <param name="Id">The <see cref="Id"/> representing the observer uniquely.</param>
+/// <param name="Identifier">The <see cref="Identifier"/> representing the observer uniquely.</param>
 /// <param name="LastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> of the last event the observer handled.</param>
 /// <param name="RunningState">The <see cref="ObserverRunningState"/> of the observer.</param>
 /// <param name="ReplayingPartitions">The individual partitions that are being replayed.</param>
@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="FailedPartitions">Collection of <see cref="FailedPartition"/>.</param>
 /// <param name="IsReplaying">Whether the observer is replaying.</param>
 public record ObserverState(
-    ObserverId Id,
+    ObserverId Identifier,
     EventSequenceNumber LastHandledEventSequenceNumber,
     ObserverRunningState RunningState,
     ISet<Key> ReplayingPartitions,

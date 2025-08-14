@@ -16,7 +16,7 @@ public partial class Observer
     public async Task CatchUp()
     {
         _isPreparingCatchup = true;
-        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         var subscription = await GetSubscription();
         await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
@@ -43,7 +43,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions)
     {
-        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
         logger.RegisteringCatchingUpPartitions();
         foreach (var partition in partitions)
         {

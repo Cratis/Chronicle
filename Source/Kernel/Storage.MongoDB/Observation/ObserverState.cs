@@ -11,18 +11,40 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// <summary>
 /// Represents the state of an observer.
 /// </summary>
-/// <param name="Id">The unique identifier of the observer.</param>
-/// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-/// <param name="RunningState">The current running state of the observer.</param>
-/// <param name="ReplayingPartitions">The set of partitions being replayed.</param>
-/// <param name="CatchingUpPartitions">The set of partitions being caught up.</param>
-/// <param name="IsReplaying">Indicates if the observer is currently replaying events.</param>
-/// <param name="IsReplayable">Indicates if the observer can be replayed.</param>
-public record ObserverState(
-    ObserverId Id,
-    EventSequenceNumber LastHandledEventSequenceNumber,
-    ObserverRunningState RunningState,
-    ISet<Key> ReplayingPartitions,
-    ISet<Key> CatchingUpPartitions,
-    bool IsReplaying,
-    bool IsReplayable);
+public class ObserverState
+{
+    /// <summary>
+    /// Gets or sets the unique identifier of the observer.
+    /// </summary>
+    public ObserverId Id { get; set; } = ObserverId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the last handled event sequence number.
+    /// </summary>
+    public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or sets the current running state of the observer.
+    /// </summary>
+    public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;
+
+    /// <summary>
+    /// Gets or sets the set of partitions being replayed.
+    /// </summary>
+    public IEnumerable<Key> ReplayingPartitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the set of partitions being caught up.
+    /// </summary>
+    public IEnumerable<Key> CatchingUpPartitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether the observer is currently replaying events.
+    /// </summary>
+    public bool IsReplaying { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the observer can be replayed.
+    /// </summary>
+    public bool IsReplayable { get; set; }
+}

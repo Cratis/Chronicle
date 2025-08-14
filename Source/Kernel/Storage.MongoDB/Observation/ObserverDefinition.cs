@@ -10,16 +10,35 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// <summary>
 /// Represents a MongoDB version of observer definition.
 /// </summary>
-/// <param name="Id">The <see cref="ObserverId"/> representing the observer uniquely.</param>
-/// <param name="EventTypes">The list of <see cref="EventTypeId"/> representing the event types the observer is interested in.</param>
-/// <param name="EventSequenceId">The <see cref="EventSequenceId"/> representing the current event sequence the observer is on.</param>
-/// <param name="Type">The <see cref="ObserverType"/> representing the type of the observer.</param>
-/// <param name="Owner">The <see cref="ObserverOwner"/> representing the owner of the observer.</param>
-/// <param name="IsReplayable">A boolean indicating whether the observer is replayable.</param>
-public record ObserverDefinition(
-    ObserverId Id,
-    IEnumerable<EventTypeId> EventTypes,
-    EventSequenceId EventSequenceId,
-    ObserverType Type,
-    ObserverOwner Owner,
-    bool IsReplayable);
+public class ObserverDefinition
+{
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverId"/> of the observer.
+    /// </summary>
+    public ObserverId Id { get; set; } = ObserverId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the collection of <see cref="EventType"/> the observer is interested in.
+    /// </summary>
+    public IEnumerable<string> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the <see cref="EventSequenceId"/> the observer is associated with.
+    /// </summary>
+    public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverType"/> of the observer.
+    /// </summary>
+    public ObserverType Type { get; set; } = ObserverType.Unknown;
+
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverOwner"/> of the observer.
+    /// </summary>
+    public ObserverOwner Owner { get; set; } = ObserverOwner.None;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the observer supports replay scenarios.
+    /// </summary>
+    public bool IsReplayable { get; set; }
+}

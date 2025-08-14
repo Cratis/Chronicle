@@ -23,7 +23,7 @@ public class when_evaluating_and_observer_is_not_replayable : Specification
 
         var observerState = new ObserverState
         {
-            Id = "test-observer",
+            Identifier = "test-observer",
             EventTypes = [EventType.Unknown],
             IsReplayable = false
         };

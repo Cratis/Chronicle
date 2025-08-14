@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Reactive;
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// Represents an implementation of <see cref="IObserverStateStorage"/> for MongoDB.
 /// </summary>
 /// <param name="namespaceDatabase"><see cref="IEventStoreNamespaceDatabase"/>.</param>
-public class ObserverStorage(IEventStoreNamespaceDatabase namespaceDatabase) : IObserverStateStorage
+public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase) : IObserverStateStorage
 {
     IMongoCollection<ObserverState> _collection => namespaceDatabase.GetObserverStateCollection();
 
@@ -22,33 +21,32 @@ public class ObserverStorage(IEventStoreNamespaceDatabase namespaceDatabase) : I
     public ISubject<IEnumerable<Chronicle.Storage.Observation.ObserverState>> ObserveAll()
     {
         var collectionSubject = _collection.Observe();
-        return new TransformingSubject<IEnumerable<ObserverState>, IEnumerable<ObserverInformation>>(
+        return new TransformingSubject<IEnumerable<ObserverState>, IEnumerable<Chronicle.Storage.Observation.ObserverState>>(
             collectionSubject,
-            observers => observers.Select(_ => ToObserverInformation(_)).ToArray());
+            observers => observers.ToKernel());
     }
 
     /// <inheritdoc/>
-    public Task<Chronicle.Storage.Observation.ObserverState> Get(ObserverId observerId) =>
-        _collection
+    public async Task<Chronicle.Storage.Observation.ObserverState> Get(ObserverId observerId) =>
+        (await _collection
             .Aggregate()
             .Match(_ => _.Id == observerId)
             .JoinWithFailedPartitions()
-            .FirstAsync();
+            .FirstAsync())
+            .ToKernel();
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverState>> GetAll()
     {
         var aggregation = _collection.Aggregate().JoinWithFailedPartitions();
         var cursor = await aggregation.ToCursorAsync();
-        return cursor.ToList();
+        return cursor.ToList().ToKernel();
     }
 
     /// <inheritdoc/>
-    public async Task Save(Chronicle.Storage.Observation.ObserverState state)
-    {
+    public async Task Save(Chronicle.Storage.Observation.ObserverState state) =>
         await _collection.ReplaceOneAsync(
-            os => os.Id == state.Id,
-            state!,
+            os => os.Id == state.Identifier,
+            state!.ToMongoDB(),
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
-    }
 }

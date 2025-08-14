@@ -49,7 +49,7 @@ public class Observing(
 
         logger.SubscribingToStream(state.NextEventSequenceNumber);
 
-        var key = new ObserverKey(state.Id, eventStore, @namespace, eventSequenceId);
+        var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
         _subscription = await appendedEventsQueues.Subscribe(key, definition.EventTypes);
 
         return state;

@@ -32,7 +32,7 @@ internal static class ObservingScopes
         EventSequenceId eventSequenceId) =>
         logger.BeginScope(new
         {
-            ObserverId = state.Id,
+            ObserverId = state.Identifier,
             EventStore = eventStore,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId
