@@ -40,9 +40,9 @@ public interface IEventStoreNamespaceStorage
     IJobStepStorage JobSteps { get; }
 
     /// <summary>
-    /// Gets the <see cref="IObserverStorage"/> for the event store namespace.
+    /// Gets the <see cref="IObserverStateStorage"/> for the event store namespace.
     /// </summary>
-    IObserverStorage Observers { get; }
+    IObserverStateStorage Observers { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
