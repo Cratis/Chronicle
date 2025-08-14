@@ -26,6 +26,11 @@ public record ObserverState(
     IEnumerable<FailedPartition> FailedPartitions,
     bool IsReplaying)
 {
+    /// <summary>
+    /// Represents an empty observer state.
+    /// </summary>
+    public static readonly ObserverState Empty = new();
+
     readonly EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>

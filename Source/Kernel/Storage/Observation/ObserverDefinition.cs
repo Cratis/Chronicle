@@ -22,4 +22,10 @@ public record ObserverDefinition(
     EventSequenceId EventSequenceId,
     ObserverType Type,
     ObserverOwner Owner,
-    bool IsReplayable);
+    bool IsReplayable)
+{
+    /// <summary>
+    /// Represents an empty observer definition.
+    /// </summary>
+    public static readonly ObserverDefinition Empty = new(ObserverId.Unspecified, [], EventSequenceId.Unspecified, ObserverType.Unknown, ObserverOwner.None, false);
+}
