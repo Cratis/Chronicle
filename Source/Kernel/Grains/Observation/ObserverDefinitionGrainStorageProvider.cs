@@ -25,6 +25,11 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage) : IGrainSt
 
         var observers = storage.GetEventStore(observerKey.EventStore).Observers;
         actualGrainState.State = await observers.Get(observerKey.ObserverId);
+        actualGrainState.State = actualGrainState.State with
+        {
+            Identifier = observerKey.ObserverId,
+            EventSequenceId = observerKey.EventSequenceId
+        };
     }
 
     /// <inheritdoc/>
