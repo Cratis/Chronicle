@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Keys;
 /// Initializes a new instance of the <see cref="ObserverKeyIndexes"/> class.
 /// </remarks>
 /// <param name="eventStoreDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
-/// <param name="observerStorage">Provider for <see cref="IObserverStorage"/>.</param>
+/// <param name="observerStorage">Provider for <see cref="IObserverStateStorage"/>.</param>
 public class ObserverKeyIndexes(
     IEventStoreNamespaceDatabase eventStoreDatabase,
-    IObserverStorage observerStorage) : IObserverKeyIndexes
+    IObserverStateStorage observerStorage) : IObserverKeyIndexes
 {
     /// <inheritdoc/>
     public async Task<IObserverKeyIndex> GetFor(ObserverKey observerKey)

@@ -121,7 +121,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     public IJobStepStorage JobSteps { get; }
 
     /// <inheritdoc/>
-    public IObserverStorage Observers { get; }
+    public IObserverStateStorage Observers { get; }
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; }
