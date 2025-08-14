@@ -32,8 +32,8 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Aggregate()
             .Match(_ => _.Id == observerId)
             .JoinWithFailedPartitions()
-            .FirstAsync())
-            .ToKernel();
+            .FirstOrDefaultAsync())?
+            .ToKernel() ?? Chronicle.Storage.Observation.ObserverState.Empty;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverState>> GetAll()

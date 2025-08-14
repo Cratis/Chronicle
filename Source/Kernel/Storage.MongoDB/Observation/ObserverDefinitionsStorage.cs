@@ -32,7 +32,7 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
     public async Task<Chronicle.Storage.Observation.ObserverDefinition> Get(ObserverId id)
     {
         using var result = await _collection.FindAsync(definition => definition.Id == id);
-        return result.Single().ToKernel();
+        return result.FirstOrDefault()?.ToKernel() ?? Chronicle.Storage.Observation.ObserverDefinition.Empty;
     }
 
     /// <inheritdoc/>
