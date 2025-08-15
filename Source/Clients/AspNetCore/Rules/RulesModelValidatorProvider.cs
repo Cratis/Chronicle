@@ -35,7 +35,6 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
     /// <inheritdoc/>
     public void CreateValidators(ModelValidatorProviderContext context)
     {
-        var es = ServiceProvider.GetRequiredService<IEventStore>();
         var rulesSystem = ServiceProvider.GetRequiredService<IRules>();
         if (rulesSystem.HasFor(context.ModelMetadata.ModelType))
         {
