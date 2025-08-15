@@ -14,9 +14,10 @@ public class when_getting_event_stores(context context) : Given<context>(context
     {
         public QueryResult<IEnumerable<string>> Result;
 
+        Task Establish() => Client.ExecuteCommand("/api/event-stores/add", new AddEventStore("testing"));
+
         async Task Because()
         {
-            await Client.ExecuteCommand("/api/event-stores/add", new AddEventStore("testing"));
             Result = await Client.ExecuteQuery<IEnumerable<string>>("/api/event-stores");
         }
     }
