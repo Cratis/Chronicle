@@ -243,7 +243,7 @@ jobs:
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [workbench, release]
 
     steps:
       - name: Checkout code
@@ -286,7 +286,7 @@ jobs:
   publish-docker-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [dotnet-arm64, dotnet-x64, workbench, release]
 
     steps:
       - name: Checkout code
