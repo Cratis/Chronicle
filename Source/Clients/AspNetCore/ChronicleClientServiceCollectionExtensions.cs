@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
+using Cratis.Chronicle.Rules;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +75,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reactors);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
+        services.AddScoped<IRules, Rules>();
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.NamingPolicy);
 
