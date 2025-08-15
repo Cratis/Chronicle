@@ -88,7 +88,7 @@ public class ConnectedClients(
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId)
     {
-        var connectedClient = _clients.FirstOrDefault(_ => _.ConnectionId == connectionId) ?? throw new ClientIsNotConnected(connectionId);
+        var connectedClient = _clients.Find(_ => _.ConnectionId == connectionId) ?? throw new ClientIsNotConnected(connectionId);
         return Task.FromResult(connectedClient);
     }
 
