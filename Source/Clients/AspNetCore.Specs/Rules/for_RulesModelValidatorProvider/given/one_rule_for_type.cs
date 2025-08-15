@@ -15,6 +15,7 @@ public class one_rule_for_type : Specification
     {
         _rules = Substitute.For<IRules>();
         _serviceProvider = Substitute.For<IServiceProvider>();
-        _provider = new(_rules, _serviceProvider);
+        _serviceProvider.GetService(typeof(IRules)).Returns(_rules);
+        _provider = new(_serviceProvider);
     }
 }
