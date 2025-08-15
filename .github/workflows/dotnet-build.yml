@@ -3,6 +3,7 @@ name: .NET Build & Integration
 env:
   DOTNET_VERSION: "9.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
+  CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
   workflow_dispatch:
@@ -42,8 +43,19 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true
+
+      - name: Publish Docker Image
+        run: |
+          docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
   dotnet-build-repack-clients:
     runs-on: ubuntu-latest
@@ -120,17 +132,12 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run integration tests for .Net 9
+        working-directory: ./Integration/DotNET.InProcess
         run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
 
   integration-api:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
-    strategy:
-      matrix:
-        namespace:
-          - 'Api.for_Endpoints'
-    env:
-      NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -147,5 +154,13 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run API integration tests for .Net 9
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+        working-directory: ./Integration/Api
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --framework net9.0

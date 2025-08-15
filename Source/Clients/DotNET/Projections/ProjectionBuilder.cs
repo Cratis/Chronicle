@@ -2,17 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Schemas;
-using Cratis.Models;
-using Cratis.Reflection;
-using Cratis.Strings;
-using Humanizer;
+using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Chronicle.Projections;
@@ -20,20 +15,17 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents a base projection builder.
 /// </summary>
-/// <typeparam name="TModel">Type of model to build for.</typeparam>
-/// <typeparam name="TBuilder">Type of actual builder.</typeparam>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ProjectionBuilder{TModel, TBuilder}"/> class.
-/// </remarks>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-/// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 /// <param name="autoMap">Whether to automatically map properties.</param>
-public class ProjectionBuilder<TModel, TBuilder>(
+/// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
+/// <typeparam name="TBuilder">Type of actual builder.</typeparam>
+public class ProjectionBuilder<TReadModel, TBuilder>(
+    INamingPolicy namingPolicy,
     IEventTypes eventTypes,
-    IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
-    bool autoMap) : IProjectionBuilder<TModel, TBuilder>
+    bool autoMap) : IProjectionBuilder<TReadModel, TBuilder>
     where TBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -48,10 +40,10 @@ public class ProjectionBuilder<TModel, TBuilder>(
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected bool _autoMap = autoMap;
-    protected string _modelName = typeof(TModel).HasAttribute<ModelNameAttribute>() ? typeof(TModel).GetCustomAttribute<ModelNameAttribute>()!.Name : typeof(TModel).Name.Pluralize().ToCamelCase();
+    protected string _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
 
     /// <inheritdoc/>
-    public TBuilder WithInitialValues(Func<TModel> initialValueProviderCallback)
+    public TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback)
     {
         var instance = initialValueProviderCallback();
         _initialValues = JsonObject.Create(JsonSerializer.SerializeToDocument(instance, jsonSerializerOptions).RootElement)!;
@@ -59,14 +51,14 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilder<TModel, TBuilder> AutoMap()
+    public IProjectionBuilder<TReadModel, TBuilder> AutoMap()
     {
         _autoMap = true;
         return this;
     }
 
     /// <inheritdoc/>
-    public TBuilder From<TEvent>(Action<IFromBuilder<TModel, TEvent>>? builderCallback = default)
+    public TBuilder From<TEvent>(Action<IFromBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -77,7 +69,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
 
         var eventTypesInProjection = type.GetEventTypes(eventTypes.AllClrTypes).Select(eventTypes.GetEventTypeFor).ToArray();
 
-        var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
+        var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
         if (_autoMap)
         {
@@ -103,14 +95,14 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>>? builderCallback = default)
+    public TBuilder Join<TEvent>(Action<IJoinBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
         if (!typeof(TEvent).IsEventType(eventTypes.AllClrTypes))
         {
             throw new TypeIsNotAnEventType(typeof(TEvent));
         }
 
-        var builder = new JoinBuilder<TModel, TEvent, TBuilder>(this);
+        var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
         if (_autoMap)
         {
@@ -124,9 +116,9 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder FromEvery(Action<IFromEveryBuilder<TModel>> builderCallback)
+    public TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback)
     {
-        var builder = new FromEveryBuilder<TModel>();
+        var builder = new FromEveryBuilder<TReadModel>();
         builderCallback(builder);
         var fromEveryDefinition = builder.Build();
         _fromEveryDefinition = new FromEveryDefinition
@@ -138,7 +130,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TModel, TEvent>>? builderCallback = default)
+    public TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -148,7 +140,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
         }
 
         var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithBuilder = new RemovedWithBuilder<TModel, TEvent>();
+        var removedWithBuilder = new RemovedWithBuilder<TReadModel, TEvent>();
         builderCallback?.Invoke(removedWithBuilder);
         _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
 
@@ -156,7 +148,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder RemovedWithJoin<TEvent>(Action<RemovedWithJoinBuilder<TModel, TEvent>>? builderCallback = default)
+    public TBuilder RemovedWithJoin<TEvent>(Action<RemovedWithJoinBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
 
@@ -166,7 +158,7 @@ public class ProjectionBuilder<TModel, TBuilder>(
         }
 
         var removedWithJoinEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TModel, TEvent>();
+        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TReadModel, TEvent>();
         builderCallback?.Invoke(removedWithJoinBuilder);
         _removedWithJoinDefinitions[removedWithJoinEvent] = removedWithJoinBuilder.Build();
 
@@ -174,9 +166,9 @@ public class ProjectionBuilder<TModel, TBuilder>(
     }
 
     /// <inheritdoc/>
-    public TBuilder Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
+    public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TModel, TChildModel>(eventTypes, schemaGenerator, jsonSerializerOptions, _autoMap);
+        var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return (this as TBuilder)!;

@@ -19,8 +19,7 @@ public class and_there_are_no_projections : given.all_dependencies
             _eventTypes,
             _projectionWatcherManager,
             _clientArtifacts,
-            _schemaGenerator,
-            _modelNameResolver,
+            _namingPolicy,
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);

@@ -5,68 +5,63 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
-using Cratis.Models;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// /// Represents an implementation of <see cref="IProjectionBuilderFor{TModel}"/>.
+/// Represents an implementation of <see cref="IProjectionBuilderFor{TReadModel}"/>.
 /// </summary>
-/// <typeparam name="TModel">Type of model.</typeparam>
-public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectionBuilderFor<TModel>>, IProjectionBuilderFor<TModel>
+/// <typeparam name="TReadModel">Type of read model.</typeparam>
+public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IProjectionBuilderFor<TReadModel>>, IProjectionBuilderFor<TReadModel>
 {
     readonly ProjectionId _identifier;
-    readonly IJsonSchemaGenerator _schemaGenerator;
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
     bool _isActive = true;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
+    /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TReadModel}"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier for the projection.</param>
-    /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
+    /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionBuilderFor(
         ProjectionId identifier,
-        IModelNameResolver modelNameResolver,
+        INamingPolicy namingPolicy,
         IEventTypes eventTypes,
-        IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(eventTypes, schemaGenerator, jsonSerializerOptions, false)
+        : base(namingPolicy, eventTypes, jsonSerializerOptions, false)
     {
         _identifier = identifier;
-        _schemaGenerator = schemaGenerator;
-        _modelName = modelNameResolver.GetNameFor(typeof(TModel));
+        _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> FromEventSequence(EventSequenceId eventSequenceId)
+    public IProjectionBuilderFor<TReadModel> FromEventSequence(EventSequenceId eventSequenceId)
     {
         _eventSequenceId = eventSequenceId;
         return this;
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> ModelName(string modelName)
+    public IProjectionBuilderFor<TReadModel> ReadModelName(string readModelName)
     {
-        _modelName = modelName;
+        _readModelName = readModelName;
         return this;
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> NotRewindable()
+    public IProjectionBuilderFor<TReadModel> NotRewindable()
     {
         _isRewindable = false;
         return this;
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> Passive()
+    public IProjectionBuilderFor<TReadModel> Passive()
     {
         _isActive = false;
         return this;
@@ -78,18 +73,12 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     /// <returns><see cref="ProjectionDefinition"/>.</returns>
     internal ProjectionDefinition Build()
     {
-        var modelType = typeof(TModel);
-        var modelSchema = _schemaGenerator.Generate(modelType);
-
+        var modelType = typeof(TReadModel);
         return new()
         {
             EventSequenceId = _eventSequenceId,
             Identifier = _identifier,
-            Model = new()
-            {
-                Name = _modelName,
-                Schema = modelSchema.ToJson()
-            },
+            ReadModel = _readModelName,
             IsActive = _isActive,
             IsRewindable = _isRewindable,
             InitialModelState = _initialValues.ToJsonString(),

@@ -32,15 +32,12 @@ public class and_there_are_two_projections : given.all_dependencies
         _serviceProvider.GetService(_firstProjection.GetType()).Returns(_firstProjection);
         _serviceProvider.GetService(_secondProjection.GetType()).Returns(_secondProjection);
 
-        _schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
-
         _projections = new Projections(
             _eventStore,
             _eventTypes,
             _projectionWatcherManager,
             _clientArtifacts,
-            _schemaGenerator,
-            _modelNameResolver,
+            _namingPolicy,
             _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);

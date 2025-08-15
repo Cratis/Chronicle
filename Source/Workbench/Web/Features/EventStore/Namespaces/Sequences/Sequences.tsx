@@ -37,8 +37,8 @@ export const Sequences = () => {
         eventSequenceId: 'event-log'
     };
 
-    const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.metadata.sequenceNumber);
-    const typePath = GetPathFor<AppendedEvent>(et => et.metadata.type.id);
+    const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.context.sequenceNumber);
+    const typePath = GetPathFor<AppendedEvent>(et => et.context.eventType.id);
     const eventSourceIdPath = GetPathFor<AppendedEvent>(et => et.context.eventSourceId);
     const occurredPath = GetPathFor<AppendedEvent>(et => et.context.occurred);
 
@@ -55,7 +55,7 @@ export const Sequences = () => {
 
     const handler = new PropertyPathResolverProxyHandler();
     const proxy = new Proxy({}, handler);
-    const accessor = (et: AppendedEvent) => et.metadata.type.id;
+    const accessor = (et: AppendedEvent) => et.context.eventType.id;
     accessor(proxy);
     console.log(handler.path);
 
@@ -80,7 +80,7 @@ export const Sequences = () => {
             emptyMessage={strings.eventStore.namespaces.sequences.empty}
             dataKey={sequenceNumberPath}
             defaultFilters={filters}
-            globalFilterFields={['metadata.type.id']}
+            globalFilterFields={['context.eventType.id']}
             detailsComponent={EventDetails}>
             <DataPage.Columns>
                 <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />

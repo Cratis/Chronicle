@@ -108,7 +108,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 }
 
                 AppendedEvent parentEvent;
-                if (parentEventTypeIds.Any(id => id == @event.Metadata.Type.Id))
+                if (parentEventTypeIds.Any(id => id == @event.Context.EventType.Id))
                 {
                     parentEvent = @event;
                 }
@@ -119,7 +119,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 }
 
                 var eventType =
-                    parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Metadata.Type.Id);
+                    parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
                 var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
                 var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, parentEvent);
                 parentKey = resolvedParentKey;

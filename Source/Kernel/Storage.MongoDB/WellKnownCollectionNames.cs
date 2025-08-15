@@ -44,9 +44,9 @@ public static class WellKnownCollectionNames
     public const string ConnectedClients = "connected-clients";
 
     /// <summary>
-    /// The collection that holds schemas.
+    /// The collection that holds event types.
     /// </summary>
-    public const string Schemas = "schemas";
+    public const string EventTypes = "event-types";
 
     /// <summary>
     /// The collection that holds failed partitions.
@@ -81,17 +81,17 @@ public static class WellKnownCollectionNames
     /// <summary>
     /// The collection that holds reducer definitions.
     /// </summary>
-    public const string ReactorDefinitions = "reactor-definitions";
+    public const string ReactorDefinitions = "reactors";
 
     /// <summary>
     /// The collection that holds reducer definitions.
     /// </summary>
-    public const string ReducerDefinitions = "reducer-definitions";
+    public const string ReducerDefinitions = "reducers";
 
     /// <summary>
     /// The collection that holds projection definitions.
     /// </summary>
-    public const string ProjectionDefinitions = "projection-definitions";
+    public const string ProjectionDefinitions = "projections";
 
     /// <summary>
     /// The collection that holds the definitions of constraints.
@@ -104,7 +104,12 @@ public static class WellKnownCollectionNames
     public const string ReplayContexts = "replay-contexts";
 
     /// <summary>
-    /// The collection that holds replayed models.
+    /// The collection that holds replayed read models.
     /// </summary>
-    public const string ReplayedModels = "replayed-models";
+    public const string ReplayedReadModels = "replayed-read-models";
+
+    /// <summary>
+    /// The collection that holds read model definitions.
+    /// </summary>
+    public const string ReadModelDefinitions = "read-model";
 }

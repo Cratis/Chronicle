@@ -10,7 +10,7 @@ public class when_asking_can_resolve_for_event_context_expression : Specificatio
 
     void Establish() => _resolver = new();
 
-    void Because() => _result = _resolver.CanResolve("$eventContext(something)");
+    void Because() => _result = _resolver.CanResolve("$eventContext(Something)");
 
     [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

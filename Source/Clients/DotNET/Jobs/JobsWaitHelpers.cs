@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.InProcess.Integration;
 /// </remarks>>
 public static class JobsWaitHelpers
 {
+    const int DefaultDelay = 50;
+
     /// <summary>
     /// Waits for there to be jobs in the system.
     /// </summary>
@@ -27,7 +29,7 @@ public static class JobsWaitHelpers
         while (!currentJobs.Any() && !cts.IsCancellationRequested)
         {
             currentJobs = await jobs.GetJobs();
-            await Task.Delay(20);
+            await Task.Delay(DefaultDelay);
         }
 
         return currentJobs;
@@ -49,7 +51,7 @@ public static class JobsWaitHelpers
         while (currentJobs.Any() && !currentJobs.All(_ => includeStatuses.Contains(_.Status)) && !cts.IsCancellationRequested)
         {
             currentJobs = await jobs.GetJobs();
-            await Task.Delay(20);
+            await Task.Delay(DefaultDelay);
         }
         return currentJobs;
     }
@@ -92,7 +94,7 @@ public static class JobsWaitHelpers
             {
                 return;
             }
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -115,7 +117,7 @@ public static class JobsWaitHelpers
             {
                 return currentJob;
             }
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 }

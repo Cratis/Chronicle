@@ -21,17 +21,17 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
     {
         if (!context.Changeset.HasChanges)
         {
-            logger.NotSaving(context.Event.Metadata.SequenceNumber);
+            logger.NotSaving(context.Event.Context.SequenceNumber);
             return context;
         }
-        logger.SavingResult(context.Event.Metadata.SequenceNumber);
+        logger.SavingResult(context.Event.Context.SequenceNumber);
 
         // TODO: Return the number of affected records and pass this along to the changeset storage
-        await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Metadata.SequenceNumber);
+        await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
         await changesetStorage.Save(
-            projection.Model.Name,
+            projection.ReadModel.Name,
             context.Key,
-            context.Event.Metadata.Type,
+            context.Event.Context.EventType,
             context.Event.Context.SequenceNumber,
             context.Event.Context.CorrelationId,
             context.Changeset);

@@ -29,6 +29,7 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
 
         async Task Because()
         {
+            await EventStore.ReadModels.Register<SomeReadModel>();
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await reducer.WaitTillSubscribed();
             await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);

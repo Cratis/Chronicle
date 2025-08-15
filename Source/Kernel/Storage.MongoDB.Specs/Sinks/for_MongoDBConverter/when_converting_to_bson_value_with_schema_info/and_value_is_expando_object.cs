@@ -19,11 +19,11 @@ public class and_value_is_expando_object : given.a_mongodb_converter
     {
         _value = new ExpandoObject();
         ((dynamic)_value).SomeProperty = "Some value";
-        _schemaProperty = _model.Schema.GetSchemaPropertyForPropertyPath(nameof(given.ReadModel.SomeProperty));
+        _schemaProperty = _model.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(nameof(given.ReadModel.SomeProperty));
 
         _bsonDocument = new()
         {
-            { "someProperty", "Some value" }
+            { "SomeProperty", "Some value" }
         };
         _expandoObjectConverter.ToBsonDocument(_value, _schemaProperty).Returns(_bsonDocument);
     }

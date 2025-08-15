@@ -6,23 +6,23 @@ using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Concepts.Observation.Reactors.Json;
-using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
-using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
+using Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
+using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reactors;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Events.MongoDB.EventTypes;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,9 +37,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
 /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
-/// <param name="projectionSerializer"><see cref="IJsonProjectionDefinitionSerializer"/> for handling serialization of projection definitions.</param>
-/// <param name="reactorSerializer"><see cref="IJsonReactorDefinitionSerializer"/> for handling serialization of reactor definitions.</param>
-/// <param name="reducerSerializer"><see cref="IJsonReducerDefinitionSerializer"/> for handling serialization of reducer definitions.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -50,9 +47,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
-    IJsonProjectionDefinitionSerializer projectionSerializer,
-    IJsonReactorDefinitionSerializer reactorSerializer,
-    IJsonReducerDefinitionSerializer reducerSerializer,
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
@@ -73,16 +67,22 @@ public class EventStoreStorage(
     public IEventTypesStorage EventTypes { get; } = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
 
     /// <inheritdoc/>
-    public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase, reactorSerializer);
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase, reducerSerializer);
+    public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase, projectionSerializer);
+    public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModelDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
@@ -98,6 +98,7 @@ public class EventStoreStorage(
                 @namespace,
                 eventStoreDatabase.GetNamespaceDatabase(@namespace),
                 EventTypes,
+                Observers,
                 complianceManager,
                 expandoObjectConverter,
                 jsonSerializerOptions,

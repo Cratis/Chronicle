@@ -22,5 +22,5 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
     [Fact] void should_pass_the_event() => _reducer.ReceivedEvents.First().ShouldEqual(_event);
     [Fact] void should_pass_no_read_model() => _reducer.ReceivedReadModels.First().ShouldBeNull();
     [Fact] void should_pass_the_event_context() => _reducer.ReceivedEventContexts.First().ShouldEqual(_eventContext);
-    [Fact] void should_return_the_read_model() => _reduceResult.ModelState.ShouldEqual(_reducer.ReturnedReadModel);
+    [Fact] void should_return_the_read_model() => _reduceResult.ReadModelState.ShouldEqual(_reducer.ReturnedReadModel);
 }

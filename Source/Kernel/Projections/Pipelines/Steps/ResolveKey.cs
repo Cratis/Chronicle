@@ -22,8 +22,8 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        logger.ResolvingKey(context.Event.Metadata.SequenceNumber);
-        var keyResolver = projection.GetKeyResolverFor(context.Event.Metadata.Type);
+        logger.ResolvingKey(context.Event.Context.SequenceNumber);
+        var keyResolver = projection.GetKeyResolverFor(context.Event.Context.EventType);
         var key = await keyResolver(eventSequenceStorage, context.Event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(projection, key);
         return context with { Key = key };
@@ -35,7 +35,7 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ITypeFormats
             ArrayIndexers = new ArrayIndexers(
                 key.ArrayIndexers.All.Select(arrayIndexer =>
                 {
-                    var targetType = projection.Model.Schema.GetTargetTypeForPropertyPath(arrayIndexer.ArrayProperty + arrayIndexer.IdentifierProperty, typeFormats);
+                    var targetType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(arrayIndexer.ArrayProperty + arrayIndexer.IdentifierProperty, typeFormats);
                     if (targetType is null)
                     {
                         return arrayIndexer;

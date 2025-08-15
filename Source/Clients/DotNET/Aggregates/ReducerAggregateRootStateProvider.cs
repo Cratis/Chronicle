@@ -30,8 +30,8 @@ public class ReducerAggregateRootStateProvider<TState>(
             aggregateRootContext.EventStreamType,
             aggregateRootContext.EventStreamId);
         var result = await reducer.OnNext(events, null, serviceProvider);
-        aggregateRootContext.TailEventSequenceNumber = events[^1].Metadata.SequenceNumber;
-        return (TState?)result.ModelState;
+        aggregateRootContext.TailEventSequenceNumber = events[^1].Context.SequenceNumber;
+        return (TState?)result.ReadModelState;
     }
 
     /// <inheritdoc/>
@@ -39,7 +39,7 @@ public class ReducerAggregateRootStateProvider<TState>(
     {
         var eventsWithContext = events.Select(_ => new EventAndContext(_, EventContext.EmptyWithEventSourceId(aggregateRootContext.EventSourceId)));
         var result = await reducer.Invoker.Invoke(serviceProvider, eventsWithContext, initialState);
-        return (TState?)result.ModelState;
+        return (TState?)result.ReadModelState;
     }
 
     /// <inheritdoc/>

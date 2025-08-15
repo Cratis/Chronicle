@@ -14,7 +14,7 @@ public class when_replaying_partition_and_observer_is_not_replayable : given.an_
     async Task Establish()
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
-        _stateStorage.State = _stateStorage.State with { IsReplayable = false };
+        _definitionStorage.State = _definitionStorage.State with { IsReplayable = false };
         _partition = "some-partition";
         _storageStats.ResetCounts();
     }

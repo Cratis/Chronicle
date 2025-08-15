@@ -77,7 +77,6 @@ public class Reactors : IReactors
         _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
-        eventStore.Connection.Lifecycle.OnConnected += Register;
     }
 
     /// <inheritdoc/>
@@ -257,22 +256,21 @@ public class Reactors : IReactors
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         foreach (var @event in events.Events)
         {
-            _logger.EventReceived(@event.Metadata.Type.Id, handler.Id);
+            _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
 
             try
             {
                 var context = @event.Context.ToClient();
-                var metadata = @event.Metadata.ToClient();
 
-                var eventType = _eventTypes.GetClrTypeFor(metadata.Type.Id);
+                var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
-                await handler.OnNext(metadata, context, content, serviceProviderScope.ServiceProvider);
-                lastSuccessfullyObservedEvent = @event.Metadata.SequenceNumber;
+                await handler.OnNext(context, content, serviceProviderScope.ServiceProvider);
+                lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)
             {
-                _logger.ErrorWhileHandlingEvent(ex, @event.Metadata.Type.Id, handler.Id);
+                _logger.ErrorWhileHandlingEvent(ex, @event.Context.EventType.Id, handler.Id);
                 exceptionMessages = ex.GetAllMessages();
                 exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 state = ObservationState.Failed;

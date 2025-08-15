@@ -11,6 +11,6 @@ public class a_unique_constraint_builder_with_owner : all_dependencies
     void Establish()
     {
         _owner = typeof(Owner);
-        _constraintBuilder = new UniqueConstraintBuilder(_eventTypes, _owner);
+        _constraintBuilder = new UniqueConstraintBuilder(_eventTypes, _namingPolicy, _owner);
     }
 }

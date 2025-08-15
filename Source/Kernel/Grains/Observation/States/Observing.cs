@@ -18,12 +18,14 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// <param name="eventStore"><see cref="EventStoreName"/> the state is for.</param>
 /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the state is for.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
+/// <param name="definitionState">Persistent state <see cref="ObserverDefinition"/> for the observer.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Observing(
     IAppendedEventsQueues appendedEventsQueues,
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
+    IPersistentState<ObserverDefinition> definitionState,
     ILogger<Observing> logger) : BaseObserverState
 {
     AppendedEventsQueueSubscription? _subscription;
@@ -47,8 +49,8 @@ public class Observing(
 
         logger.SubscribingToStream(state.NextEventSequenceNumber);
 
-        var key = new ObserverKey(state.Id, eventStore, @namespace, eventSequenceId);
-        _subscription = await appendedEventsQueues.Subscribe(key, state.EventTypes);
+        var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
+        _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes);
 
         return state;
     }

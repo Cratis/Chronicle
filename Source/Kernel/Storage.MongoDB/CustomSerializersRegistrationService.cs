@@ -16,9 +16,16 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="types">The <see cref="ITypes"/>.</param>
 public class CustomSerializersRegistrationService(IServiceProvider serviceProvider, ITypes types) : IStartupTask
 {
+    static bool _isRegistered;
+
     /// <inheritdoc/>
     public Task Execute(CancellationToken cancellationToken)
     {
+        if (_isRegistered)
+        {
+            return Task.CompletedTask;
+        }
+
         foreach (var type in types.FindMultiple<IBsonSerializationProvider>().Where(IsEligibleForAutoRegistration))
         {
             var provider = (IBsonSerializationProvider)ActivatorUtilities.CreateInstance(serviceProvider, type);
@@ -27,8 +34,13 @@ public class CustomSerializersRegistrationService(IServiceProvider serviceProvid
         foreach (var type in types.FindMultiple<IBsonSerializer>().Where(IsEligibleForAutoRegistration))
         {
             var serializer = (IBsonSerializer)ActivatorUtilities.CreateInstance(serviceProvider, type);
+            if (BsonSerializer.LookupSerializer(serializer.ValueType) is not null)
+            {
+                continue;
+            }
             BsonSerializer.TryRegisterSerializer(serializer.ValueType, serializer);
         }
+        _isRegistered = true;
         return Task.CompletedTask;
     }
 

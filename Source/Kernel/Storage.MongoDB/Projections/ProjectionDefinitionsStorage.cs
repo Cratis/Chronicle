@@ -1,12 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 using Cratis.Chronicle.Storage.Projections;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using ProjectionDefinition = Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition;
 
@@ -19,52 +18,49 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
 /// </remarks>
 /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-/// <param name="projectionDefinitionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
 public class ProjectionDefinitionsStorage(
-    IEventStoreDatabase eventStoreDatabase,
-    IJsonProjectionDefinitionSerializer projectionDefinitionSerializer) : IProjectionDefinitionsStorage
+    IEventStoreDatabase eventStoreDatabase) : IProjectionDefinitionsStorage
 {
-    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ProjectionDefinitions);
+    IMongoCollection<Projection> Collection => eventStoreDatabase.GetCollection<Projection>(WellKnownCollectionNames.ProjectionDefinitions);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        using var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
-        var definitionsAsBson = result.ToList();
-        return definitionsAsBson.Select(_ =>
-        {
-            _.Remove("_id");
-            var definitionAsJson = _.ToJson();
-            return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
-        }).ToArray();
+        using var result = await Collection.FindAsync(FilterDefinition<Projection>.Empty);
+        var projections = result.ToList();
+        return projections.Select(projection => projection.Definitions.Last().Value.ToKernel(projection.Sink)).ToArray();
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ProjectionId id) =>
-        Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
+    public Task<bool> Has(ProjectionId id) => Collection.Find(_ => _.Id == id).AnyAsync();
 
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
-        using var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
-        var document = result.Single();
-        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
+        using var result = await Collection.FindAsync(_ => _.Id == id);
+        var projection = result.Single();
+        return projection.Definitions.Last().Value.ToKernel(projection.Sink);
     }
 
     /// <inheritdoc/>
     public Task Delete(ProjectionId id) =>
-        Collection.DeleteOneAsync(new BsonDocument("_id", id.Value));
+        Collection.DeleteOneAsync(_ => _.Id == id);
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
-        var json = projectionDefinitionSerializer.Serialize(definition);
-        var document = BsonDocument.Parse(json.ToJsonString());
-        document["_id"] = definition.Identifier.Value;
-
+        var projection = new Projection(
+            definition.Identifier,
+            definition.Owner,
+            new(definition.ReadModel, ReadModelGeneration.First),
+            definition.Sink,
+            new Dictionary<string, Definitions.ProjectionDefinition>
+            {
+                { ProjectionGeneration.First.ToString(), definition.ToMongoDB() }
+            });
         await Collection.ReplaceOneAsync(
-            filter: new BsonDocument("_id", definition.Identifier.Value),
-            replacement: document,
+            filter: _ => _.Id == definition.Identifier,
+            replacement: projection,
             options: new ReplaceOptions { IsUpsert = true });
     }
 }

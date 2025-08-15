@@ -13,14 +13,14 @@ public class when_validating_two_rule_sets_with_model_record_having_specific_key
     ModelValidationContext _context;
     ModelMetadata _modelMetadata;
     IModelMetadataProvider _modelMetadataProvider;
-    ModelWithKey _model;
+    ReadModelWithKey _model;
     IEnumerable<ModelValidationResult> _result;
 
     void Establish()
     {
         _modelMetadataProvider = Substitute.For<IModelMetadataProvider>();
-        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ModelWithKey)));
-        _model = new ModelWithKey(Key);
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ReadModelWithKey)));
+        _model = new ReadModelWithKey(Key);
         _context = new(
             new(),
             _modelMetadata,

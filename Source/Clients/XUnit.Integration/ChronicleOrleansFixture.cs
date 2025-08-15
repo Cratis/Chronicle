@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.XUnit.Integration;
@@ -23,7 +24,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         startupType ??= TestAssembly!.ExportedTypes.FirstOrDefault()!;
         var webApplicationFactoryType = typeof(ChronicleOrleansInProcessWebApplicationFactory<>).MakeGenericType(startupType!);
         var configureServices = ConfigureServices;
-        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, ContentRoot]) as IAsyncDisposable)!;
+        var configureMongoDB = ConfigureMongoDB;
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, ContentRoot]) as IAsyncDisposable)!;
     }
 
     /// <summary>
@@ -31,6 +33,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to configure.</param>
     protected virtual void ConfigureServices(IServiceCollection services)
+    {
+    }
+
+    /// <summary>
+    /// Method to configure MongoDB options.
+    /// </summary>
+    /// <param name="mongoDBBuilder"><see cref="IMongoDBBuilder"/> to configure.</param>
+    protected virtual void ConfigureMongoDB(IMongoDBBuilder mongoDBBuilder)
     {
     }
 }

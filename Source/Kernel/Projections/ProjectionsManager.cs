@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -21,14 +22,15 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     readonly ConcurrentDictionary<string, IProjection> _projections = new();
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> namespaces)
+    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         foreach (var definition in definitions)
         {
             _definitions[eventStore] = definition;
+            var readModel = readModelDefinitions.Single(rm => rm.Name == definition.ReadModel);
             foreach (var @namespace in namespaces)
             {
-                var projection = await projectionFactory.Create(eventStore, @namespace, definition);
+                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
                 var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
                 _projections[key] = projection;
             }
@@ -36,14 +38,15 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     }
 
     /// <inheritdoc/>
-    public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions)
     {
         foreach (var definition in _definitions.Values)
         {
             var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
+            var readModel = readModelDefinitions.Single(rm => rm.Name == definition.ReadModel);
             if (!_projections.ContainsKey(key))
             {
-                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition);
+                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
             }
         }
     }

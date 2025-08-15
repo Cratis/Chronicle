@@ -5,7 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Text;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Strings;
@@ -23,11 +23,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between <see cref="ExpandoObject"/> to <see cref="BsonDocument"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
-/// <param name="model"><see cref="Model"/> the converter is for.</param>
+/// <param name="readModel"><see cref="ReadModelDefinition"/> the converter is for.</param>
 public class MongoDBConverter(
     IExpandoObjectConverter expandoObjectConverter,
     ITypeFormats typeFormats,
-    Model model) : IMongoDBConverter
+    ReadModelDefinition readModel) : IMongoDBConverter
 {
     /// <inheritdoc/>
     public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)
@@ -81,9 +81,12 @@ public class MongoDBConverter(
     /// <inheritdoc/>
     public BsonValue ToBsonValue(Key key)
     {
+        var schema = readModel.GetSchemaForLatestGeneration();
+        var idPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
+
         var bsonValue = key.Value is ExpandoObject ?
-                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, model.Schema.GetSchemaForPropertyPath("id")) :
-                ToBsonValue(key.Value, "id");
+                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(idPropertyName)) :
+                ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
         return bsonValue == BsonNull.Value ? new BsonString(key.Value.ToString()) : bsonValue;
@@ -126,7 +129,7 @@ public class MongoDBConverter(
     /// <inheritdoc/>
     public BsonValue ToBsonValue(object? input, PropertyPath property)
     {
-        var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(property);
+        var schemaProperty = readModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(property);
         return schemaProperty is not null ? ToBsonValue(input, schemaProperty) : ToBsonValue(input!);
     }
 

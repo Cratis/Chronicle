@@ -70,7 +70,7 @@ public class EventSerializer : IEventSerializer
     /// <inheritdoc/>
     public async Task<object> Deserialize(AppendedEvent @event)
     {
-        var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
+        var eventType = _eventTypes.GetClrTypeFor(@event.Context.EventType.Id);
 
         var json = await Serialize(@event.Content);
         return await Deserialize(eventType, json);

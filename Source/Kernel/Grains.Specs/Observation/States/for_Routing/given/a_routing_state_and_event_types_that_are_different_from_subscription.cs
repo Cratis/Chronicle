@@ -9,13 +9,6 @@ public class a_routing_state_and_event_types_that_are_different_from_subscriptio
 {
     void Establish()
     {
-        _storedState = _storedState with
-        {
-            EventTypes =
-            [
-                new EventType("31252720-dcbb-47ae-927d-26070f7ef8ae", EventTypeGeneration.First)
-            ]
-        };
         _subscription = _subscription with
         {
             EventTypes =

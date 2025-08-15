@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;
@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers;
 public interface IReducerPipeline
 {
     /// <summary>
-    /// Gets the <see cref="Model"/> the pipeline is for.
+    /// Gets the <see cref="Concepts.ReadModels.ReadModelDefinition"/> the pipeline is for.
     /// </summary>
-    Model ReadModel { get; }
+    ReadModelDefinition ReadModel { get; }
 
     /// <summary>
     /// Gets the <see cref="ISink">sink</see> to use for output.

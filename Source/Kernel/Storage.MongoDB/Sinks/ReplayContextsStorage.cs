@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using MongoDB.Driver;
@@ -20,13 +20,13 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     public Task Save(Chronicle.Storage.Sinks.ReplayContext context)
     {
         var storageContext = context.ToStorage();
-        return _collection.ReplaceOneAsync(_ => _.ModelName == storageContext.ModelName, storageContext, new ReplaceOptions { IsUpsert = true });
+        return _collection.ReplaceOneAsync(_ => _.ReadModelName == storageContext.ReadModelName, storageContext, new ReplaceOptions { IsUpsert = true });
     }
 
     /// <inheritdoc/>
-    public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ModelName model)
+    public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ReadModelName readModel)
     {
-        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ModelName, model);
+        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, readModel);
         var context = _collection.Find(filter).FirstOrDefault();
         return context == null ?
             Task.FromResult(Result.Failed<Chronicle.Storage.Sinks.ReplayContext, GetContextError>(GetContextError.NotFound)) :
@@ -34,9 +34,9 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     }
 
     /// <inheritdoc/>
-    public Task Remove(ModelName model)
+    public Task Remove(ReadModelName readModel)
     {
-        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ModelName, model);
+        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, readModel);
         return _collection.DeleteOneAsync(filter);
     }
 }

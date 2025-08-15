@@ -11,14 +11,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 internal static partial class ObserverStorageLogMessages
 {
     [LoggerMessage(LogLevel.Trace, "Getting tail sequence number for observer {ObserverId} for namespace {Namespace} in event store {EventStore}")]
-    internal static partial void GettingTailSequenceNumber(this ILogger<ObserverStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore);
+    internal static partial void GettingTailSequenceNumber(this ILogger<ObserverStateStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore);
 
     [LoggerMessage(LogLevel.Trace, "Got tail sequence number {TailSequenceNumber} for observer {ObserverId} for namespace {Namespace} in event store {EventStore}")]
-    internal static partial void GotTailSequenceNumber(this ILogger<ObserverStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore, EventSequenceNumber tailSequenceNumber);
+    internal static partial void GotTailSequenceNumber(this ILogger<ObserverStateStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore, EventSequenceNumber tailSequenceNumber);
 
     [LoggerMessage(LogLevel.Trace, "Getting next sequence number greater or equal than {SequenceNumber} for observer {ObserverId} for namespace {Namespace} in event store {EventStore}")]
-    internal static partial void GettingNextSequenceNumberGreaterOrEqualThan(this ILogger<ObserverStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore, EventSequenceNumber sequenceNumber);
+    internal static partial void GettingNextSequenceNumberGreaterOrEqualThan(this ILogger<ObserverStateStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore, EventSequenceNumber sequenceNumber);
 
     [LoggerMessage(LogLevel.Trace, "Got next sequence number {NextSequenceNumber} for observer {ObserverId} for namespace {Namespace} in event store {EventStore}")]
-    internal static partial void GotNextSequenceNumber(this ILogger<ObserverStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore, EventSequenceNumber nextSequenceNumber);
+    internal static partial void GotNextSequenceNumber(this ILogger<ObserverStateStorage> logger, ObserverId observerId, EventStoreNamespaceName @namespace, EventStoreName eventStore, EventSequenceNumber nextSequenceNumber);
 }

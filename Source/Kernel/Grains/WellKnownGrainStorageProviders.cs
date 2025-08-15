@@ -19,9 +19,14 @@ public static class WellKnownGrainStorageProviders
     public const string EventSequences = "event-sequences";
 
     /// <summary>
+    /// The name of the storage provider used for observer definitions.
+    /// </summary>
+    public const string ObserverDefinitions = "observer-definitions";
+
+    /// <summary>
     /// The name of the storage provider used for observers.
     /// </summary>
-    public const string Observers = "observers";
+    public const string ObserverState = "observer-state";
 
     /// <summary>
     /// The name of the storage provider used for failed partitions on an observer.
@@ -69,7 +74,17 @@ public static class WellKnownGrainStorageProviders
     public const string ReducersManager = "reducers-manager";
 
     /// <summary>
-    /// The name of the storage provider used for event types.
+    /// The name of the storage provider used for constraints.
     /// </summary>
     public const string Constraints = "constraints";
+
+    /// <summary>
+    /// The name of the storage provider used for read models.
+    /// </summary>
+    public const string ReadModels = "read-models";
+
+    /// <summary>
+    /// The name of the storage provider used for the read models manager.
+    /// </summary>
+    public const string ReadModelsManager = "read-models-manager";
 }

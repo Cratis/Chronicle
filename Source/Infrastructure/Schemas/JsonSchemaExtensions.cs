@@ -11,36 +11,6 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public static class JsonSchemaExtensions
 {
-    const string FlattenedProperties = "x-flattened-properties";
-
-    /// <summary>
-    /// Ensure the flattened properties are available.
-    /// </summary>
-    /// <param name="schema"><see cref="JsonSchema"/> to ensure for.</param>
-    public static void EnsureFlattenedProperties(this JsonSchema schema)
-    {
-        lock (schema)
-        {
-            if (schema.ExtensionData?.ContainsKey(FlattenedProperties) != true || schema.ExtensionData?[FlattenedProperties] is not IEnumerable<JsonSchemaProperty>)
-            {
-                var properties = new List<JsonSchemaProperty>();
-                CollectPropertiesFrom(schema, properties);
-
-                schema.ExtensionData ??= new Dictionary<string, object?>();
-                schema.ExtensionData[FlattenedProperties] = properties.DistinctBy(_ => _.Name).ToArray().AsEnumerable();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reset the flattened properties.
-    /// </summary>
-    /// <param name="schema"><see cref="JsonSchema"/> to reset for.</param>
-    public static void ResetFlattenedProperties(this JsonSchema schema)
-    {
-        schema.ExtensionData?.Remove(FlattenedProperties);
-    }
-
     /// <summary>
     /// Get all actual properties from a schema, including any inherited properties from inherited schemas.
     /// </summary>
@@ -48,11 +18,47 @@ public static class JsonSchemaExtensions
     /// <returns>Collection of <see cref="JsonSchemaProperty"/>.</returns>
     public static IEnumerable<JsonSchemaProperty> GetFlattenedProperties(this JsonSchema schema)
     {
-        lock (schema)
+        var properties = new List<JsonSchemaProperty>();
+        CollectPropertiesFrom(schema, properties);
+        return properties;
+    }
+
+    /// <summary>
+    /// Checks if the schema has a key property.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <returns>Whether there is a key property.</returns>
+    public static bool HasKeyProperty(this JsonSchema schema) =>
+        schema.Properties.ContainsKey("id") || schema.Properties.ContainsKey("Id");
+
+    /// <summary>
+    /// Gets the key property from the schema.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <returns>The key <see cref="JsonSchemaProperty"/>.</returns>
+    public static JsonSchemaProperty GetKeyProperty(this JsonSchema schema)
+    {
+        var idPropertyName = schema.Properties.ContainsKey("id") ? "id" : "Id";
+        return schema.Properties[idPropertyName];
+    }
+
+    /// <summary>
+    /// Gets the likely key property name from the schema based on property naming conventions (camel vs pascal) of existing properties.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <returns>The likely key property name.</returns>
+    public static string GetLikelyKeyPropertyName(this JsonSchema schema)
+    {
+        var properties = schema.GetFlattenedProperties().Select(_ => _.Name).ToList();
+        if (properties.Count == 0)
         {
-            EnsureFlattenedProperties(schema);
-            return (schema.ExtensionData![FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
+            return null!;
         }
+
+        var camelCaseCount = properties.Count(name => char.IsLower(name[0]));
+        var pascalCaseCount = properties.Count(name => char.IsUpper(name[0]));
+
+        return camelCaseCount > pascalCaseCount ? "id" : "Id";
     }
 
     /// <summary>

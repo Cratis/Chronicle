@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Jobs;
@@ -37,9 +38,10 @@ public class JobStateWithLastHandledEvent : JobState
     /// Handles state based on <see cref="JobStepResult"/>.
     /// </summary>
     /// <param name="result">The result.</param>
-    public void HandleResult(JobStepResult result)
+    /// <param name="jsonSerializerOptions">The serializer options used to deserialize the result.</param>
+    public void HandleResult(JobStepResult result, JsonSerializerOptions jsonSerializerOptions)
     {
-        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _))
+        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _, jsonSerializerOptions))
         {
             if (!LastHandledEventSequenceNumber.IsActualValue ||
                 handleEventsResult.LastHandledEventSequenceNumber > LastHandledEventSequenceNumber)

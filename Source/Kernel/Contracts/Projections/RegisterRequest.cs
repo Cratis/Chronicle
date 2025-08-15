@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using ProtoBuf;
-
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
@@ -18,8 +16,14 @@ public class RegisterRequest
     public string EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="ProjectionDefinition"/> instances to register.
+    /// Gets or sets the owner of the projection.
     /// </summary>
-    [ProtoMember(2, IsRequired = true)]
+    [ProtoMember(2)]
+    public ProjectionOwner Owner { get; set; } = ProjectionOwner.None;
+
+    /// <summary>
+    /// Gets or sets the collection of <see cref="ProjectionDefinition"/> instances to register.
+    /// </summary>
+    [ProtoMember(3, IsRequired = true)]
     public IList<ProjectionDefinition> Projections { get; set; } = [];
 }

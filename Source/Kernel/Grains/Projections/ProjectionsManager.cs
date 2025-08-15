@@ -5,8 +5,10 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -68,26 +70,29 @@ public class ProjectionsManager(
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
         await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
 
         foreach (var projectionDefinition in State.Projections)
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
             await projection.SetDefinition(projectionDefinition);
-            await SubscribeIfNotSubscribed(projectionDefinition, added.Namespace);
+            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinitions.Single(rm => rm.Name == projectionDefinition.ReadModel), added.Namespace);
         }
     }
 
     async Task SetDefinitionAndSubscribeForAllProjections()
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+
         foreach (var definition in State.Projections)
         {
-            await SetDefinitionAndSubscribeForProjection(namespaces, definition);
+            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinitions.Single(rm => rm.Name == definition.ReadModel));
         }
     }
 
-    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition)
+    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new ProjectionKey(definition.Identifier, _eventStoreName);
@@ -101,11 +106,11 @@ public class ProjectionsManager(
 
         foreach (var namespaceName in namespaces)
         {
-            await SubscribeIfNotSubscribed(definition, namespaceName);
+            await SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName);
         }
     }
 
-    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, EventStoreNamespaceName namespaceName)
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)
     {
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
         var subscribed = await observer.IsSubscribed();
@@ -113,7 +118,7 @@ public class ProjectionsManager(
         if (!subscribed && definition.IsActive)
         {
             logger.Subscribing(definition.Identifier, namespaceName);
-            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition);
+            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition);
 
             await observer.Subscribe<IProjectionObserverSubscriber>(
                 ObserverType.Projection,

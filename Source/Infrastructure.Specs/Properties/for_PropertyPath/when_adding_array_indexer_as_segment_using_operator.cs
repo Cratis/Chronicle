@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Strings;
-
 namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_array_indexer_as_segment_using_operator : Specification
@@ -19,5 +17,5 @@ public class when_adding_array_indexer_as_segment_using_operator : Specification
     void Because() => _result = _initial + new ArrayProperty(ThirdSegment);
 
     [Fact] void should_have_last_segment_be_array_index() => _result.LastSegment.ShouldBeOfExactType<ArrayProperty>();
-    [Fact] void should_have_last_segment_have_camel_case_identifier() => _result.LastSegment.Value.ShouldEqual(ThirdSegment.ToCamelCase());
+    [Fact] void should_have_last_segment_have_camel_case_identifier() => _result.LastSegment.Value.ShouldEqual(ThirdSegment);
 }

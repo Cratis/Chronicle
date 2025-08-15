@@ -46,13 +46,13 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventType type, EventSourceId eventSourceId, object content)
     {
         return new(
-            new(sequenceNumber, type),
             new(
+                type,
                 EventSourceType.Default,
                 eventSourceId,
                 EventStreamType.All,
                 EventStreamId.Default,
-                0,
+                sequenceNumber,
                 DateTimeOffset.UtcNow,
                 "123b8935-a1a4-410d-aace-e340d48f0aa0",
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",

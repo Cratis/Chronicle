@@ -8,5 +8,5 @@ namespace Cratis.Chronicle.Api.Projections;
 /// </summary>
 /// <param name="Id">Identifier of the projection.</param>
 /// <param name="IsActive">Whether or not it is an active projection.</param>
-/// <param name="ModelName">Name of the model used.</param>
-public record Projection(Guid Id, bool IsActive, string ModelName);
+/// <param name="ReadModelName">Name of the read model used.</param>
+public record Projection(Guid Id, bool IsActive, string ReadModelName);

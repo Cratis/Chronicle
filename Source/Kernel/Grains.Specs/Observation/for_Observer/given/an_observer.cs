@@ -34,11 +34,13 @@ public class an_observer : Specification
     protected TestKitSilo _silo = new();
     protected IStorage<ObserverState> _stateStorage;
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
+    protected IStorage<ObserverDefinition> _definitionStorage;
     protected IStorage<FailedPartitions> _failedPartitionsStorage;
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
     protected IEventSequence _eventSequence;
     protected IConfigurationForObserverProvider _configurationProvider;
     protected Observers _observersConfig;
+
     async Task Establish()
     {
         _observersConfig = new();
@@ -64,6 +66,14 @@ public class an_observer : Specification
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
         _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
+        _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));
+        _definitionStorage.State = new ObserverDefinition
+        {
+            Identifier = _observerId,
+            IsReplayable = true,
+        };
+        await _definitionStorage.WriteStateAsync();
+
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
 
@@ -82,7 +92,7 @@ public class an_observer : Specification
                 _.ObserverKey == _observerKey &&
                 _.Key == _partition &&
                 _.FromSequenceNumber == lastHandled.Next() &&
-                _.EventTypes.SequenceEqual(_stateStorage.State.EventTypes)));
+                _.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes)));
 
     protected void CheckDidNotStartCatchupJob() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());

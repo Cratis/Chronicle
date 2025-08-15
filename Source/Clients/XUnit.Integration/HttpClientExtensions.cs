@@ -36,7 +36,7 @@ public static class HttpClientExtensions
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     public static async Task<CommandResult<TCommandResult>?> ExecuteCommand<TCommand, TCommandResult>(this HttpClient client, string requestUri, TCommand command)
     {
-        var response = await PostCommand(client, requestUri, command);
+        var response = await Post(client, requestUri, command);
         CommandResult<TCommandResult>? commandResult = null;
         try
         {
@@ -53,14 +53,14 @@ public static class HttpClientExtensions
     /// <summary>
     /// Posts a command request.
     /// </summary>
-    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <typeparam name="TPayload">The payload type.</typeparam>
     /// <param name="client">The http client.</param>
     /// <param name="requestUri">The request uri string.</param>
-    /// <param name="command">The command.</param>
+    /// <param name="body">The command.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static async Task<HttpResponseMessage> PostCommand<TCommand>(this HttpClient client, string requestUri, TCommand command)
+    public static async Task<HttpResponseMessage> Post<TPayload>(this HttpClient client, string requestUri, TPayload body)
     {
-        using var request = JsonContent.Create(command, options: Globals.JsonSerializerOptions);
+        using var request = JsonContent.Create(body, options: Globals.JsonSerializerOptions);
         return await client.PostAsync(requestUri, request);
     }
 

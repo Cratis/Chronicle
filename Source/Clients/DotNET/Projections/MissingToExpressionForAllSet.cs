@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="MissingToExpressionForAllSet"/> class.
 /// </remarks>
-/// <param name="modelType">Type of model the expression is missing for.</param>
+/// <param name="readModelType">Type of read model the expression is missing for.</param>
 /// <param name="propertyPath">Path within the model the expression is missing for.</param>
-public class MissingToExpressionForAllSet(Type modelType, PropertyPath propertyPath)
-    : Exception($"Property '{propertyPath}' on '{modelType.FullName}' is missing a `.To...()` expression when mapping in an all expression");
+public class MissingToExpressionForAllSet(Type readModelType, PropertyPath propertyPath)
+    : Exception($"Property '{propertyPath}' on '{readModelType.FullName}' is missing a `.To...()` expression when mapping in an all expression");

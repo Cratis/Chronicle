@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts;
 
 public class when_evicting : Specification
 {
-    static ModelName _model = "SomeModel";
+    static ReadModelName _model = "SomeModel";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
 

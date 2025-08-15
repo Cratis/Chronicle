@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Json;
 using Cratis.Monads;
+
 namespace Cratis.Chronicle.Grains.Jobs;
 
 /// <summary>
@@ -43,16 +44,16 @@ public class JobStepResult(Result<object?, PerformJobStepError> result)
     /// </summary>
     /// <param name="result">The optional full or partial result.</param>
     /// <param name="error">The optional <see cref="PerformJobStepError"/> error when the result was partial or fully failed.</param>
-    /// <param name="jsonSerializerOptions">The serializer settings used to deserialize the result object.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for deserialization.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <returns>True if full result, false if partial or none result.</returns>
-    public bool TryGetFullResult<TResult>([NotNullWhen(true)]out TResult? result, [NotNullWhen(false)]out PerformJobStepError? error, JsonSerializerOptions? jsonSerializerOptions = null)
+    public bool TryGetFullResult<TResult>([NotNullWhen(true)] out TResult? result, [NotNullWhen(false)] out PerformJobStepError? error, JsonSerializerOptions jsonSerializerOptions)
         where TResult : class
     {
         error = null;
         if (_result.TryGetResult(out var fullResult))
         {
-            result = fullResult.DeserializeIfNecessary<TResult>()!;
+            result = fullResult.DeserializeIfNecessary<TResult>(jsonSerializerOptions)!;
             return true;
         }
 

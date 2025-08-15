@@ -40,6 +40,7 @@ var app = builder.Build();
 app
     .UseRouting()
     .UseCratisApplicationModel()
+    .UseCratisChronicle()
     .UseCratisChronicleApi();
 
 Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ApiPort}");

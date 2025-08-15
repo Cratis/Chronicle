@@ -264,7 +264,7 @@
 | Move OneOf<> Protobuf implementation to fundamentals (introduce new package) | https://github.com/Cratis/Chronicle/issues/1297 | None | [einari](https://github.com/einari) | None | None | None |
 | Add access to IServiceProvider on RuleAttribute | https://github.com/Cratis/Chronicle/issues/1296 | None | [einari](https://github.com/einari) | None | None | None |
 | Make DefineState on attribute based rules a virtual method on the base `RuleAttribute` - making the API clearer | https://github.com/Cratis/Chronicle/issues/1295 | None | [einari](https://github.com/einari) | None | None | None |
-| Move Rules documentation and correct it from Application Model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | None | [einari](https://github.com/einari) | None | None | None |
+| Move Rules documentation and correct it from Application Read model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | None | [einari](https://github.com/einari) | None | None | None |
 | Repack client consumed assemblies to internalize dependencies we don't want to expose externally | https://github.com/Cratis/Chronicle/issues/1293 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 313 days, 8:28:42 | None |
 | Introduce a "transaction scope" for AggregateRoot operations | https://github.com/Cratis/Chronicle/issues/1291 | None | [einari](https://github.com/einari) | None | 18 days, 20:42:50 | None |
 | Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | None | [einari](https://github.com/einari) | None | None | None |
@@ -342,4 +342,12 @@
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
 | Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/1018 | None | [einari](https://github.com/einari) | None | None | No
+| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/1018 | None | [einari](https://github.com/einari) | None | None | None |
+| Create guidance on setting up Docker Compose correctly when not using development image | https://github.com/Cratis/Chronicle/issues/1017 | None | [einari](https://github.com/einari) | None | None | None |
+| Support resilient transactions when appending events | https://github.com/Cratis/Chronicle/issues/1014 | None | [einari](https://github.com/einari) | None | None | None |
+| Import compensations through the workbench with a specific format and preview of compensations before applying them | https://github.com/Cratis/Chronicle/issues/1012 | None | [einari](https://github.com/einari) | None | None | None |
+| Import events in a specific format from the workbench | https://github.com/Cratis/Chronicle/issues/1011 | None | [einari](https://github.com/einari) | None | None | None |
+| Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
+| IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
+| Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | 616 days, 3:25:19 | None |
+| Projection fail with children and there are no instances of the events defined in root From definitions.

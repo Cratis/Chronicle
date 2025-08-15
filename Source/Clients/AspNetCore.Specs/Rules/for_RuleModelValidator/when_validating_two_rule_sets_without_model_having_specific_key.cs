@@ -12,14 +12,14 @@ public class when_validating_two_rule_sets_without_model_having_specific_key : g
     ModelValidationContext _context;
     ModelMetadata _modelMetadata;
     IModelMetadataProvider _modelMetadataProvider;
-    Model _model;
+    ReadModel _model;
     IEnumerable<ModelValidationResult> _result;
 
     void Establish()
     {
         _modelMetadataProvider = Substitute.For<IModelMetadataProvider>();
-        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(Model)));
-        _model = new Model();
+        _modelMetadata = Substitute.For<ModelMetadata>(ModelMetadataIdentity.ForType(typeof(ReadModel)));
+        _model = new ReadModel();
         _context = new(
             new(),
             _modelMetadata,
