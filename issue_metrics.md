@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 273 days, 14:14:47 | 124 days, 8:40:41 | 825 days, 13:01:45 |
+| Time to close | 272 days, 21:49:39 | 123 days, 0:34:12 | 823 days, 9:49:33 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 280 |
-| Number of items closed | 565 |
+| Number of items that remain open | 272 |
+| Number of items closed | 573 |
 | Total number of items created | 845 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -18,15 +18,15 @@
 | Add authorization on the Kernel side | https://github.com/Cratis/Chronicle/issues/1965 | None | [einari](https://github.com/einari) | None | None | None |
 | Add authentication & TLS for server and client | https://github.com/Cratis/Chronicle/issues/1964 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add generate test events in workbench. Leveraging LLM | https://github.com/Cratis/Chronicle/issues/1960 | None | [einari](https://github.com/einari) | None | None | None |
-| Support generational Projections with references to correct generation of ReadModel | https://github.com/Cratis/Chronicle/issues/1959 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Make event type storage generational within same document stored | https://github.com/Cratis/Chronicle/issues/1957 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Rename Schemas collection in MongoDB to be EventTypes | https://github.com/Cratis/Chronicle/issues/1948 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Support generational Projections with references to correct generation of ReadModel | https://github.com/Cratis/Chronicle/issues/1959 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 16 days, 18:27:52 | None |
+| Make event type storage generational within same document stored | https://github.com/Cratis/Chronicle/issues/1957 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 17 days, 14:15:20 | None |
+| Rename Schemas collection in MongoDB to be EventTypes | https://github.com/Cratis/Chronicle/issues/1948 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 31 days, 17:07:35 | None |
 | Integration Specs should have an isolated database per fixture | https://github.com/Cratis/Chronicle/issues/1929 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 19 days, 17:17:06 | None |
-| Get rid of EventMetadata and move properties to EventContext | https://github.com/Cratis/Chronicle/issues/1926 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Get rid of EventMetadata and move properties to EventContext | https://github.com/Cratis/Chronicle/issues/1926 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 46 days, 16:47:49 | None |
 | Filtering of properties in Event Sequence table | https://github.com/Cratis/Chronicle/issues/1925 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add OpenTelemetry tracing context to appending of events and also let this flow further into observers | https://github.com/Cratis/Chronicle/issues/1923 | None | [einari](https://github.com/einari) | None | None | None |
 | [Design] - DSL for projections | https://github.com/Cratis/Chronicle/issues/1915 | None | [einari](https://github.com/einari) | None | None | None |
-| Chronicle should not decide casing on read models, event types or other artifacts given to it by the client | https://github.com/Cratis/Chronicle/issues/1914 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Chronicle should not decide casing on read models, event types or other artifacts given to it by the client | https://github.com/Cratis/Chronicle/issues/1914 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 61 days, 1:30:04 | None |
 | Sequence Query editor in Workbench | https://github.com/Cratis/Chronicle/issues/1911 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Multiple sinks for projections and reducers | https://github.com/Cratis/Chronicle/issues/1910 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Symbol package validation failed - NuGet | https://github.com/Cratis/Chronicle/issues/1907 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 29 days, 5:13:14 | None |
@@ -34,7 +34,7 @@
 | Reactor/Reducer/Projection-Handler should be split apart | https://github.com/Cratis/Chronicle/issues/1899 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Simplify and merge projects | https://github.com/Cratis/Chronicle/issues/1898 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Watch Projection changeset for Children RemoveWithJoin issue | https://github.com/Cratis/Chronicle/issues/1896 | None | [woksin](https://github.com/woksin) | 0:32:56 | None | None |
-| Formalize Read Model definition storage and make it generational | https://github.com/Cratis/Chronicle/issues/1877 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Formalize Read Model definition storage and make it generational | https://github.com/Cratis/Chronicle/issues/1877 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 110 days, 2:01:01 | None |
 | Support SQL type of servers as Sink for Reducers and Projections | https://github.com/Cratis/Chronicle/issues/1869 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | 8 days, 18:13:02 | None | None |
 | Support SQL type Servers as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | None | [einari](https://github.com/einari) | None | None | None |
 | Support clustering for Kernel | https://github.com/Cratis/Chronicle/issues/1863 | None | [einari](https://github.com/einari) | None | None | None |
@@ -264,7 +264,7 @@
 | Move OneOf<> Protobuf implementation to fundamentals (introduce new package) | https://github.com/Cratis/Chronicle/issues/1297 | None | [einari](https://github.com/einari) | None | None | None |
 | Add access to IServiceProvider on RuleAttribute | https://github.com/Cratis/Chronicle/issues/1296 | None | [einari](https://github.com/einari) | None | None | None |
 | Make DefineState on attribute based rules a virtual method on the base `RuleAttribute` - making the API clearer | https://github.com/Cratis/Chronicle/issues/1295 | None | [einari](https://github.com/einari) | None | None | None |
-| Move Rules documentation and correct it from Application Read model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | None | [einari](https://github.com/einari) | None | None | None |
+| Move Rules documentation and correct it from Application Model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | None | [einari](https://github.com/einari) | None | None | None |
 | Repack client consumed assemblies to internalize dependencies we don't want to expose externally | https://github.com/Cratis/Chronicle/issues/1293 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 313 days, 8:28:42 | None |
 | Introduce a "transaction scope" for AggregateRoot operations | https://github.com/Cratis/Chronicle/issues/1291 | None | [einari](https://github.com/einari) | None | 18 days, 20:42:50 | None |
 | Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | None | [einari](https://github.com/einari) | None | None | None |
@@ -342,12 +342,4 @@
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
 | Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/1018 | None | [einari](https://github.com/einari) | None | None | None |
-| Create guidance on setting up Docker Compose correctly when not using development image | https://github.com/Cratis/Chronicle/issues/1017 | None | [einari](https://github.com/einari) | None | None | None |
-| Support resilient transactions when appending events | https://github.com/Cratis/Chronicle/issues/1014 | None | [einari](https://github.com/einari) | None | None | None |
-| Import compensations through the workbench with a specific format and preview of compensations before applying them | https://github.com/Cratis/Chronicle/issues/1012 | None | [einari](https://github.com/einari) | None | None | None |
-| Import events in a specific format from the workbench | https://github.com/Cratis/Chronicle/issues/1011 | None | [einari](https://github.com/einari) | None | None | None |
-| Replay specific partition from the workbench | https://github.com/Cratis/Chronicle/issues/1010 | None | [einari](https://github.com/einari) | None | None | None |
-| IObserverMiddleware should have which observer it is running for | https://github.com/Cratis/Chronicle/issues/1009 | None | [einari](https://github.com/einari) | None | None | None |
-| Improve error message when a child projection is not able to resolve the key for the parent | https://github.com/Cratis/Chronicle/issues/1008 | None | [einari](https://github.com/einari) | None | 616 days, 3:25:19 | None |
-| Projection fail with children and there are no instances of the events defined in root From definitions.
+| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle
