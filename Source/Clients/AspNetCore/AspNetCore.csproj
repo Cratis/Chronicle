@@ -27,6 +27,7 @@
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <PackageReference Include="Cratis.Chronicle"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' != 'true'">
