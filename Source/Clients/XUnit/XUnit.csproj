@@ -26,7 +26,7 @@
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
 
-        <PackageReference Include="Cratis.Chronicle"/>
+        <PackageReference Include="Cratis.Chronicle" Condition="'$(Publish)' == 'true'"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -27,8 +27,8 @@
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
 
-        <PackageReference Include="Cratis.Chronicle"/>
-        <PackageReference Include="Cratis.Chronicle.InProcess"/>
+        <PackageReference Include="Cratis.Chronicle" Condition="'$(Publish)' == 'true'"/>
+        <PackageReference Include="Cratis.Chronicle.InProcess" Condition="'$(Publish)' == 'true'"/>
     </ItemGroup>
 
     <ItemGroup>

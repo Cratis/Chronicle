@@ -175,7 +175,7 @@ jobs:
       - name: Build
         run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }}
       - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
         working-directory: ./Source/Clients
 
       - name: Create NuGet packages
