@@ -19,6 +19,10 @@
 
     <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
+    </PropertyGroup>
+
     <ItemGroup Condition="'$(Repack)' == 'true'">
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
