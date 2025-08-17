@@ -164,6 +164,7 @@ This guarantees that the repacked assembly is available for reference during the
 
 <ItemGroup Condition="'$(Repack)' == 'true'">
     <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+    <PackageReference Include="Cratis.Chronicle" Condition="'$(Publish)' == 'true'"/>
 </ItemGroup>
 
 <ItemGroup Condition="'$(Repack)' != 'true'">
@@ -171,6 +172,11 @@ This guarantees that the repacked assembly is available for reference during the
     <ProjectReference Include="../Connections/Connections.csproj" />
 </ItemGroup>
 ```
+
+> Note: Notice the `<PackageReference Include="Cratis.Chronicle" Condition="'$(Publish)' == 'true'"/>`, its version is defined in the central package management (`Directory.Packages.props`)
+> with a variable `$(Version)`. If the `Version` property is not set, it will default to `1.0.0`.
+> During publishing (`Publish` property set to `true`), we use a build property setting this variable to the correct version number.
+> This package reference is needed for the generated `.nuspec` to be correct when packaging the package.
 
 This configuration ensures that, when repacking is enabled, your project references the merged output assembly directly—guaranteeing runtime correctness and hiding internal APIs.
 During normal development (when repacking is not enabled), it falls back to standard project references, preserving fast incremental builds and IDE tooling support.
