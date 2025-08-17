@@ -1,4 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
@@ -9,15 +11,30 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
     </ItemGroup>
 
+    <Target Name="BuildDependencies">
+        <MSBuild Projects="../DotNET.InProcess/DotNET.InProcess.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);TargetFrameworks=$(TargetFrameworks);Repack=$(Repack)" />
+        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.dll" DestinationFolder="$(OutDir)"/>
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
+    </ItemGroup>
+
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' != 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
-        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
-        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
-        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj" />
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj" />
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
