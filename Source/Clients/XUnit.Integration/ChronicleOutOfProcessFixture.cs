@@ -42,9 +42,6 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
     /// </summary>
     /// <param name="builder"><see cref="ContainerBuilder"/> to configure.</param>
     /// <returns>The configured <see cref="ContainerBuilder"/>.</returns>
-    protected virtual ContainerBuilder ConfigureImage(ContainerBuilder builder)
-    {
+    protected virtual ContainerBuilder ConfigureImage(ContainerBuilder builder) =>
         builder.WithImage("cratis/chronicle:latest-development");
-        return builder;
-    }
 }
