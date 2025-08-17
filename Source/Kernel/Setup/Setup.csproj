@@ -2,7 +2,6 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Setup</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Setup</RootNamespace>
-        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
