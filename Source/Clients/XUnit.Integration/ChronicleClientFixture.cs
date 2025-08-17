@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.ServiceModel;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
@@ -355,7 +354,7 @@ public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChro
                 return parameters.Length == 2 && parameters[0].ParameterType == typeof(IChronicleSetupFixture) && parameters[1].ParameterType == typeof(ContentRoot);
             }))
         {
-            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IChronicleSetupFixture)}, {nameof(Action<IWebHostBuilder>)} and {nameof(ContentRoot)} parameters");
+            throw new InvalidWebApplicationFactory();
         }
         return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
     }
