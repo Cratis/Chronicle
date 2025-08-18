@@ -21,6 +21,10 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
     {
         builder
             .UseContentRoot(contentRoot)
-            .ConfigureServices(services => services.Configure<ChronicleOptions>(options => options.ArtifactsProvider = fixture));
+            .ConfigureServices(services => services.Configure<ChronicleOptions>(options =>
+            {
+                options.ArtifactsProvider = fixture;
+                options.Url = "chronicle://localhost:35001";
+            }));
     }
 }

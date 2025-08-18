@@ -28,7 +28,7 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
-            .WithPortBinding(35000, 35000)
+            .WithPortBinding(35001, 35000)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
