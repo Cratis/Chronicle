@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <Target Name="BuildDependencies">
-        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFrameworks=$(TargetFrameworks);TargetFramework=$(TargetFramework);Repack=$(Repack)" />
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
     </Target>
 
     <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
@@ -26,8 +26,8 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
-        <PackageReference Include="Cratis.Chronicle" Condition="'$(Publish)' == 'true'" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' != 'true'">
