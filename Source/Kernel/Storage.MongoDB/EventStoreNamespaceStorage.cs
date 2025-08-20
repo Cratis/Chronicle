@@ -157,6 +157,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             _converter,
             _eventTypesStorage,
             Identities,
+            new ClosedStreamsStorage()
             _expandoObjectConverter,
             _jsonSerializerOptions,
             _loggerFactory.CreateLogger<EventSequenceStorage>());

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -17,6 +18,8 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
+    const string ClosedStreamCollectionName = "closed-streams";
+
     readonly IMongoDatabase _database;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
@@ -53,16 +56,23 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <inheritdoc/>
     public IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId)
     {
-        var collectionName = GetCollectionNameFor(eventSequenceId);
+        var collectionName = GetEventSequenceCollectionNameFor(eventSequenceId);
         var collection = _database.GetCollection<Event>(collectionName);
         CreateIndexesForEventSequenceIfNotCreated(collection, eventSequenceId);
         return collection;
     }
 
     /// <inheritdoc/>
+    public IMongoCollection<ClosedStreamState> GetClosedStreamCollectionFor(EventSequenceId eventSequenceId)
+    {
+        var collectionName = GetClosedStreamCollectionNameFor(eventSequenceId);
+        return _database.GetCollection<ClosedStreamState>(collectionName);
+    }
+
+    /// <inheritdoc/>
     public IMongoCollection<BsonDocument> GetEventSequenceCollectionAsBsonFor(EventSequenceId eventSequenceId)
     {
-        var collectionName = GetCollectionNameFor(eventSequenceId);
+        var collectionName = GetEventSequenceCollectionNameFor(eventSequenceId);
         return _database.GetCollection<BsonDocument>(collectionName);
     }
 
@@ -217,7 +227,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         }
     }
 
-    string GetCollectionNameFor(EventSequenceId eventSequenceId)
+    string GetEventSequenceCollectionNameFor(EventSequenceId eventSequenceId)
     {
         var collectionName = WellKnownCollectionNames.EventLog;
         if (!eventSequenceId.IsEventLog && eventSequenceId == EventSequenceId.System)
@@ -227,4 +237,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
         return collectionName;
     }
+
+    string GetClosedStreamCollectionNameFor(EventSequenceId eventSequenceId) =>
+        GetEventSequenceCollectionNameFor(eventSequenceId) + ClosedStreamCollectionName;
 }

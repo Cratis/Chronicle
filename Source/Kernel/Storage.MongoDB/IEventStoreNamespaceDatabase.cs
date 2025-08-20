@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -29,6 +30,13 @@ public interface IEventStoreNamespaceDatabase
     IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId);
 
     /// <summary>
+    /// Get the <see cref="IMongoCollection{T}"/> for an event sequence based on identifier.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> identifier.</param>
+    /// <returns>The collection instance.</returns>
+    IMongoCollection<ClosedStreamState> GetClosedStreamCollectionFor(EventSequenceId eventSequenceId);
+
+    /// <summary>
     /// Get the <see cref="IMongoCollection{T}"/> for an event sequence based on identifier as <see cref="BsonDocument"/>.
     /// </summary>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> identifier.</param>
@@ -41,3 +49,4 @@ public interface IEventStoreNamespaceDatabase
     /// <returns>The collection instance.</returns>
     IMongoCollection<ObserverState> GetObserverStateCollection();
 }
+
