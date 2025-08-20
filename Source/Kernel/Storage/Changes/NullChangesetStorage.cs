@@ -15,11 +15,11 @@ namespace Cratis.Chronicle.Storage.Changes;
 public class NullChangesetStorage : IChangesetStorage
 {
     /// <inheritdoc/>
-    public Task BeginReplay(ReadModelName model) => Task.CompletedTask;
+    public Task BeginReplay(ReadModelName readModel) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task EndReplay(ReadModelName model) => Task.CompletedTask;
+    public Task EndReplay(ReadModelName readModel) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task Save(ReadModelName model, Key modelKey, EventType eventType, EventSequenceNumber sequenceNumber, CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> changeset) => Task.CompletedTask;
+    public Task Save(ReadModelName readModel, Key readModelKey, EventType eventType, EventSequenceNumber sequenceNumber, CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> changeset) => Task.CompletedTask;
 }

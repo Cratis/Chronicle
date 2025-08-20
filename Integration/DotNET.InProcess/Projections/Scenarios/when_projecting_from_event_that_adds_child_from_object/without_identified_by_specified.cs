@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class without_identified_by_specified(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UnidentifiableChildrenProjection, ModelWithChildren>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UnidentifiableChildrenProjection, ReadModelWithChildren>(chronicleInProcessFixture)
     {
         public EventWithChildObject FirstEventAppended;
         public EventWithChildObject SecondEventAppended;

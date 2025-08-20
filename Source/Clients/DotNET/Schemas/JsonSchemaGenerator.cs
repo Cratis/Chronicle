@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
@@ -31,7 +31,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AllowReferencesWithProperties = true,
             SerializerOptions = new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
             }
         };
         settings.ReflectionService = new ReflectionService(settings.ReflectionService);

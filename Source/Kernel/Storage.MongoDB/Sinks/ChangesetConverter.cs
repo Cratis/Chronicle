@@ -20,12 +20,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChangesetConverter"/> class.
 /// </remarks>
-/// <param name="model">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+/// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 public class ChangesetConverter(
-    ReadModelDefinition model,
+    ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
@@ -153,7 +153,7 @@ public class ChangesetConverter(
         }
         else
         {
-            var schema = model.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+            var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childAdded.ChildrenProperty);
             bsonValue = expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
         }
 
@@ -179,7 +179,7 @@ public class ChangesetConverter(
         }
         else
         {
-            var schema = model.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
+            var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
             bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema);
         }
 

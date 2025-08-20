@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Json;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
@@ -12,7 +11,8 @@ namespace Orleans.Hosting;
 /// <summary>
 /// Represents a <see cref="IBsonSerializationProvider"/> for <see cref="JsonElement"/>.
 /// </summary>
-public class JsonElementSerializer : SerializerBase<JsonElement>
+/// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
+public class JsonElementSerializer(JsonSerializerOptions jsonSerializerOptions) : SerializerBase<JsonElement>
 {
     /// <inheritdoc/>
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, JsonElement value)
@@ -27,6 +27,6 @@ public class JsonElementSerializer : SerializerBase<JsonElement>
     {
         var serializer = BsonSerializer.LookupSerializer<BsonDocument>();
         var document = serializer.Deserialize(context, args);
-        return JsonSerializer.Deserialize<JsonElement>(document.ToJson(), Globals.JsonSerializerOptions);
+        return JsonSerializer.Deserialize<JsonElement>(document.ToJson(), jsonSerializerOptions);
     }
 }

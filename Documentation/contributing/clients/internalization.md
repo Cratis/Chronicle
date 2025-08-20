@@ -152,8 +152,8 @@ This guarantees that the repacked assembly is available for reference during the
 <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
 
 <Target Name="BuildDependencies">
-    <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);TargetFrameworks=$(TargetFrameworks);Repack=$(Repack)" />
     <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+    <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
 </Target>
 
 <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Web" />
@@ -163,6 +163,7 @@ This guarantees that the repacked assembly is available for reference during the
 </PropertyGroup>
 
 <ItemGroup Condition="'$(Repack)' == 'true'">
+    <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
     <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
 </ItemGroup>
 
@@ -171,6 +172,10 @@ This guarantees that the repacked assembly is available for reference during the
     <ProjectReference Include="../Connections/Connections.csproj" />
 </ItemGroup>
 ```
+
+> Note: When repacking, the `<ProjectReference/>` to a repacked project, like the `DotNET.csproj` will have to not reference the output assembly directly, which will
+> be the assembly before it has been repackaged. This is due to build optimization and parallelism. In conjunction with the `<Copy/>` statement we get the correct
+> assembly that it will create correct bindings to. Also notice that we include the `.pdb` file when copying, to get a correct reference.
 
 This configuration ensures that, when repacking is enabled, your project references the merged output assembly directly—guaranteeing runtime correctness and hiding internal APIs.
 During normal development (when repacking is not enabled), it falls back to standard project references, preserving fast incremental builds and IDE tooling support.

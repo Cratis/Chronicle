@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;

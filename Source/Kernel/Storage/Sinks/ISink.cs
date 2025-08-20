@@ -25,16 +25,16 @@ public interface ISink
     SinkTypeName Name { get; }
 
     /// <summary>
-    /// Find a model by key, or return an empty object if not found.
+    /// Find a read model by key, or return an empty object if not found.
     /// </summary>
-    /// <param name="key">Key of the model to find.</param>
-    /// <returns>A model instance with the data from the source, or an empty object.</returns>
+    /// <param name="key">Key of the read model to find.</param>
+    /// <returns>A read model instance with the data from the source, or an empty object.</returns>
     Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
-    /// Update or insert model based on key.
+    /// Update or insert read model based on key.
     /// </summary>
-    /// <param name="key">Key of the model to upsert.</param>
+    /// <param name="key">Key of the read model to upsert.</param>
     /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
     /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

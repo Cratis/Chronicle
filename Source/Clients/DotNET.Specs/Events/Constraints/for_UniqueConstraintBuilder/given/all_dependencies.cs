@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
@@ -16,13 +15,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings
-        {
-            SerializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            },
-        });
+        _generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
         _namingPolicy = new DefaultNamingPolicy();
         _eventTypes = Substitute.For<IEventTypes>();
     }

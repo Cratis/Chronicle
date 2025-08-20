@@ -6,9 +6,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_from_event_that_adds_child_from_object;
 
-public class UnidentifiableChildrenProjection : IProjectionFor<ModelWithChildren>
+public class UnidentifiableChildrenProjection : IProjectionFor<ReadModelWithChildren>
 {
-    public void Define(IProjectionBuilderFor<ModelWithChildren> builder) => builder
+    public void Define(IProjectionBuilderFor<ReadModelWithChildren> builder) => builder
         .From<EventWithChildObject>(_ => _
             .AddChild(m => m.Children, _ => _
                 .FromObject(e => e.Child)));

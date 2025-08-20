@@ -25,7 +25,7 @@ public record ProjectionGeneration(uint Value) : ConceptAs<uint>(Value)
     public static readonly ProjectionGeneration Unspecified = new(uint.MaxValue);
 
     /// <summary>
-    /// /// Implicitly convert from <see cref="uint"/> to <see cref="ProjectionGeneration"/>.
+    /// Implicitly convert from <see cref="uint"/> to <see cref="ProjectionGeneration"/>.
     /// </summary>
     /// <param name="generation"><see cref="uint"/> to convert from.</param>
     public static implicit operator ProjectionGeneration(uint generation) => new(generation);

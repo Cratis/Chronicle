@@ -7,7 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reducers.for_Reducers.given;

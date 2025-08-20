@@ -5,15 +5,13 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypesStorage"/>.
@@ -41,7 +39,7 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Register(Chronicle.Concepts.Events.EventType type, JsonSchema schema)
+    public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
@@ -57,7 +55,6 @@ public class EventTypesStorage(
         if (existingEventType is not null)
         {
             var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[generationAsString].ToJson());
-            existingSchema.ResetFlattenedProperties();
             if (existingSchema.ToJson() == schema.ToJson())
             {
                 return;
@@ -70,13 +67,8 @@ public class EventTypesStorage(
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
         _eventTypes.Add(eventSchema.ToMongoDB());
-        eventSchema.Schema.ResetFlattenedProperties();
-
-        schema.EnsureFlattenedProperties();
 
         var mongoEventSchema = eventSchema.ToMongoDB();
-        value[type.Generation] = eventSchema;
-
         await GetCollection().ReplaceOneAsync(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,
@@ -88,17 +80,17 @@ public class EventTypesStorage(
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
-        return schemas.Select(_ => _.ToEventSchema());
+        return schemas.Select(_ => _.ToKernel());
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Chronicle.Concepts.Events.EventType eventType)
+    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)
     {
         var collection = GetCollection();
         var filter = GetFilterForSpecificEventType(eventType.Id);
         using var result = await collection.FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        return schemas.Select(_ => _.ToEventSchema());
+        return schemas.Select(_ => _.ToKernel());
     }
 
     /// <inheritdoc/>
@@ -108,7 +100,7 @@ public class EventTypesStorage(
         var generationAsString = generation.ToString();
         if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToEventSchema();
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToKernel();
         }
 
         var filter = GetFilterForSpecificEventType(type);
@@ -123,7 +115,7 @@ public class EventTypesStorage(
                 generation);
         }
 
-        return schemas[0].ToEventSchema();
+        return schemas[0].ToKernel();
     }
 
     /// <inheritdoc/>

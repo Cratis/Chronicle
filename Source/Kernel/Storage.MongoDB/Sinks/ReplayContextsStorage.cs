@@ -24,9 +24,9 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     }
 
     /// <inheritdoc/>
-    public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ReadModelName model)
+    public Task<Result<Chronicle.Storage.Sinks.ReplayContext, GetContextError>> TryGet(ReadModelName readModel)
     {
-        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, model);
+        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, readModel);
         var context = _collection.Find(filter).FirstOrDefault();
         return context == null ?
             Task.FromResult(Result.Failed<Chronicle.Storage.Sinks.ReplayContext, GetContextError>(GetContextError.NotFound)) :
@@ -34,9 +34,9 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     }
 
     /// <inheritdoc/>
-    public Task Remove(ReadModelName model)
+    public Task Remove(ReadModelName readModel)
     {
-        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, model);
+        var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModelName, readModel);
         return _collection.DeleteOneAsync(filter);
     }
 }

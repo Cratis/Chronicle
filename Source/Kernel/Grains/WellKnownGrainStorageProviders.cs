@@ -19,9 +19,14 @@ public static class WellKnownGrainStorageProviders
     public const string EventSequences = "event-sequences";
 
     /// <summary>
+    /// The name of the storage provider used for observer definitions.
+    /// </summary>
+    public const string ObserverDefinitions = "observer-definitions";
+
+    /// <summary>
     /// The name of the storage provider used for observers.
     /// </summary>
-    public const string Observers = "observers";
+    public const string ObserverState = "observer-state";
 
     /// <summary>
     /// The name of the storage provider used for failed partitions on an observer.

@@ -14,25 +14,25 @@
         <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.7" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.7.0" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.8.0" />
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.0.0" />
-        <PackageVersion Include="Cratis.Applications" Version="16.0.2" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="16.0.2" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="16.0.2" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="16.0.2" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="16.0.2" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="16.0.2" />
+        <PackageVersion Include="Cratis.Applications" Version="17.2.1" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.2.1" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.2.1" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.2.1" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.2.1" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.2.1" />
         <!-- Orleans -->
-        <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.0" />
-        <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="9.1.2" />
-        <PackageVersion Include="Microsoft.Orleans.Client" Version="9.1.2" />
+        <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
+        <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.1" />
+        <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="9.2.1" />
+        <PackageVersion Include="Microsoft.Orleans.Client" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Serialization" Version="9.2.1" />
-        <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Streaming" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.1" />
@@ -58,7 +58,7 @@
         <!-- Analysis -->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.14.0" />
         <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
-        <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.0" />
+        <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.1" />
         <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
         <PackageVersion Include="Roslynator.Analyzers" Version="4.14.0" />
         <PackageVersion Include="Meziantou.Analyzer" Version="2.0.210" />
@@ -78,13 +78,12 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageVersion>
-        <PackageVersion Include="protobuf-net.Grpc" Version="1.2.2" />
+        <PackageVersion Include="protobuf-net.Grpc" Version="1.2.5" />
         <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
         <PackageVersion Include="Grpc.Net.Client" Version="2.71.0" />
-        <PackageVersion Include="mongodb.driver" Version="3.4.2" />
+        <PackageVersion Include="mongodb.driver" Version="3.4.3" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.3" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="9.0.0" />
-        <PackageVersion Include="automapper" Version="14.0.0" />
         <PackageVersion Include="FluentValidation" Version="12.0.0" />
         <PackageVersion Include="handlebars.net" Version="2.1.6" />
         <PackageVersion Include="OneOf" Version="3.0.271" />
@@ -94,7 +93,7 @@
         <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
         <PackageVersion Include="Testcontainers" Version="4.6.0" />
         <PackageVersion Include="xunit" Version="2.9.3" />
-        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.3" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
         <PackageVersion Include="Microsoft.NET.Test.SDK" Version="17.14.1" />
     </ItemGroup>

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -15,10 +14,11 @@ internal static class ProjectionChangesetConverters
     /// Convert to client representation.
     /// </summary>
     /// <param name="changeset">Contract representation of changeset.</param>
+    /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <typeparam name="TReadModel">Type of read model it should convert to.</typeparam>
     /// <returns>Converted <see cref="ProjectionChangeset{T}"/>.</returns>
-    internal static ProjectionChangeset<TReadModel> ToClient<TReadModel>(this Contracts.Projections.ProjectionChangeset changeset) => new(
+    internal static ProjectionChangeset<TReadModel> ToClient<TReadModel>(this Contracts.Projections.ProjectionChangeset changeset, JsonSerializerOptions jsonSerializerOptions) => new(
             changeset.Namespace,
             changeset.ReadModelKey,
-            JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, Globals.JsonSerializerOptions)!);
+            JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, jsonSerializerOptions)!);
 }

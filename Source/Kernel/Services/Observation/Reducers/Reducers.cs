@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -33,11 +34,13 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for observing actual events as they are made available.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
+/// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
     IExpandoObjectConverter expandoObjectConverter,
+    JsonSerializerOptions jsonSerializerOptions,
     ILogger<Reducers> logger) : IReducers
 {
     /// <inheritdoc/>
@@ -141,7 +144,7 @@ internal sealed class Reducers(
                             {
                                 Partition = reduceOperation.Partition.Value.ToString()!,
                                 InitialState = initialState,
-                                Events = reduceOperation.Events.Select(_ => _.ToContract()).ToArray()
+                                Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
                             };
 
                             observer.OnNext(message);

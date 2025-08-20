@@ -4,6 +4,7 @@
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
@@ -11,7 +12,6 @@ using Cratis.Chronicle.InProcess;
 using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,11 +49,6 @@ public static class ChronicleClientSiloBuilderExtensions
         Action<IChronicleBuilder>? configureChronicle = default,
         string? configSection = default)
     {
-        // We disable the AspNet client registration.
-        // The AspNetCore client uses an `IHostedService` to register the client, which then runs before the Silo is ready.
-        // Leading to crashing the entire process.
-        ChronicleClientStartupTask.RegistrationEnabled = false;
-
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
 
@@ -102,7 +97,6 @@ public static class ChronicleClientSiloBuilderExtensions
         builder.AddActivityPropagation();
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
-        builder.AddStartupTask<ChronicleOrleansClientStartupTask>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();
@@ -132,8 +126,8 @@ public static class ChronicleClientSiloBuilderExtensions
 
                 var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
-                var connectionLifecycle = new InProcessConnectionLifecycle();
-                var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
+                var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
+                var connection = new Cratis.Chronicle.InProcess.ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                 connection.SetServices(services);
                 return new ChronicleClient(connection, options);
             });
@@ -144,7 +138,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 {
                     var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
                     var client = sp.GetRequiredService<IChronicleClient>();
-                    return client.GetEventStore(options.EventStoreName, skipDiscovery: true).GetAwaiter().GetResult();
+                    return client.GetEventStore(options.EventStoreName).GetAwaiter().GetResult();
                 }
             });
 

@@ -6,7 +6,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.ReadModels;
 

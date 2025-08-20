@@ -22,7 +22,7 @@ public interface ISinkFactory
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the sink is for.</param>
-    /// <param name="model"><see cref="ReadModelDefinition"/> to create for.</param>
+    /// <param name="readModel"><see cref="ReadModelDefinition"/> to create for.</param>
     /// <returns>A new instance of <see cref="ISink"/> for the <see cref="ReadModelDefinition"/>.</returns>
-    ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition model);
+    ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel);
 }

@@ -22,6 +22,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task Ensure();
 
     /// <summary>
+    /// Get the definition from the observer.
+    /// </summary>
+    /// <returns>The <see cref="ObserverDefinition"/>.</returns>
+    [AlwaysInterleave]
+    Task<ObserverDefinition> GetDefinition();
+
+    /// <summary>
     /// Get the state from the observer.
     /// </summary>
     /// <returns>The <see cref="ObserverState"/>.</returns>

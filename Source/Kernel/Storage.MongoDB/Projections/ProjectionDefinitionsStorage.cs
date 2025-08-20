@@ -1,14 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 using Cratis.Chronicle.Storage.Projections;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using ProjectionDefinition = Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition;
 
@@ -21,10 +18,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
 /// </remarks>
 /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-/// <param name="projectionDefinitionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
 public class ProjectionDefinitionsStorage(
-    IEventStoreDatabase eventStoreDatabase,
-    IJsonProjectionDefinitionSerializer projectionDefinitionSerializer) : IProjectionDefinitionsStorage
+    IEventStoreDatabase eventStoreDatabase) : IProjectionDefinitionsStorage
 {
     IMongoCollection<Projection> Collection => eventStoreDatabase.GetCollection<Projection>(WellKnownCollectionNames.ProjectionDefinitions);
 
@@ -33,11 +28,7 @@ public class ProjectionDefinitionsStorage(
     {
         using var result = await Collection.FindAsync(FilterDefinition<Projection>.Empty);
         var projections = result.ToList();
-        return projections.Select(projection =>
-        {
-            var definition = projection.Definitions.Last()!.Value;
-            return BsonSerializer.Deserialize<ProjectionDefinition>(definition);
-        }).ToArray();
+        return projections.Select(projection => projection.Definitions.Last().Value.ToKernel(projection.Sink)).ToArray();
     }
 
     /// <inheritdoc/>
@@ -47,8 +38,8 @@ public class ProjectionDefinitionsStorage(
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
         using var result = await Collection.FindAsync(_ => _.Id == id);
-        var document = result.Single();
-        return projectionDefinitionSerializer.Deserialize(JsonNode.Parse(document.Definitions.First().Value.ToJson())!);
+        var projection = result.Single();
+        return projection.Definitions.Last().Value.ToKernel(projection.Sink);
     }
 
     /// <inheritdoc/>
@@ -62,9 +53,10 @@ public class ProjectionDefinitionsStorage(
             definition.Identifier,
             definition.Owner,
             new(definition.ReadModel, ReadModelGeneration.First),
-            new Dictionary<string, BsonDocument>
+            definition.Sink,
+            new Dictionary<string, Definitions.ProjectionDefinition>
             {
-                { ProjectionGeneration.First.ToString(), BsonDocument.Parse(projectionDefinitionSerializer.Serialize(definition).ToJsonString()) }
+                { ProjectionGeneration.First.ToString(), definition.ToMongoDB() }
             });
         await Collection.ReplaceOneAsync(
             filter: _ => _.Id == definition.Identifier,

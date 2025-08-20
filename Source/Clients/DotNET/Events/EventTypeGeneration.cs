@@ -25,7 +25,7 @@ public record EventTypeGeneration(uint Value) : ConceptAs<uint>(Value)
     public static readonly EventTypeGeneration Unspecified = new(uint.MaxValue);
 
     /// <summary>
-    /// /// Implicitly convert from <see cref="uint"/> to <see cref="EventTypeGeneration"/>.
+    /// Implicitly convert from <see cref="uint"/> to <see cref="EventTypeGeneration"/>.
     /// </summary>
     /// <param name="generation"><see cref="uint"/> to convert from.</param>
     public static implicit operator EventTypeGeneration(uint generation) => new(generation);

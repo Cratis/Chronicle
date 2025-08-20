@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 

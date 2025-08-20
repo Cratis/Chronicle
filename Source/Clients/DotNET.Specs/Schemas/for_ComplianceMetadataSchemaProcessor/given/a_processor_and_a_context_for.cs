@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Namotion.Reflection;
 using NJsonSchema.Generation;
@@ -20,14 +19,8 @@ public class a_processor_and_a_context_for<T> : Specification
     {
         _resolver = Substitute.For<IComplianceMetadataResolver>();
         _processor = new(_resolver);
-        var settings = new SystemTextJsonSchemaGeneratorSettings
-        {
-            SerializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            },
-        };
 
+        var settings = new SystemTextJsonSchemaGeneratorSettings();
         var generator = new NJsonSchemaGenerator(settings);
         var schema = generator.Generate(typeof(T));
 

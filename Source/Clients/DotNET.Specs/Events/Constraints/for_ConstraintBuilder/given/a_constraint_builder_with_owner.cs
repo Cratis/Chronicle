@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
@@ -17,13 +16,7 @@ public class a_constraint_builder_with_owner : Specification
 
     void Establish()
     {
-        _generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings
-        {
-            SerializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            }
-        });
+        _generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
 
         _owner = typeof(Owner);
         _eventTypes = Substitute.For<IEventTypes>();
@@ -31,4 +24,11 @@ public class a_constraint_builder_with_owner : Specification
     }
 
     record Owner();
+
+    protected IConstraintDefinition CreateConstraint(ConstraintName name)
+    {
+        var constraint = Substitute.For<IConstraintDefinition>();
+        constraint.Name.Returns(name);
+        return constraint;
+    }
 }

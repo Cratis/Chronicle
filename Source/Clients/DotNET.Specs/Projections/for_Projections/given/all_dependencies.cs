@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Rules;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections.for_Projections.given;
 

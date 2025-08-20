@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -9,7 +10,6 @@ using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
-using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -52,11 +52,13 @@ builder.Host
        _.ValidateOnBuild = false;
    })
    .UseCratisApplicationModel()
-   .UseCratisMongoDB(mongo =>
-   {
-       mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-       mongo.Database = WellKnownDatabaseNames.Chronicle;
-   })
+   .UseCratisMongoDB(
+       configureOptions: mongo =>
+       {
+           mongo.Server = chronicleOptions.Storage.ConnectionDetails;
+           mongo.Database = WellKnownDatabaseNames.Chronicle;
+       },
+       builder => builder.WithCamelCaseNamingPolicy())
    .UseOrleans(_ => _
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
@@ -70,7 +72,6 @@ builder.Host
    .ConfigureServices((context, services) =>
    {
        services
-          .AddSingleton(Globals.JsonSerializerOptions)
           .AddBindingsByConvention()
           .AddChronicleTelemetry(context.Configuration)
           .AddSelfBindings()

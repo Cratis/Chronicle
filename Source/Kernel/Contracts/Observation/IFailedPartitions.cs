@@ -13,7 +13,7 @@ public interface IFailedPartitions
     /// Get all failed partitions for an event store and namespace and optionally filter by observer id.
     /// </summary>
     /// <param name="request">The <see cref="GetFailedPartitionsRequest"/>.</param>
-    /// /// <param name="context">gRPC call context.</param>
+    /// <param name="context">gRPC call context.</param>
     /// <returns>A collection of <see cref="FailedPartition"/>.</returns>
     Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default);
 

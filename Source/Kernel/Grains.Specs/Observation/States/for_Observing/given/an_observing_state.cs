@@ -28,6 +28,8 @@ public class an_observing_state : Specification
     protected EventSequenceId _eventSequenceId;
     protected ObserverSubscription _subscription;
     protected AppendedEventsQueueSubscription _queueSubscription;
+    protected IPersistentState<ObserverDefinition> _definitionState;
+    protected ObserverDefinition _observerDefinition;
     protected ObserverKey _observerKey;
     protected IAppendedEventsQueue _appendedEventsQueue;
     protected IEnumerable<EventType> _eventTypes = [
@@ -53,18 +55,25 @@ public class an_observing_state : Specification
         _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>()).Returns(_queueSubscription);
         _queueSubscription = new(_observerKey, 0);
         _appendedEventsQueues.Subscribe(Arg.Any<ObserverKey>(), _eventTypes).Returns(_queueSubscription);
+        _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
+        _observerDefinition = new()
+        {
+            Identifier = _observerId,
+            EventTypes = _eventTypes
+        };
+        _definitionState.State.Returns(_observerDefinition);
 
         _state = new Observing(
             _appendedEventsQueues,
             _eventStoreName,
             _eventStoreNamespace,
             _eventSequenceId,
+            _definitionState,
             Substitute.For<ILogger<Observing>>());
         _state.SetStateMachine(_observer);
         _storedState = new ObserverState
         {
-            Id = _observerId,
-            EventTypes = _eventTypes,
+            Identifier = _observerId,
             RunningState = ObserverRunningState.Active,
         };
 
@@ -78,6 +87,6 @@ public class an_observing_state : Specification
 
         _observer.GetSubscription().Returns(_ => _subscription);
 
-        _tailEventSequenceNumbers = new TailEventSequenceNumbers(_storedState.EventSequenceId, _subscription.EventTypes.ToImmutableList(), 0, 0);
+        _tailEventSequenceNumbers = new TailEventSequenceNumbers(_observerDefinition.EventSequenceId, _subscription.EventTypes.ToImmutableList(), 0, 0);
     }
 }

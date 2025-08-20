@@ -19,8 +19,8 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Transactions;
+using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -36,6 +36,7 @@ public class EventStore : IEventStore
     readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IEventSerializer _eventSerializer;
     readonly ILogger<EventStore> _logger;
 
@@ -53,6 +54,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
@@ -67,6 +69,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
     {
@@ -74,6 +77,7 @@ public class EventStore : IEventStore
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _jsonSerializerOptions = jsonSerializerOptions;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
@@ -109,7 +113,8 @@ public class EventStore : IEventStore
             concurrencyScopeStrategies,
             causationManager,
             UnitOfWorkManager,
-            identityProvider);
+            identityProvider,
+            jsonSerializerOptions);
 
         Jobs = new Jobs.Jobs(this);
 
@@ -140,7 +145,7 @@ public class EventStore : IEventStore
         var projections = new Projections.Projections(
             this,
             EventTypes,
-            new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
+            new ProjectionWatcherManager(new ProjectionWatcherFactory(this, jsonSerializerOptions), this),
             clientArtifactsProvider,
             namingPolicy,
             _eventSerializer,
@@ -167,6 +172,11 @@ public class EventStore : IEventStore
                 correlationIdAccessor),
             UnitOfWorkManager,
             serviceProvider);
+
+        if (autoDiscoverAndRegister)
+        {
+            Connection.Lifecycle.OnConnected += RegisterAll;
+        }
     }
 
     /// <inheritdoc/>
@@ -257,7 +267,8 @@ public class EventStore : IEventStore
             _concurrencyScopeStrategies,
             _causationManager,
             UnitOfWorkManager,
-            _identityProvider);
+            _identityProvider,
+            _jsonSerializerOptions);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)

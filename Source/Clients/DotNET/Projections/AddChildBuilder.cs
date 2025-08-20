@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IAddChildBuilder{TChildModel, TEvent}"/>.
 /// </summary>
-/// <typeparam name="TParentReadModel">Parent model type.</typeparam>
-/// <typeparam name="TChildModel">Child model type.</typeparam>
+/// <typeparam name="TParentReadModel">Parent read model type.</typeparam>
+/// <typeparam name="TChildModel">Child read model type.</typeparam>
 /// <typeparam name="TEvent">Type of the event.</typeparam>
 /// <remarks>
 /// Initializes a new instance of the <see cref="AddChildBuilder{TParentReadModel, TChildModel, TEvent}"/> class.

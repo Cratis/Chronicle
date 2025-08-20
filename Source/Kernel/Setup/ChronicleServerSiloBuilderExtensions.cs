@@ -20,7 +20,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
-using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -90,13 +89,13 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
-                new EventSequences(grainFactory, storage, Globals.JsonSerializerOptions),
+                new EventSequences(grainFactory, storage, jsonSerializerOptions),
                 new EventTypes(storage),
                 new Constraints(grainFactory),
                 new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
                 new FailedPartitions(storage),
-                new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
+                new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
                 new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, jsonSerializerOptions),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),

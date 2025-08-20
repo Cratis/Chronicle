@@ -11,7 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -97,7 +97,7 @@ public class Projections(
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
-        return result.ToClient<TReadModel>();
+        return result.ToClient<TReadModel>(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -136,7 +136,7 @@ public class Projections(
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSession(request);
-        return result.ToClient(readModelType);
+        return result.ToClient(readModelType, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -162,11 +162,11 @@ public class Projections(
             EventSequenceId = EventSequenceId.Log,
             ReadModelKey = readModelKey,
             SessionId = sessionId,
-            Events = eventsToApply.ToContract()
+            Events = eventsToApply.ToContract(jsonSerializerOptions)
         };
 
         var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
-        return result.ToClient(readModelType);
+        return result.ToClient(readModelType, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>

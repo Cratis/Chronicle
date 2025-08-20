@@ -173,9 +173,9 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
       - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }}
       - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
         working-directory: ./Source/Clients
 
       - name: Create NuGet packages
@@ -187,7 +187,7 @@ jobs:
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [dotnet-arm64, dotnet-x64, workbench, release]
 
     steps:
       - name: Checkout code
@@ -243,7 +243,7 @@ jobs:
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [workbench, release]
 
     steps:
       - name: Checkout code
@@ -286,7 +286,7 @@ jobs:
   publish-docker-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [dotnet-arm64, dotnet-x64, workbench, release]
 
     steps:
       - name: Checkout code

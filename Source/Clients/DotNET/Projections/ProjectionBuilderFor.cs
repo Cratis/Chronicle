@@ -5,13 +5,13 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Serialization;
 using Cratis.Chronicle.Sinks;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// /// Represents an implementation of <see cref="IProjectionBuilderFor{TReadModel}"/>.
+/// Represents an implementation of <see cref="IProjectionBuilderFor{TReadModel}"/>.
 /// </summary>
 /// <typeparam name="TReadModel">Type of read model.</typeparam>
 public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IProjectionBuilderFor<TReadModel>>, IProjectionBuilderFor<TReadModel>

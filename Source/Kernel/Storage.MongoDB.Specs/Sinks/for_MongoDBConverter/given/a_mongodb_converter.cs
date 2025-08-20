@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
 using NJsonSchema;
@@ -19,14 +18,7 @@ public class a_mongodb_converter : Specification
 
     void Establish()
     {
-        var generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings
-        {
-            AllowReferencesWithProperties = true,
-            SerializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            }
-        });
+        var generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
 
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _typeFormats = Substitute.For<ITypeFormats>();

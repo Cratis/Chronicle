@@ -7,7 +7,7 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Serialization;
+using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
 namespace Cratis.Chronicle.Projections;
@@ -19,8 +19,8 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 /// <param name="autoMap">Whether to automatically map properties.</param>
-/// <typeparam name="TParentReadModel">Parent model type.</typeparam>
-/// <typeparam name="TChildReadModel">Child model type.</typeparam>
+/// <typeparam name="TParentReadModel">Parent read model type.</typeparam>
+/// <typeparam name="TChildReadModel">Child read model type.</typeparam>
 public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
@@ -32,7 +32,7 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     PropertyPath _identifiedBy = PropertyPath.NotSet;
 
 #pragma warning disable IDE0052 // Remove unread private members
-    // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ModelPropertiesBuilder
+    // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ReadModelPropertiesBuilder
     EventType? _fromEventPropertyEventType;
     IEventValueExpression? _fromEventPropertyExpression;
 
@@ -75,8 +75,6 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
         return new()
         {
             IdentifiedBy = _identifiedBy,
-            ReadModel = _readModelName,
-            InitialModelState = _initialValues.ToJsonString(),
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),

@@ -14,10 +14,12 @@ namespace Cratis.Chronicle.Grains.Observation.States;
 /// Represents the replay state of an observer.
 /// </summary>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
+/// <param name="definitionState">The persistent state <see cref="ObserverDefinition"/> for the observer.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Replay(
     ObserverKey observerKey,
+    IPersistentState<ObserverDefinition> definitionState,
     IJobsManager jobsManager,
     ILogger<Replay> logger) : BaseObserverState
 {
@@ -34,14 +36,14 @@ public class Replay(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = logger.BeginReplayScope(state.Id, observerKey);
+        using var scope = logger.BeginReplayScope(state.Identifier, observerKey);
         logger.Entering();
 
         var subscription = await Observer.GetSubscription();
 
         await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
             logger,
-            new(observerKey, state.Type, state.EventTypes),
+            new(observerKey, definitionState.State.Type, definitionState.State.EventTypes),
             requestPredicate: null,
             () =>
             {

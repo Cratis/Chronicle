@@ -12,6 +12,19 @@ namespace Cratis.Chronicle.Connections;
 /// chronicle://username:password@<host>[:<port>]/?<options>
 /// chronicle+srv://<host>[:<port>]/?<options>
 /// chronicle://<host>[:<port>],<host>[:<port>],<host>[:<port>]/?<options>
+///
+/// // Regex patterns for valid Chronicle URLs:
+/// // 1. chronicle://<host>[:<port>]/?<options>
+/// const string SingleHostPattern = @"^chronicle:\/\/([a-zA-Z0-9\.-]+)(:\d+)?(\/\?.*)?$";
+///
+/// // 2. chronicle://username:password@<host>[:<port>]/?<options>
+/// const string AuthPattern = @"^chronicle:\/\/([a-zA-Z0-9_\-\.]+):([^@]+)@([a-zA-Z0-9\.-]+)(:\d+)?(\/\?.*)?$";
+///
+/// // 3. chronicle+srv://<host>[:<port>]/?<options>
+/// const string SrvPattern = @"^chronicle\+srv:\/\/([a-zA-Z0-9\.-]+)(:\d+)?(\/\?.*)?$";
+///
+/// // 4. chronicle://<host>[:<port>],<host>[:<port>],<host>[:<port>]/?<options>
+/// const string MultiHostPattern = @"^chronicle:\/\/([a-zA-Z0-9\.-]+(:\d+)?)(,([a-zA-Z0-9\.-]+(:\d+)?))*\/(\?.*)?$";
 /// ]]>
 /// </remarks>
 public class ChronicleUrl

@@ -52,7 +52,7 @@ public class EventSequence(
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
-    IObserverStorage? _observerStorage;
+    IObserverDefinitionsStorage? _observerDefinitionsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
@@ -61,7 +61,7 @@ public class EventSequence(
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
-    IObserverStorage ObserverStorage => _observerStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Observers;
+    IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
     ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage);
 
     /// <inheritdoc/>
@@ -508,7 +508,7 @@ public class EventSequence(
         var observers = await ObserverStorage.GetForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
-            var key = new ObserverKey(observer.Id, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+            var key = new ObserverKey(observer.Identifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
             await GrainFactory.GetGrain<IObserver>(key).ReplayPartition(eventSourceId);
         }
     }

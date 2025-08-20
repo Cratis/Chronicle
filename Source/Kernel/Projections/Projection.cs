@@ -118,10 +118,7 @@ public class Projection : IProjection, IDisposable
     public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Context.EventType.Id));
 
     /// <inheritdoc/>
-    public void OnNext(ProjectionEventContext context)
-    {
-        _subject.OnNext(context);
-    }
+    public void OnNext(ProjectionEventContext context) => _subject.OnNext(context);
 
     /// <inheritdoc/>
     public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);

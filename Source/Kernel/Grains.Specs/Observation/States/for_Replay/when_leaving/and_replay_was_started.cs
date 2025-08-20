@@ -9,7 +9,7 @@ public class and_replay_was_started : given.a_replay_state
 {
     async Task Establish()
     {
-        _storedState = _storedState with
+        _observerDefinition = _observerDefinition with
         {
             Type = ObserverType.Reactor
         };

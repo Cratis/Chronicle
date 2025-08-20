@@ -18,7 +18,7 @@ public class when_getting_boolean_true_value_from_event_content : Specification
     void Establish()
     {
         var content = new ExpandoObject();
-        ((dynamic)content).propertySet = Expected;
+        ((dynamic)content).PropertySet = Expected;
 
         _event = new(
             new(

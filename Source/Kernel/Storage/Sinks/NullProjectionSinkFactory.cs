@@ -18,5 +18,5 @@ public class NullProjectionSinkFactory : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.Null;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition model) => _instance;
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) => _instance;
 }

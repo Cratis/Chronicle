@@ -16,12 +16,12 @@ public partial class Observer
     public async Task CatchUp()
     {
         _isPreparingCatchup = true;
-        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         var subscription = await GetSubscription();
         await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
-            new(_observerKey, State.Type, State.NextEventSequenceNumber, subscription.EventTypes),
+            new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
             requestPredicate: null,
             () =>
             {
@@ -43,7 +43,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions)
     {
-        using var scope = logger.BeginObserverScope(State.Id, _observerKey);
+        using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
         logger.RegisteringCatchingUpPartitions();
         foreach (var partition in partitions)
         {
@@ -110,7 +110,7 @@ public partial class Observer
         var nextEventSequenceNumber = lastHandledEventSequenceNumber.Next();
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, State.Type, partition, nextEventSequenceNumber, State.EventTypes));
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
         await WriteStateAsync();
     }
 

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
@@ -23,8 +22,6 @@ internal static class ChildrenDefinitionConverters
         return new()
         {
             IdentifiedBy = definition.IdentifiedBy,
-            ReadModel = definition.ReadModel,
-            InitialModelState = definition.InitialModelState.ToJsonString(),
             From = definition.From.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Join = definition.Join.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Children = definition.Children.ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
@@ -44,8 +41,6 @@ internal static class ChildrenDefinitionConverters
     {
         return new(
             contract.IdentifiedBy,
-            contract.ReadModel,
-            (JsonObject)JsonNode.Parse(contract.InitialModelState)! ?? [],
             contract.From.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.Join.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.Children.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
