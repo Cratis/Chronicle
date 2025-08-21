@@ -216,12 +216,8 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
 
         await ChronicleFixture.RemoveAllDatabases();
-        _ = Task.Run(async () =>
-        {
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        });
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     /// <summary>
