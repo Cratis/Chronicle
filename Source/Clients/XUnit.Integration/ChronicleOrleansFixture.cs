@@ -18,6 +18,19 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     where TChronicleFixture : IChronicleFixture
 {
     /// <inheritdoc/>
+    public override async Task DisposeAsync()
+    {
+        await base.DisposeAsync();
+
+        _ = Task.Run(async () =>
+        {
+            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        });
+    }
+
+    /// <inheritdoc/>
     protected override IAsyncDisposable CreateWebApplicationFactory()
     {
         var startupType = TestAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
