@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Rules;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Http;
@@ -37,12 +38,15 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
+            var connection = sp.GetService<IChronicleConnection>();
             options.ServiceProvider = sp;
             options.IdentityProvider = new IdentityProvider(
                                 sp.GetRequiredService<IHttpContextAccessor>(),
                                 sp.GetRequiredService<ILogger<IdentityProvider>>());
             options.LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
-            return new ChronicleClient(options);
+            return connection is null ?
+                new ChronicleClient(options) :
+                new ChronicleClient(connection, options);
         });
 
         services.AddScoped(sp =>
