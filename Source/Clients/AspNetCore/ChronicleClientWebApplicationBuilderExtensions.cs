@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,11 +69,35 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        if (configure != default)
+        var baseBuilder = services
+            .AddOptions<ChronicleOptions>()
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        if (configure is not null)
         {
             builder.Configure(configure);
+            baseBuilder.Configure(options =>
+            {
+                var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
+                CopyValues(aspNetCoreOptions, options);
+                configure((ChronicleAspNetCoreOptions)options);
+                CopyValues(options, aspNetCoreOptions);
+            });
         }
 
         return builder;
+    }
+
+    static void CopyValues(object target, object source)
+    {
+        foreach (var property in target.GetType().GetProperties())
+        {
+            var value = source.GetType().GetProperty(property.Name)?.GetValue(source);
+            if (property?.CanWrite == true)
+            {
+                property.SetValue(target, value);
+            }
+        }
     }
 }
