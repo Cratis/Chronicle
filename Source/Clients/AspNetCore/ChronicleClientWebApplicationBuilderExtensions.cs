@@ -81,7 +81,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             {
                 var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
                 CopyValues(aspNetCoreOptions, options);
-                configure((ChronicleAspNetCoreOptions)options);
+                configure(aspNetCoreOptions);
                 CopyValues(options, aspNetCoreOptions);
             });
         }
