@@ -59,7 +59,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <summary>
     /// Gets the value indicating whether to auto discover artifacts.
     /// </summary>
-    public virtual bool AutoDiscoverArtifacts { get; }
+    public virtual bool AutoDiscoverArtifacts { get; } = true;
 
     /// <summary>
     /// Gets the docker network.

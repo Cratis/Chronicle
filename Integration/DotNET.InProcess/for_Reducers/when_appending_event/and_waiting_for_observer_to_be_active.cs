@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.when_appending_eve
 [Collection(ChronicleCollection.Name)]
 public class and_waiting_for_observer_to_be_active(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
         public static TaskCompletionSource Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;

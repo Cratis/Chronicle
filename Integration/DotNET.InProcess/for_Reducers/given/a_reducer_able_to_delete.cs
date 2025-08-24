@@ -6,7 +6,7 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.given;
 
-public class a_reducer_able_to_delete<TReducer>(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class a_reducer_able_to_delete<TReducer>(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     where TReducer : class, IReducerFor<SomeReadModel>, new()
 {
     public TReducer Reducer;
