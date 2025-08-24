@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <typeparam name="TChronicleFixture">The type of the chronicle fixture.</typeparam>
 /// <param name="fixture">The <see cref="ChronicleInProcessFixture"/>.</param>
-public abstract class IntegrationSpecificationContext<TChronicleFixture>(TChronicleFixture fixture) : ChronicleOrleansFixture<TChronicleFixture>(fixture)
+public abstract class Specification<TChronicleFixture>(TChronicleFixture fixture) : ChronicleOrleansFixture<TChronicleFixture>(fixture)
     where TChronicleFixture : IChronicleFixture
 {
     /// <inheritdoc/>
@@ -43,7 +43,7 @@ public abstract class IntegrationSpecificationContext<TChronicleFixture>(TChroni
 /// <typeparam name="TStartup">The startup class type.</typeparam>
 /// <param name="fixture">The <see cref="ChronicleInProcessFixture"/>.</param>
 #pragma warning disable SA1402
-public abstract class IntegrationSpecificationContext<TChronicleFixture, TFactory, TStartup>(TChronicleFixture fixture) : ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(fixture)
+public abstract class Specification<TChronicleFixture, TFactory, TStartup>(TChronicleFixture fixture) : ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(fixture)
 #pragma warning restore SA1402
     where TChronicleFixture : IChronicleFixture
     where TFactory : ChronicleWebApplicationFactory<TStartup>

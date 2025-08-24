@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Api.for_EventStoreQueries;
 [Collection(ChronicleCollection.Name)]
 public class when_getting_event_stores(context context) : Given<context>(context)
 {
-    public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.a_configured_http_client(fixture)
+    public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_http_client(fixture)
     {
         public QueryResult<IEnumerable<string>> Result;
 

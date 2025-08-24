@@ -23,15 +23,14 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
+#pragma warning disable CA2213, SA1600, CA1051
+    protected IAsyncDisposable? _webApplicationFactory;
+#pragma warning restore CA2213, SA1600, CA1051
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
     static MethodInfo _createClientWithOptionsMethod = null!;
     static bool _isInitialized;
-
-#pragma warning disable CA2213
-    IAsyncDisposable? _webApplicationFactory;
-#pragma warning restore CA2213
     bool _backupPerformed;
     string _name = string.Empty;
     IServiceProvider? _services;
@@ -60,7 +59,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <summary>
     /// Gets the value indicating whether to auto discover artifacts.
     /// </summary>
-    public virtual bool AutoDiscoverArtifacts { get; }
+    public virtual bool AutoDiscoverArtifacts { get; } = true;
 
     /// <summary>
     /// Gets the docker network.
@@ -207,7 +206,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         if (!_backupPerformed)
         {
@@ -216,12 +215,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
 
         await ChronicleFixture.RemoveAllDatabases();
-        _ = Task.Run(async () =>
-        {
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        });
     }
 
     /// <summary>

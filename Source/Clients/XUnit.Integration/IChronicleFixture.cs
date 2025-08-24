@@ -7,7 +7,7 @@ using DotNet.Testcontainers.Networks;
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
-/// Defines the chronicle fiture.
+/// Defines the chronicle fixture.
 /// </summary>
 public interface IChronicleFixture : IAsyncDisposable
 {

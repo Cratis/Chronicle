@@ -3,4 +3,7 @@
 
 namespace Cratis.Chronicle.InProcess.Integration;
 
-public class IntegrationSpecificationContext(ChronicleInProcessFixture fixture) : IntegrationSpecificationContext<ChronicleInProcessFixture>(fixture);
+public class Specification(ChronicleInProcessFixture fixture) : Specification<ChronicleInProcessFixture>(fixture)
+{
+    public override bool AutoDiscoverArtifacts => false;
+}

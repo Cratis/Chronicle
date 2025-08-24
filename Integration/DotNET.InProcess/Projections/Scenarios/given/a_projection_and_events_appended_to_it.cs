@@ -7,7 +7,7 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.given;
 
-public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     where TProjection : class, IProjectionFor<TReadModel>, new()
     where TReadModel : class
 {
