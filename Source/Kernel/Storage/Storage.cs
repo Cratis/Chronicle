@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -10,7 +12,10 @@ namespace Cratis.Chronicle.Storage;
 /// Represents an implementation of <see cref="IStorage"/> for MongoDB.
 /// </summary>
 /// <param name="clusterStorage">The <see cref="IClusterStorage"/> instance.</param>
-public class Storage(IClusterStorage clusterStorage) : IStorage
+/// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
+public class Storage(
+    IClusterStorage clusterStorage,
+    IInstancesOf<ISinkFactory> sinkFactories) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
 
@@ -29,6 +34,10 @@ public class Storage(IClusterStorage clusterStorage) : IStorage
             return pair.Value;
         }
 
-        return _eventStores[eventStore] = clusterStorage.CreateStorageForEventStore(eventStore);
+        return _eventStores[eventStore] =
+            clusterStorage.CreateStorageForEventStore(
+                eventStore,
+                (eventStoreNamespaceName) =>
+                    new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
     }
 }

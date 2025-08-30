@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -27,8 +28,9 @@ public interface IClusterStorage
     /// Get the <see cref="IEventStoreStorage"/> for a specific <see cref="EventStoreName"/>.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get.</param>
+    /// <param name="sinksFactory">Factory delegate that can create <see cref="ISinks"/>.</param>
     /// <returns>The <see cref="IEventStoreStorage"/> instance.</returns>
-    IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore);
+    IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory);
 
     /// <summary>
     /// Saves the specified <see cref="EventStoreName"/> to the cluster storage.

@@ -23,7 +23,6 @@ using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -40,7 +39,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+/// <param name="sinksFactory"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -50,7 +49,7 @@ public class EventStoreStorage(
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IInstancesOf<ISinkFactory> sinkFactories,
+    SinksFactory sinksFactory,
     IJobTypes jobTypes,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IEventStoreStorage
@@ -102,7 +101,7 @@ public class EventStoreStorage(
                 complianceManager,
                 expandoObjectConverter,
                 jsonSerializerOptions,
-                sinkFactories,
+                sinksFactory(@namespace),
                 jobTypes,
                 options,
                 loggerFactory);

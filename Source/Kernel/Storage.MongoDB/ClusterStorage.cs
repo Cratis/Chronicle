@@ -7,9 +7,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -23,7 +21,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> instance.</param>
 /// <param name="expandoObjectConverter">The <see cref="Json.IExpandoObjectConverter"/> instance.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> instance.</param>
-/// <param name="sinkFactories">The collection of <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> instance.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> instance.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
@@ -32,7 +29,6 @@ public class ClusterStorage(
     IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IInstancesOf<ISinkFactory> sinkFactories,
     IJobTypes jobTypes,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IClusterStorage
@@ -55,13 +51,13 @@ public class ClusterStorage(
     }
 
     /// <inheritdoc/>
-    public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore) => new EventStoreStorage(
+    public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory) => new EventStoreStorage(
         eventStore,
         database.GetEventStoreDatabase(eventStore),
         complianceManager,
         expandoObjectConverter,
         jsonSerializerOptions,
-        sinkFactories,
+        sinksFactory,
         jobTypes,
         options,
         loggerFactory);
