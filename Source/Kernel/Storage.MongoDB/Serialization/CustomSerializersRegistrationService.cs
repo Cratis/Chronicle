@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Chronicle.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB.Serialization;
 
 /// <summary>
 /// Represents an <see cref="IHostedService"/> that registers our custom bson serializers.
