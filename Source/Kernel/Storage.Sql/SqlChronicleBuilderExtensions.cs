@@ -2,6 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sql;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -18,10 +21,7 @@ public static class SqlChronicleBuilderExtensions
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithSql(this IChronicleBuilder builder, ChronicleOptions options)
     {
-        builder.ConfigureServices(services =>
-        {
-            // services.AddSingleton<IClusterStorage, ClusterStorage>();
-        });
+        builder.ConfigureServices(services => services.AddSingleton<IClusterStorage, ClusterStorage>());
 
         return builder;
     }
