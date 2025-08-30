@@ -49,7 +49,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IDatabase, Database>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
-            services.AddSingleton<IStorage, Storage.MongoDB.Storage>();
+            services.AddSingleton<IClusterStorage, ClusterStorage>();
         });
 
         return builder;

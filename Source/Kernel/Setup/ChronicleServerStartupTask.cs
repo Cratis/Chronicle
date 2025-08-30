@@ -40,7 +40,7 @@ internal sealed class ChronicleServerStartupTask(
 
         await eventTypes.DiscoverAndRegister();
 
-        var allEventStores = await storage.GetEventStores();
+        var allEventStores = await storage.Cluster.GetEventStores();
         foreach (var eventStore in allEventStores)
         {
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);

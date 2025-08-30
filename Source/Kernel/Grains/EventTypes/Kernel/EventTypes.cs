@@ -63,7 +63,7 @@ public class EventTypes : IEventTypes
         var eventTypes = _types.All
             .Where(t => t.HasAttribute<EventTypeAttribute>())
             .ToArray();
-        var eventStores = await _storage.GetEventStores();
+        var eventStores = await _storage.Cluster.GetEventStores();
         foreach (var eventStore in eventStores)
         {
             _logger.DiscoveringAndRegistering(eventStore, eventTypes.Length);

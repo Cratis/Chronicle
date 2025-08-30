@@ -31,7 +31,7 @@ public class ProjectionsService(
     /// <inheritdoc/>
     public override async Task Init(IServiceProvider serviceProvider)
     {
-        var eventStores = await storage.GetEventStores();
+        var eventStores = await storage.Cluster.GetEventStores();
         foreach (var eventStore in eventStores)
         {
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);

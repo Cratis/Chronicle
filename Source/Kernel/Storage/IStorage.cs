@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Storage;
@@ -12,16 +11,9 @@ namespace Cratis.Chronicle.Storage;
 public interface IStorage
 {
     /// <summary>
-    /// Get all the <see cref="EventStoreName">event stores</see> available.
+    /// Gets the cluster storage.
     /// </summary>
-    /// <returns>Collection of <see cref="EventStoreName"/>.</returns>
-    Task<IEnumerable<EventStoreName>> GetEventStores();
-
-    /// <summary>
-    /// Observes all the <see cref="EventStoreName">event stores</see> available.
-    /// </summary>
-    /// <returns>Collection of <see cref="EventStoreName"/>.</returns>
-    ISubject<IEnumerable<EventStoreName>> ObserveEventStores();
+    IClusterStorage Cluster { get;  }
 
     /// <summary>
     /// Get the <see cref="IEventStoreStorage"/> for a specific <see cref="EventStoreName"/>.
