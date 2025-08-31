@@ -22,6 +22,7 @@ public class Initial : Migration
             {
                 Id = table.Column<string>(type: "TEXT", nullable: false),
                 GrainId = table.Column<string>(type: "TEXT", nullable: false),
+                GrainHash = table.Column<uint>(type: "INTEGER", nullable: false),
                 ReminderName = table.Column<string>(type: "TEXT", nullable: false),
                 Period = table.Column<long>(type: "INTEGER", nullable: false),
                 StartAt = table.Column<DateTime>(type: "INTEGER", nullable: false),
@@ -48,6 +49,9 @@ public class InitialSnapshot : ModelSnapshot
                 .IsRequired();
             b.Property<string>(nameof(Reminder.GrainId))
                 .HasColumnType("TEXT")
+                .IsRequired();
+            b.Property<uint>(nameof(Reminder.GrainHash))
+                .HasColumnType("INTEGER")
                 .IsRequired();
             b.Property<string>(nameof(Reminder.ReminderName))
                 .HasColumnType("TEXT")

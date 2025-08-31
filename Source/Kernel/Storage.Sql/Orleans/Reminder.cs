@@ -22,6 +22,11 @@ public class Reminder
     public string GrainId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the hash code for the grain identifier.
+    /// </summary>
+    public uint GrainHash { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the reminder.
     /// </summary>
     public string ReminderName { get; set; } = string.Empty;
