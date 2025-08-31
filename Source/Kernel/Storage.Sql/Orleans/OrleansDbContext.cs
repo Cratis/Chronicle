@@ -3,16 +3,16 @@
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql;
+namespace Cratis.Chronicle.Storage.Sql.Orleans;
 
 /// <summary>
-/// Represents the database context for the cluster.
+/// Represents the database context for Orleans.
 /// </summary>
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
-public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : DbContext(options)
+public class OrleansDbContext(DbContextOptions<OrleansDbContext> options) : DbContext(options)
 {
     /// <summary>
-    /// Gets or sets the DbSet for event stores.
+    /// Gets or sets DbSet for reminders.
     /// </summary>
-    public DbSet<EventStore> EventStores { get; set; }
+    public DbSet<Reminder> Reminders { get; set; }
 }

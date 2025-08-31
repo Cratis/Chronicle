@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Cratis.Chronicle.Storage.Sql.Migrations.Cluster;
+namespace Cratis.Chronicle.Storage.Sql.Cluster.Migrations;
 
 #nullable disable
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(ClusterDbContext))]
-[Migration(nameof(Initial))]
+[Migration("Cluster-Initial")]
 public class Initial : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -43,7 +43,6 @@ public class InitialSnapshot : ModelSnapshot
                 .IsRequired();
 
             b.HasKey(nameof(EventStore.Name));
-
             b.ToTable("EventStores");
         });
 }

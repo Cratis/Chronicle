@@ -17,7 +17,7 @@ public class DbContextFactory<TDbContext> : IDesignTimeDbContextFactory<TDbConte
     public TDbContext CreateDbContext(string[] args)
     {
         var builder = new DbContextOptionsBuilder<TDbContext>();
-        builder.UseSqlite("Data Source=Chronicle.db", x => x.MigrationsAssembly(typeof(TDbContext).Assembly.FullName));
+        builder.UseSqlite("Data Source=chronicle.db", x => x.MigrationsAssembly(typeof(TDbContext).Assembly.FullName));
         return (Activator.CreateInstance(typeof(TDbContext), builder.Options) as TDbContext)!;
     }
 }

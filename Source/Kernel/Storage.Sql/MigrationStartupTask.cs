@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Sql;
+using Cratis.Types;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,7 +22,10 @@ public class MigrationStartupTask(IServiceProvider serviceProvider) : ILifecycle
     private async Task Execute(CancellationToken cancellationToken)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
-        var clusterDbContext = scope.ServiceProvider.GetRequiredService<ClusterDbContext>();
-        await clusterDbContext.Database.MigrateAsync();
+        foreach (var dbContextType in scope.ServiceProvider.GetRequiredService<IImplementationsOf<DbContext>>())
+        {
+            var dbContext = (scope.ServiceProvider.GetRequiredService(dbContextType) as DbContext)!;
+            await dbContext.Database.MigrateAsync();
+        }
     }
 }

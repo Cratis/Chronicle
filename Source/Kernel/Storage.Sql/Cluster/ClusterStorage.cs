@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql;
+namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClusterStorage"/> for SQL.

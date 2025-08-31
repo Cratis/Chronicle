@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sql;
+using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.Orleans;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,8 +27,10 @@ public static class SqlChronicleBuilderExtensions
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddDbContext<OrleansDbContext>(options);
             services.AddDbContext<ClusterDbContext>(options);
-
+            services.AddDbContext<EventStoreDbContext>(options);
+            builder.Services.AddSingleton<IReminderTable, ReminderTable>();
             builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, MigrationStartupTask>();
         });
 
@@ -36,7 +40,7 @@ public static class SqlChronicleBuilderExtensions
     static IServiceCollection AddDbContext<TDbContext>(this IServiceCollection services, ChronicleOptions options)
         where TDbContext : DbContext
     {
-        services.AddDbContext<ClusterDbContext>(opts =>
+        services.AddDbContext<TDbContext>(opts =>
         {
             switch (options.Storage.Type.ToLowerInvariant())
             {
