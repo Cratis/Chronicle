@@ -24,9 +24,9 @@ public static class EventTypeConverters
             Id = schema.Type.Id,
             Owner = EventTypeOwner.Client,
             Tombstone = schema.Type.Tombstone,
-            Schemas = new Dictionary<string, string>
+            Schemas = new Dictionary<uint, string>
             {
-                { schema.Type.Generation.ToString(), schema.Schema.ToJson() }
+                { schema.Type.Generation, schema.Schema.ToJson() }
             }
         };
 

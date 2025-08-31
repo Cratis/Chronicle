@@ -33,13 +33,12 @@ public class EventTypesStorage(EventStoreName eventStore, EventTypesDbContext db
     /// <inheritdoc/>
     public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
-        var generationAsString = type.Generation.ToString();
         var existingEventType = _eventTypes
-            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(generationAsString));
+            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(type.Generation));
 
         if (existingEventType is not null)
         {
-            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[generationAsString]);
+            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation]);
             if (existingSchema.ToJson() == schema.ToJson())
             {
                 return;
@@ -64,10 +63,9 @@ public class EventTypesStorage(EventStoreName eventStore, EventTypesDbContext db
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = null)
     {
         generation ??= EventTypeGeneration.First;
-        var generationAsString = generation.ToString();
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
+        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToKernel();
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel();
         }
         var eventType = await GetSpecificEventType(type) ?? throw new UnknownEventType(eventStore, type);
         if (eventType.Schemas.Count == 0)
@@ -88,15 +86,13 @@ public class EventTypesStorage(EventStoreName eventStore, EventTypesDbContext db
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = null)
     {
         generation ??= EventTypeGeneration.First;
-        var generationAsString = generation.ToString();
-
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
+        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
         {
             return true;
         }
 
         var eventType = await GetSpecificEventType(type);
-        return eventType?.Schemas.ContainsKey(generationAsString) ?? false;
+        return eventType?.Schemas.ContainsKey(generation) ?? false;
     }
 
     Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId) =>

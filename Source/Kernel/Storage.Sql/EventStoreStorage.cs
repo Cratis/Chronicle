@@ -46,7 +46,7 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IProjectionDefinitionsStorage Projections => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IReadModelDefinitionsStorage ReadModels => throw new NotImplementedException();
+    public IReadModelDefinitionsStorage ReadModels => new ReadModels.ReadModelDefinitionsStorage(serviceProvider.GetRequiredService<ReadModels.ReadModelsDbContext>());
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace) => throw new NotImplementedException();

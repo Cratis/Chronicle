@@ -30,5 +30,5 @@ public class EventType
     /// <summary>
     /// Gets or sets the versioned schemas associated with the event type.
     /// </summary>
-    public IDictionary<string, string> Schemas { get; set; } = new Dictionary<string, string>();
+    public IDictionary<uint, string> Schemas { get; set; } = new Dictionary<uint, string>();
 }
