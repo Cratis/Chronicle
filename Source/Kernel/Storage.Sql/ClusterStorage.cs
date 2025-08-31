@@ -15,7 +15,7 @@ public class ClusterStorage(ClusterDbContext dbContext) : IClusterStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores() =>
-        await dbContext.EventStores.Select(es => es.Name).ToListAsync();
+        await dbContext.EventStores.Select(es => (EventStoreName)es.Name).ToListAsync();
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => throw new NotImplementedException();
@@ -27,7 +27,7 @@ public class ClusterStorage(ClusterDbContext dbContext) : IClusterStorage
     /// <inheritdoc/>
     public Task SaveEventStore(EventStoreName eventStore)
     {
-        dbContext.EventStores.Add(new EventStore(eventStore));
+        dbContext.EventStores.Add(new EventStore { Name = eventStore });
         return dbContext.SaveChangesAsync();
     }
 }
