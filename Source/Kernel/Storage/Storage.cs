@@ -34,10 +34,18 @@ public class Storage(
             return pair.Value;
         }
 
+        // TODO: This logic should be replaced by formalizing event stores as a Grain and it ensuring existence. Service layer should do this.
+        var eventStores = clusterStorage.GetEventStores().GetAwaiter().GetResult();
+        var existingEventStore = eventStores.SingleOrDefault(e => e == eventStore);
+        if (existingEventStore is null)
+        {
+            clusterStorage.SaveEventStore(eventStore).GetAwaiter().GetResult();
+        }
+
         return _eventStores[eventStore] =
-            clusterStorage.CreateStorageForEventStore(
-                eventStore,
-                (eventStoreNamespaceName) =>
-                    new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
+                clusterStorage.CreateStorageForEventStore(
+                    eventStore,
+                    (eventStoreNamespaceName) =>
+                        new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
     }
 }
