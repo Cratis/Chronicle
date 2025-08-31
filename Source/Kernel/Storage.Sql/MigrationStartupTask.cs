@@ -16,7 +16,7 @@ public class MigrationStartupTask(IServiceProvider serviceProvider) : ILifecycle
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
     {
-        lifecycle.Subscribe(nameof(MigrationStartupTask), ServiceLifecycleStage.Active, Execute);
+        lifecycle.Subscribe(nameof(MigrationStartupTask), ServiceLifecycleStage.First, Execute);
     }
 
     private async Task Execute(CancellationToken cancellationToken)
