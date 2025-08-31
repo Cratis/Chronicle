@@ -10,7 +10,6 @@ using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
-using Cratis.Chronicle.Storage.Sql.Namespaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -26,10 +25,10 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>
-    public INamespaceStorage Namespaces { get; } = new NamespaceStorage(serviceProvider.GetRequiredService<NamespacesDbContext>());
+    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(serviceProvider.GetRequiredService<Namespaces.NamespacesDbContext>());
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes => throw new NotImplementedException();
+    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, serviceProvider.GetRequiredService<EventTypes.EventTypesDbContext>());
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints => throw new NotImplementedException();

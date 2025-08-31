@@ -22,7 +22,7 @@ public class MigrationStartupTask(IServiceProvider serviceProvider) : ILifecycle
     private async Task Execute(CancellationToken cancellationToken)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
-        foreach (var dbContextType in scope.ServiceProvider.GetRequiredService<IImplementationsOf<DbContext>>().OnlyChronicle())
+        foreach (var dbContextType in scope.ServiceProvider.GetRequiredService<IImplementationsOf<BaseDbContext>>().OnlyChronicle())
         {
             var dbContext = (scope.ServiceProvider.GetRequiredService(dbContextType) as DbContext)!;
             await dbContext.Database.MigrateAsync();

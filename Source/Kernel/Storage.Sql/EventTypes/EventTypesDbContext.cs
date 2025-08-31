@@ -3,16 +3,16 @@
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql.Namespaces;
+namespace Cratis.Chronicle.Storage.Sql.EventTypes;
 
 /// <summary>
 /// Represents the database context for the cluster.
 /// </summary>
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
-public class NamespacesDbContext(DbContextOptions<NamespacesDbContext> options) : BaseDbContext(options)
+public class EventTypesDbContext(DbContextOptions<EventTypesDbContext> options) : BaseDbContext(options)
 {
     /// <summary>
-    /// Gets or sets the DbSet for namespaces.
+    /// Gets or sets the DbSet for event types.
     /// </summary>
-    public DbSet<Namespace> Namespaces { get; set; }
+    public DbSet<EventType> EventTypes { get; set; }
 }

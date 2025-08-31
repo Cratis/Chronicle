@@ -42,20 +42,20 @@ public static class SqlChronicleBuilderExtensions
     }
 
     static IServiceCollection AddDbContext<TDbContext>(this IServiceCollection services, ChronicleOptions options)
-        where TDbContext : DbContext
+        where TDbContext : BaseDbContext
     {
-        services.AddDbContext<TDbContext>(opts =>
+        services.AddDbContext<TDbContext>(builder =>
         {
             switch (options.Storage.Type.ToLowerInvariant())
             {
                 case StorageType.Sqlite:
-                    opts.UseSqlite(options.Storage.ConnectionDetails);
+                    builder.UseSqlite(options.Storage.ConnectionDetails);
                     break;
                 case StorageType.SqlServer:
-                    opts.UseSqlServer(options.Storage.ConnectionDetails);
+                    builder.UseSqlServer(options.Storage.ConnectionDetails);
                     break;
                 case StorageType.PostgreSql:
-                    opts.UseNpgsql(options.Storage.ConnectionDetails);
+                    builder.UseNpgsql(options.Storage.ConnectionDetails);
                     break;
                 default:
                     throw new NotSupportedException($"Storage type '{options.Storage.Type}' is not supported.");

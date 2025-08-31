@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.Orleans;
 /// Represents the database context for Orleans.
 /// </summary>
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
-public class OrleansDbContext(DbContextOptions<OrleansDbContext> options) : DbContext(options)
+public class OrleansDbContext(DbContextOptions<OrleansDbContext> options) : BaseDbContext(options)
 {
     /// <summary>
     /// Gets or sets DbSet for reminders.
