@@ -5,7 +5,7 @@ using Cratis.Types;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.Setup;
+namespace Cratis.Chronicle.Storage.Sql;
 
 /// <summary>
 /// Represents a migration startup task for handling database migrations.
@@ -22,7 +22,7 @@ public class MigrationStartupTask(IServiceProvider serviceProvider) : ILifecycle
     private async Task Execute(CancellationToken cancellationToken)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
-        foreach (var dbContextType in scope.ServiceProvider.GetRequiredService<IImplementationsOf<DbContext>>())
+        foreach (var dbContextType in scope.ServiceProvider.GetRequiredService<IImplementationsOf<DbContext>>().OnlyChronicle())
         {
             var dbContext = (scope.ServiceProvider.GetRequiredService(dbContextType) as DbContext)!;
             await dbContext.Database.MigrateAsync();

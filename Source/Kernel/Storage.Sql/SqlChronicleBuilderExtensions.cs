@@ -24,17 +24,21 @@ public static class SqlChronicleBuilderExtensions
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithSql(this IChronicleBuilder builder, ChronicleOptions options)
     {
-        builder.ConfigureServices(services =>
-        {
-            services.AddSingleton<IClusterStorage, ClusterStorage>();
-            services.AddDbContext<OrleansDbContext>(options);
-            services.AddDbContext<ClusterDbContext>(options);
-            services.AddDbContext<EventStoreDbContext>(options);
-            builder.Services.AddSingleton<IReminderTable, ReminderTable>();
-            builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, MigrationStartupTask>();
-        });
+        builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
+        builder.Services.AddDbContexts(options);
+        builder.Services.AddSingleton<IReminderTable, ReminderTable>();
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, MigrationStartupTask>();
 
         return builder;
+    }
+
+    static void AddDbContexts(this IServiceCollection services, ChronicleOptions options)
+    {
+        var addDbContextMethod = typeof(SqlChronicleBuilderExtensions).GetMethod(nameof(AddDbContext), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
+        foreach (var dbContext in Types.Types.Instance.FindMultiple<DbContext>().OnlyChronicle())
+        {
+            addDbContextMethod.MakeGenericMethod(dbContext).Invoke(null, [services, options]);
+        }
     }
 
     static IServiceCollection AddDbContext<TDbContext>(this IServiceCollection services, ChronicleOptions options)
