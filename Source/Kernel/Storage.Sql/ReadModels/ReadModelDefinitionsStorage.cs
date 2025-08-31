@@ -17,7 +17,7 @@ public class ReadModelDefinitionsStorage(ReadModelsDbContext dbContext) : IReadM
     public async Task<IEnumerable<ReadModelDefinition>> GetAll()
     {
         var readModels = await dbContext.ReadModels.ToListAsync();
-        return readModels.Select(rm => rm.ToKernel());
+        return readModels.Select(rm => rm.ToKernel()).ToArray();
     }
 
     /// <inheritdoc/>
@@ -42,10 +42,7 @@ public class ReadModelDefinitionsStorage(ReadModelsDbContext dbContext) : IReadM
     /// <inheritdoc/>
     public async Task Delete(ReadModelName name)
     {
-        var entity = await dbContext.ReadModels
-            .Where(rm => rm.Id == name)
-            .FirstOrDefaultAsync();
-
+        var entity = await dbContext.ReadModels.FindAsync(name);
         if (entity != null)
         {
             dbContext.ReadModels.Remove(entity);
