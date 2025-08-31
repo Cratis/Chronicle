@@ -5,8 +5,14 @@
   <ItemGroup>
     <!-- System -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.8" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.8" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="9.0.8" />
