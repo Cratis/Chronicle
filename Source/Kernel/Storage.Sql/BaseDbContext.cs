@@ -18,5 +18,9 @@ public class BaseDbContext(DbContextOptions options) : DbContext(options)
         configurationBuilder
             .Properties<IDictionary<uint, string>>()
             .HaveConversion<DictionaryValueConverter<uint, string>>();
+
+        configurationBuilder
+            .Properties<IEnumerable<string>>()
+            .HaveConversion<EnumerableConverter<string>>();
     }
 }
