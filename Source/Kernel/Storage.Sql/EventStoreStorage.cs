@@ -43,7 +43,7 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IReducerDefinitionsStorage Reducers => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections => throw new NotImplementedException();
+    public IProjectionDefinitionsStorage Projections => new Projections.ProjectionDefinitionsStorage(serviceProvider.GetRequiredService<Projections.ProjectionsDbContext>());
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels => new ReadModels.ReadModelDefinitionsStorage(serviceProvider.GetRequiredService<ReadModels.ReadModelsDbContext>());
