@@ -10,8 +10,9 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <summary>
 /// Represents an implementation of <see cref="IClusterStorage"/> for SQL.
 /// </summary>
+/// <param name="serviceProvider">The service provider.</param>
 /// <param name="dbContext">The <see cref="ClusterDbContext"/> to use for storage operations.</param>
-public class ClusterStorage(ClusterDbContext dbContext) : IClusterStorage
+public class ClusterStorage(IServiceProvider serviceProvider, ClusterDbContext dbContext) : IClusterStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores() =>
@@ -22,7 +23,7 @@ public class ClusterStorage(ClusterDbContext dbContext) : IClusterStorage
 
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory) =>
-        new EventStoreStorage();
+        new EventStoreStorage(serviceProvider, eventStore);
 
     /// <inheritdoc/>
     public Task SaveEventStore(EventStoreName eventStore)

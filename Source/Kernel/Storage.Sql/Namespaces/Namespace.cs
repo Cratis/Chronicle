@@ -15,4 +15,9 @@ public class Namespace
     /// </summary>
     [Key]
     public required string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the creation date of the namespace.
+    /// </summary>
+    public DateTimeOffset Created { get; set; }
 }

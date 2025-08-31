@@ -20,7 +20,8 @@ public class Initial : Migration
             name: "Namespaces",
             columns: table => new
             {
-                Name = table.Column<string>(type: "TEXT", nullable: false)
+                Name = table.Column<string>(type: "TEXT", nullable: false),
+                Created = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
             },
             constraints: table => table.PrimaryKey("PK_Namespaces", x => x.Name));
     }
@@ -39,6 +40,10 @@ public class InitialSnapshot : ModelSnapshot
         .Entity(typeof(Namespace).FullName, b =>
         {
             b.Property<string>(nameof(Namespace.Name))
+                .HasColumnType("TEXT")
+                .IsRequired();
+
+            b.Property<DateTimeOffset>(nameof(Namespace.Created))
                 .HasColumnType("TEXT")
                 .IsRequired();
 

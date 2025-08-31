@@ -10,19 +10,23 @@ using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Namespaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreStorage"/> for a specific event store.
 /// </summary>
-public class EventStoreStorage : IEventStoreStorage
+/// <param name="serviceProvider">The service provider.</param>
+/// <param name="eventStore">The name of the event store.</param>
+public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName eventStore) : IEventStoreStorage
 {
     /// <inheritdoc/>
-    public EventStoreName EventStore => throw new NotImplementedException();
+    public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>
-    public INamespaceStorage Namespaces => throw new NotImplementedException();
+    public INamespaceStorage Namespaces { get; } = new NamespaceStorage(serviceProvider.GetRequiredService<NamespacesDbContext>());
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes => throw new NotImplementedException();
