@@ -9,16 +9,19 @@ namespace Cratis.Chronicle.Storage.Sql.Converters;
 /// <summary>
 /// Represents a value converter for converting dictionaries to and from JSON strings.
 /// </summary>
-public class DictionaryValueConverter : ValueConverter<IDictionary<string, string>, string>
+/// <typeparam name="TKey">The type of the dictionary keys.</typeparam>
+/// <typeparam name="TValue">The type of the dictionary values.</typeparam>
+public class DictionaryValueConverter<TKey, TValue> : ValueConverter<IDictionary<TKey, TValue>, string>
+    where TKey : notnull
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DictionaryValueConverter"/> class.
+    /// Initializes a new instance of the <see cref="DictionaryValueConverter{TKey, TValue}"/> class.
     /// </summary>
     public DictionaryValueConverter() : base(
-        v => JsonSerializer.Serialize(v ?? new Dictionary<string, string>(), (JsonSerializerOptions?)null),
+        v => JsonSerializer.Serialize(v ?? new Dictionary<TKey, TValue>(), (JsonSerializerOptions?)null),
         v => string.IsNullOrEmpty(v)
-            ? new Dictionary<string, string>()
-            : JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null)!)
+            ? new Dictionary<TKey, TValue>()
+            : JsonSerializer.Deserialize<Dictionary<TKey, TValue>>(v, (JsonSerializerOptions?)null)!)
     {
     }
 }

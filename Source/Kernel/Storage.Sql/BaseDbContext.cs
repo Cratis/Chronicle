@@ -16,7 +16,7 @@ public class BaseDbContext(DbContextOptions options) : DbContext(options)
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder
-            .Properties<IDictionary<string, string>>()
-            .HaveConversion<DictionaryValueConverter>();
+            .Properties<IDictionary<uint, string>>()
+            .HaveConversion<DictionaryValueConverter<uint, string>>();
     }
 }
