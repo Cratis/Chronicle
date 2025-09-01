@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.given;
 
-public class a_reducer_observing_an_event(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class a_reducer_observing_an_event(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
 {
     public TaskCompletionSource Tcs;
     public SomeReducer Reducer;

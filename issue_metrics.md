@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 272 |
+| Number of items that remain open | 273 |
 | Number of items closed | 573 |
-| Total number of items created | 845 |
+| Total number of items created | 846 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Investigate how we could be writing tests/specs for event sourcing in a better way | https://github.com/Cratis/Chronicle/issues/1980 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve serialization when Appending events in the MongoDB Storage | https://github.com/Cratis/Chronicle/issues/1967 | None | [einari](https://github.com/einari) | None | None | None |
 | Add authorization on the Kernel side | https://github.com/Cratis/Chronicle/issues/1965 | None | [einari](https://github.com/einari) | None | None | None |
 | Add authentication & TLS for server and client | https://github.com/Cratis/Chronicle/issues/1964 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
@@ -341,5 +342,4 @@
 | Clean up ObserverState and remove the composite key. | https://github.com/Cratis/Chronicle/issues/1026 | None | [einari](https://github.com/einari) | None | 278 days, 16:36:49 | None |
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
-| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle
+| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari]

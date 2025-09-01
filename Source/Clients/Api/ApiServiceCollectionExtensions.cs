@@ -61,8 +61,8 @@ public static class ApiServiceCollectionExtensions
         {
             services.AddCratisChronicleConnection(urlFactory: sp =>
             {
-                var options = sp.GetRequiredService<IOptions<ChronicleApiOptions>>();
-                return options.Value.ChronicleUrl;
+                var options = sp.GetRequiredService<IOptions<ChronicleOptions>>();
+                return options.Value.Url;
             });
         }
 

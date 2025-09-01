@@ -5,7 +5,7 @@ using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;
 
-public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
 {
     public TheJobStepProcessor JobStepProcessor;
     public IJobStorage JobStorage;

@@ -9,7 +9,7 @@ using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Scenarios.given;
 
-public class an_aggregate_root_with_state<TAggregate, TInternalState>(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class an_aggregate_root_with_state<TAggregate, TInternalState>(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     where TAggregate : IIntegrationTestAggregateRoot<TInternalState>
     where TInternalState : class
 {

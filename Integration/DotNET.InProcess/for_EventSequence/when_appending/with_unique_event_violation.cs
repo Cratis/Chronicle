@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appendin
 [Collection(ChronicleCollection.Name)]
 public class with_unique_event_violation(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueEventConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted)];
