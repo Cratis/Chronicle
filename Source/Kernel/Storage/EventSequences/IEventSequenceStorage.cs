@@ -16,6 +16,11 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 public interface IEventSequenceStorage
 {
     /// <summary>
+    /// Gets the <see cref="IClosedStreamsStorage"/>.
+    /// </summary>
+    IClosedStreamsStorage ClosedStreams { get; }
+
+    /// <summary>
     /// Get the state of an event sequence.
     /// </summary>
     /// <returns><see cref="EventSequenceState"/> for the event sequence.</returns>
