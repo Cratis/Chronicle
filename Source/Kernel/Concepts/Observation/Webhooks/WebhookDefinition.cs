@@ -12,10 +12,12 @@ namespace Cratis.Chronicle.Concepts.Observation.Webhooks;
 /// <param name="Owner">The owner of the webhook.</param>
 /// <param name="EventSequenceId">The <see cref="EventSequenceId"/> the webhook is for.</param>
 /// <param name="EventTypes">The type of events the observer is interested in.</param>
+/// <param name="Url">The URL to send the events to.</param>
 /// <param name="IsReplayable">Whether the webhook supports replay scenarios.</param>
 public record WebhookDefinition(
     WebhookId Identifier,
     WebhookOwner Owner,
     EventSequenceId EventSequenceId,
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
+    string Url,
     bool IsReplayable = true);

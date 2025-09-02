@@ -32,4 +32,9 @@ public class WebhookDefinition
     /// </summary>
     [ProtoMember(4), DefaultValue(true)]
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the URL to send the events to.
+    /// </summary>
+    public string Url { get; set; }
 }
