@@ -13,7 +13,7 @@ public class WebhookDefinition
     /// Gets or sets the observer identifier.
     /// </summary>
     [ProtoMember(1)]
-    public string ReactorId { get; set; }
+    public string WebhookId { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence identifier.
@@ -28,13 +28,14 @@ public class WebhookDefinition
     public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets whether the reactor supports replay scenarios.
-    /// </summary>
-    [ProtoMember(4), DefaultValue(true)]
-    public bool IsReplayable { get; set; } = true;
-
-    /// <summary>
     /// Gets or sets the URL to send the events to.
     /// </summary>
+    [ProtoMember(4), DefaultValue(true)]
     public string Url { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the reactor supports replay scenarios.
+    /// </summary>
+    [ProtoMember(5), DefaultValue(true)]
+    public bool IsReplayable { get; set; } = true;
 }
