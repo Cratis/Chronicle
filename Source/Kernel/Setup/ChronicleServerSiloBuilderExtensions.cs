@@ -60,6 +60,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddStreaming()
             .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
+            .AddWebhookObserverHttpClient()
             .ConfigureSerialization();
 
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
