@@ -28,6 +28,17 @@ public record ObserverSubscriberKey(
     string SiloAddress)
 {
     /// <summary>
+    /// The unspecified key.
+    /// </summary>
+    public static readonly ObserverSubscriberKey Unspecified = new(
+        ObserverId.Unspecified,
+        EventStoreName.NotSet,
+        EventStoreNamespaceName.NotSet,
+        EventSequenceId.Unspecified,
+        EventSourceId.Unspecified,
+        string.Empty);
+
+    /// <summary>
     /// Implicitly convert from <see cref="ObserverKey"/> to string.
     /// </summary>
     /// <param name="key"><see cref="ObserverKey"/> to convert from.</param>
