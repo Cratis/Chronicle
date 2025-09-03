@@ -19,6 +19,7 @@ public interface IWebhookMediator
     /// <param name="webhookTarget">The <see cref="WebhookTarget"/>.</param>
     /// <param name="partition"><see cref="Key"/> for the partition.</param>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
+    /// <param name="timeout">The optional timeout.</param>
     /// <returns>A <see cref="Task{T}"/> of <see cref="Catch"/>.</returns>
-    Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events);
+    Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, TimeSpan? timeout = null);
 }

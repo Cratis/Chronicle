@@ -18,10 +18,10 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IW
     public const string HttpClientName = "webhook";
 
     /// <inheritdoc/>
-    public HttpClient Create(WebhookDefinition definition)
+    public HttpClient Create(WebhookTarget webhookTarget)
     {
         var client = httpClientFactory.CreateClient(HttpClientName);
-        var webhookTarget = definition.Target;
+
         if (Uri.TryCreate(webhookTarget.Url, UriKind.Absolute, out var uri))
         {
             client.BaseAddress = new Uri(uri.GetLeftPart(UriPartial.Authority));
