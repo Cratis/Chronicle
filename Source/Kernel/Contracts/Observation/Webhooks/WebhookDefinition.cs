@@ -28,10 +28,10 @@ public class WebhookDefinition
     public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the URL to send the events to.
+    /// Gets or sets the webhook target.
     /// </summary>
-    [ProtoMember(4), DefaultValue(true)]
-    public string Url { get; set; }
+    [ProtoMember(4, IsRequired = true)]
+    public WebhookTarget Target { get; set; } = new();
 
     /// <summary>
     /// Gets or sets whether the reactor supports replay scenarios.
