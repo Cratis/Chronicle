@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Sql.Converters;
+using Cratis.Chronicle.Storage.Sql.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -13,14 +13,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 public class BaseDbContext(DbContextOptions options) : DbContext(options)
 {
     /// <inheritdoc/>
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        configurationBuilder
-            .Properties<IDictionary<uint, string>>()
-            .HaveConversion<DictionaryValueConverter<uint, string>>();
-
-        configurationBuilder
-            .Properties<IEnumerable<string>>()
-            .HaveConversion<EnumerableConverter<string>>();
+        modelBuilder.ApplyJsonConversion(Database.ProviderName);
+        base.OnModelCreating(modelBuilder);
     }
 }
