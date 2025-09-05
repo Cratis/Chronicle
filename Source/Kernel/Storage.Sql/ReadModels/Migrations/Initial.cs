@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Sql.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -22,7 +23,7 @@ public class Initial : Migration
             {
                 Id = table.Column<string>(type: "TEXT", nullable: false),
                 Owner = table.Column<int>(type: "INTEGER", nullable: false),
-                Schemas = table.Column<IDictionary<string, string>>(type: "TEXT", nullable: false),
+                Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)
             },
             constraints: table => table.PrimaryKey("PK_ReadModels", x => x.Id));
     }
