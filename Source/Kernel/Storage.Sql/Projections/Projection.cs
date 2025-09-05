@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Storage.Sql.Json;
 
 namespace Cratis.Chronicle.Storage.Sql.Projections;
 
@@ -45,5 +46,6 @@ public class Projection
     /// <summary>
     /// Gets or sets the versioned definitions associated with the projection.
     /// </summary>
+    [Json]
     public IDictionary<uint, string> Definitions { get; set; } = new Dictionary<uint, string>();
 }

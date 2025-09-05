@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Json;
 
 namespace Cratis.Chronicle.Storage.Sql.ReadModels;
 
@@ -25,5 +26,6 @@ public class ReadModel
     /// <summary>
     /// Gets or sets the versioned schemas associated with the read model.
     /// </summary>
+    [Json]
     public IDictionary<uint, string> Schemas { get; set; } = new Dictionary<uint, string>();
 }
