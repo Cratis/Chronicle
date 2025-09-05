@@ -37,36 +37,3 @@ public class Initial : Migration
             name: "Reminders");
     }
 }
-
-[DbContext(typeof(OrleansDbContext))]
-public class InitialSnapshot : ModelSnapshot
-{
-    protected override void BuildModel(ModelBuilder modelBuilder) => modelBuilder
-        .Entity(typeof(Reminder).FullName, b =>
-        {
-            b.Property<string>(nameof(Reminder.Id))
-                .HasColumnType("TEXT")
-                .IsRequired();
-            b.Property<string>(nameof(Reminder.GrainId))
-                .HasColumnType("TEXT")
-                .IsRequired();
-            b.Property<uint>(nameof(Reminder.GrainHash))
-                .HasColumnType("INTEGER")
-                .IsRequired();
-            b.Property<string>(nameof(Reminder.ReminderName))
-                .HasColumnType("TEXT")
-                .IsRequired();
-            b.Property<long>(nameof(Reminder.Period))
-                .HasColumnType("INTEGER")
-                .IsRequired();
-            b.Property<DateTime>(nameof(Reminder.StartAt))
-                .HasColumnType("INTEGER")
-                .IsRequired();
-            b.Property<string>(nameof(Reminder.ETag))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.HasKey(nameof(Reminder.Id));
-            b.ToTable("Reminders");
-        });
-}

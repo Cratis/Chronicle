@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -37,43 +36,4 @@ public class Initial : Migration
         migrationBuilder.DropTable(
             name: "Projections");
     }
-}
-
-[DbContext(typeof(ProjectionsDbContext))]
-public class InitialSnapshot : ModelSnapshot
-{
-    protected override void BuildModel(ModelBuilder modelBuilder) => modelBuilder
-        .Entity(typeof(Projection).FullName, b =>
-        {
-            b.Property<string>(nameof(Projection.Id))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.Property<EventTypeOwner>(nameof(Projection.Owner))
-                .HasColumnType("INTEGER")
-                .IsRequired();
-
-            b.Property<string>(nameof(Projection.ReadModelName))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.Property<int>(nameof(Projection.ReadModelGeneration))
-                .HasColumnType("INTEGER")
-                .IsRequired();
-
-            b.Property<Guid>(nameof(Projection.SinkType))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.Property<Guid>(nameof(Projection.SinkConfigurationId))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.Property<IDictionary<string, string>>(nameof(Projection.Definitions))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.HasKey(nameof(Projection.Id));
-            b.ToTable("Projections");
-        });
 }

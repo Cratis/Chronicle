@@ -31,18 +31,3 @@ public class Initial : Migration
             name: "EventStores");
     }
 }
-
-[DbContext(typeof(ClusterDbContext))]
-public class InitialSnapshot : ModelSnapshot
-{
-    protected override void BuildModel(ModelBuilder modelBuilder) => modelBuilder
-        .Entity(typeof(EventStore).FullName, b =>
-        {
-            b.Property<string>(nameof(EventStore.Name))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.HasKey(nameof(EventStore.Name));
-            b.ToTable("EventStores");
-        });
-}

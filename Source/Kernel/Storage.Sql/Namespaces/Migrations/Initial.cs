@@ -32,22 +32,3 @@ public class Initial : Migration
             name: "Namespaces");
     }
 }
-
-[DbContext(typeof(NamespacesDbContext))]
-public class InitialSnapshot : ModelSnapshot
-{
-    protected override void BuildModel(ModelBuilder modelBuilder) => modelBuilder
-        .Entity(typeof(Namespace).FullName, b =>
-        {
-            b.Property<string>(nameof(Namespace.Name))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.Property<DateTimeOffset>(nameof(Namespace.Created))
-                .HasColumnType("TEXT")
-                .IsRequired();
-
-            b.HasKey(nameof(Namespace.Name));
-            b.ToTable("Namespaces");
-        });
-}
