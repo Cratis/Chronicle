@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Storage.Sql.Json;
 
 namespace Cratis.Chronicle.Storage.Sql.EventTypes;
 
@@ -30,5 +31,6 @@ public class EventType
     /// <summary>
     /// Gets or sets the versioned schemas associated with the event type.
     /// </summary>
-    public EventTypeSchemas Schemas { get; set; } = new();
+    [Json]
+    public IDictionary<uint, string> Schemas { get; set; } = new Dictionary<uint, string>();
 }
