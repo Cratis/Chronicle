@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Cratis.Chronicle.Storage.Sql.Orleans;
+namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
 /// <summary>
 /// Represents a reminder entry.

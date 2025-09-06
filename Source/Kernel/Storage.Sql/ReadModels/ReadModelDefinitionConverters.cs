@@ -7,16 +7,16 @@ using NJsonSchema;
 namespace Cratis.Chronicle.Storage.Sql.ReadModels;
 
 /// <summary>
-/// Converter methods for working with <see cref="ReadModelDefinition"/> converting to and from SQL representations.
+/// Converter methods for working with <see cref="Concepts.ReadModels.ReadModelDefinition"/> converting to and from SQL representations.
 /// </summary>
 public static class ReadModelDefinitionConverters
 {
     /// <summary>
-    /// Convert to a <see cref="ReadModel">SQL</see> representation.
+    /// Convert to a <see cref="ReadModelDefinition">SQL</see> representation.
     /// </summary>
-    /// <param name="definition"><see cref="ReadModelDefinition"/> to convert.</param>
-    /// <returns>Converted <see cref="ReadModel"/>.</returns>
-    public static ReadModel ToSql(this ReadModelDefinition definition) =>
+    /// <param name="definition"><see cref="Concepts.ReadModels.ReadModelDefinition"/> to convert.</param>
+    /// <returns>Converted <see cref="ReadModelDefinition"/>.</returns>
+    public static ReadModelDefinition ToSql(this Concepts.ReadModels.ReadModelDefinition definition) =>
         new()
         {
             Id = definition.Name,
@@ -25,11 +25,11 @@ public static class ReadModelDefinitionConverters
         };
 
     /// <summary>
-    /// Convert to <see cref="ReadModelDefinition"/> from <see cref="ReadModel"/>.
+    /// Convert to <see cref="Concepts.ReadModels.ReadModelDefinition"/> from <see cref="ReadModelDefinition"/>.
     /// </summary>
-    /// <param name="schema"><see cref="ReadModel"/> to convert from.</param>
-    /// <returns>Converted <see cref="ReadModelDefinition"/>.</returns>
-    public static ReadModelDefinition ToKernel(this ReadModel schema) =>
+    /// <param name="schema"><see cref="ReadModelDefinition"/> to convert from.</param>
+    /// <returns>Converted <see cref="Concepts.ReadModels.ReadModelDefinition"/>.</returns>
+    public static Concepts.ReadModels.ReadModelDefinition ToKernel(this ReadModelDefinition schema) =>
         new(
             schema.Id,
             schema.Owner,

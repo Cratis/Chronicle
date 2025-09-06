@@ -11,10 +11,10 @@ namespace Cratis.Chronicle.Storage.Sql.ReadModels;
 /// Represents an implementation of <see cref="IReadModelDefinitionsStorage"/> for SQL.
 /// </summary>
 /// <param name="dbContext">The database context.</param>
-public class ReadModelDefinitionsStorage(ReadModelsDbContext dbContext) : IReadModelDefinitionsStorage
+public class ReadModelDefinitionsStorage(EventStoreDbContext dbContext) : IReadModelDefinitionsStorage
 {
     /// <inheritdoc/>
-    public async Task<IEnumerable<ReadModelDefinition>> GetAll()
+    public async Task<IEnumerable<Concepts.ReadModels.ReadModelDefinition>> GetAll()
     {
         var readModels = await dbContext.ReadModels.ToListAsync();
         return readModels.Select(rm => rm.ToKernel()).ToArray();
@@ -25,14 +25,14 @@ public class ReadModelDefinitionsStorage(ReadModelsDbContext dbContext) : IReadM
         dbContext.ReadModels.AnyAsync(rm => rm.Id == name);
 
     /// <inheritdoc/>
-    public Task<ReadModelDefinition> Get(ReadModelName name) =>
+    public Task<Concepts.ReadModels.ReadModelDefinition> Get(ReadModelName name) =>
         dbContext.ReadModels
             .Where(rm => rm.Id == name)
             .Select(rm => rm.ToKernel())
             .FirstOrDefaultAsync()!;
 
     /// <inheritdoc/>
-    public async Task Save(ReadModelDefinition definition)
+    public async Task Save(Concepts.ReadModels.ReadModelDefinition definition)
     {
         var entity = definition.ToSql();
         dbContext.ReadModels.Add(entity);

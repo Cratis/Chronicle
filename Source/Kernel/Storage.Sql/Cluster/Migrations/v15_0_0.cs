@@ -23,11 +23,28 @@ public class v15_0_0 : Migration
                 Name = table.Column<string>(type: "TEXT", nullable: false)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EventStores}", x => x.Name));
+
+        migrationBuilder.CreateTable(
+            name: WellKnownTableNames.Reminders,
+            columns: table => new
+            {
+                Id = table.Column<string>(type: "TEXT", nullable: false),
+                GrainId = table.Column<string>(type: "TEXT", nullable: false),
+                GrainHash = table.Column<uint>(type: "INTEGER", nullable: false),
+                ReminderName = table.Column<string>(type: "TEXT", nullable: false),
+                Period = table.Column<long>(type: "INTEGER", nullable: false),
+                StartAt = table.Column<DateTime>(type: "INTEGER", nullable: false),
+                ETag = table.Column<string>(type: "TEXT", nullable: false),
+            },
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Reminders}", x => x.Id));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
             name: WellKnownTableNames.EventStores);
+
+        migrationBuilder.DropTable(
+            name: WellKnownTableNames.Reminders);
     }
 }

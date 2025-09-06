@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.Sql.ReadModels;
 /// <summary>
 /// Represents a read model.
 /// </summary>
-public class ReadModel
+public class ReadModelDefinition
 {
     /// <summary>
     /// Gets or sets the unique identifier for the read model.

@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Storage.Sql.Namespaces;
 /// <summary>
 /// Represents an implementation of <see cref="INamespaceStorage"/> for SQL.
 /// </summary>
-/// <param name="dbContext">The <see cref="NamespacesDbContext"/> to use for storage operations.</param>
-public class NamespaceStorage(NamespacesDbContext dbContext) : INamespaceStorage
+/// <param name="dbContext">The <see cref="EventStoreDbContext"/> to use for storage operations.</param>
+public class NamespaceStorage(EventStoreDbContext dbContext) : INamespaceStorage
 {
     /// <inheritdoc/>
     public async Task Create(EventStoreNamespaceName name, DateTimeOffset created)

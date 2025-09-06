@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="dbContext">The database context.</param>
-public class EventTypesStorage(EventStoreName eventStore, EventTypesDbContext dbContext) : IEventTypesStorage
+public class EventTypesStorage(EventStoreName eventStore, EventStoreDbContext dbContext) : IEventTypesStorage
 {
     ConcurrentBag<EventType> _eventTypes = new();
 

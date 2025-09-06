@@ -26,6 +26,8 @@ public class MigrationStartupTask(IServiceProvider serviceProvider) : ILifecycle
         {
             var dbContext = (scope.ServiceProvider.GetRequiredService(dbContextType) as DbContext)!;
             await dbContext.Database.MigrateAsync();
+
+            // TODO: Migrate per event store and then the namespace dependent ones, do it per namespace
         }
     }
 }

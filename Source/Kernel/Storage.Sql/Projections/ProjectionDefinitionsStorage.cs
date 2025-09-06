@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sql.Projections;
 /// Represents an implementation of <see cref="IProjectionDefinitionsStorage"/> for SQL.
 /// </summary>
 /// <param name="dbContext">The database context.</param>
-public class ProjectionDefinitionsStorage(ProjectionsDbContext dbContext) : IProjectionDefinitionsStorage
+public class ProjectionDefinitionsStorage(EventStoreDbContext dbContext) : IProjectionDefinitionsStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()

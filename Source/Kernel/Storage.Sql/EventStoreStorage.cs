@@ -25,10 +25,10 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>
-    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(serviceProvider.GetRequiredService<Namespaces.NamespacesDbContext>());
+    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, serviceProvider.GetRequiredService<EventTypes.EventTypesDbContext>());
+    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints => throw new NotImplementedException();
@@ -37,16 +37,16 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IObserverDefinitionsStorage Observers => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(serviceProvider.GetRequiredService<Reactors.ReactorDefinitionsDbContext>());
+    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
     public IReducerDefinitionsStorage Reducers => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections => new Projections.ProjectionDefinitionsStorage(serviceProvider.GetRequiredService<Projections.ProjectionsDbContext>());
+    public IProjectionDefinitionsStorage Projections => new Projections.ProjectionDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
-    public IReadModelDefinitionsStorage ReadModels => new ReadModels.ReadModelDefinitionsStorage(serviceProvider.GetRequiredService<ReadModels.ReadModelsDbContext>());
+    public IReadModelDefinitionsStorage ReadModels => new ReadModels.ReadModelDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace) => throw new NotImplementedException();

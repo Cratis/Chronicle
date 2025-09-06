@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sql.Reactors;
 /// Represents an implementation of <see cref="IEventTypesStorage"/> for SQL.
 /// </summary>
 /// <param name="dbContext">The database context.</param>
-public class ReactorDefinitionsStorage(ReactorDefinitionsDbContext dbContext) : IReactorDefinitionsStorage
+public class ReactorDefinitionsStorage(EventStoreDbContext dbContext) : IReactorDefinitionsStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<Concepts.Observation.Reactors.ReactorDefinition>> GetAll()

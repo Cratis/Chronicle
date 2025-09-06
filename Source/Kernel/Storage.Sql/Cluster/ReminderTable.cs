@@ -3,13 +3,13 @@
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql.Orleans;
+namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
 /// <summary>
 /// Represents an implementation of the reminder table for Orleans.
 /// </summary>
 /// <param name="dbContext">The database context.</param>
-public class ReminderTable(OrleansDbContext dbContext) : IReminderTable
+public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
 {
     /// <inheritdoc/>
     public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)

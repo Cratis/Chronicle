@@ -39,6 +39,7 @@ public class DbContextFactory<TDbContext> : IDesignTimeDbContextFactory<TDbConte
         builder.UseSqlite("Data Source=chronicle.db", x => x.MigrationsAssembly(typeof(TDbContext).Assembly.FullName));
         return (Activator.CreateInstance(typeof(TDbContext), builder.Options) as TDbContext)!;
     }
+
     static string? GetArg(string[] args, string name)
     {
         var i = Array.IndexOf(args, name);

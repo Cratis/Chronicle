@@ -14,6 +14,11 @@ public static class WellKnownTableNames
     public const string EventStores = "EventStores";
 
     /// <summary>
+    /// The table that holds reminders for Orleans grains.
+    /// </summary>
+    public const string Reminders = "Reminders";
+
+    /// <summary>
     /// The table that holds evens for the event log sequence.
     /// </summary>
     public const string EventLog = "EventLog";
