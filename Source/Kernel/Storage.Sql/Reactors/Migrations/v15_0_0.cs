@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.Reactors.Migrations;
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(ReactorDefinitionsDbContext))]
-[Migration("Reactors-Initial")]
-public class Initial : Migration
+[Migration($"{WellKnownTableNames.ReactorDefinitions}-{nameof(v15_0_0)}")]
+public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -28,7 +28,7 @@ public class Initial : Migration
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
                 IsReplayable = table.Column<int>(type: "INTEGER", nullable: false),
             },
-            constraints: table => table.PrimaryKey("PK_EventTypes", x => x.Id));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReactorDefinitions}", x => x.Id));
 
         migrationBuilder.EnsureJsonColumn(WellKnownTableNames.ReactorDefinitions, "EventTypes");
     }

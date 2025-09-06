@@ -6,34 +6,31 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Cratis.Chronicle.Storage.Sql.EventTypes.Migrations;
+namespace Cratis.Chronicle.Storage.Sql.ReadModels.Migrations;
 
 #nullable disable
 #pragma warning disable SA1600, SA1402, MA0048
 
-[DbContext(typeof(EventTypesDbContext))]
-[Migration("EventTypes-Initial")]
-public class Initial : Migration
+[DbContext(typeof(ReadModelsDbContext))]
+[Migration($"{WellKnownTableNames.ReadModelDefinitions}-{nameof(v15_0_0)}")]
+public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "EventTypes",
+            name: WellKnownTableNames.ReadModelDefinitions,
             columns: table => new
             {
                 Id = table.Column<string>(type: "TEXT", nullable: false),
                 Owner = table.Column<int>(type: "INTEGER", nullable: false),
-                Tombstone = table.Column<bool>(type: "INTEGER", nullable: false),
-                Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
+                Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)
             },
-            constraints: table => table.PrimaryKey("PK_EventTypes", x => x.Id));
-
-        migrationBuilder.EnsureJsonColumn("EventTypes", "Schemas");
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReadModelDefinitions}", x => x.Id));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
-            name: "EventTypes");
+            name: WellKnownTableNames.ReadModelDefinitions);
     }
 }

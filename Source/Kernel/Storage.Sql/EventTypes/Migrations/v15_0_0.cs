@@ -6,35 +6,34 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Cratis.Chronicle.Storage.Sql.Projections.Migrations;
+namespace Cratis.Chronicle.Storage.Sql.EventTypes.Migrations;
 
 #nullable disable
 #pragma warning disable SA1600, SA1402, MA0048
 
-[DbContext(typeof(ProjectionsDbContext))]
-[Migration("Projections-Initial")]
-public class Initial : Migration
+[DbContext(typeof(EventTypesDbContext))]
+[Migration($"{WellKnownTableNames.EventTypes}-{nameof(v15_0_0)}")]
+public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "Projections",
+            name: WellKnownTableNames.EventTypes,
             columns: table => new
             {
                 Id = table.Column<string>(type: "TEXT", nullable: false),
                 Owner = table.Column<int>(type: "INTEGER", nullable: false),
-                ReadModelName = table.Column<string>(type: "TEXT", nullable: false),
-                ReadModelGeneration = table.Column<int>(type: "INTEGER", nullable: false),
-                SinkType = table.Column<Guid>(type: "TEXT", nullable: false),
-                SinkConfigurationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Definitions = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
+                Tombstone = table.Column<bool>(type: "INTEGER", nullable: false),
+                Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
             },
-            constraints: table => table.PrimaryKey("PK_Projections", x => x.Id));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EventTypes}", x => x.Id));
+
+        migrationBuilder.EnsureJsonColumn(WellKnownTableNames.EventTypes, "Schemas");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
-            name: "Projections");
+            name: WellKnownTableNames.EventTypes);
     }
 }

@@ -11,7 +11,7 @@ public static class WellKnownTableNames
     /// <summary>
     /// The table that holds <see cref="EventStore"/>.
     /// </summary>
-    public const string EventStores = "EventSores";
+    public const string EventStores = "EventStores";
 
     /// <summary>
     /// The table that holds evens for the event log sequence.
