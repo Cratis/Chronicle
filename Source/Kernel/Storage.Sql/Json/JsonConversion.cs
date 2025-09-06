@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -13,9 +14,13 @@ namespace Cratis.Chronicle.Storage.Sql.Json;
 /// </summary>
 public static class JsonConversion
 {
-    static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerOptions.Web)
+    static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerOptions.Default)
     {
-        WriteIndented = false
+        WriteIndented = false,
+        Converters =
+        {
+            new ConceptAsJsonConverterFactory()
+        }
     };
 
     /// <summary>
