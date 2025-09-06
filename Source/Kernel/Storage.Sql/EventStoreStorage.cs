@@ -37,7 +37,7 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IObserverDefinitionsStorage Observers => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IReactorDefinitionsStorage Reactors => throw new NotImplementedException();
+    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(serviceProvider.GetRequiredService<Reactors.ReactorDefinitionsDbContext>());
 
     /// <inheritdoc/>
     public IReducerDefinitionsStorage Reducers => throw new NotImplementedException();
