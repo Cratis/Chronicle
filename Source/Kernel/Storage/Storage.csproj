@@ -9,6 +9,4 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
-    <ItemGroup>
-    </ItemGroup>
 </Project>
