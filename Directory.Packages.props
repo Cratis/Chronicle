@@ -103,6 +103,6 @@
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.9" />
     </ItemGroup>
 </Project>
