@@ -15,7 +15,7 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.8" />
-        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.8.0" />
+        <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.9.0" />
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.0.0" />
