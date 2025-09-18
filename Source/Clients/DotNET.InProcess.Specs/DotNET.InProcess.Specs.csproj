@@ -7,6 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Cratis.Applications.MongoDB" VersionOverride="17.7.1" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
