@@ -23,7 +23,7 @@
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.2.2" />
         <PackageVersion Include="Cratis.Applications.Orleans" Version="17.7.1" />
         <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.2.2" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.7.1" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.8.0" />
         <PackageVersion Include="Cratis.Applications.Swagger" Version="17.7.1" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
