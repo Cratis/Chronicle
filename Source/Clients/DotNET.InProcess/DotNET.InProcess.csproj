@@ -94,7 +94,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications.MongoDB" VersionOverride="17.2.2" />
+      <PackageReference Include="Cratis.Applications.MongoDB" />
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
