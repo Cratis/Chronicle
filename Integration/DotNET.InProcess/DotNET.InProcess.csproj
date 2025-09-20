@@ -19,8 +19,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications" VersionOverride="17.2.2" />
-      <PackageReference Include="Cratis.Applications.MongoDB" VersionOverride="17.2.2" />
+      <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Cratis.Applications.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Polly.Core" />

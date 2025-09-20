@@ -13,10 +13,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications" VersionOverride="17.2.2" />
-      <PackageReference Include="Cratis.Applications.MongoDB" VersionOverride="17.2.2" />
-    <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" VersionOverride="17.7.1" />
-      <PackageReference Include="Cratis.Applications.Swagger" VersionOverride="17.2.2" />
+      <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Cratis.Applications.MongoDB" />
+    <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+      <PackageReference Include="Cratis.Applications.Swagger" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
