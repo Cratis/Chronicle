@@ -27,8 +27,6 @@ public class v15_0_0 : Migration
                 Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EventTypes}", x => x.Id));
-
-        migrationBuilder.EnsureJsonColumn(WellKnownTableNames.EventTypes, "Schemas");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

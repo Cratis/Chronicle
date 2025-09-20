@@ -29,8 +29,6 @@ public class v15_0_0 : Migration
                 IsReplayable = table.Column<int>(type: "INTEGER", nullable: false),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReactorDefinitions}", x => x.Id));
-
-        migrationBuilder.EnsureJsonColumn(WellKnownTableNames.ReactorDefinitions, "EventTypes");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
