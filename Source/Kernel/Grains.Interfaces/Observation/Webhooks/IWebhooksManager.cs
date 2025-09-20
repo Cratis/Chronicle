@@ -21,7 +21,8 @@ public interface IWebhooksManager : IGrainWithStringKey
     /// Get all the <see cref="WebhookDefinition">webhook definitions</see> available.
     /// </summary>
     /// <returns>A collection of <see cref="WebhookDefinition"/>.</returns>
-    Task<IEnumerable<WebhookDefinition>> GetProjectionDefinitions();
+    Task<IEnumerable<WebhookDefinition>> GetWebhookDefinitions();
+
 
     /// <summary>
     /// Register a set of <see cref="WebhookDefinition"/> for the event store it belongs to.
