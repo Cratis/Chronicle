@@ -32,7 +32,7 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017));
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(27017));
 
         return builder.Build();
     }
