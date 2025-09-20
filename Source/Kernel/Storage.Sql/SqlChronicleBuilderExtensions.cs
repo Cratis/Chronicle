@@ -25,6 +25,9 @@ public static class SqlChronicleBuilderExtensions
     {
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddDbContexts(options);
+        builder.Services.AddDbContextFactory<EventStoreDbContext>((sp, options) =>
+        {
+        });
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, MigrationStartupTask>();
 
