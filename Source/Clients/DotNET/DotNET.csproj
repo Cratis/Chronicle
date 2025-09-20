@@ -49,7 +49,7 @@
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="FluentValidation" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" VersionOverride="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
