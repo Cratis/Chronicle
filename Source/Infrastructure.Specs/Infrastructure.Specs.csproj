@@ -12,5 +12,6 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 </Project>

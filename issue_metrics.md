@@ -2,15 +2,15 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 272 days, 21:49:39 | 123 days, 0:34:12 | 823 days, 9:49:33 |
+| Time to first response | 179 days, 17:05:40 | 5 days, 5:02:03 | 1038 days, 11:57:09 |
+| Time to close | 275 days, 20:06:19 | 123 days, 3:12:33 | 827 days, 3:55:50 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 273 |
-| Number of items closed | 573 |
-| Total number of items created | 846 |
+| Number of items that remain open | 272 |
+| Number of items closed | 575 |
+| Total number of items created | 847 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -143,6 +143,7 @@
 | HandleEventsForPartition JobStep Perform is not reliable | https://github.com/Cratis/Chronicle/issues/1553 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 20 days, 22:22:14 | None |
 | Observer Handle make it reentrant | https://github.com/Cratis/Chronicle/issues/1552 | None | [woksin](https://github.com/woksin) | 0:07:12 | 89 days, 0:27:51 | None |
 | Observer does not handle partitions separetely / parallel | https://github.com/Cratis/Chronicle/issues/1549 | None | [woksin](https://github.com/woksin) | 10:01:58 | None | None |
+| Observer.Handle is a good candidate to use Result or Catch monad | https://github.com/Cratis/Chronicle/issues/1548 | None | [woksin](https://github.com/woksin) | None | 1 day, 21:56:46 | None |
 | AppendedEventsQueue QueueHandler should just send the appended events to each subscriber at the same time | https://github.com/Cratis/Chronicle/issues/1547 | [einari](https://github.com/einari) | [woksin](https://github.com/woksin) | None | 5 days, 18:24:39 | None |
 | AppendedEventsQueue QueueHandler calling Observer.Handle is completely unreliable | https://github.com/Cratis/Chronicle/issues/1546 | [einari](https://github.com/einari) | [woksin](https://github.com/woksin) | None | 5 days, 18:07:51 | None |
 | AppendedEventsQueue unreliable AsyncManualResetEvent | https://github.com/Cratis/Chronicle/issues/1545 | [einari](https://github.com/einari) | [woksin](https://github.com/woksin) | None | 5 days, 18:10:58 | None |
@@ -238,11 +239,9 @@
 | Change CorrelationId to be a Guid - for consistency with Open Telemetry | https://github.com/Cratis/Chronicle/issues/1327 | None | [einari](https://github.com/einari) | None | 17 days, 4:34:38 | None |
 | EventStore.RegisterAll called twice, once through EventStore.RegisterAll explicitly and once through the ConnectionLifecycle | https://github.com/Cratis/Chronicle/issues/1324 | [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | 11:15:40 | 333 days, 11:37:57 | None |
 | Add EventSourceId for the event that caused unique constraint | https://github.com/Cratis/Chronicle/issues/1323 | None | [einari](https://github.com/einari) | None | 1 day, 2:34:28 | None |
-| Implement ImmutableList serializer for Orleans | https://github.com/Cratis/Chronicle/issues/1322 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Reactions need to collect errors from the UnitOfWork and report back for "failed partitions" | https://github.com/Cratis/Chronicle/issues/1321 | None | [einari](https://github.com/einari) | None | None | None |
 | Change Dispose() on UnitOfWork to commit instead of rollback | https://github.com/Cratis/Chronicle/issues/1320 | None | [einari](https://github.com/einari) | None | 4:59:38 | None |
 | Use scoped service provider for Reactors & Reducers on the client | https://github.com/Cratis/Chronicle/issues/1319 | None | [einari](https://github.com/einari) | None | 194 days, 0:45:42 | None |
-| Add information about source that caused an event | https://github.com/Cratis/Chronicle/issues/1318 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 49 days, 5:18:37 | None |
 | Unique Constraints should support a way of removing based on an event | https://github.com/Cratis/Chronicle/issues/1317 | None | [einari](https://github.com/einari) | None | 129 days, 12:34:36 | None |
 | Orleans based Aggregate Roots does not need to rehydrate from the beginning if the grain is already in memory | https://github.com/Cratis/Chronicle/issues/1316 | None | [einari](https://github.com/einari) | None | 31 days, 22:34:38 | None |
 | We need a better way to delimit individual components for Grain keys | https://github.com/Cratis/Chronicle/issues/1315 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 33 days, 21:36:27 | None |
@@ -342,4 +341,5 @@
 | Clean up ObserverState and remove the composite key. | https://github.com/Cratis/Chronicle/issues/1026 | None | [einari](https://github.com/einari) | None | 278 days, 16:36:49 | None |
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
-| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari]
+| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://github.com/Cratis/Chronicle/issues/10
