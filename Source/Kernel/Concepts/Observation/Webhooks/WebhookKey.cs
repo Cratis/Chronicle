@@ -10,9 +10,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Webhooks;
 /// </summary>
 /// <param name="WebhookId">The webhook identifier.</param>
 /// <param name="EventStore">The event store.</param>
-/// <param name="Namespace">The namespace.</param>
-/// <param name="EventSequenceId">The event sequence.</param>
-public record WebhookKey(WebhookId WebhookId, EventStoreName EventStore, EventStoreNamespaceName Namespace, EventSequenceId EventSequenceId)
+public record WebhookKey(WebhookId WebhookId, EventStoreName EventStore)
 {
     /// <summary>
     /// Implicitly convert from <see cref="WebhookKey"/> to string.
@@ -21,7 +19,7 @@ public record WebhookKey(WebhookId WebhookId, EventStoreName EventStore, EventSt
     public static implicit operator string(WebhookKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(WebhookId, EventStore, Namespace, EventSequenceId);
+    public override string ToString() => KeyHelper.Combine(WebhookId, EventStore);
 
     /// <summary>
     /// Parse a key into its components.

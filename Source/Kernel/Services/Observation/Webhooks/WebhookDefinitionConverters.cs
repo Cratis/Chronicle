@@ -17,12 +17,13 @@ internal static class WebhookDefinitionConverters
     /// <returns>Converted <see cref="WebhookDefinition"/>.</returns>
     public static WebhookDefinition ToChronicle(this Contracts.Observation.Webhooks.WebhookDefinition webhookDefinition) =>
         new(
-            webhookDefinition.WebhookId,
+            webhookDefinition.Identifier,
             WebhookOwner.Client,
             webhookDefinition.EventSequenceId,
             webhookDefinition.EventTypes.Select(_ => _.ToChronicle()),
             webhookDefinition.Target.ToChronicle(),
-            webhookDefinition.IsReplayable);
+            webhookDefinition.IsReplayable,
+            webhookDefinition.IsActive);
 
     static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target) =>
         new(

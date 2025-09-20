@@ -10,26 +10,20 @@ namespace Cratis.Chronicle.Contracts.Observation.Webhooks;
 public class RegisterWebhook
 {
     /// <summary>
-    /// Gets or sets the connection identifier.
-    /// </summary>
-    [ProtoMember(1)]
-    public string ConnectionId { get; set; }
-
-    /// <summary>
     /// Gets or sets the event store name.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(1)]
     public string EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the namespace.
+    /// Gets or sets the <see cref="ObserverOwner"/>.
     /// </summary>
-    [ProtoMember(3)]
-    public string Namespace { get; set; }
+    [ProtoMember(2)]
+    public ObserverOwner Owner { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="WebhookDefinition"/>.
+    /// Gets or sets the collection of  <see cref="WebhookDefinition"/> instances to register.
     /// </summary>
-    [ProtoMember(4)]
-    public WebhookDefinition Webhook { get; set; }
+    [ProtoMember(3, IsRequired = true)]
+    public IList<WebhookDefinition> Webhooks { get; set; } = [];
 }

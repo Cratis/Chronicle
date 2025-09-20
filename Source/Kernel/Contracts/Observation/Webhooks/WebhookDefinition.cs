@@ -10,16 +10,16 @@ namespace Cratis.Chronicle.Contracts.Observation.Webhooks;
 public class WebhookDefinition
 {
     /// <summary>
-    /// Gets or sets the observer identifier.
-    /// </summary>
-    [ProtoMember(1)]
-    public string WebhookId { get; set; }
-
-    /// <summary>
     /// Gets or sets the event sequence identifier.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(1)]
     public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique identifier of the webhook.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Identifier { get; set; }
 
     /// <summary>
     /// Gets or sets a collection of event types to observe.
@@ -34,8 +34,14 @@ public class WebhookDefinition
     public WebhookTarget Target { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets whether the reactor supports replay scenarios.
+    /// Gets or sets whether the webhook observer supports replay scenarios.
     /// </summary>
     [ProtoMember(5), DefaultValue(true)]
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the webhook is active or not.
+    /// </summary>
+    [ProtoMember(6), DefaultValue(true)]
+    public bool IsActive { get; set; } = true;
 }
