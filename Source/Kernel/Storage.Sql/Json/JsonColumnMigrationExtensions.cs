@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations.Operations.Builders;
 
 namespace Cratis.Chronicle.Storage.Sql.Json;
 
+
 /// <summary>
 /// Extension methods for working with Json columns.
 /// </summary>
