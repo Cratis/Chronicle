@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventTypes;
 using Cratis.Chronicle.Storage.Sql.Namespaces;
 using Cratis.Chronicle.Storage.Sql.Projections;

@@ -13,22 +13,23 @@
         <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.9" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="9.0.9" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.9.0" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.8" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.8" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.8" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.9" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
         <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.0.0" />
-        <PackageVersion Include="Cratis.Applications" Version="17.7.1" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.2.2" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.7.1" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.2.2" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.7.1" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.7.1" />
+        <PackageVersion Include="Cratis.Applications" Version="17.8.0" />
+        <PackageVersion Include="Cratis.Applications.EntityFrameworkCore" Version="17.8.0" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.8.0" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.8.0" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.8.0" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.8.0" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.8.0" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.1" />
