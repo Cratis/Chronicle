@@ -8,4 +8,5 @@ export enum ObserverType {
     reactor = 1,
     projection = 2,
     reducer = 3,
+    webhook = 4,
 }
