@@ -37,6 +37,7 @@
 
     <ItemGroup>
         <PackageReference Include="FluentValidation" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     </ItemGroup>
 </Project>
