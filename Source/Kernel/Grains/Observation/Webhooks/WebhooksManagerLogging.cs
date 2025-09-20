@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <summary>
 /// Holds log messages for <see cref="WebhooksManager"/>.
 /// </summary>
-internal static partial class ProjectionsManagerLogging
+internal static partial class WebhooksManagerLogging
 {
     [LoggerMessage(LogLevel.Information, "Setting definition for webhook '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<WebhooksManager> logger, WebhookId identifier);

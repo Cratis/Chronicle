@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Xml;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -25,7 +26,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 public class WebhookObserverSubscriber(
     IWebhookMediator webhookMediator,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<WebhookObserverSubscriber> logger) : Grain<WebhookDefinition>, IWebhookObserverSubscriber
+    ILogger<WebhookObserverSubscriber> logger) : Grain<WebhookDefinition>, IWebhookObserverSubscriber, INotifyWebhookDefinitionsChanged
 {
     ObserverKey _key = ObserverKey.NotSet;
 
@@ -58,4 +59,7 @@ public class WebhookObserverSubscriber(
                 error.StackTrace ?? string.Empty);
         }
     }
+
+    /// <inheritdoc/>
+    public Task OnWebhookDefinitionsChanged() => ReadStateAsync();
 }

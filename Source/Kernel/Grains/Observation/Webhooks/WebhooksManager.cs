@@ -4,32 +4,23 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
-using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Grains.ReadModels;
-using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
-using IProjection = Cratis.Chronicle.Projections.IProjection;
-using ProjectionsManager = Cratis.Chronicle.Projections.ProjectionsManager;
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 
 /// <summary>
-/// Represents an implementation of <see cref="Chronicle.Projections.IProjectionsManager"/>.
+/// Represents an implementation of <see cref="IWebhooksManager"/>.
 /// </summary>
-/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
-/// <param name="projectionsService"><see cref="Projections.IProjectionsServiceClient"/> for managing projections.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public class WebhooksManager(
-    IProjectionFactory projectionFactory,
-    IWebhooksServiceClient projectionsService,
     ILocalSiloDetails localSiloDetails,
-    ILogger<ProjectionsManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager
+    ILogger<WebhooksManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager, IOnBroadcastChannelSubscribed
 {
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
@@ -46,15 +37,35 @@ public class WebhooksManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<WebhookDefinition> definitions)
     {
-        await projectionsService.Register(_eventStoreName, definitions);
-        State.Projections = definitions;
+        State.Webhooks = definitions;
+        await WriteStateAsync();
         await SetDefinitionAndSubscribeForAllWebhooks();
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<WebhookDefinition>> GetProjectionDefinitions()
+    public Task<IEnumerable<WebhookDefinition>> GetWebhookDefinitions() => Task.FromResult(State.Webhooks);
+
+    /// <inheritdoc/>
+    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
     {
-        return Task.FromResult(State.Projections);
+        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
+        if (_eventStoreName != eventStore) return Task.CompletedTask;
+
+        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
+        return Task.CompletedTask;
+
+        static Task OnError(Exception exception) => Task.CompletedTask;
+    }
+
+    async Task OnNamespaceAdded(NamespaceAdded added)
+    {
+        foreach (var definitions in State.Webhooks)
+        {
+            var key = new WebhookKey(definitions.Identifier, _eventStoreName);
+            var webhook = GrainFactory.GetGrain<IWebhook>(key);
+            await webhook.SetDefinition(definitions);
+            await SubscribeIfNotSubscribed(definitions, added.Namespace);
+        }
     }
 
     async Task SetDefinitionAndSubscribeForAllWebhooks()
@@ -66,41 +77,37 @@ public class WebhooksManager(
             await SetDefinitionAndSubscribeForWebhook(namespaces, definition);
         }
     }
-    
-    async Task SetDefinitionAndSubscribeForWebhook(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+
+    async Task SetDefinitionAndSubscribeForWebhook(IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition)
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new WebhookKey(definition.Identifier, _eventStoreName);
-        var projection = GrainFactory.GetGrain<IProjection>(key);
+        var projection = GrainFactory.GetGrain<IWebhook>(key);
         await projection.SetDefinition(definition);
-    
+
         if (!definition.IsActive)
         {
             return;
         }
-    
+
         foreach (var namespaceName in namespaces)
         {
-            await SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName);
+            await SubscribeIfNotSubscribed(definition, namespaceName);
         }
     }
-    //
-    // async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)
-    // {
-    //     var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
-    //     var subscribed = await observer.IsSubscribed();
-    //
-    //     if (!subscribed && definition.IsActive)
-    //     {
-    //         ObserverLogMessages.Subscribing(logger, definition.Identifier, namespaceName);
-    //         var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition);
-    //
-    //         await observer.Subscribe<IProjectionObserverSubscriber>(
-    //             ObserverType.Projection,
-    //             projection.EventTypes,
-    //             localSiloDetails.SiloAddress);
-    //     }
-    // }
 
-    Task OnError(Exception exception) => Task.CompletedTask;
+    async Task SubscribeIfNotSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
+        var subscribed = await observer.IsSubscribed();
+
+        if (!subscribed && definition.IsActive)
+        {
+            logger.Subscribing(definition.Identifier, namespaceName);
+            await observer.Subscribe<IWebhookObserverSubscriber>(
+                ObserverType.Projection,
+                definition.EventTypes.Select(_ => _.EventType),
+                localSiloDetails.SiloAddress);
+        }
+    }
 }
