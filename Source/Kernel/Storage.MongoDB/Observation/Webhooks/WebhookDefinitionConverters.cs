@@ -26,8 +26,9 @@ public static class WebhookDefinitionConverters
             EventTypes = definition.EventTypes.ToDictionary(
                 et => et.EventType.ToString(),
                 et => et.Key.ToString()),
-            Url = definition.Url,
-            IsReplayable = definition.IsReplayable
+            Target = definition.Target.ToMongoDB(),
+            IsReplayable = definition.IsReplayable,
+            IsActive = definition.IsActive
         };
 
     /// <summary>
@@ -41,6 +42,24 @@ public static class WebhookDefinitionConverters
             definition.Owner,
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
-            definition.Url,
+            definition.Target.ToKernel(),
             definition.IsReplayable);
+
+    static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target) => new(
+        target.Url,
+        target.Authentication,
+        target.Username,
+        target.Passsword,
+        target.BearerToken,
+        target.Headers.AsReadOnly());
+
+    static WebhookTarget ToMongoDB(this Concepts.Observation.Webhooks.WebhookTarget target) => new()
+    {
+        Url = target.Url,
+        Authentication = target.Authentication,
+        BearerToken = target.BearerToken,
+        Passsword = target.Password,
+        Username = target.Username
+    };
+
 }

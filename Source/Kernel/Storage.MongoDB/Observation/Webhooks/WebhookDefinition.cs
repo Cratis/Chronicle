@@ -32,13 +32,18 @@ public class WebhookDefinition
     public IDictionary<string, string> EventTypes { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
-    /// Gets or sets the URL to send the events to.
+    /// Gets or sets the <see cref="WebhookTarget"/> the webhook is for.
     /// </summary>
-    public string Url { get; set; } = string.Empty;
+    public WebhookTarget Target { get; set; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether the webhook is replayable.
     /// </summary>
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the webhook is active.
+    /// </summary>
+    public bool IsActive { get; set; } = true;
 
 }
