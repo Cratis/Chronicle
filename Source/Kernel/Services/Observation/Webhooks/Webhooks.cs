@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Observation.Webhooks;
@@ -11,8 +10,7 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// Represents an implementation of <see cref="IWebhooks"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="logger"><see cref="ILogger"/> for logging.</param>
-internal sealed class Webhooks(IGrainFactory grainFactory, ILogger<Webhooks> logger) : IWebhooks
+internal sealed class Webhooks(IGrainFactory grainFactory) : IWebhooks
 {
     /// <inheritdoc/>
     public Task Register(RegisterWebhook request, CallContext context = default)

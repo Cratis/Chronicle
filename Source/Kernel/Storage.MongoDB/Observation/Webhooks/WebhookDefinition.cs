@@ -45,5 +45,4 @@ public class WebhookDefinition
     /// Gets or sets a value indicating whether the webhook is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
-
 }

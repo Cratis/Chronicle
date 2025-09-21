@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
@@ -22,7 +21,6 @@ public interface IWebhooksManager : IGrainWithStringKey
     /// </summary>
     /// <returns>A collection of <see cref="WebhookDefinition"/>.</returns>
     Task<IEnumerable<WebhookDefinition>> GetWebhookDefinitions();
-
 
     /// <summary>
     /// Register a set of <see cref="WebhookDefinition"/> for the event store it belongs to.

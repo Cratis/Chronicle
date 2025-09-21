@@ -20,6 +20,7 @@ public static class GrainFactoryExtension
     public static IRecommendationsManager GetRecommendationsManager(
         this IGrainFactory grainFactory,
         EventStoreAndNamespace eventStoreAndNamespace) =>
-        grainFactory.GetGrain<IRecommendationsManager>(0,
+        grainFactory.GetGrain<IRecommendationsManager>(
+            0,
             new RecommendationsManagerKey(eventStoreAndNamespace.EventStore, eventStoreAndNamespace.Namespace));
 }

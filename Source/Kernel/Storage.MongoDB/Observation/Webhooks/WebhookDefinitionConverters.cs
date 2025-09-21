@@ -61,5 +61,4 @@ public static class WebhookDefinitionConverters
         Passsword = target.Password,
         Username = target.Username
     };
-
 }
