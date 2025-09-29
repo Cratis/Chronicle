@@ -20,9 +20,9 @@
         <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.0.0" />
         <PackageVersion Include="Cratis.Applications" Version="17.8.2" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.8.1" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.8.1" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.8.1" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.8.2" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.8.2" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.8.2" />
         <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.8.2" />
         <PackageVersion Include="Cratis.Applications.Swagger" Version="17.8.2" />
         <!-- Orleans -->
@@ -73,7 +73,7 @@
         </PackageVersion>
         <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
         <PackageVersion Include="NJsonSchema" Version="11.5.0" />
-        <PackageVersion Include="Polly.Core" Version="8.6.3" />
+        <PackageVersion Include="Polly.Core" Version="8.6.4" />
         <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.52">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
