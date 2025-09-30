@@ -12,13 +12,15 @@ public class when_getting_event_stores(context context) : Given<context>(context
 {
     public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_http_client(fixture)
     {
-        public QueryResult<IEnumerable<string>> Result;
+        public QueryResult Result;
+        public IEnumerable<string> Data;
 
         Task Establish() => Client.ExecuteCommand("/api/event-stores/add", new AddEventStore("testing"));
 
         async Task Because()
         {
-            Result = await Client.ExecuteQuery<IEnumerable<string>>("/api/event-stores");
+            Result = await Client.ExecuteQuery("/api/event-stores");
+            Data = Result.Data as IEnumerable<string>;
         }
     }
 
@@ -26,5 +28,5 @@ public class when_getting_event_stores(context context) : Given<context>(context
     void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
 
     [Fact]
-    void should_return_two_event_stores_including_system() => Context.Result.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
+    void should_return_two_event_stores_including_system() => Context.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
 }

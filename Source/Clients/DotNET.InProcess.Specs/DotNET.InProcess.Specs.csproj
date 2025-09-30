@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Cratis.Applications" />
-      <PackageReference Include="Cratis.Applications.Orleans" VersionOverride="17.8.1" />
+      <PackageReference Include="Cratis.Applications.Orleans" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
