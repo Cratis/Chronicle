@@ -17,6 +17,7 @@
         <PackageReference Include="Cratis.Applications.MongoDB" />
         <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry" />
