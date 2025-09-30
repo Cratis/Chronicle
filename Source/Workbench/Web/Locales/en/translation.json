@@ -35,6 +35,7 @@
             "groupLabel": "General",
             "types": "Types",
             "namespaces": "Namespaces",
+            "webhooks": "Webhooks",
             "sequences": "Sequences",
             "projections": "Projections",
             "reducers": "Reducers",
@@ -76,6 +77,27 @@
                     "addNamespace": {
                         "title": "Add namespace",
                         "name": "Name"
+                    }
+                }
+            },
+            "webhooks": {
+                "title": "Webhooks",
+                "empty": "No webhooks found",
+                "actions": {
+                    "create": "Create"
+                },
+                "columns": {
+                    "id": "Identifier",
+                    "name": "Name"
+                },
+                "dialogs": {
+                    "addWebhook": {
+                        "title": "Add webhook",
+                        "eventSequence": "Select an Event Sequence",
+                        "eventTypes": "Select an Event Type",
+                        "target": {
+                            "url": "Target URL"
+                        }
                     }
                 }
             }
