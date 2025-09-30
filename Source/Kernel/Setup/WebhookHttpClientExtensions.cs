@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Grains.Observation.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
-using Microsoft.Extensions.Resilience;
 using Polly;
 
 namespace Orleans.Hosting;

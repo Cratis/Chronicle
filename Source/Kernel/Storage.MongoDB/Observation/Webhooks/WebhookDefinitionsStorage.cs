@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Applications.MongoDB;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
+using Cratis.Reactive;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
@@ -27,6 +29,12 @@ public class WebhookDefinitionsStorage(
         var definitions = result.ToList();
         return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<WebhookDefinition>, IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>>(
+            Collection.Observe(),
+            definitions => definitions.Select(definition => definition.ToKernel()));
 
     /// <inheritdoc/>
     public Task<bool> Has(WebhookId id) =>

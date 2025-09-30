@@ -22,7 +22,7 @@ public class EventType
     public uint Generation { get; set; }
 
     /// <summary>
-    /// Gets or sets whether or not the event is a tombstone event.
+    /// Gets or sets whether the event is a tombstone event.
     /// </summary>
     [ProtoMember(3)]
     public bool Tombstone { get; set; }
