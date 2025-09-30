@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Storage.Observation.Webhooks;
@@ -15,6 +16,12 @@ public interface IWebhookDefinitionsStorage
     /// </summary>
     /// <returns>A collection of <see cref="WebhookDefinition"/>.</returns>
     Task<IEnumerable<WebhookDefinition>> GetAll();
+
+    /// <summary>
+    /// Get all <see cref="WebhookDefinition">definitions</see> registered.
+    /// </summary>
+    /// <returns>A <see cref="ISubject{T}"/> of <see cref="IEnumerable{T}"/> of <see cref="WebhookDefinition"/>.</returns>
+    ISubject<IEnumerable<WebhookDefinition>> ObserveAll();
 
     /// <summary>
     /// Check if a <see cref="WebhookDefinition"/> exists by its <see cref="WebhookId"/>.

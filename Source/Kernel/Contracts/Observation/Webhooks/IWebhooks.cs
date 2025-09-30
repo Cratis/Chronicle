@@ -17,4 +17,21 @@ public interface IWebhooks
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task Register(RegisterWebhook request, CallContext context = default);
+
+    /// <summary>
+    /// Gets all webhooks.
+    /// </summary>
+    /// <param name="request"><see cref="GetWebhooksRequest"/>.</param>
+    /// <returns><see cref="IEnumerable{T}"/> of <see cref="WebhookDefinition"/>.</returns>
+    [Operation]
+    Task<IEnumerable<WebhookDefinition>> GetWebhooks(GetWebhooksRequest request);
+
+    /// <summary>
+    /// Gets observer over all webhooks.
+    /// </summary>
+    /// <param name="request"><see cref="GetWebhooksRequest"/>.</param>
+    /// <param name="context"><see cref="CallContext"/>.</param>
+    /// <returns><see cref="IObservable{T}"/> of <see cref="IEnumerable{T}"/> of <see cref="WebhookDefinition"/>.</returns>
+    [Operation]
+    IObservable<IEnumerable<WebhookDefinition>> ObserveWebhooks(GetWebhooksRequest request, CallContext context = default);
 }

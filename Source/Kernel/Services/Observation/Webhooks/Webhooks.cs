@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Storage;
+using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Observation.Webhooks;
@@ -10,7 +13,8 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// Represents an implementation of <see cref="IWebhooks"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-internal sealed class Webhooks(IGrainFactory grainFactory) : IWebhooks
+/// <param name="storage"><see cref="IStorage"/> for getting webhook definitions.</param>
+internal sealed class Webhooks(IGrainFactory grainFactory, IStorage storage) : IWebhooks
 {
     /// <inheritdoc/>
     public Task Register(RegisterWebhook request, CallContext context = default)
@@ -21,4 +25,19 @@ internal sealed class Webhooks(IGrainFactory grainFactory) : IWebhooks
         _ = Task.Run(() => webhooksManager.Register(webhooks));
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<WebhookDefinition>> GetWebhooks(GetWebhooksRequest request)
+    {
+        var definitions = await storage.GetEventStore(request.EventStore).Webhooks.GetAll();
+        return definitions.Select(definition => definition.ToContract());
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<WebhookDefinition>> ObserveWebhooks(GetWebhooksRequest request, CallContext context = default) =>
+        storage.GetEventStore(request.EventStore)
+            .Webhooks
+            .ObserveAll()
+            .CompletedBy(context.CancellationToken)
+            .Select(definitions => definitions.Select(definition => definition.ToContract()).ToList());
 }
