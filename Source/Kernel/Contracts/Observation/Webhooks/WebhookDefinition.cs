@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Events;
+
 namespace Cratis.Chronicle.Contracts.Observation.Webhooks;
 
 /// <summary>
@@ -25,7 +27,7 @@ public class WebhookDefinition
     /// Gets or sets a collection of event types to observe.
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
-    public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
+    public IList<EventType> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the webhook target.

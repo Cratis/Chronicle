@@ -106,7 +106,7 @@ public class WebhooksManager(
             logger.Subscribing(definition.Identifier, namespaceName);
             await observer.Subscribe<IWebhookObserverSubscriber>(
                 ObserverType.Projection,
-                definition.EventTypes.Select(_ => _.EventType),
+                definition.EventTypes,
                 localSiloDetails.SiloAddress);
         }
     }

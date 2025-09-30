@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 
@@ -24,8 +22,8 @@ public static class WebhookDefinitionConverters
             Owner = definition.Owner,
             EventSequenceId = definition.EventSequenceId,
             EventTypes = definition.EventTypes.ToDictionary(
-                et => et.EventType.ToString(),
-                et => et.Key.ToString()),
+                et => et.ToString(),
+                et => "$eventSourceId"),
             Target = definition.Target.ToMongoDB(),
             IsReplayable = definition.IsReplayable,
             IsActive = definition.IsActive
@@ -41,7 +39,7 @@ public static class WebhookDefinitionConverters
             definition.Id,
             definition.Owner,
             definition.EventSequenceId,
-            definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
+            definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
             definition.Target.ToKernel(),
             definition.IsReplayable);
 
