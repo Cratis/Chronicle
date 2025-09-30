@@ -70,23 +70,13 @@ public static class HttpClientExtensions
     /// <param name="client">The http client.</param>
     /// <param name="requestUri">The request uri string.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static Task<QueryResult<object>?> ExecuteQuery(this HttpClient client, string requestUri)
-        => ExecuteQuery<object>(client, requestUri);
-
-    /// <summary>
-    /// Executes a query.
-    /// </summary>
-    /// <typeparam name="TQueryResult">The type of the query result.</typeparam>
-    /// <param name="client">The http client.</param>
-    /// <param name="requestUri">The request uri string.</param>
-    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static async Task<QueryResult<TQueryResult>?> ExecuteQuery<TQueryResult>(this HttpClient client, string requestUri)
+    public static async Task<QueryResult?> ExecuteQuery(this HttpClient client, string requestUri)
     {
         var response = await DoQuery(client, requestUri);
-        QueryResult<TQueryResult>? queryResult = null;
+        QueryResult? queryResult = null;
         try
         {
-            queryResult = await response.Content.ReadFromJsonAsync<QueryResult<TQueryResult>>(options: Globals.JsonSerializerOptions);
+            queryResult = await response.Content.ReadFromJsonAsync<QueryResult>(options: Globals.JsonSerializerOptions);
         }
         catch
         {
