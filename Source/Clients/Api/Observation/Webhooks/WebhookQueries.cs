@@ -29,8 +29,8 @@ public class WebhookQueries : ControllerBase
     /// </summary>
     /// <param name="eventStore">The event stores to observe webhooks for.</param>
     /// <returns>An observable for observing a collection of <see cref="WebhookDefinition"/>.</returns>
-    [HttpGet]
-    public ISubject<IEnumerable<WebhookDefinition>> AllNamespaces([FromRoute] string eventStore) =>
+    [HttpGet("observe")]
+    public ISubject<IEnumerable<WebhookDefinition>> AllWebhooks([FromRoute] string eventStore) =>
         _webhooks.InvokeAndWrapWithSubject(token => _webhooks.ObserveWebhooks(new() { EventStore = eventStore }, token));
 
     /// <summary>
@@ -39,6 +39,6 @@ public class WebhookQueries : ControllerBase
     /// <param name="eventStore">The event stores to get for.</param>
     /// <returns>A collection of <see cref="WebhookDefinition"/>.</returns>
     [HttpGet]
-    public Task<IEnumerable<WebhookDefinition>> GetAllNamespaces([FromRoute] string eventStore) =>
+    public Task<IEnumerable<WebhookDefinition>> GetAllWebhooks([FromRoute] string eventStore) =>
         _webhooks.GetWebhooks(new() { EventStore = eventStore });
 }

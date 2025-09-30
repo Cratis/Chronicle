@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.WebhooksManager)]
 public class WebhooksManager(
     ILocalSiloDetails localSiloDetails,
     ILogger<WebhooksManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager, IOnBroadcastChannelSubscribed
@@ -82,8 +82,8 @@ public class WebhooksManager(
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new WebhookKey(definition.Identifier, _eventStoreName);
-        var projection = GrainFactory.GetGrain<IWebhook>(key);
-        await projection.SetDefinition(definition);
+        var webhook = GrainFactory.GetGrain<IWebhook>(key);
+        await webhook.SetDefinition(definition);
 
         if (!definition.IsActive)
         {
@@ -105,8 +105,8 @@ public class WebhooksManager(
         {
             logger.Subscribing(definition.Identifier, namespaceName);
             await observer.Subscribe<IWebhookObserverSubscriber>(
-                ObserverType.Projection,
-                definition.EventTypes,
+                ObserverType.Webhook,
+                definition.EventTypes.ToArray(),
                 localSiloDetails.SiloAddress);
         }
     }

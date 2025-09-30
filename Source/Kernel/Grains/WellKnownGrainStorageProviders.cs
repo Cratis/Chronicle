@@ -69,6 +69,11 @@ public static class WellKnownGrainStorageProviders
     public const string Webhooks = "webhooks";
 
     /// <summary>
+    /// The name of the storage provider used for webhooks manager.
+    /// </summary>
+    public const string WebhooksManager = "webhooks-manager";
+
+    /// <summary>
     /// The name of the storage provider used for reducers.
     /// </summary>
     public const string Reducers = "reducers";

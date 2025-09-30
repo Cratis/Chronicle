@@ -13,14 +13,14 @@ using Orleans.Utilities;
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 
 /// <summary>
-/// Represents an implementation of <see cref="Chronicle.Projections.IProjection"/>.
+/// Represents an implementation of <see cref="IWebhook"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="Chronicle.Projections.Projection"/> class.
+/// Initializes a new instance of the <see cref="Webhook"/> class.
 /// </remarks>
 /// <param name="webhookDefinitionComparer"><see cref="IWebhookDefinitionComparer"/> for comparing projection definitions.</param>
 /// <param name="logger">Logger for logging.</param>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class Webhook(
     IWebhookDefinitionComparer webhookDefinitionComparer,
     ILogger<Webhook> logger) : Grain<WebhookDefinition>, IWebhook

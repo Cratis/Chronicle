@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Namespaces;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -44,6 +45,7 @@ public class Namespaces(
         var channelWriter = _namespaceAddedChannel.GetChannelWriter<NamespaceAdded>(channelId);
         var eventStore = this.GetPrimaryKeyString();
         await channelWriter.Publish(new NamespaceAdded(eventStore, @namespace));
+
     }
 
     /// <inheritdoc/>

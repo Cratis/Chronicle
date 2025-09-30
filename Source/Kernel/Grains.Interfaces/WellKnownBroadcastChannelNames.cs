@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Grains;
 
 /// <summary>
-/// Holds well known broadcast channel names.
+/// Holds well-known broadcast channel names.
 /// </summary>
 public static class WellKnownBroadcastChannelNames
 {

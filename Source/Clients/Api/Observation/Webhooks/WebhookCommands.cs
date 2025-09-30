@@ -29,7 +29,7 @@ public class WebhookCommands : ControllerBase
     /// <param name="eventStore">Name of the event store the observer is for.</param>
     /// <param name="command"><see cref="RegisterWebhook"/> command.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("/register")]
+    [HttpPost("register")]
     public async Task<Guid> RegisterWebhook(
         [FromRoute] string eventStore,
         [FromBody] RegisterWebhook command)
