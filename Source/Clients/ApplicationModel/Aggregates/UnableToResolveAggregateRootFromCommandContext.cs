@@ -11,6 +11,6 @@ namespace Cratis.Chronicle.Applications.Aggregates;
 /// </remarks>
 /// <param name="aggregateRootType">The type of aggregate root that could not be resolved.</param>
 public class UnableToResolveAggregateRootFromCommandContext(Type aggregateRootType) :
-    Exception($"Unable to resolve aggregate root of type '{aggregateRootType.FullName}' from current command context. Ensure that the command has an EventSourceId property and that a command context is available.")
+    Exception($"Unable to resolve aggregate root of type '{aggregateRootType.FullName}' from current command context. Ensure that the command has either one property that is of derivative of EventSourceId or a property marked with [Key] attribute and that a command context is available.")
 {
 }

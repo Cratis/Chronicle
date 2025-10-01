@@ -5,6 +5,7 @@ using Cratis.Applications.Commands;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Applications.Aggregates;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Keys;
 using Cratis.Types;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -40,10 +41,20 @@ public static class AggregateRootServiceCollectionExtensions
                 var eventSourceIdProperty = commandContext.Command
                     .GetType()
                     .GetProperties()
-                    .FirstOrDefault(p => p.PropertyType.IsAssignableTo(typeof(EventSourceId))) ??
+                    .FirstOrDefault(p => p.PropertyType.IsAssignableTo(typeof(EventSourceId)) ||
+                                          p.GetCustomAttributes(typeof(KeyAttribute), false).Length > 0) ??
                     throw new UnableToResolveAggregateRootFromCommandContext(aggregateRootType);
 
-                var eventSourceId = (EventSourceId)eventSourceIdProperty.GetValue(commandContext.Command)!;
+                EventSourceId eventSourceId;
+                if (eventSourceIdProperty.PropertyType.IsAssignableTo(typeof(EventSourceId)))
+                {
+                    eventSourceId = (EventSourceId)eventSourceIdProperty.GetValue(commandContext.Command)!;
+                }
+                else
+                {
+                    var propertyValue = eventSourceIdProperty.GetValue(commandContext.Command);
+                    eventSourceId = propertyValue?.ToString() ?? EventSourceId.Unspecified;
+                }
                 if (eventSourceId == EventSourceId.Unspecified)
                 {
                     throw new UnableToResolveAggregateRootFromCommandContext(aggregateRootType);
