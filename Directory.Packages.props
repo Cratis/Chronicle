@@ -51,7 +51,7 @@
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.10.0-beta.1" />
-        <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.12.0" />
+        <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.13.0" />
         <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
         <!-- Roslyn-->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
