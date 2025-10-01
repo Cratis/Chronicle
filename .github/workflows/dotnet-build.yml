@@ -75,7 +75,7 @@ jobs:
         working-directory: ./Source/Clients
 
       - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -maxcpucount:1
         working-directory: ./Source/Clients
 
   specs:
