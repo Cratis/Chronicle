@@ -62,7 +62,7 @@ public static class AggregateRootServiceCollectionExtensions
 
                 var getMethod = typeof(IAggregateRootFactory)
                     .GetMethods()
-                    .First(m => m.Name == "Get" && m.IsGenericMethod);
+                    .First(m => m.Name == nameof(IAggregateRootFactory.Get) && m.IsGenericMethod);
 
                 var genericGetMethod = getMethod.MakeGenericMethod(aggregateRootType);
                 return genericGetMethod.Invoke(aggregateRootFactory, [eventSourceId, null, null])!;
