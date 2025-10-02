@@ -33,7 +33,7 @@ export class AddEventStore extends Command<IAddEventStore> implements IAddEventS
         super(Object, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameter(): string[] {
         return [
         ];
     }
