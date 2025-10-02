@@ -26,10 +26,7 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
-        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false">
-            <Pack>true</Pack>
-            <PrivateAssets>none</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
     </ItemGroup>
 
@@ -43,22 +40,19 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 
-    <!--  When repacking, add our injection target to the Pack dependency chain -->
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);InjectChroniclePackageDependency</GenerateNuspecDependsOn>
-    </PropertyGroup>
-    
-    <!-- Inject Cratis.Chronicle as a package dependency in the nuspec immediately after it's generated -->
-    <Target Name="InjectChroniclePackageDependency" Condition="'$(Repack)' == 'true'">
+    <!-- When repacking and packaging, inject Cratis.Chronicle as a package dependency -->
+    <!-- The PowerShell script modifies the generated nuspec to add the dependency -->
+    <Target Name="InjectChroniclePackageDependency" AfterTargets="GenerateNuspec" Condition="'$(Repack)' == 'true' and '$(ContinuePackingAfterGeneratingNuspec)' == 'true'">
         <PropertyGroup>
-            <GeneratedNuspecPath Condition="'$(TargetFramework)' == ''">$(BaseIntermediateOutputPath)$(Configuration)\$(PackageId).$(PackageVersion).nuspec</GeneratedNuspecPath>
-            <GeneratedNuspecPath Condition="'$(TargetFramework)' != ''">$(IntermediateOutputPath)$(PackageId).$(PackageVersion).nuspec</GeneratedNuspecPath>
+            <NuspecPath>$(BaseIntermediateOutputPath)$(Configuration)\$(PackageId).$(PackageVersion).nuspec</NuspecPath>
             <InjectScriptPath>$(MSBuildThisFileDirectory)../inject-dependency.ps1</InjectScriptPath>
         </PropertyGroup>
         
-        <Message Text="[TFM: $(TargetFramework)] Injecting Cratis.Chronicle dependency into nuspec at: $(GeneratedNuspecPath)" Importance="high" />
+        <Message Text="Injecting Cratis.Chronicle v$(PackageVersion) dependency into nuspec" Importance="high" />
         
-        <!-- Use PowerShell script to inject the dependency if the nuspec file exists -->
-        <Exec Command="pwsh -NoProfile -File &quot;$(InjectScriptPath)&quot; -NuspecPath &quot;$(GeneratedNuspecPath)&quot; -PackageId &quot;Cratis.Chronicle&quot; -PackageVersion &quot;$(PackageVersion)&quot;" Condition="Exists('$(GeneratedNuspecPath)')" />
+        <!-- Run PowerShell script to inject the dependency into the nuspec -->
+        <Exec Command="pwsh -NoProfile -File &quot;$(InjectScriptPath)&quot; -NuspecPath &quot;$(NuspecPath)&quot; -PackageId &quot;Cratis.Chronicle&quot; -PackageVersion &quot;$(PackageVersion)&quot;" 
+              Condition="Exists('$(NuspecPath)')" 
+              IgnoreExitCode="false" />
     </Target>
 </Project>
