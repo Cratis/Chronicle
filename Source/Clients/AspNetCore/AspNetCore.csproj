@@ -17,6 +17,10 @@
         <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' == 'true'">
+        <NoWarn>$(NoWarn);NU1603</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess"/>
     </ItemGroup>
@@ -25,8 +29,13 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' == 'true'">
+    <ItemGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' != 'true'">
         <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' == 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
     </ItemGroup>
 
