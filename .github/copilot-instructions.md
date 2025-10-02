@@ -104,6 +104,7 @@
    - [How to Write Entity Framework Core Specs](./instructions/efcore.specs.instructions.md)
    - [Concepts](./instructions/concepts.instructions.md)
    - [Documentation](./instructions/documentation.instructions.md)
+   - [Pull Requests](./instructions/pull-requests.instructions.md)
 
 ## Header
 

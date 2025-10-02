@@ -17,3 +17,7 @@ applyTo: "Documentation/**/*.md"
 - Use headings, lists, and code blocks to organize content.
 - Include links to relevant resources and references.
 - Always add an index.md file in each folder to serve as the landing page.
+- Maintain the index.md file to include links to all relevant subtopics.
+- Use relative links for internal documentation references.
+- Ensure all links are valid and up-to-date.
+- Use images and diagrams to enhance understanding.
