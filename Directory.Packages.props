@@ -18,14 +18,14 @@
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.9.0" />
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
         <!-- Cratis -->
-        <PackageVersion Include="Cratis.Fundamentals" Version="7.0.0" />
+        <PackageVersion Include="Cratis.Fundamentals" Version="7.1.0" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.0.0" />
-        <PackageVersion Include="Cratis.Applications" Version="17.9.5" />
+        <PackageVersion Include="Cratis.Applications" Version="17.12.2" />
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.9.5" />
         <PackageVersion Include="Cratis.Applications.Orleans" Version="17.9.5" />
         <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.9.5" />
         <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.9.5" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.9.5" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.12.2" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.1" />
