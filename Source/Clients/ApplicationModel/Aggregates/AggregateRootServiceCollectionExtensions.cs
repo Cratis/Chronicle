@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Commands;
+using Cratis.Chronicle;
 using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Applications.Aggregates;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
-using Cratis.Types;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -19,19 +19,11 @@ public static class AggregateRootServiceCollectionExtensions
     /// Adds aggregate root auto-discovery and registration to the service collection.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="types">The <see cref="ITypes"/> system for type discovery.</param>
+    /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/> for type discovery.</param>
     /// <returns>The service collection for continuation.</returns>
-    public static IServiceCollection AddAggregateRoots(this IServiceCollection services, ITypes types)
+    public static IServiceCollection AddAggregateRoots(this IServiceCollection services, IClientArtifactsProvider clientArtifactsProvider)
     {
-        var aggregateRootTypes = types
-            .All
-            .Where(type => type.IsClass &&
-                          !type.IsAbstract &&
-                          type.GetInterfaces().Any(i => i == typeof(IAggregateRoot)) &&
-                          type.Namespace?.StartsWith("Cratis.Chronicle.") is not true)
-            .ToArray();
-
-        foreach (var aggregateRootType in aggregateRootTypes)
+        foreach (var aggregateRootType in clientArtifactsProvider.AggregateRoots)
         {
             services.AddTransient(aggregateRootType, serviceProvider =>
             {

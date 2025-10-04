@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Commands;
+using Cratis.Chronicle;
 using Cratis.Chronicle.Applications.ReadModels;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Types;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -20,16 +19,19 @@ public static class ReadModelServiceCollectionExtensions
     /// Adds read model auto-discovery and registration to the service collection.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="types">The <see cref="ITypes"/> system for type discovery.</param>
+    /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/> for type discovery.</param>
     /// <returns>The service collection for continuation.</returns>
-    public static IServiceCollection AddReadModels(this IServiceCollection services, ITypes types)
+    public static IServiceCollection AddReadModels(this IServiceCollection services, IClientArtifactsProvider clientArtifactsProvider)
     {
-        var readModelTypes = types
-            .All
-            .Where(type => type.IsClass &&
-                          !type.IsAbstract &&
-                          HasProjectionOrReducerFor(type, types) &&
-                          type.Namespace?.StartsWith("Cratis.Chronicle.") is not true)
+        var readModelTypes = clientArtifactsProvider.Projections
+            .Select(projectionType =>
+            {
+                var projectionInterface = projectionType.GetInterfaces()
+                    .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IProjectionFor<>));
+                return projectionInterface?.GetGenericArguments()[0];
+            })
+            .Where(type => type?.IsClass == true && !type.IsAbstract)
+            .Cast<Type>()
             .ToArray();
 
         foreach (var readModelType in readModelTypes)
@@ -42,14 +44,14 @@ public static class ReadModelServiceCollectionExtensions
                 var keyProperty = commandContext.Command
                     .GetType()
                     .GetProperties()
-                    .FirstOrDefault(p => p.PropertyType.IsAssignableTo(typeof(EventSourceId)) ||
+                    .FirstOrDefault(p => p.PropertyType.IsAssignableTo(typeof(ReadModelKey)) ||
                                           p.GetCustomAttributes(typeof(KeyAttribute), false).Length > 0) ??
                     throw new UnableToResolveReadModelFromCommandContext(readModelType);
 
                 ReadModelKey readModelKey;
-                if (keyProperty.PropertyType.IsAssignableTo(typeof(EventSourceId)))
+                if (keyProperty.PropertyType.IsAssignableTo(typeof(ReadModelKey)))
                 {
-                    readModelKey = (EventSourceId)keyProperty.GetValue(commandContext.Command)!;
+                    readModelKey = (ReadModelKey)keyProperty.GetValue(commandContext.Command)!;
                 }
                 else
                 {
@@ -68,12 +70,5 @@ public static class ReadModelServiceCollectionExtensions
         }
 
         return services;
-    }
-
-    static bool HasProjectionOrReducerFor(Type readModelType, ITypes types)
-    {
-        return types.All.Any(type =>
-            type.GetInterfaces().Any(i =>
-                i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IProjectionFor<>) && i.GetGenericArguments()[0] == readModelType));
     }
 }
