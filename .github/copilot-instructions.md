@@ -101,6 +101,8 @@
 
 - Follow the following guides:
    - [How to Write Specs](./instructions/specs.instructions.md)
+   - [How to Write C# Specs](./instructions/specs.csharp.instructions.md)
+   - [How to Write TypeScript Specs](./instructions/specs.typescript.instructions.md)
    - [How to Write Entity Framework Core Specs](./instructions/efcore.specs.instructions.md)
    - [Concepts](./instructions/concepts.instructions.md)
    - [Documentation](./instructions/documentation.instructions.md)

@@ -56,7 +56,7 @@ export class RedactMany extends Command<IRedactMany> implements IRedactMany {
         super(Object, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

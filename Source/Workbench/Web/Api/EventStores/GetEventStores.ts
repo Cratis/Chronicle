@@ -33,7 +33,7 @@ export class GetEventStores extends QueryFor<string[]> {
         this._sortBy = new GetEventStoresSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
         ];
     }

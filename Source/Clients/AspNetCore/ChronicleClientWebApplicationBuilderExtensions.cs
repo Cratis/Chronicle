@@ -27,12 +27,14 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     /// <param name="builder"><see cref="WebApplicationBuilder"/> to build on.</param>
     /// <param name="configureOptions">Optional <see cref="Action{T}"/> for configuring options.</param>
     /// <param name="configSection">Optional config section.</param>
+    /// <param name="configure">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder AddCratisChronicle(
         this WebApplicationBuilder builder,
         Action<ChronicleAspNetCoreOptions>? configureOptions = default,
         string? configSection = default,
+        Action<IChronicleBuilder>? configure = default,
         ILoggerFactory? loggerFactory = default)
     {
         builder.Services.AddOptions(configureOptions);
@@ -45,6 +47,12 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddCompliance()
             .AddCausation()
             .AddCratisChronicleClient();
+
+        var options = new ChronicleOptions();
+        builder.Configuration.GetSection(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)).Bind(options);
+        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, options.ArtifactsProvider);
+        configure?.Invoke(chronicleBuilder);
+
         builder.Host.AddCratisChronicle(loggerFactory);
         return builder;
     }

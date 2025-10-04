@@ -49,11 +49,11 @@ class AllProjectionsSortByWithoutQuery {
     }
 }
 
-export interface AllProjectionsArguments {
+export interface AllProjectionsParameters {
     eventStore: string;
 }
 
-export class AllProjections extends QueryFor<Projection[], AllProjectionsArguments> {
+export class AllProjections extends QueryFor<Projection[], AllProjectionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/projections';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
@@ -65,7 +65,7 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         this._sortBy = new AllProjectionsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
@@ -79,11 +79,11 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         return this._sortBy;
     }
 
-    static use(args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsArguments>, SetSorting] {
-        return useQuery<Projection[], AllProjections, AllProjectionsArguments>(AllProjections, args, sorting);
+    static use(args?: AllProjectionsParameters, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsParameters>, SetSorting] {
+        return useQuery<Projection[], AllProjections, AllProjectionsParameters>(AllProjections, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllProjectionsParameters, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<Projection[], AllProjections>(AllProjections, new Paging(0, pageSize), args, sorting);
     }
 }

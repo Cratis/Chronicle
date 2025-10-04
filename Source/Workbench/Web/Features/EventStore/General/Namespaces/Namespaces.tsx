@@ -3,7 +3,7 @@
 
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { NamespacesViewModel } from './NamespacesViewModel';
-import { AllNamespaces, AllNamespacesArguments } from 'Api/Namespaces';
+import { AllNamespaces, AllNamespacesParameters } from 'Api/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
@@ -16,7 +16,7 @@ import { AddNamespace, AddNamespaceRequest, AddNamespaceResponse } from './AddNa
 export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddNamespaceDialog] = useDialog<AddNamespaceRequest, AddNamespaceResponse>(AddNamespaceRequest, AddNamespace);
-    const queryArgs: AllNamespacesArguments = {
+    const queryArgs: AllNamespacesParameters = {
         eventStore: params.eventStore!
     };
 

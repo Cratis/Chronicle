@@ -21,3 +21,4 @@ applyTo: "Documentation/**/*.md"
 - Use relative links for internal documentation references.
 - Ensure all links are valid and up-to-date.
 - Use images and diagrams to enhance understanding.
+- Emphasize why something is done, not just how.

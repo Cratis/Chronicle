@@ -85,11 +85,11 @@ class AllJobsSortByWithoutQuery {
     }
 }
 
-export interface AllJobsArguments {
+export interface AllJobsParameters {
     eventStore: string;
     namespace: string;
 }
-export class AllJobs extends ObservableQueryFor<Job[], AllJobsArguments> {
+export class AllJobs extends ObservableQueryFor<Job[], AllJobsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Job[] = [];
@@ -101,7 +101,7 @@ export class AllJobs extends ObservableQueryFor<Job[], AllJobsArguments> {
         this._sortBy = new AllJobsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -116,11 +116,11 @@ export class AllJobs extends ObservableQueryFor<Job[], AllJobsArguments> {
         return this._sortBy;
     }
 
-    static use(args?: AllJobsArguments, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting] {
-        return useObservableQuery<Job[], AllJobs, AllJobsArguments>(AllJobs, args, sorting);
+    static use(args?: AllJobsParameters, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting] {
+        return useObservableQuery<Job[], AllJobs, AllJobsParameters>(AllJobs, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllJobsArguments, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllJobsParameters, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<Job[], AllJobs>(AllJobs, new Paging(0, pageSize), args, sorting);
     }
 }

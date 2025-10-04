@@ -5,7 +5,7 @@ import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa6';
-import { AllJobs, AllJobsArguments } from 'Api/Jobs';
+import { AllJobs, AllJobsParameters } from 'Api/Jobs';
 import { Job, JobStatus } from 'Api/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -46,7 +46,7 @@ const progress = (job: Job) => {
 
 export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AllJobsArguments = {
+    const queryArgs: AllJobsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };

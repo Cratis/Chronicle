@@ -3,7 +3,7 @@
 
 import { Column } from 'primereact/column';
 import strings from 'Strings';
-import { AllEventTypesArguments, AllEventTypesWithSchemas } from 'Api/EventTypes';
+import { AllEventTypesParameters, AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
@@ -27,7 +27,7 @@ export const Types = withViewModel(TypesViewModel, () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeDialog] = useDialog<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest, AddEventType);
 
-    const queryArgs: AllEventTypesArguments = {
+    const queryArgs: AllEventTypesParameters = {
         eventStore: params.eventStore!
     };
 

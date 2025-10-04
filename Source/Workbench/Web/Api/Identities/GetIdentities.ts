@@ -58,12 +58,12 @@ class GetIdentitiesSortByWithoutQuery {
     }
 }
 
-export interface GetIdentitiesArguments {
+export interface GetIdentitiesParameters {
     eventStore: string;
     namespace: string;
 }
 
-export class GetIdentities extends QueryFor<Identity[], GetIdentitiesArguments> {
+export class GetIdentities extends QueryFor<Identity[], GetIdentitiesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Identity[] = [];
@@ -75,7 +75,7 @@ export class GetIdentities extends QueryFor<Identity[], GetIdentitiesArguments> 
         this._sortBy = new GetIdentitiesSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -90,11 +90,11 @@ export class GetIdentities extends QueryFor<Identity[], GetIdentitiesArguments> 
         return this._sortBy;
     }
 
-    static use(args?: GetIdentitiesArguments, sorting?: Sorting): [QueryResultWithState<Identity[]>, PerformQuery<GetIdentitiesArguments>, SetSorting] {
-        return useQuery<Identity[], GetIdentities, GetIdentitiesArguments>(GetIdentities, args, sorting);
+    static use(args?: GetIdentitiesParameters, sorting?: Sorting): [QueryResultWithState<Identity[]>, PerformQuery<GetIdentitiesParameters>, SetSorting] {
+        return useQuery<Identity[], GetIdentities, GetIdentitiesParameters>(GetIdentities, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetIdentitiesArguments, sorting?: Sorting): [QueryResultWithState<Identity[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetIdentitiesParameters, sorting?: Sorting): [QueryResultWithState<Identity[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<Identity[], GetIdentities>(GetIdentities, new Paging(0, pageSize), args, sorting);
     }
 }

@@ -58,12 +58,12 @@ class AllFailedPartitionsSortByWithoutQuery {
     }
 }
 
-export interface AllFailedPartitionsArguments {
+export interface AllFailedPartitionsParameters {
     eventStore: string;
     namespace: string;
     observerId?: string;
 }
-export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsArguments> {
+export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/failed-partitions/{observerId?}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: FailedPartition[] = [];
@@ -75,7 +75,7 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
         this._sortBy = new AllFailedPartitionsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -90,11 +90,11 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
         return this._sortBy;
     }
 
-    static use(args?: AllFailedPartitionsArguments, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>, SetSorting] {
-        return useObservableQuery<FailedPartition[], AllFailedPartitions, AllFailedPartitionsArguments>(AllFailedPartitions, args, sorting);
+    static use(args?: AllFailedPartitionsParameters, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>, SetSorting] {
+        return useObservableQuery<FailedPartition[], AllFailedPartitions, AllFailedPartitionsParameters>(AllFailedPartitions, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllFailedPartitionsArguments, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllFailedPartitionsParameters, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<FailedPartition[], AllFailedPartitions>(AllFailedPartitions, new Paging(0, pageSize), args, sorting);
     }
 }

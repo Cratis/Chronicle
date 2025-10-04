@@ -49,11 +49,11 @@ class AllEventTypesSortByWithoutQuery {
     }
 }
 
-export interface AllEventTypesArguments {
+export interface AllEventTypesParameters {
     eventStore: string;
 }
 
-export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments> {
+export class AllEventTypes extends QueryFor<EventType[], AllEventTypesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventType[] = [];
@@ -65,7 +65,7 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
         this._sortBy = new AllEventTypesSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
@@ -79,11 +79,11 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
         return this._sortBy;
     }
 
-    static use(args?: AllEventTypesArguments, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery<AllEventTypesArguments>, SetSorting] {
-        return useQuery<EventType[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args, sorting);
+    static use(args?: AllEventTypesParameters, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery<AllEventTypesParameters>, SetSorting] {
+        return useQuery<EventType[], AllEventTypes, AllEventTypesParameters>(AllEventTypes, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllEventTypesArguments, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllEventTypesParameters, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<EventType[], AllEventTypes>(AllEventTypes, new Paging(0, pageSize), args, sorting);
     }
 }

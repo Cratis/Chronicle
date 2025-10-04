@@ -9,7 +9,7 @@ import { ObserverType } from 'Api/Observation/ObserverType';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { FilterMatchMode } from 'primereact/api';
 import strings from 'Strings';
-import { AllObservers, AllObserversArguments, ObserverOwner } from 'Api/Observation';
+import { AllObservers, AllObserversParameters, ObserverOwner } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { DataPage, MenuItem } from 'Components';
@@ -53,7 +53,7 @@ const defaultFilters: DataTableFilterMeta = {
 
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AllObserversArguments = {
+    const queryArgs: AllObserversParameters = {
         eventStore: params.eventStore!,
         namespace: viewModel.currentNamespace
     };

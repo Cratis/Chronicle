@@ -67,12 +67,12 @@ class GetRecommendationsSortByWithoutQuery {
     }
 }
 
-export interface GetRecommendationsArguments {
+export interface GetRecommendationsParameters {
     eventStore: string;
     namespace: string;
 }
 
-export class GetRecommendations extends QueryFor<Recommendation[], GetRecommendationsArguments> {
+export class GetRecommendations extends QueryFor<Recommendation[], GetRecommendationsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Recommendation[] = [];
@@ -84,7 +84,7 @@ export class GetRecommendations extends QueryFor<Recommendation[], GetRecommenda
         this._sortBy = new GetRecommendationsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -99,11 +99,11 @@ export class GetRecommendations extends QueryFor<Recommendation[], GetRecommenda
         return this._sortBy;
     }
 
-    static use(args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery<GetRecommendationsArguments>, SetSorting] {
-        return useQuery<Recommendation[], GetRecommendations, GetRecommendationsArguments>(GetRecommendations, args, sorting);
+    static use(args?: GetRecommendationsParameters, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery<GetRecommendationsParameters>, SetSorting] {
+        return useQuery<Recommendation[], GetRecommendations, GetRecommendationsParameters>(GetRecommendations, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetRecommendationsParameters, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<Recommendation[], GetRecommendations>(GetRecommendations, new Paging(0, pageSize), args, sorting);
     }
 }

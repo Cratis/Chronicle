@@ -40,14 +40,14 @@ class AppendedEventsSortByWithoutQuery {
     }
 }
 
-export interface AppendedEventsArguments {
+export interface AppendedEventsParameters {
     eventStore: string;
     namespace: string;
     eventSequenceId: string;
     eventSourceId?: string;
 }
 
-export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsArguments> {
+export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}?eventSourceId={eventSourceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
@@ -59,7 +59,7 @@ export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsArgu
         this._sortBy = new AppendedEventsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -75,11 +75,11 @@ export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsArgu
         return this._sortBy;
     }
 
-    static use(args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery<AppendedEventsArguments>, SetSorting] {
-        return useQuery<AppendedEvent[], AppendedEvents, AppendedEventsArguments>(AppendedEvents, args, sorting);
+    static use(args?: AppendedEventsParameters, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery<AppendedEventsParameters>, SetSorting] {
+        return useQuery<AppendedEvent[], AppendedEvents, AppendedEventsParameters>(AppendedEvents, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AppendedEventsArguments, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AppendedEventsParameters, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<AppendedEvent[], AppendedEvents>(AppendedEvents, new Paging(0, pageSize), args, sorting);
     }
 }

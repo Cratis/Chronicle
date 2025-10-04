@@ -4,14 +4,14 @@
 namespace Cratis.Chronicle.Keys;
 
 /// <summary>
-/// Represents metadata for defining which property on the event to use as key.
+/// Represents metadata for defining which property use as key, or marks a property as a key.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="KeyAttribute"/> class.
 /// </remarks>
-/// <param name="property">Property to use.</param>
-[AttributeUsage(AttributeTargets.Method)]
-public sealed class KeyAttribute(string property) : Attribute
+/// <param name="property">Property to use when applied to methods. Optional when applied to properties.</param>
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+public sealed class KeyAttribute(string property = "") : Attribute
 {
     /// <summary>
     /// Gets the property to use as key.

@@ -6,3 +6,4 @@
 - Ensure your code follows the project's coding standards and guidelines.
 - Write clear and concise commit messages.
 - Label your pull request appropriately according to semantic versioning for what type of improvement the PR is offering (major, minor, patch).
+- Add a link to the issue it addresses on every bullet-point added in parentheses (e.g., (#123)) at the end of the bullet point, if applicable.
