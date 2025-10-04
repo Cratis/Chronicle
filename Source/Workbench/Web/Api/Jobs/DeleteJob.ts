@@ -40,7 +40,7 @@ export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

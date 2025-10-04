@@ -42,7 +42,7 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

@@ -40,7 +40,7 @@ export class Perform extends Command<IPerform> implements IPerform {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

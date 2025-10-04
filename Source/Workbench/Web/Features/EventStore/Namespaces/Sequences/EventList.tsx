@@ -3,7 +3,7 @@
 
 import { Column } from 'primereact/column';
 import { DataTableForQuery } from 'Components/index';
-import { AppendedEvents, AppendedEventsArguments } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { AppendedEvent } from 'Api/Events';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
@@ -19,7 +19,7 @@ const occurred = (event: AppendedEvent) => {
 
 export const EventList = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AppendedEventsArguments = {
+    const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         eventSequenceId: 'event-log'

@@ -40,7 +40,7 @@ export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

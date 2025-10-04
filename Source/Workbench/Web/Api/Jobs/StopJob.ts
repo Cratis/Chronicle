@@ -40,7 +40,7 @@ export class StopJob extends Command<IStopJob> implements IStopJob {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

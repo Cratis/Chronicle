@@ -36,7 +36,7 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
         ];

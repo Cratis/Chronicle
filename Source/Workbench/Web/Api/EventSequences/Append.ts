@@ -63,7 +63,7 @@ export class Append extends Command<IAppend> implements IAppend {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

@@ -54,7 +54,7 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

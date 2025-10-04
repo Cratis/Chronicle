@@ -40,7 +40,7 @@ export class Ignore extends Command<IIgnore> implements IIgnore {
         super(Object, false);
     }
 
-    get requestParameter(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

@@ -6,11 +6,11 @@ import strings from 'Strings';
 import { DataPage } from 'Components';
 import { Column } from 'primereact/column';
 import { useParams } from 'react-router-dom';
-import { AllIdentities, AllIdentitiesArguments } from 'Api/Identities';
+import { AllIdentities, AllIdentitiesParameters } from 'Api/Identities';
 
 export const Identities = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AllIdentitiesArguments = {
+    const queryArgs: AllIdentitiesParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };
