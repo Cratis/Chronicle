@@ -53,7 +53,7 @@ export class Redact extends Command<IRedact> implements IRedact {
         super(Object, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameter(): string[] {
         return [
             'eventStore',
             'namespace',

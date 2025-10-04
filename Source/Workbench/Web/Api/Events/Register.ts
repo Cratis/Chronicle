@@ -37,7 +37,7 @@ export class Register extends Command<IRegister> implements IRegister {
         super(Object, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameter(): string[] {
         return [
             'eventStore',
         ];

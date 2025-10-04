@@ -42,7 +42,7 @@ export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartitio
         super(Object, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameter(): string[] {
         return [
             'eventStore',
             'namespace',
