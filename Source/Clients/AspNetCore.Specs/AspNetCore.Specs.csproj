@@ -8,6 +8,6 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <ProjectReference Include="../AspNetCore.csproj" />
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
 </Project>
