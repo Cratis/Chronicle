@@ -39,11 +39,6 @@ Explore command handling patterns, including returning events and using response
 
 ## Getting Started
 
-To use the Application Model client, ensure you have the proper service registration in your application:
+The Application Model client simplifies working with Chronicle by providing automatic dependency injection and higher-level abstractions.
 
-```csharp
-services.AddChronicle()
-    .WithApplicationModel();
-```
-
-This will automatically register all the necessary services and enable the patterns described in this documentation.
+[Get started with Application Model →](getting-started.md)
