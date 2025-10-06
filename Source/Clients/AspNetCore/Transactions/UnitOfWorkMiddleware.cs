@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions;
 
@@ -11,7 +14,8 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// Represents a middleware for managing units of work.
 /// </summary>
 /// <param name="next">The next middleware.</param>
-public class UnitOfWorkMiddleware(RequestDelegate next)
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/>.</param>
+public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddleware> logger)
 {
     /// <summary>
     /// Invoke the middleware.
@@ -32,6 +36,30 @@ public class UnitOfWorkMiddleware(RequestDelegate next)
         try
         {
             await next(context);
+
+            // Handle unit of work completion and constraint violations
+            if (!unitOfWork.IsCompleted)
+            {
+                await unitOfWork.Commit();
+            }
+            else
+            {
+                logger.AlreadyCompletedManually(unitOfWork.CorrelationId);
+            }
+
+            if (!unitOfWork.IsSuccess)
+            {
+                // Try to add model errors if this is an MVC context
+                var actionContext = context.Features.Get<ActionContext>();
+                if (actionContext is not null)
+                {
+                    foreach (var violation in unitOfWork.GetConstraintViolations())
+                    {
+                        var memberName = violation.Details.TryGetValue(WellKnownConstraintDetailKeys.PropertyName, out var propertyName) ? propertyName : string.Empty;
+                        actionContext.ModelState.AddModelError(memberName, violation.Message);
+                    }
+                }
+            }
         }
         catch
         {
