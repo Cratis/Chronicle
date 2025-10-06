@@ -17,7 +17,7 @@ public class without_event_source_id : given.an_events_command_response_value_ha
         _eventTypes.HasFor(typeof(TestEvent)).Returns(true);
 
         var commandWithoutEventSourceId = new CommandWithoutEventSourceId();
-        _commandContextWithoutEventSourceId = new CommandContext(_correlationId, typeof(CommandWithoutEventSourceId), commandWithoutEventSourceId, []);
+        _commandContextWithoutEventSourceId = new CommandContext(_correlationId, typeof(CommandWithoutEventSourceId), commandWithoutEventSourceId, [], new(), null);
     }
 
     void Because() => _result = _handler.CanHandle(_commandContextWithoutEventSourceId, _events);

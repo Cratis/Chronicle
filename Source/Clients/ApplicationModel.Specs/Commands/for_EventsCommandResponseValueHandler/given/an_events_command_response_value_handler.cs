@@ -23,7 +23,11 @@ public class an_events_command_response_value_handler : Specification
 
         _correlationId = Guid.NewGuid();
         var command = new TestCommand { EventSourceId = EventSourceId.New() };
-        _commandContext = new CommandContext(_correlationId, typeof(TestCommand), command, []);
+        var commandContextValues = new CommandContextValues
+        {
+            { WellKnownCommandContextKeys.EventSourceId, command.EventSourceId }
+        };
+        _commandContext = new CommandContext(_correlationId, typeof(TestCommand), command, [], commandContextValues, null);
     }
 
     protected class TestCommand

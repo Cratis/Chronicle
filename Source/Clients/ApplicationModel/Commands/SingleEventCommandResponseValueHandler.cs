@@ -16,14 +16,14 @@ public class SingleEventCommandResponseValueHandler(IEventLog eventLog, IEventTy
 {
     /// <inheritdoc/>
     public bool CanHandle(CommandContext commandContext, object value) =>
-        commandContext.HasEventSourceId(value) &&
         value is object obj &&
-        eventTypes.HasFor(obj.GetType());
+        eventTypes.HasFor(obj.GetType()) &&
+        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var id) && id is EventSourceId;
 
     /// <inheritdoc/>
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
     {
-        var eventSourceId = commandContext.GetEventSourceId(value);
+        var eventSourceId = commandContext.GetEventSourceId();
         await eventLog.Append(eventSourceId, value);
         return CommandResult.Success(commandContext.CorrelationId);
     }

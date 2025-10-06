@@ -16,7 +16,7 @@ public class without_event_source_id : given.a_single_event_command_response_val
         _eventTypes.HasFor(typeof(TestEvent)).Returns(true);
 
         var command = new TestCommandWithoutEventSourceId();
-        _commandContext = new CommandContext(_correlationId, typeof(TestCommandWithoutEventSourceId), command, []);
+        _commandContext = new CommandContext(_correlationId, typeof(TestCommandWithoutEventSourceId), command, [], new(), null);
     }
 
     void Because() => _result = _handler.CanHandle(_commandContext, _event);

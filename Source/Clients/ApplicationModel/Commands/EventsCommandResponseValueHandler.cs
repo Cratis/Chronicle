@@ -16,16 +16,15 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
 {
     /// <inheritdoc/>
     public bool CanHandle(CommandContext commandContext, object value) =>
-        commandContext.HasEventSourceId(value) &&
-        value is IEnumerable<object> objects &&
-        objects.All(o => eventTypes.HasFor(o.GetType()));
+        (value is IEnumerable<object> objects) &&
+        objects.All(o => eventTypes.HasFor(o.GetType())) &&
+        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var id) && id is EventSourceId;
 
     /// <inheritdoc/>
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
     {
-        var eventSourceId = commandContext.GetEventSourceId(value);
+        var eventSourceId = commandContext.GetEventSourceId();
         var events = (IEnumerable<object>)value;
-
         if (events.Any())
         {
             await eventLog.Append(eventSourceId, events);
