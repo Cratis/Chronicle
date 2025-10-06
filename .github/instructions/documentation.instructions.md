@@ -22,3 +22,4 @@ applyTo: "Documentation/**/*.md"
 - Ensure all links are valid and up-to-date.
 - Use images and diagrams to enhance understanding.
 - Emphasize why something is done, not just how.
+- Always include an empty line at the end of the file.
