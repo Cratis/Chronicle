@@ -3,10 +3,10 @@
 
 using Cratis.Applications.Commands;
 using Cratis.Chronicle;
+using Cratis.Chronicle.Applications.Commands;
 using Cratis.Chronicle.Applications.ReadModels;
-using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.ReadModels;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -41,30 +41,13 @@ public static class ReadModelServiceCollectionExtensions
                 var commandContext = serviceProvider.GetRequiredService<CommandContext>();
                 var projections = serviceProvider.GetRequiredService<IProjections>();
 
-                var keyProperty = commandContext.Command
-                    .GetType()
-                    .GetProperties()
-                    .FirstOrDefault(p => p.PropertyType.IsAssignableTo(typeof(ReadModelKey)) ||
-                                          p.GetCustomAttributes(typeof(KeyAttribute), false).Length > 0) ??
-                    throw new UnableToResolveReadModelFromCommandContext(readModelType);
-
-                ReadModelKey readModelKey;
-                if (keyProperty.PropertyType.IsAssignableTo(typeof(ReadModelKey)))
-                {
-                    readModelKey = (ReadModelKey)keyProperty.GetValue(commandContext.Command)!;
-                }
-                else
-                {
-                    var propertyValue = keyProperty.GetValue(commandContext.Command);
-                    readModelKey = propertyValue?.ToString() ?? ReadModelKey.Unspecified;
-                }
-
-                if (readModelKey == ReadModelKey.Unspecified)
+                var eventSourceId = commandContext.GetEventSourceId();
+                if (eventSourceId == EventSourceId.Unspecified)
                 {
                     throw new UnableToResolveReadModelFromCommandContext(readModelType);
                 }
 
-                var result = projections.GetInstanceById(readModelType, readModelKey).GetAwaiter().GetResult();
+                var result = projections.GetInstanceById(readModelType, eventSourceId).GetAwaiter().GetResult();
                 return result.ReadModel;
             });
         }
