@@ -11,6 +11,31 @@ Command handlers in the Application Model client can return different types of r
 - **Tuples with Values**: Return both an event and a value, where the value becomes the command response
 - **Event Source ID from Responses**: Use values from responses as event source IDs for subsequent operations
 
+## Error Handling
+
+### Exception-Free Command Handlers
+
+Rather than throwing exceptions from a command handler for business rule violations or validation errors, you could  use `OneOf<>` types to return either validation results for failures or successful outcomes with events. This approach provides:
+
+- **Type Safety**: Explicit handling of success and failure cases
+- **Better Testability**: Clear return types make testing scenarios easier
+- **Improved Maintainability**: No hidden exception paths to consider
+- **Client-Friendly**: Structured error responses instead of exceptions
+
+### When to Use Exceptions vs OneOf
+
+**Use OneOf for:**
+
+- Business rule violations (insufficient funds, invalid state transitions)
+- Validation errors (missing required fields, invalid formats)
+- Expected failure scenarios that clients should handle
+
+**Exceptions should only be used for:**
+
+- Unexpected technical failures (database connection issues, network timeouts)
+- Programming errors (null reference, index out of range)
+- Infrastructure problems that cannot be recovered from
+
 ## Response Value Handlers
 
 The Application Model client includes two main response value handlers:
@@ -288,28 +313,140 @@ public async Task<(OrderItemAdded, EventSourceId)> Handle(AddItemCommand command
 
 ### Business Rule Validation
 
-Handle business rule violations before creating events:
+Command handlers should not throw exceptions for business rule violations. Instead, use `OneOf<>` to return either validation results or successful outcomes. This provides a more explicit and type-safe approach to error handling.
+
+#### Using OneOf with Validation Results
 
 ```csharp
+using Cratis.Applications.Validation;
+
 public record TransferFundsCommand([Key] Guid AccountId, decimal Amount, Guid ToAccountId)
 {
-    public (FundsTransferred, TransferResult) Handle(Account account, AccountSummary summary)
+    public OneOf<ValidationResult, (FundsTransferred, TransferResult)> Handle(Account account, AccountSummary summary)
     {
-        // Validate before creating events
+        // Validate business rules first
         if (summary.Balance < Amount)
         {
-            throw new InsufficientFundsException(Amount, summary.Balance);
+            return ValidationResult.Error($"Insufficient funds. Cannot transfer {Amount:C}. Available balance: {summary.Balance:C}");
         }
 
+        // Perform the business operation
         account.Transfer(ToAccountId, Amount);
 
-        return (
-            new FundsTransferred { Amount = Amount, ToAccount = ToAccountId },
-            new TransferResult { Success = true, NewBalance = summary.Balance - Amount }
-        );
+        // Return successful result
+        var transferredEvent = new FundsTransferred { Amount = Amount, ToAccount = ToAccountId };
+        var result = new TransferResult { Success = true, NewBalance = summary.Balance - Amount };
+
+        return (transferredEvent, result);
     }
 }
-```## Advanced Scenarios
+```
+
+#### Returning Single Events with Validation
+
+For commands that return single events, use `OneOf<ValidationResult, Event>`:
+
+```csharp
+using Cratis.Applications.Validation;
+
+public record CreateUserCommand(string Email, string Name)
+{
+    public OneOf<ValidationResult, UserCreated> Handle(IUserService userService)
+    {
+        // Validate business rules
+        if (userService.EmailExists(Email))
+        {
+            return ValidationResult.Error("A user with email '{Email}' already exists");
+        }
+
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            return ValidationResult.Error("User name cannot be empty");
+        }
+
+        // Return successful event
+        return new UserCreated
+        {
+            Email = Email,
+            Name = Name
+        };
+    }
+}
+```
+
+#### Returning Multiple Events with Validation
+
+For commands that return multiple events, use `OneOf<ValidationResult, IEnumerable<object>>`:
+
+```csharp
+using Cratis.Applications.Validation;
+
+public record ProcessOrderCommand([Key] Guid OrderId)
+{
+    public OneOf<ValidationResult, IEnumerable<object>> Handle(Order order, OrderSummary summary)
+    {
+        // Validate order can be processed
+        if (summary.Status == OrderStatus.Cancelled)
+        {
+            return ValidationResult.Error("Order {OrderId} has been cancelled and cannot be processed");
+        }
+
+        if (summary.ItemCount == 0)
+        {
+            return ValidationResult.Error("Order must contain at least one item");
+        }
+
+        // Return successful events
+        var events = new List<object>
+        {
+            new OrderProcessed { ProcessedAt = DateTime.UtcNow },
+            new OrderStatusChanged { NewStatus = "Processing" }
+        };
+
+        if (summary.TotalAmount > 1000m)
+        {
+            events.Add(new HighValueOrderDetected { Amount = summary.TotalAmount });
+        }
+
+        return events;
+    }
+}
+```
+
+#### Working with OneOf Results
+
+When calling command handlers that return `OneOf<>`, you can handle the results using pattern matching:
+
+```csharp
+var command = new TransferFundsCommand(accountId, 500m, toAccountId);
+var result = command.Handle(account, summary);
+
+result.Switch(
+    validationResult =>
+    {
+        // Handle validation failure
+        Console.WriteLine($"Validation failed: {validationResult.Message}");
+    },
+    success =>
+    {
+        // Handle successful transfer
+        var (transferredEvent, transferResult) = success;
+        Console.WriteLine($"Transfer successful. New balance: {transferResult.NewBalance:C}");
+        // Process the event...
+    }
+);
+```
+
+Or use the `Match` method to return a value:
+
+```csharp
+var message = result.Match(
+    validationResult => validationResult.Message,
+    success => "Transfer completed successfully"
+);
+```
+
+## Advanced Scenarios
 
 ### Conditional Event Generation
 
@@ -337,7 +474,9 @@ public record ProcessOrderCommand([Key] Guid OrderId)
         return events;
     }
 }
-```### Dynamic Response Types
+```
+
+### Dynamic Response Types
 
 ```csharp
 public record FlexibleCommand(string Data, bool ReturnEvent, bool ReturnMultiple, bool ReturnTuple, string ResponseValue)
