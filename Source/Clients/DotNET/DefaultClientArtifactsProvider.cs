@@ -9,6 +9,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
+using Cratis.Chronicle.Webhooks;
 using Cratis.Reflection;
 using Cratis.Types;
 
@@ -39,6 +40,9 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Reducers { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Webhooks { get; private set; } = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> ReactorMiddlewares { get; private set; } = [];
@@ -84,6 +88,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
         ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
+        Webhooks = assembliesProvider.DefinedTypes.Where(_ => _.IsAssignableTo(typeof(Webhook)) && !_.IsAbstract).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
         var aggregateRoots = AggregateRoots = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IAggregateRoot>()).ToArray();
         AggregateRootStateTypes = aggregateRoots
