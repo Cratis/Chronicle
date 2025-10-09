@@ -9,9 +9,9 @@ namespace Cratis.Chronicle.Grains.ReadModels;
 /// <summary>
 /// Represents the key for a read model.
 /// </summary>
-/// <param name="Name">The <see cref="ReadModelName"/> part.</param>
+/// <param name="Identifier">The <see cref="ReadModelIdentifier"/> part.</param>
 /// <param name="EventStore">The <see cref="EventStoreName"/> part.</param>
-public record ReadModelGrainKey(ReadModelName Name, EventStoreName EventStore)
+public record ReadModelGrainKey(ReadModelIdentifier Identifier, EventStoreName EventStore)
 {
     /// <summary>
     /// Implicitly convert from <see cref="ReadModelGrainKey"/> to string.
@@ -20,7 +20,7 @@ public record ReadModelGrainKey(ReadModelName Name, EventStoreName EventStore)
     public static implicit operator string(ReadModelGrainKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(Name, EventStore);
+    public override string ToString() => KeyHelper.Combine(Identifier, EventStore);
 
     /// <summary>
     /// Parse a key into its components.

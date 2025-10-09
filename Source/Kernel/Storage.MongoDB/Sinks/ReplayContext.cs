@@ -8,7 +8,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <summary>
 /// Represents the MongoDB version of a replay context.
 /// </summary>
+/// <param name="Identifier">The read model identifier.</param>
 /// <param name="ReadModelName">The read model name.</param>
 /// <param name="RevertReadModelName">The revert read model name.</param>
 /// <param name="Started">The started date and time.</param>
-public record ReplayContext(ReadModelName ReadModelName, ReadModelName RevertReadModelName, DateTimeOffset Started);
+public record ReplayContext(ReadModelIdentifier Identifier, ReadModelName ReadModelName, ReadModelName RevertReadModelName, DateTimeOffset Started);

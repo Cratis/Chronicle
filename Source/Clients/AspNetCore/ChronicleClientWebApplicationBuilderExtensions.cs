@@ -65,7 +65,14 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratisChronicle(this IApplicationBuilder app)
     {
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() => GlobalInstances.ServiceProvider = app.ApplicationServices);
+        appLifetime.ApplicationStarted.Register(() =>
+        {
+            GlobalInstances.ServiceProvider = app.ApplicationServices;
+            var client = app.ApplicationServices.GetRequiredService<IChronicleClient>();
+            var options = app.ApplicationServices.GetService<IOptions<ChronicleAspNetCoreOptions>>()!;
+            var eventStore = client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
+            eventStore.Connection.Connect().Wait();
+        });
 
         return app;
     }

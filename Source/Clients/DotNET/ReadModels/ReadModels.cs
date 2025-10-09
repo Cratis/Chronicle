@@ -36,6 +36,7 @@ public class ReadModels(
         readModels.AddRange(reducers.GetAllHandlers());
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
+            Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
             Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
             Generation = ReadModelGeneration.First,
             Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),

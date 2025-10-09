@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -40,7 +41,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected bool _autoMap = autoMap;
-    protected string _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
+    protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
     /// <inheritdoc/>
     public TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback)
