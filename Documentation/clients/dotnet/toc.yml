@@ -8,3 +8,5 @@
   href: events/reducers.md
 - name: Projections
   href: events/projections.md
+- name: Constraints
+  href: constraints.md
