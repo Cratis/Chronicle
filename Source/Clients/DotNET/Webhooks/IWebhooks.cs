@@ -1,32 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Webhooks;
-
-public interface IWebhookDefinitionBuilder
-{
-    IWebhookDefinitionBuilder OnEventSequence(EventSequenceId eventSequenceId);
-    IWebhookDefinitionBuilder WithBasicAuth(string username, string password);
-    IWebhookDefinitionBuilder WithBearerToken(string token);
-    IWebhookDefinitionBuilder WithHeader(string key, string value);
-    IWebhookDefinitionBuilder WithEventType<TEventType>();
-
-    WebhookDefinition Build();
-}
-
-public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefinitionBuilder
-{
-    public IWebhookDefinitionBuilder OnEventSequence(EventSequenceId eventSequenceId) => throw new NotImplementedException();
-    public IWebhookDefinitionBuilder WithBasicAuth(string username, string password) => throw new NotImplementedException();
-    public IWebhookDefinitionBuilder WithBearerToken(string token) => throw new NotImplementedException();
-    public IWebhookDefinitionBuilder WithHeader(string key, string value) => throw new NotImplementedException();
-    public IWebhookDefinitionBuilder WithEventType<TEventType>() => throw new NotImplementedException();
-    public WebhookDefinition Build() => throw new NotImplementedException();
-}
 
 /// <summary>
 /// Defines a system for working with webhook registrations for the Kernel.
@@ -37,8 +14,9 @@ public interface IWebhooks
     /// Registers a webhook.
     /// </summary>
     /// <param name="webhookId">The <see cref="WebhookId"/> of the webhook to register.</param>
+    /// <param name="configure">The <see cref="Action{T}"/> for configuring the <see cref="WebhookDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Register(WebhookId webhookId, WebhookTargetUrl targetUrl);
+    Task Register(WebhookId webhookId, Action<IWebhookDefinitionBuilder> configure);
 
     /// <summary>
     /// Registers a webhook.
@@ -58,7 +36,7 @@ public interface IWebhooks
     /// Get the state of a specific webhook observer.
     /// </summary>
     /// <param name="webhookId">The <see cref="WebhookId"/>.</param>
-    /// <returns><see cref="webhookState"/>.</returns>
+    /// <returns><see cref="WebhookState"/>.</returns>
     Task<WebhookState> GetStateFor(WebhookId webhookId);
 
     /// <summary>
