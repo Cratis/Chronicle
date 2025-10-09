@@ -19,13 +19,6 @@ public interface IWebhooks
     Task Register(WebhookId webhookId, Action<IWebhookDefinitionBuilder> configure);
 
     /// <summary>
-    /// Registers a webhook.
-    /// </summary>
-    /// <param name="webhook">The <see cref="WebhookDefinition"/> to register.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Register(WebhookDefinition webhook);
-
-    /// <summary>
     /// Get any failed partitions for a specific webhook.
     /// </summary>
     /// <param name="webhookId">The <see cref="WebhookId"/>.</param>

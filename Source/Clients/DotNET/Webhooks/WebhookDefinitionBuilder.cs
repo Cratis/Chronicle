@@ -7,7 +7,7 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Webhooks;
 
 /// <summary>
-/// Represents the <see cref="IWebhookDefinitionBuilder"/>.
+/// Represents an implementation of <see cref="IWebhookDefinitionBuilder"/>.
 /// </summary>
 /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
 public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefinitionBuilder
