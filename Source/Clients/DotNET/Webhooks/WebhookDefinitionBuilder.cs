@@ -92,7 +92,7 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
 
         return new WebhookDefinition(
             Identifier: id,
-            EventTypes: _eventTypes.ToArray(),
+            EventTypes: _eventTypes.Count > 0 ? _eventTypes : eventTypes.All,
             Target: target,
             EventSequenceId: _eventSequenceId,
             IsReplayable: _isReplayable,
