@@ -1,5 +1,7 @@
 - name: Events
   href: events/events.md
+- name: Concurrency
+  href: events/concurrency.md
 - name: Aggregate Root
   href: aggregates/aggregate-root.md
 - name: Reactors
