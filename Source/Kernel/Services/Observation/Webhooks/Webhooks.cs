@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
+using WebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
 
 namespace Cratis.Chronicle.Services.Observation.Webhooks;
 
@@ -23,6 +25,15 @@ internal sealed class Webhooks(IGrainFactory grainFactory, IStorage storage) : I
         var webhooks = request.Webhooks.Select(w => w.ToChronicle()).ToArray();
 
         _ = Task.Run(() => webhooksManager.Register(webhooks));
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Unregister(UnregisterWebhook request, CallContext context = default)
+    {
+        var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooksManager>(request.EventStore);
+
+        _ = Task.Run(() => webhooksManager.Unregister(request.Webhooks.Select(_ => new WebhookId(_))));
         return Task.CompletedTask;
     }
 

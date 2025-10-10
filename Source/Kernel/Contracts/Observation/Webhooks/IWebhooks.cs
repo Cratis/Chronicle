@@ -19,6 +19,15 @@ public interface IWebhooks
     Task Register(RegisterWebhook request, CallContext context = default);
 
     /// <summary>
+    /// Unregister projections.
+    /// </summary>
+    /// <param name="request">The <see cref="UnregisterWebhook"/> request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task Unregister(UnregisterWebhook request, CallContext context = default);
+
+    /// <summary>
     /// Gets all webhooks.
     /// </summary>
     /// <param name="request"><see cref="GetWebhooksRequest"/>.</param>

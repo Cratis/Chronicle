@@ -28,4 +28,11 @@ public interface IWebhooksManager : IGrainWithStringKey
     /// <param name="definitions">A collection of <see cref="WebhookDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Register(IEnumerable<WebhookDefinition> definitions);
+
+    /// <summary>
+    /// Unregister a set of <see cref="WebhookId"/> for the event store it belongs to.
+    /// </summary>
+    /// <param name="webhookIds">A collection of <see cref="WebhookId"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Unregister(IEnumerable<WebhookId> webhookIds);
 }

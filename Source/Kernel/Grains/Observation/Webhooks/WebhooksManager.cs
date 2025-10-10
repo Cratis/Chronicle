@@ -31,15 +31,19 @@ public class WebhooksManager(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();
-        await SetDefinitionAndSubscribeForAllWebhooks();
+        await SetDefinitionAndSubscribeInAllNamespaces(State.Webhooks);
     }
 
     /// <inheritdoc/>
     public async Task Register(IEnumerable<WebhookDefinition> definitions)
     {
-        State.Webhooks = definitions;
-        await WriteStateAsync();
-        await SetDefinitionAndSubscribeForAllWebhooks();
+        await SetDefinitionAndSubscribeInAllNamespaces(definitions);
+    }
+
+    /// <inheritdoc/>
+    public async Task Unregister(IEnumerable<WebhookId> definitions)
+    {
+        await UnsubscribeInAllNamespaces(definitions);
     }
 
     /// <inheritdoc/>
@@ -59,23 +63,24 @@ public class WebhooksManager(
 
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
-        foreach (var definitions in State.Webhooks)
-        {
-            var key = new WebhookKey(definitions.Identifier, _eventStoreName);
-            var webhook = GrainFactory.GetGrain<IWebhook>(key);
-            await webhook.SetDefinition(definitions);
-            await SubscribeIfNotSubscribed(definitions, added.Namespace);
-        }
+        var tasks = State.Webhooks.ToList().Select(definition => SubscribeIfNotSubscribed(definition, added.Namespace));
+        await Task.WhenAll(tasks);
     }
 
-    async Task SetDefinitionAndSubscribeForAllWebhooks()
+    async Task SetDefinitionAndSubscribeInAllNamespaces(IEnumerable<WebhookDefinition> definitions)
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
 
-        foreach (var definition in State.Webhooks)
-        {
-            await SetDefinitionAndSubscribeForWebhook(namespaces, definition);
-        }
+        var tasks = definitions.Select(definition => SetDefinitionAndSubscribeForWebhook(namespaces, definition));
+        await Task.WhenAll(tasks);
+    }
+
+    async Task UnsubscribeInAllNamespaces(IEnumerable<WebhookId> webhookIds)
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+
+        var tasks = webhookIds.Select(webhookId => UnsubscribeWebhook(namespaces, webhookId));
+        await Task.WhenAll(tasks);
     }
 
     async Task SetDefinitionAndSubscribeForWebhook(IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition)
@@ -87,18 +92,28 @@ public class WebhooksManager(
 
         if (!definition.IsActive)
         {
+            logger.NotActive(definition.Identifier);
             return;
         }
 
-        foreach (var namespaceName in namespaces)
-        {
-            await SubscribeIfNotSubscribed(definition, namespaceName);
-        }
+        var tasks = namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, namespaceName));
+        await Task.WhenAll(tasks);
+    }
+
+    async Task UnsubscribeWebhook(IEnumerable<EventStoreNamespaceName> namespaces, WebhookId webhookId)
+    {
+        logger.Unregistering(webhookId);
+        var key = new WebhookKey(webhookId, _eventStoreName);
+        var webhook = GrainFactory.GetGrain<IWebhook>(key);
+        var definition = await webhook.GetDefinition();
+
+        var tasks = namespaces.Select(namespaceName => UnsubscribeIfSubscribed(definition, namespaceName));
+        await Task.WhenAll(tasks);
     }
 
     async Task SubscribeIfNotSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
     {
-        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
+        var observer = GetObserver(definition, namespaceName);
         var subscribed = await observer.IsSubscribed();
 
         if (!subscribed && definition.IsActive)
@@ -108,6 +123,25 @@ public class WebhooksManager(
                 ObserverType.Webhook,
                 definition.EventTypes.ToArray(),
                 localSiloDetails.SiloAddress);
+            return;
         }
+        logger.AlreadySubscribed(definition.Identifier, namespaceName);
     }
+
+    async Task UnsubscribeIfSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
+    {
+        var observer = GetObserver(definition, namespaceName);
+        var subscribed = await observer.IsSubscribed();
+
+        if (subscribed)
+        {
+            logger.Unsubscribing(definition.Identifier, namespaceName);
+            await observer.Unsubscribe();
+            return;
+        }
+        logger.AlreadyUnsubscribed(definition.Identifier, namespaceName);
+    }
+
+    IObserver GetObserver(WebhookDefinition definition, EventStoreNamespaceName namespaceName) =>
+        GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
 }
