@@ -31,11 +31,6 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Reducers { get; }
 
     /// <summary>
-    /// Gets all the available webhook types.
-    /// </summary>
-    IEnumerable<Type> Webhooks { get; }
-
-    /// <summary>
     /// Gets all the available Reactor middleware types.
     /// </summary>
     IEnumerable<Type> ReactorMiddlewares { get; }

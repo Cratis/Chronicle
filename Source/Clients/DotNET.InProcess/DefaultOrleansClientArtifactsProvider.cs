@@ -35,9 +35,6 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
     public IEnumerable<Type> Reducers => provider.Reducers;
 
     /// <inheritdoc/>
-    public IEnumerable<Type> Webhooks => provider.Webhooks;
-
-    /// <inheritdoc/>
     public IEnumerable<Type> ReactorMiddlewares => provider.ReactorMiddlewares;
 
     /// <inheritdoc/>
