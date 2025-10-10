@@ -19,8 +19,8 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     string? _username;
     string? _password;
     string? _bearerToken;
-    bool _isReplayable;
-    bool _isActive;
+    bool _isReplayable = true;
+    bool _isActive = true;
 
     /// <inheritdoc/>
     public IWebhookDefinitionBuilder OnEventSequence(EventSequenceId eventSequenceId)
@@ -79,11 +79,12 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     /// Builds the <see cref="WebhookDefinition"/>.
     /// </summary>
     /// <param name="id">The <see cref="WebhookId"/>.</param>
+    /// <param name="targetUrl">The <see cref="WebhookTargetUrl"/>.</param>
     /// <returns>The built <see cref="WebhookDefinition"/>.</returns>
-    public WebhookDefinition Build(WebhookId id)
+    public WebhookDefinition Build(WebhookId id, WebhookTargetUrl targetUrl)
     {
         var target = new WebhookTarget(
-            Url: new WebhookTargetUrl(string.Empty),
+            Url: targetUrl,
             Authentication: _authentication,
             Username: _username,
             Password: _password,

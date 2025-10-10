@@ -20,11 +20,11 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
 
     /// <inheritdoc/>
-    public async Task Register(WebhookId webhookId, Action<IWebhookDefinitionBuilder> configure)
+    public async Task Register(WebhookId webhookId, WebhookTargetUrl targetUrl, Action<IWebhookDefinitionBuilder> configure)
     {
         var definitionBuilder = new WebhookDefinitionBuilder(eventTypes);
         configure(definitionBuilder);
-        var definition = definitionBuilder.Build(webhookId);
+        var definition = definitionBuilder.Build(webhookId, targetUrl);
         logger.RegisterWebhook(
             definition.Identifier,
             definition.EventSequenceId);

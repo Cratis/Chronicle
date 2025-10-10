@@ -12,7 +12,8 @@ public interface IWebhooks
     /// Registers a webhook.
     /// </summary>
     /// <param name="webhookId">The <see cref="WebhookId"/> of the webhook to register.</param>
+    /// <param name="targetUrl">The <see cref="WebhookTargetUrl"/>.</param>
     /// <param name="configure">The <see cref="Action{T}"/> for configuring the <see cref="WebhookDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Register(WebhookId webhookId, Action<IWebhookDefinitionBuilder> configure);
+    Task Register(WebhookId webhookId, WebhookTargetUrl targetUrl, Action<IWebhookDefinitionBuilder> configure);
 }

@@ -8,6 +8,6 @@ namespace Cratis.Chronicle.Webhooks;
 
 internal static partial class WebhooksLogMessages
 {
-    [LoggerMessage(LogLevel.Trace, "Registering webhook with id '{WebhookId}', for event sequence '{EventSequenceId}'")]
+    [LoggerMessage(LogLevel.Debug, "Registering webhook with id '{WebhookId}', for event sequence '{EventSequenceId}'")]
     internal static partial void RegisterWebhook(this ILogger<Webhooks> logger, WebhookId webhookId, EventSequenceId eventSequenceId);
 }
