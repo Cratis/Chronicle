@@ -19,22 +19,20 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 internal sealed class Webhooks(IGrainFactory grainFactory, IStorage storage) : IWebhooks
 {
     /// <inheritdoc/>
-    public Task Register(RegisterWebhook request, CallContext context = default)
+    public async Task Register(RegisterWebhook request, CallContext context = default)
     {
         var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooksManager>(request.EventStore);
         var webhooks = request.Webhooks.Select(w => w.ToChronicle()).ToArray();
 
-        _ = Task.Run(() => webhooksManager.Register(webhooks));
-        return Task.CompletedTask;
+        await webhooksManager.Register(webhooks);
     }
 
     /// <inheritdoc/>
-    public Task Unregister(UnregisterWebhook request, CallContext context = default)
+    public async Task Unregister(UnregisterWebhook request, CallContext context = default)
     {
         var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooksManager>(request.EventStore);
 
-        _ = Task.Run(() => webhooksManager.Unregister(request.Webhooks.Select(_ => new WebhookId(_))));
-        return Task.CompletedTask;
+        await webhooksManager.Unregister(request.Webhooks.Select(id => new WebhookId(id)));
     }
 
     /// <inheritdoc/>
