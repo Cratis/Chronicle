@@ -8,12 +8,7 @@ The Application Model client automatically registers all aggregate root types an
 
 ## Automatic Registration
 
-Aggregate roots are automatically discovered and registered when you configure the Application Model client:
-
-```csharp
-services.AddChronicle()
-    .WithApplicationModel();
-```
+Aggregate roots are automatically discovered and registered when you configure the Application Model client. See [getting started](./getting-started.md) for more details.
 
 This will scan for all aggregate root types and register them with the dependency injection container.
 

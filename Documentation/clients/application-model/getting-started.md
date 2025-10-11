@@ -4,7 +4,7 @@ The Application Model client provides higher-level abstractions for building app
 
 ## Prerequisites
 
-- .NET 9 or later
+- .NET 8 or later
 - ASP.NET Core application
 - Access to a Chronicle event store (local or remote)
 
@@ -15,6 +15,9 @@ Add the Application Model NuGet package to your project:
 ```shell
 dotnet add package Cratis.Chronicle.Applications
 ```
+
+> **Note**: The `Cratis.Chronicle.Applications` has a dependency to `Cratis.Applications`that holds the rest of the application model.
+> In addition, this builds on top of `Cratis.Chronicle.AspNetCore`, which assumes your project is an ASP.NET Core project.
 
 ## Configuration
 
@@ -27,13 +30,17 @@ using Cratis.Chronicle.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Chronicle with Application Model support
-builder.AddCratisChronicle(configure => configure
-    .WithApplicationModel());
+// Add ApplicationModel and then configure Chronicle with Application Model support
+builder
+    .AddCratisApplicationModel()
+    .AddCratisChronicle(
+        options => options.EventStore = "YourEventStoreName",
+        configure => configure.WithApplicationModel());
 
 var app = builder.Build();
 
-// Configure Chronicle middleware
+// Use both the ApplicationModel and Chronicle
+app.UseCratisApplicationModel();
 app.UseCratisChronicle();
 
 app.Run();
