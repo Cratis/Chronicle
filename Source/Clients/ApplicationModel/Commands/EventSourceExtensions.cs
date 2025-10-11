@@ -57,7 +57,7 @@ public static class EventSourceExtensions
                 values.Add(tuple[i]);
             }
 
-            var id = values.FirstOrDefault(v => v is EventSourceId);
+            var id = values.Find(v => v is EventSourceId);
             if (id is not null)
             {
                 eventSourceId = (EventSourceId)id;
