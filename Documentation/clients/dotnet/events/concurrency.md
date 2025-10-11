@@ -109,7 +109,7 @@ public class MonthlyReportService(IEventLog eventLog)
     public async Task GenerateMonthlyReport(AccountId accountId, DateTime month)
     {
         var monthKey = month.ToString("yyyy-MM");
-        
+
         var concurrencyScope = new ConcurrencyScopeBuilder()
             .WithEventSourceId(accountId)
             .WithEventStreamType("Reporting")
@@ -177,7 +177,7 @@ public class TransferService(IEventLog eventLog)
                 .WithSequenceNumber(50)
                 .WithEventType<MoneyWithdrawn>()
                 .Build(),
-                
+
             [toAccount] = new ConcurrencyScopeBuilder()
                 .WithEventSourceId(toAccount)
                 .WithSequenceNumber(25)
