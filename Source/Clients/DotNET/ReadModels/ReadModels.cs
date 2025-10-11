@@ -57,6 +57,7 @@ public class ReadModels(
         {
             new()
             {
+                Identifier = typeof(TReadModel).GetReadModelIdentifier(),
                 Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
             }
