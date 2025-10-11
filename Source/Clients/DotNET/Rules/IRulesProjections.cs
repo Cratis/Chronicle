@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Rules;
 
@@ -11,6 +12,11 @@ namespace Cratis.Chronicle.Rules;
 /// </summary>
 internal interface IRulesProjections
 {
+    /// <summary>
+    /// Gets all read models that has business rules defined.
+    /// </summary>
+    IEnumerable<IHaveReadModel> ReadModels { get; }
+
     /// <summary>
     /// Discover all the projection definitions related to rules.
     /// </summary>

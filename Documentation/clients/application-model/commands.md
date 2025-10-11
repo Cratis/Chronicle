@@ -113,7 +113,9 @@ public record CreateProductCommand(string Name, decimal Price)
         return (productCreated, productId);
     }
 }
-```In this example:
+```
+
+In this example:
 
 - The `ProductCreated` event is appended to the event log
 - The `Guid` value is returned as the command response
@@ -142,7 +144,9 @@ public record CreateOrderCommand(string CustomerName, List<OrderItem> Items)
         return (orderCreated, orderId);
     }
 }
-```The `EventSourceId` in the tuple can be used by the client for subsequent operations on the same aggregate.
+```
+
+The `EventSourceId` in the tuple can be used by the client for subsequent operations on the same aggregate.
 
 ## Complex Tuple Responses
 

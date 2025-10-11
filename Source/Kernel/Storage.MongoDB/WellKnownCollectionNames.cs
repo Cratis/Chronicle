@@ -111,5 +111,5 @@ public static class WellKnownCollectionNames
     /// <summary>
     /// The collection that holds read model definitions.
     /// </summary>
-    public const string ReadModelDefinitions = "read-model";
+    public const string ReadModelDefinitions = "read-models";
 }
