@@ -24,6 +24,7 @@
     <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" VersionOverride="1.13.1" />
         <PackageReference Include="Polly.Core" />
         <PackageReference Include="OneOf" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />

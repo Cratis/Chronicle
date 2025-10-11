@@ -19,6 +19,7 @@
         <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
         <PackageReference Include="Cratis.Applications.Swagger" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" VersionOverride="1.13.1" />
     </ItemGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">

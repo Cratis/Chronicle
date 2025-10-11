@@ -6,6 +6,7 @@
         <NoWarn>$(NoWarn);SA1600</NoWarn>
     </PropertyGroup>
     <ItemGroup>
+      <PackageReference Include="OpenTelemetry" />
       <PackageReference Include="protobuf-net.Grpc" />
       <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
