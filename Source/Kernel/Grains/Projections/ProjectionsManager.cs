@@ -77,7 +77,7 @@ public class ProjectionsManager(
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
             await projection.SetDefinition(projectionDefinition);
-            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinitions.Single(rm => rm.Name == projectionDefinition.ReadModel), added.Namespace);
+            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinitions.Single(rm => rm.Identifier == projectionDefinition.ReadModel), added.Namespace);
         }
     }
 
@@ -88,7 +88,7 @@ public class ProjectionsManager(
 
         foreach (var definition in State.Projections)
         {
-            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinitions.Single(rm => rm.Name == definition.ReadModel));
+            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel));
         }
     }
 

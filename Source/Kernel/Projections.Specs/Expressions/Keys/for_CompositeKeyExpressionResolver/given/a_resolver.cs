@@ -18,7 +18,7 @@ public class a_resolver : Specification
 
     void Establish()
     {
-        _model = new("Something", ReadModelOwner.Client, new Dictionary<ReadModelGeneration, JsonSchema>
+        _model = new("SomethingId", "Something", ReadModelOwner.Client, new Dictionary<ReadModelGeneration, JsonSchema>
         {
             { ReadModelGeneration.First, new JsonSchema() }
         });

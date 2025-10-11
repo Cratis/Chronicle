@@ -3,7 +3,7 @@
 
 import { DataPage } from 'Components';
 import strings from 'Strings';
-import { AppendedEvents, AppendedEventsArguments } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
@@ -31,7 +31,7 @@ function GetPathFor<T>(lambda: Lambda<T>): string {
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AppendedEventsArguments = {
+    const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         eventSequenceId: 'event-log'

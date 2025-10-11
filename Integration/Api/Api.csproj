@@ -17,7 +17,6 @@
         <PackageReference Include="Cratis.Applications.MongoDB" />
         <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
-        <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
         <PackageReference Include="Cratis.Applications.Swagger" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>

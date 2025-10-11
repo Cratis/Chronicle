@@ -4,7 +4,6 @@
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Transactions;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +19,6 @@ public static class UnitOfWorkServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddUnitOfWork(this IServiceCollection services)
     {
-        services.Configure<MvcOptions>(options => options.Filters.Add<UnitOfWorkActionFilter>(0));
         services.AddTransient<IStartupFilter, UnitOfWorkStartupFilter>();
         services.AddScoped(sp =>
         {

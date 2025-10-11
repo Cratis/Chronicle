@@ -17,7 +17,7 @@ public class when_getting_for_known_type : Specification
 
     void Establish()
     {
-        _model = new("Something", ReadModelOwner.None, null!);
+        _model = new("SomethingId", "Something", ReadModelOwner.None, null!);
         _store = Substitute.For<ISink>();
         _factory = Substitute.For<ISinkFactory>();
         _factory.TypeId.Returns(_type);

@@ -6,6 +6,6 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// <summary>
 /// Represents a read model.
 /// </summary>
-/// <param name="Name">The name of the read model.</param>
+/// <param name="Name">The identifier of the read model.</param>
 /// <param name="Generation">The generation of the read model.</param>
-public record ReadModel(ReadModelName Name, ReadModelGeneration Generation);
+public record ReadModel(ReadModelIdentifier Name, ReadModelGeneration Generation);

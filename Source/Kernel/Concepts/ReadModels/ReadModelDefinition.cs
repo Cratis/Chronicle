@@ -8,12 +8,13 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// <summary>
 /// Represents the model used by a projection to project to.
 /// </summary>
+/// <param name="Identifier">Unique identifier of the model.</param>
 /// <param name="Name">Name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
 /// <param name="Schemas">The <see cref="JsonSchema"/> for the model.</param>
 [GenerateSerializer]
 [Alias(nameof(ReadModelDefinition))]
-public record ReadModelDefinition(ReadModelName Name, ReadModelOwner Owner, IDictionary<ReadModelGeneration, JsonSchema> Schemas)
+public record ReadModelDefinition(ReadModelIdentifier Identifier, ReadModelName Name, ReadModelOwner Owner, IDictionary<ReadModelGeneration, JsonSchema> Schemas)
 {
     /// <summary>
     /// Gets the latest generation of the read model.

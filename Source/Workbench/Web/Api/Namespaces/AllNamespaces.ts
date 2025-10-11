@@ -21,10 +21,10 @@ class AllNamespacesSortByWithoutQuery {
 
 }
 
-export interface AllNamespacesArguments {
+export interface AllNamespacesParameters {
     eventStore: string;
 }
-export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesArguments> {
+export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/namespaces';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
@@ -36,7 +36,7 @@ export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesArg
         this._sortBy = new AllNamespacesSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
@@ -50,11 +50,11 @@ export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesArg
         return this._sortBy;
     }
 
-    static use(args?: AllNamespacesArguments, sorting?: Sorting): [QueryResultWithState<string[]>, SetSorting] {
-        return useObservableQuery<string[], AllNamespaces, AllNamespacesArguments>(AllNamespaces, args, sorting);
+    static use(args?: AllNamespacesParameters, sorting?: Sorting): [QueryResultWithState<string[]>, SetSorting] {
+        return useObservableQuery<string[], AllNamespaces, AllNamespacesParameters>(AllNamespaces, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllNamespacesArguments, sorting?: Sorting): [QueryResultWithState<string[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllNamespacesParameters, sorting?: Sorting): [QueryResultWithState<string[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<string[], AllNamespaces>(AllNamespaces, new Paging(0, pageSize), args, sorting);
     }
 }

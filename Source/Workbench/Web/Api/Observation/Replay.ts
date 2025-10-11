@@ -39,7 +39,7 @@ export class Replay extends Command<IReplay> implements IReplay {
         super(Object, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
             'namespace',

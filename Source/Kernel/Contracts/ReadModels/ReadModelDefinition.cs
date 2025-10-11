@@ -10,20 +10,26 @@ namespace Cratis.Chronicle.Contracts.ReadModels;
 public class ReadModelDefinition
 {
     /// <summary>
-    /// Gets or sets the name of the model.
+    /// Gets or sets the unique identifier of the model.
     /// </summary>
     [ProtoMember(1)]
+    public string Identifier { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the model.
+    /// </summary>
+    [ProtoMember(2)]
     public string Name { get; set; }
 
     /// <summary>
     /// Gets or sets the generation of the model.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(3)]
     public ulong Generation { get; set; }
 
     /// <summary>
     /// Gets or sets the JSON schema for the model.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(4)]
     public string Schema { get; set; }
 }

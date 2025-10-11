@@ -18,6 +18,6 @@ public class and_projection_does_not_exist : given.a_projection_replay_handler
 
     Task Because() => _handler.BeginReplayFor(_observerDetails);
 
-    [Fact] void should_not_establish_context() => _replayContexts.DidNotReceiveWithAnyArgs().Establish(null!);
+    [Fact] void should_not_establish_context() => _replayContexts.DidNotReceiveWithAnyArgs().Establish(null!, null!);
     [Fact] void should_not_begin_replay() => _projectionPipeline.DidNotReceiveWithAnyArgs().BeginReplay(null!);
 }
