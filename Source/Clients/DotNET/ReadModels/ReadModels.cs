@@ -15,14 +15,16 @@ namespace Cratis.Chronicle.ReadModels;
 /// </summary>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-/// <param name="projections">Projections to use.</param>
-/// <param name="reducers">Reducers to use.</param>
+/// <param name="projections">Projections to get read models from.</param>
+/// <param name="reducers">Reducers to get read models from.</param>
+/// <param name="additionalReadModels">Additional read models to register.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
 public class ReadModels(
     IEventStore eventStore,
     INamingPolicy namingPolicy,
     IProjections projections,
     IReducers reducers,
+    IEnumerable<IHaveReadModel> additionalReadModels,
     IJsonSchemaGenerator schemaGenerator) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -34,6 +36,8 @@ public class ReadModels(
 
         readModels.AddRange(projections.GetAllHandlers());
         readModels.AddRange(reducers.GetAllHandlers());
+        readModels.AddRange(additionalReadModels);
+
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
             Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
