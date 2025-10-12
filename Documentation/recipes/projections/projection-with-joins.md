@@ -1,6 +1,6 @@
 # Projection with joins
 
-Joins allow projections to incorporate data from events that don't share the same event source ID. This enables building read models that combine data from different aggregates.
+Joins allow projections to incorporate data from events that don't share the same event source ID. This enables building read models that combine data from different streams.
 
 ## Defining a projection with joins
 
@@ -43,17 +43,17 @@ public record User(
 
 ## Event definitions
 
-Events come from different aggregates but are joined based on common identifiers:
+Events come from different streams but are joined based on common identifiers:
 
 ```csharp
-// User aggregate events
+// User stream events
 [EventType]
 public record UserCreated(string Name, string Email);
 
 [EventType]
 public record UserAssignedToGroup(string UserId, string GroupId);
 
-// Group aggregate events
+// Group stream events
 [EventType]
 public record GroupCreated(string Name, string Description);
 
@@ -64,7 +64,7 @@ public record GroupRenamed(string NewName);
 ## How joins work
 
 1. **Primary events** establish the read model and may set join keys
-2. **Join conditions** specify which property links to other aggregates
+2. **Join conditions** specify which property links to other streams
 3. **Joined events** update properties when their event source ID matches the join key
 4. Join properties are updated whenever relevant events occur
 
@@ -92,7 +92,7 @@ Joins match events based on their event source ID and the join property:
 
 ### Multiple joins
 
-A projection can join with multiple aggregates:
+A projection can join with multiple streams:
 
 ```csharp
 .Join<GroupCreated>(j => j.On(m => m.GroupId).Set(/* ... */))
@@ -117,9 +117,9 @@ Joins can also be used within child collections:
 
 ## Performance considerations
 
-- Joins require Chronicle to track relationships between aggregates
+- Joins require Chronicle to track relationships between streams
 - The system automatically manages join indexes and updates
 - Consider the frequency of joined events when designing projections
 - Large numbers of joins may impact projection performance
 
-Joins enable powerful cross-aggregate read models while maintaining the benefits of event sourcing and proper aggregate boundaries.
+Joins enable powerful cross-stream read models while maintaining the benefits of event sourcing and proper stream boundaries.

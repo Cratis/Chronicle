@@ -6,7 +6,7 @@ Event context contains metadata about each event, such as when it occurred, its 
 
 The `EventContext` contains the following properties you can map to:
 
-- `EventSourceId` - The identifier of the aggregate that produced the event
+- `EventSourceId` - The identifier of the event source that produced the event
 - `SequenceNumber` - The position of the event in the event sequence
 - `Occurred` - When the event occurred (timestamp)
 - `EventType` - Information about the event type
@@ -147,6 +147,6 @@ Use `SequenceNumber` when you need to preserve exact event ordering.
 
 ### Source tracking
 
-Use `EventSourceId` to identify which aggregate produced the event.
+Use `EventSourceId` to identify which event source produced the event.
 
 Event context properties provide rich metadata that can significantly enhance your read models with timing, traceability, and debugging information.

@@ -5,22 +5,7 @@
 - name: Reacting to events in the event log
   href: reacting-events-in-event-log.md
 - name: Projections
-  href: projections/index.md
-  items:
-  - name: Simple projection
-    href: projections/simple-projection.md
-  - name: Projection with properties
-    href: projections/projection-with-properties.md
-  - name: Projection with children
-    href: projections/projection-with-children.md
-  - name: Projection with joins
-    href: projections/projection-with-joins.md
-  - name: Projection functions
-    href: projections/projection-functions.md
-  - name: Projection composite keys
-    href: projections/projection-composite-keys.md
-  - name: Projection with event context
-    href: projections/projection-event-context.md
+  href: projections/toc.yml
 - name: Constraints
   href: constraints.md
 - name: Custom Rules

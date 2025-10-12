@@ -9,10 +9,13 @@ Projections in Cratis allow you to create read models from events stored in the 
 | [Simple projection](simple-projection.md) | Basic projection using AutoMap() |
 | [Projection with properties](projection-with-properties.md) | Explicit property mapping and transformations |
 | [Projection with children](projection-with-children.md) | Hierarchical data models with child collections |
-| [Projection with joins](projection-with-joins.md) | Cross-aggregate projections using joins |
+| [Projection with joins](projection-with-joins.md) | Cross-stream projections using joins |
 | [Projection functions](projection-functions.md) | Mathematical operations and calculations |
 | [Projection composite keys](projection-composite-keys.md) | Multi-property key identification |
 | [Projection with event context](projection-event-context.md) | Using event metadata in projections |
+| [Projection with FromEvery](projection-from-every.md) | Setting properties for all events in a projection |
+| [Projection with initial values](projection-initial-values.md) | Default values for read model properties |
+| [Projection with RemoveWithJoin](projection-remove-with-join.md) | Cross-stream child removal |
 
 ## Key concepts
 
@@ -31,7 +34,7 @@ Projections in Cratis allow you to create read models from events stored in the 
 
 - Event source ID is used as the default key for read models
 - Child collections use custom identifiers for individual items
-- Joins use keys to link data from different aggregates
+- Joins use keys to link data from different streams
 
 ### Performance
 
