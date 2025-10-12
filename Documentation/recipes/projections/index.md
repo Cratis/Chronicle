@@ -16,6 +16,9 @@ Projections in Cratis allow you to create read models from events stored in the 
 | [Projection with FromEvery](projection-from-every.md) | Setting properties for all events in a projection |
 | [Projection with initial values](projection-initial-values.md) | Default values for read model properties |
 | [Projection with RemoveWithJoin](projection-remove-with-join.md) | Cross-stream child removal |
+| [Passive projection](projection-passive.md) | In-memory projections for on-demand lookups |
+| [Projection with FromEventSequence](projection-from-event-sequence.md) | Sourcing events from specific event sequences |
+| [Projection with NotRewindable](projection-not-rewindable.md) | Forward-only projections that cannot be replayed |
 
 ## Key concepts
 

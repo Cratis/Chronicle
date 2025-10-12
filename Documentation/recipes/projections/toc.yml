@@ -20,3 +20,9 @@
   href: projection-initial-values.md
 - name: Projection with RemoveWithJoin
   href: projection-remove-with-join.md
+- name: Passive projection
+  href: projection-passive.md
+- name: Projection with FromEventSequence
+  href: projection-from-event-sequence.md
+- name: Projection with NotRewindable
+  href: projection-not-rewindable.md
