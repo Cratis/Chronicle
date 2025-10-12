@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -11,7 +12,8 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an implementation of <see cref="IFromEveryBuilder{TReadModel}"/>.
 /// </summary>
 /// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
-public class FromEveryBuilder<TReadModel> : IFromEveryBuilder<TReadModel>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEveryBuilder<TReadModel>
 {
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
     bool _includeChildren = true;
@@ -19,7 +21,7 @@ public class FromEveryBuilder<TReadModel> : IFromEveryBuilder<TReadModel>
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var setBuilder = new AllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>>(this, readModelPropertyAccessor.GetPropertyPath());
+        var setBuilder = new AllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>>(this, namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath()), namingPolicy);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }
