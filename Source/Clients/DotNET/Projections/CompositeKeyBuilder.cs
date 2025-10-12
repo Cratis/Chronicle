@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Text;
 using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TKeyType">Type of key to build.</typeparam>
 /// <typeparam name="TEvent">Event to build from.</typeparam>
-public class CompositeKeyBuilder<TKeyType, TEvent> : ICompositeKeyBuilder<TKeyType, TEvent>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class CompositeKeyBuilder<TKeyType, TEvent>(INamingPolicy namingPolicy) : ICompositeKeyBuilder<TKeyType, TEvent>
 {
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
 
@@ -23,7 +25,7 @@ public class CompositeKeyBuilder<TKeyType, TEvent> : ICompositeKeyBuilder<TKeyTy
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var setBuilder = new SetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>>(this, readModelPropertyAccessor.GetPropertyPath(), !primitive);
+        var setBuilder = new SetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>>(this, readModelPropertyAccessor.GetPropertyPath(), namingPolicy, !primitive);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }

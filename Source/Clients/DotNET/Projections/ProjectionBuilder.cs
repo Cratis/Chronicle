@@ -141,7 +141,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         }
 
         var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithBuilder = new RemovedWithBuilder<TReadModel, TEvent>();
+        var removedWithBuilder = new RemovedWithBuilder<TReadModel, TEvent>(namingPolicy);
         builderCallback?.Invoke(removedWithBuilder);
         _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
 
@@ -159,7 +159,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         }
 
         var removedWithJoinEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TReadModel, TEvent>();
+        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TReadModel, TEvent>(namingPolicy);
         builderCallback?.Invoke(removedWithJoinBuilder);
         _removedWithJoinDefinitions[removedWithJoinEvent] = removedWithJoinBuilder.Build();
 
@@ -171,7 +171,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     {
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
-        _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
+        _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
         return (this as TBuilder)!;
     }
 }
