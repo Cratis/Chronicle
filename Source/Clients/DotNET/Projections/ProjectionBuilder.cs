@@ -119,7 +119,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback)
     {
-        var builder = new FromEveryBuilder<TReadModel>();
+        var builder = new FromEveryBuilder<TReadModel>(namingPolicy);
         builderCallback(builder);
         var fromEveryDefinition = builder.Build();
         _fromEveryDefinition = new FromEveryDefinition

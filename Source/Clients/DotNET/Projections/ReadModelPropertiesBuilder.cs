@@ -65,7 +65,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     public IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
         var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
-        var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy);
         _propertyExpressions[propertyPath] = addBuilder;
         return addBuilder;
     }
@@ -74,7 +74,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     public ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
         var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
-        var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy);
         _propertyExpressions[propertyPath] = subtractBuilder;
         return subtractBuilder;
     }
@@ -146,7 +146,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         {
             childrenBuilder.From<TEvent>(fromBuilder =>
             {
-                var builder = new AddChildBuilder<TReadModel, TChildModel, TEvent>(childrenBuilder, fromBuilder);
+                var builder = new AddChildBuilder<TReadModel, TChildModel, TEvent>(childrenBuilder, fromBuilder, _namingPolicy);
                 builderCallback(builder);
             });
         });

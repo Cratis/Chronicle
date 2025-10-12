@@ -28,7 +28,7 @@ public class KeyAndParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy
     /// <inheritdoc/>
     public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _parentKeyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _parentKeyExpression = new EventContentPropertyExpression(_namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 
@@ -44,7 +44,7 @@ public class KeyAndParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy
     /// <inheritdoc/>
     public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        _parentKeyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _parentKeyExpression = new EventContextPropertyExpression(_namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 }

@@ -27,14 +27,14 @@ public class KeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IKeyBuil
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _keyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _keyExpression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        _keyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _keyExpression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 
