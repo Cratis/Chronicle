@@ -29,6 +29,7 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     ProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>(namingPolicy, eventTypes, jsonSerializerOptions, autoMap),
     IChildrenBuilder<TParentReadModel, TChildReadModel>
 {
+    readonly INamingPolicy _namingPolicy = namingPolicy;
     PropertyPath _identifiedBy = PropertyPath.NotSet;
 
 #pragma warning disable IDE0052 // Remove unread private members
@@ -47,14 +48,14 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     /// <inheritdoc/>
     public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy(PropertyPath propertyPath)
     {
-        _identifiedBy = propertyPath;
+        _identifiedBy = _namingPolicy.GetPropertyName(propertyPath);
         return this;
     }
 
     /// <inheritdoc/>
     public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression)
     {
-        _identifiedBy = propertyExpression.GetPropertyPath();
+        _identifiedBy = _namingPolicy.GetPropertyName(propertyExpression.GetPropertyPath());
         return this;
     }
 
