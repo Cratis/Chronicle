@@ -10,6 +10,8 @@
   href: constraints.md
 - name: Custom Rules
   href: rules/custom-rules.md
+- name: Configuration
+  href: configuration/toc.yml
 - name: Docker Compose
   href: docker-compose.md
 
