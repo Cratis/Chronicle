@@ -16,7 +16,7 @@ Keep tests focused, isolated, and descriptive!
     - `when_<behavior>/` for behaviors with multiple outcomes
     - Single file `when_<behavior>` for simple behaviors with single outcomes
     - Example: `for_UnitOfWork/when_committing/and_it_has_events_and_append_returns_constraints_and_errors`
- 
+
 ## What to specify
 
 - Write specs that verify what is promised from the signature of methods, not based on its implementation - we want to catch problems with the implementation.
@@ -71,6 +71,7 @@ Keep tests focused, isolated, and descriptive!
 - Context can be encapsulated into reusable contexts that can be leveraged between specs.
 - Create a `given` folder within the unit folder (e.g., `for_<Unit>/given/`)
 - Add reusable context classes with descriptive names starting with `a_` or `an_` (e.g., `a_events_command_response_value_handler`)
+- Reusable contexts can also be more specific to reflect a certain setup (e.g. `two_queries`, `existing_query`, `non_existing_query`)
 
 - **For behaviors with multiple outcomes:**
   - The reusable context should be in the unit's `given/` folder (e.g., `for_<Unit>/given/`)

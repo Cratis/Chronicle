@@ -97,6 +97,11 @@ public class with_valid_events_collection : given.an_events_command_response_val
   - All test files within behavior folders (e.g., `when_<behavior>/`) inherit from this shared context
   - This allows consistent setup across all variations of the behavior
 - If a specific behavior needs additional setup, create behavior-specific contexts in `when_<behavior>/given/` folder
+- If the system being specified is not constructed in the reusable context, don't keep the variable for it in the context, instead create it in the specific behavior spec
+- Reusable contexts can inherit from other reusable contexts to build upon setups
+- Use `Establish` method for setup logic in reusable contexts
+- When it makes sense, create a root reusable context called `all_dependencies` that sets up all common dependencies for the unit under test that more specific contexts can inherit from
+- `Because`method should not be used in reusable contexts, it should be in the specific behavior spec files
 
 ## Async
 
