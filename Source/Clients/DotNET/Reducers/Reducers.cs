@@ -12,6 +12,7 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -269,7 +270,7 @@ public class Reducers : IReducers
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
-                ReadModel = handler.ReadModelName,
+                ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
                 Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB

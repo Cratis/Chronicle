@@ -21,7 +21,7 @@ public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorag
     {
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
-        return eventStore.ReadModels.Delete(readModelKey.Name);
+        return eventStore.ReadModels.Delete(readModelKey.Identifier);
     }
 
     /// <inheritdoc/>
@@ -31,8 +31,8 @@ public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorag
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
 
-        if (!await eventStore.ReadModels.Has(readModelKey.Name)) return;
-        actualGrainState.State = await eventStore.ReadModels.Get(readModelKey.Name);
+        if (!await eventStore.ReadModels.Has(readModelKey.Identifier)) return;
+        actualGrainState.State = await eventStore.ReadModels.Get(readModelKey.Identifier);
     }
 
     /// <inheritdoc/>

@@ -1,4 +1,4 @@
-# Extending rules
+# Custom rules
 
 As part of your domain logic you typically have rules that govern whats allowed or not.
 Some of these rules are reusable rules one wants to apply in multiple places.

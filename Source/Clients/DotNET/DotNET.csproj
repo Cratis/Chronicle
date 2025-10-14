@@ -37,7 +37,7 @@
         <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
 
-    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
+    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging" Condition=" '$(TargetFramework)' != '' ">
         <Message Text="Generating gRPC clients" Importance="high" />
         <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
     </Target>
@@ -49,7 +49,6 @@
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="FluentValidation" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />

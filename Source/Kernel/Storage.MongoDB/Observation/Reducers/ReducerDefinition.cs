@@ -30,9 +30,9 @@ public class ReducerDefinition
     public IDictionary<string, string> EventTypes { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
-    /// Gets or sets the <see cref="ReadModelName"/> the reducer produces.
+    /// Gets or sets the <see cref="ReadModelIdentifier"/> the reducer produces.
     /// </summary>
-    public ReadModelName ReadModel { get; set; } = ReadModelName.NotSet;
+    public ReadModelIdentifier ReadModel { get; set; } = ReadModelIdentifier.NotSet;
 
     /// <summary>
     /// Gets or sets the <see cref="SinkDefinition"/> the reducer uses.

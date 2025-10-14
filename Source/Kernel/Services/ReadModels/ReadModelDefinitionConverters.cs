@@ -22,6 +22,7 @@ internal static class ReadModelDefinitionConverters
         var latestSchema = definition.GetSchemaForLatestGeneration();
         return new()
         {
+            Identifier = definition.Identifier,
             Name = definition.Name,
             Generation = latestGeneration.Value,
             Schema = latestSchema.ToJson()
@@ -39,6 +40,7 @@ internal static class ReadModelDefinitionConverters
         var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
 
         return new(
+            contract.Identifier,
             contract.Name,
             (ReadModelOwner)(int)owner,
             new Dictionary<ReadModelGeneration, JsonSchema>

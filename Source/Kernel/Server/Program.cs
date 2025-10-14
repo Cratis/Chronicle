@@ -29,6 +29,7 @@ builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChan
 var chronicleOptions = new ChronicleOptions();
 builder.Configuration.Bind(chronicleOptions);
 builder.Services.Configure<ChronicleOptions>(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
 
 if (chronicleOptions.Features.Api)
 {

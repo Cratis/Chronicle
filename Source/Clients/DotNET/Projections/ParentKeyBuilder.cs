@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
-public class ParentKeyBuilder<TEvent, TBuilder> : IParentKeyBuilder<TEvent, TBuilder>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class ParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IParentKeyBuilder<TEvent, TBuilder>
     where TBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -25,14 +27,14 @@ public class ParentKeyBuilder<TEvent, TBuilder> : IParentKeyBuilder<TEvent, TBui
     /// <inheritdoc/>
     public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _parentKeyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _parentKeyExpression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
     {
-        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
+        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>(namingPolicy);
         builderCallback(compositeKeyBuilder);
         _parentKeyExpression = compositeKeyBuilder.Build();
         return (this as TBuilder)!;
@@ -41,7 +43,7 @@ public class ParentKeyBuilder<TEvent, TBuilder> : IParentKeyBuilder<TEvent, TBui
     /// <inheritdoc/>
     public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        _parentKeyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _parentKeyExpression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 }

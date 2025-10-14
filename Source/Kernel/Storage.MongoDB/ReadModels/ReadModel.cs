@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// Represents a read model.
 /// </summary>
 /// <param name="Id">The unique identifier of the read model.</param>
+/// <param name="Name">The friendly display name of the read model.</param>
 /// <param name="Owner">The owner of the read model.</param>
 /// <param name="Schemas">The schemas per generation of the read model.</param>
-public record ReadModel(ReadModelName Id, ReadModelOwner Owner, IDictionary<string, BsonDocument> Schemas);
+public record ReadModel(ReadModelIdentifier Id, ReadModelName Name, ReadModelOwner Owner, IDictionary<string, BsonDocument> Schemas);

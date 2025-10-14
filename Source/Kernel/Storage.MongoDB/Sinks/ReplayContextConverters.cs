@@ -13,12 +13,12 @@ public static class ReplayContextConverters
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> to convert.</param>
     /// <returns>The converted <see cref="Chronicle.Storage.Sinks.ReplayContext"/>.</returns>
-    public static Chronicle.Storage.Sinks.ReplayContext ToChronicle(this ReplayContext context) => new(context.ReadModelName, context.RevertReadModelName, context.Started);
+    public static Chronicle.Storage.Sinks.ReplayContext ToChronicle(this ReplayContext context) => new(context.Identifier, context.ReadModelName, context.RevertReadModelName, context.Started);
 
     /// <summary>
     /// Convert a <see cref="Chronicle.Storage.Sinks.ReplayContext"/> to a <see cref="ReplayContext"/>.
     /// </summary>
     /// <param name="context">The <see cref="Chronicle.Storage.Sinks.ReplayContext"/> to convert.</param>
     /// <returns>The converted <see cref="ReplayContext"/>.</returns>
-    public static ReplayContext ToStorage(this Chronicle.Storage.Sinks.ReplayContext context) => new(context.ReadModel, context.RevertModel, context.Started);
+    public static ReplayContext ToStorage(this Chronicle.Storage.Sinks.ReplayContext context) => new(context.ReadModelIdentifier, context.ReadModel, context.RevertModel, context.Started);
 }

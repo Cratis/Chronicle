@@ -15,21 +15,22 @@ public interface IReplayContexts
     /// <summary>
     /// Establish a <see cref="ReplayContext"/> for a given <see cref="ReadModelDefinition"/> and <see cref="ObserverKey"/> .
     /// </summary>
-    /// <param name="model">The <see cref="ReadModelName"/> the context is for.</param>
+    /// <param name="readModelIdentifier">The <see cref="ReadModelIdentifier"/> the context is for.</param>
+    /// <param name="readModelName">The <see cref="ReadModelName"/> the context is for.</param>
     /// <returns>A <see cref="ReplayContext"/> for the model.</returns>
-    Task<ReplayContext> Establish(ReadModelName model);
+    Task<ReplayContext> Establish(ReadModelIdentifier readModelIdentifier, ReadModelName readModelName);
 
     /// <summary>
     /// Establish a <see cref="ReplayContext"/> for a given <see cref="ReadModelDefinition"/>.
     /// </summary>
-    /// <param name="model">The <see cref="ReadModelName"/> the context is for.</param>
+    /// <param name="readModel">The <see cref="ReadModelIdentifier"/> the context is for.</param>
     /// <returns>A <see cref="ReplayContext"/> for the model.</returns>
-    Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelName model);
+    Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel);
 
     /// <summary>
     /// Evict a <see cref="ReplayContext"/> for a given <see cref="ObserverKey"/>.
     /// </summary>
-    /// <param name="model">The <see cref="ReadModelName"/> the context is for.</param>
+    /// <param name="readModel">The <see cref="ReadModelIdentifier"/> the context is for.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Evict(ReadModelName model);
+    Task Evict(ReadModelIdentifier readModel);
 }
