@@ -3,14 +3,14 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 272 days, 19:50:45 | 123 days, 0:34:12 | 823 days, 9:49:33 |
+| Time to close | 273 days, 7:12:47 | 123 days, 1:53:22 | 824 days, 4:45:29 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
 | Number of items that remain open | 273 |
-| Number of items closed | 573 |
-| Total number of items created | 846 |
+| Number of items closed | 572 |
+| Total number of items created | 845 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -144,7 +144,6 @@
 | HandleEventsForPartition JobStep Perform is not reliable | https://github.com/Cratis/Chronicle/issues/1553 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 20 days, 22:22:14 | None |
 | Observer Handle make it reentrant | https://github.com/Cratis/Chronicle/issues/1552 | None | [woksin](https://github.com/woksin) | 0:07:12 | 89 days, 0:27:51 | None |
 | Observer does not handle partitions separetely / parallel | https://github.com/Cratis/Chronicle/issues/1549 | None | [woksin](https://github.com/woksin) | 10:01:58 | None | None |
-| Observer.Handle is a good candidate to use Result or Catch monad | https://github.com/Cratis/Chronicle/issues/1548 | None | [woksin](https://github.com/woksin) | None | 1 day, 21:56:46 | None |
 | AppendedEventsQueue QueueHandler should just send the appended events to each subscriber at the same time | https://github.com/Cratis/Chronicle/issues/1547 | [einari](https://github.com/einari) | [woksin](https://github.com/woksin) | None | 5 days, 18:24:39 | None |
 | AppendedEventsQueue QueueHandler calling Observer.Handle is completely unreliable | https://github.com/Cratis/Chronicle/issues/1546 | [einari](https://github.com/einari) | [woksin](https://github.com/woksin) | None | 5 days, 18:07:51 | None |
 | AppendedEventsQueue unreliable AsyncManualResetEvent | https://github.com/Cratis/Chronicle/issues/1545 | [einari](https://github.com/einari) | [woksin](https://github.com/woksin) | None | 5 days, 18:10:58 | None |
@@ -342,4 +341,5 @@
 | Clean up ObserverState and remove the composite key. | https://github.com/Cratis/Chronicle/issues/1026 | None | [einari](https://github.com/einari) | None | 278 days, 16:36:49 | None |
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
-| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com
+| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Look into how we can take advantage of MongoDB write and read concerns for improved performance in a replica set | https://gi
