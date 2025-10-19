@@ -17,20 +17,20 @@ public interface IWebhookDefinitionBuilder
     /// <returns>The <see cref="IWebhookDefinitionBuilder"/> builder for continuation.</returns>
     IWebhookDefinitionBuilder OnEventSequence(EventSequenceId eventSequenceId);
 
-    /// <summary>
-    /// Use basic authentication.
-    /// </summary>
-    /// <param name="username">The username.</param>
-    /// <param name="password">The password.</param>
-    /// <returns>The <see cref="IWebhookDefinitionBuilder"/> builder for continuation.</returns>
-    IWebhookDefinitionBuilder WithBasicAuth(string username, string password);
-
-    /// <summary>
-    /// Use bearer token authentication.
-    /// </summary>
-    /// <param name="token">The bearer token.</param>
-    /// <returns>The <see cref="IWebhookDefinitionBuilder"/> builder for continuation.</returns>
-    IWebhookDefinitionBuilder WithBearerToken(string token);
+    // /// <summary>
+    // /// Use basic authentication.
+    // /// </summary>
+    // /// <param name="username">The username.</param>
+    // /// <param name="password">The password.</param>
+    // /// <returns>The <see cref="IWebhookDefinitionBuilder"/> builder for continuation.</returns>
+    // IWebhookDefinitionBuilder WithBasicAuth(string username, string password);
+    //
+    // /// <summary>
+    // /// Use bearer token authentication.
+    // /// </summary>
+    // /// <param name="token">The bearer token.</param>
+    // /// <returns>The <see cref="IWebhookDefinitionBuilder"/> builder for continuation.</returns>
+    // IWebhookDefinitionBuilder WithBearerToken(string token);
 
     /// <summary>
     /// Adds a header to the webhook requests.

@@ -15,10 +15,13 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     readonly HashSet<EventType> _eventTypes = new();
     readonly Dictionary<string, string> _headers = new();
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
-    AuthenticationType _authentication = AuthenticationType.None;
-    string? _username;
-    string? _password;
-    string? _bearerToken;
+
+#pragma warning disable RCS1181
+    // AuthenticationType _authentication = AuthenticationType.None;
+    // string? _username;
+    // string? _password;
+    // string? _bearerToken;
+#pragma warning restore RCS1181
     bool _isReplayable = true;
     bool _isActive = true;
 
@@ -29,22 +32,22 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
         return this;
     }
 
-    /// <inheritdoc/>
-    public IWebhookDefinitionBuilder WithBasicAuth(string username, string password)
-    {
-        _authentication = AuthenticationType.Basic;
-        _username = username;
-        _password = password;
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IWebhookDefinitionBuilder WithBearerToken(string token)
-    {
-        _authentication = AuthenticationType.Bearer;
-        _bearerToken = token;
-        return this;
-    }
+    // /// <inheritdoc/>
+    // public IWebhookDefinitionBuilder WithBasicAuth(string username, string password)
+    // {
+    //     _authentication = AuthenticationType.Basic;
+    //     _username = username;
+    //     _password = password;
+    //     return this;
+    // }
+    //
+    // /// <inheritdoc/>
+    // public IWebhookDefinitionBuilder WithBearerToken(string token)
+    // {
+    //     _authentication = AuthenticationType.Bearer;
+    //     _bearerToken = token;
+    //     return this;
+    // }
 
     /// <inheritdoc/>
     public IWebhookDefinitionBuilder WithHeader(string key, string value)
@@ -85,10 +88,10 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     {
         var target = new WebhookTarget(
             Url: targetUrl,
-            Authentication: _authentication,
-            Username: _username,
-            Password: _password,
-            BearerToken: _bearerToken,
+            Authentication: AuthenticationType.None,
+            Username: null,
+            Password: null,
+            BearerToken: null,
             Headers: _headers);
 
         return new WebhookDefinition(
