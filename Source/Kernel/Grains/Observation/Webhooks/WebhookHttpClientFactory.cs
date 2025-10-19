@@ -24,7 +24,7 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IW
 
         if (Uri.TryCreate(webhookTarget.Url, UriKind.Absolute, out var uri))
         {
-            client.BaseAddress = new Uri(uri.GetLeftPart(UriPartial.Authority));
+            client.BaseAddress = uri;
         }
 
         switch (webhookTarget.Authentication)
