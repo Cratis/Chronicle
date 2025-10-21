@@ -79,7 +79,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reactors);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
-        services.AddSingleton<IRules, Rules>();
+        services.AddScoped<IRules, Rules>();
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.NamingPolicy);
 
