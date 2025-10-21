@@ -11,7 +11,6 @@ public class all_dependencies : Specification
 {
     protected IClientArtifactsProvider _clientArtifacts;
     protected IProjections _projections;
-    protected JsonSerializerOptions _jsonSerializerOptions;
     protected INamingPolicy _namingPolicy;
 
     void Establish()
@@ -19,6 +18,5 @@ public class all_dependencies : Specification
         _namingPolicy = new DefaultNamingPolicy();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _projections = Substitute.For<IProjections>();
-        _jsonSerializerOptions = new JsonSerializerOptions();
     }
 }
