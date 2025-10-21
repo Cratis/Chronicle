@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Rules.for_Rules.when_projecting_to_rule;
 
@@ -29,8 +30,8 @@ public class with_model_identifier : given.no_rules
             [nameof(RuleWithState.SecondStateValue)] = SecondStateValue,
             [nameof(RuleWithState.ComplexState)] = new JsonObject
             {
-                [nameof(ComplexState.SomeInteger)] = ComplexStateSomeInteger,
-                [nameof(ComplexState.SomeString)] = ComplexStateSomeString
+                [nameof(ComplexState.SomeInteger).ToCamelCase()] = ComplexStateSomeInteger,
+                [nameof(ComplexState.SomeString).ToCamelCase()] = ComplexStateSomeString
             }
         };
 
