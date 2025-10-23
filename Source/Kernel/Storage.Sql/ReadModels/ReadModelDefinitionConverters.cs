@@ -32,6 +32,7 @@ public static class ReadModelDefinitionConverters
     public static Concepts.ReadModels.ReadModelDefinition ToKernel(this ReadModelDefinition schema) =>
         new(
             schema.Id,
+            schema.Name,
             schema.Owner,
             schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJsonAsync(kvp.Value).GetAwaiter().GetResult()));
 }

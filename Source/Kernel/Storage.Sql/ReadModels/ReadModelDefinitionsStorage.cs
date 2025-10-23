@@ -21,13 +21,13 @@ public class ReadModelDefinitionsStorage(EventStoreDbContext dbContext) : IReadM
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ReadModelName name) =>
-        dbContext.ReadModels.AnyAsync(rm => rm.Id == name);
+    public Task<bool> Has(ReadModelIdentifier identifier) =>
+        dbContext.ReadModels.AnyAsync(rm => rm.Id == identifier);
 
     /// <inheritdoc/>
-    public Task<Concepts.ReadModels.ReadModelDefinition> Get(ReadModelName name) =>
+    public Task<Concepts.ReadModels.ReadModelDefinition> Get(ReadModelIdentifier identifier) =>
         dbContext.ReadModels
-            .Where(rm => rm.Id == name)
+            .Where(rm => rm.Id == identifier)
             .Select(rm => rm.ToKernel())
             .FirstOrDefaultAsync()!;
 
@@ -40,9 +40,9 @@ public class ReadModelDefinitionsStorage(EventStoreDbContext dbContext) : IReadM
     }
 
     /// <inheritdoc/>
-    public async Task Delete(ReadModelName name)
+    public async Task Delete(ReadModelIdentifier identifier)
     {
-        var entity = await dbContext.ReadModels.FindAsync(name);
+        var entity = await dbContext.ReadModels.FindAsync(identifier);
         if (entity != null)
         {
             dbContext.ReadModels.Remove(entity);

@@ -19,6 +19,11 @@ public class ReadModelDefinition
     public required string Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the read model.
+    /// </summary>
+    public ReadModelName Name { get; set; } = ReadModelName.NotSet;
+
+    /// <summary>
     /// Gets or sets the owner identifier for the read model.
     /// </summary>
     public ReadModelOwner Owner { get; set; }
