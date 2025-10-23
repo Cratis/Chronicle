@@ -33,7 +33,7 @@ export class AllEventStores extends ObservableQueryFor<string[]> {
         this._sortBy = new AllEventStoresSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
         ];
     }

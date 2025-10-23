@@ -13,7 +13,6 @@ public class one_rule_for_type : all_dependencies
         _clientArtifacts.Rules.Returns([typeof(RulesForTypeForRules)]);
 
         rules = new(
-            _jsonSerializerOptions,
             _namingPolicy,
             _projections,
             _clientArtifacts);

@@ -32,7 +32,7 @@ public class ProjectionDefinition
     /// <summary>
     /// Gets or sets the target read model.
     /// </summary>
-    public ReadModelName ReadModel { get; set; } = ReadModelName.NotSet;
+    public ReadModelIdentifier ReadModel { get; set; } = ReadModelIdentifier.NotSet;
 
     /// <summary>
     /// Gets or sets whether or not the projection is an actively observing projection.

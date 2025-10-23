@@ -103,11 +103,11 @@ class AllObserversSortByWithoutQuery {
     }
 }
 
-export interface AllObserversArguments {
+export interface AllObserversParameters {
     eventStore: string;
     namespace: string;
 }
-export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversArguments> {
+export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
@@ -119,7 +119,7 @@ export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllO
         this._sortBy = new AllObserversSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -134,11 +134,11 @@ export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllO
         return this._sortBy;
     }
 
-    static use(args?: AllObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting] {
-        return useObservableQuery<ObserverInformation[], AllObservers, AllObserversArguments>(AllObservers, args, sorting);
+    static use(args?: AllObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting] {
+        return useObservableQuery<ObserverInformation[], AllObservers, AllObserversParameters>(AllObservers, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<ObserverInformation[], AllObservers>(AllObservers, new Paging(0, pageSize), args, sorting);
     }
 }

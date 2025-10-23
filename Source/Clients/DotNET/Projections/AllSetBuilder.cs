@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -13,12 +14,10 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-/// <remarks>
-/// Initializes a new instance of the <see cref="SetBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/> class.
-/// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
-public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : IAllSetBuilder<TReadModel, TParentBuilder>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, INamingPolicy namingPolicy) : IAllSetBuilder<TReadModel, TParentBuilder>
 {
     IEventValueExpression? _expression;
 
@@ -35,7 +34,7 @@ public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, Pr
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        _expression = new EventContextPropertyExpression(eventContextPropertyAccessor.GetPropertyPath());
+        _expression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(eventContextPropertyAccessor.GetPropertyPath()));
         return parent;
     }
 

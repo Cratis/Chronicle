@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts.when_trying_to_get;
 
 public class and_there_is_no_context : Specification
 {
-    static ReadModelName _model = "SomeModel";
+    static ReadModelIdentifier _readModelIdentifier = "SomeModelId";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
     Result<ReplayContext, GetContextError> _result;
@@ -16,11 +16,11 @@ public class and_there_is_no_context : Specification
     void Establish()
     {
         _storage = Substitute.For<IReplayContextsStorage>();
-        _storage.TryGet(_model).Returns(GetContextError.NotFound);
+        _storage.TryGet(_readModelIdentifier).Returns(GetContextError.NotFound);
         _contexts = new(_storage);
     }
 
-    async Task Because() => _result = await _contexts.TryGet(_model);
+    async Task Because() => _result = await _contexts.TryGet(_readModelIdentifier);
 
     [Fact] void should_not_be_successful() => _result.IsSuccess.ShouldBeFalse();
 }

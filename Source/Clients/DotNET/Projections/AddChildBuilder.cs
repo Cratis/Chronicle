@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -13,12 +14,10 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TParentReadModel">Parent read model type.</typeparam>
 /// <typeparam name="TChildModel">Child read model type.</typeparam>
 /// <typeparam name="TEvent">Type of the event.</typeparam>
-/// <remarks>
-/// Initializes a new instance of the <see cref="AddChildBuilder{TParentReadModel, TChildModel, TEvent}"/> class.
-/// </remarks>
 /// <param name="childrenBuilder">The children builder to use internally.</param>
 /// <param name="fromBuilder">The <see cref="IFromBuilder{TReadModel, TEvent}"/> to build the internals of the child relationship.</param>
-public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBuilder<TParentReadModel, TChildModel> childrenBuilder, IFromBuilder<TChildModel, TEvent> fromBuilder) : IAddChildBuilder<TChildModel, TEvent>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBuilder<TParentReadModel, TChildModel> childrenBuilder, IFromBuilder<TChildModel, TEvent> fromBuilder, INamingPolicy namingPolicy) : IAddChildBuilder<TChildModel, TEvent>
 {
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
@@ -65,7 +64,7 @@ public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBui
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> FromObject(Expression<Func<TEvent, TChildModel>> propertyWithChild)
     {
-        var childProperty = propertyWithChild.GetPropertyPath();
+        var childProperty = namingPolicy.GetPropertyName(propertyWithChild.GetPropertyPath());
         foreach (var property in typeof(TChildModel).GetProperties())
         {
             var propertyPath = new PropertyPath(property.Name);

@@ -151,16 +151,24 @@ public class EventStore : IEventStore
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
-        projections.SetRulesProjections(new RulesProjections(
-            serviceProvider,
-            clientArtifactsProvider,
-            EventTypes,
-            namingPolicy,
-            jsonSerializerOptions));
+
+        var rulesProjections = new RulesProjections(
+                    serviceProvider,
+                    clientArtifactsProvider,
+                    EventTypes,
+                    namingPolicy,
+                    jsonSerializerOptions);
+        projections.SetRulesProjections(rulesProjections);
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
-        ReadModels = new ReadModels.ReadModels(this, namingPolicy, projections, Reducers, schemaGenerator);
+        ReadModels = new ReadModels.ReadModels(
+            this,
+            namingPolicy,
+            projections,
+            Reducers,
+            rulesProjections.ReadModels,
+            schemaGenerator);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,

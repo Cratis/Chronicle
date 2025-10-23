@@ -1,16 +1,5 @@
 # GitHub Copilot Instructions
 
-## Technology Stack
-
-- .NET 9 (specified in global.json)
-- C# 13
-- ASP.NET Core
-- MongoDB.Driver for C#
-- Entity Framework Core
-- xUnit for testing
-- NSubstitute for mocking
-- Cratis.Specifications for BDD-style tests
-
 ## General
 
 - Make only high confidence suggestions when reviewing code changes.
@@ -47,6 +36,28 @@
 - Use file-scoped namespace declarations.
 - Use single-line using directives.
 - For types that does not have an implementation, don't add a body (e.g., `public interface IMyInterface;`).
+- Prefer using `record` types for immutable data structures.
+- Use expression-bodied members for simple methods and properties.
+- Use `async` and `await` for asynchronous programming.
+- Use `Task` and `Task<T>` for asynchronous methods.
+- Use `IEnumerable<T>` for collections that are not modified.
+- Never return mutable collections from public APIs.
+- Don't use regions in the code.
+- Never add postfixes like Async, Impl, etc. to class or method names.
+- Favor collection initializers and object initializers.
+- Use string interpolation instead of string.Format or concatenation.
+- Favor primary constructors for all types.
+
+## Exceptions
+
+- Use exceptions for exceptional situations only.
+- Don't use exceptions for control flow.
+- Always provide a meaningful message when throwing an exception.
+- Always create a custom exception type that derives from Exception.
+- Never use any built-in exception types like InvalidOperationException, ArgumentException, etc.
+- Add XML documentation for exceptions being thrown.
+- XML documentation for exception should start with "The exception that is thrown when ...".
+- Never suffix exception class names with "Exception".
 
 ## Nullable Reference Types
 
@@ -66,6 +77,8 @@
 - Use appropriate log levels (Information, Warning, Error, Debug).
 - Always use a generic ILogger<T> where T is the class name.
 - Keep logging in separate partial methods for better readability. Call the file <SystemName>Logging.cs. Make this class partial and static and internal and all methods should be internal.
+- Use the `[LoggerMessage]` attribute to define log messages.
+- Don't include `eventId` in the `[LoggerMessage]` attribute.
 
 ## Dependency Injection
 
@@ -77,14 +90,17 @@
 ## Testing
 
 - Follow the following guides:
+   - [C# specifics](./instructions/csharp.instructions.md)
    - [How to Write Specs](./instructions/specs.instructions.md)
+   - [How to Write C# Specs](./instructions/specs.csharp.instructions.md)
+   - [How to Write TypeScript Specs](./instructions/specs.typescript.instructions.md)
    - [How to Write Entity Framework Core Specs](./instructions/efcore.specs.instructions.md)
+   - [Concepts](./instructions/concepts.instructions.md)
+   - [Documentation](./instructions/documentation.instructions.md)
+   - [Pull Requests](./instructions/pull-requests.instructions.md)
 
-## Header
+## Nullable Reference Types
 
-All files should start with the following header:
+- Always use is null or is not null instead of == null or != null.
+- Trust the C# null annotations and don't add null checks when the type system says a value cannot be null.
 
-```csharp
-// Copyright (c) Cratis. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-```

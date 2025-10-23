@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 /// <typeparam name="TParentBuilder">The type of parent builder.</typeparam>
 public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder, INamingPolicy namingPolicy)
-    : KeyAndParentKeyBuilder<TEvent, TBuilder>, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
+    : KeyAndParentKeyBuilder<TEvent, TBuilder>(namingPolicy), IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
         where TBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
         where TParentBuilder : class
 {
@@ -29,12 +29,13 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
 #pragma warning restore CA1629, CA1002, MA0016 // Return abstract
 #pragma warning restore CA1600 // Elements should be documented
 #pragma warning restore CA1051 // Visible instance fields
+    readonly INamingPolicy _namingPolicy = namingPolicy;
 
     /// <inheritdoc/>
     public TBuilder AutoMap()
     {
-        var eventProperties = typeof(TEvent).GetProperties().Select(_ => namingPolicy.GetPropertyName(_.Name));
-        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => namingPolicy.GetPropertyName(_.Name));
+        var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name);
+        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => _.Name);
 
         foreach (var property in eventProperties.Intersect(modelProperties))
         {
@@ -47,7 +48,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
+        var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
         _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
@@ -55,7 +56,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
+        var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
         _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
@@ -63,8 +64,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
-        var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
+        var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy);
         _propertyExpressions[propertyPath] = addBuilder;
         return addBuilder;
     }
@@ -72,8 +73,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
-        var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath);
+        var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
+        var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy);
         _propertyExpressions[propertyPath] = subtractBuilder;
         return subtractBuilder;
     }
@@ -83,7 +84,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     {
         var propertyInfo = propertyPath.GetPropertyInfoFor<TReadModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
-        var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
+        propertyPath = _namingPolicy.GetPropertyName(propertyInfo.Name);
+        var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
@@ -95,8 +97,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
-        var setBuilder = new SetBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, !primitive);
+        var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
+        var setBuilder = new SetBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
 
         return setBuilder;
@@ -106,7 +108,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     public ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue()
     {
         var propertyPath = new PropertyPath("$this");
-        var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, false);
+        var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, false);
         _propertyExpressions[propertyPath] = setBuilder;
         return setBuilder;
     }
@@ -114,7 +116,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Count<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = readModelPropertyAccessor.GetPropertyPath();
+        var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
         _propertyExpressions[propertyPath] = new CountBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
@@ -144,7 +146,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         {
             childrenBuilder.From<TEvent>(fromBuilder =>
             {
-                var builder = new AddChildBuilder<TReadModel, TChildModel, TEvent>(childrenBuilder, fromBuilder);
+                var builder = new AddChildBuilder<TReadModel, TChildModel, TEvent>(childrenBuilder, fromBuilder, _namingPolicy);
                 builderCallback(builder);
             });
         });

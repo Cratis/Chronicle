@@ -10,12 +10,13 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
 {
     protected Chronicle.Projections.IProjection _projection;
     protected ReadModelDefinition _model;
-    protected ReadModelName _modelName = "TheModel";
+    protected ReadModelIdentifier _readModelId = "SomeId";
+    protected ReadModelName _readModelName = "TheReadModel";
 
     void Establish()
     {
         _projection = Substitute.For<Chronicle.Projections.IProjection>();
-        _model = new(_modelName, ReadModelOwner.None, null!);
+        _model = new(_readModelId, _readModelName, ReadModelOwner.None, null!);
         _projection.ReadModel.Returns(_model);
 
         _projections.TryGet(

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Json;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Rules;
@@ -15,13 +16,11 @@ namespace Cratis.Chronicle.Rules;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Rules"/> class.
 /// </remarks>
-/// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
 /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for property naming.</param>
 /// <param name="projections"><see cref="IProjections"/> client.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 [Singleton]
 public class Rules(
-    JsonSerializerOptions serializerOptions,
     INamingPolicy namingPolicy,
     IProjections projections,
     IClientArtifactsProvider clientArtifacts) : IRules
@@ -54,7 +53,7 @@ public class Rules(
             var node = result.ReadModel[name];
             if (node is not null)
             {
-                property.SetValue(rule, node.Deserialize(property.PropertyType, serializerOptions));
+                property.SetValue(rule, node.Deserialize(property.PropertyType, Globals.JsonSerializerOptions));
             }
         }
     }

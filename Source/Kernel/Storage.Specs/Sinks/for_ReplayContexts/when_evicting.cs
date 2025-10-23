@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts;
 
 public class when_evicting : Specification
 {
-    static ReadModelName _model = "SomeModel";
+    ReadModelIdentifier _readModelId = "SomeModelId";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
 
@@ -17,7 +17,7 @@ public class when_evicting : Specification
         _contexts = new(_storage);
     }
 
-    Task Because() => _contexts.Evict(_model);
+    Task Because() => _contexts.Evict(_readModelId);
 
-    [Fact] void should_remove_from_storage() => _storage.Received(1).Remove(_model);
+    [Fact] void should_remove_from_storage() => _storage.Received(1).Remove(_readModelId);
 }

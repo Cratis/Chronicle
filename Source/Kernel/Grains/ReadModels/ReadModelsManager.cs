@@ -21,7 +21,7 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
         State.ReadModels = definitions.ToList();
         foreach (var definition in definitions)
         {
-            var readModelGrain = GrainFactory.GetReadModel(definition.Name, this.GetPrimaryKeyString());
+            var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
             await readModelGrain.SetDefinition(definition);
         }
     }

@@ -38,6 +38,6 @@ public class MyProjection : IProjectionFor<MyReadModel>
 By the virtue of implementing the `IProjectionFor<>`, the projection is
 automatically discovered and registered with Chronicle.
 
-A more concrete example of a reducer with one-to-one relationship:
+A more concrete example of a projection with one-to-one relationship:
 
 {{snippet:Quickstart-BorrowedBooksProjection}}

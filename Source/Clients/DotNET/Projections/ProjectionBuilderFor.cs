@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 
@@ -36,7 +37,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
         : base(namingPolicy, eventTypes, jsonSerializerOptions, false)
     {
         _identifier = identifier;
-        _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
+        _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
     }
 
     /// <inheritdoc/>
@@ -49,7 +50,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// <inheritdoc/>
     public IProjectionBuilderFor<TReadModel> ReadModelName(string readModelName)
     {
-        _readModelName = readModelName;
+        _readModelIdentifier = readModelName;
         return this;
     }
 
@@ -71,14 +72,12 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// Build the projection definition.
     /// </summary>
     /// <returns><see cref="ProjectionDefinition"/>.</returns>
-    internal ProjectionDefinition Build()
-    {
-        var modelType = typeof(TReadModel);
-        return new()
+    internal ProjectionDefinition Build() =>
+        new()
         {
             EventSequenceId = _eventSequenceId,
             Identifier = _identifier,
-            ReadModel = _readModelName,
+            ReadModel = _readModelIdentifier,
             IsActive = _isActive,
             IsRewindable = _isRewindable,
             InitialModelState = _initialValues.ToJsonString(),
@@ -93,5 +92,4 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
                 TypeId = WellKnownSinkTypes.MongoDB
             }
         };
-    }
 }
