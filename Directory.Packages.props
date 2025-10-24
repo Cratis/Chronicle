@@ -23,7 +23,7 @@
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.2.1" />
         <PackageVersion Include="Cratis.Applications" Version="17.18.2" />
         <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.18.2" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.18.2" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.18.3" />
         <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.18.2" />
         <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.18.2" />
         <PackageVersion Include="Cratis.Applications.Swagger" Version="17.18.2" />
