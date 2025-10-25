@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Applications.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.EntityFrameworkCore;
@@ -22,11 +23,11 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReactorDefinitions,
             columns: table => new
             {
-                Id = table.Column<string>(type: "TEXT", nullable: false),
-                Owner = table.Column<int>(type: "INTEGER", nullable: false),
-                EventSequenceId = table.Column<bool>(type: "TEXT", nullable: false),
+                Id = table.StringColumn(migrationBuilder),
+                Owner = table.NumberColumn<int>(migrationBuilder),
+                EventSequenceId = table.StringColumn(migrationBuilder),
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
-                IsReplayable = table.Column<int>(type: "INTEGER", nullable: false),
+                IsReplayable = table.BoolColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReactorDefinitions}", x => x.Id));
     }

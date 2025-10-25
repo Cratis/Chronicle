@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Applications.EntityFrameworkCore.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -21,12 +22,12 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ProjectionDefinitions,
             columns: table => new
             {
-                Id = table.Column<string>(type: "TEXT", nullable: false),
-                Owner = table.Column<int>(type: "INTEGER", nullable: false),
-                ReadModelName = table.Column<string>(type: "TEXT", nullable: false),
-                ReadModelGeneration = table.Column<int>(type: "INTEGER", nullable: false),
-                SinkType = table.Column<Guid>(type: "TEXT", nullable: false),
-                SinkConfigurationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                Id = table.StringColumn(migrationBuilder),
+                Owner = table.NumberColumn<int>(migrationBuilder),
+                ReadModelName = table.StringColumn(migrationBuilder),
+                ReadModelGeneration = table.NumberColumn<int>(migrationBuilder),
+                SinkType = table.GuidColumn(migrationBuilder),
+                SinkConfigurationId = table.GuidColumn(migrationBuilder),
                 Definitions = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ProjectionDefinitions}", x => x.Id));

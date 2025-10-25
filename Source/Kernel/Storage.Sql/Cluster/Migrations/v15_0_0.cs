@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -20,7 +21,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.EventStores,
             columns: table => new
             {
-                Name = table.Column<string>(type: "TEXT", nullable: false)
+                Name = table.StringColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EventStores}", x => x.Name));
 
@@ -28,13 +29,13 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Reminders,
             columns: table => new
             {
-                Id = table.Column<string>(type: "TEXT", nullable: false),
-                GrainId = table.Column<string>(type: "TEXT", nullable: false),
-                GrainHash = table.Column<uint>(type: "INTEGER", nullable: false),
-                ReminderName = table.Column<string>(type: "TEXT", nullable: false),
-                Period = table.Column<long>(type: "INTEGER", nullable: false),
-                StartAt = table.Column<DateTime>(type: "INTEGER", nullable: false),
-                ETag = table.Column<string>(type: "TEXT", nullable: false),
+                Id = table.StringColumn(migrationBuilder),
+                GrainId = table.StringColumn(migrationBuilder),
+                GrainHash = table.NumberColumn<uint>(migrationBuilder),
+                ReminderName = table.StringColumn(migrationBuilder),
+                Period = table.NumberColumn<long>(migrationBuilder),
+                StartAt = table.NumberColumn<long>(migrationBuilder),
+                ETag = table.StringColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Reminders}", x => x.Id));
     }

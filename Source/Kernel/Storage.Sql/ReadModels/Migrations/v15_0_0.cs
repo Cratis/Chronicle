@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Applications.EntityFrameworkCore.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -21,8 +22,9 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReadModelDefinitions,
             columns: table => new
             {
-                Id = table.Column<string>(type: "TEXT", nullable: false),
-                Owner = table.Column<int>(type: "INTEGER", nullable: false),
+                Id = table.StringColumn(migrationBuilder),
+                Name = table.StringColumn(migrationBuilder),
+                Owner = table.NumberColumn<int>(migrationBuilder),
                 Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReadModelDefinitions}", x => x.Id));

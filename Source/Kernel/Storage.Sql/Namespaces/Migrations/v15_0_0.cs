@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Applications.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -20,8 +21,8 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Namespaces,
             columns: table => new
             {
-                Name = table.Column<string>(type: "TEXT", nullable: false),
-                Created = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                Name = table.StringColumn(migrationBuilder),
+                Created = table.DateTimeOffsetColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Namespaces}", x => x.Name));
     }
