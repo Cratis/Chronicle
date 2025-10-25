@@ -91,7 +91,7 @@ public static class WellKnownTableNames
     /// <summary>
     /// The table that holds reducer definitions.
     /// </summary>
-    public const string ReducerDefinitions = "Reducer";
+    public const string ReducerDefinitions = "Reducers";
 
     /// <summary>
     /// The table that holds projection definitions.

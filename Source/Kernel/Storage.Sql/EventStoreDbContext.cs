@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Sql.Namespaces;
 using Cratis.Chronicle.Storage.Sql.Projections;
 using Cratis.Chronicle.Storage.Sql.Reactors;
 using Cratis.Chronicle.Storage.Sql.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Reducers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -36,6 +37,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the reactors DbSet.
     /// </summary>
     public DbSet<ReactorDefinition> Reactors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reducers DbSet.
+    /// </summary>
+    public DbSet<ReducerDefinition> Reducers { get; set; }
 
     /// <summary>
     /// Gets or sets the read models DbSet.

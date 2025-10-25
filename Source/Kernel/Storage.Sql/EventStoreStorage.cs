@@ -40,7 +40,7 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
-    public IReducerDefinitionsStorage Reducers => throw new NotImplementedException();
+    public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections => new Projections.ProjectionDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
