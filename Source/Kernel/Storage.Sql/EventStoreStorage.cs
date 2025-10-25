@@ -34,7 +34,7 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IConstraintsStorage Constraints => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers => throw new NotImplementedException();
+    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());

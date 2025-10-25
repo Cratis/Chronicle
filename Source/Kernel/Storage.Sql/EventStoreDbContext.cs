@@ -4,6 +4,7 @@
 using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventTypes;
 using Cratis.Chronicle.Storage.Sql.Namespaces;
+using Cratis.Chronicle.Storage.Sql.Observers;
 using Cratis.Chronicle.Storage.Sql.Projections;
 using Cratis.Chronicle.Storage.Sql.Reactors;
 using Cratis.Chronicle.Storage.Sql.ReadModels;
@@ -27,6 +28,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the namespaces DbSet.
     /// </summary>
     public DbSet<Namespace> Namespaces { get; set; }
+
+    /// <summary>
+    /// Gets or sets the observers DbSet.
+    /// </summary>
+    public DbSet<ObserverDefinition> Observers { get; set; }
 
     /// <summary>
     /// Gets or sets the projections DbSet.
