@@ -30,7 +30,6 @@ public static class SqlChronicleBuilderExtensions
         {
         });
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
-        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, MigrationStartupTask>();
 
         return builder;
     }

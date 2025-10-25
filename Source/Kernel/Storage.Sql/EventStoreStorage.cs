@@ -10,43 +10,46 @@ using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreStorage"/> for a specific event store.
 /// </summary>
-/// <param name="serviceProvider">The service provider.</param>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventStoreStorage"/> class.
+/// </remarks>
+/// <param name="eventStoreDbContext">The database context.</param>
 /// <param name="eventStore">The name of the event store.</param>
-public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName eventStore) : IEventStoreStorage
+public class EventStoreStorage(EventStoreDbContext eventStoreDbContext, EventStoreName eventStore) : IEventStoreStorage
 {
+
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>
-    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStoreDbContext);
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, eventStoreDbContext);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(eventStoreDbContext);
 
     /// <inheritdoc/>
-    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(eventStoreDbContext);
 
     /// <inheritdoc/>
-    public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(eventStoreDbContext);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections => new Projections.ProjectionDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStoreDbContext);
 
     /// <inheritdoc/>
-    public IReadModelDefinitionsStorage ReadModels => new ReadModels.ReadModelDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
+    public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModels.ReadModelDefinitionsStorage(eventStoreDbContext);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
