@@ -49,5 +49,6 @@ public class EventStoreStorage(IServiceProvider serviceProvider, EventStoreName 
     public IReadModelDefinitionsStorage ReadModels => new ReadModels.ReadModelDefinitionsStorage(serviceProvider.GetRequiredService<EventStoreDbContext>());
 
     /// <inheritdoc/>
-    public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace) => throw new NotImplementedException();
+    public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
+        => new Namespaces.EventStoreNamespaceStorage();
 }
