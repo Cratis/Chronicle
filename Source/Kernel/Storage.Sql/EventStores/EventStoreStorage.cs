@@ -11,7 +11,7 @@ using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sql;
+namespace Cratis.Chronicle.Storage.Sql.EventStores;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreStorage"/> for a specific event store.

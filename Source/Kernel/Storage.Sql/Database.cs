@@ -7,6 +7,7 @@ using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

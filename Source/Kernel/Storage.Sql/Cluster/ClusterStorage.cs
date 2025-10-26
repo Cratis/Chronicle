@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Sql.EventStores;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
@@ -33,7 +34,7 @@ public class ClusterStorage(IDatabase database) : IClusterStorage
     public async Task SaveEventStore(EventStoreName eventStore)
     {
         await using var scope = await database.Cluster();
-        scope.DbContext.EventStores.Add(new EventStore { Name = eventStore });
+        await scope.DbContext.EventStores.Upsert(new EventStore { Name = eventStore });
         await scope.DbContext.SaveChangesAsync();
     }
 }

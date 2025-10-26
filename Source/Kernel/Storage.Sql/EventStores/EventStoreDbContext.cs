@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.EntityFrameworkCore;
-using Cratis.Chronicle.Storage.Sql.EventTypes;
-using Cratis.Chronicle.Storage.Sql.Namespaces;
-using Cratis.Chronicle.Storage.Sql.Observers;
-using Cratis.Chronicle.Storage.Sql.Projections;
-using Cratis.Chronicle.Storage.Sql.Reactors;
-using Cratis.Chronicle.Storage.Sql.ReadModels;
-using Cratis.Chronicle.Storage.Sql.Reducers;
+using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
+using Cratis.Chronicle.Storage.Sql.EventStores.Projections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
+using Cratis.Chronicle.Storage.Sql.EventStores.ReadModels;
+using Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql;
+namespace Cratis.Chronicle.Storage.Sql.EventStores;
 
 /// <summary>
 /// DbContext for the event store.

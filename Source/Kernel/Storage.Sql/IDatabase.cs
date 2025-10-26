@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.EventStores;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
