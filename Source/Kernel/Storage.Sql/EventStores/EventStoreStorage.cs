@@ -49,5 +49,5 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database) : 
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage(eventStore, database);
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database);
 }

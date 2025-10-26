@@ -19,8 +19,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// Represents an implementation of <see cref="IEventStoreNamespaceStorage"/> for SQL.
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
+/// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, IDatabase database) : IEventStoreNamespaceStorage
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets => throw new NotImplementedException();
@@ -35,7 +36,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, IDatabase dat
     public IJobStepStorage JobSteps => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IObserverStateStorage Observers => throw new NotImplementedException();
+    public IObserverStateStorage Observers { get; } = new Observers.ObserverStateStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions => throw new NotImplementedException();
