@@ -60,7 +60,7 @@ public class ProjectionDefinitionsStorage(EventStoreName eventStore, IDatabase d
     {
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
-        scope.DbContext.Projections.Add(entity);
+        await scope.DbContext.Projections.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
 }

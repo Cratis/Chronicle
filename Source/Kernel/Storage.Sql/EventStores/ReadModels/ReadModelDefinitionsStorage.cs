@@ -47,7 +47,7 @@ public class ReadModelDefinitionsStorage(EventStoreName eventStore, IDatabase da
     {
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
-        scope.DbContext.ReadModels.Add(entity);
+        await scope.DbContext.ReadModels.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
 

@@ -59,7 +59,7 @@ public class ReducerDefinitionsStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
-        scope.DbContext.Reducers.Add(entity);
+        await scope.DbContext.Reducers.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
 }
