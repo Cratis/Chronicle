@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -24,4 +25,12 @@ public interface IDatabase
     /// <param name="eventStore">The name of the event store.</param>
     /// <returns>A <see cref="DbContextScope{EventStoreDbContext}"/> for the specified event store.</returns>
     Task<DbContextScope<EventStoreDbContext>> EventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Gets a database context scope for the specified event store namespace.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/> for the specified event store namespace.</returns>
+    Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }

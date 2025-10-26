@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,7 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
 {
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
+    readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
 
     /// <inheritdoc/>
     public async Task<DbContextScope<ClusterDbContext>> Cluster()
@@ -57,6 +59,31 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
         return new DbContextScope<EventStoreDbContext>(dbContext, () => _eventStoreDbContexts.Value?.Remove(eventStore.Value));
     }
 
+    /// <inheritdoc/>
+    public async Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var key = $"{eventStore.Value}:{@namespace.Value}";
+
+        _namespaceDbContexts.Value ??= new Dictionary<string, Dictionary<string, NamespaceDbContext>>();
+        if (!_namespaceDbContexts.Value.TryGetValue(eventStore.Value, out var namespaces))
+        {
+            namespaces = new Dictionary<string, NamespaceDbContext>();
+            _namespaceDbContexts.Value[eventStore.Value] = namespaces;
+        }
+
+        if (!namespaces.TryGetValue(key, out var dbContext))
+        {
+            var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+            var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+            builder.UseDatabaseFromConnectionString(connectionString);
+            dbContext = new NamespaceDbContext(builder.Options);
+            await dbContext.Database.MigrateAsync();
+            namespaces[@namespace.Value] = dbContext;
+        }
+
+        return new DbContextScope<NamespaceDbContext>(dbContext, () => namespaces.Remove(key));
+    }
+
     string GetConnectionStringForEventStore(EventStoreName eventStore)
     {
         var databaseType = options.Value.Storage.ConnectionDetails.GetDatabaseType();
@@ -68,13 +95,24 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
         return options.Value.Storage.ConnectionDetails;
     }
 
-    string ReplaceFilename(EventStoreName eventStore)
+    string GetConnectionStringForEventStoreAndNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        if (TryReplaceFilename(eventStore, "Data Source", out var dataSource))
+        var databaseType = options.Value.Storage.ConnectionDetails.GetDatabaseType();
+        if (databaseType == DatabaseType.Sqlite)
+        {
+            return ReplaceFilename($"{eventStore}_{@namespace}");
+        }
+
+        return options.Value.Storage.ConnectionDetails;
+    }
+
+    string ReplaceFilename(string postfix)
+    {
+        if (TryReplaceFilename("Data Source", postfix, out var dataSource))
         {
             return dataSource;
         }
-        if (TryReplaceFilename(eventStore, "Filename", out var filename))
+        if (TryReplaceFilename("Filename", postfix, out var filename))
         {
             return filename;
         }
@@ -82,7 +120,7 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
         return options.Value.Storage.ConnectionDetails;
     }
 
-    bool TryReplaceFilename(EventStoreName eventStore, string keyToReplace, [NotNullWhen(true)] out string? connectionString)
+    bool TryReplaceFilename(string keyToReplace, string postfix, [NotNullWhen(true)] out string? connectionString)
     {
         var builder = new DbConnectionStringBuilder
         {
@@ -93,7 +131,7 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
         {
             var originalFilename = dataSource.ToString()!;
             var directory = Path.GetDirectoryName(originalFilename) ?? string.Empty;
-            var newFilename = $"{Path.GetFileNameWithoutExtension(originalFilename)}_{eventStore.Value}{Path.GetExtension(originalFilename)}";
+            var newFilename = $"{Path.GetFileNameWithoutExtension(originalFilename)}_{postfix}{Path.GetExtension(originalFilename)}";
             builder[keyToReplace] = Path.Combine(directory, newFilename);
             connectionString = builder.ConnectionString!;
             return true;

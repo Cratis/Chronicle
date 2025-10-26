@@ -84,6 +84,11 @@ public static class WellKnownTableNames
     public const string Recommendations = "Recommendations";
 
     /// <summary>
+    /// The table that holds observer definitions.
+    /// </summary>
+    public const string ObserverDefinitions = "Observers";
+
+    /// <summary>
     /// The table that holds reducer definitions.
     /// </summary>
     public const string ReactorDefinitions = "Reactors";
