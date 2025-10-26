@@ -13,7 +13,7 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Sinks;
 
-namespace Cratis.Chronicle.Storage.Sql.Namespaces;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespaceStorage"/> for SQL.
