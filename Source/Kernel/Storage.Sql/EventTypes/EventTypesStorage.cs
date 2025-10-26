@@ -15,15 +15,16 @@ namespace Cratis.Chronicle.Storage.Sql.EventTypes;
 /// Represents an implementation of <see cref="IEventTypesStorage"/> for SQL.
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
-/// <param name="dbContext">The database context.</param>
-public class EventTypesStorage(EventStoreName eventStore, EventStoreDbContext dbContext) : IEventTypesStorage
+/// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
+public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
 {
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
     public async Task Populate()
     {
-        var eventTypes = await dbContext.EventTypes.ToListAsync();
+        await using var scope = await database.EventStore(eventStore);
+        var eventTypes = await scope.DbContext.EventTypes.ToListAsync();
         foreach (var eventType in eventTypes)
         {
             _eventTypes.Add(eventType);
@@ -33,6 +34,8 @@ public class EventTypesStorage(EventStoreName eventStore, EventStoreDbContext db
     /// <inheritdoc/>
     public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
+        await using var scope = await database.EventStore(eventStore);
+
         var existingEventType = _eventTypes
             .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(type.Generation));
 
@@ -52,8 +55,8 @@ public class EventTypesStorage(EventStoreName eventStore, EventStoreDbContext db
         }
         var eventType = eventSchema.ToSql();
         _eventTypes.Add(eventType);
-        dbContext.EventTypes.Add(eventType);
-        await dbContext.SaveChangesAsync();
+        scope.DbContext.EventTypes.Add(eventType);
+        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -95,6 +98,9 @@ public class EventTypesStorage(EventStoreName eventStore, EventStoreDbContext db
         return eventType?.Schemas.ContainsKey(generation) ?? false;
     }
 
-    Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId) =>
-        dbContext.EventTypes.FirstOrDefaultAsync(e => e.Id == eventTypeId.Value);
+    async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.EventTypes.FirstOrDefaultAsync(e => e.Id == eventTypeId.Value);
+    }
 }

@@ -16,42 +16,38 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreStorage"/> for a specific event store.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventStoreStorage"/> class.
-/// </remarks>
-/// <param name="eventStoreDbContext">The database context.</param>
 /// <param name="eventStore">The name of the event store.</param>
-public class EventStoreStorage(EventStoreDbContext eventStoreDbContext, EventStoreName eventStore) : IEventStoreStorage
+/// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
+public class EventStoreStorage(EventStoreName eventStore, IDatabase database) : IEventStoreStorage
 {
+    /// <inheritdoc/>
+    public EventStoreName EventStore { get; } = eventStore.Value;
 
     /// <inheritdoc/>
-    public EventStoreName EventStore { get; } = eventStore;
+    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStoreDbContext);
-
-    /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, eventStoreDbContext);
+    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(eventStoreDbContext);
+    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(eventStoreDbContext);
+    public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(eventStoreDbContext);
+    public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStoreDbContext);
+    public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModels.ReadModelDefinitionsStorage(eventStoreDbContext);
+    public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModels.ReadModelDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage();
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, database);
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -17,7 +18,9 @@ namespace Cratis.Chronicle.Storage.Sql.Namespaces;
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespaceStorage"/> for SQL.
 /// </summary>
-public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
+/// <param name="eventStore">The name of the event store.</param>
+/// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
+public class EventStoreNamespaceStorage(EventStoreName eventStore, IDatabase database) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets => throw new NotImplementedException();

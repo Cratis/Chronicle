@@ -1,53 +1,64 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
-using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Reactors;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventTypesStorage"/> for SQL.
+/// Represents an implementation of <see cref="IReactorDefinitionsStorage"/> for SQL.
 /// </summary>
-/// <param name="dbContext">The database context.</param>
-public class ReactorDefinitionsStorage(EventStoreDbContext dbContext) : IReactorDefinitionsStorage
+/// <param name="eventStore">The name of the event store.</param>
+/// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
+public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IReactorDefinitionsStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<Concepts.Observation.Reactors.ReactorDefinition>> GetAll()
     {
-        var reactors = await dbContext.Reactors.ToListAsync();
+        await using var scope = await database.EventStore(eventStore);
+        var reactors = await scope.DbContext.Reactors.ToListAsync();
         return reactors.Select(reactor => reactor.ToKernel()).ToArray();
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ReactorId id) =>
-        dbContext.Reactors.AnyAsync(reactor => reactor.Id == id);
+    public async Task<bool> Has(ReactorId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.Reactors.AnyAsync(reactor => reactor.Id == id);
+    }
 
     /// <inheritdoc/>
-    public Task<Concepts.Observation.Reactors.ReactorDefinition> Get(ReactorId id) =>
-        dbContext.Reactors
+    public async Task<Concepts.Observation.Reactors.ReactorDefinition> Get(ReactorId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var reactor = await scope.DbContext.Reactors
             .Where(reactor => reactor.Id == id)
             .Select(reactor => reactor.ToKernel())
-            .FirstOrDefaultAsync()!;
+            .FirstOrDefaultAsync();
+        return reactor!;
+    }
 
     /// <inheritdoc/>
     public async Task Delete(ReactorId id)
     {
-        var projection = await dbContext.Reactors.FindAsync(id);
+        await using var scope = await database.EventStore(eventStore);
+        var projection = await scope.DbContext.Reactors.FindAsync(id);
         if (projection != null)
         {
-            dbContext.Reactors.Remove(projection);
-            await dbContext.SaveChangesAsync();
+            scope.DbContext.Reactors.Remove(projection);
+            await scope.DbContext.SaveChangesAsync();
         }
     }
 
     /// <inheritdoc/>
     public async Task Save(Concepts.Observation.Reactors.ReactorDefinition definition)
     {
+        await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
-        dbContext.Reactors.Add(entity);
-        await dbContext.SaveChangesAsync();
+        scope.DbContext.Reactors.Add(entity);
+        await scope.DbContext.SaveChangesAsync();
     }
 }

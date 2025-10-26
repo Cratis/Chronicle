@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Storage.Projections;
@@ -11,43 +12,55 @@ namespace Cratis.Chronicle.Storage.Sql.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionDefinitionsStorage"/> for SQL.
 /// </summary>
-/// <param name="dbContext">The database context.</param>
-public class ProjectionDefinitionsStorage(EventStoreDbContext dbContext) : IProjectionDefinitionsStorage
+/// <param name="eventStore">The name of the event store.</param>
+/// <param name="database">The <see cref="IDatabase"/> to use for storage.</param>
+public class ProjectionDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IProjectionDefinitionsStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        var projections = await dbContext.Projections.ToListAsync();
+        await using var scope = await database.EventStore(eventStore);
+        var projections = await scope.DbContext.Projections.ToListAsync();
         return projections.Select(projection => projection.ToKernel()).ToArray();
     }
 
     /// <inheritdoc/>
-    public Task<bool> Has(ProjectionId id) =>
-        dbContext.Projections.AnyAsync(projection => projection.Id == id);
+    public async Task<bool> Has(ProjectionId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.Projections.AnyAsync(projection => projection.Id == id);
+    }
 
     /// <inheritdoc/>
-    public Task<ProjectionDefinition> Get(ProjectionId id) =>
-        dbContext.Projections
+    public async Task<ProjectionDefinition> Get(ProjectionId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var projection = await scope.DbContext.Projections
             .Where(projection => projection.Id == id)
             .Select(projection => projection.ToKernel())
-            .FirstOrDefaultAsync()!;
+            .FirstOrDefaultAsync();
+
+        return projection!;
+    }
 
     /// <inheritdoc/>
     public async Task Delete(ProjectionId id)
     {
-        var projection = await dbContext.Projections.FindAsync(id);
+        await using var scope = await database.EventStore(eventStore);
+        var projection = await scope.DbContext.Projections.FindAsync(id);
         if (projection != null)
         {
-            dbContext.Projections.Remove(projection);
-            await dbContext.SaveChangesAsync();
+            scope.DbContext.Projections.Remove(projection);
+            await scope.DbContext.SaveChangesAsync();
         }
     }
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
+        await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
-        dbContext.Projections.Add(entity);
-        await dbContext.SaveChangesAsync();
+        scope.DbContext.Projections.Add(entity);
+        await scope.DbContext.SaveChangesAsync();
     }
 }

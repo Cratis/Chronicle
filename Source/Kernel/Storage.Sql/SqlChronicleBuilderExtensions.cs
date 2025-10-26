@@ -24,13 +24,10 @@ public static class SqlChronicleBuilderExtensions
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithSql(this IChronicleBuilder builder, ChronicleOptions options)
     {
+        builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddDbContexts(options);
-        builder.Services.AddDbContextFactory<EventStoreDbContext>((sp, options) =>
-        {
-        });
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
-
         return builder;
     }
 
@@ -46,24 +43,7 @@ public static class SqlChronicleBuilderExtensions
     static IServiceCollection AddDbContext<TDbContext>(this IServiceCollection services, ChronicleOptions options)
         where TDbContext : BaseDbContext
     {
-        services.AddDbContext<TDbContext>(builder =>
-        {
-            switch (options.Storage.Type.ToLowerInvariant())
-            {
-                case StorageType.Sqlite:
-                    builder.UseSqlite(options.Storage.ConnectionDetails);
-                    break;
-                case StorageType.SqlServer:
-                    builder.UseSqlServer(options.Storage.ConnectionDetails);
-                    break;
-                case StorageType.PostgreSql:
-                    builder.UseNpgsql(options.Storage.ConnectionDetails);
-                    break;
-                default:
-                    throw new NotSupportedException($"Storage type '{options.Storage.Type}' is not supported.");
-            }
-        });
-
+        services.AddDbContext<TDbContext>(builder => builder.UseDatabaseFromConnectionString(options.Storage.ConnectionDetails));
         return services;
     }
 }

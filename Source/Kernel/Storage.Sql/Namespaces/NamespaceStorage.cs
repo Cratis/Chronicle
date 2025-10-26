@@ -11,27 +11,31 @@ namespace Cratis.Chronicle.Storage.Sql.Namespaces;
 /// <summary>
 /// Represents an implementation of <see cref="INamespaceStorage"/> for SQL.
 /// </summary>
-/// <param name="dbContext">The <see cref="EventStoreDbContext"/> to use for storage operations.</param>
-public class NamespaceStorage(EventStoreDbContext dbContext) : INamespaceStorage
+/// <param name="eventStore">The event store.</param>
+/// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
+public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : INamespaceStorage
 {
     /// <inheritdoc/>
     public async Task Create(EventStoreNamespaceName name, DateTimeOffset created)
     {
-        await dbContext.Namespaces.AddAsync(new Namespace { Name = name.ToString(), Created = created });
-        await dbContext.SaveChangesAsync();
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.Namespaces.AddAsync(new Namespace { Name = name.ToString(), Created = created });
+        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
-    public Task Delete(EventStoreNamespaceName name)
+    public async Task Delete(EventStoreNamespaceName name)
     {
-        dbContext.Namespaces.Remove(new Namespace { Name = name.ToString() });
-        return dbContext.SaveChangesAsync();
+        await using var scope = await database.EventStore(eventStore);
+        scope.DbContext.Namespaces.Remove(new Namespace { Name = name.ToString() });
+        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
     public async Task Ensure(EventStoreNamespaceName name)
     {
-        var result = await dbContext.Namespaces.FindAsync(name.ToString());
+        await using var scope = await database.EventStore(eventStore);
+        var result = await scope.DbContext.Namespaces.FindAsync(name.ToString());
         if (result is null)
         {
             await Create(name, DateTimeOffset.UtcNow);
@@ -39,8 +43,11 @@ public class NamespaceStorage(EventStoreDbContext dbContext) : INamespaceStorage
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<NamespaceState>> GetAll() =>
-        await dbContext.Namespaces.Select(ns => new NamespaceState(ns.Name, ns.Created)).ToListAsync();
+    public async Task<IEnumerable<NamespaceState>> GetAll()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.Namespaces.Select(ns => new NamespaceState(ns.Name, ns.Created)).ToListAsync();
+    }
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<NamespaceState>> ObserveAll() => throw new NotImplementedException();
