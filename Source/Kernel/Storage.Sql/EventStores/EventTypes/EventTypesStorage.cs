@@ -21,17 +21,6 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
-    public async Task Populate()
-    {
-        await using var scope = await database.EventStore(eventStore);
-        var eventTypes = await scope.DbContext.EventTypes.ToListAsync();
-        foreach (var eventType in eventTypes)
-        {
-            _eventTypes.Add(eventType);
-        }
-    }
-
-    /// <inheritdoc/>
     public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
         await using var scope = await database.EventStore(eventStore);
@@ -55,7 +44,8 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         }
         var eventType = eventSchema.ToSql();
         _eventTypes.Add(eventType);
-        scope.DbContext.EventTypes.Add(eventType);
+
+        await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
     }
 
