@@ -8,7 +8,7 @@
     },
     "storage": {
         "type": "sqlite",
-        "connectionDetails": "Data Source=chronicle.db"
+        "connectionDetails": "Data Source=data/chronicle.db"
     },
     "observers": {
         "subscriberTimeout": 5,
