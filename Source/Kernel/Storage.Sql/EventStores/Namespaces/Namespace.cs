@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Cratis.Chronicle.Storage.Sql.Namespaces;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
 /// <summary>
 /// Represents a namespace.

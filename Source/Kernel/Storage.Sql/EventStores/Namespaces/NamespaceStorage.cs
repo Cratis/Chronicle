@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Namespaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql.Namespaces;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
 /// <summary>
 /// Represents an implementation of <see cref="INamespaceStorage"/> for SQL.

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Cratis.Chronicle.Storage.Sql.Namespaces.Migrations;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Migrations;
 
 #nullable disable
 #pragma warning disable SA1600, SA1402, MA0048
