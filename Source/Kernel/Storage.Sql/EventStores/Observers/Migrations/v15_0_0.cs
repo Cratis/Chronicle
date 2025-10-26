@@ -20,7 +20,7 @@ public class v15_0_0 : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: WellKnownTableNames.Observers,
+            name: WellKnownTableNames.ObserverDefinitions,
             columns: table => new
             {
                 Id = table.StringColumn(migrationBuilder),
@@ -29,12 +29,12 @@ public class v15_0_0 : Migration
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
                 IsReplayable = table.BoolColumn(migrationBuilder),
             },
-            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Observers}", x => x.Id));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ObserverDefinitions}", x => x.Id));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
-            name: WellKnownTableNames.Observers);
+            name: WellKnownTableNames.ObserverDefinitions);
     }
 }
