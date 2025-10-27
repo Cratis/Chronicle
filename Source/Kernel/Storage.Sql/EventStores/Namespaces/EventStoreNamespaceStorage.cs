@@ -74,8 +74,8 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
             NullLogger<EventSequences.EventSequenceStorage>.Instance); // Null logger for now
 
     /// <inheritdoc/>
-    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId) => throw new NotImplementedException();
+    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId) => new UniqueConstraints.UniqueConstraintsStorage(eventStore, @namespace, eventSequenceId, database);
 
     /// <inheritdoc/>
-    public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId) => throw new NotImplementedException();
+    public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId) => new UniqueEventTypesConstraints.UniqueEventTypesConstraintsStorage(eventStore, @namespace, eventSequenceId, database);
 }

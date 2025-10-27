@@ -66,4 +66,9 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// Gets or sets the event sequence events DbSet.
     /// </summary>
     public DbSet<EventSequences.EventEntry> EventSequenceEvents { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the unique constraint indexes DbSet.
+    /// </summary>
+    public DbSet<UniqueConstraints.UniqueConstraintIndexEntry> UniqueConstraintIndexes { get; set; } = null!;
 }

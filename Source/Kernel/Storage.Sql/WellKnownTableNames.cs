@@ -134,6 +134,11 @@ public static class WellKnownTableNames
     public const string Changesets = "Changesets";
 
     /// <summary>
+    /// The table that holds unique constraint indexes.
+    /// </summary>
+    public const string UniqueConstraintIndexes = "UniqueConstraintIndexes";
+
+    /// <summary>
     /// The table that holds observer key indexes.
     /// </summary>
     public const string ObserverKeyIndexes = "ObserverKeyIndexes";
