@@ -164,11 +164,43 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content)
+    public async Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content)
     {
-        // This method would implement compensation (undo/reversal) of a specific event
-        logger.CompensateNotImplemented();
-        return Task.CompletedTask;
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        // Get the original event to compensate
+        var originalEvent = await scope.DbContext.EventSequenceEvents
+            .FirstOrDefaultAsync(e =>
+                e.EventSequenceId == eventSequenceId.Value &&
+                e.SequenceNumber == sequenceNumber.Value)
+            ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
+
+        // Get the next sequence number for the compensation event
+        var state = await GetState();
+        var compensationSequenceNumber = state.SequenceNumber + 1;
+
+        // Create compensation event entry
+        var compensationEntry = EventEntryConverter.ToEventEntry(
+            eventSequenceId.Value,
+            compensationSequenceNumber,
+            new EventSourceType(originalEvent.EventSourceType),
+            new EventSourceId(originalEvent.EventSourceId),
+            new EventStreamType(originalEvent.EventStreamType),
+            new EventStreamId(originalEvent.EventStreamId),
+            eventType,
+            correlationId,
+            causation,
+            causedByChain,
+            occurred,
+            content);
+
+        scope.DbContext.EventSequenceEvents.Add(compensationEntry);
+
+        // Update state
+        state.SequenceNumber = compensationSequenceNumber;
+        await SaveState(state);
+
+        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -216,11 +248,39 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred)
+    public async Task<IEnumerable<EventType>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred)
     {
-        // This method would redact all events for a given event source
-        logger.BulkRedactionNotImplemented();
-        return Task.FromResult(Enumerable.Empty<EventType>());
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var query = scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value && e.EventSourceId == eventSourceId.Value);
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        var eventsToRedact = await query.ToListAsync();
+        var affectedEventTypes = new HashSet<EventType>();
+
+        foreach (var eventEntry in eventsToRedact)
+        {
+            // Replace content with redaction marker
+            eventEntry.Content = JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                { "redacted", true },
+                { "reason", reason.Value },
+                { "redactedAt", occurred }
+            });
+            scope.DbContext.EventSequenceEvents.Update(eventEntry);
+
+            var eventType = EventEntryConverter.GetEventType(eventEntry);
+            affectedEventTypes.Add(eventType);
+        }
+
+        await scope.DbContext.SaveChangesAsync();
+        return affectedEventTypes;
     }
 
     /// <inheritdoc/>
@@ -300,31 +360,90 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task<TailEventSequenceNumbers> GetTailSequenceNumbers(IEnumerable<EventType> eventTypes)
+    public async Task<TailEventSequenceNumbers> GetTailSequenceNumbers(IEnumerable<EventType> eventTypes)
     {
-        // This method is complex to implement efficiently in SQL
-        logger.GetTailSequenceNumbersNotImplemented();
-        return Task.FromResult(new TailEventSequenceNumbers(
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        // Get the overall tail (latest sequence number)
+        var overallTail = await scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value)
+            .MaxAsync(e => (ulong?)e.SequenceNumber);
+
+        var overallTailSequenceNumber = overallTail.HasValue
+            ? new EventSequenceNumber(overallTail.Value)
+            : EventSequenceNumber.Unavailable;
+
+        // Get the tail for the specified event types
+        var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+        var tailForEventTypes = await scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value && eventTypeIds.Contains(e.Type))
+            .MaxAsync(e => (ulong?)e.SequenceNumber);
+
+        var tailForEventTypesSequenceNumber = tailForEventTypes.HasValue
+            ? new EventSequenceNumber(tailForEventTypes.Value)
+            : EventSequenceNumber.Unavailable;
+
+        return new TailEventSequenceNumbers(
             eventSequenceId,
             eventTypes.ToImmutableList(),
-            EventSequenceNumber.Unavailable,
-            EventSequenceNumber.Unavailable));
+            overallTailSequenceNumber,
+            tailForEventTypesSequenceNumber);
     }
 
     /// <inheritdoc/>
-    public Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(IEnumerable<EventType> eventTypes)
+    public async Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        // This method is complex to implement efficiently in SQL
-        logger.GetTailSequenceNumbersForEventTypesNotImplemented();
-        return Task.FromResult<IImmutableDictionary<EventType, EventSequenceNumber>>(ImmutableDictionary<EventType, EventSequenceNumber>.Empty);
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+        var eventTypeList = eventTypes.ToList();
+
+        // Query to get the max sequence number for each event type
+        var tailSequenceNumbers = await scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value && eventTypeIds.Contains(e.Type))
+            .GroupBy(e => e.Type)
+            .Select(g => new { EventTypeId = g.Key, MaxSequenceNumber = g.Max(e => e.SequenceNumber) })
+            .ToListAsync();
+
+        var result = new Dictionary<EventType, EventSequenceNumber>();
+
+        foreach (var eventType in eventTypeList)
+        {
+            var tailEntry = tailSequenceNumbers.FirstOrDefault(t => t.EventTypeId == eventType.Id.Value);
+            result[eventType] = tailEntry is not null
+                ? new EventSequenceNumber(tailEntry.MaxSequenceNumber)
+                : EventSequenceNumber.Unavailable;
+        }
+
+        return result.ToImmutableDictionary();
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null)
+    public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null)
     {
-        // This method is for finding the next event sequence number after a given one
-        logger.GetNextSequenceNumberGreaterOrEqualThanNotImplemented();
-        return Task.FromResult(EventSequenceNumber.Unavailable);
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var query = scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber >= sequenceNumber.Value);
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            query = query.Where(e => e.EventSourceId == eventSourceId.Value);
+        }
+
+        var nextEvent = await query
+            .OrderBy(e => e.SequenceNumber)
+            .FirstOrDefaultAsync();
+
+        return nextEvent?.SequenceNumber is null
+            ? EventSequenceNumber.Unavailable
+            : new EventSequenceNumber(nextEvent.SequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -337,11 +456,51 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
+    public async Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(EventTypeId eventTypeId, EventSourceId eventSourceId, EventSequenceNumber currentSequenceNumber)
     {
-        // This method finds the last event of a specific type for an event source before a given sequence number
-        logger.TryGetLastEventBeforeNotImplemented();
-        return Task.FromResult<Catch<Option<AppendedEvent>>>(Option<AppendedEvent>.None());
+        try
+        {
+            await using var scope = await database.Namespace(eventStore, @namespace);
+
+            var eventEntry = await scope.DbContext.EventSequenceEvents
+                .Where(e => e.EventSequenceId == eventSequenceId.Value
+                    && e.Type == eventTypeId.Value
+                    && e.EventSourceId == eventSourceId.Value
+                    && e.SequenceNumber < currentSequenceNumber.Value)
+                .OrderByDescending(e => e.SequenceNumber)
+                .FirstOrDefaultAsync();
+
+            if (eventEntry is null)
+            {
+                return Option<AppendedEvent>.None();
+            }
+
+            var eventType = EventEntryConverter.GetEventType(eventEntry);
+            var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+            var causation = EventEntryConverter.GetCausation(eventEntry);
+            var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
+
+            var eventMetadata = new EventContext(
+                eventType,
+                new EventSourceType(eventEntry.EventSourceType),
+                new EventSourceId(eventEntry.EventSourceId),
+                new EventStreamType(eventEntry.EventStreamType),
+                new EventStreamId(eventEntry.EventStreamId),
+                new EventSequenceNumber(eventEntry.SequenceNumber),
+                eventEntry.Occurred,
+                eventStore,
+                @namespace,
+                new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
+                causation,
+                await identityStorage.GetFor(causedBy));
+
+            var appendedEvent = new AppendedEvent(eventMetadata, content);
+            return (Option<AppendedEvent>)appendedEvent;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <inheritdoc/>
@@ -350,11 +509,48 @@ public class EventSequenceStorage(
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var eventEntry = await scope.DbContext.EventSequenceEvents
-            .FirstOrDefaultAsync(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber == sequenceNumber.Value);
+            .FirstOrDefaultAsync(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber == sequenceNumber.Value)
+            ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
+
+        var eventType = EventEntryConverter.GetEventType(eventEntry);
+        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+        var causation = EventEntryConverter.GetCausation(eventEntry);
+        var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
+
+        var eventMetadata = new EventContext(
+            eventType,
+            new EventSourceType(eventEntry.EventSourceType),
+            new EventSourceId(eventEntry.EventSourceId),
+            new EventStreamType(eventEntry.EventStreamType),
+            new EventStreamId(eventEntry.EventStreamId),
+            new EventSequenceNumber(eventEntry.SequenceNumber),
+            eventEntry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
+            causation,
+            await identityStorage.GetFor(causedBy));
+
+        return new AppendedEvent(eventMetadata, content);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var eventTypeIds = eventTypes.Select(et => et.Value).ToArray();
+
+        var eventEntry = await scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value
+                && e.EventSourceId == eventSourceId.Value
+                && eventTypeIds.Contains(e.Type))
+            .OrderByDescending(e => e.SequenceNumber)
+            .FirstOrDefaultAsync();
 
         if (eventEntry is null)
         {
-            throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
+            return Option<AppendedEvent>.None();
         }
 
         var eventType = EventEntryConverter.GetEventType(eventEntry);
@@ -380,26 +576,58 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes)
+    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        // This method finds the last instance of any of the specified event types for an event source
-        logger.TryGetLastInstanceOfAnyNotImplemented();
-        return Task.FromResult(Option<AppendedEvent>.None());
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var query = scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber >= sequenceNumber.Value);
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            query = query.Where(e => e.EventSourceId == eventSourceId.Value);
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            query = query.Where(e => e.EventStreamType == eventStreamType.Value);
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            query = query.Where(e => e.EventStreamId == eventStreamId.Value);
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
+    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        // This method creates a cursor for reading events from a specific sequence number
-        logger.GetFromSequenceNumberNotImplemented();
-        return Task.FromResult<IEventCursor>(new EmptyEventCursor());
-    }
+        await using var scope = await database.Namespace(eventStore, @namespace);
 
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
-    {
-        // This method creates a cursor for reading events within a specific range
-        logger.GetRangeNotImplemented();
-        return Task.FromResult<IEventCursor>(new EmptyEventCursor());
+        var query = scope.DbContext.EventSequenceEvents
+            .Where(e => e.EventSequenceId == eventSequenceId.Value
+                && e.SequenceNumber >= start.Value
+                && e.SequenceNumber <= end.Value);
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            query = query.Where(e => e.EventSourceId == eventSourceId.Value);
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 }
