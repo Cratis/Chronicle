@@ -3,7 +3,10 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores;
+using Cratis.Types;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
@@ -12,7 +15,9 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// Represents an implementation of <see cref="IClusterStorage"/> for SQL.
 /// </summary>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class ClusterStorage(IDatabase database) : IClusterStorage
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+/// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IClusterStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
@@ -27,7 +32,7 @@ public class ClusterStorage(IDatabase database) : IClusterStorage
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobTypes);
     }
 
     /// <inheritdoc/>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Namespaces;
@@ -10,6 +11,8 @@ using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores;
 
@@ -18,7 +21,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database) : IEventStoreStorage
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+/// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
+public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IEventStoreStorage
 {
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
@@ -49,5 +54,5 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database) : 
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database);
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobTypes);
 }

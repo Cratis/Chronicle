@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -12,6 +13,10 @@ using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Types;
+using Microsoft.Extensions.Logging.Abstractions;
+using SinksReplayContexts = Cratis.Chronicle.Storage.Sinks.ReplayContexts;
+using SinksSinks = Cratis.Chronicle.Storage.Sinks.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -21,43 +26,52 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IEventStoreNamespaceStorage
+/// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+/// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
-    public IChangesetStorage Changesets => throw new NotImplementedException();
+    public IChangesetStorage Changesets { get; } = new Changesets.ChangesetStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IIdentityStorage Identities => throw new NotImplementedException();
+    public IIdentityStorage Identities { get; } = new Identities.IdentityStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IJobStorage Jobs => throw new NotImplementedException();
+    public IJobStorage Jobs { get; } = new Jobs.JobStorage(eventStore, @namespace, database, jobTypes);
 
     /// <inheritdoc/>
-    public IJobStepStorage JobSteps => throw new NotImplementedException();
+    public IJobStepStorage JobSteps { get; } = new JobSteps.JobStepStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; } = new Observers.ObserverStateStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IFailedPartitionsStorage FailedPartitions => throw new NotImplementedException();
+    public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IRecommendationStorage Recommendations => throw new NotImplementedException();
+    public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IObserverKeyIndexes ObserverKeyIndexes => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public IReplayContexts ReplayContexts => throw new NotImplementedException();
+    public IReplayContexts ReplayContexts { get; } = new SinksReplayContexts(new ReplayContexts.ReplayContextsStorage(eventStore, @namespace, database));
 
     /// <inheritdoc/>
-    public ISinks Sinks => throw new NotImplementedException();
+    public ISinks Sinks { get; } = new SinksSinks(eventStore, @namespace, sinkFactories);
 
     /// <inheritdoc/>
-    public IReplayedModelsStorage ReplayedModels => throw new NotImplementedException();
+    public IReplayedModelsStorage ReplayedModels { get; } = new ReplayedModels.ReplayedModelsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) => throw new NotImplementedException();
+    public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) =>
+        new EventSequences.EventSequenceStorage(
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            database,
+            Identities, // Use existing Identities property
+            NullLogger<EventSequences.EventSequenceStorage>.Instance); // Null logger for now
 
     /// <inheritdoc/>
     public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId) => throw new NotImplementedException();

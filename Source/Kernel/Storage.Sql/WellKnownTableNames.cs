@@ -44,6 +44,11 @@ public static class WellKnownTableNames
     public const string EventSequences = "EventSequences";
 
     /// <summary>
+    /// The table that holds individual events within event sequences.
+    /// </summary>
+    public const string EventSequenceEvents = "EventSequenceEvents";
+
+    /// <summary>
     /// The table that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "ConnectedClients";
@@ -122,4 +127,19 @@ public static class WellKnownTableNames
     /// The table that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "ReadModels";
+
+    /// <summary>
+    /// The table that holds changesets.
+    /// </summary>
+    public const string Changesets = "Changesets";
+
+    /// <summary>
+    /// The table that holds observer key indexes.
+    /// </summary>
+    public const string ObserverKeyIndexes = "ObserverKeyIndexes";
+
+    /// <summary>
+    /// The table that holds sinks.
+    /// </summary>
+    public const string Sinks = "Sinks";
 }
