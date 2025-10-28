@@ -28,7 +28,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IEventStoreNamespaceStorage
+/// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, IObserverDefinitionsStorage observerDefinitionsStorage) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new Changesets.ChangesetStorage(eventStore, @namespace, database);
@@ -52,7 +53,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IObserverKeyIndexes ObserverKeyIndexes => throw new NotImplementedException();
+    public IObserverKeyIndexes ObserverKeyIndexes { get; } = new ObserverKeyIndexes.ObserverKeyIndexes(eventStore, @namespace, database, observerDefinitionsStorage);
 
     /// <inheritdoc/>
     public IReplayContexts ReplayContexts { get; } = new SinksReplayContexts(new ReplayContexts.ReplayContextsStorage(eventStore, @namespace, database));
