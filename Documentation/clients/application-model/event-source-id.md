@@ -22,7 +22,9 @@ public record UpdateUserCommand(Guid UserId, string Name) : ICanProvideEventSour
 {
     public EventSourceId GetEventSourceId() => UserId.ToString();
 }
-```This approach gives you full control over how the event source ID is determined for your command.
+```
+
+This approach gives you full control over how the event source ID is determined for your command.
 
 ## Property-Based Resolution
 
@@ -61,7 +63,9 @@ public record CreateProductCommand(string Name, decimal Price)
         return (productCreated, productId);
     }
 }
-```## Automatic Generation
+```
+
+## Automatic Generation
 
 If no event source ID can be resolved from the command, the system will automatically generate a new one using `EventSourceId.New()`. This is useful for creation scenarios where the ID is not known beforehand.
 
