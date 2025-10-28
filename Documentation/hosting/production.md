@@ -62,7 +62,7 @@ Chronicle uses a `chronicle.json` configuration file to define runtime behavior.
 
 | Property | Type   | Required | Description                    |
 |----------|--------|----------|--------------------------------|
-| apiPort  | number | Yes      | Port for the REST API server  |
+| apiPort  | number | Yes      | Port for the REST API server, and the Workbench, if enabled |
 | port     | number | Yes      | Main service port              |
 
 #### Features
