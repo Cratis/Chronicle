@@ -19,7 +19,7 @@ export class WebhooksViewModel {
     async addWebhook() {
         const query = new AllEventTypes();
         const res = await query.perform({ eventStore: this._params.eventStore!});
-        
+
         const request = new AddWebhookRequest();
         request.eventTypes = res.data;
         const [, response] = await this._dialogs.show<AddWebhookRequest, AddWebhookResponse>(request);
@@ -30,7 +30,6 @@ export class WebhooksViewModel {
         command.eventSequenceId = response!.eventSequence;
         command.target = response!.target!;
         command.eventTypes = response!.eventTypes;
-        debugger;
         await command.execute();
     }
 }
