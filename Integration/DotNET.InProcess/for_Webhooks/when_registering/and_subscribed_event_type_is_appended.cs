@@ -55,8 +55,5 @@ public class and_subscribed_event_type_is_appended(context context) : Given<cont
     }
 
     [Fact]
-    async Task Test()
-    {
-        await Context.CreateClient().PostAsync("/webhooks", new StringContent("{}"));
-    }
+    void should_have_invoked_webhook() => Context.InvokedWebhooks.Count.ShouldEqual(1);
 }
