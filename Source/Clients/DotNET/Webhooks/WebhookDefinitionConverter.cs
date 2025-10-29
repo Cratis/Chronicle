@@ -8,14 +8,14 @@ namespace Cratis.Chronicle.Webhooks;
 /// <summary>
 /// Represents a converter for converting between webhook types.
 /// </summary>
-public static class WebhookDefinitionConverter
+internal static class WebhookDefinitionConverter
 {
     /// <summary>
     /// Converts a <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/> to a <see cref="WebhookDefinition"/>.
     /// </summary>
     /// <param name="definition">The <see cref="WebhookDefinition"/> to convert.</param>
     /// <returns>The converted <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/>.</returns>
-    public static Contracts.Observation.Webhooks.WebhookDefinition ToContract(this WebhookDefinition definition) =>
+    internal static Contracts.Observation.Webhooks.WebhookDefinition ToContract(this WebhookDefinition definition) =>
         new()
         {
             EventSequenceId = definition.EventSequenceId.Value,
