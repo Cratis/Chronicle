@@ -4,6 +4,8 @@
   href: concepts/toc.yml
 - name: Recipes
   href: recipes/toc.yml
+- name: Hosting
+  href: hosting/toc.yml
 - name: Clients
   href: clients/toc.yml
 - name: Contributing

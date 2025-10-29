@@ -51,6 +51,7 @@ You can also use `AutoMap()` explicitly for each event type instead of at the pr
 ```csharp
 .From<AccountOpened>(_ => _.AutoMap())
 .From<MoneyDeposited>(_ => _.AutoMap())
+```
 
 ## Read model definition
 
