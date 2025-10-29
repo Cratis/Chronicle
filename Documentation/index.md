@@ -1,12 +1,8 @@
 # Chronicle
 
-## Event Sourcing Database for .NET Built on MongoDB
+Chronicle is a comprehensive event sourcing platform built with ease of use, productivity, compliance, and maintainability as core principles. It delivers a complete solution for implementing event-driven architectures in .NET applications through a powerful combination of server kernel and rich client SDK.
 
-Chronicle is a comprehensive event sourcing platform designed with ease of use, productivity, compliance, and maintainability at its core. It provides a complete solution for implementing event-driven architectures in .NET applications through a powerful combination of a server kernel and rich client SDK.
-
-## What is Chronicle?
-
-Chronicle is an event sourcing database that captures and stores all changes to application state as a sequence of events. Instead of storing just the current state, Chronicle maintains the complete history of what happened in your system, enabling powerful capabilities like time travel, audit trails, and event-driven architectures.
+As an event sourcing database, Chronicle captures and stores all application state changes as a sequence of immutable events. Rather than persisting only current state, Chronicle preserves the complete history of system changes, unlocking powerful capabilities such as time travel debugging, comprehensive audit trails, and robust event-driven architectures.
 
 ## Key Features
 
