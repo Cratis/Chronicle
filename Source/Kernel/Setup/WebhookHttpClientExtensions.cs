@@ -42,7 +42,7 @@ public static class WebhookHttpClientExtensions
                 });
 
                 // Timeout per request
-                pipeline.AddTimeout(TimeSpan.FromSeconds(10));
+                pipeline.AddTimeout(TimeSpan.FromSeconds(60));
             });
         return builder;
     }

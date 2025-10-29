@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
-using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Orleans.Providers;
@@ -19,12 +18,10 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// Initializes a new instance of the <see cref="WebhookObserverSubscriber"/> class.
 /// </remarks>
 /// <param name="webhookMediator">The <see cref="IWebhookMediator"/>.</param>
-/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class WebhookObserverSubscriber(
     IWebhookMediator webhookMediator,
-    IConfigurationForObserverProvider configurationProvider,
     ILogger<WebhookObserverSubscriber> logger) : Grain<WebhookDefinition>, IWebhookObserverSubscriber, INotifyWebhookDefinitionsChanged
 {
     ObserverKey _key = ObserverKey.NotSet;
@@ -39,8 +36,7 @@ public class WebhookObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
-        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events, timeout);
+        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)

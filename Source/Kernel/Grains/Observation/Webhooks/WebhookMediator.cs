@@ -24,12 +24,11 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
     {
         try
         {
-            timeout ??= TimeSpan.FromSeconds(60);
             var httpClient = webhookHttpClientFactory.Create(webhookTarget);
             await httpClient.PostAsJsonAsync(
                 string.Empty,
                 new EventsToObserve(partition.ToString(), events.ToArray()),
-                jsonSerializerOptions).WaitAsync(timeout.Value);
+                jsonSerializerOptions);
             return Catch.Success();
         }
         catch (Exception e)
