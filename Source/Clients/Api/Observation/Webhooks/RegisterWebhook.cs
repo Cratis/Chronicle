@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.Api.Observation.Webhooks;
 /// </summary>
 /// <param name="EventSequenceId">The <see cref="EventSequenceId"/>.</param>
 /// <param name="EventTypes">Event types to register.</param>
-/// <param name="Target">The webohok target.</param>
+/// <param name="Target">The <see cref="WebhookTarget"/>.</param>
 public record RegisterWebhook(EventSequenceId EventSequenceId, IEnumerable<EventType> EventTypes, WebhookTarget Target);

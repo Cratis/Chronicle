@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Api.Events;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Api.Observation.Webhooks;
@@ -35,23 +34,19 @@ public class WebhookCommands : ControllerBase
         [FromBody] RegisterWebhook command)
     {
         var identifier = Guid.NewGuid();
+        var definition = new WebhookDefinition(
+            identifier.ToString(),
+            command.EventTypes,
+            command.Target,
+            command.EventSequenceId,
+            true,
+            true);
+
         await _webhooks.Register(new()
         {
             EventStore = eventStore, Owner = Contracts.Observation.ObserverOwner.Client, Webhooks =
             [
-                new()
-                {
-                    EventSequenceId = command.EventSequenceId,
-                    EventTypes = command.EventTypes.Select(_ => _.ToContract()).ToList(),
-                    Target = new Contracts.Observation.Webhooks.WebhookTarget()
-                    {
-                        Authentication = AuthenticationType.None,
-                        Url = command.Target.Url
-                    },
-                    Identifier = identifier.ToString(),
-                    IsActive = true,
-                    IsReplayable = true
-                }
+                definition.ToContract()
             ]
         });
 
