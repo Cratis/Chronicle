@@ -45,7 +45,7 @@ export class RegisterWebhook extends Command<IRegisterWebhook, Guid> implements 
         super(Guid, false);
     }
 
-    get requestArguments(): string[] {
+    get requestParameters(): string[] {
         return [
             'eventStore',
         ];

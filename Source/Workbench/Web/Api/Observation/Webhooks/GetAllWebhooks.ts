@@ -76,11 +76,11 @@ class GetAllWebhooksSortByWithoutQuery {
     }
 }
 
-export interface GetAllWebhooksArguments {
+export interface GetAllWebhooksParameters {
     eventStore: string;
 }
 
-export class GetAllWebhooks extends QueryFor<WebhookDefinition[], GetAllWebhooksArguments> {
+export class GetAllWebhooks extends QueryFor<WebhookDefinition[], GetAllWebhooksParameters> {
     readonly route: string = '/api/event-store/{eventStore}/observers/webhooks';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: WebhookDefinition[] = [];
@@ -92,7 +92,7 @@ export class GetAllWebhooks extends QueryFor<WebhookDefinition[], GetAllWebhooks
         this._sortBy = new GetAllWebhooksSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
@@ -106,11 +106,11 @@ export class GetAllWebhooks extends QueryFor<WebhookDefinition[], GetAllWebhooks
         return this._sortBy;
     }
 
-    static use(args?: GetAllWebhooksArguments, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, PerformQuery<GetAllWebhooksArguments>, SetSorting] {
-        return useQuery<WebhookDefinition[], GetAllWebhooks, GetAllWebhooksArguments>(GetAllWebhooks, args, sorting);
+    static use(args?: GetAllWebhooksParameters, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, PerformQuery<GetAllWebhooksParameters>, SetSorting] {
+        return useQuery<WebhookDefinition[], GetAllWebhooks, GetAllWebhooksParameters>(GetAllWebhooks, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetAllWebhooksArguments, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetAllWebhooksParameters, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<WebhookDefinition[], GetAllWebhooks>(GetAllWebhooks, new Paging(0, pageSize), args, sorting);
     }
 }

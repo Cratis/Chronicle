@@ -76,10 +76,10 @@ class AllWebhooksSortByWithoutQuery {
     }
 }
 
-export interface AllWebhooksArguments {
+export interface AllWebhooksParameters {
     eventStore: string;
 }
-export class AllWebhooks extends ObservableQueryFor<WebhookDefinition[], AllWebhooksArguments> {
+export class AllWebhooks extends ObservableQueryFor<WebhookDefinition[], AllWebhooksParameters> {
     readonly route: string = '/api/event-store/{eventStore}/observers/webhooks/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: WebhookDefinition[] = [];
@@ -91,7 +91,7 @@ export class AllWebhooks extends ObservableQueryFor<WebhookDefinition[], AllWebh
         this._sortBy = new AllWebhooksSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
@@ -105,11 +105,11 @@ export class AllWebhooks extends ObservableQueryFor<WebhookDefinition[], AllWebh
         return this._sortBy;
     }
 
-    static use(args?: AllWebhooksArguments, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, SetSorting] {
-        return useObservableQuery<WebhookDefinition[], AllWebhooks, AllWebhooksArguments>(AllWebhooks, args, sorting);
+    static use(args?: AllWebhooksParameters, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, SetSorting] {
+        return useObservableQuery<WebhookDefinition[], AllWebhooks, AllWebhooksParameters>(AllWebhooks, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllWebhooksArguments, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllWebhooksParameters, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<WebhookDefinition[], AllWebhooks>(AllWebhooks, new Paging(0, pageSize), args, sorting);
     }
 }
