@@ -3,7 +3,7 @@
 
 import { withViewModel } from '@cratis/applications.react.mvvm';
 import { WebhooksViewModel } from './WebhooksViewModel';
-import { AllWebhooks, AllWebhooksArguments } from 'Api/Observation/Webhooks/';
+import { AllWebhooks, AllWebhooksParameters } from 'Api/Observation/Webhooks/';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
@@ -16,7 +16,7 @@ import { AddWebhook, AddWebhookRequest, AddWebhookResponse } from './AddWebhook'
 export const Webhooks = withViewModel(WebhooksViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddWebhookDialog] = useDialog<AddWebhookRequest, AddWebhookResponse>(AddWebhookRequest, AddWebhook);
-    const queryArgs: AllWebhooksArguments = {
+    const queryArgs: AllWebhooksParameters = {
         eventStore: params.eventStore!
     };
 
