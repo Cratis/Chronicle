@@ -57,6 +57,7 @@ public static class WebhookDefinitionConverters
         Authentication = target.Authentication,
         BearerToken = target.BearerToken,
         Passsword = target.Password,
-        Username = target.Username
+        Username = target.Username,
+        Headers = target.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
     };
 }
