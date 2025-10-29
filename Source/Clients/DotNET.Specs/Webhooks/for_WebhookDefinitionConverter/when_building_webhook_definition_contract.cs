@@ -11,15 +11,15 @@ public class when_building_webhook_definition_contract : Specification
 {
     WebhookDefinition _definition;
     Contracts.Observation.Webhooks.WebhookDefinition _contract;
-    WebhookTarget target;
-    EventType eventType;
-    WebhookId id;
+    WebhookTarget _target;
+    EventType _eventType;
+    WebhookId _id;
 
     void Establish()
     {
-        id = new WebhookId("my-webhook");
-        eventType = new EventType("EventType", EventTypeGeneration.First);
-        target = new WebhookTarget(
+        _id = new WebhookId("my-webhook");
+        _eventType = new EventType("EventType", EventTypeGeneration.First);
+        _target = new WebhookTarget(
             new WebhookTargetUrl("https://example.test/webhook"),
             AuthenticationType.None,
             null,
@@ -28,9 +28,9 @@ public class when_building_webhook_definition_contract : Specification
             new Dictionary<string, string>());
 
         _definition = new WebhookDefinition(
-            Identifier: id,
-            EventTypes: [eventType],
-            Target: target,
+            Identifier: _id,
+            EventTypes: [_eventType],
+            Target: _target,
             EventSequenceId: EventSequenceId.Log,
             IsReplayable: true,
             IsActive: true);
@@ -42,7 +42,7 @@ public class when_building_webhook_definition_contract : Specification
     }
 
     [Fact]
-    void should_map_identifier() => _contract.Identifier.ShouldEqual(id.Value);
+    void should_map_identifier() => _contract.Identifier.ShouldEqual(_id.Value);
 
     [Fact]
     void should_map_event_sequence() => _contract.EventSequenceId.ShouldEqual(EventSequenceId.Log.Value);
@@ -51,11 +51,11 @@ public class when_building_webhook_definition_contract : Specification
     void should_map_event_types()
     {
         _contract.EventTypes.ShouldContainSingleItem();
-        _contract.EventTypes[0].Id.ShouldEqual(eventType.Id.Value);
+        _contract.EventTypes[0].Id.ShouldEqual(_eventType.Id.Value);
     }
 
     [Fact]
-    void should_map_target_url() => _contract.Target.Url.ShouldEqual(target.Url.Value);
+    void should_map_target_url() => _contract.Target.Url.ShouldEqual(_target.Url.Value);
 
     [Fact]
     void should_map_authentication_type() => _contract.Target.Authentication.ShouldEqual(

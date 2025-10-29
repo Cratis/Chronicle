@@ -41,9 +41,9 @@ public class WebhooksManager(
     }
 
     /// <inheritdoc/>
-    public async Task Unregister(IEnumerable<WebhookId> definitions)
+    public async Task Unregister(IEnumerable<WebhookId> webhookIds)
     {
-        await UnsubscribeInAllNamespaces(definitions);
+        await UnsubscribeInAllNamespaces(webhookIds);
     }
 
     /// <inheritdoc/>

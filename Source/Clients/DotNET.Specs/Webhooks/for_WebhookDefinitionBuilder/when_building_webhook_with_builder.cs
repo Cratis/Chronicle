@@ -43,7 +43,7 @@ public class when_building_webhook_with_builder : Specification
 
     [Fact]
     void should_be_active_by_default() => _result.IsActive.ShouldBeTrue();
-    
+
     [Fact]
     void should_have_no_event_types() => _result.EventTypes.ShouldBeEmpty();
 }
