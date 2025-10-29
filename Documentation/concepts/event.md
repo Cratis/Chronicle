@@ -4,7 +4,7 @@ Chronicle is optimized for the scenario of [domain events](https://www.martinfow
 Figuring out the correct name of an [event type](./event-type.md) and what properties it should have can be hard.
 This page walks through some general guidance on how to do so. Recommend also reading the [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) on this.
 
-> Note: Read more about the relationship to [event source](../event-source.md)
+> Note: Read more about the relationship to [event source](./event-source.md)
 
 ## Past tense
 
