@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Webhooks;
-using context = Cratis.Chronicle.InProcess.Integration.for_Webhooks.when_registering.and_subscribed_event_type_is_appended.context;
+using context = Cratis.Chronicle.InProcess.Integration.for_Webhooks.when_registering.with_headers_and_subscribed_event_type_is_appended.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Webhooks.when_registering;
 
 [Collection(ChronicleCollection.Name)]
-public class and_subscribed_event_type_is_appended(context context) : Given<context>(context)
+public class with_headers_and_subscribed_event_type_is_appended(context context) : Given<context>(context)
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture)
         : given.webhook_states_after_registering(chronicleInProcessFixture)
@@ -18,7 +18,7 @@ public class and_subscribed_event_type_is_appended(context context) : Given<cont
         public Task Establish()
         {
             return Register(
-                (WebhookId, TargetUrl, builder => builder.WithEventType<SomeEvent>()));
+                (WebhookId, TargetUrl, builder => builder.WithEventType<SomeEvent>().WithHeader("some-header", "some-value")));
         }
 
         public async Task Because()
@@ -57,5 +57,6 @@ public class and_subscribed_event_type_is_appended(context context) : Given<cont
     void should_have_invoked_webhook() => Context.InvokedWebhooks.Count.ShouldEqual(1);
 
     [Fact]
-    void should_have_invoked_webhook_with_no_headers() => Context.InvokedWebhooks.GetAll().Single().Headers.ShouldBeEmpty();
+    void should_have_invoked_webhook_with_the_correct_headers() => Context.InvokedWebhooks.GetAll().Single().Headers
+        .ShouldContainOnly(new KeyValuePair<string, string>("some-header", "some-value"));
 }

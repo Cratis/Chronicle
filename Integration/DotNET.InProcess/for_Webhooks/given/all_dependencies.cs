@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
 using Cratis.Chronicle.Webhooks;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -14,17 +13,27 @@ public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixtur
     public InvokedWebhooks InvokedWebhooks;
     public IWebhooks Webhooks => Services.GetService<IEventStore>().Webhooks;
 
-
-    public WebhookTargetUrl TargetUrl => $"{Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault() ?? "http://localhost"}/webhooks";
+    public WebhookTargetUrl TargetUrl
+    {
+        get
+        {
+            var server = Services.GetRequiredService<IServer>();
+            var addressFeature = server.Features.Get<IServerAddressesFeature>();
+            var baseAddress = addressFeature?.Addresses.FirstOrDefault() ?? "http://localhost:5000";
+            return $"{baseAddress.TrimEnd('/')}/webhooks";
+        }
+    }
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-         InvokedWebhooks = new();
-         services.AddSingleton(InvokedWebhooks);
+        InvokedWebhooks = new();
 
-         // Configure the webhook HTTP client to use the test server
-         // services.AddHttpClient("webhook")
-         //     .ConfigurePrimaryHttpMessageHandler(() => Services.GetRequiredService<IServer>().);
+        // Override the IHttpClientFactory to use TestServer's handler
+        services.AddTransient<IHttpClientFactory>(_ =>
+        {
+            var factory = new TestHttpClientFactory(CreateClient());
+            return factory;
+        });
     }
 
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
@@ -37,11 +46,12 @@ public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixtur
                 {
                     using var reader = new StreamReader(httpContext.Request.Body);
                     var body = await reader.ReadToEndAsync();
-                    Console.WriteLine($"Received webhook: {body}");
 
-                    // Store the invoked webhook for test verification
-                    var invokedWebhooks = httpContext.RequestServices.GetService<InvokedWebhooks>();
-                    invokedWebhooks?.Add(body);
+                    InvokedWebhooks.Add(body, httpContext.Request.Headers
+                        .Where(pair => !new[] { "Host", "Content-Type", "Content-Length" }.Contains(pair.Key))
+                        .ToDictionary(k => k.Key, v => v.Value.ToString()));
+                    httpContext.Response.StatusCode = 200;
+                    await httpContext.Response.WriteAsync("OK");
                 });
             }));
     }

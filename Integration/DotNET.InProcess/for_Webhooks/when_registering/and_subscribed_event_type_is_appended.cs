@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Webhooks;
-using Humanizer;
 using context = Cratis.Chronicle.InProcess.Integration.for_Webhooks.when_registering.and_subscribed_event_type_is_appended.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Webhooks.when_registering;
@@ -25,7 +24,7 @@ public class and_subscribed_event_type_is_appended(context context) : Given<cont
         public async Task Because()
         {
             await EventStore.EventLog.Append("some-event-source", new SomeEvent(42));
-            await Task.Delay(10.Seconds());
+            await InvokedWebhooks.WaitForInvocation(1);
         }
     }
 
@@ -56,4 +55,7 @@ public class and_subscribed_event_type_is_appended(context context) : Given<cont
 
     [Fact]
     void should_have_invoked_webhook() => Context.InvokedWebhooks.Count.ShouldEqual(1);
+
+    [Fact]
+    void should_have_invoked_webhook_with_no_headers() => Context.InvokedWebhooks.GetAll().Single().Headers.ShouldBeEmpty();
 }
