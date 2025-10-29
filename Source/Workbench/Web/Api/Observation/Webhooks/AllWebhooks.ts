@@ -12,25 +12,22 @@ import Handlebars from 'handlebars';
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/webhooks/observe');
 
 class AllWebhooksSortBy {
-    private _eventSequenceId: SortingActionsForObservableQuery<WebhookDefinition[]>;
     private _identifier: SortingActionsForObservableQuery<WebhookDefinition[]>;
     private _eventTypes: SortingActionsForObservableQuery<WebhookDefinition[]>;
     private _target: SortingActionsForObservableQuery<WebhookDefinition[]>;
+    private _eventSequenceId: SortingActionsForObservableQuery<WebhookDefinition[]>;
     private _isReplayable: SortingActionsForObservableQuery<WebhookDefinition[]>;
     private _isActive: SortingActionsForObservableQuery<WebhookDefinition[]>;
 
     constructor(readonly query: AllWebhooks) {
-        this._eventSequenceId = new SortingActionsForObservableQuery<WebhookDefinition[]>('eventSequenceId', query);
         this._identifier = new SortingActionsForObservableQuery<WebhookDefinition[]>('identifier', query);
         this._eventTypes = new SortingActionsForObservableQuery<WebhookDefinition[]>('eventTypes', query);
         this._target = new SortingActionsForObservableQuery<WebhookDefinition[]>('target', query);
+        this._eventSequenceId = new SortingActionsForObservableQuery<WebhookDefinition[]>('eventSequenceId', query);
         this._isReplayable = new SortingActionsForObservableQuery<WebhookDefinition[]>('isReplayable', query);
         this._isActive = new SortingActionsForObservableQuery<WebhookDefinition[]>('isActive', query);
     }
 
-    get eventSequenceId(): SortingActionsForObservableQuery<WebhookDefinition[]> {
-        return this._eventSequenceId;
-    }
     get identifier(): SortingActionsForObservableQuery<WebhookDefinition[]> {
         return this._identifier;
     }
@@ -39,6 +36,9 @@ class AllWebhooksSortBy {
     }
     get target(): SortingActionsForObservableQuery<WebhookDefinition[]> {
         return this._target;
+    }
+    get eventSequenceId(): SortingActionsForObservableQuery<WebhookDefinition[]> {
+        return this._eventSequenceId;
     }
     get isReplayable(): SortingActionsForObservableQuery<WebhookDefinition[]> {
         return this._isReplayable;
@@ -49,16 +49,13 @@ class AllWebhooksSortBy {
 }
 
 class AllWebhooksSortByWithoutQuery {
-    private _eventSequenceId: SortingActions  = new SortingActions('eventSequenceId');
     private _identifier: SortingActions  = new SortingActions('identifier');
     private _eventTypes: SortingActions  = new SortingActions('eventTypes');
     private _target: SortingActions  = new SortingActions('target');
+    private _eventSequenceId: SortingActions  = new SortingActions('eventSequenceId');
     private _isReplayable: SortingActions  = new SortingActions('isReplayable');
     private _isActive: SortingActions  = new SortingActions('isActive');
 
-    get eventSequenceId(): SortingActions {
-        return this._eventSequenceId;
-    }
     get identifier(): SortingActions {
         return this._identifier;
     }
@@ -67,6 +64,9 @@ class AllWebhooksSortByWithoutQuery {
     }
     get target(): SortingActions {
         return this._target;
+    }
+    get eventSequenceId(): SortingActions {
+        return this._eventSequenceId;
     }
     get isReplayable(): SortingActions {
         return this._isReplayable;

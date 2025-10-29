@@ -40,7 +40,6 @@ export const AddWebhook = () => {
             </div>
             <div className="card flex flex-column gap-3">
                 <div className="p-inputgroup flex-1 flex flex-column gap-2">
-                    
                     <MultiSelect placeholder={strings.eventStore.general.webhooks.dialogs.addWebhook.eventTypes} value={selectedEventTypes}
                               onChange={e => setSelectedEventTypes(e.target.value)} options={request.eventTypes} optionLabel='id' />
 

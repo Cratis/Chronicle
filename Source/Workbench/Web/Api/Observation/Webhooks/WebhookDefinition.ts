@@ -11,9 +11,6 @@ import { WebhookTarget } from './WebhookTarget';
 export class WebhookDefinition {
 
     @field(String)
-    eventSequenceId!: string;
-
-    @field(String)
     identifier!: string;
 
     @field(EventType, true)
@@ -21,6 +18,9 @@ export class WebhookDefinition {
 
     @field(WebhookTarget)
     target!: WebhookTarget;
+
+    @field(String)
+    eventSequenceId!: string;
 
     @field(Boolean)
     isReplayable!: boolean;
