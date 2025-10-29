@@ -12,7 +12,7 @@ public class webhook_states_after_registering(ChronicleInProcessFixture chronicl
 
     protected async Task Register(params (WebhookId, WebhookTargetUrl, Action<IWebhookDefinitionBuilder>)[] registration)
     {
-        foreach (var (id, targetUrl,configure) in registration)
+        foreach (var (id, targetUrl, configure) in registration)
         {
             await Webhooks.Register(id, targetUrl, configure);
         }
