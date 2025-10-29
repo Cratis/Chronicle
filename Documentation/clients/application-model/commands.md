@@ -50,7 +50,8 @@ These handlers automatically append events to the event log using the event sour
 The simplest pattern is returning a single event from your command handler:
 
 ```csharp
-public record CreateUserCommand(string Email, string Name)
+[Command]
+public record CreateUser(string Email, string Name)
 {
     public UserCreated Handle(User user)
     {
@@ -73,7 +74,8 @@ The returned event will be automatically appended to the event log using the eve
 You can return multiple events from a single command handler:
 
 ```csharp
-public record ProcessOrderCommand([Key] Guid OrderId)
+[Command]
+public record ProcessOrder([Key] Guid OrderId)
 {
     public IEnumerable<object> Handle(Order order)
     {
@@ -97,7 +99,8 @@ All events in the collection will be appended to the event log in the order they
 One of the most powerful patterns is returning tuples that contain both events and values. The value part of the tuple becomes the command response, while the event is still appended to the event log:
 
 ```csharp
-public record CreateProductCommand(string Name, decimal Price)
+[Command]
+public record CreateProduct(string Name, decimal Price)
 {
     public (ProductCreated, Guid) Handle()
     {
@@ -126,7 +129,8 @@ In this example:
 A particularly useful pattern is when the response value can serve as the event source ID. This is especially valuable for creation scenarios:
 
 ```csharp
-public record CreateOrderCommand(string CustomerName, List<OrderItem> Items)
+[Command]
+public record CreateOrder(string CustomerName, List<OrderItem> Items)
 {
     public (OrderCreated, EventSourceId) Handle()
     {
@@ -153,7 +157,8 @@ The `EventSourceId` in the tuple can be used by the client for subsequent operat
 You can return more complex tuples with multiple values:
 
 ```csharp
-public record ProcessPaymentCommand([Key] Guid PaymentId, decimal Amount)
+[Command]
+public record ProcessPayment([Key] Guid PaymentId, decimal Amount)
 {
     public (PaymentProcessed, PaymentResult) Handle(Payment payment)
     {
@@ -176,12 +181,15 @@ public record ProcessPaymentCommand([Key] Guid PaymentId, decimal Amount)
         return (paymentProcessed, paymentResult);
     }
 }
-```## Event Source ID Resolution in Responses
+```
+
+## Event Source ID Resolution in Responses
 
 When using tuples, the Application Model client can also resolve event source IDs from the response values. This works with the same resolution logic as commands:
 
 ```csharp
-public record LinkAccountsCommand(Guid PrimaryAccountId, Guid SecondaryAccountId)
+[Command]
+public record LinkAccounts(Guid PrimaryAccountId, Guid SecondaryAccountId)
 {
     public (AccountsLinked, EventSourceId) Handle()
     {
@@ -195,7 +203,9 @@ public record LinkAccountsCommand(Guid PrimaryAccountId, Guid SecondaryAccountId
         return (accountsLinked, PrimaryAccountId.ToString());
     }
 }
-```## Response Value Handler Implementation
+```
+
+## Response Value Handler Implementation
 
 ### SingleEventCommandResponseValueHandler
 
@@ -214,17 +224,6 @@ This handler:
 - Appends all events to the event log in order
 
 ## Error Handling
-
-### Missing Event Source ID
-
-If no event source ID can be resolved from the command context, the response value handlers will not be able to process event responses:
-
-```csharp
-public record InvalidCommand(string SomeProperty);
-// No event source ID property
-
-// This will fail because no event source ID is available for event handling
-```
 
 ### Unknown Event Types
 
@@ -262,13 +261,16 @@ public IEnumerable<object> Handle(ProcessOrderCommand command)
 
 // Good: Clear tuple with value return
 public (ProductCreated, Guid) Handle(CreateProductCommand command)
-```### Meaningful Response Values
+```
+
+### Meaningful Response Values
 
 When returning tuples, make the non-event values meaningful to the client:
 
 ```csharp
 // Good: Client gets useful information
-public record CreateOrderCommand(List<OrderItem> Items)
+[Command]
+public record CreateOrder(List<OrderItem> Items)
 {
     public (OrderCreated, OrderConfirmation) Handle()
     {
@@ -288,30 +290,13 @@ public record CreateOrderCommand(List<OrderItem> Items)
 }
 
 // Less useful: Generic return values
-public record CreateSimpleOrderCommand()
+[Command]
+public record CreateSimpleOrder()
 {
     public (OrderCreated, bool) Handle()
     {
         return (new OrderCreated(), true); // What does true mean?
     }
-}
-```### Event Source ID Consistency
-
-When returning event source IDs in tuples, ensure they align with your aggregate boundaries:
-
-```csharp
-// Good: Consistent with aggregate boundary
-public async Task<(CustomerCreated, EventSourceId)> Handle(CreateCustomerCommand command)
-{
-    var customerId = EventSourceId.New();
-    return (new CustomerCreated { Name = command.Name }, customerId);
-}
-
-// Consider: Does this make sense for your domain?
-public async Task<(OrderItemAdded, EventSourceId)> Handle(AddItemCommand command)
-{
-    // Returning a new event source ID for adding an item to existing order
-    // might not align with aggregate boundaries
 }
 ```
 
@@ -324,7 +309,8 @@ Command handlers should not throw exceptions for business rule violations. Inste
 ```csharp
 using Cratis.Applications.Validation;
 
-public record TransferFundsCommand([Key] Guid AccountId, decimal Amount, Guid ToAccountId)
+[Command]
+public record TransferFunds([Key] Guid AccountId, decimal Amount, Guid ToAccountId)
 {
     public OneOf<ValidationResult, (FundsTransferred, TransferResult)> Handle(Account account, AccountSummary summary)
     {
@@ -353,7 +339,8 @@ For commands that return single events, use `OneOf<ValidationResult, Event>`:
 ```csharp
 using Cratis.Applications.Validation;
 
-public record CreateUserCommand(string Email, string Name)
+[Command]
+public record CreateUser(string Email, string Name)
 {
     public OneOf<ValidationResult, UserCreated> Handle(IUserService userService)
     {
@@ -385,7 +372,8 @@ For commands that return multiple events, use `OneOf<ValidationResult, IEnumerab
 ```csharp
 using Cratis.Applications.Validation;
 
-public record ProcessOrderCommand([Key] Guid OrderId)
+[Command]
+public record ProcessOrder([Key] Guid OrderId)
 {
     public OneOf<ValidationResult, IEnumerable<object>> Handle(Order order, OrderSummary summary)
     {
@@ -417,45 +405,13 @@ public record ProcessOrderCommand([Key] Guid OrderId)
 }
 ```
 
-#### Working with OneOf Results
-
-When calling command handlers that return `OneOf<>`, you can handle the results using pattern matching:
-
-```csharp
-var command = new TransferFundsCommand(accountId, 500m, toAccountId);
-var result = command.Handle(account, summary);
-
-result.Switch(
-    validationResult =>
-    {
-        // Handle validation failure
-        Console.WriteLine($"Validation failed: {validationResult.Message}");
-    },
-    success =>
-    {
-        // Handle successful transfer
-        var (transferredEvent, transferResult) = success;
-        Console.WriteLine($"Transfer successful. New balance: {transferResult.NewBalance:C}");
-        // Process the event...
-    }
-);
-```
-
-Or use the `Match` method to return a value:
-
-```csharp
-var message = result.Match(
-    validationResult => validationResult.Message,
-    success => "Transfer completed successfully"
-);
-```
-
 ## Advanced Scenarios
 
 ### Conditional Event Generation
 
 ```csharp
-public record ProcessOrderCommand([Key] Guid OrderId)
+[Command]
+public record ProcessOrder([Key] Guid OrderId)
 {
     public IEnumerable<object> Handle(Order order, OrderSummary summary)
     {
@@ -483,7 +439,8 @@ public record ProcessOrderCommand([Key] Guid OrderId)
 ### Dynamic Response Types
 
 ```csharp
-public record FlexibleCommand(string Data, bool ReturnEvent, bool ReturnMultiple, bool ReturnTuple, string ResponseValue)
+[Command]
+public record Flexible(string Data, bool ReturnEvent, bool ReturnMultiple, bool ReturnTuple, string ResponseValue)
 {
     public object Handle()
     {

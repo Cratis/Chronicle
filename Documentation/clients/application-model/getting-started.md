@@ -64,9 +64,11 @@ public record UserRegistered(string Email, string Name);
 ```csharp
 // Commands/RegisterUserCommand.cs
 using System.ComponentModel.DataAnnotations;
+using Cratis.Applications.Commands.ModelBound;
 using Cratis.Chronicle.Events;
 
-public record RegisterUserCommand(
+[Command]
+public record RegisterUser(
     [Key] EventSourceId UserId,
     string Email,
     string Name)
