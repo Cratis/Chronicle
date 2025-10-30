@@ -13,35 +13,29 @@ public class WebhookTarget
     /// Gets or sets the URL to send the events to.
     /// </summary>
     [ProtoMember(1)]
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets <see cref="AuthenticationType"/> to use.
+    /// Gets or sets the basic authorization.
     /// </summary>
     [ProtoMember(2)]
-    public AuthenticationType Authentication { get; set; } = AuthenticationType.None;
+    public BasicAuthorization? BasicAuthorization { get; set; }
 
     /// <summary>
-    /// Gets or sets optional the username.
+    /// Gets or sets the bearer token authorization.
     /// </summary>
     [ProtoMember(3)]
-    public string? Username { get; set; }
+    public BearerTokenAuthorization? BearerTokenAuthorization { get; set; }
 
     /// <summary>
-    /// Gets or sets optional the password.
+    /// Gets or sets the OAuth authorization.
     /// </summary>
     [ProtoMember(4)]
-    public string? Password { get; set; }
-
-    /// <summary>
-    /// Gets or sets the optional bearer token.
-    /// </summary>
-    [ProtoMember(5)]
-    public string? BearerToken { get; set; }
+    public OAuthAuthorization? OAuthAuthorization { get; set; }
 
     /// <summary>
     /// Gets or sets the headers.
     /// </summary>
-    [ProtoMember(6, IsRequired = true)]
+    [ProtoMember(5, IsRequired = true)]
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
 }

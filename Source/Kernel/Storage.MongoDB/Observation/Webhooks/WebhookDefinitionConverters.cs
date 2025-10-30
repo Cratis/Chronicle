@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable IDE0005 // Using directive is unnecessary
+
 using Cratis.Chronicle.Concepts.Events;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 
@@ -43,21 +46,59 @@ public static class WebhookDefinitionConverters
             definition.Target.ToKernel(),
             definition.IsReplayable);
 
-    static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target) => new(
-        target.Url,
-        target.Authentication,
-        target.Username,
-        target.Passsword,
-        target.BearerToken,
-        target.Headers.AsReadOnly());
-
-    static WebhookTarget ToMongoDB(this Concepts.Observation.Webhooks.WebhookTarget target) => new()
+    static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
-        Url = target.Url,
-        Authentication = target.Authentication,
-        BearerToken = target.BearerToken,
-        Passsword = target.Password,
-        Username = target.Username,
-        Headers = target.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-    };
+        OneOf.OneOf<Concepts.Observation.Webhooks.BasicAuthorization, Concepts.Observation.Webhooks.BearerTokenAuthorization, Concepts.Observation.Webhooks.OAuthAuthorization, None> authorization;
+
+        if (target.BasicAuthorizationUsername is not null && target.BasicAuthorizationPassword is not null)
+        {
+            authorization = new Concepts.Observation.Webhooks.BasicAuthorization(target.BasicAuthorizationUsername, target.BasicAuthorizationPassword);
+        }
+        else if (target.BearerToken is not null)
+        {
+            authorization = new Concepts.Observation.Webhooks.BearerTokenAuthorization(target.BearerToken);
+        }
+        else if (target.OAuthAuthority is not null && target.OAuthClientId is not null && target.OAuthClientSecret is not null)
+        {
+            authorization = new Concepts.Observation.Webhooks.OAuthAuthorization(
+                target.OAuthAuthority,
+                target.OAuthClientId,
+                target.OAuthClientSecret);
+        }
+        else
+        {
+            authorization = default(None);
+        }
+
+        return new(
+            target.Url,
+            authorization,
+            target.Headers.AsReadOnly());
+    }
+
+    static WebhookTarget ToMongoDB(this Concepts.Observation.Webhooks.WebhookTarget target)
+    {
+        var mongoTarget = new WebhookTarget
+        {
+            Url = target.Url,
+            Headers = target.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+        };
+
+        target.Authorization.Switch(
+            basic =>
+            {
+                mongoTarget.BasicAuthorizationUsername = basic.Username;
+                mongoTarget.BasicAuthorizationPassword = basic.Password;
+            },
+            bearer => mongoTarget.BearerToken = bearer.Token,
+            oauth =>
+            {
+                mongoTarget.OAuthAuthority = oauth.Authority;
+                mongoTarget.OAuthClientId = oauth.ClientId;
+                mongoTarget.OAuthClientSecret = oauth.ClientSecret;
+            },
+            none => { });
+
+        return mongoTarget;
+    }
 }

@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable IDE0005 // Using directive is unnecessary
+
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using OneOf.Types;
 
 namespace Cratis.Chronicle.Services.Observation.Webhooks;
 
@@ -42,40 +45,61 @@ internal static class WebhookDefinitionConverters
             Target = webhookDefinition.Target.ToContract()
         };
 
-    static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target) =>
-        new(
+    static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
+    {
+        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, None> authorization;
+        if (target.BasicAuthorization is not null)
+        {
+            authorization = new BasicAuthorization(target.BasicAuthorization.Username, target.BasicAuthorization.Password);
+        }
+        else if (target.BearerTokenAuthorization is not null)
+        {
+            authorization = new BearerTokenAuthorization(target.BearerTokenAuthorization.Token);
+        }
+        else if (target.OAuthAuthorization is not null)
+        {
+            authorization = new OAuthAuthorization(
+                target.OAuthAuthorization.Authority,
+                target.OAuthAuthorization.ClientId,
+                target.OAuthAuthorization.ClientSecret);
+        }
+        else
+        {
+            authorization = default(None);
+        }
+
+        return new(
             target.Url,
-            target.Authentication.ToChronicle(),
-            target.Username,
-            target.Password,
-            target.BearerToken,
+            authorization,
             target.Headers.AsReadOnly());
+    }
 
-    static Contracts.Observation.Webhooks.WebhookTarget ToContract(this WebhookTarget target) =>
-        new()
+    static Contracts.Observation.Webhooks.WebhookTarget ToContract(this WebhookTarget target)
+    {
+        var contractTarget = new Contracts.Observation.Webhooks.WebhookTarget
         {
-            Authentication = target.Authentication.ToContract(),
-            BearerToken = target.BearerToken,
             Headers = target.Headers.ToDictionary(),
-            Password = target.Password,
-            Url = target.Url,
-            Username = target.Username
+            Url = target.Url
         };
 
-    static AuthenticationType ToChronicle(this Contracts.Observation.Webhooks.AuthenticationType authenticationType) =>
-        authenticationType switch
-        {
-            Contracts.Observation.Webhooks.AuthenticationType.None => AuthenticationType.None,
-            Contracts.Observation.Webhooks.AuthenticationType.Basic => AuthenticationType.Basic,
-            Contracts.Observation.Webhooks.AuthenticationType.Bearer => AuthenticationType.Bearer,
-            _ => (AuthenticationType)authenticationType
-        };
-    static Contracts.Observation.Webhooks.AuthenticationType ToContract(this AuthenticationType authenticationType) =>
-        authenticationType switch
-        {
-            AuthenticationType.None => Contracts.Observation.Webhooks.AuthenticationType.None,
-            AuthenticationType.Basic => Contracts.Observation.Webhooks.AuthenticationType.Basic,
-            AuthenticationType.Bearer => Contracts.Observation.Webhooks.AuthenticationType.Bearer,
-            _ => (Contracts.Observation.Webhooks.AuthenticationType)authenticationType
-        };
+        target.Authorization.Switch(
+            basic => contractTarget.BasicAuthorization = new Contracts.Observation.Webhooks.BasicAuthorization
+            {
+                Username = basic.Username,
+                Password = basic.Password
+            },
+            bearer => contractTarget.BearerTokenAuthorization = new Contracts.Observation.Webhooks.BearerTokenAuthorization
+            {
+                Token = bearer.Token
+            },
+            oauth => contractTarget.OAuthAuthorization = new Contracts.Observation.Webhooks.OAuthAuthorization
+            {
+                Authority = oauth.Authority,
+                ClientId = oauth.ClientId,
+                ClientSecret = oauth.ClientSecret
+            },
+            none => { });
+
+        return contractTarget;
+    }
 }

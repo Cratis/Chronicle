@@ -27,17 +27,15 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IW
             client.BaseAddress = uri;
         }
 
-        switch (webhookTarget.Authentication)
-        {
-            case AuthenticationType.Basic when webhookTarget.Username is not null && webhookTarget.Password is not null:
-                var basic = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{webhookTarget.Username}:{webhookTarget.Password}"));
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);
-                break;
-
-            case AuthenticationType.Bearer when webhookTarget.BearerToken is not null:
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", webhookTarget.BearerToken);
-                break;
-        }
+        webhookTarget.Authorization.Switch(
+            basic =>
+            {
+                var value = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{basic.Username}:{basic.Password}"));
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", value);
+            },
+            bearer => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Token),
+            oAuth => throw new NotImplementedException(),
+            none => { });
 
         foreach (var header in webhookTarget.Headers)
         {

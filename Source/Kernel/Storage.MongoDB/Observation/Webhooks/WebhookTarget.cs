@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation.Webhooks;
-
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 
 /// <summary>
@@ -16,24 +14,34 @@ public class WebhookTarget
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the <see cref="AuthenticationType"/>.
+    /// Gets or sets the basic authorization username.
     /// </summary>
-    public AuthenticationType Authentication { get; set; } = AuthenticationType.None;
+    public string? BasicAuthorizationUsername { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional username.
+    /// Gets or sets the basic authorization password.
     /// </summary>
-    public string? Username { get; set; } = string.Empty;
+    public string? BasicAuthorizationPassword { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional password.
+    /// Gets or sets the bearer token.
     /// </summary>
-    public string? Passsword { get; set; } = string.Empty;
+    public string? BearerToken { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional bearer token.
+    /// Gets or sets the OAuth authority.
     /// </summary>
-    public string? BearerToken { get; set; } = string.Empty;
+    public string? OAuthAuthority { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OAuth client ID.
+    /// </summary>
+    public string? OAuthClientId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OAuth client secret.
+    /// </summary>
+    public string? OAuthClientSecret { get; set; }
 
     /// <summary>
     /// Gets or sets the headers.

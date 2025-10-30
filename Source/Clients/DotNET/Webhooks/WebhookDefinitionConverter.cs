@@ -30,6 +30,7 @@ internal static class WebhookDefinitionConverter
         new()
         {
             Url = target.Url.Value,
+            
             Authentication = target.Authentication.ToContract(),
             BearerToken = target.BearerToken,
             Headers = target.Headers.ToDictionary(_ => _.Key, _ => _.Value),
@@ -37,12 +38,4 @@ internal static class WebhookDefinitionConverter
             Username = target.Username
         };
 
-    static Contracts.Observation.Webhooks.AuthenticationType ToContract(this AuthenticationType authentication) =>
-        authentication switch
-        {
-            AuthenticationType.None => Contracts.Observation.Webhooks.AuthenticationType.None,
-            AuthenticationType.Basic => Contracts.Observation.Webhooks.AuthenticationType.Basic,
-            AuthenticationType.Bearer => Contracts.Observation.Webhooks.AuthenticationType.Bearer,
-            _ => throw new ArgumentOutOfRangeException(nameof(authentication), authentication, null)
-        };
 }
