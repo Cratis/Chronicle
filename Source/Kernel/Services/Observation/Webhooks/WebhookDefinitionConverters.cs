@@ -47,9 +47,7 @@ internal static class WebhookDefinitionConverters
 
     static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, None> authorization;
-
-        authorization = target.Authorization switch
+        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, None> authorization = target.Authorization switch
         {
             null => default(None),
             var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),

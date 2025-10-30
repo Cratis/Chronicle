@@ -40,7 +40,6 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
         return this;
     }
 
-
     /// <inheritdoc/>
     public IWebhookDefinitionBuilder WithHeader(string key, string value)
     {
