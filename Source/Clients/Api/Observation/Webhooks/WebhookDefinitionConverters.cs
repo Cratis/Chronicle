@@ -55,21 +55,21 @@ internal static class WebhookDefinitionConverters
         };
 
         target.Authorization.Switch(
-            basic => contractTarget.BasicAuthorization = new Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
+            basic => contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
             {
                 Username = basic.Username,
                 Password = basic.Password
-            },
-            bearer => contractTarget.BearerTokenAuthorization = new Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
+            }),
+            bearer => contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
             {
                 Token = bearer.Token
-            },
-            oauth => contractTarget.OAuthAuthorization = new Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
+            }),
+            oauth => contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
                 ClientSecret = oauth.ClientSecret
-            },
+            }),
             none => { });
 
         return contractTarget;
@@ -77,27 +77,17 @@ internal static class WebhookDefinitionConverters
 
     static WebhookTarget ToApi(this Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> authorization;
-
-        if (target.BasicAuthorization is not null)
+        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> authorization = target.Authorization switch
         {
-            authorization = new BasicAuthorization(target.BasicAuthorization.Username, target.BasicAuthorization.Password);
-        }
-        else if (target.BearerTokenAuthorization is not null)
-        {
-            authorization = new BearerTokenAuthorization(target.BearerTokenAuthorization.Token);
-        }
-        else if (target.OAuthAuthorization is not null)
-        {
-            authorization = new OAuthAuthorization(
-                target.OAuthAuthorization.Authority,
-                target.OAuthAuthorization.ClientId,
-                target.OAuthAuthorization.ClientSecret);
-        }
-        else
-        {
-            authorization = default(OneOf.Types.None);
-        }
+            null => default(OneOf.Types.None),
+            var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
+            var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
+            var auth when auth.Value2 is not null => new OAuthAuthorization(
+                auth.Value2.Authority,
+                auth.Value2.ClientId,
+                auth.Value2.ClientSecret),
+            _ => default(OneOf.Types.None)
+        };
 
         return new(
             target.Url,

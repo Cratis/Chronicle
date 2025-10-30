@@ -16,26 +16,14 @@ public class WebhookTarget
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the basic authorization.
+    /// Gets or sets the authorization.
     /// </summary>
     [ProtoMember(2)]
-    public BasicAuthorization? BasicAuthorization { get; set; }
-
-    /// <summary>
-    /// Gets or sets the bearer token authorization.
-    /// </summary>
-    [ProtoMember(3)]
-    public BearerTokenAuthorization? BearerTokenAuthorization { get; set; }
-
-    /// <summary>
-    /// Gets or sets the OAuth authorization.
-    /// </summary>
-    [ProtoMember(4)]
-    public OAuthAuthorization? OAuthAuthorization { get; set; }
+    public OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? Authorization { get; set; }
 
     /// <summary>
     /// Gets or sets the headers.
     /// </summary>
-    [ProtoMember(5, IsRequired = true)]
+    [ProtoMember(3, IsRequired = true)]
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
 }

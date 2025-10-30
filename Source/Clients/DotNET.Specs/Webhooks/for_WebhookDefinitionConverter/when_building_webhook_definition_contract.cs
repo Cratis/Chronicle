@@ -55,11 +55,11 @@ public class when_building_webhook_definition_contract : Specification
     void should_map_target_url() => _contract.Target.Url.ShouldEqual(_target.Url.Value);
 
     [Fact]
-    void should_not_have_basic_authorization() => _contract.Target.BasicAuthorization.ShouldBeNull();
+    void should_not_have_basic_authorization() => _contract.Target.Authorization.Value0.ShouldBeNull();
 
     [Fact]
-    void should_not_have_bearer_token_authorization() => _contract.Target.BearerTokenAuthorization.ShouldBeNull();
+    void should_not_have_bearer_token_authorization() => _contract.Target.Authorization.Value1.ShouldBeNull();
 
     [Fact]
-    void should_not_have_oauth_authorization() => _contract.Target.OAuthAuthorization.ShouldBeNull();
+    void should_not_have_oauth_authorization() => _contract.Target.Authorization.Value2.ShouldBeNull();
 }
