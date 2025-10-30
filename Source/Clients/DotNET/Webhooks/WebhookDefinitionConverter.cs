@@ -26,16 +26,33 @@ internal static class WebhookDefinitionConverter
             Target = definition.Target.ToContract()
         };
 
-    static Contracts.Observation.Webhooks.WebhookTarget ToContract(this WebhookTarget target) =>
-        new()
+    static Contracts.Observation.Webhooks.WebhookTarget ToContract(this WebhookTarget target)
+    {
+        var contractTarget = new Contracts.Observation.Webhooks.WebhookTarget
         {
             Url = target.Url.Value,
-            
-            Authentication = target.Authentication.ToContract(),
-            BearerToken = target.BearerToken,
-            Headers = target.Headers.ToDictionary(_ => _.Key, _ => _.Value),
-            Password = target.Password,
-            Username = target.Username
+            Headers = target.Headers.ToDictionary(_ => _.Key, _ => _.Value)
         };
+
+        target.Authorization.Switch(
+            basic => contractTarget.BasicAuthorization = new Contracts.Observation.Webhooks.BasicAuthorization
+            {
+                Username = basic.Username,
+                Password = basic.Password
+            },
+            bearer => contractTarget.BearerTokenAuthorization = new Contracts.Observation.Webhooks.BearerTokenAuthorization
+            {
+                Token = bearer.Token
+            },
+            oauth => contractTarget.OAuthAuthorization = new Contracts.Observation.Webhooks.OAuthAuthorization
+            {
+                Authority = oauth.Authority,
+                ClientId = oauth.ClientId,
+                ClientSecret = oauth.ClientSecret
+            },
+            none => { });
+
+        return contractTarget;
+    }
 
 }

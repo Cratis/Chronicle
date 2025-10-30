@@ -4,7 +4,6 @@
 #pragma warning disable IDE0005 // Using directive is unnecessary
 
 using Cratis.Chronicle.Concepts.Events;
-using OneOf.Types;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 
@@ -48,26 +47,26 @@ public static class WebhookDefinitionConverters
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
-        OneOf.OneOf<Concepts.Observation.Webhooks.BasicAuthorization, Concepts.Observation.Webhooks.BearerTokenAuthorization, Concepts.Observation.Webhooks.OAuthAuthorization, None> authorization;
+        OneOf.OneOf<Concepts.Observation.Webhooks.BasicAuthorization, Concepts.Observation.Webhooks.BearerTokenAuthorization, Concepts.Observation.Webhooks.OAuthAuthorization, OneOf.Types.None> authorization;
 
-        if (target.BasicAuthorizationUsername is not null && target.BasicAuthorizationPassword is not null)
+        if (target.BasicAuthorization is not null)
         {
-            authorization = new Concepts.Observation.Webhooks.BasicAuthorization(target.BasicAuthorizationUsername, target.BasicAuthorizationPassword);
+            authorization = new Concepts.Observation.Webhooks.BasicAuthorization(target.BasicAuthorization.Username, target.BasicAuthorization.Password);
         }
-        else if (target.BearerToken is not null)
+        else if (target.BearerTokenAuthorization is not null)
         {
-            authorization = new Concepts.Observation.Webhooks.BearerTokenAuthorization(target.BearerToken);
+            authorization = new Concepts.Observation.Webhooks.BearerTokenAuthorization(target.BearerTokenAuthorization.Token);
         }
-        else if (target.OAuthAuthority is not null && target.OAuthClientId is not null && target.OAuthClientSecret is not null)
+        else if (target.OAuthAuthorization is not null)
         {
             authorization = new Concepts.Observation.Webhooks.OAuthAuthorization(
-                target.OAuthAuthority,
-                target.OAuthClientId,
-                target.OAuthClientSecret);
+                target.OAuthAuthorization.Authority,
+                target.OAuthAuthorization.ClientId,
+                target.OAuthAuthorization.ClientSecret);
         }
         else
         {
-            authorization = default(None);
+            authorization = default(OneOf.Types.None);
         }
 
         return new(
@@ -85,17 +84,20 @@ public static class WebhookDefinitionConverters
         };
 
         target.Authorization.Switch(
-            basic =>
+            basic => mongoTarget.BasicAuthorization = new BasicAuthorization
             {
-                mongoTarget.BasicAuthorizationUsername = basic.Username;
-                mongoTarget.BasicAuthorizationPassword = basic.Password;
+                Username = basic.Username,
+                Password = basic.Password
             },
-            bearer => mongoTarget.BearerToken = bearer.Token,
-            oauth =>
+            bearer => mongoTarget.BearerTokenAuthorization = new BearerTokenAuthorization
             {
-                mongoTarget.OAuthAuthority = oauth.Authority;
-                mongoTarget.OAuthClientId = oauth.ClientId;
-                mongoTarget.OAuthClientSecret = oauth.ClientSecret;
+                Token = bearer.Token
+            },
+            oauth => mongoTarget.OAuthAuthorization = new OAuthAuthorization
+            {
+                Authority = oauth.Authority,
+                ClientId = oauth.ClientId,
+                ClientSecret = oauth.ClientSecret
             },
             none => { });
 

@@ -14,34 +14,19 @@ public class WebhookTarget
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the basic authorization username.
+    /// Gets or sets the basic authorization.
     /// </summary>
-    public string? BasicAuthorizationUsername { get; set; }
+    public BasicAuthorization? BasicAuthorization { get; set; }
 
     /// <summary>
-    /// Gets or sets the basic authorization password.
+    /// Gets or sets the bearer token authorization.
     /// </summary>
-    public string? BasicAuthorizationPassword { get; set; }
+    public BearerTokenAuthorization? BearerTokenAuthorization { get; set; }
 
     /// <summary>
-    /// Gets or sets the bearer token.
+    /// Gets or sets the OAuth authorization.
     /// </summary>
-    public string? BearerToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the OAuth authority.
-    /// </summary>
-    public string? OAuthAuthority { get; set; }
-
-    /// <summary>
-    /// Gets or sets the OAuth client ID.
-    /// </summary>
-    public string? OAuthClientId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the OAuth client secret.
-    /// </summary>
-    public string? OAuthClientSecret { get; set; }
+    public OAuthAuthorization? OAuthAuthorization { get; set; }
 
     /// <summary>
     /// Gets or sets the headers.

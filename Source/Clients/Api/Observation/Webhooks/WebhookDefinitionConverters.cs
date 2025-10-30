@@ -77,7 +77,7 @@ internal static class WebhookDefinitionConverters
 
     static WebhookTarget ToApi(this Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, None> authorization;
+        OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> authorization;
 
         if (target.BasicAuthorization is not null)
         {
@@ -96,7 +96,7 @@ internal static class WebhookDefinitionConverters
         }
         else
         {
-            authorization = default(None);
+            authorization = default(OneOf.Types.None);
         }
 
         return new(

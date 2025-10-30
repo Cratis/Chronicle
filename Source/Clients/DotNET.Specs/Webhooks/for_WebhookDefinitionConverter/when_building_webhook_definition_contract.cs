@@ -21,10 +21,7 @@ public class when_building_webhook_definition_contract : Specification
         _eventType = new EventType("EventType", EventTypeGeneration.First);
         _target = new WebhookTarget(
             new WebhookTargetUrl("https://example.test/webhook"),
-            AuthenticationType.None,
-            null,
-            null,
-            null,
+            default(OneOf.Types.None),
             new Dictionary<string, string>());
 
         _definition = new WebhookDefinition(
@@ -58,6 +55,11 @@ public class when_building_webhook_definition_contract : Specification
     void should_map_target_url() => _contract.Target.Url.ShouldEqual(_target.Url.Value);
 
     [Fact]
-    void should_map_authentication_type() => _contract.Target.Authentication.ShouldEqual(
-        Contracts.Observation.Webhooks.AuthenticationType.None);
+    void should_not_have_basic_authorization() => _contract.Target.BasicAuthorization.ShouldBeNull();
+
+    [Fact]
+    void should_not_have_bearer_token_authorization() => _contract.Target.BearerTokenAuthorization.ShouldBeNull();
+
+    [Fact]
+    void should_not_have_oauth_authorization() => _contract.Target.OAuthAuthorization.ShouldBeNull();
 }
