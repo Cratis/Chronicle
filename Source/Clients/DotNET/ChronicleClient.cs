@@ -107,7 +107,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         EventStoreName name,
         EventStoreNamespaceName? @namespace = null)
     {
-        @namespace ??= EventStoreNamespaceName.Default;
+        @namespace ??= Options.EventStoreNamespaceProvider.GetNamespace();
         var key = new EventStoreKey(name, @namespace);
         if (_eventStores.TryGetValue(key, out var eventStore))
         {
