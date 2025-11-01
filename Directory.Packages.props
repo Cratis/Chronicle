@@ -21,12 +21,12 @@
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="7.2.1" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.2.1" />
-        <PackageVersion Include="Cratis.Applications" Version="17.22.0" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.21.2" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.22.0" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.21.2" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.21.2" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.22.0" />
+        <PackageVersion Include="Cratis.Applications" Version="17.22.4" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.22.4" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.22.4" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.22.4" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.22.4" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.22.4" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.1" />
@@ -67,7 +67,7 @@
         <PackageVersion Include="castle.core" Version="5.2.1" />
         <PackageVersion Include="docfx.console" Version="2.59.4" />
         <PackageVersion Include="humanizer" Version="2.14.1" />
-        <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="2.0.44">
+        <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="2.0.43">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageVersion>
