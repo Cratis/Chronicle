@@ -1,6 +1,6 @@
-# Camel Casing for ASP.NET Core
+# Camel Casing Configuration
 
-When building ASP.NET Core applications that use Chronicle, you can configure Chronicle to use camel case naming policy for property names. This affects how Chronicle builds projection definitions and handles property mapping when projections update read models.
+When building applications that use Chronicle, you can configure Chronicle to use camel case naming policy for property names. This affects how Chronicle builds projection definitions and handles property mapping when projections update read models.
 
 ## Overview
 
@@ -10,7 +10,36 @@ By default, Chronicle uses property names as they appear in C# (PascalCase). How
 - Determine the property names used when projections update read models
 - Ensure consistent naming conventions across your Chronicle-based application
 
-## Configuration
+## Using a Regular Client
+
+If you're building a console application or service that uses Chronicle directly, you can configure the client with camel case naming policy by passing options.
+
+### Simple Configuration
+
+```csharp
+var options = new ChronicleOptions();
+options.WithCamelCaseNamingPolicy();
+
+var client = new ChronicleClient(options);
+```
+
+### Configuration with Additional Options
+
+You can combine camel case naming policy with other Chronicle configuration options:
+
+```csharp
+var options = new ChronicleOptions
+{
+    EventStore = "MyEventStore"
+};
+options.WithCamelCaseNamingPolicy();
+
+var client = new ChronicleClient(options);
+```
+
+## Using ASP.NET Core
+
+When building ASP.NET Core applications, use the dependency injection extensions to configure Chronicle with camel case naming policy.
 
 ### Basic Configuration
 
@@ -28,7 +57,7 @@ builder.AddCratisChronicle(options =>
 var app = builder.Build();
 ```
 
-### Advanced Configuration with Additional Options
+### Dependency Injection Configuration
 
 You can combine camel case naming policy with other Chronicle configuration options:
 
