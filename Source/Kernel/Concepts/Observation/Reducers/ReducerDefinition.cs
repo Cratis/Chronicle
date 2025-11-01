@@ -19,5 +19,5 @@ public record ReducerDefinition(
     ReducerId Identifier,
     EventSequenceId EventSequenceId,
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
-    ReadModelName ReadModel,
+    ReadModelIdentifier ReadModel,
     SinkDefinition Sink);

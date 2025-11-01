@@ -19,7 +19,7 @@ public class when_getting_event_stores(context context) : Given<context>(context
 
         async Task Because()
         {
-            Result = await Client.ExecuteQuery("/api/event-stores");
+            Result = await Client.ExecuteQuery<IEnumerable<string>>("/api/event-stores");
             Data = Result.Data as IEnumerable<string>;
         }
     }

@@ -21,12 +21,13 @@ public class JoinBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<
         where TParentBuilder : class
 {
     readonly IProjectionBuilder<TReadModel, TParentBuilder> _projectionBuilder = projectionBuilder;
+    readonly INamingPolicy _namingPolicy = namingPolicy;
     PropertyPath? _on;
 
     /// <inheritdoc/>
     public IJoinBuilder<TReadModel, TEvent> On<TProperty>(Expression<Func<TReadModel, TProperty>> keyAccessor)
     {
-        _on = keyAccessor.GetPropertyPath();
+        _on = _namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath());
         return this;
     }
 

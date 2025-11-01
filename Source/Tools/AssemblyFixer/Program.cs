@@ -4,6 +4,8 @@
 using Cratis.Collections;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using Orleans.Serialization.Configuration;
 
 Console.WriteLine("\nAssembly fixer\n");
 
@@ -74,6 +76,24 @@ attributesToRemove.ForEach(attribute =>
     assembly.CustomAttributes.Remove(attribute);
 });
 
+var attrCtor = assembly.MainModule.ImportReference(typeof(TypeManifestProviderAttribute).GetConstructor([typeof(Type)]));
+var systemTypeRef = assembly.MainModule.ImportReference(typeof(Type));
+
+var typeManifestProviderBaseTypes = assembly.MainModule.GetAllTypes().Where(type => type.BaseType?.Name == "TypeManifestProviderBase").ToArray();
+var typeManifestProviderAttributes = typeManifestProviderBaseTypes.Select(type =>
+{
+    var ca = new CustomAttribute(attrCtor);
+    ca.ConstructorArguments.Add(new CustomAttributeArgument(systemTypeRef, type));
+
+    return ca;
+});
+
+foreach (var attribute in typeManifestProviderAttributes)
+{
+    Console.WriteLine($"Adding TypeManifestProviderAttribute for '{attribute.ConstructorArguments[0].Value}'");
+    assembly.CustomAttributes.Add(attribute);
+}
+
 if (referencesToRemove.Length > 0)
 {
     Console.WriteLine("Removing references");
@@ -101,3 +121,5 @@ var tempPdbPath = Path.ChangeExtension(tempAssemblyPath, ".pdb");
 var assemblyPdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
 File.Copy(tempAssemblyPath, assemblyPath, true);
 File.Copy(tempPdbPath, assemblyPdbPath, true);
+
+// Orleans.Serialization.Configuration.TypeManifestProviderAttribute

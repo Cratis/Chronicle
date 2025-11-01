@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -40,7 +41,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected bool _autoMap = autoMap;
-    protected string _readModelName = namingPolicy.GetReadModelName(typeof(TReadModel));
+    protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
     /// <inheritdoc/>
     public TBuilder WithInitialValues(Func<TReadModel> initialValueProviderCallback)
@@ -118,7 +119,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback)
     {
-        var builder = new FromEveryBuilder<TReadModel>();
+        var builder = new FromEveryBuilder<TReadModel>(namingPolicy);
         builderCallback(builder);
         var fromEveryDefinition = builder.Build();
         _fromEveryDefinition = new FromEveryDefinition
@@ -140,7 +141,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         }
 
         var removedWithEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithBuilder = new RemovedWithBuilder<TReadModel, TEvent>();
+        var removedWithBuilder = new RemovedWithBuilder<TReadModel, TEvent>(namingPolicy);
         builderCallback?.Invoke(removedWithBuilder);
         _removedWithDefinitions[removedWithEvent] = removedWithBuilder.Build();
 
@@ -158,7 +159,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         }
 
         var removedWithJoinEvent = eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
-        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TReadModel, TEvent>();
+        var removedWithJoinBuilder = new RemovedWithJoinBuilder<TReadModel, TEvent>(namingPolicy);
         builderCallback?.Invoke(removedWithJoinBuilder);
         _removedWithJoinDefinitions[removedWithJoinEvent] = removedWithJoinBuilder.Build();
 
@@ -170,7 +171,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     {
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
         builderCallback(builder);
-        _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
+        _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
         return (this as TBuilder)!;
     }
 }

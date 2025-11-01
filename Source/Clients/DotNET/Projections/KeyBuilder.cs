@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
-public class KeyBuilder<TEvent, TBuilder> : IKeyBuilder<TEvent, TBuilder>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class KeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IKeyBuilder<TEvent, TBuilder>
     where TBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -25,21 +27,21 @@ public class KeyBuilder<TEvent, TBuilder> : IKeyBuilder<TEvent, TBuilder>
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _keyExpression = new EventContentPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _keyExpression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        _keyExpression = new EventContextPropertyExpression(keyAccessor.GetPropertyPath()).Build();
+        _keyExpression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
     {
-        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
+        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>(namingPolicy);
         builderCallback(compositeKeyBuilder);
         _keyExpression = compositeKeyBuilder.Build();
         return (this as TBuilder)!;

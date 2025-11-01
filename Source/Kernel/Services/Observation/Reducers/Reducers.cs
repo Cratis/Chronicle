@@ -52,7 +52,11 @@ internal sealed class Reducers(
         ConcurrentDictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
         IReducer? clientObserver = null;
 
-        var model = new ReadModelDefinition(ReadModelName.NotSet, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema>());
+        var model = new ReadModelDefinition(
+            ReadModelIdentifier.NotSet,
+            ReadModelName.NotSet,
+            ReadModelOwner.None,
+            new Dictionary<ReadModelGeneration, JsonSchema>());
 
         messages.Subscribe(message =>
         {

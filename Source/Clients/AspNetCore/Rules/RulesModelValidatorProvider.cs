@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Rules;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,7 +36,8 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
     /// <inheritdoc/>
     public void CreateValidators(ModelValidatorProviderContext context)
     {
-        var rulesSystem = ServiceProvider.GetRequiredService<IRules>();
+        var httpContextAccessor = ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+        var rulesSystem = httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<IRules>();
         if (rulesSystem.HasFor(context.ModelMetadata.ModelType))
         {
             var ruleTypes = rulesSystem.GetFor(context.ModelMetadata.ModelType);

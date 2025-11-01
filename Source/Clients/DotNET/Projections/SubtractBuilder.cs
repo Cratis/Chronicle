@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -15,7 +16,8 @@ namespace Cratis.Chronicle.Projections;
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
-public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : ISubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, INamingPolicy namingPolicy) : ISubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
     where TParentBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TParentBuilder>
 {
     string _expression = string.Empty;
@@ -26,7 +28,7 @@ public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TPar
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        _expression = $"$subtract({eventPropertyAccessor.GetPropertyPath()})";
+        _expression = $"$subtract({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
         return parent;
     }
 

@@ -34,7 +34,7 @@ public record ProjectionDefinition(
     ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
     ProjectionId Identifier,
-    ReadModelName ReadModel,
+    ReadModelIdentifier ReadModel,
     bool IsActive,
     bool IsRewindable,
     JsonObject InitialModelState,

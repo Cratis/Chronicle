@@ -33,7 +33,7 @@ public record ChildrenDefinition(
         ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,
         ProjectionId.Unspecified,
-        ReadModelName.NotSet,
+        ReadModelIdentifier.NotSet,
         true,
         false,
         new JsonObject(),

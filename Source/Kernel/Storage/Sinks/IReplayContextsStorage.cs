@@ -21,14 +21,14 @@ public interface IReplayContextsStorage
     /// <summary>
     /// Try to get the replay context for a given observer.
     /// </summary>
-    /// <param name="readModel">The <see cref="ReadModelName"/> to get the context for.</param>
+    /// <param name="readModel">The <see cref="ReadModelIdentifier"/> to get the context for.</param>
     /// <returns><see cref="Result"/> of either the <see cref="ReplayContext"/> or an error.</returns>
-    Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelName readModel);
+    Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel);
 
     /// <summary>
     /// Remove a replay context.
     /// </summary>
-    /// <param name="readModel">The <see cref="ReadModelName"/> to get the context for.</param>
+    /// <param name="readModel">The <see cref="ReadModelIdentifier"/> to get the context for.</param>
     /// <returns>Awaitable task.</returns>
-    Task Remove(ReadModelName readModel);
+    Task Remove(ReadModelIdentifier readModel);
 }

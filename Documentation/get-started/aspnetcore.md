@@ -22,9 +22,11 @@ Start by creating a folder for your project and then create a .NET web project i
 dotnet new web
 ```
 
-Add a reference to the [Chronicle ASP.NET Core package](https://www.nuget.org/packages/Cratis.Chronicle.AspNetCore):
+Add a reference to the [Chronicle package](https://www.nuget.org/packages/Cratis.Chronicle) and
+[Chronicle ASP.NET Core package](https://www.nuget.org/packages/Cratis.Chronicle.AspNetCore):
 
 ```shell
+dotnet add package Cratis.Chronicle
 dotnet add package Cratis.Chronicle.AspNetCore
 ```
 
@@ -77,13 +79,6 @@ builder.Services
 
 The first statement adds service bindings by convention, which is basically any service that implements an interface with the same name only prefixed with `I` will be automatically registered (`IFoo` -> `Foo`). The second statement automatically registers all
 class instances as themselves, meaning you can then take dependencies to concrete types without having to register them.
-
-You might run into issues with the Microsoft service provider not validating these correctly. Depending on your setup you
-might want to ignore the validation errors that will happen at runtime. This can be done by adding the following code:
-
-{{snippet:Quickstart-AspNetCore-ServiceValidation}}
-
-The code turns of validation of wrong scoping of dependencies and general validation when it is building the service provider.
 
 [!INCLUDE [common](./mongodb.md)]
 

@@ -70,13 +70,19 @@ public static class HttpClientExtensions
     /// <param name="client">The http client.</param>
     /// <param name="requestUri">The request uri string.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static async Task<QueryResult?> ExecuteQuery(this HttpClient client, string requestUri)
+    /// <typeparam name="TData">The type of the data.</typeparam>
+    public static async Task<QueryResult?> ExecuteQuery<TData>(this HttpClient client, string requestUri)
     {
         var response = await DoQuery(client, requestUri);
         QueryResult? queryResult = null;
         try
         {
             queryResult = await response.Content.ReadFromJsonAsync<QueryResult>(options: Globals.JsonSerializerOptions);
+
+            if (queryResult?.Data is JsonElement jsonElement && typeof(TData) != typeof(object))
+            {
+                queryResult.Data = jsonElement.Deserialize<TData>(Globals.JsonSerializerOptions)!;
+            }
         }
         catch
         {

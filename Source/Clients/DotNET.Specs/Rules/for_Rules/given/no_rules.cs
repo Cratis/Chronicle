@@ -10,7 +10,6 @@ public class no_rules : all_dependencies
     protected Rules rules;
 
     void Establish() => rules = new(
-        _jsonSerializerOptions,
         new DefaultNamingPolicy(),
         _projections,
         _clientArtifacts);

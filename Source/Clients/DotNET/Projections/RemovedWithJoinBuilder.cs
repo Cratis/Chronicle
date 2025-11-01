@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -10,7 +11,9 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-public class RemovedWithJoinBuilder<TReadModel, TEvent> : KeyBuilder<TEvent, RemovedWithJoinBuilder<TReadModel, TEvent>>, IRemovedWithJoinBuilder<TReadModel, TEvent, RemovedWithJoinBuilder<TReadModel, TEvent>>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class RemovedWithJoinBuilder<TReadModel, TEvent>(INamingPolicy namingPolicy)
+    : KeyBuilder<TEvent, RemovedWithJoinBuilder<TReadModel, TEvent>>(namingPolicy), IRemovedWithJoinBuilder<TReadModel, TEvent, RemovedWithJoinBuilder<TReadModel, TEvent>>
 {
     /// <summary>
     /// Build the removed with join definition.

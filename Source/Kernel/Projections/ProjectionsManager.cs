@@ -27,7 +27,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
         foreach (var definition in definitions)
         {
             _definitions[eventStore] = definition;
-            var readModel = readModelDefinitions.Single(rm => rm.Name == definition.ReadModel);
+            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
             foreach (var @namespace in namespaces)
             {
                 var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
@@ -43,7 +43,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
         foreach (var definition in _definitions.Values)
         {
             var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
-            var readModel = readModelDefinitions.Single(rm => rm.Name == definition.ReadModel);
+            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
             if (!_projections.ContainsKey(key))
             {
                 _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel);

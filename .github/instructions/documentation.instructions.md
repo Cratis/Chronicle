@@ -9,11 +9,27 @@ applyTo: "Documentation/**/*.md"
 - Use [GitHub Flavored Markdown](https://github.github.com/gfm/) for additional features.
 - Use [Mermaid](https://mermaid-js.github.io/mermaid/#/) for diagrams.
 - Use [PlantUML](https://plantuml.com/) for UML diagrams.
-- Site is build using [DocFX](https://dotnet.github.io/docfx/).
+- Site is built using [DocFX](https://dotnet.github.io/docfx/).
 - Follow the [DocFX Markdown](https://dotnet.github.io/docfx/markdown/) guidelines for additional syntax.
 - Generate and maintain correct [DocFX TOC files](https://dotnet.github.io/docfx/docs/dotnet-yaml-format.html) for navigation.
 - Be consistent with formatting and style.
 - Use clear and concise language.
+- Be concise and to the point.
+- Be specific and avoid ambiguity.
+- Use examples and code snippets to illustrate concepts.
+- Do not add extraneous information.
+- Do not document the obvious.
+- Do not add documentation for internal or private APIs.
+- Do not document internal implementation details.
+- Focus on the public APIs and features of the project.
+- Do not document third party libraries or tools.
+- Use active voice and present tense.
+- Use proper grammar and spelling.
+- Use a friendly and approachable tone.
+- Create focused and well-scoped documents.
+- Use consistent terminology throughout the documentation.
+- Follow a logical structure and flow.
+- Don't be too verbose.
 - Use headings, lists, and code blocks to organize content.
 - Include links to relevant resources and references.
 - Always add an index.md file in each folder to serve as the landing page.
@@ -21,3 +37,9 @@ applyTo: "Documentation/**/*.md"
 - Use relative links for internal documentation references.
 - Ensure all links are valid and up-to-date.
 - Use images and diagrams to enhance understanding.
+- Emphasize why something is done, not just how.
+- Always end the generated markdown with a single empty line as the last line of the file content. This newline must be included directly in the markdown text when creating or editing files, not added through separate commands.
+- Never use shell commands or external tools to modify files after writing them. All content, including any trailing newlines, must be part of the file content when using file creation or editing tools.
+- Every folder should have its own `toc.yml` file to define the structure of the documentation within that folder.
+- When linking to a folder in a `toc.yml` file, link to the `toc.yml` file in that folder, not to an `index.md` file.
+- Ensure that documentation is accurate according to the public APIs and features of the project.

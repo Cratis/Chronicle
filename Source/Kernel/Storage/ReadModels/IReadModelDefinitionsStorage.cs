@@ -19,23 +19,23 @@ public interface IReadModelDefinitionsStorage
     /// <summary>
     /// Checks if a read model definition exists by its name.
     /// </summary>
-    /// <param name="name">The name of the read model definition.</param>
+    /// <param name="identifier">The identifier of the read model definition.</param>
     /// <returns>True if it exists, false otherwise.</returns>
-    Task<bool> Has(ReadModelName name);
+    Task<bool> Has(ReadModelIdentifier identifier);
 
     /// <summary>
     /// Gets a specific read model definition by its name.
     /// </summary>
-    /// <param name="name">The name of the read model definition.</param>
+    /// <param name="identifier">The identifier of the read model definition.</param>
     /// <returns>The read model definition.</returns>
-    Task<ReadModelDefinition> Get(ReadModelName name);
+    Task<ReadModelDefinition> Get(ReadModelIdentifier identifier);
 
     /// <summary>
     /// Deletes a read model definition by its name.
     /// </summary>
-    /// <param name="name">The name of the read model definition to delete.</param>
+    /// <param name="identifier">The identifier of the read model definition to delete.</param>
     /// <returns>An awaitable task.</returns>
-    Task Delete(ReadModelName name);
+    Task Delete(ReadModelIdentifier identifier);
 
     /// <summary>
     /// Saves a read model definition.

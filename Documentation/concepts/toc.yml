@@ -16,3 +16,5 @@
   href: projection.md
 - name: Constraints
   href: constraints.md
+- name: Event Metadata Tags
+  href: event-metadata-tags.md

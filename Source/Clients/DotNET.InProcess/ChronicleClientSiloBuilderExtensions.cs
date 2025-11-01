@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
@@ -41,12 +40,12 @@ public static class ChronicleClientSiloBuilderExtensions
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
-    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
+    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="Cratis.Chronicle.Configuration.IChronicleBuilder"/>.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddCratisChronicle(
         this ISiloBuilder builder,
-        Action<IChronicleBuilder>? configureChronicle = default,
+        Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default,
         string? configSection = default)
     {
         builder.ConfigureServices(services => AddOptions(services)
@@ -62,12 +61,12 @@ public static class ChronicleClientSiloBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
     /// <param name="configureOptions">Callback for providing options.</param>
-    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
+    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="Cratis.Chronicle.Configuration.IChronicleBuilder"/>.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddCratisChronicle(
         this ISiloBuilder builder,
         Action<ChronicleOrleansInProcessOptions> configureOptions,
-        Action<IChronicleBuilder>? configureChronicle = default)
+        Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default)
     {
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
         ConfigureChronicle(builder, configureChronicle);
@@ -90,7 +89,7 @@ public static class ChronicleClientSiloBuilderExtensions
         return builder;
     }
 
-    static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
+    static void ConfigureChronicle(this ISiloBuilder builder, Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default)
     {
         // Add Chronicle to the silo as the first thing we do, order matters - this is especially important for the different call filters.
         builder.AddChronicleToSilo(configureChronicle);

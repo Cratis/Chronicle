@@ -21,11 +21,11 @@ class AllEventSequencesSortByWithoutQuery {
 
 }
 
-export interface AllEventSequencesArguments {
+export interface AllEventSequencesParameters {
     eventStore: string;
 }
 
-export class AllEventSequences extends QueryFor<string[], AllEventSequencesArguments> {
+export class AllEventSequences extends QueryFor<string[], AllEventSequencesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/sequences';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
@@ -37,7 +37,7 @@ export class AllEventSequences extends QueryFor<string[], AllEventSequencesArgum
         this._sortBy = new AllEventSequencesSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
@@ -51,11 +51,11 @@ export class AllEventSequences extends QueryFor<string[], AllEventSequencesArgum
         return this._sortBy;
     }
 
-    static use(args?: AllEventSequencesArguments, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery<AllEventSequencesArguments>, SetSorting] {
-        return useQuery<string[], AllEventSequences, AllEventSequencesArguments>(AllEventSequences, args, sorting);
+    static use(args?: AllEventSequencesParameters, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery<AllEventSequencesParameters>, SetSorting] {
+        return useQuery<string[], AllEventSequences, AllEventSequencesParameters>(AllEventSequences, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllEventSequencesArguments, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllEventSequencesParameters, sorting?: Sorting): [QueryResultWithState<string[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<string[], AllEventSequences>(AllEventSequences, new Paging(0, pageSize), args, sorting);
     }
 }

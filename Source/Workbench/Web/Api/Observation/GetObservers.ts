@@ -103,12 +103,12 @@ class GetObserversSortByWithoutQuery {
     }
 }
 
-export interface GetObserversArguments {
+export interface GetObserversParameters {
     eventStore: string;
     namespace: string;
 }
 
-export class GetObservers extends QueryFor<ObserverInformation[], GetObserversArguments> {
+export class GetObservers extends QueryFor<ObserverInformation[], GetObserversParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
@@ -120,7 +120,7 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversAr
         this._sortBy = new GetObserversSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
@@ -135,11 +135,11 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversAr
         return this._sortBy;
     }
 
-    static use(args?: GetObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery<GetObserversArguments>, SetSorting] {
-        return useQuery<ObserverInformation[], GetObservers, GetObserversArguments>(GetObservers, args, sorting);
+    static use(args?: GetObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery<GetObserversParameters>, SetSorting] {
+        return useQuery<ObserverInformation[], GetObservers, GetObserversParameters>(GetObservers, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: GetObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: GetObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<ObserverInformation[], GetObservers>(GetObservers, new Paging(0, pageSize), args, sorting);
     }
 }

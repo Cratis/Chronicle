@@ -6,7 +6,6 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Rules;
-using Cratis.Execution;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,12 +37,19 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
-            var connection = sp.GetService<IChronicleConnection>();
+            IChronicleConnection? connection = null;
+            try
+            {
+                connection = sp.GetService<IChronicleConnection>();
+            }
+            catch { }
+
             options.ServiceProvider = sp;
             options.IdentityProvider = new IdentityProvider(
                                 sp.GetRequiredService<IHttpContextAccessor>(),
                                 sp.GetRequiredService<ILogger<IdentityProvider>>());
             options.LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
             return connection is null ?
                 new ChronicleClient(options) :
                 new ChronicleClient(connection, options);
@@ -82,10 +88,6 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped<IRules, Rules>();
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.NamingPolicy);
-
-        // We're hardcoding the CorrelationId accessor here, as it is not available in the ChronicleAspNetCoreOptions anyways, and registering it dynamically causes a
-        // circular dependency in the DI container.
-        services.AddSingleton<ICorrelationIdAccessor>(sp => new CorrelationIdAccessor());
 
         return services;
     }
