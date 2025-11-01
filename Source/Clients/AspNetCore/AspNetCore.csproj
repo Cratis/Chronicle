@@ -6,7 +6,8 @@
         <RootNamespace>Cratis.Chronicle.AspNetCore</RootNamespace>
     </PropertyGroup>
 
-    <Target Name="BuildDependencies">
+    <Target Name="BuildDependencies" DependsOnTargets="ResolveProjectReferences">
+        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);Repack=true" />
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
     </Target>
@@ -17,6 +18,10 @@
         <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' == 'true'">
+        <NoWarn>$(NoWarn);NU1603</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess"/>
     </ItemGroup>
@@ -25,8 +30,18 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' == 'true'">
+    <ItemGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' == ''">
         <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' == 'false'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true' and '$(IsPackaging)' == 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
     </ItemGroup>
 
