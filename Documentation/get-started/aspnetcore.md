@@ -26,7 +26,6 @@ Add a reference to the [Chronicle package](https://www.nuget.org/packages/Cratis
 [Chronicle ASP.NET Core package](https://www.nuget.org/packages/Cratis.Chronicle.AspNetCore):
 
 ```shell
-dotnet add package Cratis.Chronicle
 dotnet add package Cratis.Chronicle.AspNetCore
 ```
 
