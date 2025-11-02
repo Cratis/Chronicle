@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <summary>
 /// Represents an empty event cursor for methods not yet implemented.
 /// </summary>
-internal class EmptyEventCursor : IEventCursor
+internal sealed class EmptyEventCursor : IEventCursor
 {
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Current { get; } = [];

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -13,8 +12,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// </summary>
 public static class EventSequenceStateEntryConverter
 {
-
-
     /// <summary>
     /// Convert from <see cref="EventSequenceState"/> to <see cref="EventSequenceStateEntry"/>.
     /// </summary>

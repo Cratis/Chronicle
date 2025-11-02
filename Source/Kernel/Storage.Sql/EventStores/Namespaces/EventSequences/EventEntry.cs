@@ -34,7 +34,7 @@ public class EventEntry
 
     /// <summary>
     /// Gets or sets the serialized caused by chain.
-    /// /// </summary>
+    /// </summary>
     public string CausedBy { get; set; } = string.Empty;
 
     /// <summary>

@@ -21,6 +21,7 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
     readonly RecommendationConverter _converter = new();
     readonly Subject<IEnumerable<RecommendationState>> _recommendationsSubject = new();
 
+    /// <inheritdoc/>
     public async Task<RecommendationState?> Get(RecommendationId recommendationId)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
@@ -28,6 +29,7 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
         return entity is not null ? _converter.ToRecommendationState(entity) : null;
     }
 
+    /// <inheritdoc/>
     public async Task Save(RecommendationId recommendationId, RecommendationState recommendationState)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
@@ -47,6 +49,7 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
         _recommendationsSubject.OnNext(await GetAllInternal());
     }
 
+    /// <inheritdoc/>
     public async Task Remove(RecommendationId recommendationId)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
@@ -59,11 +62,13 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
         }
     }
 
+    /// <inheritdoc/>
     public async Task<IImmutableList<RecommendationState>> GetAll()
     {
         return (await GetAllInternal()).ToImmutableList();
     }
 
+    /// <inheritdoc/>
     public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations()
     {
         return _recommendationsSubject;
