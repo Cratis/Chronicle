@@ -7,16 +7,16 @@ using Microsoft.Extensions.Options;
 namespace Cratis.Chronicle.AspNetCore;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventStoreNamespaceProvider"/> that resolves the namespace from an HTTP header.
+/// Represents an implementation of <see cref="IEventStoreNamespaceResolver"/> that resolves the namespace from an HTTP header.
 /// </summary>
 /// <param name="httpContextAccessor">The <see cref="IHttpContextAccessor"/> for accessing the current HTTP context.</param>
 /// <param name="options">The <see cref="Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions"/> containing the header name configuration.</param>
-public class HttpHeaderEventStoreNamespaceProvider(
+public class HttpHeaderEventStoreNamespaceResolver(
     IHttpContextAccessor httpContextAccessor,
-    IOptions<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions> options) : IEventStoreNamespaceProvider
+    IOptions<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions> options) : IEventStoreNamespaceResolver
 {
     /// <inheritdoc/>
-    public EventStoreNamespaceName GetNamespace()
+    public EventStoreNamespaceName Resolve()
     {
         var headerName = options.Value.NamespaceHttpHeader;
         if (httpContextAccessor.HttpContext?.Request.Headers.TryGetValue(headerName, out var values) ?? false)

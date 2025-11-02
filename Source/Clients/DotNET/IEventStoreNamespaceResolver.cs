@@ -4,13 +4,13 @@
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Defines a system that can provide the event store namespace to use.
+/// Defines a system that can resolve the event store namespace to use.
 /// </summary>
-public interface IEventStoreNamespaceProvider
+public interface IEventStoreNamespaceResolver
 {
     /// <summary>
-    /// Gets the current event store namespace.
+    /// Resolves the current event store namespace.
     /// </summary>
     /// <returns>The <see cref="EventStoreNamespaceName"/> to use.</returns>
-    EventStoreNamespaceName GetNamespace();
+    EventStoreNamespaceName Resolve();
 }

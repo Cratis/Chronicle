@@ -6,11 +6,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
-namespace Cratis.Chronicle.for_HttpHeaderEventStoreNamespaceProvider;
+namespace Cratis.Chronicle.for_HttpHeaderEventStoreNamespaceResolver;
 
-public class when_getting_namespace_with_header_present : Specification
+public class when_resolving_with_header_present : Specification
 {
-    HttpHeaderEventStoreNamespaceProvider _provider;
+    HttpHeaderEventStoreNamespaceResolver _resolver;
     IHttpContextAccessor _httpContextAccessor;
     IOptions<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions> _options;
     EventStoreNamespaceName _result;
@@ -37,10 +37,10 @@ public class when_getting_namespace_with_header_present : Specification
             NamespaceHttpHeader = "x-cratis-tenant-id"
         });
 
-        _provider = new HttpHeaderEventStoreNamespaceProvider(_httpContextAccessor, _options);
+        _resolver = new HttpHeaderEventStoreNamespaceResolver(_httpContextAccessor, _options);
     }
 
-    void Because() => _result = _provider.GetNamespace();
+    void Because() => _result = _resolver.Resolve();
 
     [Fact] void should_return_namespace_from_header() => _result.ShouldEqual(_expectedNamespace);
 }

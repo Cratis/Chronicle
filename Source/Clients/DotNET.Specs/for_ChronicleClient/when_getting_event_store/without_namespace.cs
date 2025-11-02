@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.for_ChronicleClient.when_getting_event_store;
 
 public class without_namespace : Specification
 {
-    IEventStoreNamespaceProvider _namespaceProvider;
+    IEventStoreNamespaceResolver _namespaceResolver;
     EventStoreNamespaceName _customNamespace;
     ChronicleOptions _options;
     ChronicleClient _client;
@@ -13,12 +13,12 @@ public class without_namespace : Specification
     void Establish()
     {
         _customNamespace = "CustomNamespace";
-        _namespaceProvider = Substitute.For<IEventStoreNamespaceProvider>();
-        _namespaceProvider.GetNamespace().Returns(_customNamespace);
+        _namespaceResolver = Substitute.For<IEventStoreNamespaceResolver>();
+        _namespaceResolver.Resolve().Returns(_customNamespace);
 
         _options = new ChronicleOptions
         {
-            EventStoreNamespaceProvider = _namespaceProvider,
+            EventStoreNamespaceResolver = _namespaceResolver,
             AutoDiscoverAndRegister = false
         };
 
@@ -27,5 +27,5 @@ public class without_namespace : Specification
 
     void Because() => _ = _client.GetEventStore("TestStore");
 
-    [Fact] void should_call_namespace_provider() => _namespaceProvider.Received(1).GetNamespace();
+    [Fact] void should_call_namespace_resolver() => _namespaceResolver.Received(1).Resolve();
 }
