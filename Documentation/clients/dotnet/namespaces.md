@@ -54,14 +54,15 @@ var options = new ChronicleOptions
     Url = "http://localhost:9007"
 }.WithClaimsBasedNamespaceResolver(); // Uses default claim type "tenant_id"
 
-// Or specify a custom claim type
+// Or configure a custom claim type
 var options = new ChronicleOptions
 {
-    Url = "http://localhost:9007"
-}.WithClaimsBasedNamespaceResolver("custom_tenant_claim");
+    Url = "http://localhost:9007",
+    ClaimsBasedNamespaceResolverClaimType = "custom_tenant_claim"
+}.WithClaimsBasedNamespaceResolver();
 ```
 
-The resolver looks for the specified claim in the current principal's claims and returns its value as the namespace. If the claim is not found or the user is not authenticated, it returns the default namespace.
+The resolver looks for the specified claim in the current principal's claims and returns its value as the namespace. If the claim is not found or the user is not authenticated, it returns the default namespace. The claim type is configured via the `ClaimsBasedNamespaceResolverClaimType` property, which defaults to "tenant_id".
 
 ### Custom Resolvers
 
@@ -104,10 +105,10 @@ For multi-tenant applications where tenant information is available in user clai
 var options = new ChronicleOptions
 {
     Url = "http://localhost:9007"
-}.WithClaimsBasedNamespaceResolver("tenant_id");
+}.WithClaimsBasedNamespaceResolver();
 ```
 
-This will automatically extract the tenant identifier from the user's claims and use it as the namespace.
+This will automatically extract the tenant identifier from the user's claims and use it as the namespace. By default, it looks for a claim named "tenant_id", but you can configure a different claim type via the `ClaimsBasedNamespaceResolverClaimType` property.
 
 ### Custom Business Logic
 

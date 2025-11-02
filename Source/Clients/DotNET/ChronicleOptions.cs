@@ -123,6 +123,12 @@ public class ChronicleOptions(
     public ILoggerFactory LoggerFactory { get; set; } = loggerFactory ?? new LoggerFactory();
 
     /// <summary>
+    /// Gets or sets the claim type to use for claims-based namespace resolution.
+    /// This is used by the <see cref="ClaimsBasedNamespaceResolver"/> when configured via the WithClaimsBasedNamespaceResolver extension method.
+    /// </summary>
+    public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
