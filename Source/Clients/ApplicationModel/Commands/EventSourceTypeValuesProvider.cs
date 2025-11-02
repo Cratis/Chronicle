@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Commands;
-using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Applications.Commands;
 

@@ -49,80 +49,15 @@ These handlers automatically append events to the event log using the event sour
 
 Commands can be decorated with metadata attributes that provide additional context when events are appended. This metadata helps organize and categorize events for better querying and processing.
 
-### Available Metadata Attributes
+Chronicle supports the following event metadata:
 
-Chronicle supports the following event metadata attributes:
+- **[Event Source Type](event-source-type.md)** - Specifies the overarching entity or domain concept (e.g., "Account", "Customer")
+- **[Event Stream Type](event-stream-type.md)** - Identifies the specific process or workflow (e.g., "Onboarding", "Transactions")
+- **[Event Stream ID](event-stream-id.md)** - Provides a marker for separating independent streams (e.g., "Monthly", "Yearly")
 
-- **EventSourceType**: Specifies the overarching entity or domain concept (e.g., "Account", "Customer")
-- **EventStreamType**: Identifies the specific process or workflow (e.g., "Onboarding", "Transactions")
-- **EventStreamId**: Provides a marker for separating independent streams (e.g., "Monthly", "Yearly")
+For complete details on using these metadata attributes, including code examples and best practices, see the dedicated documentation pages linked above.
 
-### Using Metadata Attributes
-
-Simply decorate your command with the desired metadata attributes:
-
-```csharp
-[EventSourceType("Account")]
-[EventStreamType("Onboarding")]
-[EventStreamId("Monthly")]
-public record ProcessAccountOnboardingCommand([Key] Guid AccountId)
-{
-    public AccountOnboardingProcessed Handle()
-    {
-        return new AccountOnboardingProcessed
-        {
-            ProcessedAt = DateTime.UtcNow
-        };
-    }
-}
-```
-
-All events generated from this command will automatically be tagged with the specified metadata.
-
-### Dynamic Event Stream ID
-
-For scenarios where the event stream ID needs to be determined at runtime, implement the `ICanProvideEventStreamId` interface:
-
-```csharp
-[EventSourceType("Order")]
-[EventStreamType("Processing")]
-public record ProcessTenantOrderCommand(Guid TenantId, [Key] Guid OrderId) 
-    : ICanProvideEventStreamId
-{
-    public EventStreamId GetEventStreamId() => TenantId.ToString();
-
-    public TenantOrderProcessed Handle()
-    {
-        return new TenantOrderProcessed
-        {
-            TenantId = TenantId,
-            OrderId = OrderId,
-            ProcessedAt = DateTime.UtcNow
-        };
-    }
-}
-```
-
-**Important**: You must use either the `[EventStreamId]` attribute or the `ICanProvideEventStreamId` interface, but not both. Using both will throw an `AmbiguousEventStreamId` exception.
-
-### How Metadata Works
-
-The Application Model client uses specialized value providers to extract metadata from commands:
-
-1. `EventSourceTypeValuesProvider` - Extracts event source type from the `[EventSourceType]` attribute
-2. `EventStreamTypeValuesProvider` - Extracts event stream type from the `[EventStreamType]` attribute
-3. `EventStreamIdValuesProvider` - Extracts event stream ID from the `[EventStreamId]` attribute or `ICanProvideEventStreamId` interface
-
-These values are stored in the command context and automatically included when events are appended to the event log.
-
-### Learn More
-
-For detailed information about each metadata type:
-
-- [Event Source Type](event-source-type.md) - Learn about event source types
-- [Event Stream Type](event-stream-type.md) - Understand event stream types
-- [Event Stream ID](event-stream-id.md) - Explore event stream identifiers
-- [Event Metadata Tags](../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
+See also: [Event Metadata Tags](../../concepts/event-metadata-tags.md) for a complete overview of metadata tags in Chronicle.
 
 ## Single Event Responses
 
