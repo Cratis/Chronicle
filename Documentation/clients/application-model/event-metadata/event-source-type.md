@@ -19,6 +19,30 @@ public record CreateAccountCommand(string AccountNumber, string Name);
 
 This ensures that all events generated from this command will be tagged with the "Account" event source type.
 
+### Concurrency Control
+
+The `[EventSourceType]` attribute also supports a `concurrency` parameter for optimistic concurrency control:
+
+```csharp
+[EventSourceType("Account", concurrency: true)]
+public record CreateAccountCommand(string AccountNumber, string Name)
+{
+    public AccountCreated Handle()
+    {
+        return new AccountCreated
+        {
+            AccountNumber = AccountNumber,
+            Name = Name,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+When `concurrency: true` is set, the event source type is included in the concurrency scope during event appending, providing validation for concurrent operations. This is useful when you need to ensure events for a specific source type are appended in a consistent order.
+
+For more details on concurrency scopes, see [Event Stream ID - Concurrency Scope](event-stream-id.md#concurrency-scope).
+
 ## How It Works
 
 The Application Model client uses the `EventSourceTypeValuesProvider` to automatically extract the event source type from commands decorated with the attribute. This value is then stored in the command context and passed along when appending events to the event log.

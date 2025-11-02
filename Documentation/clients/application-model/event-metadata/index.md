@@ -33,7 +33,7 @@ Event Stream Type represents a concrete process or workflow related to an event 
 
 ## Event Stream ID
 
-Event Stream ID provides a marker to separate independent streams within a stream type. It allows you to create logical partitions for events, such as "Monthly", "Yearly", "RegionA", or "TenantX". You can provide event stream IDs using either the `[EventStreamId]` attribute or by implementing the `ICanProvideEventStreamId` interface.
+Event Stream ID provides a marker to separate independent streams within a stream type. It allows you to create logical partitions for events, such as "Monthly", "Yearly", "RegionA", or "TenantX". You can provide event stream IDs using either the `[EventStreamId]` attribute or by implementing the `ICanProvideEventStreamId` interface. Event metadata attributes also support a `concurrency` parameter for fine-grained concurrency control.
 
 [Read more about Event Stream ID →](event-stream-id.md)
 
@@ -56,6 +56,29 @@ public record CompleteAccountOnboardingCommand([Key] Guid AccountId)
     }
 }
 ```
+
+## Concurrency Control with Event Metadata
+
+Event metadata attributes support a `concurrency` parameter that enables fine-grained optimistic concurrency control. When set to `true`, the metadata value is included in the concurrency scope during event appending:
+
+```csharp
+[EventStreamId("Priority", concurrency: true)]
+[EventStreamType("OrderProcessing", concurrency: true)]
+public record ProcessPriorityOrderCommand([Key] Guid OrderId)
+{
+    public PriorityOrderProcessed Handle()
+    {
+        return new PriorityOrderProcessed
+        {
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+This ensures that concurrent append operations on the same stream are properly validated, preventing race conditions. By default, concurrency is `false`, meaning metadata is used only for categorization and not for concurrency validation.
+
+[Learn more about concurrency scopes in Event Stream ID documentation →](event-stream-id.md#concurrency-scope)
 
 ## Best Practices
 
