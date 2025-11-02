@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReducerPipeline"/> class.
 /// </remarks>
-/// <param name="readModel">The <see cref="Concepts.ReadModels.ReadModelDefinition"/> the sink is for.</param>
+/// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 public class ReducerPipeline(

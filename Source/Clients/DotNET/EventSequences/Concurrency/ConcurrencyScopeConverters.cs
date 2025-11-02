@@ -16,12 +16,12 @@ internal static class ConcurrencyScopeConverters
     /// <param name="scope"><see cref="ConcurrencyScope"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
     internal static Contracts.EventSequences.Concurrency.ConcurrencyScope ToContract(this ConcurrencyScope scope) => new()
-        {
-            SequenceNumber = scope.SequenceNumber.Value,
-            EventSourceId = scope.EventSourceId is not null,
-            EventStreamType = scope.EventStreamType?.Value,
-            EventStreamId = scope.EventStreamId?.Value,
-            EventSourceType = scope.EventSourceType?.Value,
-            EventTypes = scope.EventTypes?.ToContract()
-        };
+    {
+        SequenceNumber = scope.SequenceNumber.Value,
+        EventSourceId = scope.EventSourceId is not null,
+        EventStreamType = scope.EventStreamType?.Value,
+        EventStreamId = scope.EventStreamId?.Value,
+        EventSourceType = scope.EventSourceType?.Value,
+        EventTypes = scope.EventTypes?.ToContract()
+    };
 }

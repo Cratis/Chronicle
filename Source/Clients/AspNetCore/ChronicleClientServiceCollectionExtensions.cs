@@ -34,7 +34,7 @@ public static class ChronicleClientServiceCollectionExtensions
     public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-        services.AddScoped<IEventStoreNamespaceResolver>(sp =>
+        services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
 

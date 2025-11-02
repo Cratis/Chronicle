@@ -14,7 +14,7 @@ public interface IEventSequenceOperations
     /// <summary>
     /// Gets the event sequence that these operations are associated with.
     /// </summary>
-    IEventSequence EventSequence { get;  }
+    IEventSequence EventSequence { get; }
 
     /// <summary>
     /// Configures operations for a specific event source identified by <paramref name="eventSourceId"/>.

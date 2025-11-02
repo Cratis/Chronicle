@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.Observation.Reducers;
 public interface IReducerPipeline
 {
     /// <summary>
-    /// Gets the <see cref="Concepts.ReadModels.ReadModelDefinition"/> the pipeline is for.
+    /// Gets the <see cref="ReadModelDefinition"/> the pipeline is for.
     /// </summary>
     ReadModelDefinition ReadModel { get; }
 
