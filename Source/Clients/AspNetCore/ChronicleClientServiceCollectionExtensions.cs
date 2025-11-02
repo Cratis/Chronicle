@@ -46,7 +46,14 @@ public static class ChronicleClientServiceCollectionExtensions
             }
 
             // Otherwise, use the configured type (which defaults to HttpHeaderEventStoreNamespaceResolver)
-            return (IEventStoreNamespaceResolver)ActivatorUtilities.CreateInstance(sp, options.EventStoreNamespaceResolverType);
+            var resolverType = options.EventStoreNamespaceResolverType ?? throw new InvalidOperationException("EventStoreNamespaceResolverType cannot be null");
+
+            if (!typeof(IEventStoreNamespaceResolver).IsAssignableFrom(resolverType))
+            {
+                throw new InvalidOperationException($"Type '{resolverType.FullName}' must implement IEventStoreNamespaceResolver");
+            }
+
+            return (IEventStoreNamespaceResolver)ActivatorUtilities.CreateInstance(sp, resolverType);
         });
         services.AddSingleton<IChronicleClient>(sp =>
         {
