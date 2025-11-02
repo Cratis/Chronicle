@@ -4,6 +4,7 @@
 using Cratis.Applications.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Applications.Commands;
 
@@ -27,14 +28,48 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
         var events = (IEnumerable<object>)value;
         if (events.Any())
         {
+            var concurrencyScope = BuildConcurrencyScope(commandContext);
             await eventLog.AppendMany(
                 eventSourceId,
                 events,
                 commandContext.GetEventStreamType(),
                 commandContext.GetEventStreamId(),
-                commandContext.GetEventSourceType());
+                commandContext.GetEventSourceType(),
+                correlationId: default,
+                concurrencyScope: concurrencyScope);
         }
 
         return CommandResult.Success(commandContext.CorrelationId);
+    }
+
+    static ConcurrencyScope? BuildConcurrencyScope(CommandContext commandContext)
+    {
+        var commandType = commandContext.Command.GetType();
+
+        var eventStreamIdAttribute = commandType.GetCustomAttributes(typeof(EventStreamIdAttribute), false).FirstOrDefault() as EventStreamIdAttribute;
+        var eventStreamTypeAttribute = commandType.GetCustomAttributes(typeof(EventStreamTypeAttribute), false).FirstOrDefault() as EventStreamTypeAttribute;
+        var eventSourceTypeAttribute = commandType.GetCustomAttributes(typeof(EventSourceTypeAttribute), false).FirstOrDefault() as EventSourceTypeAttribute;
+
+        var hasAnyConcurrencyMetadata =
+            (eventStreamIdAttribute?.Concurrency ?? false) ||
+            (eventStreamTypeAttribute?.Concurrency ?? false) ||
+            (eventSourceTypeAttribute?.Concurrency ?? false);
+
+        if (!hasAnyConcurrencyMetadata)
+        {
+            return null;
+        }
+
+        var eventStreamId = (eventStreamIdAttribute?.Concurrency ?? false) ? commandContext.GetEventStreamId() : null;
+        var eventStreamType = (eventStreamTypeAttribute?.Concurrency ?? false) ? commandContext.GetEventStreamType() : null;
+        var eventSourceType = (eventSourceTypeAttribute?.Concurrency ?? false) ? commandContext.GetEventSourceType() : null;
+
+        return new ConcurrencyScope(
+            EventSequenceNumber.Unavailable,
+            EventSourceId: null,
+            EventStreamType: eventStreamType,
+            EventStreamId: eventStreamId,
+            EventSourceType: eventSourceType,
+            EventTypes: null);
     }
 }

@@ -15,6 +15,11 @@ public record EventStreamId(string Value) : ConceptAs<string>(Value)
     public static readonly string Default = "Default";
 
     /// <summary>
+    /// Gets the representation of a not set <see cref="EventStreamId"/>.
+    /// </summary>
+    public static readonly EventStreamId NotSet = new(string.Empty);
+
+    /// <summary>
     /// Check whether or not the <see cref="EventStreamId"/> is the default.
     /// </summary>
     public bool IsDefault => this != Default;

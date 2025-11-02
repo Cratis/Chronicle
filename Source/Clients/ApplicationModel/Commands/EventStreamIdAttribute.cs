@@ -8,12 +8,18 @@ namespace Cratis.Chronicle.Applications.Commands;
 /// <summary>
 /// Attribute to specify the event stream id for a command.
 /// </summary>
-/// <param name="value">The event stream id value.</param>
+/// <param name="value">The event stream id value. Optional - if null, the value should be provided via ICanProvideEventStreamId interface.</param>
+/// <param name="concurrency">Whether to include this metadata in the concurrency scope when appending events. Default is false.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
-public sealed class EventStreamIdAttribute(string value) : Attribute
+public sealed class EventStreamIdAttribute(string? value = null, bool concurrency = false) : Attribute
 {
     /// <summary>
     /// Gets the event stream id value.
     /// </summary>
-    public EventStreamId Value { get; } = value;
+    public EventStreamId Value { get; } = value ?? EventStreamId.NotSet;
+
+    /// <summary>
+    /// Gets a value indicating whether this metadata should be included in the concurrency scope.
+    /// </summary>
+    public bool Concurrency { get; } = concurrency;
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Commands;
+using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Applications.Commands;
 
@@ -17,7 +18,7 @@ public class EventStreamIdValuesProvider : ICommandContextValuesProvider
         var attribute = commandType.GetCustomAttributes(typeof(EventStreamIdAttribute), false).FirstOrDefault() as EventStreamIdAttribute;
         var implementsInterface = command is ICanProvideEventStreamId;
 
-        if (attribute is not null && implementsInterface)
+        if (attribute is not null && attribute.Value != EventStreamId.NotSet && implementsInterface)
         {
             throw new AmbiguousEventStreamId(commandType);
         }
@@ -31,7 +32,7 @@ public class EventStreamIdValuesProvider : ICommandContextValuesProvider
             };
         }
 
-        if (attribute is not null)
+        if (attribute is not null && attribute.Value != EventStreamId.NotSet)
         {
             return new CommandContextValues
             {
