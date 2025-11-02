@@ -44,6 +44,25 @@ var options = new ChronicleOptions
 };
 ```
 
+### ClaimsBasedNamespaceResolver
+
+Resolves the namespace from the current user's claims using `ClaimsPrincipal.Current`. This is ideal for scenarios where you need tenant resolution based on authenticated user identity without requiring HTTP context.
+
+```csharp
+var options = new ChronicleOptions
+{
+    Url = "http://localhost:9007"
+}.WithClaimsBasedNamespaceResolver(); // Uses default claim type "tenant_id"
+
+// Or specify a custom claim type
+var options = new ChronicleOptions
+{
+    Url = "http://localhost:9007"
+}.WithClaimsBasedNamespaceResolver("custom_tenant_claim");
+```
+
+The resolver looks for the specified claim in the current principal's claims and returns its value as the namespace. If the claim is not found or the user is not authenticated, it returns the default namespace.
+
 ### Custom Resolvers
 
 You can create your own resolver by implementing the `IEventStoreNamespaceResolver` interface:
@@ -79,7 +98,20 @@ var options = new ChronicleOptions
 
 ### Multi-Tenant SaaS Applications
 
-Use namespaces to isolate data for different customers or organizations:
+For multi-tenant applications where tenant information is available in user claims, use the built-in `ClaimsBasedNamespaceResolver`:
+
+```csharp
+var options = new ChronicleOptions
+{
+    Url = "http://localhost:9007"
+}.WithClaimsBasedNamespaceResolver("tenant_id");
+```
+
+This will automatically extract the tenant identifier from the user's claims and use it as the namespace.
+
+### Custom Business Logic
+
+For scenarios requiring custom business logic that isn't based on claims, implement your own resolver:
 
 ```csharp
 public class CustomerNamespaceResolver : IEventStoreNamespaceResolver
@@ -95,48 +127,6 @@ public class CustomerNamespaceResolver : IEventStoreNamespaceResolver
     {
         var customer = _contextProvider.GetCurrentCustomer();
         return customer?.Id ?? EventStoreNamespaceName.Default;
-    }
-}
-```
-
-### Environment-Based Isolation
-
-Separate data based on the deployment environment:
-
-```csharp
-public class EnvironmentNamespaceResolver : IEventStoreNamespaceResolver
-{
-    readonly IHostEnvironment _environment;
-
-    public EnvironmentNamespaceResolver(IHostEnvironment environment)
-    {
-        _environment = environment;
-    }
-
-    public EventStoreNamespaceName Resolve()
-    {
-        return _environment.EnvironmentName.ToLowerInvariant();
-    }
-}
-```
-
-### Region-Based Partitioning
-
-Partition data by geographic region:
-
-```csharp
-public class RegionNamespaceResolver : IEventStoreNamespaceResolver
-{
-    readonly IRegionProvider _regionProvider;
-
-    public RegionNamespaceResolver(IRegionProvider regionProvider)
-    {
-        _regionProvider = regionProvider;
-    }
-
-    public EventStoreNamespaceName Resolve()
-    {
-        return _regionProvider.GetCurrentRegion();
     }
 }
 ```

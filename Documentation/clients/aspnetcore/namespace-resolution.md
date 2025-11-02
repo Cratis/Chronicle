@@ -1,12 +1,12 @@
 # Namespace Resolution in ASP.NET Core
 
-The ASP.NET Core client provides flexible namespace resolution specifically designed for multi-tenant web applications. By default, it uses HTTP headers to determine the tenant/namespace, but you can configure custom resolvers to match your application's needs.
+The ASP.NET Core client provides flexible namespace resolution specifically designed for multi-tenant web applications. Chronicle includes built-in resolvers for common scenarios, or you can implement custom resolvers to match your application's needs.
 
-## Default Behavior: HTTP Header Resolution
+## Built-in Namespace Resolvers
+
+### HTTP Header Resolution (Default)
 
 The default namespace resolver in ASP.NET Core applications reads the tenant identifier from an HTTP header. This is a common pattern in multi-tenant SaaS applications where the tenant is identified in each request.
-
-### HttpHeaderEventStoreNamespaceResolver
 
 The built-in `HttpHeaderEventStoreNamespaceResolver` reads the namespace from a configurable HTTP header:
 
@@ -16,6 +16,11 @@ builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
     options.EventStore = "my-event-store";
     options.NamespaceHttpHeader = "x-cratis-tenant-id"; // Default value
 });
+
+// Or use the extension method
+builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
+    options.EventStore = "my-event-store"
+           .WithHttpHeaderNamespaceResolver("x-cratis-tenant-id"));
 ```
 
 When a request includes the configured header, that value is used as the namespace:
@@ -30,9 +35,24 @@ In this example, all Chronicle operations within this request will use the `cust
 
 If the header is not present, the default namespace is used.
 
+### Subdomain-Based Resolution
+
+The built-in `SubdomainNamespaceResolver` extracts the namespace from the subdomain of the HTTP request host. This is ideal for applications using subdomains for tenant identification (e.g., `tenant1.example.com`).
+
+```csharp
+builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
+    options.EventStore = "my-event-store"
+           .WithSubdomainNamespaceResolver());
+```
+
+With this configuration:
+- A request to `customer123.example.com` uses namespace `customer123`
+- A request to `example.com` uses the default namespace
+- A request to `www.example.com` uses the default namespace
+
 ## Configuring Custom Resolvers
 
-You can configure custom namespace resolvers in two ways: by type or by instance.
+For scenarios not covered by the built-in resolvers, you can configure custom namespace resolvers in two ways: by type or by instance.
 
 ### Type-Based Configuration
 
@@ -42,31 +62,11 @@ Configure a custom resolver type that will be instantiated with dependency injec
 builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
 {
     options.EventStore = "my-event-store";
-    options.EventStoreNamespaceResolverType = typeof(ClaimsBasedNamespaceResolver);
+    options.EventStoreNamespaceResolverType = typeof(CustomNamespaceResolver);
 });
 ```
 
-The resolver type must implement `IEventStoreNamespaceResolver` and can have dependencies injected:
-
-```csharp
-public class ClaimsBasedNamespaceResolver : IEventStoreNamespaceResolver
-{
-    readonly IHttpContextAccessor _httpContextAccessor;
-
-    public ClaimsBasedNamespaceResolver(IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
-
-    public EventStoreNamespaceName Resolve()
-    {
-        var tenantClaim = _httpContextAccessor.HttpContext?.User
-            .FindFirst("tenant_id");
-        
-        return tenantClaim?.Value ?? EventStoreNamespaceName.Default;
-    }
-}
-```
+The resolver type must implement `IEventStoreNamespaceResolver` and can have dependencies injected through the constructor.
 
 ### Instance-Based Configuration
 
@@ -82,86 +82,7 @@ builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
 
 **Note**: Instance configuration takes precedence over type configuration, unless the instance is a `DefaultEventStoreNamespaceResolver`, in which case the type configuration is used.
 
-## Common Scenarios
-
-### JWT Claims-Based Resolution
-
-Extract tenant information from JWT claims:
-
-```csharp
-public class JwtTenantResolver : IEventStoreNamespaceResolver
-{
-    readonly IHttpContextAccessor _httpContextAccessor;
-    readonly ILogger<JwtTenantResolver> _logger;
-
-    public JwtTenantResolver(
-        IHttpContextAccessor httpContextAccessor,
-        ILogger<JwtTenantResolver> logger)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _logger = logger;
-    }
-
-    public EventStoreNamespaceName Resolve()
-    {
-        var context = _httpContextAccessor.HttpContext;
-        if (context?.User?.Identity?.IsAuthenticated == true)
-        {
-            var tenantId = context.User.FindFirst("tenant_id")?.Value;
-            if (!string.IsNullOrEmpty(tenantId))
-            {
-                return tenantId;
-            }
-        }
-
-        _logger.LogWarning("No tenant found in claims, using default namespace");
-        return EventStoreNamespaceName.Default;
-    }
-}
-```
-
-Configure it:
-
-```csharp
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
-{
-    options.EventStoreNamespaceResolverType = typeof(JwtTenantResolver);
-});
-```
-
-### Subdomain-Based Resolution
-
-Resolve tenant from subdomain:
-
-```csharp
-public class SubdomainNamespaceResolver : IEventStoreNamespaceResolver
-{
-    readonly IHttpContextAccessor _httpContextAccessor;
-
-    public SubdomainNamespaceResolver(IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
-
-    public EventStoreNamespaceName Resolve()
-    {
-        var host = _httpContextAccessor.HttpContext?.Request.Host.Host;
-        if (string.IsNullOrEmpty(host))
-        {
-            return EventStoreNamespaceName.Default;
-        }
-
-        // Extract subdomain (e.g., "customer123" from "customer123.example.com")
-        var parts = host.Split('.');
-        if (parts.Length > 2)
-        {
-            return parts[0];
-        }
-
-        return EventStoreNamespaceName.Default;
-    }
-}
-```
+## Custom Scenarios
 
 ### Route-Based Resolution
 
@@ -265,7 +186,9 @@ Namespace resolvers in ASP.NET Core should be registered as scoped services (def
 
 ## Example: Complete Setup
 
-Here's a complete example showing how to set up Chronicle with a custom namespace resolver:
+Here's a complete example showing how to set up Chronicle with different built-in resolvers:
+
+### Using HTTP Header Resolution (Default)
 
 ```csharp
 using Cratis.Chronicle;
@@ -273,23 +196,37 @@ using Microsoft.AspNetCore.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Chronicle with custom namespace resolution
 builder.Services.AddCratisChronicleClient();
 builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
 {
     options.Url = builder.Configuration["Chronicle:Url"] ?? "http://localhost:9007";
     options.EventStore = "production-store";
-    options.EventStoreNamespaceResolverType = typeof(JwtTenantResolver);
+    // HTTP header resolution is the default, but you can configure it explicitly
+    options.WithHttpHeaderNamespaceResolver("x-tenant-id");
 });
 
 var app = builder.Build();
+app.MapGet("/api/orders", async (IEventLog eventLog) => await eventLog.GetAsync());
+app.Run();
+```
 
-app.MapGet("/api/orders", async (IEventLog eventLog) =>
+### Using Subdomain Resolution
+
+```csharp
+using Cratis.Chronicle;
+using Microsoft.AspNetCore.Builder;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCratisChronicleClient();
+builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
 {
-    // The namespace is automatically resolved from the JWT claim
-    var events = await eventLog.GetAsync();
-    return Results.Ok(events);
+    options.Url = builder.Configuration["Chronicle:Url"] ?? "http://localhost:9007";
+    options.EventStore = "production-store";
+    options.WithSubdomainNamespaceResolver();
 });
 
+var app = builder.Build();
+app.MapGet("/api/orders", async (IEventLog eventLog) => await eventLog.GetAsync());
 app.Run();
 ```
