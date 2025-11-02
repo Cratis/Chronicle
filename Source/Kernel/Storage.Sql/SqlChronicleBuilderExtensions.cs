@@ -23,6 +23,8 @@ public static class SqlChronicleBuilderExtensions
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithSql(this IChronicleBuilder builder, ChronicleOptions options)
     {
+        builder.SiloBuilder.AddStartupTask<ClusterDbContextMigrator>(ServiceLifecycleStage.First);
+
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddDbContextFactory<ClusterDbContext>((serviceProvider, optionsBuilder) =>
@@ -31,7 +33,6 @@ public static class SqlChronicleBuilderExtensions
                 .UseDatabaseFromConnectionString(options.Storage.ConnectionDetails)
                 .UseApplicationServiceProvider(serviceProvider);
         });
-        builder.Services.AddHostedService<ClusterDbContextMigrator>();
 
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         return builder;
