@@ -20,7 +20,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddCratisChronicle(options =>
 {
-    options.Url = "http://localhost:9007";
     options.EventStore = "my-event-store";
 });
 ```

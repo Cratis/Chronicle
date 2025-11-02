@@ -192,20 +192,25 @@ Here's a complete example showing how to set up Chronicle with different built-i
 
 ```csharp
 using Cratis.Chronicle;
+using Cratis.Chronicle.EventSequences;
 using Microsoft.AspNetCore.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddCratisChronicle(options =>
 {
-    options.Url = builder.Configuration["Chronicle:Url"] ?? "http://localhost:9007";
     options.EventStore = "production-store";
     // HTTP header resolution is the default, but you can configure it explicitly
     options.WithHttpHeaderNamespaceResolver("x-tenant-id");
 });
 
 var app = builder.Build();
-app.MapGet("/api/orders", async (IEventLog eventLog) => await eventLog.GetAsync());
+app.MapPost("/api/cart/{cartId}/items", async (string cartId, IEventLog eventLog) =>
+{
+    var itemAdded = new ItemAddedToCart(ProductId: "product-123", Quantity: 1);
+    await eventLog.Append(cartId, itemAdded);
+    return Results.Ok();
+});
 app.Run();
 ```
 
@@ -213,18 +218,25 @@ app.Run();
 
 ```csharp
 using Cratis.Chronicle;
+using Cratis.Chronicle.EventSequences;
 using Microsoft.AspNetCore.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddCratisChronicle(options =>
 {
-    options.Url = builder.Configuration["Chronicle:Url"] ?? "http://localhost:9007";
     options.EventStore = "production-store";
     options.WithSubdomainNamespaceResolver();
 });
 
 var app = builder.Build();
-app.MapGet("/api/orders", async (IEventLog eventLog) => await eventLog.GetAsync());
+app.MapPost("/api/cart/{cartId}/items", async (string cartId, IEventLog eventLog) =>
+{
+    var itemAdded = new ItemAddedToCart(ProductId: "product-123", Quantity: 1);
+    await eventLog.Append(cartId, itemAdded);
+    return Results.Ok();
+});
 app.Run();
+
+record ItemAddedToCart(string ProductId, int Quantity);
 ```
