@@ -17,7 +17,7 @@ public class when_resolving_without_subdomain : Specification
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         var httpContext = Substitute.For<HttpContext>();
         var request = Substitute.For<HttpRequest>();
-        
+
         request.Host.Returns(new HostString("example.com"));
         httpContext.Request.Returns(request);
         _httpContextAccessor.HttpContext.Returns(httpContext);

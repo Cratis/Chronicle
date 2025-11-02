@@ -19,7 +19,7 @@ public class when_resolving_with_subdomain : Specification
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         var httpContext = Substitute.For<HttpContext>();
         var request = Substitute.For<HttpRequest>();
-        
+
         request.Host.Returns(new HostString($"{_expectedNamespace.Value}.example.com"));
         httpContext.Request.Returns(request);
         _httpContextAccessor.HttpContext.Returns(httpContext);
