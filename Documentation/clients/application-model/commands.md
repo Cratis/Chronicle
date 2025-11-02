@@ -43,7 +43,21 @@ The Application Model client includes two main response value handlers:
 - `SingleEventCommandResponseValueHandler`: Handles single event responses
 - `EventsCommandResponseValueHandler`: Handles collections of events
 
-These handlers automatically append events to the event log using the event source ID from the command context.
+These handlers automatically append events to the event log using the event source ID and other metadata from the command context.
+
+## Event Metadata
+
+Commands can be decorated with metadata attributes that provide additional context when events are appended. This metadata helps organize and categorize events for better querying and processing.
+
+Chronicle supports the following event metadata:
+
+- **[Event Source Type](event-source-type.md)** - Specifies the overarching entity or domain concept (e.g., "Account", "Customer")
+- **[Event Stream Type](event-stream-type.md)** - Identifies the specific process or workflow (e.g., "Onboarding", "Transactions")
+- **[Event Stream ID](event-stream-id.md)** - Provides a marker for separating independent streams (e.g., "Monthly", "Yearly")
+
+For complete details on using these metadata attributes, including code examples and best practices, see the dedicated documentation pages linked above.
+
+See also: [Event Metadata Tags](../../concepts/event-metadata-tags.md) for a complete overview of metadata tags in Chronicle.
 
 ## Single Event Responses
 
