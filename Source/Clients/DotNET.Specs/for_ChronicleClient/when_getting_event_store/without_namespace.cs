@@ -7,25 +7,25 @@ public class without_namespace : Specification
 {
     IEventStoreNamespaceProvider _namespaceProvider;
     EventStoreNamespaceName _customNamespace;
+    ChronicleOptions _options;
+    ChronicleClient _client;
 
     void Establish()
     {
         _customNamespace = "CustomNamespace";
         _namespaceProvider = Substitute.For<IEventStoreNamespaceProvider>();
         _namespaceProvider.GetNamespace().Returns(_customNamespace);
-    }
 
-    void Because()
-    {
-        var options = new ChronicleOptions
+        _options = new ChronicleOptions
         {
             EventStoreNamespaceProvider = _namespaceProvider,
             AutoDiscoverAndRegister = false
         };
 
-        var client = new ChronicleClient(options);
-        _ = client.GetEventStore("TestStore");
+        _client = new ChronicleClient(_options);
     }
+
+    void Because() => _ = _client.GetEventStore("TestStore");
 
     [Fact] void should_call_namespace_provider() => _namespaceProvider.Received(1).GetNamespace();
 }

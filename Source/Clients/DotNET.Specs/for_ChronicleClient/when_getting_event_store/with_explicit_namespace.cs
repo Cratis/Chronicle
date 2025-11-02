@@ -7,24 +7,24 @@ public class with_explicit_namespace : Specification
 {
     IEventStoreNamespaceProvider _namespaceProvider;
     EventStoreNamespaceName _explicitNamespace;
+    ChronicleOptions _options;
+    ChronicleClient _client;
 
     void Establish()
     {
         _explicitNamespace = "ExplicitNamespace";
         _namespaceProvider = Substitute.For<IEventStoreNamespaceProvider>();
-    }
 
-    void Because()
-    {
-        var options = new ChronicleOptions
+        _options = new ChronicleOptions
         {
             EventStoreNamespaceProvider = _namespaceProvider,
             AutoDiscoverAndRegister = false
         };
 
-        var client = new ChronicleClient(options);
-        _ = client.GetEventStore("TestStore", _explicitNamespace);
+        _client = new ChronicleClient(_options);
     }
+
+    void Because() => _ = _client.GetEventStore("TestStore", _explicitNamespace);
 
     [Fact] void should_not_call_namespace_provider() => _namespaceProvider.DidNotReceive().GetNamespace();
 }
