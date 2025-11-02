@@ -39,7 +39,6 @@ The simplest resolver that always returns the default namespace. This is useful 
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = "http://localhost:9007",
     EventStoreNamespaceResolver = new DefaultEventStoreNamespaceResolver()
 };
 ```
@@ -49,17 +48,12 @@ var options = new ChronicleOptions
 Resolves the namespace from the current user's claims using `ClaimsPrincipal.Current`. This is ideal for scenarios where you need tenant resolution based on authenticated user identity without requiring HTTP context.
 
 ```csharp
-var options = new ChronicleOptions
-{
-    Url = "http://localhost:9007"
-}.WithClaimsBasedNamespaceResolver(); // Uses default claim type "tenant_id"
+var options = new ChronicleOptions()
+    .WithClaimsBasedNamespaceResolver(); // Uses default claim type "tenant_id"
 
 // Or configure a custom claim type
-var options = new ChronicleOptions
-{
-    Url = "http://localhost:9007",
-    ClaimsBasedNamespaceResolverClaimType = "custom_tenant_claim"
-}.WithClaimsBasedNamespaceResolver();
+var options = new ChronicleOptions()
+    .WithClaimsBasedNamespaceResolver("custom_tenant_claim")
 ```
 
 The resolver looks for the specified claim in the current principal's claims and returns its value as the namespace. If the claim is not found or the user is not authenticated, it returns the default namespace. The claim type is configured via the `ClaimsBasedNamespaceResolverClaimType` property, which defaults to "tenant_id".
@@ -90,27 +84,11 @@ Then configure it in your options:
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = "http://localhost:9007",
     EventStoreNamespaceResolver = new TenantNamespaceResolver(tenantContext)
 };
 ```
 
-## Common Use Cases
-
-### Multi-Tenant SaaS Applications
-
-For multi-tenant applications where tenant information is available in user claims, use the built-in `ClaimsBasedNamespaceResolver`:
-
-```csharp
-var options = new ChronicleOptions
-{
-    Url = "http://localhost:9007"
-}.WithClaimsBasedNamespaceResolver();
-```
-
-This will automatically extract the tenant identifier from the user's claims and use it as the namespace. By default, it looks for a claim named "tenant_id", but you can configure a different claim type via the `ClaimsBasedNamespaceResolverClaimType` property.
-
-### Custom Business Logic
+## Custom namespace resolver
 
 For scenarios requiring custom business logic that isn't based on claims, implement your own resolver:
 
