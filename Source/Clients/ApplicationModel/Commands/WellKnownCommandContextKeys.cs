@@ -12,4 +12,19 @@ public static class WellKnownCommandContextKeys
     /// The key for the event source id in the command context values.
     /// </summary>
     public const string EventSourceId = "eventSourceId";
+
+    /// <summary>
+    /// The key for the event source type in the command context values.
+    /// </summary>
+    public const string EventSourceType = "eventSourceType";
+
+    /// <summary>
+    /// The key for the event stream type in the command context values.
+    /// </summary>
+    public const string EventStreamType = "eventStreamType";
+
+    /// <summary>
+    /// The key for the event stream id in the command context values.
+    /// </summary>
+    public const string EventStreamId = "eventStreamId";
 }

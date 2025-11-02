@@ -27,7 +27,11 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
         var events = (IEnumerable<object>)value;
         if (events.Any())
         {
-            await eventLog.Append(eventSourceId, events);
+            var eventSourceType = commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceType, out var estValue) && estValue is EventSourceType est ? est : null;
+            var eventStreamType = commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventStreamType, out var estrValue) && estrValue is EventStreamType estr ? estr : null;
+            var eventStreamId = commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventStreamId, out var esiValue) && esiValue is EventStreamId esi ? esi : null;
+
+            await eventLog.AppendMany(eventSourceId, events, eventStreamType, eventStreamId, eventSourceType);
         }
 
         return CommandResult.Success(commandContext.CorrelationId);
