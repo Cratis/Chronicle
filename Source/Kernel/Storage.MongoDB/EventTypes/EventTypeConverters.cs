@@ -42,7 +42,7 @@ public static class EventTypeConverters
         result.EnsureComplianceMetadata();
 
         return new EventTypeSchema(
-            new Chronicle.Concepts.Events.EventType(
+            new Concepts.Events.EventType(
                schema.Id,
                EventTypeGeneration.First,
                schema.Tombstone),

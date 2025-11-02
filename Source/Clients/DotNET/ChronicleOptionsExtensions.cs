@@ -20,4 +20,18 @@ public static class ChronicleOptionsExtensions
         options.NamingPolicy = new CamelCaseNamingPolicy();
         return options;
     }
+
+    /// <summary>
+    /// Configures the namespace resolver to use claims-based resolution from the current user principal.
+    /// </summary>
+    /// <param name="options"><see cref="ChronicleOptions"/> to configure.</param>
+    /// <returns>The same <see cref="ChronicleOptions"/> instance with the claims-based namespace resolver configured.</returns>
+    /// <remarks>
+    /// The claim type used for resolution is configured via the <see cref="ChronicleOptions.ClaimsBasedNamespaceResolverClaimType"/> property, which defaults to "tenant_id".
+    /// </remarks>
+    public static ChronicleOptions WithClaimsBasedNamespaceResolver(this ChronicleOptions options)
+    {
+        options.EventStoreNamespaceResolver = new ClaimsBasedNamespaceResolver(options.ClaimsBasedNamespaceResolverClaimType);
+        return options;
+    }
 }

@@ -287,7 +287,7 @@ public class JobsManager(
         return Task.CompletedTask;
     }
 
-    Task HandleResumeJobError(JobId jobId, ResumeJobError error) => error.Match<Task>(
+    Task HandleResumeJobError(JobId jobId, ResumeJobError error) => error.Match(
         cannotResumeError => HandleCannotResumeError(jobId, cannotResumeError),
         failedResumingSteps =>
         {

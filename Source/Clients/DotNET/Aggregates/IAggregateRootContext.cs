@@ -57,7 +57,7 @@ public interface IAggregateRootContext
     /// <summary>
     /// Gets or sets the tail event sequence number of the aggregate root.
     /// </summary>
-    EventSequenceNumber TailEventSequenceNumber { get; set;  }
+    EventSequenceNumber TailEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether aggregate root has events.

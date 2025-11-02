@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
-using Cratis.Chronicle.AspNetCore;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Rules;
@@ -35,7 +34,27 @@ public static class ChronicleClientServiceCollectionExtensions
     public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-        services.AddScoped<IEventStoreNamespaceResolver, HttpHeaderEventStoreNamespaceResolver>();
+        services.AddScoped(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
+
+            // If an instance is configured and it's not the default, use it
+            if (options.EventStoreNamespaceResolver is not null &&
+                options.EventStoreNamespaceResolver is not DefaultEventStoreNamespaceResolver)
+            {
+                return options.EventStoreNamespaceResolver;
+            }
+
+            // Otherwise, use the configured type (which defaults to HttpHeaderEventStoreNamespaceResolver)
+            var resolverType = options.EventStoreNamespaceResolverType ?? throw new InvalidOperationException("EventStoreNamespaceResolverType cannot be null");
+
+            if (!typeof(IEventStoreNamespaceResolver).IsAssignableFrom(resolverType))
+            {
+                throw new InvalidOperationException($"Type '{resolverType.FullName}' must implement IEventStoreNamespaceResolver");
+            }
+
+            return (IEventStoreNamespaceResolver)ActivatorUtilities.CreateInstance(sp, resolverType);
+        });
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;

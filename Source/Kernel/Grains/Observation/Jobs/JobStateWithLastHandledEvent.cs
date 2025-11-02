@@ -32,7 +32,7 @@ public class JobStateWithLastHandledEvent : JobState
     /// <summary>
     /// The <see cref="ObserverDetails"/>.
     /// </summary>
-    public ObserverDetails ObserverDetails => new (ObserverRequest.ObserverKey, ObserverRequest.ObserverType);
+    public ObserverDetails ObserverDetails => new(ObserverRequest.ObserverKey, ObserverRequest.ObserverType);
 
     /// <summary>
     /// Handles state based on <see cref="JobStepResult"/>.
