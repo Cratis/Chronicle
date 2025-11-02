@@ -18,27 +18,27 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <summary>
 /// Represents an implementation of <see cref="IDatabase"/>.
 /// </summary>
+/// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
 [Singleton]
-public class Database(IOptions<ChronicleOptions> options) : IDatabase
+public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options) : IDatabase
 {
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
 
     /// <inheritdoc/>
-    public async Task<DbContextScope<ClusterDbContext>> Cluster()
+    public Task<DbContextScope<ClusterDbContext>> Cluster()
     {
         if (_clusterDbContext.Value == null)
         {
             var builder = new DbContextOptionsBuilder<ClusterDbContext>();
             builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
-            var context = new ClusterDbContext(builder.Options);
-            await context.Database.MigrateAsync();
-            _clusterDbContext.Value = context;
+            builder.UseApplicationServiceProvider(serviceProvider);
+            _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
 
-        return new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!);
+        return Task.FromResult(new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!));
     }
 
     /// <inheritdoc/>
@@ -51,6 +51,8 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
             var builder = new DbContextOptionsBuilder<EventStoreDbContext>();
             var connectionString = GetConnectionStringForEventStore(eventStore);
             builder.UseDatabaseFromConnectionString(connectionString);
+            builder.UseApplicationServiceProvider(serviceProvider);
+
             dbContext = new EventStoreDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
             _eventStoreDbContexts.Value[eventStore.Value] = dbContext;
@@ -76,6 +78,8 @@ public class Database(IOptions<ChronicleOptions> options) : IDatabase
             var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
             builder.UseDatabaseFromConnectionString(connectionString);
+            builder.UseApplicationServiceProvider(serviceProvider);
+
             dbContext = new NamespaceDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
             namespaces[@namespace.Value] = dbContext;

@@ -64,7 +64,7 @@ builder.Host
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
             .WithSql(chronicleOptions))
-           //.WithMongoDB(chronicleOptions))
+        //.WithMongoDB(chronicleOptions))
         .UseDashboard(options =>
         {
             options.Host = "*";

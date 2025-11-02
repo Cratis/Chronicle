@@ -6,7 +6,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;
@@ -26,24 +25,15 @@ public static class SqlChronicleBuilderExtensions
     {
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
-        builder.Services.AddDbContexts(options);
+        builder.Services.AddDbContextFactory<ClusterDbContext>((serviceProvider, optionsBuilder) =>
+        {
+            optionsBuilder
+                .UseDatabaseFromConnectionString(options.Storage.ConnectionDetails)
+                .UseApplicationServiceProvider(serviceProvider);
+        });
+        builder.Services.AddHostedService<ClusterDbContextMigrator>();
+
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         return builder;
-    }
-
-    static void AddDbContexts(this IServiceCollection services, ChronicleOptions options)
-    {
-        var addDbContextMethod = typeof(SqlChronicleBuilderExtensions).GetMethod(nameof(AddDbContext), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
-        foreach (var dbContext in Types.Types.Instance.FindMultiple<DbContext>().OnlyChronicle())
-        {
-            addDbContextMethod.MakeGenericMethod(dbContext).Invoke(null, [services, options]);
-        }
-    }
-
-    static IServiceCollection AddDbContext<TDbContext>(this IServiceCollection services, ChronicleOptions options)
-        where TDbContext : BaseDbContext
-    {
-        services.AddDbContext<TDbContext>(builder => builder.UseDatabaseFromConnectionString(options.Storage.ConnectionDetails));
-        return services;
     }
 }
