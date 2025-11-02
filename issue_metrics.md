@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 274 |
+| Number of items that remain open | 275 |
 | Number of items closed | 572 |
-| Total number of items created | 846 |
+| Total number of items created | 847 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Introduce provider model for namespace resolution | https://github.com/Cratis/Chronicle/issues/2202 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Integration spec project matrix | https://github.com/Cratis/Chronicle/issues/2148 | None | [einari](https://github.com/einari) | None | None | None |
 | ASP.NET Core is missing a dependency to the core Cratis.Chronicle client package | https://github.com/Cratis/Chronicle/issues/2091 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Investigate how we could be writing tests/specs for event sourcing in a better way | https://github.com/Cratis/Chronicle/issues/1980 | None | [einari](https://github.com/einari) | None | None | None |
@@ -342,4 +343,4 @@
 | Clean up ObserverState and remove the composite key. | https://github.com/Cratis/Chronicle/issues/1026 | None | [einari](https://github.com/einari) | None | 278 days, 16:36:49 | None |
 | Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
 | Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
-| Make cluster info part of the MongoDB by default rather then require a second storage location for it | https://github.com/Cratis/Chronicle/issues/1019 | [einari](https://github.com/einari) | [einari](https://github.com/einari
+| Make cluster info part 
