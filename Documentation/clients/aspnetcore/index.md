@@ -13,13 +13,12 @@ The ASP.NET Core client extends the base .NET client with features specifically 
 
 ## Getting Started
 
-Add Chronicle to your ASP.NET Core application using the service collection extensions:
+Add Chronicle to your ASP.NET Core application:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCratisChronicleClient();
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
+builder.AddCratisChronicle(options =>
 {
     options.Url = "http://localhost:9007";
     options.EventStore = "my-event-store";

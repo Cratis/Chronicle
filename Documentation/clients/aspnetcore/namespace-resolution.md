@@ -196,8 +196,7 @@ using Microsoft.AspNetCore.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCratisChronicleClient();
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
+builder.AddCratisChronicle(options =>
 {
     options.Url = builder.Configuration["Chronicle:Url"] ?? "http://localhost:9007";
     options.EventStore = "production-store";
@@ -218,8 +217,7 @@ using Microsoft.AspNetCore.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCratisChronicleClient();
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
+builder.AddCratisChronicle(options =>
 {
     options.Url = builder.Configuration["Chronicle:Url"] ?? "http://localhost:9007";
     options.EventStore = "production-store";
