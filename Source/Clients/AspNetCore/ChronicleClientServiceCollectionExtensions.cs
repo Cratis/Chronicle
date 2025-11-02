@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
+using Cratis.Chronicle.AspNetCore;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Rules;
@@ -34,6 +35,7 @@ public static class ChronicleClientServiceCollectionExtensions
     public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
+        services.AddScoped<IEventStoreNamespaceResolver, HttpHeaderEventStoreNamespaceResolver>();
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
@@ -48,6 +50,7 @@ public static class ChronicleClientServiceCollectionExtensions
             options.IdentityProvider = new IdentityProvider(
                                 sp.GetRequiredService<IHttpContextAccessor>(),
                                 sp.GetRequiredService<ILogger<IdentityProvider>>());
+            options.EventStoreNamespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
             options.LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
             return connection is null ?
@@ -59,13 +62,9 @@ public static class ChronicleClientServiceCollectionExtensions
         {
             lock (_eventStoreInitLock)
             {
-                var namespaceName = EventStoreNamespaceName.Default;
-
                 var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
-                if (sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.Request.Headers.TryGetValue(options.NamespaceHttpHeader, out var values) ?? false)
-                {
-                    namespaceName = values.ToString();
-                }
+                var namespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
+                var namespaceName = namespaceResolver.Resolve();
 
                 if (_eventStores.TryGetValue(namespaceName, out var eventStore))
                 {
@@ -74,7 +73,7 @@ public static class ChronicleClientServiceCollectionExtensions
 
                 var client = sp.GetRequiredService<IChronicleClient>();
 
-                eventStore = client.GetEventStore(options.EventStore, namespaceName).GetAwaiter().GetResult();
+                eventStore = client.GetEventStore(options.EventStore).GetAwaiter().GetResult();
                 return _eventStores[namespaceName] = eventStore;
             }
         });
