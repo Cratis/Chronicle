@@ -41,9 +41,32 @@ public record ProcessTenantOperationCommand(Guid TenantId, [Key] Guid EntityId) 
 }
 ```
 
+### Combining Attribute and Interface
+
+You can also combine both approaches when you want to use the interface for dynamic values while enabling concurrency control (see [Concurrency Scope](#concurrency-scope) below):
+
+```csharp
+[EventStreamId(concurrency: true)]
+public record ProcessTenantOperationCommand(Guid TenantId, [Key] Guid EntityId) : ICanProvideEventStreamId
+{
+    public EventStreamId GetEventStreamId() => TenantId.ToString();
+
+    public TenantOperationProcessed Handle()
+    {
+        return new TenantOperationProcessed
+        {
+            TenantId = TenantId,
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+In this case, the attribute without a value serves to enable concurrency scope inclusion, while the interface provides the actual runtime value.
+
 ## Ambiguity Check
 
-**Important**: You must use either the attribute OR the interface, but not both. Using both will throw an `AmbiguousEventStreamId` exception:
+**Important**: You cannot provide the event stream ID value in both the attribute AND the interface. Using both with values will throw an `AmbiguousEventStreamId` exception:
 
 ```csharp
 // ❌ This will throw AmbiguousEventStreamId exception
@@ -55,7 +78,87 @@ public record InvalidCommand(Guid DynamicId) : ICanProvideEventStreamId
 ```
 
 The error message will indicate:
-> Command 'InvalidCommand' has both EventStreamIdAttribute and implements ICanProvideEventStreamId. Please use only one method to provide the event stream id.
+> Command 'InvalidCommand' has both EventStreamIdAttribute with a value and implements ICanProvideEventStreamId. Please use only one method to provide the event stream id, or set the attribute value to null to use the interface.
+
+## Concurrency Scope
+
+Event metadata attributes support a `concurrency` parameter that controls whether the metadata should be included in the concurrency scope when appending events. This provides fine-grained control over optimistic concurrency validation.
+
+### Basic Usage
+
+Add `concurrency: true` to include the event stream ID in the concurrency scope:
+
+```csharp
+[EventStreamId("Monthly", concurrency: true)]
+public record GenerateMonthlyReportCommand([Key] Guid ReportId)
+{
+    public MonthlyReportGenerated Handle()
+    {
+        return new MonthlyReportGenerated
+        {
+            GeneratedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+When `concurrency: true` is specified, the event stream ID becomes part of the concurrency scope, ensuring that concurrent append operations on the same stream ID are properly validated.
+
+### Combining Multiple Metadata in Concurrency Scope
+
+You can include multiple metadata attributes in the concurrency scope:
+
+```csharp
+[EventSourceType("Order", concurrency: true)]
+[EventStreamType("Processing", concurrency: true)]
+[EventStreamId("Priority", concurrency: true)]
+public record ProcessPriorityOrderCommand([Key] Guid OrderId)
+{
+    public PriorityOrderProcessed Handle()
+    {
+        return new PriorityOrderProcessed
+        {
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+This creates a concurrency scope that includes all three metadata values, providing stricter validation.
+
+### Dynamic Values with Concurrency
+
+When using the interface for dynamic values, you can still enable concurrency by using the attribute without a value:
+
+```csharp
+[EventStreamId(concurrency: true)]
+public record ProcessTenantOrderCommand(Guid TenantId, [Key] Guid OrderId) : ICanProvideEventStreamId
+{
+    public EventStreamId GetEventStreamId() => TenantId.ToString();
+
+    public TenantOrderProcessed Handle()
+    {
+        return new TenantOrderProcessed
+        {
+            TenantId = TenantId,
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+The attribute enables concurrency scope inclusion while the interface provides the runtime value.
+
+### When to Use Concurrency Scope
+
+Use concurrency scope inclusion when:
+
+- You need to prevent concurrent modifications to the same logical stream
+- You want to ensure events are appended in a consistent order
+- You're implementing optimistic concurrency control at the stream level
+- You have multiple processes that might append events to the same stream simultaneously
+
+**Note**: By default, `concurrency` is `false`, meaning metadata is not included in the concurrency scope. Only enable it when you specifically need concurrency validation.
 
 ## How It Works
 
@@ -63,10 +166,12 @@ The Application Model client uses the `EventStreamIdValuesProvider` to automatic
 
 1. Check if the command has the `[EventStreamId]` attribute
 2. Check if the command implements `ICanProvideEventStreamId`
-3. If both are present, throw `AmbiguousEventStreamId` exception
+3. If both are present with values, throw `AmbiguousEventStreamId` exception
 4. If interface is implemented, call `GetEventStreamId()` method
-5. If attribute is present, use the attribute value
-6. If neither is present, no event stream ID is added to the context
+5. If attribute is present with a value, use the attribute value
+6. If neither provides a value, no event stream ID is added to the context
+
+When events are appended, the `ConcurrencyScopeBuilder` checks which metadata attributes have `concurrency: true` and builds a concurrency scope accordingly. If no metadata has concurrency enabled, no concurrency scope is created.
 
 ## Example Scenarios
 
@@ -212,7 +317,7 @@ public record ProcessMonthlyOnboardingCommand([Key] Guid AccountId)
 
 ## Integration with EventsCommandResponseValueHandler
 
-When events are appended through the command pipeline, the `EventsCommandResponseValueHandler` automatically includes the event stream ID metadata:
+When events are appended through the command pipeline, the `EventsCommandResponseValueHandler` automatically includes the event stream ID metadata and builds a concurrency scope if needed:
 
 ```csharp
 // The handler retrieves the event stream ID from the command context
@@ -220,14 +325,21 @@ var eventStreamId = commandContext.Values.TryGetValue(
     WellKnownCommandContextKeys.EventStreamId,
     out var esiValue) && esiValue is EventStreamId esi ? esi : null;
 
-// Events are appended with metadata
+// Build concurrency scope based on metadata attributes with concurrency: true
+var concurrencyScope = ConcurrencyScopeBuilder.BuildFromCommandContext(commandContext);
+
+// Events are appended with metadata and optional concurrency scope
 await eventLog.AppendMany(
     eventSourceId,
     events,
     eventStreamType,
     eventStreamId,
-    eventSourceType);
+    eventSourceType,
+    correlationId: default,
+    concurrencyScope: concurrencyScope);
 ```
+
+The `SingleEventCommandResponseValueHandler` works the same way for single event commands.
 
 ## Default Behavior
 
@@ -239,4 +351,5 @@ If no event stream ID is specified, Chronicle uses the default stream ID "Defaul
 - [Event Source Type](event-source-type.md) - Understand event source types
 - [Event Stream Type](event-stream-type.md) - Learn about event stream types
 - [Event Metadata Tags](../../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
+- [Concurrency Control](../../dotnet/events/concurrency.md) - Learn about concurrency scopes in Chronicle
 - [Commands](../commands.md) - Command handling in Application Model

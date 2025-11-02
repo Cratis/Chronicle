@@ -24,12 +24,15 @@ public class SingleEventCommandResponseValueHandler(IEventLog eventLog, IEventTy
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
     {
         var eventSourceId = commandContext.GetEventSourceId();
+        var concurrencyScope = ConcurrencyScopeBuilder.BuildFromCommandContext(commandContext);
         await eventLog.Append(
             eventSourceId,
             value,
             commandContext.GetEventStreamType(),
             commandContext.GetEventStreamId(),
-            commandContext.GetEventSourceType());
+            commandContext.GetEventSourceType(),
+            correlationId: default,
+            concurrencyScope: concurrencyScope);
         return CommandResult.Success(commandContext.CorrelationId);
     }
 }

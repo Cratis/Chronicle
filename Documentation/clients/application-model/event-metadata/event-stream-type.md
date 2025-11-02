@@ -19,6 +19,28 @@ public record StartOnboardingCommand([Key] Guid CustomerId, string Email);
 
 All events generated from this command will be tagged with the "Onboarding" event stream type.
 
+### Concurrency Control
+
+The `[EventStreamType]` attribute also supports a `concurrency` parameter for optimistic concurrency control:
+
+```csharp
+[EventStreamType("OrderProcessing", concurrency: true)]
+public record ProcessOrderCommand([Key] Guid OrderId)
+{
+    public OrderProcessed Handle()
+    {
+        return new OrderProcessed
+        {
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+}
+```
+
+When `concurrency: true` is set, the event stream type is included in the concurrency scope during event appending, providing validation for concurrent operations. This is useful when you need to ensure events within a specific stream type are appended in a consistent order.
+
+For more details on concurrency scopes, see [Event Stream ID - Concurrency Scope](event-stream-id.md#concurrency-scope).
+
 ## How It Works
 
 The Application Model client uses the `EventStreamTypeValuesProvider` to automatically extract the event stream type from commands decorated with the attribute. This value is then stored in the command context and passed along when appending events to the event log.
