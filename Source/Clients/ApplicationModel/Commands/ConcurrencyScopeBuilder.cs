@@ -39,6 +39,8 @@ public static class ConcurrencyScopeBuilder
         var eventStreamType = (eventStreamTypeAttribute?.Concurrency ?? false) ? commandContext.GetEventStreamType() : null;
         var eventSourceType = (eventSourceTypeAttribute?.Concurrency ?? false) ? commandContext.GetEventSourceType() : null;
 
+        // EventSourceId is intentionally null as concurrency scoping is based on metadata (EventStreamId, EventStreamType, EventSourceType)
+        // rather than the event source itself.
         return new ConcurrencyScope(
             EventSequenceNumber.Unavailable,
             EventSourceId: null,
