@@ -24,7 +24,12 @@ public class SingleEventCommandResponseValueHandler(IEventLog eventLog, IEventTy
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
     {
         var eventSourceId = commandContext.GetEventSourceId();
-        await eventLog.Append(eventSourceId, value);
+        await eventLog.Append(
+            eventSourceId,
+            value,
+            commandContext.GetEventStreamType(),
+            commandContext.GetEventStreamId(),
+            commandContext.GetEventSourceType());
         return CommandResult.Success(commandContext.CorrelationId);
     }
 }

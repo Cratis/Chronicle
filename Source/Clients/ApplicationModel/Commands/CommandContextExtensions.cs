@@ -26,4 +26,34 @@ public static class CommandContextExtensions
 
         throw new MissingEventSourceIdInCommandContext(commandContext.Command.GetType());
     }
+
+    /// <summary>
+    /// Gets the event source type from the command context values, if present.
+    /// </summary>
+    /// <param name="commandContext">The command context to get the event source type from.</param>
+    /// <returns>The event source type, or null if not present.</returns>
+    public static EventSourceType? GetEventSourceType(this CommandContext commandContext) =>
+        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceType, out var value) && value is EventSourceType eventSourceType
+            ? eventSourceType
+            : null;
+
+    /// <summary>
+    /// Gets the event stream type from the command context values, if present.
+    /// </summary>
+    /// <param name="commandContext">The command context to get the event stream type from.</param>
+    /// <returns>The event stream type, or null if not present.</returns>
+    public static EventStreamType? GetEventStreamType(this CommandContext commandContext) =>
+        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventStreamType, out var value) && value is EventStreamType eventStreamType
+            ? eventStreamType
+            : null;
+
+    /// <summary>
+    /// Gets the event stream id from the command context values, if present.
+    /// </summary>
+    /// <param name="commandContext">The command context to get the event stream id from.</param>
+    /// <returns>The event stream id, or null if not present.</returns>
+    public static EventStreamId? GetEventStreamId(this CommandContext commandContext) =>
+        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventStreamId, out var value) && value is EventStreamId eventStreamId
+            ? eventStreamId
+            : null;
 }
