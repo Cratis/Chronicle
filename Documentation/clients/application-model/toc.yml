@@ -1,13 +1,7 @@
 - name: Getting Started
   href: getting-started.md
-- name: Event Source ID
-  href: event-source-id.md
-- name: Event Source Type
-  href: event-source-type.md
-- name: Event Stream Type
-  href: event-stream-type.md
-- name: Event Stream ID
-  href: event-stream-id.md
+- name: Event Metadata
+  href: event-metadata/toc.yml
 - name: Aggregate Roots
   href: aggregate-roots.md
 - name: Read Models

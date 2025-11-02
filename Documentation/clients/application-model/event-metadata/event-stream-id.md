@@ -2,6 +2,8 @@
 
 Event Stream ID is a metadata tag that provides a marker to separate independent streams within a stream type. It allows you to create logical partitions for events, such as "Monthly", "Yearly", "RegionA", or "TenantX".
 
+For a complete overview of event metadata tags in Chronicle, see [Event Metadata Tags](../../../concepts/event-metadata-tags.md).
+
 ## Overview
 
 Event Stream IDs enable you to organize events into separate logical streams while keeping them within the same event stream type. This is particularly useful for multi-tenant scenarios, time-based partitioning, or geographical segmentation.
@@ -108,7 +110,7 @@ public record GenerateYearlyReportCommand([Key] Guid ReportId, int Year)
 ```csharp
 [EventSourceType("Order")]
 [EventStreamType("Processing")]
-public record ProcessOrderCommand(Guid TenantId, [Key] Guid OrderId, List<OrderItem> Items) 
+public record ProcessOrderCommand(Guid TenantId, [Key] Guid OrderId, List<OrderItem> Items)
     : ICanProvideEventStreamId
 {
     public EventStreamId GetEventStreamId() => TenantId.ToString();
@@ -151,7 +153,7 @@ public record ProcessRegionalTransactionCommand(string Region, [Key] Guid Transa
 
 ```csharp
 public record CategorizeCustomerActivityCommand(
-    [Key] Guid CustomerId, 
+    [Key] Guid CustomerId,
     CustomerTier Tier) : ICanProvideEventStreamId
 {
     public EventStreamId GetEventStreamId() => Tier switch
@@ -215,15 +217,15 @@ When events are appended through the command pipeline, the `EventsCommandRespons
 ```csharp
 // The handler retrieves the event stream ID from the command context
 var eventStreamId = commandContext.Values.TryGetValue(
-    WellKnownCommandContextKeys.EventStreamId, 
+    WellKnownCommandContextKeys.EventStreamId,
     out var esiValue) && esiValue is EventStreamId esi ? esi : null;
 
 // Events are appended with metadata
 await eventLog.AppendMany(
-    eventSourceId, 
-    events, 
-    eventStreamType, 
-    eventStreamId, 
+    eventSourceId,
+    events,
+    eventStreamType,
+    eventStreamId,
     eventSourceType);
 ```
 
@@ -236,5 +238,5 @@ If no event stream ID is specified, Chronicle uses the default stream ID "Defaul
 - [Event Source ID](event-source-id.md) - Learn about event source identification
 - [Event Source Type](event-source-type.md) - Understand event source types
 - [Event Stream Type](event-stream-type.md) - Learn about event stream types
-- [Event Metadata Tags](../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
-- [Commands](commands.md) - Command handling in Application Model
+- [Event Metadata Tags](../../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
+- [Commands](../commands.md) - Command handling in Application Model

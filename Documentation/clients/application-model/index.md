@@ -13,11 +13,11 @@ The Application Model client is designed to work seamlessly with ASP.NET Core ap
 
 ## Key Components
 
-### Event Source ID Management
+### Event Metadata
 
-Learn how event source identifiers are resolved and managed within command contexts.
+Learn how event metadata (Event Source ID, Event Source Type, Event Stream Type, and Event Stream ID) is used to categorize and organize events within Chronicle.
 
-[Read more about Event Source ID →](event-source-id.md)
+[Read more about Event Metadata →](event-metadata/index.md)
 
 ### Aggregate Roots
 

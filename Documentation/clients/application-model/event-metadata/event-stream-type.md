@@ -2,6 +2,8 @@
 
 Event Stream Type is a metadata tag that represents a concrete process or workflow related to an event source type. It helps organize events into logical streams based on the business process they belong to, such as "Onboarding", "Transactions", or "Compliance".
 
+For a complete overview of event metadata tags in Chronicle, see [Event Metadata Tags](../../../concepts/event-metadata-tags.md).
+
 ## Overview
 
 In Chronicle, Event Stream Types are automatically linked to Aggregate Roots, making them a powerful tool for organizing domain logic around specific processes. This allows you to separate concerns and manage different aspects of an entity independently.
@@ -151,15 +153,15 @@ When events are appended through the command pipeline, the `EventsCommandRespons
 ```csharp
 // The handler retrieves the event stream type from the command context
 var eventStreamType = commandContext.Values.TryGetValue(
-    WellKnownCommandContextKeys.EventStreamType, 
+    WellKnownCommandContextKeys.EventStreamType,
     out var estrValue) && estrValue is EventStreamType estr ? estr : null;
 
 // Events are appended with metadata
 await eventLog.AppendMany(
-    eventSourceId, 
-    events, 
-    eventStreamType, 
-    eventStreamId, 
+    eventSourceId,
+    events,
+    eventStreamType,
+    eventStreamId,
     eventSourceType);
 ```
 
@@ -172,6 +174,6 @@ If no event stream type is specified, Chronicle uses the default stream type "Al
 - [Event Source ID](event-source-id.md) - Learn about event source identification
 - [Event Source Type](event-source-type.md) - Understand event source types
 - [Event Stream ID](event-stream-id.md) - Learn about event stream identifiers
-- [Event Metadata Tags](../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
-- [Aggregate Roots](aggregate-roots.md) - Working with aggregate roots
-- [Commands](commands.md) - Command handling in Application Model
+- [Event Metadata Tags](../../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
+- [Aggregate Roots](../aggregate-roots.md) - Working with aggregate roots
+- [Commands](../commands.md) - Command handling in Application Model

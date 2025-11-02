@@ -2,6 +2,8 @@
 
 Event Source Type is a metadata tag that provides an overarching, binding concept for events in Chronicle. It represents the broader entity or domain concept that events relate to, such as "Account", "Customer", or "Order".
 
+For a complete overview of event metadata tags in Chronicle, see [Event Metadata Tags](../../../concepts/event-metadata-tags.md).
+
 ## Overview
 
 The Event Source Type helps organize and categorize events at a high level, making it easier to understand the domain context and track events across different streams and processes.
@@ -98,15 +100,15 @@ When events are appended through the command pipeline, the `EventsCommandRespons
 ```csharp
 // The handler retrieves the event source type from the command context
 var eventSourceType = commandContext.Values.TryGetValue(
-    WellKnownCommandContextKeys.EventSourceType, 
+    WellKnownCommandContextKeys.EventSourceType,
     out var estValue) && estValue is EventSourceType est ? est : null;
 
 // Events are appended with metadata
 await eventLog.AppendMany(
-    eventSourceId, 
-    events, 
-    eventStreamType, 
-    eventStreamId, 
+    eventSourceId,
+    events,
+    eventStreamType,
+    eventStreamId,
     eventSourceType);
 ```
 
@@ -115,5 +117,5 @@ await eventLog.AppendMany(
 - [Event Source ID](event-source-id.md) - Learn about event source identification
 - [Event Stream Type](event-stream-type.md) - Understand event stream types
 - [Event Stream ID](event-stream-id.md) - Learn about event stream identifiers
-- [Event Metadata Tags](../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
-- [Commands](commands.md) - Command handling in Application Model
+- [Event Metadata Tags](../../../concepts/event-metadata-tags.md) - Complete overview of metadata tags
+- [Commands](../commands.md) - Command handling in Application Model
