@@ -46,6 +46,7 @@ builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
 ```
 
 With this configuration:
+
 - A request to `customer123.example.com` uses namespace `customer123`
 - A request to `example.com` uses the default namespace
 - A request to `www.example.com` uses the default namespace
