@@ -24,7 +24,7 @@ public class ModelBoundProjections(
     IClientArtifactsProvider clientArtifacts,
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
-    JsonSerializerOptions jsonSerializerOptions)
+    JsonSerializerOptions jsonSerializerOptions) : IModelBoundProjections
 {
     /// <summary>
     /// Discovers all model-bound projections.

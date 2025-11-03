@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
@@ -27,7 +28,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 public class ModelBoundProjectionBuilder(
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
-    JsonSerializerOptions jsonSerializerOptions)
+    JsonSerializerOptions jsonSerializerOptions) : IModelBoundProjectionBuilder
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
