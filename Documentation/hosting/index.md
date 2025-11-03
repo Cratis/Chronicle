@@ -5,6 +5,7 @@ Chronicle provides multiple deployment options to suit different environments an
 ## Deployment Options
 
 - **[Production](production.md)** - Docker-based production deployment with MongoDB
+- **[Configuration](configuration.md)** - Complete configuration reference
 - **Development** - Local development setup with MongoDB
 - **Docker Compose** - Multi-container setup for development and testing
 
@@ -15,7 +16,7 @@ All Chronicle hosting environments require:
 - **.NET 9 Runtime** - Chronicle is built on .NET 9
 - **MongoDB** - Primary storage backend for events and projections
 - **Network Access** - Chronicle exposes multiple ports for different services
-- **Configuration** - `chronicle.json` file for runtime configuration
+- **Configuration** - See [Configuration](configuration.md) for details
 
 ## Architecture Overview
 
