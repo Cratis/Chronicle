@@ -14,6 +14,6 @@ public interface IModelBoundProjectionBuilder
     /// Builds a projection definition from a type with model-bound projection attributes.
     /// </summary>
     /// <param name="modelType">The type of the read model.</param>
-    /// <returns>The <see cref="ProjectionDefinition"/> or null if the type doesn't have projection attributes.</returns>
-    ProjectionDefinition? Build(Type modelType);
+    /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
+    ProjectionDefinition Build(Type modelType);
 }

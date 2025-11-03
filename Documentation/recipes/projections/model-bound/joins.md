@@ -110,22 +110,22 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 // Events
-[EventType("order-placed")]
+[EventType]
 public record OrderPlaced(Guid CustomerId, DateTimeOffset PlacedAt);
 
-[EventType("customer-registered")]
+[EventType]
 public record CustomerRegistered(string Name, string Email);
 
-[EventType("customer-profile-updated")]
+[EventType]
 public record CustomerProfileUpdated(string PhoneNumber);
 
-[EventType("line-item-added")]
+[EventType]
 public record LineItemAdded(Guid ProductId, int Quantity);
 
-[EventType("product-created")]
+[EventType]
 public record ProductCreated(string Name, decimal Price);
 
-[EventType("product-price-changed")]
+[EventType]
 public record ProductPriceChanged(decimal NewPrice);
 
 // Read Models

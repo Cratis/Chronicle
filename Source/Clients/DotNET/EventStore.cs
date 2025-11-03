@@ -18,6 +18,7 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
+using Microsoft.Extensions.DependencyInjection;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
@@ -147,6 +148,7 @@ public class EventStore : IEventStore
             EventTypes,
             new ProjectionWatcherManager(new ProjectionWatcherFactory(this, jsonSerializerOptions), this),
             clientArtifactsProvider,
+            serviceProvider.GetRequiredService<Cratis.Types.ITypes>(),
             namingPolicy,
             _eventSerializer,
             serviceProvider,

@@ -13,6 +13,7 @@ using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
 using Cratis.Serialization;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -27,6 +28,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
 /// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+/// <param name="types"><see cref="ITypes"/> for discovering types.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
@@ -36,6 +38,7 @@ public class Projections(
     IEventTypes eventTypes,
     IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
+    ITypes types,
     INamingPolicy namingPolicy,
     IEventSerializer eventSerializer,
     IServiceProvider serviceProvider,
@@ -250,7 +253,7 @@ public class Projections(
             _ => _.Value);
 
         // Discover model-bound projections
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, jsonSerializerOptions);
+        var modelBoundProjections = new ModelBoundProjections(types, namingPolicy, eventTypes, jsonSerializerOptions);
         var modelBoundDefinitions = modelBoundProjections.Discover().ToList();
 
         Definitions =

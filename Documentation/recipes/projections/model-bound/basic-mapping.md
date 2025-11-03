@@ -84,16 +84,16 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 // Events
-[EventType("account-opened")]
+[EventType]
 public record AccountOpened(string AccountName, decimal InitialBalance);
 
-[EventType("deposit-made")]
+[EventType]
 public record DepositMade(decimal Amount);
 
-[EventType("withdrawal-made")]
+[EventType]
 public record WithdrawalMade(decimal Amount);
 
-[EventType("account-renamed")]
+[EventType]
 public record AccountRenamed(string NewName);
 
 // Read Model

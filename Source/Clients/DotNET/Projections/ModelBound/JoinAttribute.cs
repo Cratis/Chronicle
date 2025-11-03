@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="on">Optional property name on the model to join on. If not specified for root projections, must be specified.</param>
 /// <param name="eventPropertyName">Optional name of the property on the event. If not specified, uses the model property name.</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class JoinAttribute<TEvent>(string? on = default, string? eventPropertyName = default) : Attribute
+public sealed class JoinAttribute<TEvent>(string? on = default, string? eventPropertyName = default) : Attribute, IProjectionAnnotation
 {
     /// <summary>
     /// Gets the property name on the model to join on.

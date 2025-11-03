@@ -37,8 +37,8 @@ public class ModelBoundProjectionBuilder(
     /// Builds a projection definition from a type with model-bound projection attributes.
     /// </summary>
     /// <param name="modelType">The type of the read model.</param>
-    /// <returns>The <see cref="ProjectionDefinition"/> or null if the type doesn't have projection attributes.</returns>
-    public ProjectionDefinition? Build(Type modelType)
+    /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
+    public ProjectionDefinition Build(Type modelType)
     {
         // Use the type's full name as the projection ID
         var projectionId = new ProjectionId(modelType.FullName!);
@@ -78,12 +78,6 @@ public class ModelBoundProjectionBuilder(
         foreach (var property in properties)
         {
             ProcessProperty(property, definition, classLevelFromEvents, isRoot: true);
-        }
-
-        // If no mappings were created, return null
-        if (definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0)
-        {
-            return null;
         }
 
         return definition;

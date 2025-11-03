@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 public sealed class ChildrenFromAttribute<TEvent>(
     string? key = default,
     string? identifiedBy = default,
-    string? parentKey = default) : Attribute
+    string? parentKey = default) : Attribute, IProjectionAnnotation
 {
     /// <summary>
     /// Gets the property name on the event that identifies the child.

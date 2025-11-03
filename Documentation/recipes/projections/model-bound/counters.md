@@ -86,16 +86,16 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 // Events
-[EventType("user-logged-in")]
+[EventType]
 public record UserLoggedIn(DateTimeOffset Timestamp);
 
-[EventType("user-logged-out")]
+[EventType]
 public record UserLoggedOut(DateTimeOffset Timestamp);
 
-[EventType("purchase-made")]
+[EventType]
 public record PurchaseMade(decimal Amount);
 
-[EventType("refund-issued")]
+[EventType]
 public record RefundIssued(decimal Amount);
 
 // Read Model

@@ -85,7 +85,7 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 // Events with matching property names
-[EventType("employee-hired")]
+[EventType]
 public record EmployeeHired(
     string FirstName,
     string LastName,
@@ -93,12 +93,12 @@ public record EmployeeHired(
     string Department,
     DateTimeOffset HiredAt);
 
-[EventType("employee-department-changed")]
+[EventType]
 public record EmployeeDepartmentChanged(
     string Department,
     DateTimeOffset ChangedAt);
 
-[EventType("salary-adjusted")]
+[EventType]
 public record SalaryAdjusted(decimal NewSalary);
 
 // Read Model using convention-based mapping

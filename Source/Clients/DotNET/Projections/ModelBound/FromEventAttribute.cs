@@ -8,4 +8,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </summary>
 /// <typeparam name="TEvent">The type of event to set from.</typeparam>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true)]
-public sealed class FromEventAttribute<TEvent> : Attribute;
+public sealed class FromEventAttribute<TEvent> : Attribute, IProjectionAnnotation;
