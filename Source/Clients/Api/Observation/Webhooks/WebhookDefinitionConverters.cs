@@ -53,24 +53,30 @@ internal static class WebhookDefinitionConverters
             Headers = target.Headers,
             Url = target.Url
         };
-
-        target.Authorization.Switch(
-            basic => contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
+        if (target.BasicAuthorization is not null)
+        {
+            contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.BasicAuthorization
             {
-                Username = basic.Username,
-                Password = basic.Password
-            }),
-            bearer => contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
+                Username = target.BasicAuthorization.Username,
+                Password = target.BasicAuthorization.Password
+            });
+        }
+        else if (target.BearerTokenAuthorization is not null)
+        {
+            contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.BearerTokenAuthorization
             {
-                Token = bearer.Token
-            }),
-            oauth => contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
+                Token = target.BearerTokenAuthorization.Token
+            });
+        }
+        else if (target.OAuthAuthorization is not null)
+        {
+            contractTarget.Authorization = new(new Cratis.Chronicle.Contracts.Observation.Webhooks.OAuthAuthorization
             {
-                Authority = oauth.Authority,
-                ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
-            }),
-            none => { });
+                Authority = target.OAuthAuthorization.Authority,
+                ClientId = target.OAuthAuthorization.ClientId,
+                ClientSecret = target.OAuthAuthorization.ClientSecret
+            });
+        }
 
         return contractTarget;
     }
@@ -89,9 +95,8 @@ internal static class WebhookDefinitionConverters
             _ => default(OneOf.Types.None)
         };
 
-        return new(
+        return new WebhookTarget(
             target.Url,
-            authorization,
-            target.Headers.ToDictionary(_ => _.Key, _ => _.Value));
+            target.Headers.ToDictionary(_ => _.Key, _ => _.Value)).WithAuth(authorization);
     }
 }

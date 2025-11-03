@@ -6,7 +6,8 @@ import {Button} from 'primereact/button';
 import {Dialog} from 'primereact/dialog';
 import {useState} from 'react';
 import strings from 'Strings';
-import {AuthenticationType, WebhookTarget} from "Api/Observation/Webhooks";
+import {WebhookTarget, WebhookAuthorization} from "Api/Observation/Webhooks";
+import {None} from "Api/None";
 import {Dropdown} from "primereact/dropdown";
 import {EventType} from "Api/Events";
 import {InputText} from "primereact/inputtext";
@@ -29,6 +30,19 @@ export const AddWebhook = () => {
     const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
     const [url, setUrl] = useState('');
     const { closeDialog, request } = useDialogContext<AddWebhookRequest, AddWebhookResponse>();
+
+    const noAuthorization: WebhookAuthorization = {
+        index: 3,
+        isT0: false,
+        isT1: false,
+        isT2: false,
+        isT3: true,
+        value: new None(),
+        asT0: undefined!,
+        asT1: undefined!,
+        asT2: undefined!,
+        asT3: new None()
+    };
 
     return (
         <Dialog header={strings.eventStore.general.webhooks.dialogs.addWebhook.title} visible={true} style={{ width: '20vw' }} modal onHide={() => closeDialog(DialogResult.Cancelled, AddWebhookResponse.Canceled)}>
@@ -57,7 +71,7 @@ export const AddWebhook = () => {
                     selectedEventTypes.length === 0
                         ? []
                         : request.eventTypes.filter(requestEventType => selectedEventTypes.map(selected => selected.id).includes(requestEventType.id)),
-                    {url, authentication: AuthenticationType.none, bearerToken: '', headers: [], password: '', username: ''}
+                    {url, authorization: noAuthorization, headers: {}}
                 ))} autoFocus />
                 <Button label={strings.general.buttons.cancel} icon="pi pi-times" severity='secondary' onClick={() => closeDialog(DialogResult.Cancelled, AddWebhookResponse.Canceled)} />
             </div>

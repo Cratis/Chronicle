@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.Concepts.Observation.Webhooks;
 /// <param name="Headers">The headers.</param>
 public record WebhookTarget(
     WebhookTargetUrl Url,
-    OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> Authorization,
+    WebhookAuthorization Authorization,
     IReadOnlyDictionary<string, string> Headers);

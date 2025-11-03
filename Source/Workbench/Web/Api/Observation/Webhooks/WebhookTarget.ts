@@ -5,16 +5,24 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { field } from '@cratis/fundamentals';
-import { OneOf`4 } from '../../OneOf`4';
+import { BasicAuthorization } from './BasicAuthorization';
+import { BearerTokenAuthorization } from './BearerTokenAuthorization';
+import { OAuthAuthorization } from './OAuthAuthorization';
 
 export class WebhookTarget {
 
     @field(String)
     url!: string;
 
-    @field(OneOf`4)
-    authorization!: OneOf`4;
-
     @field(Object)
     headers!: any;
+
+    @field(BasicAuthorization)
+    basicAuthorization!: BasicAuthorization;
+
+    @field(BearerTokenAuthorization)
+    bearerTokenAuthorization!: BearerTokenAuthorization;
+
+    @field(OAuthAuthorization)
+    OAuthAuthorization!: OAuthAuthorization;
 }

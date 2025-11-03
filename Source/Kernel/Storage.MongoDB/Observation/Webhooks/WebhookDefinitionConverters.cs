@@ -4,6 +4,7 @@
 #pragma warning disable IDE0005 // Using directive is unnecessary
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 
@@ -47,7 +48,7 @@ public static class WebhookDefinitionConverters
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
-        OneOf.OneOf<Concepts.Observation.Webhooks.BasicAuthorization, Concepts.Observation.Webhooks.BearerTokenAuthorization, Concepts.Observation.Webhooks.OAuthAuthorization, OneOf.Types.None> authorization;
+        WebhookAuthorization authorization;
 
         if (target.BasicAuthorization is not null)
         {
@@ -66,7 +67,7 @@ public static class WebhookDefinitionConverters
         }
         else
         {
-            authorization = default(OneOf.Types.None);
+            authorization = WebhookAuthorization.None;
         }
 
         return new(
