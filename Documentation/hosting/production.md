@@ -16,79 +16,22 @@ docker pull cratis/chronicle:1.0.0
 
 [![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
 
+## Configuration
+
+Chronicle requires configuration to define its runtime behavior. For complete configuration details, see the [Configuration](configuration.md) guide.
+
+The configuration file must be mounted into the container at `/app/chronicle.json`, or you can use environment variables with the `Cratis__Chronicle__` prefix.
+
 ## Port Configuration
 
 Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | API Server        | REST API for client interactions        |
+| 8080  | API Server        | REST API for client interactions         |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
-| 30000 | Orleans Gateway   | Client connections to Orleans cluster   |
-| 35000 | Main Service      | Primary Chronicle service port           |
-
-## Configuration File
-
-Chronicle uses a `chronicle.json` configuration file to define runtime behavior. This file must be mounted into the container at `/app/chronicle.json`.
-
-### Basic Configuration
-
-```json
-{
-    "apiPort": 8080,
-    "port": 35000,
-    "features": {
-        "api": true,
-        "workbench": true,
-        "changesetStorage": false
-    },
-    "storage": {
-        "type": "MongoDB",
-        "connectionDetails": "mongodb://mongodb:27017"
-    },
-    "observers": {
-        "subscriberTimeout": 5,
-        "maxRetryAttempts": 10,
-        "backoffDelay": 1,
-        "exponentialBackoffDelayFactor": 2,
-        "maximumBackoffDelay": 600
-    }
-}
-```
-
-### Configuration Properties
-
-#### Root Properties
-
-| Property | Type   | Required | Description                    |
-|----------|--------|----------|--------------------------------|
-| apiPort  | number | Yes      | Port for the REST API server, and the Workbench, if enabled |
-| port     | number | Yes      | Main service port              |
-
-#### Features
-
-| Property        | Type    | Default | Description                                    |
-|-----------------|---------|---------|------------------------------------------------|
-| api             | boolean | true    | Enable REST API endpoint                       |
-| workbench       | boolean | true    | Enable web-based management interface         |
-| changesetStorage| boolean | false   | Enable changeset storage functionality        |
-
-#### Storage Configuration
-
-| Property          | Type   | Required | Description                           |
-|-------------------|--------|----------|---------------------------------------|
-| type              | string | Yes      | Storage type (currently "MongoDB")    |
-| connectionDetails | string | Yes      | MongoDB connection string             |
-
-#### Observer Settings
-
-| Property                      | Type   | Default | Description                                  |
-|-------------------------------|--------|---------|----------------------------------------------|
-| subscriberTimeout             | number | 5       | Timeout for observer subscriptions (seconds)|
-| maxRetryAttempts              | number | 10      | Maximum retry attempts for failed events    |
-| backoffDelay                  | number | 1       | Initial backoff delay (seconds)             |
-| exponentialBackoffDelayFactor | number | 2       | Exponential backoff multiplier              |
-| maximumBackoffDelay           | number | 600     | Maximum backoff delay (seconds)             |
+| 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
+| 35000 | Main Service      | Primary Chronicle gRPC service port      |
 
 ## Docker Deployment
 
@@ -132,23 +75,15 @@ volumes:
   mongodb_data:
 ```
 
-## Mounting Configuration
-
-The `chronicle.json` file should be mounted as a read-only volume to ensure configuration consistency:
-
-```bash
-# Mount configuration file
--v /host/path/chronicle.json:/app/chronicle.json:ro
-```
-
-### Configuration Best Practices
+## Best Practices
 
 1. **Use specific version tags** instead of `latest` for production deployments
-2. **Mount configuration as read-only** to prevent accidental modifications
+2. **Mount configuration as read-only** (`-v /path/to/chronicle.json:/app/chronicle.json:ro`)
 3. **Use environment-specific connection strings** for MongoDB
-4. **Configure appropriate timeouts** based on your infrastructure
+4. **Configure appropriate timeouts** based on your infrastructure (see [Configuration](configuration.md))
 5. **Enable health checks** for container orchestration
 6. **Set up monitoring** for all exposed ports
+7. **Use secrets management** for sensitive configuration values
 
 ## Health Checks
 

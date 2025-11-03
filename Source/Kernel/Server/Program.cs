@@ -24,11 +24,9 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
-builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
+ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 
-var chronicleOptions = new ChronicleOptions();
-builder.Configuration.Bind(chronicleOptions);
-builder.Services.Configure<ChronicleOptions>(builder.Configuration);
+var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
 builder.Services.AddHttpContextAccessor();
 
 if (chronicleOptions.Features.Api)
