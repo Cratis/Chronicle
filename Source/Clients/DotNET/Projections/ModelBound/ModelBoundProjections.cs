@@ -33,7 +33,12 @@ public class ModelBoundProjections(
     {
         var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes, jsonSerializerOptions);
 
-        // Find all types with ReadModelAttribute
+        // Initialize client artifacts to ensure types are discovered
+        clientArtifacts.Initialize();
+
+        // Find all types with ReadModelAttribute from the discovered assemblies
+        // Note: We scan all assemblies since model-bound projections are attributes on read models,
+        // not on projection classes like IProjectionFor<T>
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         return assemblies.SelectMany(assembly =>
         {
