@@ -1,7 +1,7 @@
 
 <!-- https://github.com/ravibpatel/ILRepack.Lib.MSBuild.Task -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Repack)' == 'true'">
+<Target Name="PerformRepackaging" AfterTargets="Build" Condition="'$(Repack)' == 'true' and '$(TargetPath)' != ''">
     <ItemGroup>
         <InputAssemblies Include="$(TargetPath)" />
         <InputAssemblies Include="@(AssemblyToMerge)" />
@@ -33,6 +33,8 @@
         <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' != ''">""$(ExplicitPublicTypes)""</ExplicitPublicTypesArgument>
         <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' == ''"></ExplicitPublicTypesArgument>
     </PropertyGroup>
+
+    <Message Text="Repacking assemblies into $(TargetPath)" Importance="High" />
 
     <ILRepack AllowDuplicateResources="false" DebugInfo="true" CopyAttributes="false" ExcludeInternalizeSerializable="false" InputAssemblies="@(InputAssemblies)" InternalizeAssembly="@(InternalizeAssemblies)" Internalize="true" InternalizeExclude="@(DoNotInternalize)" OutputFile="$(TargetPath)" Parallel="true" LibraryPath="@(LibraryPath)" Verbose="false" XmlDocumentation="true" Union="true" AllowedDuplicateNamespaces="Cratis.Chronicle.Projections" LogFile="$(OutputPath)/ILRepack.log" TargetKind="SameAsPrimaryAssembly" />
 
