@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
@@ -22,7 +23,7 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
         _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => _resolver.Resolve("targetProperty", new(), $"$add({nameof(my_event.Something)})")(@event, _target, ArrayIndexers.NoIndexers);
+    void Because() => _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Add}({nameof(my_event.Something)})")(@event, _target, ArrayIndexers.NoIndexers);
 
     [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)_target).targetProperty).ShouldEqual(my_event.Something);
 }

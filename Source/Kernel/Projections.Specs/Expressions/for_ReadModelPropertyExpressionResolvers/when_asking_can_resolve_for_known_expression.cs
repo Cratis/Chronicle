@@ -9,7 +9,7 @@ public class when_asking_can_resolve_for_known_expression : given.read_model_pro
 {
     bool _result;
 
-    void Because() => _result = _resolvers.CanResolve(string.Empty, $"$add({WellKnownExpressions.EventSourceId})");
+    void Because() => _result = _resolvers.CanResolve(string.Empty, $"{WellKnownExpressions.Add}({WellKnownExpressions.EventSourceId})");
 
     [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

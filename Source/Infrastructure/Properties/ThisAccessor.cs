@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Properties;
 public record ThisAccessor() : IPropertyPathSegment
 {
     /// <inheritdoc/>
-    public string Value => "$this";
+    public string Value => PropertyPath.ThisAccessorValue;
 
     /// <inheritdoc/>
-    public override string ToString() => "$this";
+    public override string ToString() => PropertyPath.ThisAccessorValue;
 }
