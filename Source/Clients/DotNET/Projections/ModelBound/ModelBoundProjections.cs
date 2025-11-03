@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Keys;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
@@ -36,7 +37,7 @@ public class ModelBoundProjections(
         // Initialize client artifacts to ensure types are discovered
         clientArtifacts.Initialize();
 
-        // Find all types with ReadModelAttribute from the discovered assemblies
+        // Find all types with KeyAttribute from the discovered assemblies
         // Note: We scan all assemblies since model-bound projections are attributes on read models,
         // not on projection classes like IProjectionFor<T>
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -45,7 +46,7 @@ public class ModelBoundProjections(
             try
             {
                 return assembly.GetTypes()
-                    .Where(t => t.GetCustomAttribute<ReadModelAttribute>() is not null)
+                    .Where(HasModelBoundProjectionAttributes)
                     .Select(builder.Build)
                     .OfType<ProjectionDefinition>();
             }
@@ -55,5 +56,45 @@ public class ModelBoundProjections(
                 return [];
             }
         });
+    }
+
+    static bool HasModelBoundProjectionAttributes(Type type)
+    {
+        // Check if type or its properties have KeyAttribute (indicating it's a projection root)
+        if (type.GetProperties().Any(p => p.GetCustomAttribute<KeyAttribute>() is not null))
+        {
+            return true;
+        }
+
+        // Check if type has any projection mapping attributes
+        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        foreach (var property in properties)
+        {
+            var attributes = property.GetCustomAttributes();
+            if (attributes.Any(attr => IsProjectionAttribute(attr.GetType())))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool IsProjectionAttribute(Type attributeType)
+    {
+        if (!attributeType.IsGenericType) return false;
+
+        var genericDef = attributeType.GetGenericTypeDefinition();
+        return genericDef == typeof(SetFromAttribute<>) ||
+               genericDef == typeof(AddFromAttribute<>) ||
+               genericDef == typeof(SubtractFromAttribute<>) ||
+               genericDef == typeof(IncrementAttribute<>) ||
+               genericDef == typeof(DecrementAttribute<>) ||
+               genericDef == typeof(CountAttribute<>) ||
+               genericDef == typeof(JoinAttribute<>) ||
+               genericDef == typeof(ChildrenFromAttribute<>) ||
+               genericDef == typeof(RemovedWithAttribute<>) ||
+               genericDef == typeof(RemovedWithJoinAttribute<>) ||
+               genericDef == typeof(FromEventAttribute<>);
     }
 }

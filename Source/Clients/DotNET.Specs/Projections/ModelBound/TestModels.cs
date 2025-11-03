@@ -1,15 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Keys;
+
 namespace Cratis.Chronicle.Projections.ModelBound;
 
 public record AccountId(Guid Value);
 
 public record AccountName(string Value);
 
-[ReadModel]
 public record AccountInfo(
-    [ModelKey, FromEventSourceId]
+    [Key, FromEventSourceId]
     AccountId Id,
 
     [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
@@ -19,10 +20,9 @@ public record AccountInfo(
     [SubtractFrom<WithdrawalFromDebitAccountPerformed>(nameof(WithdrawalFromDebitAccountPerformed.Amount))]
     double Balance);
 
-[ReadModel]
 [FromEvent<DebitAccountOpened>]
 public record AccountInfoWithClassLevelEvent(
-    [ModelKey, FromEventSourceId]
+    [Key, FromEventSourceId]
     AccountId Id,
 
     AccountName Name,
@@ -31,11 +31,10 @@ public record AccountInfoWithClassLevelEvent(
     [SubtractFrom<WithdrawalFromDebitAccountPerformed>(nameof(WithdrawalFromDebitAccountPerformed.Amount))]
     double Balance);
 
-public record CartItem(string Id, string Name, double Price);
+public record CartItem([Key] string Id, string Name, double Price);
 
-[ReadModel]
 public record Cart(
-    [ModelKey, FromEventSourceId]
+    [Key, FromEventSourceId]
     Guid Id,
 
     [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(CartItem.Id))]
