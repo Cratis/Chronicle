@@ -68,13 +68,10 @@ public class ModelBoundProjections(
 
         // Check if type has any projection mapping attributes
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        foreach (var property in properties)
+        if (properties.Any(property => property.GetCustomAttributes()
+                                               .Any(attr => IsProjectionAttribute(attr.GetType()))))
         {
-            var attributes = property.GetCustomAttributes();
-            if (attributes.Any(attr => IsProjectionAttribute(attr.GetType())))
-            {
-                return true;
-            }
+            return true;
         }
 
         return false;
