@@ -28,7 +28,7 @@ public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TPar
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        _expression = $"$subtract({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
+        _expression = $"{WellKnownExpressions.Subtract}({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
         return parent;
     }
 

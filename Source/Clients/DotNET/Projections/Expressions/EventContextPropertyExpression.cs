@@ -15,5 +15,5 @@ namespace Cratis.Chronicle.Projections.Expressions;
 public class EventContextPropertyExpression(PropertyPath propertyPath) : IEventValueExpression
 {
     /// <inheritdoc/>
-    public PropertyExpression Build() => $"$eventContext({propertyPath})";
+    public PropertyExpression Build() => $"{WellKnownExpressions.EventContext}({propertyPath})";
 }
