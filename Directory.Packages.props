@@ -95,8 +95,6 @@
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
         <PackageVersion Include="Microsoft.NET.Test.SDK" Version="18.0.0" />
-
-
     </ItemGroup>
 
     <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
