@@ -19,9 +19,8 @@ public class UserProfileProjection : IProjectionFor<UserProfile>
             LastLogin: null,
             LoginCount: 0,
             IsVerified: false))
+        .AutoMap()
         .From<UserCreated>(_ => _
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.Email).To(e => e.Email)
             .Set(m => m.Status).ToValue(UserStatus.Active)
             .Set(m => m.CreatedAt).ToEventContextProperty(c => c.Occurred))
         .From<UserLoggedIn>(_ => _
@@ -137,6 +136,7 @@ public class InventoryProjection : IProjectionFor<InventoryItem>
             MinimumLevel: 10,  // Business default
             MaximumLevel: 1000,  // Business default
             ReorderPoint: 20))  // Business default
+        .AutoMap()
         .From<StockReceived>(_ => _
             .Add(m => m.CurrentStock).With(e => e.Quantity)
             .Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred))

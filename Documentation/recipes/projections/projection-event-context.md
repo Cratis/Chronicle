@@ -42,12 +42,11 @@ Use `ToEventContextProperty()` to map any event context property:
 public class AuditTrailProjection : IProjectionFor<AuditEntry>
 {
     public void Define(IProjectionBuilderFor<AuditEntry> builder) => builder
+        .AutoMap()
         .From<UserAction>(_ => _
             .Set(m => m.EventId).ToEventContextProperty(c => c.SequenceNumber)
             .Set(m => m.OccurredAt).ToEventContextProperty(c => c.Occurred)
-            .Set(m => m.CorrelationId).ToEventContextProperty(c => c.CorrelationId)
-            .Set(m => m.ActionType).To(e => e.ActionType)
-            .Set(m => m.UserId).To(e => e.UserId));
+            .Set(m => m.CorrelationId).ToEventContextProperty(c => c.CorrelationId));
 }
 ```
 
@@ -104,9 +103,9 @@ Event context properties work in child collections and joins:
 ```csharp
 .Children(m => m.ActivityLog, children => children
     .IdentifiedBy(e => e.ActivityId)
+    .AutoMap()
     .From<ActivityPerformed>(_ => _
         .UsingKey(e => e.ActivityId)
-        .Set(m => m.ActivityType).To(e => e.ActivityType)
         .Set(m => m.Timestamp).ToEventContextProperty(c => c.Occurred)
         .Set(m => m.SequenceNumber).ToEventContextProperty(c => c.SequenceNumber)))
 ```

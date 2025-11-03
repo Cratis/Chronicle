@@ -12,18 +12,15 @@ using Cratis.Chronicle.Projections;
 public class GroupProjection : IProjectionFor<Group>
 {
     public void Define(IProjectionBuilderFor<Group> builder) => builder
-        .From<GroupCreated>(b => b
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.Description).To(e => e.Description))
+        .AutoMap()
+        .From<GroupCreated>()
         .Children(m => m.Members, children => children
             .IdentifiedBy(e => e.UserId)
+            .AutoMap()
             .From<UserAddedToGroup>(b => b
-                .UsingKey(e => e.UserId)
-                .Set(m => m.UserId).To(e => e.UserId)
-                .Set(m => m.Role).To(e => e.Role))
+                .UsingKey(e => e.UserId))
             .From<UserRoleChanged>(b => b
-                .UsingKey(e => e.UserId)
-                .Set(m => m.Role).To(e => e.NewRole))
+                .UsingKey(e => e.UserId))
             .RemovedWith<UserRemovedFromGroup>(e => e.UserId));
 }
 ```
@@ -99,11 +96,14 @@ You can also remove children conditionally or based on other criteria by using m
 A single projection can have multiple child collections:
 
 ```csharp
+.AutoMap()
 .Children(m => m.Members, children => children
     .IdentifiedBy(e => e.UserId)
+    .AutoMap()
     .From<UserAddedToGroup>(_ => /* ... */))
 .Children(m => m.Tasks, children => children
     .IdentifiedBy(e => e.TaskId)
+    .AutoMap()
     .From<TaskAssignedToGroup>(_ => /* ... */));
 ```
 

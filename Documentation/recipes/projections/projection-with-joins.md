@@ -12,19 +12,15 @@ using Cratis.Chronicle.Projections;
 public class UserProjection : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
-        .From<UserCreated>(b => b
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.Email).To(e => e.Email))
+        .AutoMap()
+        .From<UserCreated>()
         .From<UserAssignedToGroup>(b => b
             .UsingKey(e => e.UserId)
             .Set(m => m.GroupId).ToEventSourceId())
         .Join<GroupCreated>(j => j
-            .On(m => m.GroupId)
-            .Set(m => m.GroupName).To(e => e.Name)
-            .Set(m => m.GroupDescription).To(e => e.Description))
+            .On(m => m.GroupId))
         .Join<GroupRenamed>(j => j
-            .On(m => m.GroupId)
-            .Set(m => m.GroupName).To(e => e.NewName));
+            .On(m => m.GroupId));
 }
 ```
 
@@ -77,7 +73,7 @@ Join keys are typically set from events that establish relationships:
 ```csharp
 .From<UserAssignedToGroup>(b => b
     .UsingKey(e => e.UserId)
-    .Set(m => m.GroupId).ToEventSourceId()) // Sets join key to group's event source ID
+    .Set(m => m.GroupId).ToEventSourceId())  // Sets join key to group's event source ID
 ```
 
 ### Joining on the key
@@ -85,9 +81,9 @@ Join keys are typically set from events that establish relationships:
 Joins match events based on their event source ID and the join property:
 
 ```csharp
+.AutoMap()
 .Join<GroupCreated>(j => j
-    .On(m => m.GroupId)    // Join condition: group events where eventSourceId == m.GroupId
-    .Set(m => m.GroupName).To(e => e.Name))
+    .On(m => m.GroupId))  // Join condition: group events where eventSourceId == m.GroupId
 ```
 
 ### Multiple joins
@@ -95,9 +91,10 @@ Joins match events based on their event source ID and the join property:
 A projection can join with multiple streams:
 
 ```csharp
-.Join<GroupCreated>(j => j.On(m => m.GroupId).Set(/* ... */))
-.Join<DepartmentCreated>(j => j.On(m => m.DepartmentId).Set(/* ... */))
-.Join<LocationUpdated>(j => j.On(m => m.LocationId).Set(/* ... */));
+.AutoMap()
+.Join<GroupCreated>(j => j.On(m => m.GroupId))
+.Join<DepartmentCreated>(j => j.On(m => m.DepartmentId))
+.Join<LocationUpdated>(j => j.On(m => m.LocationId));
 ```
 
 ### Joining children
@@ -107,12 +104,11 @@ Joins can also be used within child collections:
 ```csharp
 .Children(m => m.Tasks, children => children
     .IdentifiedBy(e => e.TaskId)
+    .AutoMap()
     .From<TaskAssigned>(b => b
-        .UsingKey(e => e.TaskId)
-        .Set(m => m.ProjectId).To(e => e.ProjectId))
+        .UsingKey(e => e.TaskId))
     .Join<ProjectCreated>(j => j
-        .On(m => m.ProjectId)
-        .Set(m => m.ProjectName).To(e => e.Name)));
+        .On(m => m.ProjectId)));
 ```
 
 ## Performance considerations
