@@ -34,12 +34,15 @@ public class ChronicleUrl
     /// </summary>
     public static readonly ChronicleUrl Default = new("chronicle://localhost:35000");
 
+    readonly string _connectionString;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleUrl"/> class.
     /// </summary>
     /// <param name="connectionString">String representation of the connection string.</param>
     public ChronicleUrl(string connectionString)
     {
+        _connectionString = connectionString;
         var uri = new Uri(connectionString);
         var port = uri.Port == -1 ? 35000 : uri.Port;
         ServerAddress = new ChronicleServerAddress(uri.Host, port);
@@ -55,4 +58,7 @@ public class ChronicleUrl
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
     public static implicit operator ChronicleUrl(string connectionString) => new(connectionString);
+
+    /// <inheritdoc/>
+    public override string ToString() => _connectionString;
 }
