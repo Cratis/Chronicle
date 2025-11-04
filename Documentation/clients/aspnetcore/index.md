@@ -24,6 +24,54 @@ builder.AddCratisChronicle(options =>
 });
 ```
 
+### Configuration from appsettings.json
+
+You can configure Chronicle using your `appsettings.json` file. The configuration system will automatically bind the settings to `ChronicleOptions`:
+
+```json
+{
+  "Chronicle": {
+    "Url": "chronicle://localhost:35000",
+    "SoftwareVersion": "1.0.0",
+    "SoftwareCommit": "abc123",
+    "ProgramIdentifier": "my-service",
+    "AutoDiscoverAndRegister": true,
+    "ConnectTimeout": 5
+  }
+}
+```
+
+Then configure Chronicle to use the configuration:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ChronicleOptions>(
+    builder.Configuration.GetSection("Chronicle"));
+
+builder.AddCratisChronicle();
+```
+
+### Configuration from Environment Variables
+
+Chronicle configuration can also be set using environment variables, which is useful for containerized deployments:
+
+```bash
+# Chronicle server URL
+Chronicle__Url=chronicle://my-server:35000
+
+# Software metadata
+Chronicle__SoftwareVersion=1.0.0
+Chronicle__SoftwareCommit=abc123
+Chronicle__ProgramIdentifier=my-service
+
+# Connection settings
+Chronicle__ConnectTimeout=10
+Chronicle__AutoDiscoverAndRegister=true
+```
+
+Environment variables take precedence over `appsettings.json`, making them ideal for environment-specific configuration.
+
 ## Features
 
 The ASP.NET Core client provides specialized functionality for web applications:
