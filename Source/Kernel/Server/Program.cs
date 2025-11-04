@@ -102,7 +102,7 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
     app.MapFallbackToFile("index.html");
 }
 app.MapGrpcServices();
-app.MapHealthChecks("/health");
+app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
