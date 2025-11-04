@@ -26,16 +26,22 @@ public class OneOfSerializer(ICodecProvider codecProvider) : IGeneralizedCodec, 
     /// <inheritdoc/>
     public bool? IsTypeAllowed(Type type)
     {
-        do
+        // Check if type is in OneOf namespace
+        if (type.Namespace?.Equals(typeof(OneOf<,>).Namespace) == true)
         {
-            if (type.Namespace?.Equals(typeof(OneOf<,>).Namespace) == true)
+            return true;
+        }
+
+        // Check if type inherits from OneOfBase
+        var current = type;
+        while (current != typeof(object) && current is not null)
+        {
+            if (current.IsGenericType && current.GetGenericTypeDefinition().Name.Contains("OneOfBase"))
             {
                 return true;
             }
-
-            type = type.BaseType!;
+            current = current.BaseType!;
         }
-        while (type != typeof(object) && type is not null);
 
         return null;
     }

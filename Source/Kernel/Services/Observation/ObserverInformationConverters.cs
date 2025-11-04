@@ -50,6 +50,7 @@ internal static class ObserverInformationConverters
             Concepts.Observation.ObserverType.Reactor => ObserverType.Reactor,
             Concepts.Observation.ObserverType.Projection => ObserverType.Projection,
             Concepts.Observation.ObserverType.Reducer => ObserverType.Reducer,
+            Concepts.Observation.ObserverType.Webhook => ObserverType.Webhook,
             _ => ObserverType.Unknown
         };
 
