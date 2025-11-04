@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel;
+
 namespace Cratis.Chronicle.Connections;
 
 /// <summary>
@@ -27,6 +29,7 @@ namespace Cratis.Chronicle.Connections;
 /// const string MultiHostPattern = @"^chronicle:\/\/([a-zA-Z0-9\.-]+(:\d+)?)(,([a-zA-Z0-9\.-]+(:\d+)?))*\/(\?.*)?$";
 /// ]]>
 /// </remarks>
+[TypeConverter(typeof(ChronicleUrlConverter))]
 public class ChronicleUrl
 {
     /// <summary>
