@@ -32,6 +32,11 @@ public class ChronicleOptions
     public int ApiPort { get; init; } = 8080;
 
     /// <summary>
+    /// Gets the health check endpoint.
+    /// </summary>
+    public string HealthCheckEndpoint { get; init; } = "/health";
+
+    /// <summary>
     /// Gets the <see cref="Events"/> configuration.
     /// </summary>
     public Events Events { get; init; } = new Events();

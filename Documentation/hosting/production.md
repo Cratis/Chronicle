@@ -87,12 +87,14 @@ volumes:
 
 ## Health Checks
 
-Add health checks to your Docker deployment:
+Chronicle exposes a health check endpoint at `/health` by default. Add health checks to your Docker deployment:
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
 ```
+
+> **Note**: The health check endpoint path is configurable. See [Configuration](configuration.md#health-check-endpoint) for details.
 
 ## Security Considerations
 

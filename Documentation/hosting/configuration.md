@@ -10,6 +10,7 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 {
     "apiPort": 8080,
     "port": 35000,
+    "healthCheckEndpoint": "/health",
     "features": {
         "api": true,
         "workbench": true,
@@ -36,10 +37,11 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 
 #### Root Properties
 
-| Property | Type   | Default | Description                                      |
-|----------|--------|---------|--------------------------------------------------|
-| apiPort  | number | 8080    | Port for the REST API server and Workbench      |
-| port     | number | 35000   | Main gRPC service port                           |
+| Property           | Type   | Default  | Description                                      |
+|--------------------|--------|----------|--------------------------------------------------|
+| apiPort            | number | 8080     | Port for the REST API server and Workbench      |
+| port               | number | 35000    | Main gRPC service port                           |
+| healthCheckEndpoint| string | /health  | Health check endpoint path                       |
 
 #### Features
 
@@ -86,6 +88,13 @@ Cratis__Chronicle__Port=35000
 
 # REST API port (default: 8080)
 Cratis__Chronicle__ApiPort=8080
+```
+
+### Health Check Endpoint
+
+```bash
+# Health check endpoint path (default: /health)
+Cratis__Chronicle__HealthCheckEndpoint=/health
 ```
 
 ### Feature Toggles
@@ -163,6 +172,7 @@ docker run -d \
   --name chronicle \
   -e Cratis__Chronicle__Port=35000 \
   -e Cratis__Chronicle__ApiPort=8080 \
+  -e Cratis__Chronicle__HealthCheckEndpoint=/health \
   -e Cratis__Chronicle__Storage__Type=MongoDB \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongo:27017 \
   -e Cratis__Chronicle__Observers__SubscriberTimeout=10 \
@@ -184,6 +194,7 @@ services:
     environment:
       - Cratis__Chronicle__Port=35000
       - Cratis__Chronicle__ApiPort=8080
+      - Cratis__Chronicle__HealthCheckEndpoint=/health
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017
       - Cratis__Chronicle__Features__Api=true

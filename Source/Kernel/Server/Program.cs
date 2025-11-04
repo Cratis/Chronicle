@@ -28,6 +28,11 @@ ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHealthChecks()
+    .AddMongoDb(
+        _ => new MongoDB.Driver.MongoClient(chronicleOptions.Storage.ConnectionDetails),
+        name: "mongodb",
+        timeout: TimeSpan.FromSeconds(3));
 
 if (chronicleOptions.Features.Api)
 {
@@ -97,6 +102,7 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
     app.MapFallbackToFile("index.html");
 }
 app.MapGrpcServices();
+app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
