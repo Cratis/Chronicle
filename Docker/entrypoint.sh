@@ -17,7 +17,7 @@ if [ ! -f "$FLAG_FILE" ]; then
     mongod --logpath /var/log/mongodb/initdb.log --replSet "rs0" --bind_ip 0.0.0.0 --fork || true
 
     echo "Initializing replica set..."
-    mongosh --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "localhost:27017"}]}' || true
+    mongosh --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "localhost:27017"}]})' || true
 
     echo "Shutting down MongoDB after initialization..."
     mongod --shutdown || true
