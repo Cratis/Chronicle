@@ -18,6 +18,11 @@ public static class ModelBoundProjectionsExtensions
     /// <returns>True if the type has model-bound projection attributes; otherwise, false.</returns>
     public static bool HasModelBoundProjectionAttributes(this Type type)
     {
+        if (type.GetCustomAttributes().Any(attr => attr is IProjectionAnnotation))
+        {
+            return true;
+        }
+
         if (type.GetProperties().Any(p => p.GetCustomAttribute<KeyAttribute>() is not null))
         {
             return true;
