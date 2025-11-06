@@ -1,9 +1,9 @@
 - name: Overview
   href: index.md
-- name: Simple projection
-  href: simple-projection.md
 - name: Model-Bound Projections
   href: model-bound/toc.yml
+- name: Simple projection
+  href: simple-projection.md
 - name: Projection AutoMap
   href: projection-auto-map.md
 - name: Passive projection
