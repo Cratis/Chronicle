@@ -74,6 +74,7 @@ public record Account(
 ```
 
 In this example:
+
 - `Name` is mapped automatically by convention
 - `Balance` uses explicit attributes for multiple operations
 
@@ -126,12 +127,14 @@ public record Employee(
 ## When to Use Convention-Based Mapping
 
 **Use FromEvent when:**
+
 - Property names match between events and read models
 - You're mapping multiple properties from the same event
 - You want to reduce boilerplate code
 - The mapping is straightforward (simple Set operations)
 
 **Use explicit attributes when:**
+
 - Property names don't match
 - You need complex operations (Add, Subtract, Increment, etc.)
 - You're mapping from multiple events with different operations
@@ -147,6 +150,7 @@ public record Employee(
 ## Benefits
 
 Convention-based mapping with `FromEvent`:
+
 - **Reduces verbosity** - Less code to write and maintain
 - **Improves readability** - Clear intent when most properties map directly
 - **Easier refactoring** - Rename properties in both places without updating attributes

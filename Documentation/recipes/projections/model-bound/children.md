@@ -62,11 +62,13 @@ public record CartItem(
 ```
 
 When an `ItemAddedToCart` event occurs:
+
 1. A new `CartItem` is added to the collection
 2. Properties are mapped from the event to the child
 3. The child's own attributes are processed
 
 When a `QuantityIncreased` event occurs later:
+
 - The projection finds the matching child by ID
 - Increments the `Quantity` on that specific child
 

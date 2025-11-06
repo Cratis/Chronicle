@@ -131,12 +131,14 @@ public record UserActivity(
 ## Counter vs Count
 
 **Increment/Decrement:**
+
 - Modifies the current value
 - Useful for tracking active states (sessions, connections)
 - Can be combined with SetFrom to establish initial values
 - Changes are relative to current value
 
 **Count:**
+
 - Maintains absolute count of event occurrences
 - Useful for analytics and reporting
 - Independent of other operations

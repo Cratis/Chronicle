@@ -74,6 +74,7 @@ projection.Passive();
 ```
 
 **When to use:**
+
 - On-demand projections that are only rebuilt when explicitly requested
 - Historical snapshots
 - Resource-intensive projections that shouldn't run continuously
