@@ -253,7 +253,7 @@ public class Projections(
             _ => _.Value);
 
         // Discover model-bound projections
-        var modelBoundProjections = new ModelBoundProjections(types, namingPolicy, eventTypes, jsonSerializerOptions);
+        var modelBoundProjections = new ModelBoundProjections(types, namingPolicy, eventTypes);
         var modelBoundDefinitions = modelBoundProjections.Discover().ToList();
 
         Definitions =

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
@@ -20,12 +19,10 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="types"><see cref="ITypes"/> for discovering types.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 public class ModelBoundProjections(
     ITypes types,
     INamingPolicy namingPolicy,
-    IEventTypes eventTypes,
-    JsonSerializerOptions jsonSerializerOptions) : IModelBoundProjections
+    IEventTypes eventTypes) : IModelBoundProjections
 {
     /// <summary>
     /// Discovers all model-bound projections.
@@ -33,7 +30,7 @@ public class ModelBoundProjections(
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     public IEnumerable<ProjectionDefinition> Discover()
     {
-        var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes, jsonSerializerOptions);
+        var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes);
 
         // Find all types with model-bound projection attributes
         return types.All

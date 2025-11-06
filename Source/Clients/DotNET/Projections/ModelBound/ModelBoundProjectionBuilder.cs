@@ -2,12 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
@@ -24,11 +22,9 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </remarks>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 public class ModelBoundProjectionBuilder(
     INamingPolicy namingPolicy,
-    IEventTypes eventTypes,
-    JsonSerializerOptions jsonSerializerOptions) : IModelBoundProjectionBuilder
+    IEventTypes eventTypes) : IModelBoundProjectionBuilder
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
@@ -40,11 +36,8 @@ public class ModelBoundProjectionBuilder(
     /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
     public ProjectionDefinition Build(Type modelType)
     {
-        // Use the type's full name as the projection ID
         var projectionId = new ProjectionId(modelType.FullName!);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
-
-        // Check for class-level attributes
         var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
         var passiveAttr = modelType.GetCustomAttribute<PassiveAttribute>();
@@ -70,17 +63,12 @@ public class ModelBoundProjectionBuilder(
             }
         };
 
-        // Process class-level FromEvent attributes
         var classLevelFromEvents = modelType.GetCustomAttributes()
             .Where(attr => attr.GetType().IsGenericType &&
                           attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
             .ToList();
 
-        // Get all properties
-        var properties = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-
-        // Process properties
-        foreach (var property in properties)
+        foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             ProcessProperty(property, definition, classLevelFromEvents, isRoot: true);
         }
@@ -395,15 +383,14 @@ public class ModelBoundProjectionBuilder(
         var childType = GetChildType(property.PropertyType);
         if (childType is not null)
         {
-            var childProperties = childType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            foreach (var childProperty in childProperties)
+            foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 ProcessProperty(childProperty, definition, [], isRoot: false, childrenDef: childrenDef);
             }
         }
     }
 
-    static Type? GetChildType(Type propertyType)
+    Type? GetChildType(Type propertyType)
     {
         // Check if it's IEnumerable<T>
         if (propertyType.IsGenericType)
