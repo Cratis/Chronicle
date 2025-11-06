@@ -68,7 +68,27 @@ internal class ModelBoundProjectionBuilder(
                           attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
             .ToList();
 
-        // Process constructor parameters (for records with primary constructors)
+        var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
+        ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
+
+        return definition;
+    }
+
+    void ProcessProperties(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents, ConstructorInfo? primaryConstructor)
+    {
+        foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (primaryConstructor?.GetParameters().Any(p => p.Name?.Equals(property.Name, StringComparison.OrdinalIgnoreCase) == true) == true)
+            {
+                continue;
+            }
+
+            ProcessMember(property, definition, classLevelFromEvents, isRoot: true);
+        }
+    }
+
+    ConstructorInfo? ProcessRecord(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents)
+    {
         var constructors = modelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
         var primaryConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
 
@@ -80,19 +100,7 @@ internal class ModelBoundProjectionBuilder(
             }
         }
 
-        // Process properties (for backwards compatibility and non-record types)
-        foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            // Skip properties that were already processed as constructor parameters
-            if (primaryConstructor?.GetParameters().Any(p => p.Name?.Equals(property.Name, StringComparison.OrdinalIgnoreCase) == true) == true)
-            {
-                continue;
-            }
-
-            ProcessMember(property, definition, classLevelFromEvents, isRoot: true);
-        }
-
-        return definition;
+        return primaryConstructor;
     }
 
     void ProcessParameter(
@@ -138,14 +146,13 @@ internal class ModelBoundProjectionBuilder(
             definition.ProcessChildrenFromAttribute(_eventTypes, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember);
         }
 
-        foreach (var attr in classLevelFromEvents)
+        foreach (var (eventType, eventProperty) in classLevelFromEvents
+            .Select(attr => (
+            eventType: attr.GetType().GetGenericArguments()[0],
+            eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(memberName)))
+            .Where(x => x.eventProperty is not null))
         {
-            var eventType = attr.GetType().GetGenericArguments()[0];
-            var eventProperty = eventType.GetProperty(memberName);
-            if (eventProperty is not null)
-            {
-                targetFrom.AddSetMapping(_eventTypes, _namingPolicy, eventType, propertyName, memberName);
-            }
+            targetFrom.AddSetMapping(_eventTypes, _namingPolicy, eventType, propertyName, memberName);
         }
     }
 
@@ -192,14 +199,13 @@ internal class ModelBoundProjectionBuilder(
             definition.ProcessChildrenFromAttribute(_eventTypes, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember);
         }
 
-        foreach (var attr in classLevelFromEvents)
+        foreach (var (eventType, eventProperty) in classLevelFromEvents
+            .Select(attr => (
+                eventType: attr.GetType().GetGenericArguments()[0],
+                eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(property.Name)))
+            .Where(x => x.eventProperty is not null))
         {
-            var eventType = attr.GetType().GetGenericArguments()[0];
-            var eventProperty = eventType.GetProperty(property.Name);
-            if (eventProperty is not null)
-            {
-                targetFrom.AddSetMapping(_eventTypes, _namingPolicy, eventType, propertyName, property.Name);
-            }
+            targetFrom.AddSetMapping(_eventTypes, _namingPolicy, eventType, propertyName, property.Name);
         }
     }
 }
