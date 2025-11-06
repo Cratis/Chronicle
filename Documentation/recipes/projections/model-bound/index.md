@@ -45,6 +45,7 @@ Model-bound projections support all projection engine capabilities:
 - **Relationships**: Join, Children
 - **Removal**: RemovedWith, RemovedWithJoin
 - **Convention-based**: FromEvent for automatic property matching
+- **Configuration**: FromEventSequence, NotRewindable, Passive
 - **Recursive**: All attributes work on child types and joined types
 
 See the following pages for detailed information on each feature:
@@ -54,6 +55,7 @@ See the following pages for detailed information on each feature:
 - [Children](./children.md) - Managing child collections
 - [Joins](./joins.md) - Joining with other events
 - [Convention-Based](./convention-based.md) - Automatic property matching
+- [Configuration](./configuration.md) - Event sequence, rewindable, and active settings
 
 ## When to Use
 

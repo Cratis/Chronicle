@@ -10,3 +10,5 @@
   href: joins.md
 - name: Convention-Based
   href: convention-based.md
+- name: Configuration
+  href: configuration.md

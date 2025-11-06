@@ -39,3 +39,37 @@ public record Cart(
 
     [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(CartItem.Id))]
     IEnumerable<CartItem> Items);
+
+[FromEventSequence("audit-log")]
+public record AuditRecord(
+    [Key, FromEventSourceId]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string EventName);
+
+[NotRewindable]
+public record AuditLogEntry(
+    [Key, FromEventSourceId]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Message);
+
+[Passive]
+public record Snapshot(
+    [Key, FromEventSourceId]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Data);
+
+[FromEventSequence("custom")]
+[NotRewindable]
+[Passive]
+public record ConfiguredProjection(
+    [Key, FromEventSourceId]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Value);

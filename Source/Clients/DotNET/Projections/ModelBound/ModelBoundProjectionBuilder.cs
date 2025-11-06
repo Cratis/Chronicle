@@ -44,13 +44,18 @@ public class ModelBoundProjectionBuilder(
         var projectionId = new ProjectionId(modelType.FullName!);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
 
+        // Check for class-level attributes
+        var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
+        var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
+        var passiveAttr = modelType.GetCustomAttribute<PassiveAttribute>();
+
         var definition = new ProjectionDefinition
         {
-            EventSequenceId = EventSequenceId.Log,
+            EventSequenceId = fromEventSequenceAttr?.EventSequenceId ?? EventSequenceId.Log,
             Identifier = projectionId,
             ReadModel = readModelIdentifier,
-            IsActive = true,
-            IsRewindable = true,
+            IsActive = passiveAttr is null,
+            IsRewindable = notRewindableAttr is null,
             InitialModelState = "{}",
             From = new Dictionary<EventType, FromDefinition>(),
             Join = new Dictionary<EventType, JoinDefinition>(),
