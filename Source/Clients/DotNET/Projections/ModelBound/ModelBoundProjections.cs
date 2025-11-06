@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/> to use for discovering client artifacts.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-public class ModelBoundProjections(
+internal class ModelBoundProjections(
     IClientArtifactsProvider clientArtifactsProvider,
     INamingPolicy namingPolicy,
     IEventTypes eventTypes) : IModelBoundProjections

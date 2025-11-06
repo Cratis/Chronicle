@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </remarks>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-public class ModelBoundProjectionBuilder(
+internal class ModelBoundProjectionBuilder(
     INamingPolicy namingPolicy,
     IEventTypes eventTypes) : IModelBoundProjectionBuilder
 {

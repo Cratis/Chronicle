@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilde
 
 public class a_model_bound_projection_builder : Specification
 {
-    protected ModelBoundProjectionBuilder builder;
+    internal ModelBoundProjectionBuilder builder;
     protected INamingPolicy naming_policy;
     protected IEventTypes event_types;
 

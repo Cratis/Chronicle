@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines a system for discovering and building projection definitions from model-bound attributes.
 /// </summary>
-public interface IModelBoundProjections
+internal interface IModelBoundProjections
 {
     /// <summary>
     /// Discovers all model-bound projections.
