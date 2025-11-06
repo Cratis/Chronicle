@@ -13,68 +13,68 @@ public record AccountId(Guid Value);
 public record AccountName(string Value);
 
 public record AccountInfo(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     AccountId Id,
 
-    [property: SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     AccountName Name,
 
-    [property: AddFrom<DepositToDebitAccountPerformed>(nameof(DepositToDebitAccountPerformed.Amount))]
-    [property: SubtractFrom<WithdrawalFromDebitAccountPerformed>(nameof(WithdrawalFromDebitAccountPerformed.Amount))]
+    [AddFrom<DepositToDebitAccountPerformed>(nameof(DepositToDebitAccountPerformed.Amount))]
+    [SubtractFrom<WithdrawalFromDebitAccountPerformed>(nameof(WithdrawalFromDebitAccountPerformed.Amount))]
     double Balance);
 
 [FromEvent<DebitAccountOpened>]
 public record AccountInfoWithClassLevelEvent(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     AccountId Id,
 
     AccountName Name,
 
-    [property: AddFrom<DepositToDebitAccountPerformed>(nameof(DepositToDebitAccountPerformed.Amount))]
-    [property: SubtractFrom<WithdrawalFromDebitAccountPerformed>(nameof(WithdrawalFromDebitAccountPerformed.Amount))]
+    [AddFrom<DepositToDebitAccountPerformed>(nameof(DepositToDebitAccountPerformed.Amount))]
+    [SubtractFrom<WithdrawalFromDebitAccountPerformed>(nameof(WithdrawalFromDebitAccountPerformed.Amount))]
     double Balance);
 
-public record CartItem([property: Key] string Id, string Name, double Price);
+public record CartItem([Key] string Id, string Name, double Price);
 
 public record Cart(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     Guid Id,
 
-    [property: ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(CartItem.Id))]
+    [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(CartItem.Id))]
     IEnumerable<CartItem> Items);
 
 [FromEventSequence("audit-log")]
 public record AuditRecord(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     Guid Id,
 
-    [property: SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string EventName);
 
 [NotRewindable]
 public record AuditLogEntry(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     Guid Id,
 
-    [property: SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string Message);
 
 [Passive]
 public record Snapshot(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     Guid Id,
 
-    [property: SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string Data);
 
 [FromEventSequence("custom")]
 [NotRewindable]
 [Passive]
 public record ConfiguredProjection(
-    [property: Key] [property: FromEventSourceId]
+    [Key]
     Guid Id,
 
-    [property: SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string Value);
 
 #pragma warning restore SA1402 // File may only contain a single type
