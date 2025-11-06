@@ -14,10 +14,7 @@ public class a_model_bound_projection_builder : Specification
 
     void Establish()
     {
-        naming_policy = Substitute.For<INamingPolicy>();
-        naming_policy.GetPropertyName(Arg.Any<Properties.PropertyPath>())
-            .Returns(ci => ci.ArgAt<Properties.PropertyPath>(0).Path);
-
+        naming_policy = new TestNamingPolicy();
         event_types = new EventTypesForSpecifications([
             typeof(DebitAccountOpened),
             typeof(DepositToDebitAccountPerformed),

@@ -12,29 +12,33 @@ public class when_building_model_with_add_and_subtract : given.a_model_bound_pro
 
     void Because() => _result = builder.Build(typeof(AccountInfo));
 
-    [Fact] void should_have_from_definition_for_deposit()
+    [Fact]
+    void should_have_from_definition_for_deposit()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DepositToDebitAccountPerformed)).ToContract();
-        _result.From.Keys.ShouldContain(eventType);
+        _result.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_use_add_expression_for_balance()
+    [Fact]
+    void should_use_add_expression_for_balance()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DepositToDebitAccountPerformed)).ToContract();
-        var expression = _result.From[eventType].Properties["Balance"];
+        var expression = _result.From.Single(kvp => kvp.Key.Id == eventType.Id).Value.Properties["Balance"];
         expression.ShouldContain(WellKnownExpressions.Add);
     }
 
-    [Fact] void should_have_from_definition_for_withdrawal()
+    [Fact]
+    void should_have_from_definition_for_withdrawal()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WithdrawalFromDebitAccountPerformed)).ToContract();
-        _result.From.Keys.ShouldContain(eventType);
+        _result.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_use_subtract_expression_for_balance()
+    [Fact]
+    void should_use_subtract_expression_for_balance()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WithdrawalFromDebitAccountPerformed)).ToContract();
-        var expression = _result.From[eventType].Properties["Balance"];
+        var expression = _result.From.Single(kvp => kvp.Key.Id == eventType.Id).Value.Properties["Balance"];
         expression.ShouldContain(WellKnownExpressions.Subtract);
     }
 }

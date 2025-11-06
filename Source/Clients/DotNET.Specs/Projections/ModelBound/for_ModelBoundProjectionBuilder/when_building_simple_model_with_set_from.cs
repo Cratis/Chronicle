@@ -21,12 +21,12 @@ public class when_building_simple_model_with_set_from : given.a_model_bound_proj
     [Fact] void should_have_from_definition_for_debit_account_opened()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DebitAccountOpened)).ToContract();
-        _result.From.Keys.ShouldContain(eventType);
+        _result.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
     [Fact] void should_map_name_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DebitAccountOpened)).ToContract();
-        _result.From[eventType].Properties.Keys.ShouldContain("Name");
+        _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties.Keys.ShouldContain("Name");
     }
 }

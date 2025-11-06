@@ -87,7 +87,7 @@ public partial class PropertyPath
     /// </summary>
     /// <param name="property"><see cref="PropertyPath"/> to convert from.</param>
     /// <returns>Converted path.</returns>
-    public static implicit operator string(PropertyPath property) => property.Path;
+    public static implicit operator string(PropertyPath property) => property?.Path ?? string.Empty;
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to a <see cref="PropertyPath"/>.
