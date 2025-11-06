@@ -17,20 +17,17 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 public sealed class ChildrenFromAttribute<TEvent>(
     string? key = default,
     string? identifiedBy = default,
-    string? parentKey = default) : Attribute, IProjectionAnnotation
+    string? parentKey = default) : Attribute, IProjectionAnnotation, IChildrenFromAttribute
 {
-    /// <summary>
-    /// Gets the property name on the event that identifies the child.
-    /// </summary>
+    /// <inheritdoc/>
+    public Type EventType => typeof(TEvent);
+
+    /// <inheritdoc/>
     public string Key { get; } = key ?? WellKnownExpressions.EventSourceId;
 
-    /// <summary>
-    /// Gets the property name on the child model that identifies it.
-    /// </summary>
-    public string IdentifiedBy { get; } = identifiedBy ?? WellKnownExpressions.Id;
-
-    /// <summary>
-    /// Gets the property name that identifies the parent.
-    /// </summary>
+    /// <inheritdoc/>
     public string ParentKey { get; } = parentKey ?? WellKnownExpressions.EventSourceId;
+
+    /// <inheritdoc/>
+    public string IdentifiedBy { get; } = identifiedBy ?? WellKnownExpressions.Id;
 }
