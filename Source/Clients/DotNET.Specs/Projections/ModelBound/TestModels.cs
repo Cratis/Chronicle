@@ -5,6 +5,9 @@ using Cratis.Chronicle.Keys;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
+#pragma warning disable SA1649 // File name should match first type name
+#pragma warning disable SA1402 // File may only contain a single type
+
 public record AccountId(Guid Value);
 
 public record AccountName(string Value);
@@ -73,3 +76,6 @@ public record ConfiguredProjection(
 
     [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string Value);
+
+#pragma warning restore SA1402 // File may only contain a single type
+#pragma warning restore SA1649 // File name should match first type name
