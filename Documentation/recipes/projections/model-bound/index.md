@@ -13,24 +13,25 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 public record AccountInfo(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.Name))]
     string Name,
-    
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
     decimal Balance);
 ```
 
 In this example:
+
 - `[Key]` marks the property as the key for the read model (using `KeyAttribute` from `Cratis.Chronicle.Keys`)
-- `[FromEventSourceId]` indicates the key comes from the event source ID
 - `[SetFrom<TEvent>]` maps properties from specific events
 
 ## Discovery
 
 Types are automatically discovered by the presence of:
+
 - `KeyAttribute` on any property, OR
 - Any projection mapping attribute (SetFrom, AddFrom, Join, etc.)
 
@@ -60,18 +61,21 @@ See the following pages for detailed information on each feature:
 ## When to Use
 
 Use model-bound projections when:
+
 - You have simple to moderate projection logic
 - The projection mapping is straightforward and declarative
 - You prefer a more concise, attribute-based approach
 
 Use fluent projections (`IProjectionFor<T>`) when:
-- You need complex, imperative logic in your projections
+
+- You prefer to separate the concerns of the representation of a read model and its projection definition
 - You want more control over the projection building process
 - You need to share projection logic across multiple read models
 
 ## Comparison with Fluent Projections
 
 **Fluent Projection:**
+
 ```csharp
 public class AccountProjection : IProjectionFor<AccountInfo>
 {
@@ -83,9 +87,10 @@ public class AccountProjection : IProjectionFor<AccountInfo>
 ```
 
 **Model-Bound Projection:**
+
 ```csharp
 public record AccountInfo(
-    [Key, FromEventSourceId] Guid Id,
+    [Key] Guid Id,
     [SetFrom<AccountOpened>(nameof(AccountOpened.Name))] string Name,
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))] decimal Balance);
 ```

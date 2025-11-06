@@ -11,9 +11,9 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 public record Order(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [ChildrenFrom<LineItemAdded>(
         key: nameof(LineItemAdded.ItemId),
         identifiedBy: nameof(LineItem.Id))]
@@ -38,9 +38,9 @@ All projection attributes work recursively on child types. The child type's prop
 
 ```csharp
 public record ShoppingCart(
-    [Key, FromEventSourceId]
+    [Key]
     Guid CartId,
-    
+
     [ChildrenFrom<ItemAddedToCart>(
         key: nameof(ItemAddedToCart.ItemId))]
     IEnumerable<CartItem> Items);
@@ -48,13 +48,13 @@ public record ShoppingCart(
 // Child type with its own projection attributes
 public record CartItem(
     [Key] Guid Id,
-    
+
     [SetFrom<ItemAddedToCart>(nameof(ItemAddedToCart.ProductName))]
     string ProductName,
-    
+
     [SetFrom<ItemAddedToCart>(nameof(ItemAddedToCart.Price))]
     decimal Price,
-    
+
     [SetFrom<ItemAddedToCart>(nameof(ItemAddedToCart.InitialQuantity))]
     [Increment<QuantityIncreased>]
     [Decrement<QuantityDecreased>]
@@ -76,9 +76,9 @@ Use `RemovedWith` to remove children from collections:
 
 ```csharp
 public record Order(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
     [RemovedWith<LineItemRemoved>(key: nameof(LineItemRemoved.ItemId))]
     IEnumerable<OrderLine> Lines);
@@ -94,9 +94,9 @@ For more complex removal scenarios using joins:
 
 ```csharp
 public record Subscription(
-    [Key, FromEventSourceId]
+    [Key]
     Guid SubscriptionId,
-    
+
     [ChildrenFrom<FeatureActivated>]
     [RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
     IEnumerable<Feature> Features);
@@ -130,26 +130,26 @@ public record LineItemRemoved(Guid ItemId);
 
 // Read Models
 public record Order(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<OrderCreated>(nameof(OrderCreated.CustomerName))]
     string Customer,
-    
+
     [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
     [RemovedWith<LineItemRemoved>(key: nameof(LineItemRemoved.ItemId))]
     IEnumerable<OrderLine> Lines);
 
 public record OrderLine(
     [Key] Guid Id,
-    
+
     [SetFrom<LineItemAdded>(nameof(LineItemAdded.ProductName))]
     string Product,
-    
+
     [SetFrom<LineItemAdded>(nameof(LineItemAdded.InitialQuantity))]
     [SetFrom<QuantityAdjusted>(nameof(QuantityAdjusted.NewQuantity))]
     int Quantity,
-    
+
     [SetFrom<LineItemAdded>(nameof(LineItemAdded.UnitPrice))]
     decimal UnitPrice);
 ```
@@ -167,7 +167,7 @@ Children can have their own children, creating deeply nested structures:
 
 ```csharp
 public record Organization(
-    [Key, FromEventSourceId] Guid Id,
+    [Key] Guid Id,
     [ChildrenFrom<DepartmentCreated>] IEnumerable<Department> Departments);
 
 public record Department(

@@ -11,9 +11,9 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 public record UserStatistics(
-    [Key, FromEventSourceId]
+    [Key]
     Guid UserId,
-    
+
     [Increment<UserLoggedIn>]
     int LoginCount);
 ```
@@ -26,9 +26,9 @@ The `Decrement` attribute decrements a numeric property when an event occurs. Th
 
 ```csharp
 public record ServerStatistics(
-    [Key, FromEventSourceId]
+    [Key]
     Guid ServerId,
-    
+
     [Increment<UserConnected>]
     [Decrement<UserDisconnected>]
     int ActiveConnections);
@@ -42,12 +42,12 @@ The `Count` attribute counts the total number of times an event occurs. Unlike I
 
 ```csharp
 public record EventMetrics(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [Count<OrderPlaced>]
     int TotalOrders,
-    
+
     [Count<OrderCancelled>]
     int CancelledOrders);
 ```
@@ -58,20 +58,20 @@ You can use multiple attributes on the same property to respond to different eve
 
 ```csharp
 public record InventoryItem(
-    [Key, FromEventSourceId]
+    [Key]
     Guid ItemId,
-    
+
     [SetFrom<ItemCreated>(nameof(ItemCreated.Name))]
     string Name,
-    
+
     [SetFrom<ItemCreated>(nameof(ItemCreated.InitialQuantity))]
     [Increment<ItemRestocked>]
     [Decrement<ItemSold>]
     int Quantity,
-    
+
     [Count<ItemRestocked>]
     int RestockCount,
-    
+
     [Count<ItemSold>]
     int SalesCount);
 ```
@@ -100,28 +100,28 @@ public record RefundIssued(decimal Amount);
 
 // Read Model
 public record UserActivity(
-    [Key, FromEventSourceId]
+    [Key]
     Guid UserId,
-    
+
     // Track login/logout counts
     [Count<UserLoggedIn>]
     int TotalLogins,
-    
+
     [Count<UserLoggedOut>]
     int TotalLogouts,
-    
+
     // Track active sessions
     [Increment<UserLoggedIn>]
     [Decrement<UserLoggedOut>]
     int ActiveSessions,
-    
+
     // Track transaction counts
     [Count<PurchaseMade>]
     int PurchaseCount,
-    
+
     [Count<RefundIssued>]
     int RefundCount,
-    
+
     // Track transaction values
     [AddFrom<PurchaseMade>(nameof(PurchaseMade.Amount))]
     [SubtractFrom<RefundIssued>(nameof(RefundIssued.Amount))]

@@ -11,12 +11,12 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 public record OrderSummary(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [SetFrom<OrderPlaced>]
     decimal Amount,
-    
+
     [Join<CustomerCreated>(
         on: nameof(CustomerId),
         eventPropertyName: nameof(CustomerCreated.Name))]
@@ -34,21 +34,21 @@ Joins work within child collections. When used in children, the `on` parameter i
 
 ```csharp
 public record Order(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [ChildrenFrom<LineItemAdded>]
     IEnumerable<OrderLine> Lines);
 
 public record OrderLine(
     [Key] Guid Id,
-    
+
     [SetFrom<LineItemAdded>]
     int Quantity,
-    
+
     [Join<ProductUpdated>(eventPropertyName: nameof(ProductUpdated.ProductName))]
     string ProductName,
-    
+
     [Join<ProductUpdated>(eventPropertyName: nameof(ProductUpdated.CurrentPrice))]
     decimal Price);
 ```
@@ -59,15 +59,15 @@ You can join with multiple different events:
 
 ```csharp
 public record EnrichedOrder(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [Join<CustomerCreated>(on: nameof(CustomerId))]
     string CustomerName,
-    
+
     [Join<CustomerUpdated>(on: nameof(CustomerId))]
     string CustomerEmail,
-    
+
     [Join<ShippingAddressSet>(on: nameof(OrderId))]
     string ShippingAddress);
 ```
@@ -78,23 +78,23 @@ Join attributes on related types are processed recursively:
 
 ```csharp
 public record Order(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [ChildrenFrom<LineItemAdded>]
     IEnumerable<OrderLine> Lines);
 
 public record OrderLine(
     [Key] Guid Id,
-    
+
     [Join<ProductCatalogUpdated>(
         eventPropertyName: nameof(ProductCatalogUpdated.Name))]
     string ProductName,
-    
+
     [Join<ProductCatalogUpdated>(
         eventPropertyName: nameof(ProductCatalogUpdated.Description))]
     string Description,
-    
+
     [Join<PricingUpdated>(
         eventPropertyName: nameof(PricingUpdated.CurrentPrice))]
     decimal UnitPrice);
@@ -130,41 +130,41 @@ public record ProductPriceChanged(decimal NewPrice);
 
 // Read Models
 public record OrderDetails(
-    [Key, FromEventSourceId]
+    [Key]
     Guid OrderId,
-    
+
     [SetFrom<OrderPlaced>]
     DateTimeOffset PlacedAt,
-    
+
     // Join customer information
     [Join<CustomerRegistered>(
         on: nameof(CustomerId),
         eventPropertyName: nameof(CustomerRegistered.Name))]
     string CustomerName,
-    
+
     [Join<CustomerRegistered>(
         on: nameof(CustomerId),
         eventPropertyName: nameof(CustomerRegistered.Email))]
     string CustomerEmail,
-    
+
     [Join<CustomerProfileUpdated>(
         on: nameof(CustomerId),
         eventPropertyName: nameof(CustomerProfileUpdated.PhoneNumber))]
     string CustomerPhone,
-    
+
     [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ProductId))]
     IEnumerable<LineItemDetails> Items);
 
 public record LineItemDetails(
     [Key] Guid ProductId,
-    
+
     [SetFrom<LineItemAdded>]
     int Quantity,
-    
+
     // Join product information
     [Join<ProductCreated>(eventPropertyName: nameof(ProductCreated.Name))]
     string ProductName,
-    
+
     [Join<ProductCreated>(eventPropertyName: nameof(ProductCreated.Price))]
     [Join<ProductPriceChanged>(eventPropertyName: nameof(ProductPriceChanged.NewPrice))]
     decimal Price);

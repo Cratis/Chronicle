@@ -12,9 +12,9 @@ using Cratis.Chronicle.Projections.ModelBound;
 
 [FromEvent<UserRegistered>]
 public record User(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     string Name,        // Automatically mapped from UserRegistered.Name
     string Email,       // Automatically mapped from UserRegistered.Email
     DateTimeOffset RegisteredAt);  // Automatically mapped from UserRegistered.RegisteredAt
@@ -24,15 +24,15 @@ This is equivalent to:
 
 ```csharp
 public record User(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<UserRegistered>(nameof(UserRegistered.Name))]
     string Name,
-    
+
     [SetFrom<UserRegistered>(nameof(UserRegistered.Email))]
     string Email,
-    
+
     [SetFrom<UserRegistered>(nameof(UserRegistered.RegisteredAt))]
     DateTimeOffset RegisteredAt);
 ```
@@ -45,9 +45,9 @@ You can use multiple `FromEvent` attributes for different events:
 [FromEvent<UserRegistered>]
 [FromEvent<UserProfileUpdated>]
 public record UserProfile(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     string Name,     // From UserRegistered and UserProfileUpdated
     string Email,    // From UserRegistered and UserProfileUpdated
     string Phone);   // From UserProfileUpdated only
@@ -62,11 +62,11 @@ You can combine `FromEvent` with explicit property attributes:
 ```csharp
 [FromEvent<AccountOpened>]
 public record Account(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     string Name,  // Convention-based from AccountOpened.Name
-    
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
     [AddFrom<DepositMade>(nameof(DepositMade.Amount))]
     [SubtractFrom<WithdrawalMade>(nameof(WithdrawalMade.Amount))]
@@ -105,19 +105,19 @@ public record SalaryAdjusted(decimal NewSalary);
 [FromEvent<EmployeeHired>]
 [FromEvent<EmployeeDepartmentChanged>]
 public record Employee(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     // These properties are automatically mapped by name
     string FirstName,
     string LastName,
     string Email,
     string Department,
-    
+
     // This needs explicit mapping because it comes from a different property name
     [SetFrom<SalaryAdjusted>(nameof(SalaryAdjusted.NewSalary))]
     decimal Salary,
-    
+
     // Track department changes
     [Count<EmployeeDepartmentChanged>]
     int DepartmentChangeCount);

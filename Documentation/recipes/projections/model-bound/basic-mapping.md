@@ -11,12 +11,12 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 public record User(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<UserRegistered>(nameof(UserRegistered.Email))]
     string Email,
-    
+
     [SetFrom<UserRegistered>(nameof(UserRegistered.Name))]
     string Name);
 ```
@@ -27,7 +27,7 @@ If the property name on the event matches the read model property name, you can 
 
 ```csharp
 public record User(
-    [Key, FromEventSourceId] Guid Id,
+    [Key] Guid Id,
     [SetFrom<UserRegistered>] string Email,  // Maps to UserRegistered.Email
     [SetFrom<UserRegistered>] string Name);   // Maps to UserRegistered.Name
 ```
@@ -38,8 +38,8 @@ You can set a property from multiple different events:
 
 ```csharp
 public record Account(
-    [Key, FromEventSourceId] Guid Id,
-    
+    [Key] Guid Id,
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.AccountName))]
     [SetFrom<AccountRenamed>(nameof(AccountRenamed.NewName))]
     string Name);
@@ -51,8 +51,8 @@ The `AddFrom` attribute adds values from event properties to the read model prop
 
 ```csharp
 public record Account(
-    [Key, FromEventSourceId] Guid Id,
-    
+    [Key] Guid Id,
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
     [AddFrom<DepositMade>(nameof(DepositMade.Amount))]
     decimal Balance);
@@ -66,8 +66,8 @@ The `SubtractFrom` attribute subtracts values from event properties. This is com
 
 ```csharp
 public record Account(
-    [Key, FromEventSourceId] Guid Id,
-    
+    [Key] Guid Id,
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
     [AddFrom<DepositMade>(nameof(DepositMade.Amount))]
     [SubtractFrom<WithdrawalMade>(nameof(WithdrawalMade.Amount))]
@@ -98,13 +98,13 @@ public record AccountRenamed(string NewName);
 
 // Read Model
 public record BankAccount(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.AccountName))]
     [SetFrom<AccountRenamed>(nameof(AccountRenamed.NewName))]
     string Name,
-    
+
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
     [AddFrom<DepositMade>(nameof(DepositMade.Amount))]
     [SubtractFrom<WithdrawalMade>(nameof(WithdrawalMade.Amount))]

@@ -12,9 +12,9 @@ using Cratis.Chronicle.Projections.ModelBound;
 
 [FromEventSequence("custom-sequence")]
 public record OrderSummary(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<OrderPlaced>]
     decimal TotalAmount);
 ```
@@ -32,12 +32,12 @@ Mark a projection as not rewindable (forward-only) using `[NotRewindable]`:
 ```csharp
 [NotRewindable]
 public record AuditLog(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<AuditEvent>]
     string Message,
-    
+
     [SetFrom<AuditEvent>]
     DateTimeOffset Timestamp);
 ```
@@ -60,9 +60,9 @@ Mark a projection as passive (not actively observing) using `[Passive]`:
 ```csharp
 [Passive]
 public record HistoricalSnapshot(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<SnapshotCreated>]
     string Data);
 ```
@@ -87,12 +87,12 @@ You can combine multiple configuration attributes:
 [NotRewindable]
 [Passive]
 public record AuditSnapshot(
-    [Key, FromEventSourceId]
+    [Key]
     Guid Id,
-    
+
     [SetFrom<AuditEvent>]
     string EventType,
-    
+
     [SetFrom<AuditEvent>]
     DateTimeOffset OccurredAt);
 ```
