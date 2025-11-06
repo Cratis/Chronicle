@@ -7,6 +7,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// Marks a projection as passive, meaning it won't actively observe.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
-public sealed class PassiveAttribute : Attribute, IProjectionAnnotation
-{
-}
+public sealed class PassiveAttribute : Attribute, IProjectionAnnotation;

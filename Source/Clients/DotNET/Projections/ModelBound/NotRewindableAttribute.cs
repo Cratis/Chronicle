@@ -7,6 +7,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// Marks a projection as not rewindable - it's a moving forward only projection.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
-public sealed class NotRewindableAttribute : Attribute, IProjectionAnnotation
-{
-}
+public sealed class NotRewindableAttribute : Attribute, IProjectionAnnotation;
