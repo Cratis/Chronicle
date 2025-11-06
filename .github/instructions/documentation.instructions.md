@@ -43,3 +43,4 @@ applyTo: "Documentation/**/*.md"
 - Every folder should have its own `toc.yml` file to define the structure of the documentation within that folder.
 - When linking to a folder in a `toc.yml` file, link to the `toc.yml` file in that folder, not to an `index.md` file.
 - Ensure that documentation is accurate according to the public APIs and features of the project.
+- When writing documentation that involves specifying an event type with the `[EventType]` attribute, never add an explicit name - just keep it as `[EventType]`.

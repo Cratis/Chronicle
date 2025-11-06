@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 270 days, 23:43:28 | 118 days, 0:29:05 | 820 days, 6:05:47 |
+| Time to close | 271 days, 6:11:12 | 121 days, 12:21:42 | 818 days, 16:13:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 273 |
-| Number of items closed | 577 |
+| Number of items that remain open | 271 |
+| Number of items closed | 579 |
 | Total number of items created | 850 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -67,7 +67,7 @@
 | During GitHub builds we want to build specs and integration specs with Debug but compile them with "treat warning as errors" | https://github.com/Cratis/Chronicle/issues/1773 | None | [einari](https://github.com/einari) | None | 16 days, 17:36:25 | None |
 | Projections for Rules shouldn't end up as an observer | https://github.com/Cratis/Chronicle/issues/1766 | None | [einari](https://github.com/einari) | None | 0:06:00 | None |
 | Add support for observer Replays being cancelled | https://github.com/Cratis/Chronicle/issues/1764 | None | [einari](https://github.com/einari) | None | None | None |
-| Projections sometimes fail with concurrency issues related to cloning of the internal ExpandoObject | https://github.com/Cratis/Chronicle/issues/1763 | None | [einari](https://github.com/einari) | None | None | None |
+| Projections sometimes fail with concurrency issues related to cloning of the internal ExpandoObject | https://github.com/Cratis/Chronicle/issues/1763 | None | [einari](https://github.com/einari) | None | 236 days, 21:32:29 | None |
 | Monthly issue metrics report | https://github.com/Cratis/Chronicle/issues/1755 | None | [github-actions[bot]](https://github.com/github-actions[bot]) | None | 0:05:28 | None |
 | Add programatic support for replaying from the .NET client (Reactors, Reducers, Projections) | https://github.com/Cratis/Chronicle/issues/1754 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 125 days, 0:35:04 | None |
 | More efficient JobStorage queries | https://github.com/Cratis/Chronicle/issues/1753 | None | [woksin](https://github.com/woksin) | None | None | None |
@@ -275,7 +275,7 @@
 | Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | None | [einari](https://github.com/einari) | None | None | None |
 | Add a way to clear state / API call. Only available in Development | https://github.com/Cratis/Chronicle/issues/1287 | None | [einari](https://github.com/einari) | None | None | None |
 | Add possibility to report errors back inside an aggregate root method | https://github.com/Cratis/Chronicle/issues/1285 | None | [einari](https://github.com/einari) | None | None | None |
-| Investigate a simplified "query language" for projections | https://github.com/Cratis/Chronicle/issues/1284 | None | [einari](https://github.com/einari) | None | None | None |
+| Investigate a simplified "query language" for projections | https://github.com/Cratis/Chronicle/issues/1284 | None | [einari](https://github.com/einari) | None | 460 days, 23:29:09 | None |
 | Ability to configure automatically applying recommendation based on their type | https://github.com/Cratis/Chronicle/issues/1281 | None | [einari](https://github.com/einari) | None | 207 days, 23:48:57 | None |
 | First event not handled after adding a namespace | https://github.com/Cratis/Chronicle/issues/1280 | None | [einari](https://github.com/einari) | None | 207 days, 21:29:35 | None |
 | Fix API namespaces prefix | https://github.com/Cratis/Chronicle/issues/1279 | None | [einari](https://github.com/einari) | None | 157 days, 6:24:14 | None |
@@ -342,4 +342,4 @@
 | Improve .To() / .ToValue() - consolidate + support complex types | https://github.com/Cratis/Chronicle/issues/1051 | None | [einari](https://github.com/einari) | None | None | None |
 | Support base types for projections | https://github.com/Cratis/Chronicle/issues/1030 | None | [einari](https://github.com/einari) | None | 6:52:46 | None |
 | Support deletion for reducers | https://github.com/Cratis/Chronicle/issues/1028 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 587 days, 23:46:34 | None |
-| Consolidate the creation of EventTypeRegistration - removing duplicate logic for creation | https://github.com/Cratis/Chronicle/issues/1027 | None | [e
+| Consolidate the creation of EventTypeRegistration - removing duplicate logic for creation | https://github.com/Cratis/Chro

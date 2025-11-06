@@ -13,6 +13,7 @@
 
     <!-- 3rd party package references -->
     <ItemGroup>
+        <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
         <PackageReference Include="Cratis.Applications" />
         <PackageReference Include="Cratis.Applications.MongoDB" />
         <PackageReference Include="Cratis.Applications.Orleans" />

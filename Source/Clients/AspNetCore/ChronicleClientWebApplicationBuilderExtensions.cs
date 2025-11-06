@@ -37,8 +37,9 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         Action<IChronicleBuilder>? configure = default,
         ILoggerFactory? loggerFactory = default)
     {
-        builder.Services.AddOptions(configureOptions);
-        builder.Configuration.Bind(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths));
+        builder.Services
+            .AddOptions(configureOptions)
+            .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths));
 
         builder.Services
             .AddRules()
@@ -81,11 +82,13 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     {
         var builder = services
             .AddOptions<ChronicleAspNetCoreOptions>()
+            .BindConfiguration(ConfigurationPath.Combine(DefaultSectionPaths))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
         var baseBuilder = services
             .AddOptions<ChronicleOptions>()
+            .BindConfiguration(ConfigurationPath.Combine(DefaultSectionPaths))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
