@@ -21,6 +21,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Projections { get; }
 
     /// <summary>
+    /// Gets all the available model-bound projection types.
+    /// </summary>
+    IEnumerable<Type> ModelBoundProjections { get; }
+
+    /// <summary>
     /// Gets all the available Reactor types.
     /// </summary>
     IEnumerable<Type> Reactors { get; }

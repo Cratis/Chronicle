@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
 using Cratis.Serialization;
@@ -248,10 +249,15 @@ public class Projections(
             _ => _.Key.GetReadModelType(),
             _ => _.Value);
 
+        // Discover model-bound projections
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
+        var modelBoundDefinitions = modelBoundProjections.Discover().ToList();
+
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
                 .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
-                .. _definitionsByType.Values.Select(_ => _).ToList()
+                .. _definitionsByType.Values.Select(_ => _).ToList(),
+                .. modelBoundDefinitions
             ]).ToImmutableList();
 
         return Task.CompletedTask;
