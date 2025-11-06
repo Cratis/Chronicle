@@ -12,4 +12,6 @@ This area contains explanations and guidance on the concepts in Cratis.
 | [Event Sequence](./event-sequence.md) | What is an event sequence |
 | [Observer](./observer.md) | What is an observer |
 | [Projection](./projection.md) | What is a projection |
+| [Projection Operations](./projection-operations.md) | Advanced projection operations: joins, children, and keys |
 | [Constraints](./constraints.md) | What are constraints |
+
