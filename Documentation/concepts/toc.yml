@@ -14,6 +14,8 @@
   href: observers.md
 - name: Projection
   href: projection.md
+- name: Projection Operations
+  href: projection-operations.md
 - name: Constraints
   href: constraints.md
 - name: Event Metadata Tags

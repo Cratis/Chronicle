@@ -2,6 +2,8 @@
 
 Projections in Cratis allow you to create read models from events stored in the event log. They provide different levels of complexity from simple auto-mapping to sophisticated hierarchical models with joins.
 
+For an in-depth explanation of how joins, children, and keys work together, see the [Projection Operations](../../concepts/projection-operations.md) concept guide.
+
 ## Projection recipes
 
 | Recipe | Description |
