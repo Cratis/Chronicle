@@ -1,6 +1,6 @@
 # Model-Bound Projections
 
-Model-bound projections allow you to define projections using C# attributes directly on your read model types, eliminating the need to implement `IProjectionFor<T>` for simple cases. This approach uses C# 11's generic attributes feature to provide a declarative way to configure projections.
+Model-bound projections allow you to define projections using C# attributes directly on your read model types, eliminating the need to implement `IProjectionFor<T>` and rather put in metadata directly into your read model.
 
 ## Overview
 
