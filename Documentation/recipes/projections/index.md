@@ -6,6 +6,7 @@ Projections in Cratis allow you to create read models from events stored in the 
 
 | Recipe | Description |
 | ------ | ----------- |
+| [Model-Bound Projections](model-bound/index.md) | How to work with model-bound projections |
 | [Simple projection](simple-projection.md) | Basic projection using AutoMap() |
 | [Projection AutoMap](projection-auto-map.md) | Automatic property mapping at different levels |
 | [Passive projection](projection-passive.md) | In-memory projections for on-demand lookups |
