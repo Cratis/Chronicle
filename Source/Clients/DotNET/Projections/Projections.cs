@@ -235,11 +235,17 @@ public class Projections(
     /// <inheritdoc/>
     public Task Discover()
     {
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
+        var modelBoundDefinitions = modelBoundProjections.Discover();
+
         _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             serviceProvider,
             jsonSerializerOptions);
+        _definitionsByType = _definitionsByType
+            .Concat(modelBoundDefinitions)
+            .ToDictionary(x => x.Key, x => x.Value);
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
@@ -249,15 +255,11 @@ public class Projections(
             _ => _.Key.GetReadModelType(),
             _ => _.Value);
 
-        // Discover model-bound projections
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
-        var modelBoundDefinitions = modelBoundProjections.Discover().ToList();
-
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
                 .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
                 .. _definitionsByType.Values.Select(_ => _).ToList(),
-                .. modelBoundDefinitions
+                .. modelBoundDefinitions.Values
             ]).ToImmutableList();
 
         return Task.CompletedTask;
