@@ -59,7 +59,7 @@ public class Projections(
     public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
-    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByType.Values;
+    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByModelType.Values;
 
     /// <inheritdoc/>
     public IProjectionHandler GetHandlerFor<TProjection>()
@@ -250,11 +250,11 @@ public class Projections(
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
                 kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
-        _handlersByType = _handlersByType.Concat(modelBoundHandlers).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         _handlersByModelType = _handlersByType.ToDictionary(
             _ => _.Key.GetReadModelType(),
             _ => _.Value);
+        _handlersByModelType = _handlersByModelType.Concat(modelBoundHandlers).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
