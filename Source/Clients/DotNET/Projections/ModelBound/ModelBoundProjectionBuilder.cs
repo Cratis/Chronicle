@@ -137,8 +137,6 @@ internal class ModelBoundProjectionBuilder(
         var targetRemovedWith = isRoot ? definition.RemovedWith : childrenDef?.RemovedWith ?? definition.RemovedWith;
         var targetRemovedWithJoin = isRoot ? definition.RemovedWithJoin : childrenDef?.RemovedWithJoin ?? definition.RemovedWithJoin;
 
-        var eventTypesReferencedByParameter = new HashSet<Type>();
-
         void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string> mappingAction)
             where TAttribute : Attribute
         {
@@ -150,7 +148,6 @@ internal class ModelBoundProjectionBuilder(
             foreach (var attr in attributes)
             {
                 var eventType = attr.GetType().GetGenericArguments()[0];
-                eventTypesReferencedByParameter.Add(eventType);
                 allEventTypesReferencedByModel.Add(eventType);
                 var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
@@ -191,7 +188,6 @@ internal class ModelBoundProjectionBuilder(
             eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(memberName)))
             .Where(x => x.eventProperty is not null))
         {
-            eventTypesReferencedByParameter.Add(eventType);
             allEventTypesReferencedByModel.Add(eventType);
             targetFrom.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName);
         }
