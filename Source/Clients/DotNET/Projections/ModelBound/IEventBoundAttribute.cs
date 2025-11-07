@@ -4,7 +4,13 @@
 namespace Cratis.Chronicle.Projections.ModelBound;
 
 /// <summary>
-/// Defines an attribute that indicates what event removes a child from a collection.
+/// Defines an attribute that is bound to a specific event type.
 /// </summary>
-public interface IRemovedWithAttribute : IKeyedAttribute, IEventBoundAttribute;
+public interface IEventBoundAttribute
+{
+    /// <summary>
+    /// Gets the type of event this attribute is bound to.
+    /// </summary>
+    Type EventType { get; }
+}
 

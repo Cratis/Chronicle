@@ -6,10 +6,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines an attribute that indicates that a read model or property is populated from an event.
 /// </summary>
-public interface IFromEventAttribute
-{
-    /// <summary>
-    /// Gets the type of event this attribute projects from.
-    /// </summary>
-    Type EventType { get; }
-}
+public interface IFromEventAttribute : IEventBoundAttribute;
