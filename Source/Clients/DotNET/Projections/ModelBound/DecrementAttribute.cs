@@ -8,4 +8,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </summary>
 /// <typeparam name="TEvent">The type of event that triggers the decrement.</typeparam>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class DecrementAttribute<TEvent> : Attribute, IProjectionAnnotation;
+public sealed class DecrementAttribute<TEvent> : Attribute, IProjectionAnnotation, IDecrementAttribute;

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </remarks>
 /// <param name="eventPropertyName">Optional name of the property on the event. If not specified, uses the model property name.</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class SetFromAttribute<TEvent>(string? eventPropertyName = default) : Attribute, IProjectionAnnotation
+public sealed class SetFromAttribute<TEvent>(string? eventPropertyName = default) : Attribute, IProjectionAnnotation, ISetFromAttribute
 {
     /// <summary>
     /// Gets the name of the property on the event.
