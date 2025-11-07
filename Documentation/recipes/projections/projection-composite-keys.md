@@ -10,17 +10,15 @@ Use `UsingCompositeKey<>()` to define a key made up of multiple properties:
 public class OrderProjection : IProjectionFor<Order>
 {
     public void Define(IProjectionBuilderFor<Order> builder) => builder
+        .AutoMap()
         .From<OrderCreated>(_ => _
             .UsingCompositeKey<OrderKey>(_ => _
                 .Set(k => k.CustomerId).To(e => e.CustomerId)
-                .Set(k => k.OrderNumber).To(e => e.OrderNumber))
-            .Set(m => m.CustomerName).To(e => e.CustomerName)
-            .Set(m => m.OrderDate).To(e => e.OrderDate))
+                .Set(k => k.OrderNumber).To(e => e.OrderNumber)))
         .From<OrderShipped>(_ => _
             .UsingCompositeKey<OrderKey>(_ => _
                 .Set(k => k.CustomerId).To(e => e.CustomerId)
-                .Set(k => k.OrderNumber).To(e => e.OrderNumber))
-            .Set(m => m.ShippedDate).To(e => e.ShippedDate));
+                .Set(k => k.OrderNumber).To(e => e.OrderNumber)));
 }
 ```
 
@@ -52,12 +50,11 @@ You can combine event properties with event context properties in composite keys
 public class AuditProjection : IProjectionFor<AuditEntry>
 {
     public void Define(IProjectionBuilderFor<AuditEntry> builder) => builder
+        .AutoMap()
         .From<UserAction>(_ => _
             .UsingCompositeKey<AuditKey>(_ => _
                 .Set(k => k.UserId).To(e => e.UserId)
-                .Set(k => k.Timestamp).ToEventContextProperty(c => c.Occurred))
-            .Set(m => m.Action).To(e => e.ActionType)
-            .Set(m => m.Details).To(e => e.Details));
+                .Set(k => k.Timestamp).ToEventContextProperty(c => c.Occurred)));
 }
 ```
 
@@ -79,11 +76,11 @@ Composite keys work with child collections too:
 ```csharp
 .Children(m => m.OrderItems, children => children
     .IdentifiedBy(e => e.ItemId)
+    .AutoMap()
     .From<ItemAddedToOrder>(_ => _
         .UsingCompositeKey<ItemKey>(_ => _
             .Set(k => k.ProductId).To(e => e.ProductId)
-            .Set(k => k.Variant).To(e => e.Variant))
-        .Set(m => m.Quantity).To(e => e.Quantity)))
+            .Set(k => k.Variant).To(e => e.Variant))))
 ```
 
 ## Joins with composite keys
@@ -91,9 +88,9 @@ Composite keys work with child collections too:
 Composite keys can be used in join scenarios:
 
 ```csharp
+.AutoMap()
 .Join<ProductUpdated>(j => j
-    .On(m => m.ProductKey)  // Join on composite key property
-    .Set(m => m.ProductName).To(e => e.Name))
+    .On(m => m.ProductKey))  // Join on composite key property
 ```
 
 ## Event definitions

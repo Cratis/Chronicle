@@ -15,16 +15,16 @@ Use `RemovedWithJoin<>()` in child projections to specify which events should tr
 public class UserProjection : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
-        .From<UserCreated>(_ => _
-            .Set(m => m.Name).To(e => e.Name))
+        .AutoMap()
+        .From<UserCreated>()
         .Children(m => m.Groups, children => children
             .IdentifiedBy(e => e.GroupId)
+            .AutoMap()
             .From<UserAddedToGroup>(_ => _
                 .UsingParentKey(e => e.UserId)
                 .Set(m => m.JoinedAt).ToEventContextProperty(c => c.Occurred))
             .Join<GroupCreated>(_ => _
-                .On(m => m.GroupId)
-                .Set(m => m.GroupName).To(e => e.Name))
+                .On(m => m.GroupId))
             .RemovedWithJoin<GroupDeleted>());
 }
 ```
@@ -51,14 +51,13 @@ You can specify which property to use as the key for removal:
 ```csharp
 .Children(m => m.Projects, children => children
     .IdentifiedBy(e => e.ProjectId)
+    .AutoMap()
     .From<EmployeeAssignedToProject>(_ => _
         .UsingParentKey(e => e.EmployeeId)
         .UsingKey(e => e.ProjectId)
         .Set(m => m.AssignedAt).ToEventContextProperty(c => c.Occurred))
     .Join<ProjectCreated>(_ => _
-        .On(m => m.ProjectId)
-        .Set(m => m.ProjectName).To(e => e.Name)
-        .Set(m => m.Budget).To(e => e.Budget))
+        .On(m => m.ProjectId))
     .RemovedWithJoin<ProjectCancelled>(_ => _
         .UsingKey(e => e.ProjectId)))
 ```
@@ -71,21 +70,18 @@ Consider a system where users can be members of groups, and groups can be delete
 public class GroupMembershipProjection : IProjectionFor<UserProfile>
 {
     public void Define(IProjectionBuilderFor<UserProfile> builder) => builder
+        .AutoMap()
         .From<UserRegistered>(_ => _
-            .Set(m => m.Username).To(e => e.Username)
-            .Set(m => m.Email).To(e => e.Email)
             .Set(m => m.RegisteredAt).ToEventContextProperty(c => c.Occurred))
         .Children(m => m.Memberships, children => children
             .IdentifiedBy(e => e.GroupId)
+            .AutoMap()
             .From<UserJoinedGroup>(_ => _
                 .UsingParentKey(e => e.UserId)
                 .UsingKey(e => e.GroupId)
-                .Set(m => m.JoinedAt).ToEventContextProperty(c => c.Occurred)
-                .Set(m => m.Role).To(e => e.Role))
+                .Set(m => m.JoinedAt).ToEventContextProperty(c => c.Occurred))
             .Join<GroupCreated>(_ => _
-                .On(m => m.GroupId)
-                .Set(m => m.GroupName).To(e => e.Name)
-                .Set(m => m.GroupType).To(e => e.Type))
+                .On(m => m.GroupId))
             .RemovedWith<UserLeftGroup>(_ => _
                 .UsingParentKey(e => e.UserId)
                 .UsingKey(e => e.GroupId))
@@ -104,23 +100,18 @@ In this example:
 public class DeveloperProjectsProjection : IProjectionFor<DeveloperProfile>
 {
     public void Define(IProjectionBuilderFor<DeveloperProfile> builder) => builder
+        .AutoMap()
         .From<DeveloperOnboarded>(_ => _
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.Skills).To(e => e.Skills)
             .Set(m => m.OnboardedAt).ToEventContextProperty(c => c.Occurred))
         .Children(m => m.CurrentProjects, children => children
             .IdentifiedBy(e => e.ProjectId)
+            .AutoMap()
             .From<DeveloperAssignedToProject>(_ => _
                 .UsingParentKey(e => e.DeveloperId)
                 .UsingKey(e => e.ProjectId)
-                .Set(m => m.AssignedAt).ToEventContextProperty(c => c.Occurred)
-                .Set(m => m.Role).To(e => e.Role)
-                .Set(m => m.Allocation).To(e => e.AllocationPercentage))
+                .Set(m => m.AssignedAt).ToEventContextProperty(c => c.Occurred))
             .Join<ProjectInitiated>(_ => _
-                .On(m => m.ProjectId)
-                .Set(m => m.ProjectName).To(e => e.Name)
-                .Set(m => m.Priority).To(e => e.Priority)
-                .Set(m => m.Deadline).To(e => e.Deadline))
+                .On(m => m.ProjectId))
             .RemovedWith<DeveloperUnassignedFromProject>(_ => _
                 .UsingParentKey(e => e.DeveloperId)
                 .UsingKey(e => e.ProjectId))

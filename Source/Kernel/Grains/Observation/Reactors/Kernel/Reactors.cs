@@ -50,7 +50,7 @@ public class Reactors(
             key.ObserverId,
             ReactorOwner.Kernel,
             EventSequenceId.System,
-            typeof(TReactor).GetEventTypes().Select(et => new EventTypeWithKeyExpression(et, "$eventSourceId")),
+            typeof(TReactor).GetEventTypes().Select(et => new EventTypeWithKeyExpression(et, WellKnownExpressions.EventSourceId)).ToArray(),
             false);
         await storage.GetEventStore(eventStore).Reactors.Save(reactorDefinition);
 

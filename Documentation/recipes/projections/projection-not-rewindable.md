@@ -13,12 +13,10 @@ public class AuditLogProjection : IProjectionFor<AuditLogEntry>
 {
     public void Define(IProjectionBuilderFor<AuditLogEntry> builder) => builder
         .NotRewindable()
+        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.ProcessedAt).To(_ => DateTimeOffset.UtcNow))
         .From<UserAction>(_ => _
-            .Set(m => m.UserId).To(e => e.UserId)
-            .Set(m => m.Action).To(e => e.ActionType)
-            .Set(m => m.Details).To(e => e.Details)
             .Set(m => m.OccurredAt).ToEventContextProperty(c => c.Occurred));
 }
 ```
@@ -83,17 +81,12 @@ public class SecurityAuditProjection : IProjectionFor<SecurityAuditEntry>
 {
     public void Define(IProjectionBuilderFor<SecurityAuditEntry> builder) => builder
         .NotRewindable()
+        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.AuditedAt).To(_ => DateTimeOffset.UtcNow)
             .Set(m => m.ServerName).To(_ => Environment.MachineName))
-        .From<UserLoginAttempt>(_ => _
-            .Set(m => m.UserId).To(e => e.UserId)
-            .Set(m => m.Success).To(e => e.Success)
-            .Set(m => m.IpAddress).To(e => e.IpAddress))
-        .From<PermissionChange>(_ => _
-            .Set(m => m.UserId).To(e => e.UserId)
-            .Set(m => m.Permission).To(e => e.Permission)
-            .Set(m => m.Granted).To(e => e.Granted));
+        .From<UserLoginAttempt>()
+        .From<PermissionChange>();
 }
 ```
 
@@ -106,10 +99,8 @@ public class PerformanceMetricProjection : IProjectionFor<PerformanceMetric>
 {
     public void Define(IProjectionBuilderFor<PerformanceMetric> builder) => builder
         .NotRewindable()
+        .AutoMap()
         .From<ApiRequestCompleted>(_ => _
-            .Set(m => m.Endpoint).To(e => e.Endpoint)
-            .Set(m => m.ResponseTime).To(e => e.ResponseTime)
-            .Set(m => m.StatusCode).To(e => e.StatusCode)
             .Set(m => m.Timestamp).ToEventContextProperty(c => c.Occurred));
 }
 ```
@@ -123,12 +114,10 @@ public class TransactionLedgerProjection : IProjectionFor<LedgerEntry>
 {
     public void Define(IProjectionBuilderFor<LedgerEntry> builder) => builder
         .NotRewindable()
+        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.RecordedAt).To(_ => DateTimeOffset.UtcNow))
         .From<PaymentProcessed>(_ => _
-            .Set(m => m.Amount).To(e => e.Amount)
-            .Set(m => m.Currency).To(e => e.Currency)
-            .Set(m => m.AccountId).To(e => e.AccountId)
             .Set(m => m.TransactionType).To(_ => "PAYMENT"));
 }
 ```
@@ -165,11 +154,11 @@ public class RealTimeOrderStatusProjection : IProjectionFor<OrderStatus>
         .NotRewindable()
         .FromEventSequence("order-processing")
         .Passive()
+        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.LastUpdatedAt).To(_ => DateTimeOffset.UtcNow)
             .Set(m => m.ProcessingNode).To(_ => Environment.MachineName))
         .From<OrderReceived>(_ => _
-            .Set(m => m.OrderId).To(e => e.OrderId)
             .Set(m => m.Status).To(_ => "RECEIVED"))
         .From<OrderProcessing>(_ => _
             .Set(m => m.Status).To(_ => "PROCESSING"))

@@ -10,8 +10,8 @@ Use `Count()` to increment a counter each time an event is processed:
 public class UserActivityProjection : IProjectionFor<UserActivity>
 {
     public void Define(IProjectionBuilderFor<UserActivity> builder) => builder
+        .AutoMap()
         .From<UserLoggedIn>(_ => _
-            .Set(m => m.Username).To(e => e.Username)
             .Count(m => m.LoginCount))
         .From<UserPerformedAction>(_ => _
             .Count(m => m.ActionCount));
@@ -37,8 +37,8 @@ Use `Increment()` and `Decrement()` to add or subtract 1 from a property:
 public class InventoryProjection : IProjectionFor<Inventory>
 {
     public void Define(IProjectionBuilderFor<Inventory> builder) => builder
+        .AutoMap()
         .From<ItemAdded>(_ => _
-            .Set(m => m.ItemName).To(e => e.Name)
             .Increment(m => m.Quantity))
         .From<ItemRemoved>(_ => _
             .Decrement(m => m.Quantity));
@@ -55,8 +55,8 @@ Use `Add()` and `Subtract()` to add or subtract specific values from event prope
 public class AccountProjection : IProjectionFor<Account>
 {
     public void Define(IProjectionBuilderFor<Account> builder) => builder
+        .AutoMap()
         .From<AccountOpened>(_ => _
-            .Set(m => m.AccountNumber).To(e => e.Number)
             .Set(m => m.Balance).To(0m))
         .From<MoneyDeposited>(_ => _
             .Add(m => m.Balance).With(e => e.Amount))

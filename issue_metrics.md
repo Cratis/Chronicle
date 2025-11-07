@@ -3,20 +3,23 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 273 days, 7:12:47 | 123 days, 1:53:22 | 824 days, 4:45:29 |
+| Time to close | 271 days, 6:11:12 | 121 days, 12:21:42 | 818 days, 16:13:54 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 275 |
-| Number of items closed | 572 |
-| Total number of items created | 847 |
+| Number of items that remain open | 271 |
+| Number of items closed | 579 |
+| Total number of items created | 850 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Introduce provider model for namespace resolution | https://github.com/Cratis/Chronicle/issues/2202 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add a way to include metadata in concurrency scope when appending from model bound commands | https://github.com/Cratis/Chronicle/issues/2210 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 0:49:30 | None |
+| Expand Command pipeline with Event metadata | https://github.com/Cratis/Chronicle/issues/2207 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 1:05:15 | None |
+| Make the namespace resolver configurable for ASP.NET Core clients | https://github.com/Cratis/Chronicle/issues/2205 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 5:10:17 | None |
+| Introduce provider model for namespace resolution | https://github.com/Cratis/Chronicle/issues/2202 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 22:26:05 | None |
 | Integration spec project matrix | https://github.com/Cratis/Chronicle/issues/2148 | None | [einari](https://github.com/einari) | None | None | None |
-| ASP.NET Core is missing a dependency to the core Cratis.Chronicle client package | https://github.com/Cratis/Chronicle/issues/2091 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| ASP.NET Core is missing a dependency to the core Cratis.Chronicle client package | https://github.com/Cratis/Chronicle/issues/2091 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 31 days, 5:44:24 | None |
 | Investigate how we could be writing tests/specs for event sourcing in a better way | https://github.com/Cratis/Chronicle/issues/1980 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve serialization when Appending events in the MongoDB Storage | https://github.com/Cratis/Chronicle/issues/1967 | None | [einari](https://github.com/einari) | None | None | None |
 | Add authorization on the Kernel side | https://github.com/Cratis/Chronicle/issues/1965 | None | [einari](https://github.com/einari) | None | None | None |
@@ -64,7 +67,7 @@
 | During GitHub builds we want to build specs and integration specs with Debug but compile them with "treat warning as errors" | https://github.com/Cratis/Chronicle/issues/1773 | None | [einari](https://github.com/einari) | None | 16 days, 17:36:25 | None |
 | Projections for Rules shouldn't end up as an observer | https://github.com/Cratis/Chronicle/issues/1766 | None | [einari](https://github.com/einari) | None | 0:06:00 | None |
 | Add support for observer Replays being cancelled | https://github.com/Cratis/Chronicle/issues/1764 | None | [einari](https://github.com/einari) | None | None | None |
-| Projections sometimes fail with concurrency issues related to cloning of the internal ExpandoObject | https://github.com/Cratis/Chronicle/issues/1763 | None | [einari](https://github.com/einari) | None | None | None |
+| Projections sometimes fail with concurrency issues related to cloning of the internal ExpandoObject | https://github.com/Cratis/Chronicle/issues/1763 | None | [einari](https://github.com/einari) | None | 236 days, 21:32:29 | None |
 | Monthly issue metrics report | https://github.com/Cratis/Chronicle/issues/1755 | None | [github-actions[bot]](https://github.com/github-actions[bot]) | None | 0:05:28 | None |
 | Add programatic support for replaying from the .NET client (Reactors, Reducers, Projections) | https://github.com/Cratis/Chronicle/issues/1754 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 125 days, 0:35:04 | None |
 | More efficient JobStorage queries | https://github.com/Cratis/Chronicle/issues/1753 | None | [woksin](https://github.com/woksin) | None | None | None |
@@ -272,7 +275,7 @@
 | Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | None | [einari](https://github.com/einari) | None | None | None |
 | Add a way to clear state / API call. Only available in Development | https://github.com/Cratis/Chronicle/issues/1287 | None | [einari](https://github.com/einari) | None | None | None |
 | Add possibility to report errors back inside an aggregate root method | https://github.com/Cratis/Chronicle/issues/1285 | None | [einari](https://github.com/einari) | None | None | None |
-| Investigate a simplified "query language" for projections | https://github.com/Cratis/Chronicle/issues/1284 | None | [einari](https://github.com/einari) | None | None | None |
+| Investigate a simplified "query language" for projections | https://github.com/Cratis/Chronicle/issues/1284 | None | [einari](https://github.com/einari) | None | 460 days, 23:29:09 | None |
 | Ability to configure automatically applying recommendation based on their type | https://github.com/Cratis/Chronicle/issues/1281 | None | [einari](https://github.com/einari) | None | 207 days, 23:48:57 | None |
 | First event not handled after adding a namespace | https://github.com/Cratis/Chronicle/issues/1280 | None | [einari](https://github.com/einari) | None | 207 days, 21:29:35 | None |
 | Fix API namespaces prefix | https://github.com/Cratis/Chronicle/issues/1279 | None | [einari](https://github.com/einari) | None | 157 days, 6:24:14 | None |
@@ -339,8 +342,4 @@
 | Improve .To() / .ToValue() - consolidate + support complex types | https://github.com/Cratis/Chronicle/issues/1051 | None | [einari](https://github.com/einari) | None | None | None |
 | Support base types for projections | https://github.com/Cratis/Chronicle/issues/1030 | None | [einari](https://github.com/einari) | None | 6:52:46 | None |
 | Support deletion for reducers | https://github.com/Cratis/Chronicle/issues/1028 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 587 days, 23:46:34 | None |
-| Consolidate the creation of EventTypeRegistration - removing duplicate logic for creation | https://github.com/Cratis/Chronicle/issues/1027 | None | [einari](https://github.com/einari) | None | 447 days, 0:44:21 | None |
-| Clean up ObserverState and remove the composite key. | https://github.com/Cratis/Chronicle/issues/1026 | None | [einari](https://github.com/einari) | None | 278 days, 16:36:49 | None |
-| Support base types for events (Observers, Reducers, Aggregates) | https://github.com/Cratis/Chronicle/issues/1025 | None | [einari](https://github.com/einari) | None | 2 days, 4:38:16 | None |
-| Put Silo information into MongoDB and remove the customization. Not needed. | https://github.com/Cratis/Chronicle/issues/1023 | None | [einari](https://github.com/einari) | None | 252 days, 23:09:16 | None |
-| Make cluster info part 
+| Consolidate the creation of EventTypeRegistration - removing duplicate logic for creation | https://github.com/Cratis/Chro

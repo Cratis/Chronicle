@@ -103,6 +103,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> Projections => GetArtifactTypes(provider => provider.Projections);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> ModelBoundProjections => GetArtifactTypes(provider => provider.ModelBoundProjections);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);
 
     /// <inheritdoc/>

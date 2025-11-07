@@ -13,7 +13,7 @@ public class when_adding_this_accessor_using_operator : Specification
 
     void Establish() => _initial = new PropertyPath($"{FirstSegment}.{SecondSegment}");
 
-    void Because() => _result = _initial + "$this";
+    void Because() => _result = _initial + PropertyPath.ThisAccessorValue;
 
     [Fact] void should_have_last_segment_be_array_index() => _result.LastSegment.ShouldBeOfExactType<ThisAccessor>();
 }

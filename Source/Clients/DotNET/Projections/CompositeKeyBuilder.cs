@@ -39,7 +39,7 @@ public class CompositeKeyBuilder<TKeyType, TEvent>(INamingPolicy namingPolicy) :
     {
         var expressionBuilder = new StringBuilder();
         expressionBuilder
-            .Append("$composite(")
+            .Append($"{WellKnownExpressions.Composite}(")
             .AppendJoin(',', _propertyExpressions.Select(_ => $"{_.TargetProperty}={_.Build()}"))
             .Append(')');
         return expressionBuilder.ToString();

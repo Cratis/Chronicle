@@ -2,6 +2,8 @@
 
 Event Source ID is a fundamental concept in Chronicle that identifies the source of events. In the Application Model client, event source IDs are automatically resolved and managed to provide seamless integration within command handlers.
 
+For a complete overview of event metadata tags in Chronicle, see [Event Metadata Tags](../../../concepts/event-metadata-tags.md).
+
 ## How Event Source ID Resolution Works
 
 The Application Model client uses the `EventSourceValuesProvider` to automatically determine the event source ID for commands. This process follows a specific resolution strategy:

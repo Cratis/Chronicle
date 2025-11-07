@@ -269,7 +269,7 @@ public class Reducers : IReducers
             {
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
                 Sink = new SinkDefinition
                 {

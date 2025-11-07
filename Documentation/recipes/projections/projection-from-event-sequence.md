@@ -103,10 +103,8 @@ public class OrderProjection : IProjectionFor<Order>
 {
     public void Define(IProjectionBuilderFor<Order> builder) => builder
         .FromEventSequence("order-management")
+        .AutoMap()
         .From<OrderCreated>(_ => _
-            .Set(m => m.OrderNumber).To(e => e.OrderNumber)
-            .Set(m => m.CustomerId).To(e => e.CustomerId)
-            .Set(m => m.TotalAmount).To(e => e.TotalAmount)
             .Set(m => m.Status).To(_ => OrderStatus.Created));
 }
 
@@ -115,6 +113,7 @@ public class ShippingProjection : IProjectionFor<Shipping>
 {
     public void Define(IProjectionBuilderFor<Shipping> builder) => builder
         .FromEventSequence("shipping-management")
+        .AutoMap()
         .From<PackageCreated>()
         .From<PackageShipped>()
         .From<PackageDelivered>();

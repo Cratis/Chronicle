@@ -366,7 +366,7 @@ public class EventSequence(
                     occurred,
                     compliantEvent);
             }
-            while(!appendResult.IsSuccess);
+            while (!appendResult.IsSuccess);
 
             var appendedSequenceNumber = State.SequenceNumber;
             State.SequenceNumber = appendedSequenceNumber.Next();

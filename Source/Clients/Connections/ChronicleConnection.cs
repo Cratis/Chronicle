@@ -112,7 +112,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        _logger.Connecting();
+        _logger.Connecting(_url);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
 

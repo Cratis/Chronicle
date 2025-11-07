@@ -179,7 +179,7 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Replay(ReactorId reactorId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        return _servicesAccessor.Services.Observers.Replay(new Replay
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
@@ -227,7 +227,7 @@ public class Reactors : IReactors
             {
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray()
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray()
             }
         };
 

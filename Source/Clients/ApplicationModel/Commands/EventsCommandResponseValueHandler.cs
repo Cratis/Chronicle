@@ -27,7 +27,15 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
         var events = (IEnumerable<object>)value;
         if (events.Any())
         {
-            await eventLog.Append(eventSourceId, events);
+            var concurrencyScope = ConcurrencyScopeBuilder.BuildFromCommandContext(commandContext);
+            await eventLog.AppendMany(
+                eventSourceId,
+                events,
+                commandContext.GetEventStreamType(),
+                commandContext.GetEventStreamId(),
+                commandContext.GetEventSourceType(),
+                correlationId: default,
+                concurrencyScope: concurrencyScope);
         }
 
         return CommandResult.Success(commandContext.CorrelationId);

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
@@ -45,7 +46,7 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
         _resolver = new(_eventValueResolvers);
     }
 
-    void Because() => _resolver.Resolve("targetProperty", new(), "$subtract(sourceProperty)")(_event, _target, ArrayIndexers.NoIndexers);
+    void Because() => _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Subtract}(sourceProperty)")(_event, _target, ArrayIndexers.NoIndexers);
 
     [Fact] void should_resolve_to_a_propertymapper_that_can_subtract_from_the_property() => ((double)((dynamic)_target).targetProperty).ShouldEqual(40d);
 }

@@ -10,15 +10,12 @@ Use `FromEvery()` to set properties that should be updated by all events in the 
 public class UserProfileProjection : IProjectionFor<UserProfile>
 {
     public void Define(IProjectionBuilderFor<UserProfile> builder) => builder
+        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred))
-        .From<UserCreated>(_ => _
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.Email).To(e => e.Email))
-        .From<UserEmailChanged>(_ => _
-            .Set(m => m.Email).To(e => e.NewEmail))
-        .From<UserNameChanged>(_ => _
-            .Set(m => m.Name).To(e => e.NewName));
+        .From<UserCreated>()
+        .From<UserEmailChanged>()
+        .From<UserNameChanged>();
 }
 ```
 
@@ -64,20 +61,17 @@ When using `FromEvery()` with child projections, the parent properties are updat
 public class OrderProjection : IProjectionFor<Order>
 {
     public void Define(IProjectionBuilderFor<Order> builder) => builder
+        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.LastModified).ToEventContextProperty(c => c.Occurred))
-        .From<OrderCreated>(_ => _
-            .Set(m => m.OrderNumber).To(e => e.OrderNumber)
-            .Set(m => m.CustomerId).To(e => e.CustomerId))
+        .From<OrderCreated>()
         .Children(m => m.Items, children => children
             .IdentifiedBy(e => e.ProductId)
+            .AutoMap()
             .From<ItemAddedToOrder>(_ => _
-                .UsingKey(e => e.ProductId)
-                .Set(m => m.ProductName).To(e => e.ProductName)
-                .Set(m => m.Quantity).To(e => e.Quantity))
+                .UsingKey(e => e.ProductId))
             .From<ItemQuantityChanged>(_ => _
-                .UsingKey(e => e.ProductId)
-                .Set(m => m.Quantity).To(e => e.NewQuantity)));
+                .UsingKey(e => e.ProductId)));
 }
 ```
 
