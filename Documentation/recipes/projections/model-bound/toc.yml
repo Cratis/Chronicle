@@ -2,6 +2,8 @@
   href: index.md
 - name: Basic Mapping
   href: basic-mapping.md
+- name: FromEvery
+  href: from-every.md
 - name: Counters
   href: counters.md
 - name: Children

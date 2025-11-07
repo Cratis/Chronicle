@@ -27,6 +27,6 @@ public class when_building_simple_model_with_set_from : given.a_model_bound_proj
     [Fact] void should_map_name_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DebitAccountOpened)).ToContract();
-        _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties.Keys.ShouldContain("Name");
+        _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties.Keys.ShouldContain(nameof(AccountInfo.Name));
     }
 }

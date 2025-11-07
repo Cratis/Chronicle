@@ -28,6 +28,7 @@ internal class ModelBoundProjectionBuilder(
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
+    readonly Dictionary<string, EventType> _eventTypeCache = new();
 
     /// <summary>
     /// Builds a projection definition from a type with model-bound projection attributes.
@@ -74,6 +75,20 @@ internal class ModelBoundProjectionBuilder(
         return definition;
     }
 
+    EventType GetOrCreateEventType(Type eventType)
+    {
+        var chronicleEventType = _eventTypes.GetEventTypeFor(eventType);
+        var key = $"{chronicleEventType.Id}_{chronicleEventType.Generation}_{chronicleEventType.Tombstone}";
+
+        if (!_eventTypeCache.TryGetValue(key, out var cachedEventType))
+        {
+            cachedEventType = chronicleEventType.ToContract();
+            _eventTypeCache[key] = cachedEventType;
+        }
+
+        return cachedEventType;
+    }
+
     void ProcessProperties(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents, ConstructorInfo? primaryConstructor)
     {
         foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -94,9 +109,11 @@ internal class ModelBoundProjectionBuilder(
 
         if (primaryConstructor is not null)
         {
+            var allEventTypesReferencedByModel = new HashSet<Type>();
+
             foreach (var parameter in primaryConstructor.GetParameters())
             {
-                ProcessParameter(parameter, definition, classLevelFromEvents, isRoot: true);
+                ProcessParameter(parameter, definition, classLevelFromEvents, allEventTypesReferencedByModel, isRoot: true);
             }
         }
 
@@ -107,6 +124,7 @@ internal class ModelBoundProjectionBuilder(
         ParameterInfo parameter,
         ProjectionDefinition definition,
         List<Attribute> classLevelFromEvents,
+        HashSet<Type> allEventTypesReferencedByModel,
         bool isRoot,
         ChildrenDefinition? childrenDef = null)
     {
@@ -119,31 +137,49 @@ internal class ModelBoundProjectionBuilder(
         var targetRemovedWith = isRoot ? definition.RemovedWith : childrenDef?.RemovedWith ?? definition.RemovedWith;
         var targetRemovedWithJoin = isRoot ? definition.RemovedWithJoin : childrenDef?.RemovedWithJoin ?? definition.RemovedWithJoin;
 
-        parameter.ProcessParameterAttributesByType<SetFromAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, eventProp) => from.AddSetMapping(_eventTypes, _namingPolicy, eventType, prop, eventProp));
-        parameter.ProcessParameterAttributesByType<AddFromAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, eventProp) => from.AddAddMapping(_eventTypes, _namingPolicy, eventType, prop, eventProp));
-        parameter.ProcessParameterAttributesByType<SubtractFromAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, eventProp) => from.AddSubtractMapping(_eventTypes, _namingPolicy, eventType, prop, eventProp));
-        parameter.ProcessParameterAttributesByType<IncrementAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, _) => from.AddIncrementMapping(_eventTypes, eventType, prop));
-        parameter.ProcessParameterAttributesByType<DecrementAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, _) => from.AddDecrementMapping(_eventTypes, eventType, prop));
-        parameter.ProcessParameterAttributesByType<CountAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, _) => from.AddCountMapping(_eventTypes, eventType, prop));
+        void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string> mappingAction)
+            where TAttribute : Attribute
+        {
+            var attributes = parameter.GetCustomAttributes()
+                .Where(attr => attr.GetType().IsGenericType &&
+                              attr.GetType().GetGenericTypeDefinition() == typeof(TAttribute).GetGenericTypeDefinition())
+                .ToList();
+
+            foreach (var attr in attributes)
+            {
+                var eventType = attr.GetType().GetGenericArguments()[0];
+                allEventTypesReferencedByModel.Add(eventType);
+                var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
+                var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
+                mappingAction(targetFrom, eventType, propertyName, eventPropertyName ?? parameter.Name!);
+            }
+        }
+
+        TrackAndProcess<SetFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<AddFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddAddMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<SubtractFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSubtractMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(_eventTypes, _namingPolicy, attr, eventType, memberName, propertyName);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName);
         }
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
         {
-            targetRemovedWith.ProcessRemovedWithAttribute(_eventTypes, attr, eventType);
+            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
         }
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
-            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(_eventTypes, attr, eventType);
+            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
         {
-            definition.ProcessChildrenFromAttribute(_eventTypes, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember);
+            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember);
         }
 
         foreach (var (eventType, eventProperty) in classLevelFromEvents
@@ -152,7 +188,26 @@ internal class ModelBoundProjectionBuilder(
             eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(memberName)))
             .Where(x => x.eventProperty is not null))
         {
-            targetFrom.AddSetMapping(_eventTypes, _namingPolicy, eventType, propertyName, memberName);
+            allEventTypesReferencedByModel.Add(eventType);
+            targetFrom.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName);
+        }
+
+        var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
+        if (fromEveryAttr is not null)
+        {
+            // FromEvery applies to ALL events referenced by the model (class-level + all parameters processed so far)
+            var allEventTypes = new HashSet<Type>(allEventTypesReferencedByModel);
+
+            // Also include class-level events even if they don't have matching properties for this parameter
+            foreach (var attr in classLevelFromEvents)
+            {
+                allEventTypes.Add(attr.GetType().GetGenericArguments()[0]);
+            }
+
+            foreach (var eventType in allEventTypes)
+            {
+                targetFrom.AddFromEveryMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, fromEveryAttr);
+            }
         }
     }
 
@@ -171,32 +226,52 @@ internal class ModelBoundProjectionBuilder(
         var targetRemovedWith = isRoot ? definition.RemovedWith : childrenDef?.RemovedWith ?? definition.RemovedWith;
         var targetRemovedWithJoin = isRoot ? definition.RemovedWithJoin : childrenDef?.RemovedWithJoin ?? definition.RemovedWithJoin;
 
-        property.ProcessAttributesByType<SetFromAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, eventProp) => from.AddSetMapping(_eventTypes, _namingPolicy, eventType, prop, eventProp));
-        property.ProcessAttributesByType<AddFromAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, eventProp) => from.AddAddMapping(_eventTypes, _namingPolicy, eventType, prop, eventProp));
-        property.ProcessAttributesByType<SubtractFromAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, eventProp) => from.AddSubtractMapping(_eventTypes, _namingPolicy, eventType, prop, eventProp));
-        property.ProcessAttributesByType<IncrementAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, _) => from.AddIncrementMapping(_eventTypes, eventType, prop));
-        property.ProcessAttributesByType<DecrementAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, _) => from.AddDecrementMapping(_eventTypes, eventType, prop));
-        property.ProcessAttributesByType<CountAttribute<object>>(propertyName, targetFrom, (from, eventType, prop, _) => from.AddCountMapping(_eventTypes, eventType, prop));
+        var eventTypesReferencedByMember = new HashSet<Type>();
+
+        void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string> mappingAction)
+            where TAttribute : Attribute
+        {
+            var attributes = property.GetCustomAttributes()
+                .Where(attr => attr.GetType().IsGenericType &&
+                              attr.GetType().GetGenericTypeDefinition() == typeof(TAttribute).GetGenericTypeDefinition())
+                .ToList();
+
+            foreach (var attr in attributes)
+            {
+                var eventType = attr.GetType().GetGenericArguments()[0];
+                eventTypesReferencedByMember.Add(eventType);
+                var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
+                var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
+                mappingAction(targetFrom, eventType, propertyName, eventPropertyName ?? property.Name);
+            }
+        }
+
+        TrackAndProcess<SetFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<AddFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddAddMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<SubtractFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSubtractMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
-            targetJoin.ProcessJoinAttribute(_eventTypes, _namingPolicy, attr, eventType, property.Name, propertyName);
+            targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName);
         }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
         {
-            targetRemovedWith.ProcessRemovedWithAttribute(_eventTypes, attr, eventType);
+            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
         }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
-            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(_eventTypes, attr, eventType);
+            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
         {
             var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
-            definition.ProcessChildrenFromAttribute(_eventTypes, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember);
+            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember);
         }
 
         foreach (var (eventType, eventProperty) in classLevelFromEvents
@@ -205,7 +280,21 @@ internal class ModelBoundProjectionBuilder(
                 eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(property.Name)))
             .Where(x => x.eventProperty is not null))
         {
-            targetFrom.AddSetMapping(_eventTypes, _namingPolicy, eventType, propertyName, property.Name);
+            eventTypesReferencedByMember.Add(eventType);
+            targetFrom.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name);
+        }
+
+        var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();
+        if (fromEveryAttr is not null)
+        {
+            // FromEvery applies to ALL class-level events, regardless of whether they have matching properties
+            var allClassLevelEventTypes = classLevelFromEvents
+                .Select(attr => attr.GetType().GetGenericArguments()[0]);
+
+            foreach (var eventType in allClassLevelEventTypes.Union(eventTypesReferencedByMember))
+            {
+                targetFrom.AddFromEveryMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, fromEveryAttr);
+            }
         }
     }
 }
