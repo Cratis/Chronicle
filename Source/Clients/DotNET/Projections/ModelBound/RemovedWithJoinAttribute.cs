@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
 public sealed class RemovedWithJoinAttribute<TEvent>(string? key = default) : Attribute, IProjectionAnnotation, IRemovedWithJoinAttribute
 {
+    /// <inheritdoc/>
+    public Type EventType => typeof(TEvent);
+
     /// <summary>
     /// Gets the property name on the event that identifies the child to remove.
     /// </summary>

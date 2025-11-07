@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines an attribute that indicates that a property value should be incremented when an event occurs.
 /// </summary>
-public interface IIncrementAttribute;
+public interface IIncrementAttribute : IEventBoundAttribute;

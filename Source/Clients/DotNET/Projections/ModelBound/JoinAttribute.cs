@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
 public sealed class JoinAttribute<TEvent>(string? on = default, string? eventPropertyName = default) : Attribute, IProjectionAnnotation, IJoinAttribute
 {
+    /// <inheritdoc/>
+    public Type EventType => typeof(TEvent);
+
     /// <summary>
     /// Gets the property name on the model to join on.
     /// </summary>

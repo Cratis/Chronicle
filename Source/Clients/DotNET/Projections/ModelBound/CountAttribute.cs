@@ -8,4 +8,8 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </summary>
 /// <typeparam name="TEvent">The type of event to count.</typeparam>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class CountAttribute<TEvent> : Attribute, IProjectionAnnotation, ICountAttribute;
+public sealed class CountAttribute<TEvent> : Attribute, IProjectionAnnotation, ICountAttribute
+{
+    /// <inheritdoc/>
+    public Type EventType => typeof(TEvent);
+}

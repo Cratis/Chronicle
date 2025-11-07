@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
 public sealed class AddFromAttribute<TEvent>(string? eventPropertyName = default) : Attribute, IProjectionAnnotation, IAddFromAttribute
 {
+    /// <inheritdoc/>
+    public Type EventType => typeof(TEvent);
+
     /// <summary>
     /// Gets the name of the property on the event.
     /// </summary>
