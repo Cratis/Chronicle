@@ -237,19 +237,20 @@ public class Projections(
     {
         var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
         var modelBoundDefinitions = modelBoundProjections.Discover();
+        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
 
         _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             serviceProvider,
             jsonSerializerOptions);
-        _definitionsByType = _definitionsByType
-            .Concat(modelBoundDefinitions)
-            .ToDictionary(x => x.Key, x => x.Value);
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
                 kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+        _handlersByType = _handlersByType.Concat(modelBoundHandlers).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         _handlersByModelType = _handlersByType.ToDictionary(
             _ => _.Key.GetReadModelType(),
