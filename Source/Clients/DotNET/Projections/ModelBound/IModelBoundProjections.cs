@@ -14,5 +14,5 @@ internal interface IModelBoundProjections
     /// Discovers all model-bound projections.
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
-    IEnumerable<ProjectionDefinition> Discover();
+    IDictionary<Type, ProjectionDefinition> Discover();
 }
