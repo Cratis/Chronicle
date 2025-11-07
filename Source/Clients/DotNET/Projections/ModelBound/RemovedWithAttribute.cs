@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="key">Optional property name on the event that identifies the child to remove. Defaults to WellKnownExpressions.EventSourceId.</param>
 /// <param name="parentKey">Optional property name that identifies the parent. Defaults to WellKnownExpressions.EventSourceId.</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? parentKey = default) : Attribute, IProjectionAnnotation, IKeyedAttribute
+public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? parentKey = default) : Attribute, IProjectionAnnotation, IRemovedWithAttribute
 {
     /// <summary>
     /// Gets the property name on the event that identifies the child to remove.
@@ -25,3 +25,4 @@ public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? 
     /// </summary>
     public string ParentKey { get; } = parentKey ?? WellKnownExpressions.EventSourceId;
 }
+
