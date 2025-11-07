@@ -10,6 +10,11 @@ namespace Cratis.Chronicle.Concepts.Projections;
 public record PropertyExpression(string Expression) : ConceptAs<string>(Expression)
 {
     /// <summary>
+    /// Represents a not set <see cref="PropertyExpression"/>.
+    /// </summary>
+    public static readonly PropertyExpression NotSet = new(string.Empty);
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="PropertyExpression"/>.
     /// </summary>
     /// <param name="expression">Expression string.</param>
