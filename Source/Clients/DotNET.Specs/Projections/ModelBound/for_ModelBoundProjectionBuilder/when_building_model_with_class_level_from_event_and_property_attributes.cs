@@ -68,14 +68,17 @@ public class when_building_model_with_class_level_from_event_and_property_attrib
         expression.ShouldContain(WellKnownExpressions.Subtract);
     }
 
-    [Fact] void should_map_last_updated_from_every_event_using_context_property()
+    [Fact] void should_have_all_definition() => _result.All.ShouldNotBeNull();
+
+    [Fact] void should_have_last_updated_in_all_definition()
     {
-        foreach (var fromDef in _result.From.Values)
-        {
-            fromDef.Properties.Keys.ShouldContain(nameof(InventoryStatus.LastUpdated));
-            var expression = fromDef.Properties[nameof(InventoryStatus.LastUpdated)];
-            expression.ShouldContain(WellKnownExpressions.EventContext);
-            expression.ShouldContain(nameof(EventContext.Occurred));
-        }
+        _result.All.Properties.Keys.ShouldContain(nameof(InventoryStatus.LastUpdated));
+    }
+
+    [Fact] void should_map_last_updated_to_event_context_occurred()
+    {
+        var expression = _result.All.Properties[nameof(InventoryStatus.LastUpdated)];
+        expression.ShouldContain(WellKnownExpressions.EventContext);
+        expression.ShouldContain(nameof(EventContext.Occurred));
     }
 }

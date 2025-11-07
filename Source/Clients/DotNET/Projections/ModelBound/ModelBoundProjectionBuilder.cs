@@ -29,6 +29,7 @@ internal class ModelBoundProjectionBuilder(
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
     readonly Dictionary<string, EventType> _eventTypeCache = new();
+    readonly List<(string PropertyName, FromEveryAttribute Attribute)> _fromEveryAttributes = [];
 
     /// <summary>
     /// Builds a projection definition from a type with model-bound projection attributes.
@@ -37,6 +38,8 @@ internal class ModelBoundProjectionBuilder(
     /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
     public ProjectionDefinition Build(Type modelType)
     {
+        _fromEveryAttributes.Clear();
+
         var projectionId = new ProjectionId(modelType.FullName!);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
@@ -54,7 +57,7 @@ internal class ModelBoundProjectionBuilder(
             From = new Dictionary<EventType, FromDefinition>(),
             Join = new Dictionary<EventType, JoinDefinition>(),
             Children = new Dictionary<string, ChildrenDefinition>(),
-            All = default!,
+            All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
             Sink = new SinkDefinition
@@ -71,6 +74,7 @@ internal class ModelBoundProjectionBuilder(
 
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
+        BuildFromEveryDefinition(definition);
 
         return definition;
     }
@@ -87,6 +91,44 @@ internal class ModelBoundProjectionBuilder(
         }
 
         return cachedEventType;
+    }
+
+    void BuildFromEveryDefinition(ProjectionDefinition definition)
+    {
+        if (_fromEveryAttributes.Count == 0)
+        {
+            return;
+        }
+
+        var properties = new Dictionary<string, string>();
+
+        foreach (var (propertyName, attribute) in _fromEveryAttributes)
+        {
+            if (!string.IsNullOrEmpty(attribute.ContextProperty))
+            {
+                // Map from event context property
+                var contextPropertyPath = new PropertyPath(attribute.ContextProperty);
+                var convertedContextPropertyName = _namingPolicy.GetPropertyName(contextPropertyPath);
+                properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
+            }
+            else if (!string.IsNullOrEmpty(attribute.Property))
+            {
+                // Map from event property
+                var eventPropertyPath = new PropertyPath(attribute.Property);
+                properties[propertyName] = _namingPolicy.GetPropertyName(eventPropertyPath);
+            }
+            else
+            {
+                // If neither is specified, map from matching property name on event
+                properties[propertyName] = propertyName;
+            }
+        }
+
+        definition.All = new FromEveryDefinition
+        {
+            Properties = properties,
+            IncludeChildren = true
+        };
     }
 
     void ProcessProperties(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents, ConstructorInfo? primaryConstructor)
@@ -195,19 +237,7 @@ internal class ModelBoundProjectionBuilder(
         var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
         if (fromEveryAttr is not null)
         {
-            // FromEvery applies to ALL events referenced by the model (class-level + all parameters processed so far)
-            var allEventTypes = new HashSet<Type>(allEventTypesReferencedByModel);
-
-            // Also include class-level events even if they don't have matching properties for this parameter
-            foreach (var attr in classLevelFromEvents)
-            {
-                allEventTypes.Add(attr.GetType().GetGenericArguments()[0]);
-            }
-
-            foreach (var eventType in allEventTypes)
-            {
-                targetFrom.AddFromEveryMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, fromEveryAttr);
-            }
+            _fromEveryAttributes.Add((propertyName, fromEveryAttr));
         }
     }
 
@@ -287,14 +317,7 @@ internal class ModelBoundProjectionBuilder(
         var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();
         if (fromEveryAttr is not null)
         {
-            // FromEvery applies to ALL class-level events, regardless of whether they have matching properties
-            var allClassLevelEventTypes = classLevelFromEvents
-                .Select(attr => attr.GetType().GetGenericArguments()[0]);
-
-            foreach (var eventType in allClassLevelEventTypes.Union(eventTypesReferencedByMember))
-            {
-                targetFrom.AddFromEveryMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, fromEveryAttr);
-            }
+            _fromEveryAttributes.Add((propertyName, fromEveryAttr));
         }
     }
 }
