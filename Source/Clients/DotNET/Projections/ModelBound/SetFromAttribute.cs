@@ -7,9 +7,6 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// Attribute used to indicate that a property value should be set from an event property.
 /// </summary>
 /// <typeparam name="TEvent">The type of event to set from.</typeparam>
-/// <remarks>
-/// Initializes a new instance of <see cref="SetFromAttribute{TEvent}"/>.
-/// </remarks>
 /// <param name="eventPropertyName">Optional name of the property on the event. If not specified, uses the model property name.</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
 public sealed class SetFromAttribute<TEvent>(string? eventPropertyName = default) : Attribute, IProjectionAnnotation, ISetFromAttribute
