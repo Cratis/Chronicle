@@ -2,6 +2,8 @@
   href: index.md
 - name: Basic Mapping
   href: basic-mapping.md
+- name: Convention-Based
+  href: convention-based.md
 - name: FromEvery
   href: from-every.md
 - name: Counters
@@ -10,7 +12,5 @@
   href: children.md
 - name: Joins
   href: joins.md
-- name: Convention-Based
-  href: convention-based.md
 - name: Configuration
   href: configuration.md

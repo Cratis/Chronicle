@@ -53,11 +53,11 @@ Model-bound projections support all projection engine capabilities:
 See the following pages for detailed information on each feature:
 
 - [Basic Mapping](./basic-mapping.md) - SetFrom, AddFrom, SubtractFrom
+- [Convention-Based](./convention-based.md) - Automatic property mapping with FromEvent (equivalent to AutoMap)
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count
 - [Children](./children.md) - Managing child collections
 - [Joins](./joins.md) - Joining with other events
-- [Convention-Based](./convention-based.md) - Automatic property matching
 - [Configuration](./configuration.md) - Event sequence, rewindable, and active settings
 
 ## When to Use
@@ -76,15 +76,17 @@ Use fluent projections (`IProjectionFor<T>`) when:
 
 ## Comparison with Fluent Projections
 
+### Explicit Property Mapping
+
 **Fluent Projection:**
 
 ```csharp
 public class AccountProjection : IProjectionFor<AccountInfo>
 {
     public void Define(IProjectionBuilderFor<AccountInfo> builder) => builder
-        .From<AccountOpened>()
-        .Set(m => m.Name).To(e => e.Name)
-        .Set(m => m.Balance).To(e => e.InitialBalance);
+        .From<AccountOpened>(_ => _
+            .Set(m => m.Name).To(e => e.Name)
+            .Set(m => m.Balance).To(e => e.InitialBalance));
 }
 ```
 
@@ -97,4 +99,27 @@ public record AccountInfo(
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))] decimal Balance);
 ```
 
-Both approaches produce the same result, but model-bound projections are more concise for simple cases.
+### Automatic Property Mapping
+
+**Fluent Projection with AutoMap:**
+
+```csharp
+public class AccountProjection : IProjectionFor<AccountInfo>
+{
+    public void Define(IProjectionBuilderFor<AccountInfo> builder) => builder
+        .AutoMap()
+        .From<AccountOpened>();
+}
+```
+
+**Model-Bound Projection with FromEvent:**
+
+```csharp
+[FromEvent<AccountOpened>]
+public record AccountInfo(
+    [Key] Guid Id,
+    string Name,        // Automatically mapped from AccountOpened.Name
+    decimal Balance);   // Automatically mapped from AccountOpened.Balance
+```
+
+Both approaches produce the same result. Model-bound projections with `FromEvent` are particularly concise when property names match between events and read models, providing the same automatic mapping benefits as `.AutoMap()` in fluent projections.

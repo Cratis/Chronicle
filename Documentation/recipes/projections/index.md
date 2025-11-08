@@ -27,7 +27,11 @@ Projections in Cratis allow you to create read models from events stored in the 
 ### Auto-mapping vs explicit mapping
 
 - **Auto-mapping**: Automatically maps properties with matching names between events and read models
+  - Use `.AutoMap()` in fluent projections (`IProjectionFor<T>`)
+  - Use `[FromEvent<TEvent>]` in model-bound projections for the same functionality
 - **Explicit mapping**: Gives you full control over property transformations and mappings
+  - Use `.Set()`, `.Add()`, etc. in fluent projections
+  - Use `[SetFrom<TEvent>]`, `[AddFrom<TEvent>]`, etc. in model-bound projections
 
 ### Event handling
 
