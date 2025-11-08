@@ -4,14 +4,14 @@
   href: get-started/toc.yml
 - name: Concepts
   href: concepts/toc.yml
+- name: Clients
+  href: clients/toc.yml
 - name: Recipes
   href: recipes/toc.yml
 - name: Projections
   href: projections/toc.yml
 - name: Hosting
   href: hosting/toc.yml
-- name: Clients
-  href: clients/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Api
