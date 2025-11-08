@@ -68,37 +68,6 @@ public async Task<BookInventory> UpdateAndReturn(UpdateQuantityCommand command)
 }
 ```
 
-### Watching for Updates
-
-If you need to react to reducer updates in real-time, use the watch API:
-
-```csharp
-public class BookController : ControllerBase
-{
-    private readonly IEventStore _eventStore;
-
-    public async Task<IActionResult> UpdateQuantityAndWatch(UpdateQuantityCommand command)
-    {
-        // Append the event
-        await _eventStore.EventLog.Append(command.BookId, new BookQuantityUpdated(command.NewQuantity));
-
-        // Return immediately, but clients can watch for updates
-        return Ok(new {
-            BookId = command.BookId,
-            Message = "Update processing, watch for changes"
-        });
-    }
-
-    [HttpGet("watch")]
-    public IObservable<ProjectionChangeset<BookInventory>> WatchBookChanges()
-    {
-        return _eventStore.Projections.Watch<BookInventory>();
-    }
-}
-```
-
-For more details on handling eventual consistency in projections, see the [Eventual Consistency guide](./projections/eventual-consistency.md) and [Watching Projections](./projections/watching-projections.md).## Creating a Reducer
-
 ### Step 1: Define a Read Model
 
 First, create a class or record that represents the state you want to maintain:

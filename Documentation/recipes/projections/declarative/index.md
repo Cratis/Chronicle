@@ -7,19 +7,19 @@ Declarative Projections in Cratis allow you to create read models from events st
 | Recipe | Description |
 | ------ | ----------- |
 | [Simple projection](simple-projection.md) | Basic projection using AutoMap() |
-| [Projection AutoMap](projection-auto-map.md) | Automatic property mapping at different levels |
-| [Passive projection](projection-passive.md) | In-memory projections for on-demand lookups |
-| [Projection with properties](projection-with-properties.md) | Explicit property mapping and transformations |
-| [Projection with children](projection-with-children.md) | Hierarchical data models with child collections |
-| [Projection with joins](projection-with-joins.md) | Cross-stream projections using joins |
-| [Projection functions](projection-functions.md) | Mathematical operations and calculations |
-| [Projection composite keys](projection-composite-keys.md) | Multi-property key identification |
-| [Projection with event context](projection-event-context.md) | Using event metadata in projections |
-| [Projection with FromEvery](projection-from-every.md) | Setting properties for all events in a projection |
-| [Projection with initial values](projection-initial-values.md) | Default values for read model properties |
-| [Projection with RemoveWithJoin](projection-remove-with-join.md) | Cross-stream child removal |
-| [Projection with FromEventSequence](projection-from-event-sequence.md) | Sourcing events from specific event sequences |
-| [Projection with NotRewindable](projection-not-rewindable.md) | Forward-only projections that cannot be replayed |
+| [AutoMap](auto-map.md) | Automatic property mapping at different levels |
+| [Passive](passive.md) | In-memory projections for on-demand lookups |
+| [With properties](with-properties.md) | Explicit property mapping and transformations |
+| [With children](with-children.md) | Hierarchical data models with child collections |
+| [With joins](with-joins.md) | Cross-stream projections using joins |
+| [Functions](functions.md) | Mathematical operations and calculations |
+| [Composite keys](composite-keys.md) | Multi-property key identification |
+| [Event context](event-context.md) | Using event metadata in projections |
+| [FromEvery](from-every.md) | Setting properties for all events in a projection |
+| [Initial values](initial-values.md) | Default values for read model properties |
+| [RemoveWithJoin](remove-with-join.md) | Cross-stream child removal |
+| [FromEventSequence](from-event-sequence.md) | Sourcing events from specific event sequences |
+| [NotRewindable](not-rewindable.md) | Forward-only projections that cannot be replayed |
 
 ## Key concepts
 
