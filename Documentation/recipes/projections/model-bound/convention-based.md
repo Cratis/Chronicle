@@ -151,12 +151,12 @@ public record Address(
 [FromEvent<CustomerAddressUpdated>]
 public record Customer(
     [Key] Guid Id,
-    
+
     // Simple properties mapped automatically
     string FirstName,
     string LastName,
     string Email,
-    
+
     // Nested objects mapped recursively
     Address BillingAddress,
     Address ShippingAddress);
@@ -181,7 +181,7 @@ public record LineItem(
 [FromEvent<OrderCreated>]
 public record Order(
     [Key] Guid Id,
-    
+
     string CustomerEmail,  // Automatically mapped
     LineItem[] Items,      // Array mapped with nested objects
     string[] Tags);        // Simple array mapped
@@ -308,7 +308,7 @@ Events don't need to have all read model properties. Missing properties are igno
 [EventType]
 public record UserRegistered(string Email);  // Only has Email
 
-[EventType] 
+[EventType]
 public record UserProfileCompleted(string FirstName, string LastName, string Phone);
 
 [FromEvent<UserRegistered>]      // Maps: Email
@@ -317,7 +317,7 @@ public record User(
     [Key] Guid Id,
     string Email,      // From UserRegistered
     string FirstName,  // From UserProfileCompleted
-    string LastName,   // From UserProfileCompleted  
+    string LastName,   // From UserProfileCompleted
     string Phone);     // From UserProfileCompleted
 ```
 
@@ -330,18 +330,18 @@ public record User(
 [FromEvent<AccountDetailsUpdated>]   // Auto-maps: CustomerName, ContactEmail
 public record Account(
     [Key] Guid Id,
-    
+
     // Auto-mapped properties
     string AccountNumber,
-    string CustomerName, 
+    string CustomerName,
     string ContactEmail,
-    
+
     // Explicit mappings for complex scenarios
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialDeposit))]
     [AddFrom<DepositMade>(nameof(DepositMade.Amount))]
     [SubtractFrom<WithdrawalMade>(nameof(WithdrawalMade.Amount))]
     decimal Balance,
-    
+
     // Metadata tracking
     [FromEvery(contextProperty: "Occurred")]
     DateTimeOffset LastModified);

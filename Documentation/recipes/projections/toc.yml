@@ -1,32 +1,10 @@
 - name: Overview
   href: index.md
+- name: Eventual Consistency
+  href: eventual-consistency.md
+- name: Watching Projections
+  href: watching-projections.md
 - name: Model-Bound Projections
   href: model-bound/toc.yml
-- name: Simple projection
-  href: simple-projection.md
-- name: Projection AutoMap
-  href: projection-auto-map.md
-- name: Passive projection
-  href: projection-passive.md
-- name: Projection with properties
-  href: projection-with-properties.md
-- name: Projection with children
-  href: projection-with-children.md
-- name: Projection with joins
-  href: projection-with-joins.md
-- name: Projection functions
-  href: projection-functions.md
-- name: Projection composite keys
-  href: projection-composite-keys.md
-- name: Projection with event context
-  href: projection-event-context.md
-- name: Projection with FromEvery
-  href: projection-from-every.md
-- name: Projection with initial values
-  href: projection-initial-values.md
-- name: Projection with RemoveWithJoin
-  href: projection-remove-with-join.md
-- name: Projection with FromEventSequence
-  href: projection-from-event-sequence.md
-- name: Projection with NotRewindable
-  href: projection-not-rewindable.md
+- name: Declarative Projections
+  href: declarative/toc.yml
