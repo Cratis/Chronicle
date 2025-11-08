@@ -6,8 +6,6 @@
   href: reacting-events-in-event-log.md
 - name: Reducers
   href: reducers.md
-- name: Projections
-  href: projections/toc.yml
 - name: Constraints
   href: constraints.md
 - name: Custom Rules

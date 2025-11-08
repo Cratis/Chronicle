@@ -85,6 +85,7 @@ Explore Chronicle's comprehensive documentation organized by topic:
 | **[Get Started](./get-started/toc.yml)** | Quick start guides for console and ASP.NET Core applications |
 | **[Concepts](./concepts/toc.yml)** | Core concepts including events, projections, observers, and constraints |
 | **[Clients](./clients/toc.yml)** | .NET client SDK documentation and application model guidance |
+| **[Projections](./projections/index.md)** | How to create read models from events using projections |
 | **[Hosting](./hosting/toc.yml)** | Deployment options including production and development environments |
 | **[Recipes](./recipes/toc.yml)** | Practical examples and common patterns for Chronicle usage |
 | **[Contributing](./contributing/toc.yml)** | Guidelines for contributing to Chronicle development |
