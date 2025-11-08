@@ -32,7 +32,7 @@ In this example:
 
 Types are automatically discovered by the presence of:
 
-- `KeyAttribute` on any property, OR
+- Any class/record level projection mapping attributes (FromEvent, Passive, NotRewindable, etc.)
 - Any projection mapping attribute (SetFrom, AddFrom, Join, etc.)
 
 No explicit marker attribute is required on the type itself.
