@@ -12,5 +12,9 @@
   href: children.md
 - name: Joins
   href: joins.md
-- name: Configuration
-  href: configuration.md
+- name: Event Sequence Source
+  href: event-sequence-source.md
+- name: Not Rewindable
+  href: not-rewindable.md
+- name: Passive
+  href: passive.md

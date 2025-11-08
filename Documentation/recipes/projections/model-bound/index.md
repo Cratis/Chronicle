@@ -58,7 +58,9 @@ See the following pages for detailed information on each feature:
 - [Counters](./counters.md) - Increment, Decrement, Count
 - [Children](./children.md) - Managing child collections
 - [Joins](./joins.md) - Joining with other events
-- [Configuration](./configuration.md) - Event sequence, rewindable, and active settings
+- [Event Sequence Source](./event-sequence-source.md) - Reading from specific event sequences
+- [Not Rewindable](./not-rewindable.md) - Forward-only projections
+- [Passive](./passive.md) - On-demand projections
 
 ## When to Use
 

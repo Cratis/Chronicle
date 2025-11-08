@@ -9,9 +9,9 @@ Declarative Projections in Cratis allow you to create read models from events st
 | [Simple projection](simple-projection.md) | Basic projection using AutoMap() |
 | [AutoMap](auto-map.md) | Automatic property mapping at different levels |
 | [Passive](passive.md) | In-memory projections for on-demand lookups |
-| [With properties](with-properties.md) | Explicit property mapping and transformations |
-| [With children](with-children.md) | Hierarchical data models with child collections |
-| [With joins](with-joins.md) | Cross-stream projections using joins |
+| [Set properties](set-properties.md) | Explicit property mapping and transformations |
+| [Children](children.md) | Hierarchical data models with child collections |
+| [Joins](joins.md) | Cross-stream projections using joins |
 | [Functions](functions.md) | Mathematical operations and calculations |
 | [Composite keys](composite-keys.md) | Multi-property key identification |
 | [Event context](event-context.md) | Using event metadata in projections |

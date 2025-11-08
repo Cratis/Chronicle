@@ -4,12 +4,12 @@
   href: auto-map.md
 - name: Passive
   href: passive.md
-- name: With properties
-  href: with-properties.md
-- name: With children
-  href: with-children.md
-- name: With joins
-  href: with-joins.md
+- name: Set properties
+  href: set-properties.md
+- name: Children
+  href: children.md
+- name: Joins
+  href: joins.md
 - name: Functions
   href: functions.md
 - name: Composite keys
