@@ -126,10 +126,7 @@ public class IEnumerableSerializer(ICodecProvider codecProvider) : IGeneralizedC
         var elementCodec = codecProvider.GetCodec(elementType);
         foreach (var item in items)
         {
-            if (item is not null)
-            {
-                elementCodec.WriteField(ref writer, fieldIdDelta, elementType, item);
-            }
+            elementCodec.WriteField(ref writer, fieldIdDelta, elementType, item!);
         }
     }
 
