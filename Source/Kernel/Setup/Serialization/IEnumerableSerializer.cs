@@ -26,13 +26,9 @@ public class IEnumerableSerializer(ICodecProvider codecProvider) : IGeneralizedC
         }
 
         var inputType = input.GetType();
-        if (!IsIEnumerableType(inputType))
-        {
-            return input;
-        }
 
-        // Get the element type
-        var elementType = GetElementType(inputType);
+        // Get the element type from the concrete type
+        var elementType = GetElementTypeFromConcreteType(inputType);
         if (elementType is null)
         {
             return input;
@@ -61,6 +57,19 @@ public class IEnumerableSerializer(ICodecProvider codecProvider) : IGeneralizedC
         {
             return true;
         }
+
+        // Also allow concrete types that implement IEnumerable<T>
+        if (type.IsGenericType)
+        {
+            foreach (var iface in type.GetInterfaces())
+            {
+                if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                {
+                    return true;
+                }
+            }
+        }
+
         return null;
     }
 
@@ -99,7 +108,9 @@ public class IEnumerableSerializer(ICodecProvider codecProvider) : IGeneralizedC
         }
 
         var enumerable = (System.Collections.IEnumerable)value;
-        var elementType = GetElementType(value.GetType()) ?? throw new InvalidOperationException($"Cannot determine element type for {value.GetType()}");
+
+        // Get element type from expectedType (which should be IEnumerable<T>)
+        var elementType = GetElementType(expectedType) ?? GetElementTypeFromConcreteType(value.GetType()) ?? throw new InvalidOperationException($"Cannot determine element type for {value.GetType()}");
 
         // Convert to list to get count
         var items = new List<object?>();
@@ -138,6 +149,26 @@ public class IEnumerableSerializer(ICodecProvider codecProvider) : IGeneralizedC
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
             return type.GetGenericArguments()[0];
+        }
+
+        return null;
+    }
+
+    static Type? GetElementTypeFromConcreteType(Type type)
+    {
+        // First try to get it directly if it's IEnumerable<T>
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            return type.GetGenericArguments()[0];
+        }
+
+        // Otherwise, look for IEnumerable<T> in implemented interfaces
+        foreach (var iface in type.GetInterfaces())
+        {
+            if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                return iface.GetGenericArguments()[0];
+            }
         }
 
         return null;
