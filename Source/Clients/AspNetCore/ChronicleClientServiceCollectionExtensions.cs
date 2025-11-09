@@ -106,6 +106,8 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped<IRules, Rules>();
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.NamingPolicy);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.EventStoreNamespaceResolver);
+        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.CorrelationIdAccessor);
 
         return services;
     }
