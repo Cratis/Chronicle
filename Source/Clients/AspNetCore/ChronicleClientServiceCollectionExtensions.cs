@@ -102,9 +102,9 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddScoped<IRules, Rules>();
-        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.ArtifactsProvider);
-        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.NamingPolicy);
-        services.AddSingleton(sp => sp.GetRequiredService<IChronicleClient>().Options.CorrelationIdAccessor);
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.ArtifactsProvider);
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.CorrelationIdAccessor);
 
         return services;
     }
