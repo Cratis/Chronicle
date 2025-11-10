@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 271 days, 6:11:12 | 121 days, 12:21:42 | 818 days, 16:13:54 |
+| Time to close | 272 days, 23:01:19 | 122 days, 6:27:57 | 825 days, 1:54:49 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 271 |
-| Number of items closed | 579 |
+| Number of items that remain open | 270 |
+| Number of items closed | 580 |
 | Total number of items created | 850 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -171,7 +171,7 @@
 | Add details on recommendations | https://github.com/Cratis/Chronicle/issues/1522 | None | [einari](https://github.com/einari) | None | None | None |
 | Some Observer properties in state has wrong values | https://github.com/Cratis/Chronicle/issues/1521 | None | [einari](https://github.com/einari) | 9 days, 7:29:21 | None | None |
 | Configurable auto solving of recommendations | https://github.com/Cratis/Chronicle/issues/1520 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Implement Orleans serializer for IEnumerable<> | https://github.com/Cratis/Chronicle/issues/1516 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
+| Implement Orleans serializer for IEnumerable<> | https://github.com/Cratis/Chronicle/issues/1516 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Add support for clearing all children in a projection | https://github.com/Cratis/Chronicle/issues/1475 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Unit Of Work transactions does not respect event constraints | https://github.com/Cratis/Chronicle/issues/1474 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Support the Outbox -> Inbox forwarding and subscriptions - configured from the client | https://github.com/Cratis/Chronicle/issues/1473 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
@@ -342,4 +342,4 @@
 | Improve .To() / .ToValue() - consolidate + support complex types | https://github.com/Cratis/Chronicle/issues/1051 | None | [einari](https://github.com/einari) | None | None | None |
 | Support base types for projections | https://github.com/Cratis/Chronicle/issues/1030 | None | [einari](https://github.com/einari) | None | 6:52:46 | None |
 | Support deletion for reducers | https://github.com/Cratis/Chronicle/issues/1028 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 587 days, 23:46:34 | None |
-| Consolidate the creation of EventTypeRegistration - removing duplicate logic for creation | https://github.com/Cratis/Chro
+| Consolidate the creation of EventTypeRegistration - removing duplicate logic for cre
