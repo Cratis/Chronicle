@@ -18,7 +18,7 @@ public class SingleEventCommandResponseValueHandler(IEventLog eventLog, IEventTy
     public bool CanHandle(CommandContext commandContext, object value) =>
         value is object obj &&
         eventTypes.HasFor(obj.GetType()) &&
-        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var id) && id is EventSourceId;
+        commandContext.HasEventSourceId();
 
     /// <inheritdoc/>
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
