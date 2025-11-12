@@ -20,13 +20,13 @@
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
 
-        <NoWarn>NU1507</NoWarn>
+        <NoWarn>NU1507;NU1510;CA1873;CA1874;CA2024;IDE0330;IDE0048;MA0158;MA0036</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup>
         <IsPackaging Condition="'$(IsPackaging)' == ''">false</IsPackaging>
-        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net9.0</TargetFramework>
-        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0</TargetFrameworks>
+        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net10.0</TargetFramework>
+        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0;net10.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>

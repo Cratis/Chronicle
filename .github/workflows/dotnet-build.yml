@@ -1,7 +1,7 @@
 name: .NET Build & Integration
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
@@ -98,7 +98,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
+        run: dotnet test --no-build --configuration Release --framework net10.0 --settings specs.runsettings
 
   integration-specs:
     runs-on: ubuntu-latest
@@ -131,9 +131,9 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Run integration tests for .Net 9
+      - name: Run integration tests for .Net 10
         working-directory: ./Integration/DotNET.InProcess
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net10.0
 
   integration-api:
     runs-on: ubuntu-latest
@@ -161,6 +161,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run API integration tests for .Net 9
+      - name: Run API integration tests for .Net 10
         working-directory: ./Integration/Api
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --framework net9.0
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --framework net10.0

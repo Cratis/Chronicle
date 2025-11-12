@@ -196,7 +196,7 @@ This approach ensures that all necessary artifacts are built in the correct orde
 we typically perform release builds, while pull request builds target a single .NET framework for efficiency. For example:
 
 ```shell
-dotnet build -f net9.0 --configuration Release -p:Repack=true -maxcpucount:1
+dotnet build -f net10.0 --configuration Release -p:Repack=true -maxcpucount:1
 ```
 
 ## Assembly fixer
