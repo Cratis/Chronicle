@@ -18,13 +18,13 @@ public class with_constraint_violations : given.all_dependencies
         var violations = new[]
         {
             new ConstraintViolation(
-                EventTypeId.NotSet,
+                EventTypeId.Unknown,
                 EventSequenceNumber.Unavailable,
                 new ConstraintName("FirstConstraint"),
                 new ConstraintViolationMessage("First violation"),
                 new ConstraintViolationDetails()),
             new ConstraintViolation(
-                EventTypeId.NotSet,
+                EventTypeId.Unknown,
                 EventSequenceNumber.Unavailable,
                 new ConstraintName("SecondConstraint"),
                 new ConstraintViolationMessage("Second violation"),

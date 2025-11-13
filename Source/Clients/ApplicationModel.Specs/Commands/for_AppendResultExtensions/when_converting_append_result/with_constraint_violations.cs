@@ -17,7 +17,7 @@ public class with_constraint_violations : given.all_dependencies
     void Establish()
     {
         _violation = new ConstraintViolation(
-            EventTypeId.NotSet,
+            EventTypeId.Unknown,
             EventSequenceNumber.Unavailable,
             new ConstraintName("TestConstraint"),
             new ConstraintViolationMessage("Test violation message"),

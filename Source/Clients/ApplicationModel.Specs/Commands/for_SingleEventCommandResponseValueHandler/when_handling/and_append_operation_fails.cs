@@ -2,16 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Commands;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Grains.Events.Constraints;
-using Cratis.Chronicle.Grains.EventSequences;
 
 namespace Cratis.Chronicle.Applications.Commands.for_SingleEventCommandResponseValueHandler.when_handling;
 
-public class append_operation_fails : given.a_single_event_command_response_value_handler
+public class and_append_operation_fails : given.a_single_event_command_response_value_handler
 {
     TestEvent _event;
     AppendResult _appendResult;
@@ -21,9 +18,8 @@ public class append_operation_fails : given.a_single_event_command_response_valu
     {
         _event = new TestEvent("Test Event");
         var violation = new ConstraintViolation(
-            EventTypeId.NotSet,
+            EventTypeId.Unknown,
             EventSequenceNumber.Unavailable,
-            ConstraintType.NotSet,
             new ConstraintName("TestConstraint"),
             new ConstraintViolationMessage("Test violation"),
             new ConstraintViolationDetails());

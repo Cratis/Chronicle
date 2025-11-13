@@ -2,12 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.Commands;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Grains.Events.Constraints;
-using Cratis.Chronicle.Grains.EventSequences;
 
 namespace Cratis.Chronicle.Applications.Commands.for_EventsCommandResponseValueHandler.when_handling;
 
@@ -21,14 +18,17 @@ public class and_append_returns_failure : given.an_events_command_response_value
     {
         _events = [new TestEvent("Test")];
         var violation = new ConstraintViolation(
-            EventTypeId.NotSet,
+            EventTypeId.Unknown,
             EventSequenceNumber.Unavailable,
-            ConstraintType.NotSet,
             new ConstraintName("TestConstraint"),
             new ConstraintViolationMessage("Test violation"),
             new ConstraintViolationDetails());
 
-        _appendResult = AppendManyResult.Failed(_correlationId, [violation]);
+        _appendResult = new AppendManyResult
+        {
+            CorrelationId = _correlationId,
+            ConstraintViolations = [violation]
+        };
         _eventLog.AppendMany(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<object>>()).Returns(_appendResult);
         _eventTypes.HasFor(Arg.Any<Type>()).Returns(true);
     }
