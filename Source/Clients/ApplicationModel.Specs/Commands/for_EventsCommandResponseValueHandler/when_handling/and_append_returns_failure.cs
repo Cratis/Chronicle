@@ -9,17 +9,17 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grains.Events.Constraints;
 using Cratis.Chronicle.Grains.EventSequences;
 
-namespace Cratis.Chronicle.Applications.Commands.for_SingleEventCommandResponseValueHandler.when_handling;
+namespace Cratis.Chronicle.Applications.Commands.for_EventsCommandResponseValueHandler.when_handling;
 
-public class append_operation_fails : given.a_single_event_command_response_value_handler
+public class and_append_returns_failure : given.an_events_command_response_value_handler
 {
-    TestEvent _event;
-    AppendResult _appendResult;
+    IEnumerable<object> _events;
+    AppendManyResult _appendResult;
     CommandResult _result;
 
     void Establish()
     {
-        _event = new TestEvent("Test Event");
+        _events = [new TestEvent("Test")];
         var violation = new ConstraintViolation(
             EventTypeId.NotSet,
             EventSequenceNumber.Unavailable,
@@ -28,12 +28,12 @@ public class append_operation_fails : given.a_single_event_command_response_valu
             new ConstraintViolationMessage("Test violation"),
             new ConstraintViolationDetails());
 
-        _appendResult = AppendResult.Failed(_correlationId, [violation]);
-        _eventLog.Append(Arg.Any<EventSourceId>(), Arg.Any<object>()).Returns(_appendResult);
+        _appendResult = AppendManyResult.Failed(_correlationId, [violation]);
+        _eventLog.AppendMany(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<object>>()).Returns(_appendResult);
         _eventTypes.HasFor(Arg.Any<Type>()).Returns(true);
     }
 
-    async Task Because() => _result = await _handler.Handle(_commandContext, _event);
+    async Task Because() => _result = await _handler.Handle(_commandContext, _events);
 
     [Fact] void should_return_failed_command_result() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_include_validation_results() => _result.ValidationResults.ShouldNotBeEmpty();
