@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.EventTypes;
+using JsonCons.JmesPath;
 
 namespace Cratis.Chronicle.Grains.EventSequences.Migrations;
 
@@ -111,14 +113,32 @@ public class EventTypeMigrations(
 
     JsonObject ApplyMigration(JsonObject content, EventTypeMigrationDefinition migration)
     {
-        // TODO: Implement JmesPath transformation when proper API is available
-        // The JsonCons.JmesPath package v1.0.0 doesn't expose a public API for parsing expressions
-        // For now, migrations will store all generations but transformations need to be handled differently
+        // Apply JmesPath transformation if defined
+        if (migration.JmesPath?.Count > 0)
+        {
+            try
+            {
+                // The JmesPath expression defines the transformation
+                var jmesPathExpr = migration.JmesPath.ToJsonString();
 
-#pragma warning disable IDE0060 // Remove unused parameter - migration parameter will be used when JmesPath is implemented
-        // The migration.JmesPath contains the transformation expression
-        // that should be applied to transform the event from one generation to another
-#pragma warning restore IDE0060
+                // Convert JsonObject to JsonElement for JsonTransformer
+                var contentJson = content.ToJsonString();
+                using var contentDoc = JsonDocument.Parse(contentJson);
+
+                // Apply the JmesPath transformation using JsonCons.JmesPath
+                using var resultDoc = JsonTransformer.Transform(contentDoc.RootElement, jmesPathExpr);
+
+                // Convert result back to JsonObject
+                var resultJson = JsonSerializer.Serialize(resultDoc.RootElement);
+                return JsonNode.Parse(resultJson)?.AsObject() ?? new JsonObject();
+            }
+            catch
+            {
+                // If transformation fails, return original content
+                return content;
+            }
+        }
+
         return content;
     }
 }
