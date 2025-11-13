@@ -118,5 +118,14 @@ public record InventoryStatus(
     [FromEvery(contextProperty: nameof(EventContext.Occurred))]
     DateTimeOffset LastUpdated);
 
+[FromEvent<UserRegisteredWithCustomId>(key: nameof(UserRegisteredWithCustomId.UserId))]
+public record UserProfile(
+    [Key]
+    Guid Id,
+
+    string Email,
+
+    string Name);
+
 #pragma warning restore SA1402 // File may only contain a single type
 #pragma warning restore SA1649 // File name should match first type name
