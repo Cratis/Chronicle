@@ -49,7 +49,7 @@ public interface IEventSequenceStorage
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
-    /// <param name="content">The content of the event.</param>
+    /// <param name="content">The content of the event per generation.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
@@ -62,7 +62,7 @@ public interface IEventSequenceStorage
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        ExpandoObject content);
+        IDictionary<EventTypeGeneration, ExpandoObject> content);
 
     /// <summary>
     /// Compensate a single event to the event store.
