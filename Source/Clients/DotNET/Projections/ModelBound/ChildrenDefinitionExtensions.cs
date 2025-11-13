@@ -54,6 +54,7 @@ static class ChildrenDefinitionExtensions
                 IdentifiedBy = identifiedBy,
                 From = new Dictionary<EventType, FromDefinition>(),
                 Join = new Dictionary<EventType, JoinDefinition>(),
+                All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
                 RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>()
             };
