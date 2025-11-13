@@ -107,7 +107,7 @@ internal class ModelBoundProjectionBuilder(
             if (!string.IsNullOrEmpty(attribute.ContextProperty))
             {
                 // Map from event context property
-                PropertyValidator.ValidatePropertyExists(typeof(EventContext), attribute.ContextProperty);
+                PropertyValidator.ValidatePropertyExists<EventContext>(attribute.ContextProperty);
                 var contextPropertyPath = new PropertyPath(attribute.ContextProperty);
                 var convertedContextPropertyName = _namingPolicy.GetPropertyName(contextPropertyPath);
                 properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
@@ -213,7 +213,7 @@ internal class ModelBoundProjectionBuilder(
             var contextPropertyNameProperty = attr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
             var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
             var propertyToValidate = contextPropertyName ?? parameter.Name!;
-            PropertyValidator.ValidatePropertyExists(typeof(EventContext), propertyToValidate);
+            PropertyValidator.ValidatePropertyExists<EventContext>(propertyToValidate);
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
         }
 
@@ -237,14 +237,22 @@ internal class ModelBoundProjectionBuilder(
             definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember);
         }
 
-        foreach (var (eventType, eventProperty) in classLevelFromEvents
-            .Select(attr => (
-            eventType: attr.GetType().GetGenericArguments()[0],
-            eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(memberName)))
-            .Where(x => x.eventProperty is not null))
+        foreach (var attr in classLevelFromEvents)
         {
-            allEventTypesReferencedByModel.Add(eventType);
-            targetFrom.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName);
+            var eventType = attr.GetType().GetGenericArguments()[0];
+            var eventProperty = eventType.GetProperty(memberName);
+
+            if (eventProperty is not null)
+            {
+                allEventTypesReferencedByModel.Add(eventType);
+                var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+                var key = keyProperty?.GetValue(attr) as string;
+                if (!string.IsNullOrEmpty(key))
+                {
+                    PropertyValidator.ValidatePropertyExists(eventType, key);
+                }
+                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName, key);
+            }
         }
 
         var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
@@ -304,7 +312,7 @@ internal class ModelBoundProjectionBuilder(
             var contextPropertyNameProperty = attr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
             var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
             var propertyToValidate = contextPropertyName ?? property.Name;
-            PropertyValidator.ValidatePropertyExists(typeof(EventContext), propertyToValidate);
+            PropertyValidator.ValidatePropertyExists<EventContext>(propertyToValidate);
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
         }
 
@@ -329,14 +337,22 @@ internal class ModelBoundProjectionBuilder(
             definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember);
         }
 
-        foreach (var (eventType, eventProperty) in classLevelFromEvents
-            .Select(attr => (
-                eventType: attr.GetType().GetGenericArguments()[0],
-                eventProperty: attr.GetType().GetGenericArguments()[0].GetProperty(property.Name)))
-            .Where(x => x.eventProperty is not null))
+        foreach (var attr in classLevelFromEvents)
         {
-            eventTypesReferencedByMember.Add(eventType);
-            targetFrom.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name);
+            var eventType = attr.GetType().GetGenericArguments()[0];
+            var eventProperty = eventType.GetProperty(property.Name);
+
+            if (eventProperty is not null)
+            {
+                eventTypesReferencedByMember.Add(eventType);
+                var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+                var key = keyProperty?.GetValue(attr) as string;
+                if (!string.IsNullOrEmpty(key))
+                {
+                    PropertyValidator.ValidatePropertyExists(eventType, key);
+                }
+                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name, key);
+            }
         }
 
         var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();

@@ -31,6 +31,30 @@ static class FromDefinitionExtensions
     }
 
     /// <summary>
+    /// Adds a set mapping to the From definition for a given event type with an optional key.
+    /// </summary>
+    /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="namingPolicy">The naming policy for converting property names.</param>
+    /// <param name="eventType">The event type to map from.</param>
+    /// <param name="propertyName">The property name on the projection model.</param>
+    /// <param name="eventPropertyName">The property name on the event.</param>
+    /// <param name="key">Optional key expression to use for identifying the model instance.</param>
+    internal static void AddSetMappingWithKey(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string eventPropertyName, string? key)
+    {
+        var eventTypeId = getOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+        var eventPropertyPath = new PropertyPath(eventPropertyName);
+        fromDefinition.Properties[propertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
+
+        if (!string.IsNullOrEmpty(key))
+        {
+            var keyPropertyPath = new PropertyPath(key);
+            fromDefinition.Key = namingPolicy.GetPropertyName(keyPropertyPath);
+        }
+    }
+
+    /// <summary>
     /// Adds an add mapping to the From definition for a given event type.
     /// </summary>
     /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
