@@ -107,6 +107,7 @@ internal class ModelBoundProjectionBuilder(
             if (!string.IsNullOrEmpty(attribute.ContextProperty))
             {
                 // Map from event context property
+                PropertyValidator.ValidatePropertyExists(typeof(EventContext), attribute.ContextProperty);
                 var contextPropertyPath = new PropertyPath(attribute.ContextProperty);
                 var convertedContextPropertyName = _namingPolicy.GetPropertyName(contextPropertyPath);
                 properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
@@ -193,7 +194,9 @@ internal class ModelBoundProjectionBuilder(
                 allEventTypesReferencedByModel.Add(eventType);
                 var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
-                mappingAction(targetFrom, eventType, propertyName, eventPropertyName ?? parameter.Name!);
+                var propertyToUse = eventPropertyName ?? parameter.Name!;
+                PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                mappingAction(targetFrom, eventType, propertyName, propertyToUse);
             }
         }
 
@@ -203,6 +206,16 @@ internal class ModelBoundProjectionBuilder(
         TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
         TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
         TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
+
+        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<SetFromContextAttribute<object>>())
+        {
+            allEventTypesReferencedByModel.Add(eventType);
+            var contextPropertyNameProperty = attr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
+            var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
+            var propertyToValidate = contextPropertyName ?? parameter.Name!;
+            PropertyValidator.ValidatePropertyExists(typeof(EventContext), propertyToValidate);
+            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
+        }
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
@@ -272,7 +285,9 @@ internal class ModelBoundProjectionBuilder(
                 eventTypesReferencedByMember.Add(eventType);
                 var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
-                mappingAction(targetFrom, eventType, propertyName, eventPropertyName ?? property.Name);
+                var propertyToUse = eventPropertyName ?? property.Name;
+                PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                mappingAction(targetFrom, eventType, propertyName, propertyToUse);
             }
         }
 
@@ -282,6 +297,16 @@ internal class ModelBoundProjectionBuilder(
         TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
         TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
         TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
+
+        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<SetFromContextAttribute<object>>())
+        {
+            eventTypesReferencedByMember.Add(eventType);
+            var contextPropertyNameProperty = attr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
+            var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
+            var propertyToValidate = contextPropertyName ?? property.Name;
+            PropertyValidator.ValidatePropertyExists(typeof(EventContext), propertyToValidate);
+            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
+        }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())
         {

@@ -50,7 +50,9 @@ static class JoinDefinitionExtensions
             targetJoin[eventTypeId] = joinDef;
         }
 
-        var eventPropPath = new PropertyPath(eventPropertyName ?? memberName);
+        var eventPropertyToUse = eventPropertyName ?? memberName;
+        PropertyValidator.ValidatePropertyExists(eventType, eventPropertyToUse);
+        var eventPropPath = new PropertyPath(eventPropertyToUse);
         joinDef.Properties[propertyName] = namingPolicy.GetPropertyName(eventPropPath);
     }
 }
