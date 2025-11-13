@@ -20,4 +20,16 @@ public class EventTypeRegistration
     /// </summary>
     [ProtoMember(2)]
     public string Schema { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets all generations of this event type.
+    /// </summary>
+    [ProtoMember(3, IsRequired = true)]
+    public IList<EventTypeGenerationDefinition> Generations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets all migrations for this event type.
+    /// </summary>
+    [ProtoMember(4, IsRequired = true)]
+    public IList<EventTypeMigrationDefinition> Migrations { get; set; } = [];
 }
