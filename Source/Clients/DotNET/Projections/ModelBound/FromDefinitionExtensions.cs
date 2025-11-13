@@ -108,6 +108,24 @@ static class FromDefinitionExtensions
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Count}()";
     }
 
+    /// <summary>
+    /// Adds a context property mapping to the From definition for a given event type.
+    /// </summary>
+    /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="namingPolicy">The naming policy for converting property names.</param>
+    /// <param name="eventType">The event type to map from.</param>
+    /// <param name="propertyName">The property name on the projection model.</param>
+    /// <param name="contextPropertyName">The property name on the event context.</param>
+    internal static void AddContextPropertyMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string contextPropertyName)
+    {
+        var eventTypeId = getOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+        var contextPropertyPath = new PropertyPath(contextPropertyName);
+        var convertedContextPropertyName = namingPolicy.GetPropertyName(contextPropertyPath);
+        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
+    }
+
     static FromDefinition GetOrCreateFromDefinition(this IDictionary<EventType, FromDefinition> targetFrom, EventType eventTypeId)
     {
         if (!targetFrom.TryGetValue(eventTypeId, out var fromDefinition))

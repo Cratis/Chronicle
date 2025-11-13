@@ -41,7 +41,7 @@ No explicit marker attribute is required on the type itself.
 
 Model-bound projections support all projection engine capabilities:
 
-- **Property Mapping**: SetFrom, AddFrom, SubtractFrom
+- **Property Mapping**: SetFrom, AddFrom, SubtractFrom, SetFromContext
 - **FromEvery**: Set properties from all events
 - **Counters**: Increment, Decrement, Count
 - **Relationships**: Join, Children
@@ -52,7 +52,7 @@ Model-bound projections support all projection engine capabilities:
 
 See the following pages for detailed information on each feature:
 
-- [Basic Mapping](./basic-mapping.md) - SetFrom, AddFrom, SubtractFrom
+- [Basic Mapping](./basic-mapping.md) - SetFrom, AddFrom, SubtractFrom, SetFromContext
 - [Convention-Based](./convention-based.md) - Automatic property mapping with FromEvent (equivalent to AutoMap)
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count
