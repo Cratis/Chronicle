@@ -25,6 +25,7 @@
     <ItemGroup>
       <PackageReference Include="Cratis.Metrics.Roslyn" />
       <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="JsonCons.JmesPath" />
       <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
       <PackageReference Include="Microsoft.Orleans.Sdk" />
       <PackageReference Include="Microsoft.Orleans.Reminders" />
