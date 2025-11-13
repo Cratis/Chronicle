@@ -111,6 +111,92 @@ public record BankAccount(
     decimal Balance);
 ```
 
+## SetFromContext
+
+The `SetFromContext` attribute maps properties from the event context to the read model. This is useful for capturing event metadata like timestamps, sequence numbers, or correlation IDs for specific event types.
+
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections.ModelBound;
+
+public record Order(
+    [Key]
+    Guid Id,
+
+    [SetFrom<OrderPlaced>(nameof(OrderPlaced.CustomerName))]
+    string CustomerName,
+
+    [SetFromContext<OrderPlaced>(nameof(EventContext.Occurred))]
+    DateTimeOffset OrderedAt,
+
+    [SetFromContext<OrderShipped>(nameof(EventContext.Occurred))]
+    DateTimeOffset? ShippedAt);
+```
+
+In this example:
+
+- `OrderedAt` is set to the occurrence time when an `OrderPlaced` event is processed
+- `ShippedAt` is set to the occurrence time when an `OrderShipped` event is processed
+
+### Available Event Context Properties
+
+The `EventContext` provides several properties you can map to:
+
+```csharp
+public record AuditedEntity(
+    [Key] Guid Id,
+
+    [SetFromContext<EntityCreated>(nameof(EventContext.Occurred))]
+    DateTimeOffset CreatedAt,
+
+    [SetFromContext<EntityCreated>(nameof(EventContext.SequenceNumber))]
+    ulong CreatedAtSequence,
+
+    [SetFromContext<EntityCreated>(nameof(EventContext.CorrelationId))]
+    CorrelationId CreatedByCorrelation,
+
+    [SetFromContext<EntityUpdated>(nameof(EventContext.Occurred))]
+    DateTimeOffset? LastUpdatedAt);
+```
+
+### Context Property Name Convention
+
+If the event context property name matches the read model property name, you can omit the property name parameter:
+
+```csharp
+public record Event(
+    [Key] Guid Id,
+
+    [SetFromContext<EventHappened>] DateTimeOffset Occurred,  // Maps to EventContext.Occurred
+    [SetFromContext<EventHappened>] ulong SequenceNumber);    // Maps to EventContext.SequenceNumber
+```
+
+### SetFromContext vs FromEvery
+
+The key difference between `SetFromContext` and `FromEvery`:
+
+- **SetFromContext** - Maps event context properties for **specific event types**
+- **FromEvery** - Maps properties that should be updated for **every event** affecting the projection
+
+Use `SetFromContext` when you want to track when specific events occurred (e.g., "when was this order placed?"), and use `FromEvery` when you want to track the most recent update across all events (e.g., "when was this entity last modified by any event?").
+
+```csharp
+public record OrderWithAudit(
+    [Key] Guid Id,
+
+    // Specific event context properties
+    [SetFromContext<OrderPlaced>(nameof(EventContext.Occurred))]
+    DateTimeOffset PlacedAt,
+
+    [SetFromContext<OrderShipped>(nameof(EventContext.Occurred))]
+    DateTimeOffset? ShippedAt,
+
+    // Updated by any event
+    [FromEvery(contextProperty: nameof(EventContext.Occurred))]
+    DateTimeOffset LastModified);
+```
+
 ## Event Flow
 
 When events are processed:
