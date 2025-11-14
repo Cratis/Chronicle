@@ -20,7 +20,53 @@ When events are appended to the event log, Chronicle automatically:
 3. **Persists** the returned state to the configured database
 4. **Manages** concurrency and error handling
 
-## Creating a Reducer
+## Asynchronous Processing and Eventual Consistency
+
+Reducers operate under **eventual consistency** principles, meaning they process events asynchronously after they are stored in the event log. This design provides several important characteristics:
+
+### Asynchronous Event Processing
+
+When you append an event to Chronicle:
+
+1. **Event is persisted** to the event store immediately
+2. **Append operation returns** successfully to the caller
+3. **Reducers are executed asynchronously** in the background
+4. **Read models are updated** after processing completes
+
+This means there's a brief window where the event has been stored but reducers may not yet have processed it.
+
+### Benefits of Asynchronous Processing
+
+- **High Performance**: Event appends don't wait for reducer execution
+- **Scalability**: Reducer processing can be scaled independently from event storage
+- **Resilience**: Failed reducer execution doesn't affect event persistence
+- **Consistency**: Events for the same event source are processed in order
+
+### Implications for Application Design
+
+When designing applications with reducers, consider:
+
+- **Immediate Reads**: Read models may not immediately reflect just-appended events
+- **Fire-and-Forget Pattern**: Commands should append events and return, not expect immediate consistency
+- **UI Updates**: Consider optimistic UI updates or event-driven refresh patterns
+
+```csharp
+// ✅ Good - Fire and forget
+public async Task<IActionResult> UpdateBookQuantity(UpdateQuantityCommand command)
+{
+    await eventStore.EventLog.Append(command.BookId, new BookQuantityUpdated(command.NewQuantity));
+    return Ok(); // Don't try to read updated state immediately
+}
+
+// ❌ Problematic - Expecting immediate consistency
+public async Task<BookInventory> UpdateAndReturn(UpdateQuantityCommand command)
+{
+    await eventStore.EventLog.Append(command.BookId, new BookQuantityUpdated(command.NewQuantity));
+
+    // This may return stale data due to eventual consistency
+    return await readModels.GetBook(command.BookId);
+}
+```
 
 ### Step 1: Define a Read Model
 

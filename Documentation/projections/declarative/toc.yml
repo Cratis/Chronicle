@@ -1,0 +1,28 @@
+- name: Simple projection
+  href: simple-projection.md
+- name: AutoMap
+  href: auto-map.md
+- name: Passive
+  href: passive.md
+- name: Set properties
+  href: set-properties.md
+- name: Children
+  href: children.md
+- name: Joins
+  href: joins.md
+- name: Functions
+  href: functions.md
+- name: Composite keys
+  href: composite-keys.md
+- name: Event context
+  href: event-context.md
+- name: FromEvery
+  href: from-every.md
+- name: Initial values
+  href: initial-values.md
+- name: RemoveWithJoin
+  href: remove-with-join.md
+- name: FromEventSequence
+  href: from-event-sequence.md
+- name: NotRewindable
+  href: not-rewindable.md

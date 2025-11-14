@@ -23,7 +23,7 @@ public class when_building_model_with_add_and_subtract : given.a_model_bound_pro
     void should_use_add_expression_for_balance()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DepositToDebitAccountPerformed)).ToContract();
-        var expression = _result.From.Single(kvp => kvp.Key.Id == eventType.Id).Value.Properties["Balance"];
+        var expression = _result.From.Single(kvp => kvp.Key.Id == eventType.Id).Value.Properties[nameof(AccountInfo.Balance)];
         expression.ShouldContain(WellKnownExpressions.Add);
     }
 
@@ -38,7 +38,7 @@ public class when_building_model_with_add_and_subtract : given.a_model_bound_pro
     void should_use_subtract_expression_for_balance()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WithdrawalFromDebitAccountPerformed)).ToContract();
-        var expression = _result.From.Single(kvp => kvp.Key.Id == eventType.Id).Value.Properties["Balance"];
+        var expression = _result.From.Single(kvp => kvp.Key.Id == eventType.Id).Value.Properties[nameof(AccountInfo.Balance)];
         expression.ShouldContain(WellKnownExpressions.Subtract);
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
@@ -76,6 +77,55 @@ public record ConfiguredProjection(
 
     [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string Value);
+
+public record ProductInfo(
+    [Key]
+    Guid Id,
+
+    [SetFrom<ProductRegistered>(nameof(ProductRegistered.Name))]
+    string Name,
+
+    [SetFrom<ProductRegistered>(nameof(ProductRegistered.Description))]
+    string Description,
+
+    [SetFrom<ProductRegistered>(nameof(ProductRegistered.Price))]
+    double Price);
+
+public record OrderSummary(
+    [Key]
+    Guid Id,
+
+    [SetFrom<OrderPlaced>(nameof(OrderPlaced.CustomerName))]
+    string CustomerName,
+
+    [AddFrom<OrderPlaced>(nameof(OrderPlaced.Quantity))]
+    int TotalQuantity,
+
+    [AddFrom<OrderPlaced>(nameof(OrderPlaced.TotalAmount))]
+    double TotalRevenue);
+
+[FromEvent<ProductRegisteredInInventory>]
+public record InventoryStatus(
+    [Key]
+    Guid Id,
+
+    string ProductName,
+
+    [AddFrom<ItemsAddedToInventory>(nameof(ItemsAddedToInventory.Quantity))]
+    [SubtractFrom<ItemsRemovedFromInventory>(nameof(ItemsRemovedFromInventory.Quantity))]
+    int CurrentStock,
+
+    [FromEvery(contextProperty: nameof(EventContext.Occurred))]
+    DateTimeOffset LastUpdated);
+
+[FromEvent<UserRegisteredWithCustomId>(key: nameof(UserRegisteredWithCustomId.UserId))]
+public record UserProfile(
+    [Key]
+    Guid Id,
+
+    string Email,
+
+    string Name);
 
 #pragma warning restore SA1402 // File may only contain a single type
 #pragma warning restore SA1649 // File name should match first type name

@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
@@ -19,7 +18,7 @@ static class ChildrenDefinitionExtensions
     /// Processes a ChildrenFrom attribute and adds the children definition to the projection definition.
     /// </summary>
     /// <param name="definition">The projection definition to add the children to.</param>
-    /// <param name="eventTypes">The event types registry for resolving event type information.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
     /// <param name="namingPolicy">The naming policy for converting property names.</param>
     /// <param name="memberName">The member name on the projection model.</param>
     /// <param name="memberType">The type of the member.</param>
@@ -28,7 +27,7 @@ static class ChildrenDefinitionExtensions
     /// <param name="processMember">The action to process child members recursively.</param>
     internal static void ProcessChildrenFromAttribute(
         this ProjectionDefinition definition,
-        IEventTypes eventTypes,
+        Func<Type, EventType> getOrCreateEventType,
         INamingPolicy namingPolicy,
         string memberName,
         Type memberType,
@@ -38,15 +37,17 @@ static class ChildrenDefinitionExtensions
     {
         var propertyPath = new PropertyPath(memberName);
         var propertyName = namingPolicy.GetPropertyName(propertyPath);
-        var eventTypeId = eventTypes.GetEventTypeFor(eventType).ToContract();
+        var eventTypeId = getOrCreateEventType(eventType);
 
         var keyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.Key));
         var identifiedByProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.IdentifiedBy));
         var parentKeyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.ParentKey));
+        var autoMapProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.AutoMap));
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
         var identifiedBy = identifiedByProperty?.GetValue(attr) as string ?? WellKnownExpressions.Id;
         var parentKey = parentKeyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
+        var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
 
         if (!definition.Children.TryGetValue(propertyName, out var childrenDef))
         {
@@ -55,6 +56,7 @@ static class ChildrenDefinitionExtensions
                 IdentifiedBy = identifiedBy,
                 From = new Dictionary<EventType, FromDefinition>(),
                 Join = new Dictionary<EventType, JoinDefinition>(),
+                All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
                 RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>()
             };
@@ -73,6 +75,13 @@ static class ChildrenDefinitionExtensions
         var childType = GetChildType(memberType);
         if (childType is not null)
         {
+            // If autoMap is enabled, map matching properties from event to child model
+            if (autoMap)
+            {
+                var fromDefinition = childrenDef.From[eventTypeId];
+                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
+            }
+
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 processMember(childProperty, definition, [], false, childrenDef);

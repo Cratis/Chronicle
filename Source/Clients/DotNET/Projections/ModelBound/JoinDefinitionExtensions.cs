@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
@@ -18,7 +17,7 @@ static class JoinDefinitionExtensions
     /// Processes a Join attribute and adds the join definition to the target dictionary.
     /// </summary>
     /// <param name="targetJoin">The target Join dictionary to add the definition to.</param>
-    /// <param name="eventTypes">The event types registry for resolving event type information.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
     /// <param name="namingPolicy">The naming policy for converting property names.</param>
     /// <param name="attr">The Join attribute to process.</param>
     /// <param name="eventType">The event type to join from.</param>
@@ -26,16 +25,16 @@ static class JoinDefinitionExtensions
     /// <param name="propertyName">The property name on the projection model.</param>
     internal static void ProcessJoinAttribute(
         this IDictionary<EventType, JoinDefinition> targetJoin,
-        IEventTypes eventTypes,
+        Func<Type, EventType> getOrCreateEventType,
         INamingPolicy namingPolicy,
         Attribute attr,
         Type eventType,
         string memberName,
         string propertyName)
     {
-        var eventTypeId = eventTypes.GetEventTypeFor(eventType).ToContract();
+        var eventTypeId = getOrCreateEventType(eventType);
         var onProperty = attr.GetType().GetProperty(nameof(JoinAttribute<object>.On));
-        var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(JoinAttribute<object>.EventPropertyName));
+        var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
 
         var on = onProperty?.GetValue(attr) as string;
         var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
@@ -51,7 +50,9 @@ static class JoinDefinitionExtensions
             targetJoin[eventTypeId] = joinDef;
         }
 
-        var eventPropPath = new PropertyPath(eventPropertyName ?? memberName);
+        var eventPropertyToUse = eventPropertyName ?? memberName;
+        PropertyValidator.ValidatePropertyExists(eventType, eventPropertyToUse);
+        var eventPropPath = new PropertyPath(eventPropertyToUse);
         joinDef.Properties[propertyName] = namingPolicy.GetPropertyName(eventPropPath);
     }
 }

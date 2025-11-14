@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.Keys;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
@@ -23,9 +22,17 @@ public static class ModelBoundProjectionsExtensions
             return true;
         }
 
-        if (type.GetProperties().Any(p => p.GetCustomAttribute<KeyAttribute>() is not null))
+        var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        var primaryConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+
+        if (primaryConstructor is not null)
         {
-            return true;
+            var parameters = primaryConstructor.GetParameters();
+            if (parameters.Any(param => param.GetCustomAttributes()
+                                                .Any(attr => attr is IProjectionAnnotation)))
+            {
+                return true;
+            }
         }
 
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);

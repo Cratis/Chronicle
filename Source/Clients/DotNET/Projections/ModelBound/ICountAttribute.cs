@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines an attribute that indicates that a property value should count occurrences of an event.
 /// </summary>
-public interface ICountAttribute;
+public interface ICountAttribute : IEventBoundAttribute;

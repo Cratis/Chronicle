@@ -18,7 +18,7 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
     public bool CanHandle(CommandContext commandContext, object value) =>
         (value is IEnumerable<object> objects) &&
         objects.All(o => eventTypes.HasFor(o.GetType())) &&
-        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var id) && id is EventSourceId;
+        commandContext.HasEventSourceId();
 
     /// <inheritdoc/>
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
@@ -28,7 +28,7 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
         if (events.Any())
         {
             var concurrencyScope = ConcurrencyScopeBuilder.BuildFromCommandContext(commandContext);
-            await eventLog.AppendMany(
+            var result = await eventLog.AppendMany(
                 eventSourceId,
                 events,
                 commandContext.GetEventStreamType(),
@@ -36,6 +36,11 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
                 commandContext.GetEventSourceType(),
                 correlationId: default,
                 concurrencyScope: concurrencyScope);
+
+            if (!result.IsSuccess)
+            {
+                return result.ToCommandResult();
+            }
         }
 
         return CommandResult.Success(commandContext.CorrelationId);

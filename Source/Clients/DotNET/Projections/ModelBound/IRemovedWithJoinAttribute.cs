@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines an attribute that indicates what event removes a child from a collection through a join.
 /// </summary>
-public interface IRemovedWithJoinAttribute : IKeyedAttribute;
+public interface IRemovedWithJoinAttribute : IKeyedAttribute, IEventBoundAttribute;

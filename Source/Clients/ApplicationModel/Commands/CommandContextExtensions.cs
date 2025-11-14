@@ -12,6 +12,15 @@ namespace Cratis.Chronicle.Applications.Commands;
 public static class CommandContextExtensions
 {
     /// <summary>
+    /// Checks whether the command context has an event source id.
+    /// </summary>
+    /// <param name="commandContext">The command context to check.</param>
+    /// <returns>True if the command context has an event source id, false otherwise.</returns>
+    public static bool HasEventSourceId(this CommandContext commandContext) =>
+        commandContext.Response is EventSourceId ||
+        (commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var value) && value is EventSourceId);
+
+    /// <summary>
     /// Gets the event source id from the command context values.
     /// </summary>
     /// <param name="commandContext">The command context to get the event source id from.</param>
@@ -19,6 +28,11 @@ public static class CommandContextExtensions
     /// <exception cref="MissingEventSourceIdInCommandContext">Thrown when the event source id is missing in the command context.</exception>
     public static EventSourceId GetEventSourceId(this CommandContext commandContext)
     {
+        if (commandContext.Response is EventSourceId eventSourceIdResponse)
+        {
+            return eventSourceIdResponse;
+        }
+
         if (commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var value) && value is EventSourceId eventSourceId)
         {
             return eventSourceId;

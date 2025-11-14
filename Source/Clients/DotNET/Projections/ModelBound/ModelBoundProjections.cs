@@ -22,9 +22,9 @@ internal class ModelBoundProjections(
     /// Discovers all model-bound projections.
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
-    public IEnumerable<ProjectionDefinition> Discover()
+    public IDictionary<Type, ProjectionDefinition> Discover()
     {
         var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes);
-        return clientArtifactsProvider.ModelBoundProjections.Select(builder.Build);
+        return clientArtifactsProvider.ModelBoundProjections.ToDictionary(x => x, builder.Build);
     }
 }

@@ -19,5 +19,23 @@ public record WithdrawalFromDebitAccountPerformed(double Amount);
 [EventType]
 public record ItemAddedToCart(string ItemId, string ItemName, double Price);
 
+[EventType]
+public record ProductRegistered(string Name, string Description, double Price);
+
+[EventType]
+public record OrderPlaced(string CustomerName, int Quantity, double TotalAmount);
+
+[EventType]
+public record ProductRegisteredInInventory(string ProductName, DateTimeOffset RegisteredAt);
+
+[EventType]
+public record ItemsAddedToInventory(int Quantity, DateTimeOffset OccurredAt);
+
+[EventType]
+public record ItemsRemovedFromInventory(int Quantity, DateTimeOffset OccurredAt);
+
+[EventType]
+public record UserRegisteredWithCustomId(Guid UserId, string Email, string Name);
+
 #pragma warning restore SA1402 // File may only contain a single type
 #pragma warning restore SA1649 // File name should match first type name

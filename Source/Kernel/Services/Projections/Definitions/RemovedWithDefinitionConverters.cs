@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Services.Projections.Definitions;
@@ -20,7 +21,7 @@ internal static class RemovedWithDefinitionConverters
         return new()
         {
             Key = definition.Key,
-            ParentKey = definition.ParentKey ?? null!
+            ParentKey = definition.ParentKey ?? PropertyExpression.NotSet
         };
     }
 
@@ -33,7 +34,7 @@ internal static class RemovedWithDefinitionConverters
     {
         return new(
             contract.Key,
-            contract.ParentKey ?? null!
+            contract.ParentKey ?? PropertyExpression.NotSet
         );
     }
 }

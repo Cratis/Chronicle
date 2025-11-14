@@ -6,10 +6,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines an attribute that indicates that a property value should be set from an event property.
 /// </summary>
-public interface ISetFromAttribute
-{
-    /// <summary>
-    /// Gets the name of the property on the event.
-    /// </summary>
-    string? EventPropertyName { get; }
-}
+public interface ISetFromAttribute : IEventBoundAttribute, ICanMapToEventProperty;
