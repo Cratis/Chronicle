@@ -62,4 +62,24 @@ public static class WellKnownExpressions
     /// The identifier expression.
     /// </summary>
     public const string Id = "$id";
+
+    /// <summary>
+    /// The split expression for event migrations.
+    /// </summary>
+    public const string Split = "$split";
+
+    /// <summary>
+    /// The default value expression for event migrations.
+    /// </summary>
+    public const string DefaultValue = "$defaultValue";
+
+    /// <summary>
+    /// The rename expression for event migrations.
+    /// </summary>
+    public const string Rename = "$rename";
+
+    /// <summary>
+    /// The combine expression for event migrations.
+    /// </summary>
+    public const string Combine = "$combine";
 }

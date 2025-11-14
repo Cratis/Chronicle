@@ -86,6 +86,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> UniqueEventTypeConstraints { get; }
 
     /// <summary>
+    /// Gets all the available event type migrators.
+    /// </summary>
+    IEnumerable<Type> EventTypeMigrators { get; }
+
+    /// <summary>
     /// Initializes the provider.
     /// </summary>
     void Initialize();
