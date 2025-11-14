@@ -31,6 +31,59 @@ public record LineItem(
 - **key** (optional): Property on the event that identifies the child. Defaults to `EventSourceId`
 - **identifiedBy** (optional): Property on the child model that identifies it. Defaults to `Id`
 - **parentKey** (optional): Property that identifies the parent. Defaults to `EventSourceId`
+- **autoMap** (optional): Whether to automatically map matching properties from the event to the child model. Defaults to `true`
+
+### Auto-Mapping
+
+By default, `ChildrenFrom` automatically maps properties from the event to the child model when property names match. This behavior is similar to the `FromEvent` attribute:
+
+```csharp
+public record Order(
+    [Key]
+    Guid OrderId,
+
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
+    IEnumerable<LineItem> Items);
+
+public record LineItem(
+    [Key] Guid Id,
+    string ProductName,  // Automatically mapped from LineItemAdded.ProductName
+    int Quantity,        // Automatically mapped from LineItemAdded.Quantity
+    decimal Price);      // Automatically mapped from LineItemAdded.Price
+
+[EventType]
+public record LineItemAdded(
+    Guid ItemId,
+    string ProductName,
+    int Quantity,
+    decimal Price);
+```
+
+You can disable auto-mapping if you want to control property mapping explicitly:
+
+```csharp
+public record Order(
+    [Key]
+    Guid OrderId,
+
+    [ChildrenFrom<LineItemAdded>(
+        key: nameof(LineItemAdded.ItemId),
+        autoMap: false)]
+    IEnumerable<LineItem> Items);
+
+public record LineItem(
+    [Key] Guid Id,
+
+    // Now you must use SetFrom for each property
+    [SetFrom<LineItemAdded>(nameof(LineItemAdded.ProductName))]
+    string ProductName,
+
+    [SetFrom<LineItemAdded>(nameof(LineItemAdded.Quantity))]
+    int Quantity,
+
+    [SetFrom<LineItemAdded>(nameof(LineItemAdded.Price))]
+    decimal Price);
+```
 
 ## Recursive Attribute Processing
 

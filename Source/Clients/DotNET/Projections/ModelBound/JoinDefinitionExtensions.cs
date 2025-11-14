@@ -34,7 +34,7 @@ static class JoinDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var onProperty = attr.GetType().GetProperty(nameof(JoinAttribute<object>.On));
-        var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(JoinAttribute<object>.EventPropertyName));
+        var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
 
         var on = onProperty?.GetValue(attr) as string;
         var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
