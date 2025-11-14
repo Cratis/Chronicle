@@ -42,10 +42,12 @@ static class ChildrenDefinitionExtensions
         var keyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.Key));
         var identifiedByProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.IdentifiedBy));
         var parentKeyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.ParentKey));
+        var autoMapProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.AutoMap));
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
         var identifiedBy = identifiedByProperty?.GetValue(attr) as string ?? WellKnownExpressions.Id;
         var parentKey = parentKeyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
+        var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
 
         if (!definition.Children.TryGetValue(propertyName, out var childrenDef))
         {
@@ -73,6 +75,23 @@ static class ChildrenDefinitionExtensions
         var childType = GetChildType(memberType);
         if (childType is not null)
         {
+            // If autoMap is enabled, map matching properties from event to child model
+            if (autoMap)
+            {
+                var fromDefinition = childrenDef.From[eventTypeId];
+                foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    var eventProperty = eventType.GetProperty(childProperty.Name);
+                    if (eventProperty is not null)
+                    {
+                        var childPropertyPath = new PropertyPath(childProperty.Name);
+                        var childPropertyName = namingPolicy.GetPropertyName(childPropertyPath);
+                        var eventPropertyPath = new PropertyPath(eventProperty.Name);
+                        fromDefinition.Properties[childPropertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
+                    }
+                }
+            }
+
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 processMember(childProperty, definition, [], false, childrenDef);
