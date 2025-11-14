@@ -192,7 +192,7 @@ internal class ModelBoundProjectionBuilder(
             {
                 var eventType = attr.GetType().GetGenericArguments()[0];
                 allEventTypesReferencedByModel.Add(eventType);
-                var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
+                var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
                 var propertyToUse = eventPropertyName ?? parameter.Name!;
                 PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
@@ -291,7 +291,7 @@ internal class ModelBoundProjectionBuilder(
             {
                 var eventType = attr.GetType().GetGenericArguments()[0];
                 eventTypesReferencedByMember.Add(eventType);
-                var eventPropertyNameProperty = attr.GetType().GetProperty("EventPropertyName");
+                var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
                 var propertyToUse = eventPropertyName ?? property.Name;
                 PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);

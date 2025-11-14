@@ -9,10 +9,11 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <typeparam name="TEvent">The type of event to subtract from.</typeparam>
 /// <param name="eventPropertyName">Optional name of the property on the event. If not specified, uses the model property name.</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
-public sealed class SubtractFromAttribute<TEvent>(string? eventPropertyName = default) : Attribute, IProjectionAnnotation
+public sealed class SubtractFromAttribute<TEvent>(string? eventPropertyName = default) : Attribute, IProjectionAnnotation, ISubtractFromAttribute
 {
-    /// <summary>
-    /// Gets the name of the property on the event.
-    /// </summary>
+    /// <inheritdoc/>
+    public Type EventType => typeof(TEvent);
+
+    /// <inheritdoc/>
     public string? EventPropertyName { get; } = eventPropertyName;
 }

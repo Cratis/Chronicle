@@ -4,6 +4,6 @@
 namespace Cratis.Chronicle.Projections.ModelBound;
 
 /// <summary>
-/// Defines an attribute that indicates that a property value should be added from an event property.
+/// Defines an attribute that indicates that a property value should be subtracted from an event property.
 /// </summary>
-public interface IAddFromAttribute : IEventBoundAttribute, ICanMapToEventProperty;
+public interface ISubtractFromAttribute : IEventBoundAttribute, ICanMapToEventProperty;

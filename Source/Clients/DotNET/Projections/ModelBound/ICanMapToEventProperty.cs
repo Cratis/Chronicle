@@ -4,12 +4,12 @@
 namespace Cratis.Chronicle.Projections.ModelBound;
 
 /// <summary>
-/// Defines an attribute that indicates a property should be populated through a join with an event.
+/// Defines an attribute that can map to an event property.
 /// </summary>
-public interface IJoinAttribute : IEventBoundAttribute, ICanMapToEventProperty
+public interface ICanMapToEventProperty
 {
     /// <summary>
-    /// Gets the property name on the model to join on.
+    /// Gets the name of the property on the event.
     /// </summary>
-    string? On { get; }
+    string? EventPropertyName { get; }
 }
