@@ -46,7 +46,7 @@
 | Support SQL type Servers as Event Store | https://github.com/Cratis/Chronicle/issues/1868 | None | [einari](https://github.com/einari) | None | None | None |
 | Support clustering for Kernel | https://github.com/Cratis/Chronicle/issues/1863 | None | [einari](https://github.com/einari) | None | None | None |
 | Support for compensating existing events | https://github.com/Cratis/Chronicle/issues/1860 | None | [einari](https://github.com/einari) | None | None | None |
-| Support migration of events between generations (up & down casting) | https://github.com/Cratis/Chronicle/issues/1859 | None | [einari](https://github.com/einari) | None | None | None |
+| Support migration of events between generations (up & down casting) | https://github.com/Cratis/Chronicle/issues/1859 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Add support for redacting events | https://github.com/Cratis/Chronicle/issues/1858 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for handling things in bulk for Reactors | https://github.com/Cratis/Chronicle/issues/1857 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for handling things in bulk for Reducers | https://github.com/Cratis/Chronicle/issues/1856 | None | [einari](https://github.com/einari) | None | None | None |
@@ -342,4 +342,4 @@
 | Improve .To() / .ToValue() - consolidate + support complex types | https://github.com/Cratis/Chronicle/issues/1051 | None | [einari](https://github.com/einari) | None | None | None |
 | Support base types for projections | https://github.com/Cratis/Chronicle/issues/1030 | None | [einari](https://github.com/einari) | None | 6:52:46 | None |
 | Support deletion for reducers | https://github.com/Cratis/Chronicle/issues/1028 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 587 days, 23:46:34 | None |
-| Consolidate the creation of EventTypeRegistration - removing duplicate logic for cre
+| Consolidate the creation of EventTypeRegistration -
