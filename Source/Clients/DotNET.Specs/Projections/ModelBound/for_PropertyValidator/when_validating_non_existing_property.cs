@@ -7,7 +7,7 @@ public class when_validating_non_existing_property : Specification
 {
     Exception? _result;
 
-    void Because() => _result = Catch.Exception(() => PropertyValidator.ValidatePropertyExists(typeof(TestClass), "NonExistingProperty"));
+    void Because() => _result = Catch.Exception(() => PropertyValidator.ValidatePropertyExists<TestClass>("NonExistingProperty"));
 
     [Fact] void should_throw_invalid_property_for_type() => _result.ShouldBeOfExactType<InvalidPropertyForType>();
     [Fact] void should_include_type_in_message() => _result?.Message.ShouldContain(typeof(TestClass).FullName!);

@@ -7,7 +7,7 @@ public class when_validating_property_with_case_insensitive_match : Specificatio
 {
     Exception? _result;
 
-    void Because() => _result = Catch.Exception(() => PropertyValidator.ValidatePropertyExists(typeof(TestClass), "existingproperty"));
+    void Because() => _result = Catch.Exception(() => PropertyValidator.ValidatePropertyExists<TestClass>("existingproperty"));
 
     [Fact] void should_not_throw_exception() => _result.ShouldBeNull();
 

@@ -7,7 +7,7 @@ public class when_validating_existing_property : Specification
 {
     Exception? _result;
 
-    void Because() => _result = Catch.Exception(() => PropertyValidator.ValidatePropertyExists(typeof(TestClass), "ExistingProperty"));
+    void Because() => _result = Catch.Exception(() => PropertyValidator.ValidatePropertyExists<TestClass>("ExistingProperty"));
 
     [Fact] void should_not_throw_exception() => _result.ShouldBeNull();
 
