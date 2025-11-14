@@ -79,17 +79,7 @@ static class ChildrenDefinitionExtensions
             if (autoMap)
             {
                 var fromDefinition = childrenDef.From[eventTypeId];
-                foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-                {
-                    var eventProperty = eventType.GetProperty(childProperty.Name);
-                    if (eventProperty is not null)
-                    {
-                        var childPropertyPath = new PropertyPath(childProperty.Name);
-                        var childPropertyName = namingPolicy.GetPropertyName(childPropertyPath);
-                        var eventPropertyPath = new PropertyPath(eventProperty.Name);
-                        fromDefinition.Properties[childPropertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
-                    }
-                }
+                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
             }
 
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))

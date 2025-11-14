@@ -150,6 +150,28 @@ static class FromDefinitionExtensions
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
     }
 
+    /// <summary>
+    /// Auto-maps properties from event type to model type by matching property names.
+    /// </summary>
+    /// <param name="fromDefinition">The FromDefinition to add property mappings to.</param>
+    /// <param name="namingPolicy">The naming policy for converting property names.</param>
+    /// <param name="eventType">The event type to map from.</param>
+    /// <param name="modelType">The model type to map to.</param>
+    internal static void AutoMapMatchingProperties(this FromDefinition fromDefinition, INamingPolicy namingPolicy, Type eventType, Type modelType)
+    {
+        foreach (var modelProperty in modelType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            var eventProperty = eventType.GetProperty(modelProperty.Name);
+            if (eventProperty is not null)
+            {
+                var modelPropertyPath = new PropertyPath(modelProperty.Name);
+                var modelPropertyName = namingPolicy.GetPropertyName(modelPropertyPath);
+                var eventPropertyPath = new PropertyPath(eventProperty.Name);
+                fromDefinition.Properties[modelPropertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
+            }
+        }
+    }
+
     static FromDefinition GetOrCreateFromDefinition(this IDictionary<EventType, FromDefinition> targetFrom, EventType eventTypeId)
     {
         if (!targetFrom.TryGetValue(eventTypeId, out var fromDefinition))
