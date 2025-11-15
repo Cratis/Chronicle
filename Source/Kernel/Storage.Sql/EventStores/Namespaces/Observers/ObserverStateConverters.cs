@@ -23,7 +23,16 @@ public static class ObserverStateConverters
             RunningState = definition.RunningState,
             ReplayingPartitions = definition.ReplayingPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
             CatchingUpPartitions = definition.CatchingUpPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
-            FailedPartitions = definition.FailedPartitions,
+            FailedPartitions = definition.FailedPartitions.Select(fp => new FailedPartition(
+                fp.Id.Value.ToString(),
+                fp.Partition.Value?.ToString() ?? string.Empty,
+                fp.ObserverId.Value,
+                fp.Attempts.Select(a => new FailedPartitionAttempt(
+                    a.Occurred,
+                    a.SequenceNumber.Value,
+                    a.Messages,
+                    a.StackTrace)),
+                fp.IsResolved)).ToList(),
             IsReplaying = definition.IsReplaying
         };
 
@@ -39,6 +48,19 @@ public static class ObserverStateConverters
             state.RunningState,
             state.ReplayingPartitions.Select(partition => (Key)partition).ToHashSet(),
             state.CatchingUpPartitions.Select(partition => (Key)partition).ToHashSet(),
-            state.FailedPartitions,
+            state.FailedPartitions.Select(fp => new Concepts.Observation.FailedPartition
+            {
+                Id = new(Guid.Parse(fp.Id)),
+                Partition = new Key(fp.Partition, Properties.ArrayIndexers.NoIndexers),
+                ObserverId = new(fp.ObserverId),
+                Attempts = fp.Attempts.Select(a => new Concepts.Observation.FailedPartitionAttempt
+                {
+                    Occurred = a.Occurred,
+                    SequenceNumber = a.SequenceNumber,
+                    Messages = a.Messages,
+                    StackTrace = a.StackTrace
+                }),
+                IsResolved = fp.IsResolved
+            }).ToList(),
             state.IsReplaying);
 }

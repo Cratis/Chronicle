@@ -3,7 +3,6 @@
 
 using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Applications.EntityFrameworkCore.Json;
-using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
