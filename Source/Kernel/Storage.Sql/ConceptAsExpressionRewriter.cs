@@ -147,7 +147,51 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
         var valueType = expression.Type.GetConceptValueType();
 
-        // Try to evaluate the expression first (for closure variables and constants)
+        // Special handling for member access on closure variables
+        // This is the most common case: accessing a captured variable in a lambda
+        if (expression is MemberExpression memberExpr &&
+            memberExpr.Expression is ConstantExpression constantExpr)
+        {
+            // This is a field/property access on a constant (closure class)
+            // We can directly get the value without compiling
+            try
+            {
+                var member = memberExpr.Member;
+                var closureInstance = constantExpr.Value;
+
+                if (closureInstance != null)
+                {
+                    // Get the ConceptAs instance from the closure
+                    var conceptValue = member switch
+                    {
+                        System.Reflection.FieldInfo field => field.GetValue(closureInstance),
+                        System.Reflection.PropertyInfo prop => prop.GetValue(closureInstance),
+                        _ => null
+                    };
+
+                    if (conceptValue != null)
+                    {
+                        // Extract the underlying primitive value from the ConceptAs instance
+                        var valueProperty = conceptValue.GetType().GetProperty("Value");
+                        if (valueProperty != null)
+                        {
+                            var underlyingValue = valueProperty.GetValue(conceptValue);
+                            if (underlyingValue != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Extracted ConceptAs value from closure: {underlyingValue}");
+                                return Expression.Constant(underlyingValue, valueType);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to extract from closure: {ex.Message}");
+            }
+        }
+
+        // Try to evaluate the expression first (for other cases)
         // This will only work if the expression doesn't reference query parameters
         try
         {
