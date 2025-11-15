@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Applications.EntityFrameworkCore.Json;
-using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
 

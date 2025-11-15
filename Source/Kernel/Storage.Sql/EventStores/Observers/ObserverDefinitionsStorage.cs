@@ -70,7 +70,7 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
         var eventTypeIds = eventTypes.Select(et => et.Id).ToHashSet();
         await using var scope = await database.EventStore(eventStore);
         return await scope.DbContext.Observers
-            .Where(observer => observer.EventTypes.Any(et => eventTypeIds.Contains(et.EventType.Id)))
+            .Where(observer => observer.EventTypes.Any(et => eventTypeIds.Contains(et.EventType)))
             .Select(observer => observer.ToKernel())
             .ToListAsync();
     }

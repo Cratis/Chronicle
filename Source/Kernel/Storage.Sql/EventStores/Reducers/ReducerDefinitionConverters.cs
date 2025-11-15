@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
@@ -20,7 +22,7 @@ public static class ReducerDefinitionConverters
         {
             Id = definition.Identifier,
             EventSequenceId = definition.EventSequenceId,
-            EventTypes = definition.EventTypes.ToArray(),
+            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             ReadModel = definition.ReadModel,
             SinkType = definition.Sink.TypeId,
             SinkConfigurationId = definition.Sink.ConfigurationId
@@ -35,7 +37,7 @@ public static class ReducerDefinitionConverters
         new(
             schema.Id,
             schema.EventSequenceId,
-            schema.EventTypes.ToArray(),
+            schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
             schema.ReadModel,
             new SinkDefinition(schema.SinkConfigurationId, schema.SinkType));
 }

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
@@ -19,7 +19,7 @@ public static class ObserverDefinitionConverters
         new()
         {
             Id = definition.Identifier,
-            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et, "$eventSourceId")).ToArray(),
+            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.Id, et.Generation, "$eventSourceId")).ToArray(),
             EventSequenceId = definition.EventSequenceId,
             Type = definition.Type,
             Owner = definition.Owner,
@@ -34,7 +34,7 @@ public static class ObserverDefinitionConverters
     public static Observation.ObserverDefinition ToKernel(this ObserverDefinition schema) =>
         new(
             schema.Id,
-            schema.EventTypes.Select(et => et.EventType).ToArray(),
+            schema.EventTypes.Select(et => new EventType(et.EventType, et.Generation)).ToArray(),
             schema.EventSequenceId,
             schema.Type,
             schema.Owner,

@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
+
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 
 /// <summary>
@@ -19,7 +22,7 @@ public static class ReactorDefinitionConverters
             Id = definition.Identifier,
             Owner = definition.Owner,
             EventSequenceId = definition.EventSequenceId,
-            EventTypes = definition.EventTypes.ToArray(),
+            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             IsReplayable = definition.IsReplayable,
         };
 
@@ -33,6 +36,6 @@ public static class ReactorDefinitionConverters
             schema.Id,
             schema.Owner,
             schema.EventSequenceId,
-            schema.EventTypes.ToArray(),
+            schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
             schema.IsReplayable);
 }
