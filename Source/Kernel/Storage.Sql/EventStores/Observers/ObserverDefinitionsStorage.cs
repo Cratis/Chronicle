@@ -37,7 +37,7 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     {
         await using var scope = await database.EventStore(eventStore);
         var observer = await scope.DbContext.Observers
-            .Where(observer => observer.Id == id)
+            .Where(observer => observer.Id == id.Value)
             .Select(observer => observer.ToKernel())
             .FirstOrDefaultAsync();
         return observer!;
