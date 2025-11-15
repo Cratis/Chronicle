@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayContexts.Mig
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"{WellKnownTableNames.ReplayContexts}-{nameof(v15_0_0)}")]
+[Migration($"NS-{WellKnownTableNames.ReplayContexts}-{nameof(v15_0_0)}")]
 public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Migrations;
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(EventStoreDbContext))]
-[Migration($"{WellKnownTableNames.Namespaces}-{nameof(v15_0_0)}")]
+[Migration($"ES-{WellKnownTableNames.Namespaces}-{nameof(v15_0_0)}")]
 public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

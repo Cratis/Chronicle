@@ -3,7 +3,6 @@
 
 using Cratis.Applications.EntityFrameworkCore;
 using Cratis.Applications.EntityFrameworkCore.Json;
-using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers.Migrations;
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(EventStoreDbContext))]
-[Migration($"{WellKnownTableNames.ReducerDefinitions}-{nameof(v15_0_0)}")]
+[Migration($"ES-{WellKnownTableNames.ReducerDefinitions}-{nameof(v15_0_0)}")]
 public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

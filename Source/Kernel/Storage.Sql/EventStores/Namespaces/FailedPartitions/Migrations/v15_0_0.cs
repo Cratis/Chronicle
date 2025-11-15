@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.FailedPartitions.M
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"{WellKnownTableNames.FailedPartitions}-{nameof(v15_0_0)}")]
+[Migration($"NS-{WellKnownTableNames.FailedPartitions}-{nameof(v15_0_0)}")]
 public class v15_0_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
