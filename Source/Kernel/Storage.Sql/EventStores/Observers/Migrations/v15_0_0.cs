@@ -26,6 +26,7 @@ public class v15_0_0 : Migration
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 EventSequenceId = table.StringColumn(migrationBuilder),
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
+                Type = table.NumberColumn<int>(migrationBuilder),
                 IsReplayable = table.BoolColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ObserverDefinitions}", x => x.Id));
