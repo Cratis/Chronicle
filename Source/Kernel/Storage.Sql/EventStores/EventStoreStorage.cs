@@ -35,7 +35,7 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IConstraintsStorage Constraints => throw new NotImplementedException();
+    public IConstraintsStorage Constraints { get; } = new Constraints.ConstraintsStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(eventStore, database);

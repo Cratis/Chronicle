@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Applications.EntityFrameworkCore;
+using Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
@@ -53,4 +54,9 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the read models DbSet.
     /// </summary>
     public DbSet<ReadModelDefinition> ReadModels { get; set; }
+
+    /// <summary>
+    /// Gets or sets the constraints DbSet.
+    /// </summary>
+    public DbSet<ConstraintDefinition> Constraints { get; set; }
 }
