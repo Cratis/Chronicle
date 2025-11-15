@@ -30,16 +30,43 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     }
 
     /// <inheritdoc/>
+    protected override Expression VisitConstant(ConstantExpression node)
+    {
+        // If we have a constant of ConceptAs type, unwrap it immediately
+        if (node.Type.IsConcept() && node.Value != null)
+        {
+            var valueProperty = node.Value.GetType().GetProperty("Value");
+            if (valueProperty != null)
+            {
+                var underlyingValue = valueProperty.GetValue(node.Value);
+                var valueType = node.Type.GetConceptValueType();
+                System.Diagnostics.Debug.WriteLine($"Unwrapping ConceptAs constant to: {underlyingValue}");
+                return Expression.Constant(underlyingValue, valueType);
+            }
+        }
+
+        return base.VisitConstant(node);
+    }
+
+    /// <inheritdoc/>
     protected override Expression VisitMember(MemberExpression node)
     {
-        // Check if the member itself is a Concept type
-        if (node.Type.IsConcept() && node.Expression is not null)
+        // Check if the member itself is a Concept type BEFORE visiting children
+        // This is important because we need to handle the entire concept expression as one unit
+        if (node.Type.IsConcept())
         {
-            // Get the underlying value type for the Concept
-            var valueType = node.Type.GetConceptValueType();
+            // Use ExtractConceptValue to handle both closure variables (evaluate to constant)
+            // and entity properties (access .Value property)
+            return ExtractConceptValue(node);
+        }
 
-            // Create a conversion expression to extract the value
-            return Expression.Convert(node, valueType);
+        // For non-Concept members, visit the expression that this member belongs to
+        var visitedExpression = Visit(node.Expression);
+
+        // Rebuild the member access if the expression changed
+        if (visitedExpression != node.Expression)
+        {
+            return Expression.MakeMemberAccess(visitedExpression, node.Member);
         }
 
         return base.VisitMember(node);
@@ -107,6 +134,7 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     /// <summary>
     /// Tries to extract the actual value from a Concept expression.
     /// For closure variables/constants, this evaluates and extracts the value.
+    /// For entity properties, this creates a property access to the Value property.
     /// </summary>
     /// <param name="expression">The expression to extract the value from.</param>
     /// <returns>An expression representing the underlying value.</returns>
@@ -119,8 +147,8 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
         var valueType = expression.Type.GetConceptValueType();
 
-        // Always try to evaluate first - if it works, we can create a constant
-        // If it fails, we fall back to property access for entity properties
+        // Try to evaluate the expression first (for closure variables and constants)
+        // This will only work if the expression doesn't reference query parameters
         try
         {
             // Compile and evaluate the expression to get the actual Concept instance
@@ -130,25 +158,28 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
             if (conceptValue != null)
             {
-                // Get the Value property from the Concept instance
+                // Extract the underlying primitive value
                 var valueProperty = conceptValue.GetType().GetProperty("Value");
                 if (valueProperty != null)
                 {
                     var underlyingValue = valueProperty.GetValue(conceptValue);
-
-                    // Successfully evaluated - return as constant
-                    return Expression.Constant(underlyingValue, valueType);
+                    if (underlyingValue != null)
+                    {
+                        // Successfully evaluated - return as constant
+                        System.Diagnostics.Debug.WriteLine($"Successfully evaluated ConceptAs to constant: {underlyingValue}");
+                        return Expression.Constant(underlyingValue, valueType);
+                    }
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Evaluation failed - this is expected for entity properties that reference query parameters
-            // Fall through to property access
+            System.Diagnostics.Debug.WriteLine($"Failed to evaluate ConceptAs (expected for entity properties): {ex.GetType().Name}");
         }
 
-        // For expressions that reference query parameters (entity properties),
-        // create a property access to the Value property
+        // If we couldn't evaluate (entity property), create a property access to the Value property
+        System.Diagnostics.Debug.WriteLine("Creating property access to .Value for entity property");
         return Expression.Property(expression, "Value");
     }
 }
