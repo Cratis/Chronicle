@@ -12,11 +12,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 public class EventEntry
 {
     /// <summary>
-    /// Gets or sets the event sequence identifier.
-    /// </summary>
-    public string EventSequenceId { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the sequence number of the event - the primary key.
     /// </summary>
     [Key]

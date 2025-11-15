@@ -41,11 +41,10 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
         modelBuilder.Entity<EventEntry>(entity =>
         {
             entity.ToTable(tableName);
-            entity.HasKey(e => new { e.EventSequenceId, e.SequenceNumber });
+            entity.HasKey(e => e.SequenceNumber);
             entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);
             entity.HasIndex(e => e.Type);
-            entity.Property(e => e.EventSequenceId).IsRequired();
             entity.Property(e => e.SequenceNumber).IsRequired();
             entity.Property(e => e.EventSourceId).IsRequired();
             entity.Property(e => e.EventSourceType).IsRequired();

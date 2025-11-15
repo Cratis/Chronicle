@@ -50,11 +50,10 @@ public class ObserverKeysAsyncEnumerator(
     {
         if (_enumerator is null)
         {
-            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
+            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
             var query = scope.DbContext.Events
-                .Where(e => e.EventSequenceId == eventSequenceId.Value &&
-                           e.SequenceNumber >= fromEventSequenceNumber &&
+                .Where(e => e.SequenceNumber >= fromEventSequenceNumber &&
                            _eventTypeIds.Contains(e.Type))
                 .Select(e => e.EventSourceId)
                 .Distinct();

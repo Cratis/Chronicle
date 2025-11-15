@@ -23,7 +23,6 @@ public static class EventEntryConverter
     /// <summary>
     /// Convert from domain models to <see cref="EventEntry"/>.
     /// </summary>
-    /// <param name="eventSequenceId">The event sequence identifier.</param>
     /// <param name="sequenceNumber">The sequence number.</param>
     /// <param name="eventSourceType">The event source type.</param>
     /// <param name="eventSourceId">The event source identifier.</param>
@@ -37,7 +36,6 @@ public static class EventEntryConverter
     /// <param name="content">The event content.</param>
     /// <returns>The <see cref="EventEntry"/>.</returns>
     public static EventEntry ToEventEntry(
-        string eventSequenceId,
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -57,7 +55,6 @@ public static class EventEntryConverter
 
         return new EventEntry
         {
-            EventSequenceId = eventSequenceId,
             SequenceNumber = sequenceNumber.Value,
             CorrelationId = correlationId.ToString(),
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
