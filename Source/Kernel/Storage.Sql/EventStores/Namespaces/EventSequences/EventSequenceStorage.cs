@@ -76,9 +76,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value);
 
         if (lastEventSequenceNumber is not null)
@@ -111,10 +111,10 @@ public class EventSequenceStorage(
     {
         try
         {
-            await using var scope = await database.Namespace(eventStore, @namespace);
+            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
             // Check if sequence number already exists
-            var existingEvent = await scope.DbContext.EventSequenceEvents
+            var existingEvent = await scope.DbContext.Events
                 .FirstOrDefaultAsync(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber == sequenceNumber.Value);
 
             if (existingEvent is not null)
@@ -136,7 +136,7 @@ public class EventSequenceStorage(
                 occurred,
                 content);
 
-            scope.DbContext.EventSequenceEvents.Add(eventEntry);
+            scope.DbContext.Events.Add(eventEntry);
             await scope.DbContext.SaveChangesAsync();
 
             // Create AppendedEvent
@@ -166,10 +166,10 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
         // Get the original event to compensate
-        var originalEvent = await scope.DbContext.EventSequenceEvents
+        var originalEvent = await scope.DbContext.Events
             .FirstOrDefaultAsync(e =>
                 e.EventSequenceId == eventSequenceId.Value &&
                 e.SequenceNumber == sequenceNumber.Value)
@@ -194,7 +194,7 @@ public class EventSequenceStorage(
             occurred,
             content);
 
-        scope.DbContext.EventSequenceEvents.Add(compensationEntry);
+        scope.DbContext.Events.Add(compensationEntry);
 
         // Update state
         state.SequenceNumber = compensationSequenceNumber;
@@ -206,9 +206,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<AppendedEvent> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var eventEntry = await scope.DbContext.EventSequenceEvents
+        var eventEntry = await scope.DbContext.Events
             .FirstOrDefaultAsync(e =>
                 e.EventSequenceId == eventSequenceId.Value &&
                 e.SequenceNumber == sequenceNumber.Value)
@@ -221,7 +221,7 @@ public class EventSequenceStorage(
             { "reason", reason.Value },
             { "redactedAt", occurred }
         });
-        scope.DbContext.EventSequenceEvents.Update(eventEntry);
+        scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
 
         // Return the redacted event
@@ -250,9 +250,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<IEnumerable<EventType>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value && e.EventSourceId == eventSourceId.Value);
 
         if (eventTypes?.Any() == true)
@@ -273,7 +273,7 @@ public class EventSequenceStorage(
                 { "reason", reason.Value },
                 { "redactedAt", occurred }
             });
-            scope.DbContext.EventSequenceEvents.Update(eventEntry);
+            scope.DbContext.Events.Update(eventEntry);
 
             var eventType = EventEntryConverter.GetEventType(eventEntry);
             affectedEventTypes.Add(eventType);
@@ -286,9 +286,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetHeadSequenceNumber(IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value);
 
         if (eventTypes?.Any() == true)
@@ -319,9 +319,9 @@ public class EventSequenceStorage(
         EventStreamId? eventStreamId = null,
         EventStreamType? eventStreamType = null)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value);
 
         if (eventTypes?.Any() == true)
@@ -362,10 +362,10 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<TailEventSequenceNumbers> GetTailSequenceNumbers(IEnumerable<EventType> eventTypes)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        // Get the overall tail (latest sequence number)
-        var overallTail = await scope.DbContext.EventSequenceEvents
+        // Get the overall tail (lowest sequence number in the sequence)
+        var overallTail = await scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value)
             .MaxAsync(e => (ulong?)e.SequenceNumber);
 
@@ -375,7 +375,7 @@ public class EventSequenceStorage(
 
         // Get the tail for the specified event types
         var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
-        var tailForEventTypes = await scope.DbContext.EventSequenceEvents
+        var tailForEventTypes = await scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value && eventTypeIds.Contains(e.Type))
             .MaxAsync(e => (ulong?)e.SequenceNumber);
 
@@ -393,13 +393,13 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
         var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
         var eventTypeList = eventTypes.ToList();
 
         // Query to get the max sequence number for each event type
-        var tailSequenceNumbers = await scope.DbContext.EventSequenceEvents
+        var tailSequenceNumbers = await scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value && eventTypeIds.Contains(e.Type))
             .GroupBy(e => e.Type)
             .Select(g => new { EventTypeId = g.Key, MaxSequenceNumber = g.Max(e => e.SequenceNumber) })
@@ -421,9 +421,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber >= sequenceNumber.Value);
 
         if (eventTypes?.Any() == true)
@@ -449,9 +449,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        return await scope.DbContext.EventSequenceEvents
+        return await scope.DbContext.Events
             .AnyAsync(e => e.EventSequenceId == eventSequenceId.Value && e.EventSourceId == eventSourceId.Value);
     }
 
@@ -460,9 +460,9 @@ public class EventSequenceStorage(
     {
         try
         {
-            await using var scope = await database.Namespace(eventStore, @namespace);
+            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-            var eventEntry = await scope.DbContext.EventSequenceEvents
+            var eventEntry = await scope.DbContext.Events
                 .Where(e => e.EventSequenceId == eventSequenceId.Value
                     && e.Type == eventTypeId.Value
                     && e.EventSourceId == eventSourceId.Value
@@ -506,9 +506,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var eventEntry = await scope.DbContext.EventSequenceEvents
+        var eventEntry = await scope.DbContext.Events
             .FirstOrDefaultAsync(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber == sequenceNumber.Value)
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
@@ -537,11 +537,11 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
         var eventTypeIds = eventTypes.Select(et => et.Value).ToArray();
 
-        var eventEntry = await scope.DbContext.EventSequenceEvents
+        var eventEntry = await scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value
                 && e.EventSourceId == eventSourceId.Value
                 && eventTypeIds.Contains(e.Type))
@@ -578,9 +578,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value && e.SequenceNumber >= sequenceNumber.Value);
 
         if (eventSourceId?.IsSpecified == true)
@@ -610,9 +610,9 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var query = scope.DbContext.EventSequenceEvents
+        var query = scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value
                 && e.SequenceNumber >= start.Value
                 && e.SequenceNumber <= end.Value);

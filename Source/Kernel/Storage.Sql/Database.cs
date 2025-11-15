@@ -9,6 +9,8 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -20,13 +22,16 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// </summary>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
+/// <param name="eventSequenceMigrator">The <see cref="IEventSequenceMigrator"/> for managing event sequence table migrations.</param>
+/// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
 [Singleton]
-public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options) : IDatabase
+public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
 {
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>>> _uniqueConstraintDbContexts = new();
+    readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, EventSequenceDbContext>>>> _eventSequenceDbContexts = new();
 
     /// <inheritdoc/>
     public Task<DbContextScope<ClusterDbContext>> Cluster()
@@ -90,36 +95,59 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     }
 
     /// <inheritdoc/>
-    public async Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName)
+    public Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName) =>
+        GetOrCreateTableDbContext(
+            eventStore,
+            @namespace,
+            constraintName,
+            _uniqueConstraintDbContexts,
+            (options, name) => new UniqueConstraintDbContext(options, name, uniqueConstraintMigrator));
+
+    /// <inheritdoc/>
+    public Task<DbContextScope<EventSequenceDbContext>> EventSequenceTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string eventSequenceName) =>
+        GetOrCreateTableDbContext(
+            eventStore,
+            @namespace,
+            eventSequenceName,
+            _eventSequenceDbContexts,
+            (options, name) => new EventSequenceDbContext(options, name, eventSequenceMigrator));
+
+    async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        string tableName,
+        AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, TDbContext>>>> storage,
+        Func<DbContextOptions<TDbContext>, string, TDbContext> createDbContext)
+        where TDbContext : DbContext, ITableDbContext
     {
-        var key = $"{eventStore.Value}:{@namespace.Value}:{constraintName}";
+        var key = $"{eventStore.Value}:{@namespace.Value}:{tableName}";
 
-        _uniqueConstraintDbContexts.Value ??= new Dictionary<string, Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>>();
-        if (!_uniqueConstraintDbContexts.Value.TryGetValue(eventStore.Value, out var namespaces))
+        storage.Value ??= new Dictionary<string, Dictionary<string, Dictionary<string, TDbContext>>>();
+        if (!storage.Value.TryGetValue(eventStore.Value, out var namespaces))
         {
-            namespaces = new Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>();
-            _uniqueConstraintDbContexts.Value[eventStore.Value] = namespaces;
+            namespaces = new Dictionary<string, Dictionary<string, TDbContext>>();
+            storage.Value[eventStore.Value] = namespaces;
         }
 
-        if (!namespaces.TryGetValue(@namespace.Value, out var constraints))
+        if (!namespaces.TryGetValue(@namespace.Value, out var tables))
         {
-            constraints = new Dictionary<string, UniqueConstraintDbContext>();
-            namespaces[@namespace.Value] = constraints;
+            tables = new Dictionary<string, TDbContext>();
+            namespaces[@namespace.Value] = tables;
         }
 
-        if (!constraints.TryGetValue(constraintName, out var dbContext))
+        if (!tables.TryGetValue(tableName, out var dbContext))
         {
-            var builder = new DbContextOptionsBuilder<UniqueConstraintDbContext>();
+            var builder = new DbContextOptionsBuilder<TDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
             builder.UseDatabaseFromConnectionString(connectionString);
             builder.UseApplicationServiceProvider(serviceProvider);
 
-            dbContext = new UniqueConstraintDbContext(builder.Options, constraintName);
+            dbContext = createDbContext(builder.Options, tableName);
             await dbContext.EnsureTableExists();
-            constraints[constraintName] = dbContext;
+            tables[tableName] = dbContext;
         }
 
-        return new DbContextScope<UniqueConstraintDbContext>(dbContext, () => constraints.Remove(constraintName));
+        return new DbContextScope<TDbContext>(dbContext, () => tables.Remove(tableName));
     }
 
     string GetConnectionStringForEventStore(EventStoreName eventStore)

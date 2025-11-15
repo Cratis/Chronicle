@@ -21,9 +21,9 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
     /// <inheritdoc/>
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId.Value);
 
-        var existing = await scope.DbContext.EventSequenceEvents
+        var existing = await scope.DbContext.Events
             .Where(e => e.EventSequenceId == eventSequenceId.Value &&
                        e.Type == eventTypeId.Value &&
                        e.EventSourceId == eventSourceId.Value)

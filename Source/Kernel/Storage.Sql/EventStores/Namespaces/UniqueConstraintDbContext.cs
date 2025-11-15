@@ -17,25 +17,21 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// </remarks>
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
 /// <param name="tableName">The name of the table (constraint name).</param>
-public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContext> options, string tableName) : BaseDbContext(options)
+/// <param name="migrator">The <see cref="IUniqueConstraintMigrator"/> for managing table migrations.</param>
+public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContext> options, string tableName, IUniqueConstraintMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
-    /// <summary>
-    /// Gets the name of the table.
-    /// </summary>
-    public string TableName { get; } = tableName;
-
     /// <summary>
     /// Gets or sets the unique constraint index entries DbSet.
     /// </summary>
     public DbSet<UniqueConstraintIndexEntry> Entries { get; set; } = null!;
 
     /// <summary>
-    /// Ensures the table exists in the database.
+    /// Ensures the table exists in the database using migrations.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task EnsureTableExists()
     {
-        await Database.EnsureCreatedAsync();
+        await migrator.EnsureTableMigrated(tableName, this);
     }
 
     /// <inheritdoc/>
@@ -45,7 +41,7 @@ public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContex
 
         modelBuilder.Entity<UniqueConstraintIndexEntry>(entity =>
         {
-            entity.ToTable(TableName);
+            entity.ToTable(tableName);
             entity.HasKey(e => e.EventSourceId);
             entity.HasIndex(e => e.Value);
             entity.Property(e => e.EventSourceId).IsRequired();
