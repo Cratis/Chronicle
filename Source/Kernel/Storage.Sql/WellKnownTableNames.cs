@@ -26,7 +26,7 @@ public static class WellKnownTableNames
     /// <summary>
     /// The table that holds all namespaces.
     /// </summary>
-    public const string Namespaces = "namespaces";
+    public const string Namespaces = "Namespaces";
 
     /// <summary>
     /// The table that holds events for the system.
