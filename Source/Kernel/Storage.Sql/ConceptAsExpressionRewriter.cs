@@ -119,35 +119,36 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
         var valueType = expression.Type.GetConceptValueType();
 
-        // If this is a member access on a closure or constant, we can evaluate it
-        // and create a constant with the underlying value
-        if (expression is MemberExpression or ConstantExpression)
+        // Always try to evaluate first - if it works, we can create a constant
+        // If it fails, we fall back to property access for entity properties
+        try
         {
-            try
-            {
-                // Compile and evaluate the expression to get the actual Concept instance
-                var lambda = Expression.Lambda(expression);
-                var compiled = lambda.Compile();
-                var conceptValue = compiled.DynamicInvoke();
+            // Compile and evaluate the expression to get the actual Concept instance
+            var lambda = Expression.Lambda(expression);
+            var compiled = lambda.Compile();
+            var conceptValue = compiled.DynamicInvoke();
 
-                if (conceptValue != null)
+            if (conceptValue != null)
+            {
+                // Get the Value property from the Concept instance
+                var valueProperty = conceptValue.GetType().GetProperty("Value");
+                if (valueProperty != null)
                 {
-                    // Get the Value property from the Concept instance
-                    var valueProperty = conceptValue.GetType().GetProperty("Value");
-                    if (valueProperty != null)
-                    {
-                        var underlyingValue = valueProperty.GetValue(conceptValue);
-                        return Expression.Constant(underlyingValue, valueType);
-                    }
+                    var underlyingValue = valueProperty.GetValue(conceptValue);
+
+                    // Successfully evaluated - return as constant
+                    return Expression.Constant(underlyingValue, valueType);
                 }
             }
-            catch
-            {
-                // If evaluation fails, fall back to property access
-            }
+        }
+        catch
+        {
+            // Evaluation failed - this is expected for entity properties that reference query parameters
+            // Fall through to property access
         }
 
-        // For other expressions (like query parameters), create a property access
+        // For expressions that reference query parameters (entity properties),
+        // create a property access to the Value property
         return Expression.Property(expression, "Value");
     }
 }
