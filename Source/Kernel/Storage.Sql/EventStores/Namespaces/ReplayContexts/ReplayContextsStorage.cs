@@ -47,7 +47,7 @@ public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespac
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entry = await scope.DbContext.ReplayContexts
-            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModel.Value);
+            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModel);
 
         if (entry is null)
         {
@@ -64,7 +64,7 @@ public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespac
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entry = await scope.DbContext.ReplayContexts
-            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModel.Value);
+            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModel);
 
         if (entry is not null)
         {

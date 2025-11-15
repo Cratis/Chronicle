@@ -40,7 +40,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         {
             var builder = new DbContextOptionsBuilder<ClusterDbContext>();
             builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
-            builder.UseApplicationServiceProvider(serviceProvider);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
             _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
 
@@ -57,7 +59,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             var builder = new DbContextOptionsBuilder<EventStoreDbContext>();
             var connectionString = GetConnectionStringForEventStore(eventStore);
             builder.UseDatabaseFromConnectionString(connectionString);
-            builder.UseApplicationServiceProvider(serviceProvider);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
 
             dbContext = new EventStoreDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -84,7 +88,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
             builder.UseDatabaseFromConnectionString(connectionString);
-            builder.UseApplicationServiceProvider(serviceProvider);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
 
             dbContext = new NamespaceDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -140,7 +146,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             var builder = new DbContextOptionsBuilder<TDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
             builder.UseDatabaseFromConnectionString(connectionString);
-            builder.UseApplicationServiceProvider(serviceProvider);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
 
             dbContext = createDbContext(builder.Options, tableName);
             await dbContext.EnsureTableExists();

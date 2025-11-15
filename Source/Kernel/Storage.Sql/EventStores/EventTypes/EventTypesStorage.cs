@@ -91,6 +91,6 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)
     {
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.EventTypes.FirstOrDefaultAsync(e => e.Id == eventTypeId.Value);
+        return await scope.DbContext.EventTypes.FirstOrDefaultAsync(e => e.Id == eventTypeId);
     }
 }

@@ -23,7 +23,7 @@ public class ChangesetStorage(EventStoreName eventStore, EventStoreNamespaceName
     public async Task BeginReplay(ReadModelName readModel)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
-        var changesets = scope.DbContext.Changesets.Where(changeset => changeset.ReadModelName == readModel.Value);
+        var changesets = scope.DbContext.Changesets.Where(changeset => changeset.ReadModelName == readModel);
         scope.DbContext.Changesets.RemoveRange(changesets);
         await scope.DbContext.SaveChangesAsync();
     }

@@ -29,7 +29,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         var tableName = GetTableName(definition.Name);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
-        var query = scope.DbContext.Entries.Where(u => u.Value == value.Value);
+        var query = scope.DbContext.Entries.Where(u => u.Value == value);
 
         // Apply case-insensitive comparison if needed
         if (definition.IgnoreCasing)
@@ -42,7 +42,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
         if (existing is not null)
         {
-            if (existing.EventSourceId == eventSourceId.Value)
+            if (existing.EventSourceId == eventSourceId)
             {
                 return (true, (EventSequenceNumber)existing.SequenceNumber);
             }
@@ -60,7 +60,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId.Value);
+            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId);
 
         if (entry is not null)
         {
@@ -87,7 +87,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId.Value);
+            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId);
 
         if (entry is not null)
         {
