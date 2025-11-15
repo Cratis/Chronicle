@@ -13,6 +13,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 /// <summary>
 /// Represents an implementation of <see cref="IUniqueConstraintsStorage"/> for SQL.
 /// </summary>
+/// <remarks>
+/// This implementation uses a table-per-constraint pattern, similar to MongoDB's collection-per-constraint.
+/// Each unique constraint gets its own dedicated table, allowing for efficient indexing and isolation.
+/// </remarks>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage is for.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage is for.</param>
@@ -22,10 +26,10 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     /// <inheritdoc/>
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        var tableName = GetTableName(definition.Name);
+        await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
-        var query = scope.DbContext.UniqueConstraintIndexes
-            .Where(u => u.ConstraintName == definition.Name.Value && u.Value == value.Value);
+        var query = scope.DbContext.Entries.Where(u => u.Value == value.Value);
 
         // Apply case-insensitive comparison if needed
         if (definition.IgnoreCasing)
@@ -52,24 +56,22 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     /// <inheritdoc/>
     public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        var tableName = GetTableName(name);
+        await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
-        var entry = await scope.DbContext.UniqueConstraintIndexes
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId.Value && u.ConstraintName == name.Value);
+        var entry = await scope.DbContext.Entries
+            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId.Value);
 
         if (entry is not null)
         {
-            // Update existing entry
             entry.Value = value.Value;
             entry.SequenceNumber = sequenceNumber.Value;
         }
         else
         {
-            // Create new entry
-            scope.DbContext.UniqueConstraintIndexes.Add(new UniqueConstraintIndexEntry
+            scope.DbContext.Entries.Add(new UniqueConstraintIndexEntry
             {
                 EventSourceId = eventSourceId.Value,
-                ConstraintName = name.Value,
                 Value = value.Value,
                 SequenceNumber = sequenceNumber.Value
             });
@@ -81,15 +83,19 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     /// <inheritdoc/>
     public async Task Remove(EventSourceId eventSourceId, ConstraintName name)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        var tableName = GetTableName(name);
+        await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
-        var entry = await scope.DbContext.UniqueConstraintIndexes
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId.Value && u.ConstraintName == name.Value);
+        var entry = await scope.DbContext.Entries
+            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId.Value);
 
         if (entry is not null)
         {
-            scope.DbContext.UniqueConstraintIndexes.Remove(entry);
+            scope.DbContext.Entries.Remove(entry);
             await scope.DbContext.SaveChangesAsync();
         }
     }
+
+    string GetTableName(ConstraintName constraintName) =>
+        $"{eventSequenceId}_{constraintName}_constraint";
 }

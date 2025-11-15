@@ -3,28 +3,27 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
 /// <summary>
-/// Converter for <see cref="EventSequenceState"/> to and from <see cref="EventSequenceStateEntry"/>.
+/// Converter for <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/> to and from <see cref="EventSequenceState"/>.
 /// </summary>
-public static class EventSequenceStateEntryConverter
+public static class EventSequenceStateConverter
 {
     /// <summary>
-    /// Convert from <see cref="EventSequenceState"/> to <see cref="EventSequenceStateEntry"/>.
+    /// Convert from <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/> to <see cref="EventSequenceState"/>.
     /// </summary>
     /// <param name="state">The state to convert.</param>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <returns>The <see cref="EventSequenceStateEntry"/>.</returns>
-    public static EventSequenceStateEntry ToEventSequenceStateEntry(EventSequenceState state, EventSequenceId eventSequenceId)
+    /// <returns>The <see cref="EventSequenceState"/>.</returns>
+    public static EventSequenceState ToEventSequenceStateEntry(Chronicle.Storage.EventSequences.EventSequenceState state, EventSequenceId eventSequenceId)
     {
         var tailSequenceNumbers = state.TailSequenceNumberPerEventType?.ToDictionary<KeyValuePair<EventTypeId, EventSequenceNumber>, string, object>(
             kvp => kvp.Key.Value,
             kvp => kvp.Value.Value) ?? new Dictionary<string, object>();
 
-        return new EventSequenceStateEntry
+        return new EventSequenceState
         {
             EventSequenceId = eventSequenceId.Value,
             SequenceNumber = state.SequenceNumber.Value,
@@ -33,11 +32,11 @@ public static class EventSequenceStateEntryConverter
     }
 
     /// <summary>
-    /// Convert from <see cref="EventSequenceStateEntry"/> to <see cref="EventSequenceState"/>.
+    /// Convert from <see cref="EventSequenceState"/> to <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/>.
     /// </summary>
     /// <param name="entry">The entry to convert.</param>
-    /// <returns>The <see cref="EventSequenceState"/>.</returns>
-    public static EventSequenceState ToEventSequenceState(EventSequenceStateEntry entry)
+    /// <returns>The <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/>.</returns>
+    public static Chronicle.Storage.EventSequences.EventSequenceState ToEventSequenceState(EventSequenceState entry)
     {
         var tailSequenceNumbers = new Dictionary<EventTypeId, EventSequenceNumber>();
 
@@ -48,7 +47,7 @@ public static class EventSequenceStateEntryConverter
                 kvp => new EventSequenceNumber(Convert.ToUInt64(kvp.Value)));
         }
 
-        return new EventSequenceState
+        return new Chronicle.Storage.EventSequences.EventSequenceState
         {
             SequenceNumber = new EventSequenceNumber(entry.SequenceNumber),
             TailSequenceNumberPerEventType = tailSequenceNumbers

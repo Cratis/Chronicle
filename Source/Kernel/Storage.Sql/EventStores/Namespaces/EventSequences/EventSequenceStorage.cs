@@ -35,39 +35,39 @@ public class EventSequenceStorage(
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     /// <inheritdoc/>
-    public async Task<EventSequenceState> GetState()
+    public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = await scope.DbContext.EventSequenceStates
+        var entry = await scope.DbContext.EventSequences
             .FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
 
         if (entry is null)
         {
-            return new EventSequenceState();
+            return new Chronicle.Storage.EventSequences.EventSequenceState();
         }
 
-        return EventSequenceStateEntryConverter.ToEventSequenceState(entry);
+        return EventSequenceStateConverter.ToEventSequenceState(entry);
     }
 
     /// <inheritdoc/>
-    public async Task SaveState(EventSequenceState state)
+    public async Task SaveState(Chronicle.Storage.EventSequences.EventSequenceState state)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = EventSequenceStateEntryConverter.ToEventSequenceStateEntry(state, eventSequenceId);
-        var existingEntry = await scope.DbContext.EventSequenceStates
+        var entry = EventSequenceStateConverter.ToEventSequenceStateEntry(state, eventSequenceId);
+        var existingEntry = await scope.DbContext.EventSequences
             .FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
 
         if (existingEntry is not null)
         {
             existingEntry.SequenceNumber = entry.SequenceNumber;
             existingEntry.TailSequenceNumberPerEventType = entry.TailSequenceNumberPerEventType;
-            scope.DbContext.EventSequenceStates.Update(existingEntry);
+            scope.DbContext.EventSequences.Update(existingEntry);
         }
         else
         {
-            scope.DbContext.EventSequenceStates.Add(entry);
+            scope.DbContext.EventSequences.Add(entry);
         }
 
         await scope.DbContext.SaveChangesAsync();

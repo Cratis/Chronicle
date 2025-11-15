@@ -26,6 +26,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
+    readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>>> _uniqueConstraintDbContexts = new();
 
     /// <inheritdoc/>
     public Task<DbContextScope<ClusterDbContext>> Cluster()
@@ -88,6 +89,39 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         return new DbContextScope<NamespaceDbContext>(dbContext, () => namespaces.Remove(key));
     }
 
+    /// <inheritdoc/>
+    public async Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName)
+    {
+        var key = $"{eventStore.Value}:{@namespace.Value}:{constraintName}";
+
+        _uniqueConstraintDbContexts.Value ??= new Dictionary<string, Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>>();
+        if (!_uniqueConstraintDbContexts.Value.TryGetValue(eventStore.Value, out var namespaces))
+        {
+            namespaces = new Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>();
+            _uniqueConstraintDbContexts.Value[eventStore.Value] = namespaces;
+        }
+
+        if (!namespaces.TryGetValue(@namespace.Value, out var constraints))
+        {
+            constraints = new Dictionary<string, UniqueConstraintDbContext>();
+            namespaces[@namespace.Value] = constraints;
+        }
+
+        if (!constraints.TryGetValue(constraintName, out var dbContext))
+        {
+            var builder = new DbContextOptionsBuilder<UniqueConstraintDbContext>();
+            var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+            builder.UseDatabaseFromConnectionString(connectionString);
+            builder.UseApplicationServiceProvider(serviceProvider);
+
+            dbContext = new UniqueConstraintDbContext(builder.Options, constraintName);
+            await dbContext.EnsureTableExists();
+            constraints[constraintName] = dbContext;
+        }
+
+        return new DbContextScope<UniqueConstraintDbContext>(dbContext, () => constraints.Remove(constraintName));
+    }
+
     string GetConnectionStringForEventStore(EventStoreName eventStore)
     {
         var databaseType = options.Value.Storage.ConnectionDetails.GetDatabaseType();
@@ -133,15 +167,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (builder.TryGetValue(keyToReplace, out var dataSource))
         {
-            var originalFilename = dataSource.ToString()!;
+            var originalFilename = dataSource.ToString();
             var directory = Path.GetDirectoryName(originalFilename) ?? string.Empty;
             var newFilename = $"{Path.GetFileNameWithoutExtension(originalFilename)}_{postfix}{Path.GetExtension(originalFilename)}";
             builder[keyToReplace] = Path.Combine(directory, newFilename);
-            connectionString = builder.ConnectionString!;
+            connectionString = builder.ConnectionString;
             return true;
         }
 
-        connectionString = null!;
+        connectionString = null;
         return false;
     }
 }

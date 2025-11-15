@@ -33,4 +33,13 @@ public interface IDatabase
     /// <param name="namespace">The name of the namespace.</param>
     /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/> for the specified event store namespace.</returns>
     Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Gets a database context scope for a specific unique constraint table within a namespace.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <param name="constraintName">The name of the constraint.</param>
+    /// <returns>A <see cref="DbContextScope{UniqueConstraintDbContext}"/> for the specified constraint table.</returns>
+    Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName);
 }

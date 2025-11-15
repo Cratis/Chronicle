@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel.DataAnnotations;
+
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 
 /// <summary>
@@ -11,12 +13,8 @@ public class UniqueConstraintIndexEntry
     /// <summary>
     /// Gets or sets the event source identifier.
     /// </summary>
+    [Key]
     public string EventSourceId { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the constraint name.
-    /// </summary>
-    public string ConstraintName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the constraint value.

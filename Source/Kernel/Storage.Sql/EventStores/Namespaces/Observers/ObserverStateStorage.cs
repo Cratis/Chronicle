@@ -34,9 +34,9 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var observer = await scope.DbContext.Observers
-            .Where(observer => observer.Id == observerId)
+            .Where(observer => observer.Id == observerId.Value)
             .Select(observer => observer.ToKernel())
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync() ?? Observation.ObserverState.Empty;
         return observer!;
     }
 

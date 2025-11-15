@@ -60,7 +60,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// <summary>
     /// Gets or sets the event sequence states DbSet.
     /// </summary>
-    public DbSet<EventSequences.EventSequenceStateEntry> EventSequenceStates { get; set; } = null!;
+    public DbSet<EventSequences.EventSequenceState> EventSequences { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the event sequence events DbSet.

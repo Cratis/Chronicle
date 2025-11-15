@@ -32,7 +32,6 @@ public static class UniqueConstraintIndexEntryConverter
         new()
         {
             EventSourceId = index.EventSourceId.Value,
-            ConstraintName = constraintName.Value,
             Value = index.Value.Value,
             SequenceNumber = index.SequenceNumber.Value
         };

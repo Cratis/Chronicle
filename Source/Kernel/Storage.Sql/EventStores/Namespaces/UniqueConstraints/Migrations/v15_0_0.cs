@@ -22,17 +22,10 @@ public class v15_0_0 : Migration
             columns: table => new
             {
                 EventSourceId = table.StringColumn(migrationBuilder),
-                ConstraintName = table.StringColumn(migrationBuilder),
                 Value = table.StringColumn(migrationBuilder),
                 SequenceNumber = table.Column<decimal>(nullable: false)
             },
-            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.UniqueConstraintIndexes}", x => new { x.EventSourceId, x.ConstraintName }));
-
-        // Create indexes for constraint validation queries
-        migrationBuilder.CreateIndex(
-            name: $"IX_{WellKnownTableNames.UniqueConstraintIndexes}_ConstraintName_Value",
-            table: WellKnownTableNames.UniqueConstraintIndexes,
-            columns: ["ConstraintName", "Value"]);
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.UniqueConstraintIndexes}", x => x.EventSourceId));
 
         migrationBuilder.CreateIndex(
             name: $"IX_{WellKnownTableNames.UniqueConstraintIndexes}_EventSourceId",

@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <summary>
 /// Represents the entity for event sequence state entries in the database.
 /// </summary>
-public class EventSequenceStateEntry
+public class EventSequenceState
 {
     /// <summary>
     /// Gets or sets the event sequence identifier.
