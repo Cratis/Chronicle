@@ -40,6 +40,12 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
+// Add controllers if OAuth Authority is enabled
+if (chronicleOptions.Features.OAuthAuthority)
+{
+    builder.Services.AddControllers();
+}
+
 builder.WebHost.UseKestrel(options =>
 {
     if (chronicleOptions.Features.Api)
@@ -86,7 +92,7 @@ builder.Host
        services.AddCodeFirstGrpc();
 
        // Add authentication services
-       services.AddChronicleAuthentication();
+       services.AddChronicleAuthentication(chronicleOptions);
    });
 
 var app = builder.Build();
@@ -99,6 +105,14 @@ if (chronicleOptions.Authentication.Enabled)
 }
 
 app.UseRouting();
+
+// Add authentication and authorization middleware if authentication is enabled
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.UseCratisApplicationModel();
 
 if (chronicleOptions.Features.Api)
@@ -113,6 +127,13 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 
     app.MapFallbackToFile("index.html");
 }
+
+// Map controllers if OAuth Authority is enabled
+if (chronicleOptions.Features.OAuthAuthority)
+{
+    app.MapControllers();
+}
+
 app.MapGrpcServices();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 

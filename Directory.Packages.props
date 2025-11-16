@@ -85,6 +85,9 @@
         <PackageVersion Include="Grpc.Net.Client" Version="2.71.0" />
         <PackageVersion Include="mongodb.driver" Version="3.5.0" />
         <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
+        <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+        <PackageVersion Include="OpenIddict.AspNetCore" Version="6.0.0" />
+        <PackageVersion Include="OpenIddict.MongoDb" Version="6.0.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.1" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.0" />
         <PackageVersion Include="FluentValidation" Version="12.1.0" />
