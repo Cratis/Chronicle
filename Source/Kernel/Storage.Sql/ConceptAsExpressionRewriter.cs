@@ -186,13 +186,13 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
         // Special handling for ParameterExpression - these are EF Core's compiled lambda parameters
         // Since the evaluatable filter didn't work to prevent parameterization, we need to handle these
-        // Instead of creating .Value access (which EF can't translate), create a Convert expression
+        // We can't just convert the parameter - we need to replace it with a new parameter of the primitive type
         if (expression is ParameterExpression paramExpr)
         {
-            Console.WriteLine($">>>>>>> This is a ParameterExpression - creating Convert to primitive type");
-            // Create a conversion from ConceptAs to its underlying primitive type
-            // EF Core can handle Convert expressions
-            return Expression.Convert(expression, valueType);
+            Console.WriteLine($">>>>>>> This is a ParameterExpression - replacing with primitive-typed parameter");
+            // Create a new parameter with the same name but primitive type
+            // This tells EF Core to treat this parameter as the underlying type in SQL
+            return Expression.Parameter(valueType, paramExpr.Name);
         }
 
         // Special handling for member access on closure variables
