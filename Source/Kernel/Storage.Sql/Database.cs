@@ -44,7 +44,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
             _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
 
@@ -64,7 +64,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
 
             dbContext = new EventStoreDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -94,7 +94,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
 
             dbContext = new NamespaceDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -153,7 +153,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
+                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
 
             dbContext = createDbContext(builder.Options, tableName);
             await dbContext.EnsureTableExists();
