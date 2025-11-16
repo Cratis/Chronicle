@@ -49,6 +49,15 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     }
 
     /// <inheritdoc/>
+    protected override Expression VisitParameter(ParameterExpression node)
+    {
+        // DO NOT transform parameters - leave them as-is
+        // The DbCommandInterceptor will unwrap ConceptAs parameter values at execution time
+        // Trying to access .Value here creates untranslatable expressions like __p_0.Value
+        return base.VisitParameter(node);
+    }
+
+    /// <inheritdoc/>
     protected override Expression VisitMember(MemberExpression node)
     {
         // Check if the member itself is a Concept type BEFORE visiting children
@@ -100,53 +109,87 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     /// <inheritdoc/>
     protected override Expression VisitBinary(BinaryExpression node)
     {
-        // Handle comparisons where ConceptAs types are compared directly
-        var left = Visit(node.Left);
-        var right = Visit(node.Right);
+        // For comparison operators, we need to ensure type compatibility
+        // Strategy:
+        // 1. If we have: Convert(primitive_property, ConceptAs) == conceptas_parameter
+        //    Unwrap to: primitive_property == conceptas_parameter
+        //    EF Core can translate this with help from DbCommandInterceptor
+        // 2. The DbCommandInterceptor will unwrap the parameter value at SQL execution time
 
-        // Unwrap conversions TO ConceptAs types in comparisons
-        // This handles: (ObserverId)observer.Id == id
-        // We want: observer.Id == (primitive)id
-        if (left is UnaryExpression { NodeType: ExpressionType.Convert } leftConvert)
+        // Check if this is a comparison
+        var isComparison = node.NodeType == ExpressionType.Equal ||
+                          node.NodeType == ExpressionType.NotEqual ||
+                          node.NodeType == ExpressionType.GreaterThan ||
+                          node.NodeType == ExpressionType.GreaterThanOrEqual ||
+                          node.NodeType == ExpressionType.LessThan ||
+                          node.NodeType == ExpressionType.LessThanOrEqual;
+
+        if (isComparison)
         {
-            // If converting FROM primitive TO ConceptAs, unwrap the conversion
-            var leftValueType = leftConvert.Type.GetConceptValueType();
-            if (leftConvert.Operand.Type == leftValueType)
+            var left = node.Left;
+            var right = node.Right;
+
+            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Original left: {left} (Type: {left.Type.Name})");
+            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Original right: {right} (Type: {right.Type.Name})");
+
+            // Unwrap Convert(primitive, ConceptAs) on either side
+            if (left is UnaryExpression { NodeType: ExpressionType.Convert } leftConv && leftConv.Type.IsConcept())
             {
-                left = leftConvert.Operand;
+                left = leftConv.Operand;
+                Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Unwrapped left Convert: {left} (Type: {left.Type.Name})");
             }
-        }
 
-        if (right is UnaryExpression { NodeType: ExpressionType.Convert } rightConvert)
-        {
-            // If converting FROM primitive TO ConceptAs, unwrap the conversion
-            var rightValueType = rightConvert.Type.GetConceptValueType();
-            if (rightConvert.Operand.Type == rightValueType)
+            if (right is UnaryExpression { NodeType: ExpressionType.Convert } rightConv && rightConv.Type.IsConcept())
             {
-                right = rightConvert.Operand;
+                right = rightConv.Operand;
+                Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Unwrapped right Convert: {right} (Type: {right.Type.Name})");
             }
+
+            // Now visit the unwrapped expressions to handle any nested transformations
+            left = Visit(left);
+            right = Visit(right);
+
+            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] After Visit left: {left} (Type: {left.Type.Name})");
+            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] After Visit right: {right} (Type: {right.Type.Name})");
+
+            // If either side is a ConceptAs parameter, we need to extract its actual primitive value
+            // We can't just convert it - EF Core doesn't have type mappings for ConceptAs types
+            // Instead, we access the underlying value through reflection at rewrite time
+            if (left is ParameterExpression leftParam && leftParam.Type.IsConcept())
+            {
+                // For parameters, we can't evaluate them at compile time
+                // But we can create a member access to the Value property
+                // Wait - that won't work either because EF Core still doesn't know the type
+                // The REAL solution: access .Value property
+                left = Expression.Property(leftParam, "Value");
+            }
+
+            if (right is ParameterExpression rightParam && rightParam.Type.IsConcept())
+            {
+                right = Expression.Property(rightParam, "Value");
+            }
+
+            // Handle non-parameter ConceptAs expressions
+            if (left.Type.IsConcept() && left is not ParameterExpression)
+            {
+                left = ExtractConceptValue(left);
+            }
+
+            if (right.Type.IsConcept() && right is not ParameterExpression)
+            {
+                right = ExtractConceptValue(right);
+            }
+
+            if (left != node.Left || right != node.Right)
+            {
+                Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Creating new binary: {left} {node.NodeType} {right}");
+                return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, null);
+            }
+
+            return node;
         }
 
-        // Now normalize both sides to their underlying value types if they are Concepts
-        // This handles cases where one side is a Concept parameter/constant and the other is a primitive
-        if (left.Type.IsConcept())
-        {
-            left = ExtractConceptValue(left);
-        }
-
-        if (right.Type.IsConcept())
-        {
-            right = ExtractConceptValue(right);
-        }
-
-        if (left != node.Left || right != node.Right)
-        {
-            // When we change the operand types, we need to clear the method parameter
-            // because the original method (e.g., op_Equality for Concepts) won't match
-            // the new operand types (underlying primitives)
-            return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, null);
-        }
-
+        // For non-comparison operations, use default behavior
         return base.VisitBinary(node);
     }
 
@@ -167,14 +210,13 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
         var valueType = expression.Type.GetConceptValueType();
 
-        // Special handling for ParameterExpression - these are EF Core's compiled lambda parameters
-        // Since the evaluatable filter didn't work to prevent parameterization, we need to handle these
-        // We can't just convert the parameter - we need to replace it with a new parameter of the primitive type
+        // Special handling for ParameterExpression - these are EF Core's query parameters like __id_0
+        // DO NOT try to access .Value - EF Core can't translate that
+        // Instead, leave the parameter as-is and let the DbCommandInterceptor unwrap the value at execution
         if (expression is ParameterExpression paramExpr)
         {
-            // Create a new parameter with the same name but primitive type
-            // This tells EF Core to treat this parameter as the underlying type in SQL
-            return Expression.Parameter(valueType, paramExpr.Name);
+            // Return unchanged - the DbCommandInterceptor will handle unwrapping
+            return paramExpr;
         }
 
         // Special handling for member access on closure variables

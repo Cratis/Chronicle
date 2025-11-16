@@ -13,6 +13,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Options;
 
@@ -44,6 +45,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
+                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
             _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
@@ -64,6 +66,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
+                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
 
             dbContext = new EventStoreDbContext(builder.Options);
@@ -94,6 +97,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
+                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
 
             dbContext = new NamespaceDbContext(builder.Options);
@@ -153,6 +157,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
+                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
 
             dbContext = createDbContext(builder.Options, tableName);
