@@ -22,39 +22,63 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     where TContext : DbContext
 {
     static readonly ConcurrentDictionary<string, bool> _migratedTables = new();
+    static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction)
     {
-        var key = $"{context.Database.GetConnectionString()}:{tableName}";
+        var connectionString = context.Database.GetConnectionString();
+        var key = $"{connectionString}:{tableName}";
+        
+        Console.WriteLine($"[TableMigrator] EnsureTableMigrated: tableName='{tableName}', connectionString='{connectionString}', key='{key}'");
 
         if (_migratedTables.ContainsKey(key))
         {
+            Console.WriteLine($"[TableMigrator] Table '{tableName}' already migrated (key found in cache)");
             return;
         }
 
-        logger.EnsuringTableMigrated(tableName);
+        // Get or create a lock for this specific table
+        var lockObject = _migrationLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
 
+        await lockObject.WaitAsync();
         try
         {
-            var hasTable = await TableExists(context, tableName);
-
-            if (!hasTable)
+            // Double-check after acquiring lock
+            if (_migratedTables.ContainsKey(key))
             {
-                await createTableAction(context, tableName);
-                logger.CreatedTable(tableName);
-            }
-            else
-            {
-                logger.TableAlreadyExists(tableName);
+                Console.WriteLine($"[TableMigrator] Table '{tableName}' already migrated (double-check after lock)");
+                return;
             }
 
-            _migratedTables.TryAdd(key, true);
+            logger.EnsuringTableMigrated(tableName);
+            Console.WriteLine($"[TableMigrator] Starting migration for table '{tableName}'");
+
+            try
+            {
+                var hasTable = await TableExists(context, tableName);
+
+                if (!hasTable)
+                {
+                    await createTableAction(context, tableName);
+                    logger.CreatedTable(tableName);
+                }
+                else
+                {
+                    logger.TableAlreadyExists(tableName);
+                }
+
+                _migratedTables.TryAdd(key, true);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedToMigrateTable(ex, tableName);
+                throw;
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            logger.FailedToMigrateTable(ex, tableName);
-            throw;
+            lockObject.Release();
         }
     }
 
