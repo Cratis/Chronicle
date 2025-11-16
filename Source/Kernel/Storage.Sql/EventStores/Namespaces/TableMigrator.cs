@@ -29,7 +29,7 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     {
         var connectionString = context.Database.GetConnectionString();
         var key = $"{connectionString}:{tableName}";
-        
+
         Console.WriteLine($"[TableMigrator] EnsureTableMigrated: tableName='{tableName}', connectionString='{connectionString}', key='{key}'");
 
         if (_migratedTables.ContainsKey(key))
