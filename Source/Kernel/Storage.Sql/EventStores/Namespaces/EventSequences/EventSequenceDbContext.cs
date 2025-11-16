@@ -57,7 +57,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);
             entity.HasIndex(e => e.Type);
-            entity.Property(e => e.SequenceNumber).IsRequired();
+            entity.Property(e => e.SequenceNumber).IsRequired().ValueGeneratedNever();
             entity.Property(e => e.EventSourceId).IsRequired();
             entity.Property(e => e.EventSourceType).IsRequired();
             entity.Property(e => e.EventStreamId).IsRequired();
