@@ -158,8 +158,8 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
         // and we've already evaluated the ConceptAs to a constant primitive, the visitedExpression
         // will now be a ConstantExpression containing the primitive. If the current member is "Value",
         // we should just return that constant since accessing .Value on a primitive would fail.
-        if (node.Member.Name == "Value" && 
-            visitedExpression is ConstantExpression constant && 
+        if (node.Member.Name == "Value" &&
+            visitedExpression is ConstantExpression constant &&
             !constant.Type.IsConcept())
         {
             // The expression is already the primitive value, return it as-is
