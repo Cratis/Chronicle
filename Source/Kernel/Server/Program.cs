@@ -63,16 +63,29 @@ builder.Host
            mongo.Database = WellKnownDatabaseNames.Chronicle;
        },
        builder => builder.WithCamelCaseNamingPolicy())
-   .UseOrleans(_ => _
-        .UseLocalhostClustering()
-        .AddChronicleToSilo(_ => _
-           .WithMongoDB(chronicleOptions))
-        .UseDashboard(options =>
-        {
-            options.Host = "*";
-            options.Port = 8081;
-            options.HostSelf = true;
-        }))
+   .UseOrleans(siloBuilder =>
+   {
+       siloBuilder.Configure<Orleans.Configuration.ClusterOptions>(options =>
+       {
+           options.ClusterId = chronicleOptions.Clustering.ClusterId;
+           options.ServiceId = chronicleOptions.Clustering.ServiceId;
+       });
+
+       if (!chronicleOptions.Clustering.Enabled)
+       {
+           siloBuilder.UseLocalhostClustering();
+       }
+
+       siloBuilder
+           .AddChronicleToSilo(_ => _
+              .WithMongoDB(chronicleOptions))
+           .UseDashboard(options =>
+           {
+               options.Host = "*";
+               options.Port = 8081;
+               options.HostSelf = true;
+           });
+   })
    .ConfigureServices((context, services) =>
    {
        services

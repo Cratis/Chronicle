@@ -57,6 +57,11 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the clustering configuration.
+    /// </summary>
+    public Clustering Clustering { get; init; } = new Clustering();
+
+    /// <summary>
     /// Adds the Chronicle configuration.
     /// </summary>
     /// <param name="services">Service collection to add to.</param>
