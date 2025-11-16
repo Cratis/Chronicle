@@ -56,7 +56,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
         // CRITICAL: EF Core caches models by DbContext type + model cache key.
         // Since we use the same EventSequenceDbContext type for different tables,
         // we must include the table name in the cache key to prevent model reuse.
-        optionsBuilder.UseModel(null).ReplaceService<IModelCacheKeyFactory, DynamicTableModelCacheKeyFactory>();
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, DynamicTableModelCacheKeyFactory>();
     }
 
     /// <inheritdoc/>
