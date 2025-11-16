@@ -51,26 +51,20 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     /// <inheritdoc/>
     protected override Expression VisitMember(MemberExpression node)
     {
-        Console.WriteLine($">>>>>>> VisitMember: {node}, Type: {node.Type.Name}, IsConceptAs: {node.Type.IsConcept()}");
-
         // Check if the member itself is a Concept type BEFORE visiting children
         // This is important because we need to handle the entire concept expression as one unit
         if (node.Type.IsConcept())
         {
-            Console.WriteLine($">>>>>>> Found ConceptAs member: {node} of type {node.Type.Name}, Expression type: {node.Expression?.GetType().Name}");
-
             // First check if this is accessing a closure variable (captured variable in lambda)
             // Pattern: closure_instance.id where id is ConceptAs<T>
             if (node.Expression is ConstantExpression)
             {
-                Console.WriteLine($">>>>>>> This is a closure variable - evaluating to constant");
                 // This is accessing a field/property on a closure - evaluate it to a constant
                 return ExtractConceptValue(node);
             }
 
             // Otherwise, it's an entity property - append .Value to access the underlying value
             // Pattern: entity.Id where Id is ConceptAs<T> stored in DB as primitive
-            Console.WriteLine($">>>>>>> This is NOT a closure variable - creating .Value property access");
             return Expression.Property(node, "Value");
         }
 
@@ -106,13 +100,9 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     /// <inheritdoc/>
     protected override Expression VisitBinary(BinaryExpression node)
     {
-        Console.WriteLine($">>>>>>> VisitBinary: {node.NodeType}, Left: {node.Left} ({node.Left.Type.Name}), Right: {node.Right} ({node.Right.Type.Name})");
-
         // Handle comparisons where ConceptAs types are compared directly
         var left = Visit(node.Left);
         var right = Visit(node.Right);
-
-        Console.WriteLine($">>>>>>> After Visit - Left: {left} ({left.Type.Name}), Right: {right} ({right.Type.Name})");
 
         // Unwrap conversions TO ConceptAs types in comparisons
         // This handles: (ObserverId)observer.Id == id
@@ -123,7 +113,6 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
             var leftValueType = leftConvert.Type.GetConceptValueType();
             if (leftConvert.Operand.Type == leftValueType)
             {
-                Console.WriteLine($">>>>>>> Unwrapping left convert from {leftConvert.Operand.Type.Name} to {leftConvert.Type.Name}");
                 left = leftConvert.Operand;
             }
         }
@@ -134,7 +123,6 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
             var rightValueType = rightConvert.Type.GetConceptValueType();
             if (rightConvert.Operand.Type == rightValueType)
             {
-                Console.WriteLine($">>>>>>> Unwrapping right convert from {rightConvert.Operand.Type.Name} to {rightConvert.Type.Name}");
                 right = rightConvert.Operand;
             }
         }
@@ -143,19 +131,16 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
         // This handles cases where one side is a Concept parameter/constant and the other is a primitive
         if (left.Type.IsConcept())
         {
-            Console.WriteLine($">>>>>>> Left is ConceptAs - extracting value");
             left = ExtractConceptValue(left);
         }
 
         if (right.Type.IsConcept())
         {
-            Console.WriteLine($">>>>>>> Right is ConceptAs - extracting value");
             right = ExtractConceptValue(right);
         }
 
         if (left != node.Left || right != node.Right)
         {
-            Console.WriteLine($">>>>>>> Creating new binary with Left: {left} ({left.Type.Name}), Right: {right} ({right.Type.Name})");
             // When we change the operand types, we need to clear the method parameter
             // because the original method (e.g., op_Equality for Concepts) won't match
             // the new operand types (underlying primitives)
@@ -175,8 +160,6 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     /// <returns>An expression representing the underlying value.</returns>
     static Expression ExtractConceptValue(Expression expression)
     {
-        Console.WriteLine($">>>>>>> ExtractConceptValue called with: {expression} (type: {expression.GetType().Name}, ConceptType: {expression.Type.Name})");
-
         if (!expression.Type.IsConcept())
         {
             return expression;
@@ -189,7 +172,6 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
         // We can't just convert the parameter - we need to replace it with a new parameter of the primitive type
         if (expression is ParameterExpression paramExpr)
         {
-            Console.WriteLine($">>>>>>> This is a ParameterExpression - replacing with primitive-typed parameter");
             // Create a new parameter with the same name but primitive type
             // This tells EF Core to treat this parameter as the underlying type in SQL
             return Expression.Parameter(valueType, paramExpr.Name);
@@ -226,7 +208,6 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
                             var underlyingValue = valueProperty.GetValue(conceptValue);
                             if (underlyingValue != null)
                             {
-                                Console.WriteLine($">>>>>>> Extracted ConceptAs value from closure: {underlyingValue}");
                                 return Expression.Constant(underlyingValue, valueType);
                             }
                         }

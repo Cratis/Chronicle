@@ -76,22 +76,16 @@ public class ConceptAsDbCommandInterceptor : DbCommandInterceptor
 
     static void UnwrapConceptAsParameters(DbCommand command)
     {
-        Console.WriteLine($">>>>>>> ConceptAsDbCommandInterceptor: Checking {command.Parameters.Count} parameters");
-
         foreach (DbParameter parameter in command.Parameters)
         {
-            if (parameter.Value is not null && parameter.Value.GetType().IsConcept())
+            if (parameter.Value?.GetType().IsConcept() == true)
             {
                 var conceptType = parameter.Value.GetType();
                 var valueProperty = conceptType.GetProperty("Value");
 
                 if (valueProperty is not null)
                 {
-                    var primitiveValue = valueProperty.GetValue(parameter.Value);
-                    Console.WriteLine($">>>>>>> Unwrapping parameter {parameter.ParameterName} from {conceptType.Name} to {primitiveValue?.GetType().Name ?? "null"}");
-                    Console.WriteLine($">>>>>>> Old value: {parameter.Value}, New value: {primitiveValue}");
-
-                    parameter.Value = primitiveValue;
+                    parameter.Value = valueProperty.GetValue(parameter.Value);
                 }
             }
         }
