@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 270 |
+| Number of items that remain open | 271 |
 | Number of items closed | 580 |
-| Total number of items created | 850 |
+| Total number of items created | 851 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Switch to NuGet trusted publishing | https://github.com/Cratis/Chronicle/issues/2260 | None | [einari](https://github.com/einari) | None | None | None |
 | Add a way to include metadata in concurrency scope when appending from model bound commands | https://github.com/Cratis/Chronicle/issues/2210 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 0:49:30 | None |
 | Expand Command pipeline with Event metadata | https://github.com/Cratis/Chronicle/issues/2207 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 1:05:15 | None |
 | Make the namespace resolver configurable for ASP.NET Core clients | https://github.com/Cratis/Chronicle/issues/2205 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 5:10:17 | None |
@@ -341,5 +342,4 @@
 | Look at resolving the parent automatically when using the .UsingParentKey() from the child. | https://github.com/Cratis/Chronicle/issues/1052 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve .To() / .ToValue() - consolidate + support complex types | https://github.com/Cratis/Chronicle/issues/1051 | None | [einari](https://github.com/einari) | None | None | None |
 | Support base types for projections | https://github.com/Cratis/Chronicle/issues/1030 | None | [einari](https://github.com/einari) | None | 6:52:46 | None |
-| Support deletion for reducers | https://github.com/Cratis/Chronicle/issues/1028 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 587 days, 23:46:34 | None |
-| Consolidate the creation of EventTypeRegistration -
+| Support deletion for reducers | https://github.com/Cratis/Chronicle/issues/1028 | [einari](https://github.com/einari), [Copilot](h
