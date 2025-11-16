@@ -21,6 +21,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string UsernameKey = "Username";
     const string PasswordKey = "Password";
     const string SchemeKey = "Scheme";
+    const string AuthKey = "auth";
+    const string ApiKeyKey = "key";
     const int DefaultPort = 35000;
 
     /// <summary>
@@ -105,6 +107,58 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets the authentication mode.
+    /// </summary>
+    public AuthenticationMode AuthenticationMode
+    {
+        get
+        {
+            if (!ContainsKey(AuthKey))
+            {
+                // Infer from username/password if present
+                if (!string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password))
+                {
+                    return AuthenticationMode.InternalUserPassword;
+                }
+                return AuthenticationMode.None;
+            }
+
+            var authValue = (string)this[AuthKey];
+            return Enum.TryParse<AuthenticationMode>(authValue, true, out var mode) ? mode : AuthenticationMode.None;
+        }
+        set
+        {
+            if (value == AuthenticationMode.None)
+            {
+                Remove(AuthKey);
+            }
+            else
+            {
+                this[AuthKey] = value.ToString();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the API key for ApiKey authentication.
+    /// </summary>
+    public string? ApiKey
+    {
+        get => ContainsKey(ApiKeyKey) ? (string)this[ApiKeyKey] : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(ApiKeyKey);
+            }
+            else
+            {
+                this[ApiKeyKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
     /// Builds a Chronicle URL string from the current settings.
     /// </summary>
     /// <returns>The Chronicle URL string.</returns>
@@ -128,6 +182,41 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         if (Port != DefaultPort)
         {
             url += $":{Port}";
+        }
+
+        // Add query parameters if needed
+        var queryParams = new List<string>();
+
+        if (ContainsKey(AuthKey))
+        {
+            queryParams.Add($"auth={Uri.EscapeDataString((string)this[AuthKey])}");
+        }
+
+        if (ContainsKey(ApiKeyKey))
+        {
+            queryParams.Add($"key={Uri.EscapeDataString((string)this[ApiKeyKey])}");
+        }
+
+        // Add any other query parameters that aren't our special keys
+        foreach (var key in Keys)
+        {
+            var keyStr = key.ToString();
+            if (keyStr != null &&
+                keyStr != HostKey &&
+                keyStr != PortKey &&
+                keyStr != UsernameKey &&
+                keyStr != PasswordKey &&
+                keyStr != SchemeKey &&
+                keyStr != AuthKey &&
+                keyStr != ApiKeyKey)
+            {
+                queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
+            }
+        }
+
+        if (queryParams.Count > 0)
+        {
+            url += '?' + string.Join('&', queryParams);
         }
 
         return url;

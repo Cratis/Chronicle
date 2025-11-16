@@ -75,6 +75,16 @@ public class ChronicleUrl
     public string? Password => _builder.Password;
 
     /// <summary>
+    /// Gets the authentication mode.
+    /// </summary>
+    public AuthenticationMode AuthenticationMode => _builder.AuthenticationMode;
+
+    /// <summary>
+    /// Gets the API key for ApiKey authentication, if specified.
+    /// </summary>
+    public string? ApiKey => _builder.ApiKey;
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleUrl"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
@@ -120,6 +130,34 @@ public class ChronicleUrl
         {
             Username = username,
             Password = password
+        };
+        return new ChronicleUrl(newBuilder);
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="ChronicleUrl"/> with API key authentication.
+    /// </summary>
+    /// <param name="apiKey">The API key to use.</param>
+    /// <returns>A new <see cref="ChronicleUrl"/> with API key authentication configured.</returns>
+    public ChronicleUrl WithApiKey(string apiKey)
+    {
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
+        {
+            AuthenticationMode = AuthenticationMode.ApiKey,
+            ApiKey = apiKey
+        };
+        return new ChronicleUrl(newBuilder);
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="ChronicleUrl"/> with OIDC authentication.
+    /// </summary>
+    /// <returns>A new <see cref="ChronicleUrl"/> with OIDC authentication configured.</returns>
+    public ChronicleUrl WithOidc()
+    {
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
+        {
+            AuthenticationMode = AuthenticationMode.Oidc
         };
         return new ChronicleUrl(newBuilder);
     }
