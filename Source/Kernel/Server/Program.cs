@@ -7,6 +7,7 @@ using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
+using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
@@ -83,9 +84,20 @@ builder.Host
           .AddSingleton(BinderConfiguration.Default);
 
        services.AddCodeFirstGrpc();
+
+       // Add authentication services
+       services.AddChronicleAuthentication();
    });
 
 var app = builder.Build();
+
+// Initialize default admin user if authentication is enabled
+if (chronicleOptions.Authentication.Enabled)
+{
+    var authService = app.Services.GetRequiredService<IAuthenticationService>();
+    await authService.EnsureDefaultAdminUser();
+}
+
 app.UseRouting();
 app.UseCratisApplicationModel();
 
