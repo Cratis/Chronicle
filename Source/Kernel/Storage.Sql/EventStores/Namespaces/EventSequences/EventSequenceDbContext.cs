@@ -3,6 +3,7 @@
 
 using Cratis.Applications.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -19,6 +20,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="migrator">The <see cref="IEventSequenceMigrator"/> for managing table migrations.</param>
 public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> options, string tableName, IEventSequenceMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
+    internal readonly string _tableName = tableName;
+
     /// <summary>
     /// Gets or sets the event entries DbSet.
     /// </summary>
@@ -30,7 +33,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task EnsureTableExists()
     {
-        await migrator.EnsureTableMigrated(tableName, this);
+        await migrator.EnsureTableMigrated(_tableName, this);
     }
 
     /// <inheritdoc/>
@@ -46,13 +49,24 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     }
 
     /// <inheritdoc/>
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // CRITICAL: EF Core caches models by DbContext type + model cache key.
+        // Since we use the same EventSequenceDbContext type for different tables,
+        // we must include the table name in the cache key to prevent model reuse.
+        optionsBuilder.UseModel(null).ReplaceService<IModelCacheKeyFactory, DynamicTableModelCacheKeyFactory>();
+    }
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<EventEntry>(entity =>
         {
-            entity.ToTable(tableName);
+            entity.ToTable(_tableName);
             entity.HasKey(e => e.SequenceNumber);
             entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);

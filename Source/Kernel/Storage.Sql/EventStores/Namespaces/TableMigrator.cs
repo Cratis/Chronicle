@@ -27,18 +27,12 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction)
     {
-        var connectionString = context.Database.GetConnectionString();
-        var key = $"{connectionString}:{tableName}";
-
-        Console.WriteLine($"[TableMigrator] EnsureTableMigrated: tableName='{tableName}', connectionString='{connectionString}', key='{key}'");
+        var key = $"{context.Database.GetConnectionString()}:{tableName}";
 
         if (_migratedTables.ContainsKey(key))
         {
-            Console.WriteLine($"[TableMigrator] Table '{tableName}' already migrated (key found in cache)");
             return;
-        }
-
-        // Get or create a lock for this specific table
+        }        // Get or create a lock for this specific table
         var lockObject = _migrationLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
 
         await lockObject.WaitAsync();
@@ -47,12 +41,10 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
             // Double-check after acquiring lock
             if (_migratedTables.ContainsKey(key))
             {
-                Console.WriteLine($"[TableMigrator] Table '{tableName}' already migrated (double-check after lock)");
                 return;
             }
 
             logger.EnsuringTableMigrated(tableName);
-            Console.WriteLine($"[TableMigrator] Starting migration for table '{tableName}'");
 
             try
             {
