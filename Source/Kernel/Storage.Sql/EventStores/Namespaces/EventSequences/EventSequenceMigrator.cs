@@ -33,8 +33,7 @@ public class EventSequenceMigrator(
             name: tableName,
             columns: table => new
             {
-                EventSequenceId = table.StringColumn(migrationBuilder),
-                SequenceNumber = table.Column<decimal>(nullable: false),
+                SequenceNumber = table.Column<ulong>(nullable: false),
                 CorrelationId = table.StringColumn(migrationBuilder),
                 Causation = table.StringColumn(migrationBuilder),
                 CausedBy = table.StringColumn(migrationBuilder),
@@ -47,7 +46,7 @@ public class EventSequenceMigrator(
                 Content = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)
             },
-            constraints: table => table.PrimaryKey($"PK_{tableName}", x => new { x.EventSequenceId, x.SequenceNumber }));
+            constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
 
         migrationBuilder.CreateIndex(
             name: $"IX_{tableName}_SequenceNumber",
@@ -77,5 +76,3 @@ public class EventSequenceMigrator(
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 }
-
-
