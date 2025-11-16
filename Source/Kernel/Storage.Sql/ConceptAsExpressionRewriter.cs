@@ -92,8 +92,14 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
     /// <inheritdoc/>
     protected override Expression VisitUnary(UnaryExpression node)
     {
-        // Don't unwrap conversions here - let VisitBinary handle them in comparison context
-        // If we unwrap here, we'll break projections (Select) that expect ConceptAs return types
+        // Remove redundant Convert expressions (e.g., Convert(ulong, ulong))
+        // This happens when EF Core evaluates ConceptAs parameters - it extracts the primitive
+        // value but wraps it in a Convert expression that SQLite can't translate
+        if (node.NodeType == ExpressionType.Convert && node.Operand.Type == node.Type)
+        {
+            // Same type conversion - just return the operand
+            return Visit(node.Operand);
+        }
 
         // Visit the operand to handle any nested expressions
         var visitedOperand = Visit(node.Operand);

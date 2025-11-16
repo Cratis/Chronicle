@@ -80,6 +80,15 @@ public class ConceptAsEvaluatableExpressionFilter(
         // For Convert expressions involving ConceptAs, check the operand
         if (expression is UnaryExpression { NodeType: ExpressionType.Convert } unary)
         {
+            // Convert FROM ConceptAs TO primitive - this should be evaluated
+            // Example: Convert(EventSequenceNumber, ulong) -> should evaluate to the ulong value
+            if (unary.Operand.Type.IsConcept() && !unary.Type.IsConcept())
+            {
+                // This is converting from ConceptAs to primitive - evaluate it!
+                return true;
+            }
+
+            // Convert TO ConceptAs - check if the operand should be evaluated
             if (unary.Type.IsConcept() || unary.Operand.Type.IsConcept())
             {
                 return IsEvaluatableExpression(unary.Operand, model);
