@@ -14,9 +14,9 @@ public class ConceptAsQueryExpressionInterceptor : IQueryExpressionInterceptor
     /// <inheritdoc/>
     public Expression QueryCompilationStarting(Expression queryExpression, QueryExpressionEventData eventData)
     {
-        System.Diagnostics.Debug.WriteLine($"ConceptAsQueryExpressionInterceptor: Rewriting expression");
+        Console.WriteLine($">>>>>>> ConceptAsQueryExpressionInterceptor: Rewriting expression: {queryExpression}");
         var result = ConceptAsExpressionRewriter.Rewrite(queryExpression);
-        System.Diagnostics.Debug.WriteLine($"ConceptAsQueryExpressionInterceptor: Rewrite complete");
+        Console.WriteLine($">>>>>>> ConceptAsQueryExpressionInterceptor: Rewrite complete. Result: {result}");
         return result;
     }
 }

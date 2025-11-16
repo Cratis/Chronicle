@@ -13,6 +13,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -42,6 +43,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
+                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
             _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
@@ -61,6 +63,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
+                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
 
             dbContext = new EventStoreDbContext(builder.Options);
@@ -90,6 +93,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
+                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
 
             dbContext = new NamespaceDbContext(builder.Options);
@@ -148,6 +152,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
+                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
                 .AddInterceptors(new ConceptAsQueryExpressionInterceptor());
 
             dbContext = createDbContext(builder.Options, tableName);
