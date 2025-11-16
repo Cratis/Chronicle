@@ -34,6 +34,18 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     }
 
     /// <inheritdoc/>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+
+        // SQLite doesn't support unsigned 64-bit integers natively
+        // Configure ulong properties to use signed INT64 in the database
+        configurationBuilder
+            .Properties<ulong>()
+            .HaveConversion<long>();
+    }
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
