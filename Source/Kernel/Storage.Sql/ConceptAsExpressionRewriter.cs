@@ -129,28 +129,20 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
             var left = node.Left;
             var right = node.Right;
 
-            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Original left: {left} (Type: {left.Type.Name})");
-            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Original right: {right} (Type: {right.Type.Name})");
-
             // Unwrap Convert(primitive, ConceptAs) on either side
             if (left is UnaryExpression { NodeType: ExpressionType.Convert } leftConv && leftConv.Type.IsConcept())
             {
                 left = leftConv.Operand;
-                Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Unwrapped left Convert: {left} (Type: {left.Type.Name})");
             }
 
             if (right is UnaryExpression { NodeType: ExpressionType.Convert } rightConv && rightConv.Type.IsConcept())
             {
                 right = rightConv.Operand;
-                Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Unwrapped right Convert: {right} (Type: {right.Type.Name})");
             }
 
             // Now visit the unwrapped expressions to handle any nested transformations
             left = Visit(left);
             right = Visit(right);
-
-            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] After Visit left: {left} (Type: {left.Type.Name})");
-            Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] After Visit right: {right} (Type: {right.Type.Name})");
 
             // If either side is a ConceptAs parameter, we need to extract its actual primitive value
             // We can't just convert it - EF Core doesn't have type mappings for ConceptAs types
@@ -182,7 +174,6 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
             if (left != node.Left || right != node.Right)
             {
-                Console.WriteLine($"[ConceptAsExpressionRewriter.VisitBinary] Creating new binary: {left} {node.NodeType} {right}");
                 return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, null);
             }
 

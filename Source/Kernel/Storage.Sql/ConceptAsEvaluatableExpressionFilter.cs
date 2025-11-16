@@ -25,38 +25,27 @@ public class ConceptAsEvaluatableExpressionFilter(
     /// <inheritdoc/>
     public override bool IsEvaluatableExpression(Expression expression, Microsoft.EntityFrameworkCore.Metadata.IModel model)
     {
-        Console.WriteLine($"[ConceptAsEvaluatableExpressionFilter] Checking: {expression} (Type: {expression.Type.Name}, NodeType: {expression.NodeType})");
-
         // First, check if the base implementation says this is NOT evaluatable
         // If it's not evaluatable for standard reasons, respect that
         var baseResult = base.IsEvaluatableExpression(expression, model);
-        Console.WriteLine($"[ConceptAsEvaluatableExpressionFilter] Base result: {baseResult}");
 
         // Mark ANY ConceptAs typed expression as evaluatable if it's not an entity property
         // This ensures ConceptAs values from closures are evaluated to their primitive values
         if (expression.Type.IsConcept())
         {
-            Console.WriteLine("[ConceptAsEvaluatableExpressionFilter] Found ConceptAs expression!");
-
             // Check if this is NOT an entity property access
             // Entity property access looks like: Property(parameterExpression, "PropertyName")
             // or MemberAccess(parameterExpression.Property)
             if (expression is MemberExpression memberExpr)
             {
-                Console.WriteLine($"[ConceptAsEvaluatableExpressionFilter] MemberExpression, Member: {memberExpr.Member.Name}, Expression: {memberExpr.Expression}");
-
                 // If the member's declaring type is an entity type in the model, don't evaluate it
                 // Otherwise (closure variable, local variable, etc.), mark as evaluatable
                 var declaringType = memberExpr.Member.DeclaringType;
                 if (declaringType != null && model.FindEntityType(declaringType) != null)
                 {
-                    Console.WriteLine("[ConceptAsEvaluatableExpressionFilter] This is an entity property, DON'T evaluate");
-
                     // This is an entity property, let EF handle it
                     return baseResult;
                 }
-
-                Console.WriteLine("[ConceptAsEvaluatableExpressionFilter] This is a closure/local variable");
 
                 // Store the closure constant so the parameter evaluator can use it
                 if (memberExpr.Expression is ConstantExpression closureConstant && closureConstant.Value != null)
@@ -72,7 +61,6 @@ public class ConceptAsEvaluatableExpressionFilter(
             // For other ConceptAs expressions (constants, parameters from closures), evaluate them
             if (expression is ConstantExpression)
             {
-                Console.WriteLine("[ConceptAsEvaluatableExpressionFilter] ConstantExpression, EVALUATE IT!");
                 return true;
             }
 
@@ -85,7 +73,6 @@ public class ConceptAsEvaluatableExpressionFilter(
                 // But captured variables that become parameters should be evaluated
                 // The problem: at this stage, we can't easily distinguish them
                 // So we mark ConceptAs parameters as evaluatable - they should be constants anyway
-                Console.WriteLine("[ConceptAsEvaluatableExpressionFilter] ParameterExpression: " + paramExpr.Name + ", DON'T evaluate (it's a lambda parameter)");
                 return baseResult;
             }
         }

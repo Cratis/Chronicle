@@ -14,17 +14,12 @@ public class ConceptAsQueryExpressionInterceptor : IQueryExpressionInterceptor
     /// <inheritdoc/>
     public Expression QueryCompilationStarting(Expression queryExpression, QueryExpressionEventData eventData)
     {
-        Console.WriteLine("[ConceptAsQueryExpressionInterceptor] QueryCompilationStarting called");
-        Console.WriteLine($"[ConceptAsQueryExpressionInterceptor] Original expression: {queryExpression}");
-
         // FIRST: Evaluate ConceptAs closure variables to constants
         // This prevents EF Core from creating ConceptAs parameters
         var evaluated = ConceptAsParameterEvaluator.Evaluate(queryExpression);
-        Console.WriteLine($"[ConceptAsQueryExpressionInterceptor] After evaluation: {evaluated}");
 
         // SECOND: Rewrite the expression to handle any remaining ConceptAs types
         var rewritten = ConceptAsExpressionRewriter.Rewrite(evaluated);
-        Console.WriteLine($"[ConceptAsQueryExpressionInterceptor] Rewritten expression: {rewritten}");
 
         return rewritten;
     }

@@ -64,16 +64,12 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
         // Pattern: __p_0.id where __p_0 is the closure parameter and id is ConceptAs<T>
         if (node.Type.IsConcept() && node.Expression is ParameterExpression closureParam)
         {
-            Console.WriteLine($"[ConceptAsParameterEvaluator] Found ConceptAs member on closure parameter: {closureParam.Name}.{node.Member.Name} (closure type: {closureParam.Type.Name})");
-
             // Try to find the constant expression for this closure from the cache
             var closureKey = closureParam.Type.FullName ?? closureParam.Type.Name;
             var closureConstant = ClosureConstantCache.Get(closureKey);
 
             if (closureConstant != null)
             {
-                Console.WriteLine($"[ConceptAsParameterEvaluator] Found closure constant for {closureParam.Name}");
-
                 // Get the closure instance value
                 var closureInstance = closureConstant.Value;
                 if (closureInstance != null)
@@ -98,7 +94,6 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                                 if (primitiveValue != null)
                                 {
                                     var primitiveType = node.Type.GetConceptValueType();
-                                    Console.WriteLine($"[ConceptAsParameterEvaluator] Evaluated {closureParam.Name}.{node.Member.Name} to constant: {primitiveValue}");
 
                                     // Return a constant expression with the primitive value
                                     return Expression.Constant(primitiveValue, primitiveType);
@@ -106,15 +101,11 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                             }
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Console.WriteLine($"[ConceptAsParameterEvaluator] Failed to extract value from closure: {ex.Message}");
+                        // Failed to extract value - fall through to base implementation
                     }
                 }
-            }
-            else
-            {
-                Console.WriteLine($"[ConceptAsParameterEvaluator] No closure constant found for key: {closureKey}");
             }
         }
 
@@ -122,8 +113,6 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
         // Pattern: closure.conceptField where conceptField is ConceptAs<T>
         if (node.Type.IsConcept() && node.Expression is ConstantExpression constantExpr)
         {
-            Console.WriteLine($"[ConceptAsParameterEvaluator] Evaluating ConceptAs member: {node.Member.Name}");
-
             try
             {
                 // Extract the ConceptAs instance from the closure
