@@ -147,7 +147,7 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                             if (primitiveValue != null)
                             {
                                 var primitiveType = node.Type.GetConceptValueType();
-                                
+
                                 // Return a constant expression with the primitive value
                                 // This prevents EF Core from creating a ConceptAs parameter
                                 return Expression.Constant(primitiveValue, primitiveType);
