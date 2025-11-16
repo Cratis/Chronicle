@@ -32,7 +32,6 @@
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <PackageReference Include="OpenIddict.AspNetCore" />
-        <PackageReference Include="OpenIddict.MongoDb" />
     </ItemGroup>
 
     <ItemGroup>

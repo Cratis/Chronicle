@@ -45,10 +45,6 @@ public static class ServiceCollectionExtensions
         if (chronicleOptions.Features.OAuthAuthority)
         {
             services.AddOpenIddict()
-                .AddCore(options =>
-                {
-                    options.UseMongoDb();
-                })
                 .AddServer(options =>
                 {
                     // Enable the token endpoint
@@ -60,6 +56,9 @@ public static class ServiceCollectionExtensions
 
                     // Accept anonymous clients (clients without a client_id)
                     options.AcceptAnonymousClients();
+
+                    // Disable application/authorization management as we use anonymous clients
+                    options.DisableScopeValidation();
 
                     // Register the signing and encryption credentials
                     options.AddDevelopmentEncryptionCertificate()
