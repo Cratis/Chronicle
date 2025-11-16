@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
@@ -38,6 +40,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
+    readonly bool _disableTls;
+    readonly string? _certificatePath;
+    readonly string? _certificatePassword;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -55,6 +60,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
     /// <param name="logger">Logger for logging.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
+    /// <param name="disableTls">Whether TLS is disabled.</param>
+    /// <param name="certificatePath">Optional path to the certificate file.</param>
+    /// <param name="certificatePassword">Optional password for the certificate file.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
         ChronicleUrl url,
@@ -63,9 +71,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ITaskFactory tasks,
         ICorrelationIdAccessor correlationIdAccessor,
         ILogger<ChronicleConnection> logger,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool disableTls = false,
+        string? certificatePath = null,
+        string? certificatePassword = null)
     {
-        GrpcClientFactory.AllowUnencryptedHttp2 = true;
+        GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
         _url = url;
         _connectTimeout = connectTimeout;
         Lifecycle = connectionLifecycle;
@@ -73,6 +84,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
         _logger = logger;
+        _disableTls = disableTls;
+        _certificatePath = certificatePath;
+        _certificatePassword = certificatePassword;
 
         _cancellationToken.Register(() =>
         {
@@ -173,16 +187,41 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     GrpcChannel CreateGrpcChannel()
     {
+        var certificate = CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword, _disableTls);
+
         var httpHandler = new SocketsHttpHandler
         {
-            // ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
             KeepAlivePingDelay = TimeSpan.FromSeconds(60),
             KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             EnableMultipleHttp2Connections = true
         };
 
-        var address = $"http://{_url.ServerAddress.Host}:{_url.ServerAddress.Port}";
+        if (!_disableTls && certificate is not null)
+        {
+            httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
+        }
+
+        if (!_disableTls)
+        {
+            httpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
+            {
+                if (sslPolicyErrors == SslPolicyErrors.None)
+                {
+                    return true;
+                }
+
+                if (cert is not null && certificate is not null)
+                {
+                    return cert.GetCertHashString() == certificate.GetCertHashString();
+                }
+
+                return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+            };
+        }
+
+        var scheme = _disableTls ? "http" : "https";
+        var address = $"{scheme}://{_url.ServerAddress.Host}:{_url.ServerAddress.Port}";
 
         return GrpcChannel.ForAddress(
             address,

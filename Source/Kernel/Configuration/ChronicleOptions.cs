@@ -57,6 +57,21 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets or inits the path to the certificate file for TLS.
+    /// </summary>
+    public string? CertificatePath { get; init; }
+
+    /// <summary>
+    /// Gets or inits the password for the certificate file.
+    /// </summary>
+    public string? CertificatePassword { get; init; }
+
+    /// <summary>
+    /// Gets or inits whether TLS is disabled. Default is false (TLS enabled).
+    /// </summary>
+    public bool DisableTls { get; init; }
+
+    /// <summary>
     /// Adds the Chronicle configuration.
     /// </summary>
     /// <param name="services">Service collection to add to.</param>
