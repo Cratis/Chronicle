@@ -151,6 +151,27 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
             }
         }
 
+        // Visit the expression part of the member access (e.g., the object being accessed)
+        var visitedExpression = Visit(node.Expression);
+
+        // Special case: If user explicitly accessed .Value on a ConceptAs (e.g., recommendationId.Value)
+        // and we've already evaluated the ConceptAs to a constant primitive, the visitedExpression
+        // will now be a ConstantExpression containing the primitive. If the current member is "Value",
+        // we should just return that constant since accessing .Value on a primitive would fail.
+        if (node.Member.Name == "Value" && 
+            visitedExpression is ConstantExpression constant && 
+            !constant.Type.IsConcept())
+        {
+            // The expression is already the primitive value, return it as-is
+            return visitedExpression;
+        }
+
+        // If the expression changed, rebuild the member access
+        if (visitedExpression != node.Expression)
+        {
+            return Expression.MakeMemberAccess(visitedExpression, node.Member);
+        }
+
         return base.VisitMember(node);
     }
 
