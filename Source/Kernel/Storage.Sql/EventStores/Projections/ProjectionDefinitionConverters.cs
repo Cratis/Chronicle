@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Projections;
 
@@ -13,6 +14,14 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Projections;
 /// </summary>
 public static class ProjectionDefinitionConverters
 {
+    static readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        Converters =
+        {
+            new ConceptAsJsonConverterFactory()
+        }
+    };
+
     /// <summary>
     /// Convert to a <see cref="Projection">SQL</see> representation.
     /// </summary>
@@ -29,7 +38,7 @@ public static class ProjectionDefinitionConverters
             SinkConfigurationId = definition.Sink.ConfigurationId,
             Definitions = new Dictionary<uint, string>
             {
-                { ProjectionGeneration.First, JsonSerializer.Serialize(definition) }
+                { ProjectionGeneration.First, JsonSerializer.Serialize(definition, _serializerOptions) }
             }
         };
 
@@ -39,5 +48,5 @@ public static class ProjectionDefinitionConverters
     /// <param name="projection"><see cref="Projection"/> to convert from.</param>
     /// <returns>Converted <see cref="ProjectionDefinition"/>.</returns>
     public static ProjectionDefinition ToKernel(this Projection projection) =>
-        JsonSerializer.Deserialize<ProjectionDefinition>(projection.Definitions[ProjectionGeneration.First])!;
+        JsonSerializer.Deserialize<ProjectionDefinition>(projection.Definitions[ProjectionGeneration.First], _serializerOptions)!;
 }
