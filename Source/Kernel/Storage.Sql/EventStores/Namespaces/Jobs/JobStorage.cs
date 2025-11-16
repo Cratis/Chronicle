@@ -152,41 +152,22 @@ public class JobStorage(
             }
 
             await using var scope = await database.Namespace(eventStore, @namespace);
-            var job = await scope.DbContext.Jobs.FirstOrDefaultAsync(j => j.Id == jobId.Value);
 
-            if (job is null)
+            var job = new Job
             {
-                // Create new job entry
-                job = new Job
-                {
-                    Id = jobId.Value,
-                    StateJson = JsonSerializer.Serialize(state)
-                };
+                Id = jobId.Value,
+                StateJson = JsonSerializer.Serialize(state)
+            };
 
-                // Try to extract common properties from the job state if it inherits from JobState
-                if (state is JobState jobState)
-                {
-                    job.Type = jobState.Type.Value;
-                    job.Status = jobState.Status;
-                    job.Created = jobState.Created;
-                }
-
-                scope.DbContext.Jobs.Add(job);
-            }
-            else
+            // Try to extract common properties from the job state if it inherits from JobState
+            if (state is JobState jobState)
             {
-                // Update existing job
-                job.StateJson = JsonSerializer.Serialize(state);
-
-                // Update common properties if the state is a JobState
-                if (state is JobState jobState)
-                {
-                    job.Type = jobState.Type.Value;
-                    job.Status = jobState.Status;
-                    job.Created = jobState.Created;
-                }
+                job.Type = jobState.Type.Value;
+                job.Status = jobState.Status;
+                job.Created = jobState.Created;
             }
 
+            await scope.DbContext.Jobs.Upsert(job);
             await scope.DbContext.SaveChangesAsync();
             return default(None);
         }

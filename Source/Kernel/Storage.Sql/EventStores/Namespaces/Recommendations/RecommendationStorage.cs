@@ -33,18 +33,8 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
     public async Task Save(RecommendationId recommendationId, RecommendationState recommendationState)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
-        var existing = await scope.DbContext.Recommendations.FirstOrDefaultAsync(r => r.Id == recommendationId.Value);
         var entity = _converter.ToEntity(recommendationId, recommendationState);
-
-        if (existing is not null)
-        {
-            scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
-        }
-        else
-        {
-            scope.DbContext.Recommendations.Add(entity);
-        }
-
+        await scope.DbContext.Recommendations.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
         _recommendationsSubject.OnNext(await GetAllInternal());
     }

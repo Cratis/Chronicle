@@ -21,23 +21,8 @@ public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespac
     public async Task Save(ReplayContext context)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
-
         var entry = ReplayContextEntryConverter.ToReplayContextEntry(context);
-        var existingEntry = await scope.DbContext.ReplayContexts
-            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == entry.ReadModelIdentifier);
-
-        if (existingEntry is not null)
-        {
-            existingEntry.ReadModel = entry.ReadModel;
-            existingEntry.RevertModel = entry.RevertModel;
-            existingEntry.Started = entry.Started;
-            scope.DbContext.ReplayContexts.Update(existingEntry);
-        }
-        else
-        {
-            scope.DbContext.ReplayContexts.Add(entry);
-        }
-
+        await scope.DbContext.ReplayContexts.Upsert(entry);
         await scope.DbContext.SaveChangesAsync();
     }
 

@@ -52,22 +52,8 @@ public class EventSequenceStorage(
     public async Task SaveState(Chronicle.Storage.EventSequences.EventSequenceState state)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
-
         var entry = EventSequenceStateConverter.ToEventSequenceStateEntry(state, eventSequenceId);
-        var existingEntry = await scope.DbContext.EventSequences
-            .FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId);
-
-        if (existingEntry is not null)
-        {
-            existingEntry.SequenceNumber = entry.SequenceNumber;
-            existingEntry.TailSequenceNumberPerEventType = entry.TailSequenceNumberPerEventType;
-            scope.DbContext.EventSequences.Update(existingEntry);
-        }
-        else
-        {
-            scope.DbContext.EventSequences.Add(entry);
-        }
-
+        await scope.DbContext.EventSequences.Upsert(entry);
         await scope.DbContext.SaveChangesAsync();
     }
 

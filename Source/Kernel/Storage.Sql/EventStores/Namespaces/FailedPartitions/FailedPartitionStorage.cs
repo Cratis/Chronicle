@@ -54,21 +54,8 @@ public class FailedPartitionStorage(
         // Save or update failed partitions
         foreach (var failedPartition in failedPartitions.Partitions)
         {
-            var entity = await scope.DbContext.FailedPartitions.FirstOrDefaultAsync(fp => fp.Id == failedPartition.Id.Value);
-            if (entity is null)
-            {
-                // Create new
-                entity = failedPartition.ToEntity();
-                scope.DbContext.FailedPartitions.Add(entity);
-            }
-            else
-            {
-                // Update existing
-                entity.Partition = failedPartition.Partition.ToString();
-                entity.ObserverId = failedPartition.ObserverId.Value;
-                entity.IsResolved = failedPartition.IsResolved;
-                entity.StateJson = System.Text.Json.JsonSerializer.Serialize(failedPartition);
-            }
+            var entity = failedPartition.ToEntity();
+            await scope.DbContext.FailedPartitions.Upsert(entity);
         }
 
         await scope.DbContext.SaveChangesAsync();
