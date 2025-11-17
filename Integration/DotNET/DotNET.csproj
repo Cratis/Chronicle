@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Integration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Integration</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <LocalImageName>$(CRATIS_CHRONICLE_LOCAL_IMAGE)</LocalImageName>
+        <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:local-development</LocalImageName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="../Specifications/**/*.cs" LinkBase="Specifications" />
+    </ItemGroup>
+
+    <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
+        <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net9.0/. $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
+        <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
+    </Target>
+
+</Project>
