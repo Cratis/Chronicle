@@ -9,15 +9,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
-        <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
-        <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
     <ItemGroup>
