@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.when_connecti
 [Collection(ChronicleCollection.Name)]
 public class and_reactor_with_no_handlers_is_registered_while_there_events_in_sequence(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_disconnected_reactor_observing_no_event_types(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_disconnected_reactor_observing_no_event_types(chronicleFixture)
     {
         public List<EventForEventSourceId> Events;
         public ReactorState ReactorState;

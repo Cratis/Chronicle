@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class with_set_to_value_operations(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<SetValuesProjection, ReadModel>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<SetValuesProjection, ReadModel>(chronicleFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EmptyEvent)];
 

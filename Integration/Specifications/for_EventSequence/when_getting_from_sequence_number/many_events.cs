@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_get
 [Collection(ChronicleCollection.Name)]
 public class many_events(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : Specification<IChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
         public EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }

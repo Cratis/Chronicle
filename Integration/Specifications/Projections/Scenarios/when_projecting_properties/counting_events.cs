@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class counting_events(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<CountingEventsProjection, ReadModel>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<CountingEventsProjection, ReadModel>(chronicleFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 

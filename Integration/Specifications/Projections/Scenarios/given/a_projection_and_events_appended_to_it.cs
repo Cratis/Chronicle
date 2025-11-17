@@ -7,12 +7,12 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.given;
 
-public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(IChronicleFixture chronicleFixture) : Specification<IChronicleFixture>(chronicleFixture)
+public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     where TProjection : class, IProjectionFor<TReadModel>, new()
     where TReadModel : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
-    protected IChronicleFixture ChronicleFixture = chronicleFixture;
+    protected ChronicleFixture ChronicleFixture = chronicleFixture;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public EventSourceId EventSourceId;

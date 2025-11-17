@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.AggregateRoots.Scenarios.w
 [Collection(ChronicleCollection.Name)]
 public class and_there_are_already_events_for_the_aggregate_when_getting_it(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.an_aggregate_root_with_state<User, UserInternalState>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_aggregate_root_with_state<User, UserInternalState>(chronicleFixture)
     {
         UserId _userId;
         public AggregateRootCommitResult Result;

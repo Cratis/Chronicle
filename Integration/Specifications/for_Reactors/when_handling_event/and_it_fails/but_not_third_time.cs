@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.when_handling
 [Trait("Category", "Output")]
 public class but_not_third_time(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_reactor_observing_an_event_that_can_fail(chronicleFixture, 3)
+    public class context(ChronicleFixture chronicleFixture) : given.a_reactor_observing_an_event_that_can_fail(chronicleFixture, 3)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;

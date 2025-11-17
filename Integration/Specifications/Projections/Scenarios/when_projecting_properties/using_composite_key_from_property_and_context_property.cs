@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class using_composite_key_from_property_and_context_property(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ReadModelWithCompositeKey>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<CompositeKeyFromPropertyAndContextPropertyProjection, ReadModelWithCompositeKey>(chronicleFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
         public CompositeKey CompositeId;

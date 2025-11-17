@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class one_child_from_one_of_two_parents(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleFixture)
     {
         public EventSourceId FirstGroupId;
         public EventSourceId SecondGroupId;

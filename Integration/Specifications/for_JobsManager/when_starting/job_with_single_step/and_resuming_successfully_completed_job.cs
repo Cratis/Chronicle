@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.when_start
 [Collection(ChronicleCollection.Name)]
 public class and_resuming_successfully_completed_job(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_jobs_manager(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_jobs_manager(chronicleFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class with_identified_by_specified_and_three_events_with_two_having_child_with_same_identifier(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<IdentifiableChildrenProjection, ReadModelWithChildren>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<IdentifiableChildrenProjection, ReadModelWithChildren>(chronicleFixture)
     {
         string _modelId;
         public EventWithChildObject FirstEventAppended;

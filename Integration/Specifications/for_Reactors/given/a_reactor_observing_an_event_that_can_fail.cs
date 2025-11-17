@@ -5,7 +5,7 @@ using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.given;
 
-public class a_reactor_observing_an_event_that_can_fail(IChronicleFixture chronicleFixture, int numberOfObservations) : Specification<IChronicleFixture>(chronicleFixture)
+public class a_reactor_observing_an_event_that_can_fail(ChronicleFixture chronicleFixture, int numberOfObservations) : Specification<ChronicleFixture>(chronicleFixture)
 {
     public TaskCompletionSource[] Tcs;
     public ReactorThatCanFail[] Observers;

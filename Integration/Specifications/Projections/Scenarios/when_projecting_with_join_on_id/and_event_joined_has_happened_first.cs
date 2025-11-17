@@ -12,7 +12,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     const string BootTitle = "MyBook";
     const string UserName = "User";
 
-    public class context(ChronicleInProcessFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<BorrowedBooksProjection, BorrowedBook>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<BorrowedBooksProjection, BorrowedBook>(chronicleFixture)
     {
         public Guid UserId;
         public Guid BookId;

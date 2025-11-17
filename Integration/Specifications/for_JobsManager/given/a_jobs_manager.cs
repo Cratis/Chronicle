@@ -5,7 +5,7 @@ using Cratis.Chronicle.Grains.Jobs;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 
-public class a_jobs_manager(IChronicleFixture chronicleFixture) : all_dependencies(chronicleFixture)
+public class a_jobs_manager(ChronicleFixture chronicleFixture) : all_dependencies(chronicleFixture)
 {
     public IJobsManager JobsManager;
 

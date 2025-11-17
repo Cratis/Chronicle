@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.when_connecti
 [Collection(ChronicleCollection.Name)]
 public class and_reactor_is_registered_while_there_are_no_events_to_handle(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_disconnected_reactor_observing_an_event(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_disconnected_reactor_observing_an_event(chronicleFixture)
     {
         public ReactorState ReactorState;
         public EventSequenceNumber LastEventSequenceNumber;

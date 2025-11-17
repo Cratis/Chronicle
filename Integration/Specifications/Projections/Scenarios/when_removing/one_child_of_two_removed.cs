@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class one_child_of_two_removed(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleFixture)
     {
         public EventSourceId FirstGroupId;
         public EventSourceId SecondGroupId;

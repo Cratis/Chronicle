@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_Reducers.when_connecti
 [Collection(ChronicleCollection.Name)]
 public class and_reducer_has_observed_events_previously_but_is_now_behind(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_disconnected_reducer_observing_an_event(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_disconnected_reducer_observing_an_event(chronicleFixture)
     {
         public List<EventForEventSourceId> FirstEvents;
         public List<EventForEventSourceId> CatchupEvents;

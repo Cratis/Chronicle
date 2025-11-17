@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.AggregateRoots.ActorBased.
 [Collection(ChronicleCollection.Name)]
 public class and_events_does_not_modify_aggregate_internal_state(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.an_aggregate_root_with_state<IUser, UserInternalState>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_aggregate_root_with_state<IUser, UserInternalState>(chronicleFixture)
     {
         UserId _userId;
 

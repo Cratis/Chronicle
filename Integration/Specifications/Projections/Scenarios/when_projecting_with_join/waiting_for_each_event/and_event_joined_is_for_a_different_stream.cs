@@ -14,7 +14,7 @@ public class and_event_joined_is_for_a_different_stream(context context) : Given
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithJoinOnRoot, User>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithJoinOnRoot, User>(chronicleFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

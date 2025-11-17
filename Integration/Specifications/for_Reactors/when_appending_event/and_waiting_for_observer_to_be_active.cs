@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.when_appendin
 [Collection(ChronicleCollection.Name)]
 public class and_waiting_for_observer_to_be_active(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : Specification<IChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
         public static TaskCompletionSource Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;

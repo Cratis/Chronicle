@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class with_event_of_instances_of_two_event_types_applied(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<FromEveryProjection, ReadModel>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<FromEveryProjection, ReadModel>(chronicleFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EmptyEvent), typeof(EventWithPropertiesForAllSupportedTypes)];
 

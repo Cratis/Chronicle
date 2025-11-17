@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration.Specifications.for_Reducers.given;
 
-public class a_disconnected_reducer_observing_an_event(IChronicleFixture chronicleFixture) : Specification<IChronicleFixture>(chronicleFixture)
+public class a_disconnected_reducer_observing_an_event(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
 {
     public TaskCompletionSource Tcs;
     public ReducerWithoutDelay Reducer;

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Integration.Specifications.for_Reducers.when_handling
 [Collection(ChronicleCollection.Name)]
 public class and_reducer_is_asynchronous_and_returns_null_as_model_result(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_reducer_able_to_delete<AsynchronousReducerHandlingDeleteAsNull>(chronicleFixture);
+    public class context(ChronicleFixture chronicleFixture) : given.a_reducer_able_to_delete<AsynchronousReducerHandlingDeleteAsNull>(chronicleFixture);
 
     [Fact] void should_produce_read_model_before_deleted_event() => Context.CountAfterFirstEvent.ShouldEqual(1);
     [Fact] void should_delete_read_model_after_deleted_event() => Context.CountAfterSecondEvent.ShouldEqual(0);

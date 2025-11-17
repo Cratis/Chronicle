@@ -16,7 +16,7 @@ public class with_from_every(context context) : Given<context>(context)
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithFromEvery, GroupWithLastUpdated>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithFromEvery, GroupWithLastUpdated>(chronicleFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

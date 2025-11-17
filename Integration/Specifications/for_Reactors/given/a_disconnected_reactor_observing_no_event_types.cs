@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.given;
 
-public class a_disconnected_reactor_observing_no_event_types(IChronicleFixture chronicleFixture) : Specification<IChronicleFixture>(chronicleFixture)
+public class a_disconnected_reactor_observing_no_event_types(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
 {
     public TaskCompletionSource Tcs;
     public ReactorWithoutHandlers Reactor;

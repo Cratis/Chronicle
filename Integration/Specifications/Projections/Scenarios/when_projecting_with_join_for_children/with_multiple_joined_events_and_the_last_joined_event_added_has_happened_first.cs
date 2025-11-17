@@ -15,7 +15,7 @@ public class with_multiple_joined_events_and_the_last_joined_event_added_has_hap
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

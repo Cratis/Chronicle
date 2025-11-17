@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class subtracting_from_properties(context context) : Given<context>(context)
 {
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<SubtractingFromPropertiesProjection, ReadModel>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<SubtractingFromPropertiesProjection, ReadModel>(chronicleFixture)
     {
         public EventWithPropertiesForAllSupportedTypes FirstEventAppended;
         public EventWithPropertiesForAllSupportedTypes SecondEventAppended;

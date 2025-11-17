@@ -15,7 +15,7 @@ public class and_event_changes_multiple_properties(context context) : Given<cont
     const string UserName = "User";
     const string ProfileName = "ProfileName";
 
-    public class context(IChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithJoinOnRoot, User>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<ProjectionWithJoinOnRoot, User>(chronicleFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

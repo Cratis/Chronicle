@@ -9,12 +9,12 @@ using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Integration.Specifications.AggregateRoots.ActorBased.Scenarios.given;
 
-public class an_aggregate_root_with_state<TAggregate, TInternalState>(IChronicleFixture chronicleFixture) : Specification<IChronicleFixture>(chronicleFixture)
+public class an_aggregate_root_with_state<TAggregate, TInternalState>(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     where TAggregate : IIntegrationTestAggregateRoot<TInternalState>
     where TInternalState : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
-    protected IChronicleFixture ChronicleFixture = chronicleFixture;
+    protected ChronicleFixture ChronicleFixture = chronicleFixture;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public TInternalState ResultState;

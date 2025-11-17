@@ -2,3 +2,4 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 global using Cratis.Chronicle.Integration;
+global using ChronicleFixture = Cratis.Chronicle.Integration.ChronicleOutOfProcessFixtureWithLocalImage;
