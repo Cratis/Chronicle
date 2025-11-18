@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 272 |
+| Number of items that remain open | 273 |
 | Number of items closed | 581 |
-| Total number of items created | 853 |
+| Total number of items created | 854 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Enable running integration specs for different setups | https://github.com/Cratis/Chronicle/issues/2268 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Authentication for connecting to Kernel | https://github.com/Cratis/Chronicle/issues/2263 | None | [einari](https://github.com/einari) | None | None | None |
 | TLS for secure connection between client and server | https://github.com/Cratis/Chronicle/issues/2261 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Switch to NuGet trusted publishing | https://github.com/Cratis/Chronicle/issues/2260 | None | [einari](https://github.com/einari) | None | None | None |
@@ -341,4 +342,4 @@
 | Add an Orleans Serializer codec for concepts - avoid using Json for all types internally | https://github.com/Cratis/Chronicle/issues/1055 | None | [einari](https://github.com/einari) | None | 425 days, 1:12:23 | None |
 | Exactly Once Processing (EOP) for reducers, reactors and projections | https://github.com/Cratis/Chronicle/issues/1054 | None | [einari](https://github.com/einari) | None | None | None |
 | Add a public client API for running reducers in-process | https://github.com/Cratis/Chronicle/issues/1053 | None | [einari](https://github.com/einari) | None | 345 days, 1:53:34 | None |
-| Look at resolving the parent automatically when using the .UsingParentKey() from the child. | https://github.com/Cratis/Chronicle/issues/1052 | None | [einari](https://github.com/einari) | None | None | None 
+| L
