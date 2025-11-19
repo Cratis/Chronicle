@@ -71,12 +71,12 @@ public class ProjectionObserverSubscriber(
     public async Task OnProjectionDefinitionsChanged()
     {
         await ReadStateAsync();
-        
+
         if (_pipeline is not null)
         {
             await _pipeline.DisposeAsync();
         }
-        
+
         await HandlePipeline();
     }
 

@@ -14,10 +14,6 @@ public class with_existing_definitions : given.a_projections_manager
     void Establish()
     {
         _secondNamespace = "second-namespace";
-        _projectionFactory.Create(_eventStore, _secondNamespace, _firstDefinition, _firstReadModelDefinition)
-            .Returns(Substitute.For<IProjection>());
-        _projectionFactory.Create(_eventStore, _secondNamespace, _secondDefinition, _secondReadModelDefinition)
-            .Returns(Substitute.For<IProjection>());
     }
 
     async Task Because()

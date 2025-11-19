@@ -26,15 +26,18 @@ public class a_projections_manager : Specification
     void Establish()
     {
         _projectionFactory = Substitute.For<IProjectionFactory>();
+        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>())
+            .Returns(callInfo => Substitute.For<IProjection>());
+
         _manager = new ProjectionsManager(_projectionFactory);
         _eventStore = "event-store";
         _namespace = "namespace";
 
-        _secondDefinition = new ProjectionDefinition(
+        _firstDefinition = new ProjectionDefinition(
             ProjectionOwner.Client,
             EventSequenceId.Log,
-            "second-projection",
-            "second-read-model",
+            "first-projection",
+            "first-read-model",
             true,
             true,
             new System.Text.Json.Nodes.JsonObject(),
@@ -79,10 +82,5 @@ public class a_projections_manager : Specification
             "SecondReadModel",
             ReadModelOwner.Client,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>());
-
-        _projectionFactory.Create(_eventStore, _namespace, _firstDefinition, _firstReadModelDefinition)
-            .Returns(Substitute.For<IProjection>());
-        _projectionFactory.Create(_eventStore, _namespace, _secondDefinition, _secondReadModelDefinition)
-            .Returns(Substitute.For<IProjection>());
     }
 }
