@@ -71,6 +71,12 @@ public class ProjectionObserverSubscriber(
     public async Task OnProjectionDefinitionsChanged()
     {
         await ReadStateAsync();
+        
+        if (_pipeline is not null)
+        {
+            await _pipeline.DisposeAsync();
+        }
+        
         await HandlePipeline();
     }
 
@@ -118,11 +124,7 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
-        if (!projectionManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var projection))
-        {
-            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
-        }
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();\n        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
     }

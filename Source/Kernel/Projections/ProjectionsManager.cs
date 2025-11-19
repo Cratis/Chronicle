@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Cratis.Chronicle;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -18,7 +19,7 @@ namespace Cratis.Chronicle.Projections;
 [Singleton]
 public class ProjectionsManager(IProjectionFactory projectionFactory) : IProjectionsManager
 {
-    readonly ConcurrentDictionary<EventStoreName, ProjectionDefinition> _definitions = new();
+    readonly ConcurrentDictionary<string, ProjectionDefinition> _definitions = new();
     readonly ConcurrentDictionary<string, IProjection> _projections = new();
 
     /// <inheritdoc/>
@@ -26,12 +27,13 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     {
         foreach (var definition in definitions)
         {
-            _definitions[eventStore] = definition;
+            var definitionKey = $"{eventStore}{KeyHelper.Separator}{definition.Identifier}";
+            _definitions[definitionKey] = definition;
             var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
             foreach (var @namespace in namespaces)
             {
                 var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
-                var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
+                var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
                 _projections[key] = projection;
             }
         }
@@ -40,7 +42,8 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions)
     {
-        foreach (var definition in _definitions.Values)
+        var definitionsForEventStore = _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}+")).Select(kvp => kvp.Value);
+        foreach (var definition in definitionsForEventStore)
         {
             var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
             var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
