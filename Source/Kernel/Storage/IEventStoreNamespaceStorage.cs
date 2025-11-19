@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSeeding;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
@@ -73,6 +74,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IReplayedModelsStorage"/> for the event store namespace.
     /// </summary>
     IReplayedModelsStorage ReplayedModels { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSeedingStorage"/> for the event store namespace.
+    /// </summary>
+    IEventSeedingStorage EventSeeding { get; }
 
     /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.

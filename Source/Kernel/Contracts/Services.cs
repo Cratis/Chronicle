@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.Contracts.EventSeeding;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
@@ -33,6 +34,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
+/// <param name="EventSeeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="server"><see cref="IServer"/> instance.</param>
 public sealed record Services(
     IEventStores EventStores,
@@ -49,4 +51,5 @@ public sealed record Services(
     IProjections Projections,
     IReadModels ReadModels,
     IJobs Jobs,
+    IEventSeeding EventSeeding,
     IServer server) : IServices;

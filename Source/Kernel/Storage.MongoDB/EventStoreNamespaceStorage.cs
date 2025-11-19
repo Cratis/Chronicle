@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSeeding;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
@@ -17,6 +18,7 @@ using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Changes;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
+using Cratis.Chronicle.Storage.MongoDB.EventSeeding;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
@@ -100,6 +102,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
+        EventSeeding = new EventSeedingStorage(eventStoreNamespaceDatabase);
 
         _converter = new EventConverter(
             eventStore,
@@ -142,6 +145,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IReplayedModelsStorage ReplayedModels { get; }
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

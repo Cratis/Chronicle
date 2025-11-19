@@ -1,0 +1,20 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Contracts.EventSeeding;
+
+/// <summary>
+/// Defines the contract for event seeding operations.
+/// </summary>
+[Service]
+public interface IEventSeeding
+{
+    /// <summary>
+    /// Seed events into the event store.
+    /// </summary>
+    /// <param name="request">The <see cref="SeedRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="SeedResponse"/>.</returns>
+    [Operation]
+    Task<SeedResponse> Seed(SeedRequest request, CallContext context = default);
+}

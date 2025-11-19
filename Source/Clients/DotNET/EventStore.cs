@@ -8,6 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSeeding;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -170,6 +171,13 @@ public class EventStore : IEventStore
             rulesProjections.ReadModels,
             schemaGenerator);
 
+        Seeding = new EventSeeding.EventSeeding(
+            eventStoreName,
+            @namespace,
+            connection,
+            EventTypes,
+            _eventSerializer);
+
         AggregateRootFactory = new AggregateRootFactory(
             this,
             new AggregateRootMutatorFactory(
@@ -228,6 +236,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IReadModels ReadModels { get; }
+
+    /// <inheritdoc/>
+    public IEventSeeding Seeding { get; }
 
     /// <inheritdoc/>
     public async Task DiscoverAll()

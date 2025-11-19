@@ -5,6 +5,7 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSeeding;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
@@ -90,6 +91,11 @@ public interface IEventStore
     /// Gets the <see cref="IReadModels"/> for the event store.
     /// </summary>
     IReadModels ReadModels { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSeeding"/> for the event store.
+    /// </summary>
+    IEventSeeding Seeding { get; }
 
     /// <summary>
     /// Discover all artifacts for the event store.
