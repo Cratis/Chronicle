@@ -18,6 +18,8 @@ public class EventSeeding : IEventSeeding
     readonly IChronicleConnection _connection;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
+    readonly IClientArtifactsProvider _clientArtifactsProvider;
+    readonly IServiceProvider _serviceProvider;
     readonly List<SeedingEntry> _entries = [];
 
     /// <summary>
@@ -28,18 +30,24 @@ public class EventSeeding : IEventSeeding
     /// <param name="connection">The Chronicle connection.</param>
     /// <param name="eventTypes">The event types.</param>
     /// <param name="eventSerializer">The event serializer.</param>
+    /// <param name="clientArtifactsProvider">The client artifacts provider.</param>
+    /// <param name="serviceProvider">The service provider.</param>
     public EventSeeding(
         EventStoreName eventStoreName,
         EventStoreNamespaceName @namespace,
         IChronicleConnection connection,
         IEventTypes eventTypes,
-        IEventSerializer eventSerializer)
+        IEventSerializer eventSerializer,
+        IClientArtifactsProvider clientArtifactsProvider,
+        IServiceProvider serviceProvider)
     {
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
         _connection = connection;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
+        _clientArtifactsProvider = clientArtifactsProvider;
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc/>
@@ -99,6 +107,25 @@ public class EventSeeding : IEventSeeding
             });
 
         _entries.Clear();
+    }
+
+    /// <summary>
+    /// Discovers and invokes all registered event seeders.
+    /// </summary>
+    /// <param name="cancellationToken">Optional cancellation token.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task DiscoverAndSeed(CancellationToken cancellationToken = default)
+    {
+        foreach (var seederType in _clientArtifactsProvider.EventSeeders)
+        {
+            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
+            if (seeder != null)
+            {
+                seeder.Seed(this);
+            }
+        }
+
+        await Apply(cancellationToken);
     }
 
     record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event);

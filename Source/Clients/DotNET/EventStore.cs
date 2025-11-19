@@ -176,7 +176,9 @@ public class EventStore : IEventStore
             @namespace,
             connection,
             EventTypes,
-            _eventSerializer);
+            _eventSerializer,
+            clientArtifactsProvider,
+            serviceProvider);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
