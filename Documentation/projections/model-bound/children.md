@@ -14,24 +14,29 @@ public record Order(
     [Key]
     Guid OrderId,
 
-    [ChildrenFrom<LineItemAdded>(
-        key: nameof(LineItemAdded.ItemId),
-        identifiedBy: nameof(LineItem.Id))]
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
     IEnumerable<LineItem> Items);
 
 public record LineItem(
-    [Key] Guid Id,
+    [Key] Guid Id,  // Chronicle automatically discovers this as the key
     string ProductName,
     int Quantity,
     decimal Price);
 ```
 
+In this example, the `[Key]` attribute on the `LineItem.Id` property is automatically discovered by Chronicle, so you don't need to specify `identifiedBy` explicitly in the `ChildrenFrom` attribute.
+
 ### Parameters
 
 - **key** (optional): Property on the event that identifies the child. Defaults to `EventSourceId`
-- **identifiedBy** (optional): Property on the child model that identifies it. Defaults to `Id`
+- **identifiedBy** (optional): Property on the child model that identifies it. If not specified, Chronicle will:
+  1. Look for a property with the `[Key]` attribute
+  2. Look for a property named `Id` (case-insensitive)
+  3. Fall back to `EventSourceId` if neither is found
 - **parentKey** (optional): Property that identifies the parent. Defaults to `EventSourceId`
 - **autoMap** (optional): Whether to automatically map matching properties from the event to the child model. Defaults to `true`
+
+> **Note**: With automatic key discovery, you typically don't need to specify `identifiedBy` explicitly. Just mark your child model's key property with `[Key]` attribute, or name it `Id`, and Chronicle will automatically discover it.
 
 ### Auto-Mapping
 

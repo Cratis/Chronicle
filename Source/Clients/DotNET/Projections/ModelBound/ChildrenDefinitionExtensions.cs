@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
@@ -45,9 +46,15 @@ static class ChildrenDefinitionExtensions
         var autoMapProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.AutoMap));
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
-        var identifiedBy = identifiedByProperty?.GetValue(attr) as string ?? WellKnownExpressions.Id;
         var parentKey = parentKeyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
         var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
+
+        var childType = GetChildType(memberType);
+        var identifiedBy = identifiedByProperty?.GetValue(attr) as string;
+        if (string.IsNullOrEmpty(identifiedBy))
+        {
+            identifiedBy = DiscoverKeyPropertyName(childType);
+        }
 
         if (!definition.Children.TryGetValue(propertyName, out var childrenDef))
         {
@@ -72,7 +79,6 @@ static class ChildrenDefinitionExtensions
             Properties = new Dictionary<string, string>()
         };
 
-        var childType = GetChildType(memberType);
         if (childType is not null)
         {
             // If autoMap is enabled, map matching properties from event to child model
@@ -104,5 +110,41 @@ static class ChildrenDefinitionExtensions
             .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
 
         return enumerableInterface?.GetGenericArguments()[0];
+    }
+
+    static string DiscoverKeyPropertyName(Type? childType)
+    {
+        if (childType is null)
+        {
+            return WellKnownExpressions.EventSourceId;
+        }
+
+        var properties = childType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+        var keyProperty = properties.FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>(true) is not null);
+        if (keyProperty is not null)
+        {
+            return keyProperty.Name;
+        }
+
+        // Check constructor parameters for record types
+        var constructor = childType.GetConstructors().FirstOrDefault();
+        if (constructor is not null)
+        {
+            var keyParameter = constructor.GetParameters().FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>(true) is not null);
+            if (keyParameter is not null)
+            {
+                // Convert parameter name to property name (capitalize first letter)
+                return char.ToUpperInvariant(keyParameter.Name![0]) + keyParameter.Name.Substring(1);
+            }
+        }
+
+        var idProperty = properties.FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
+        if (idProperty is not null)
+        {
+            return idProperty.Name;
+        }
+
+        return WellKnownExpressions.EventSourceId;
     }
 }
