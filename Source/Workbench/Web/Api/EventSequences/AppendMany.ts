@@ -8,6 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
+import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 import { EventToAppend } from './EventToAppend';
@@ -41,6 +42,15 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/append-many';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendManyValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('eventSequenceId', String),
+        new PropertyDescriptor('eventSourceId', String),
+        new PropertyDescriptor('events', EventToAppend),
+        new PropertyDescriptor('causation', Causation),
+        new PropertyDescriptor('causedBy', Identity),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;

@@ -8,6 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
+import { PropertyDescriptor } from '@cratis/applications/reflection';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-stores/add');
@@ -26,6 +27,9 @@ export class AddEventStore extends Command<IAddEventStore> implements IAddEventS
     readonly route: string = '/api/event-stores/add';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AddEventStoreValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('name', String),
+    ];
 
     private _name!: string;
 

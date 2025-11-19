@@ -8,6 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
+import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { EventTypeRegistration } from './EventTypeRegistration';
 import Handlebars from 'handlebars';
 
@@ -29,6 +30,10 @@ export class Register extends Command<IRegister> implements IRegister {
     readonly route: string = '/api/event-store/{eventStore}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RegisterValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('types', EventTypeRegistration),
+    ];
 
     private _eventStore!: string;
     private _types!: EventTypeRegistration[];
