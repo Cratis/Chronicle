@@ -2,19 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Domain;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Events;
+using Cratis.Chronicle.Integration.Specifications.AggregateRoots.ActorBased.Domain;
+using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Events;
 using Cratis.Chronicle.Orleans.Aggregates;
 using Cratis.Chronicle.Transactions;
 
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Scenarios.given;
+namespace Cratis.Chronicle.Integration.Specifications.AggregateRoots.ActorBased.Scenarios.given;
 
-public class an_aggregate_root_with_state<TAggregate, TInternalState>(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+public class an_aggregate_root_with_state<TAggregate, TInternalState>(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     where TAggregate : IIntegrationTestAggregateRoot<TInternalState>
     where TInternalState : class
 {
 #pragma warning disable CA2213 // Disposable fields should be disposed
-    protected ChronicleInProcessFixture ChronicleInProcessFixture = chronicleInProcessFixture;
+    protected ChronicleFixture ChronicleFixture = chronicleFixture;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
     public TInternalState ResultState;

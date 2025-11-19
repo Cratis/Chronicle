@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Events;
+using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
+using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Events;
 using AggregateRoot = Cratis.Chronicle.Orleans.Aggregates.AggregateRoot;
 using IAggregateRootFactory = Cratis.Chronicle.Orleans.Aggregates.IAggregateRootFactory;
 
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased.Domain;
+namespace Cratis.Chronicle.Integration.Specifications.AggregateRoots.ActorBased.Domain;
 
 public class User(IAggregateRootFactory aggregateRootFactory) : AggregateRoot, IUser
 {

@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Orleans.Aggregates;
 
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots.ActorBased;
+namespace Cratis.Chronicle.Integration.Specifications.AggregateRoots.ActorBased;
 
 public interface IIntegrationTestAggregateRoot<TInternalState> : IAggregateRoot
     where TInternalState : class

@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
     </ItemGroup>
 
     <Target Name="BuildDependencies">
