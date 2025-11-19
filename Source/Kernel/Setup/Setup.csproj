@@ -10,6 +10,7 @@
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" Condition="'$(TargetFramework)' == 'net10.0'" />
         <PackageReference Include="NJsonSchema"  />
     </ItemGroup>
 
