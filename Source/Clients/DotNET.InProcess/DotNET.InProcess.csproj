@@ -106,6 +106,7 @@
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" Condition="'$(TargetFramework)' == 'net10.0'" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="OneOf" />
         <PackageReference Include="protobuf-net.Grpc" />
