@@ -23,7 +23,7 @@ public static class ReadModelServiceCollectionExtensions
     /// <returns>The service collection for continuation.</returns>
     public static IServiceCollection AddReadModels(this IServiceCollection services, IClientArtifactsProvider clientArtifactsProvider)
     {
-        var readModelTypes = clientArtifactsProvider.Projections
+        var readModelTypesFromProjections = clientArtifactsProvider.Projections
             .Select(projectionType =>
             {
                 var projectionInterface = projectionType.GetInterfaces()
@@ -31,7 +31,14 @@ public static class ReadModelServiceCollectionExtensions
                 return projectionInterface?.GetGenericArguments()[0];
             })
             .Where(type => type?.IsClass == true && !type.IsAbstract)
-            .Cast<Type>()
+            .Cast<Type>();
+
+        var modelBoundReadModels = clientArtifactsProvider.ModelBoundProjections
+            .Where(type => type.IsClass && !type.IsAbstract);
+
+        var readModelTypes = readModelTypesFromProjections
+            .Concat(modelBoundReadModels)
+            .Distinct()
             .ToArray();
 
         foreach (var readModelType in readModelTypes)
