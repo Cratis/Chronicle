@@ -25,7 +25,7 @@ public class SingleEventCommandResponseValueHandler(IEventLog eventLog, IEventTy
     {
         var eventSourceId = commandContext.GetEventSourceId();
         var concurrencyScope = ConcurrencyScopeBuilder.BuildFromCommandContext(commandContext);
-        await eventLog.Append(
+        var result = await eventLog.Append(
             eventSourceId,
             value,
             commandContext.GetEventStreamType(),
@@ -33,6 +33,11 @@ public class SingleEventCommandResponseValueHandler(IEventLog eventLog, IEventTy
             commandContext.GetEventSourceType(),
             correlationId: default,
             concurrencyScope: concurrencyScope);
+
+        if (!result.IsSuccess)
+        {
+            return result.ToCommandResult();
+        }
         return CommandResult.Success(commandContext.CorrelationId);
     }
 }

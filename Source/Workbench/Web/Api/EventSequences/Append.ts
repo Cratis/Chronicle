@@ -8,6 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
+import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { Causation } from '../Auditing/Causation';
 import { EventType } from '../Events/EventType';
 import { Identity } from '../Identities/Identity';
@@ -47,6 +48,18 @@ export class Append extends Command<IAppend> implements IAppend {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('eventSequenceId', String),
+        new PropertyDescriptor('eventSourceId', String),
+        new PropertyDescriptor('eventStreamType', String),
+        new PropertyDescriptor('eventStreamId', String),
+        new PropertyDescriptor('eventType', EventType),
+        new PropertyDescriptor('content', Object),
+        new PropertyDescriptor('causation', Causation),
+        new PropertyDescriptor('causedBy', Identity),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;

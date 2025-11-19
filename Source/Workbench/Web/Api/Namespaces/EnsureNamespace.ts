@@ -8,6 +8,7 @@
 import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
+import { PropertyDescriptor } from '@cratis/applications/reflection';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namespaces');
@@ -28,6 +29,10 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
     readonly route: string = '/api/event-store/{eventStore}/namespaces';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new EnsureNamespaceValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;

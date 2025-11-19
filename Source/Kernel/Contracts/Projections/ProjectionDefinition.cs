@@ -75,8 +75,8 @@ public class ProjectionDefinition
     /// <summary>
     /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
-    [ProtoMember(11)]
-    public FromEveryDefinition All { get; set; }
+    [ProtoMember(11, IsRequired = true)]
+    public FromEveryDefinition All { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.

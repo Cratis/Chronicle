@@ -67,6 +67,71 @@ public record UserProfile(
 
 Properties are matched by name. If an event doesn't have a matching property, that property is skipped for that event.
 
+## Custom Key Specification
+
+By default, `FromEvent` uses the event source identifier to identify which read model instance to update. You can specify a different property from the event to use as the key:
+
+```csharp
+[FromEvent<UserRegistered>(key: nameof(UserRegistered.UserId))]
+public record User(
+    [Key]
+    Guid Id,
+
+    string Name,
+    string Email);
+```
+
+This is equivalent to using `.UsingKey()` in declarative projections:
+
+```csharp
+public class UserProjection : IProjectionFor<User>
+{
+    public void Define(IProjectionBuilderFor<User> builder) => builder
+        .AutoMap()
+        .From<UserRegistered>(_ => _
+            .UsingKey(e => e.UserId));
+}
+```
+
+### When to Use Custom Keys
+
+Use the `key` parameter when:
+
+1. **Event source ID doesn't match read model key**: The event's natural identifier differs from the event source ID
+2. **Multiple instances per source**: A single event source creates multiple read model instances
+3. **Cross-aggregate projections**: Events from one aggregate update read models keyed by a different aggregate
+
+### Example with Custom Key
+
+```csharp
+[EventType]
+public record OrderLineItemAdded(
+    Guid OrderId,      // Key for the Order read model
+    Guid LineItemId,   // Key for individual line items
+    string ProductName,
+    int Quantity,
+    decimal Price);
+
+// Order projection using OrderId as key
+[FromEvent<OrderLineItemAdded>(key: nameof(OrderLineItemAdded.OrderId))]
+public record Order(
+    [Key]
+    Guid Id,
+
+    // Properties auto-mapped from OrderLineItemAdded
+    decimal TotalAmount);
+```
+
+### Key Validation
+
+The key property must exist on the event type. If you specify a non-existent property, you'll get a compile-time error:
+
+```csharp
+// ❌ This will throw InvalidPropertyForType exception
+[FromEvent<UserRegistered>(key: "NonExistentProperty")]
+public record User([Key] Guid Id, string Name);
+```
+
 ## Mixing Convention and Explicit Mapping
 
 You can combine `FromEvent` with explicit property attributes:

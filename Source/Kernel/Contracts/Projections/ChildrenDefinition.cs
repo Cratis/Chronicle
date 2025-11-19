@@ -38,8 +38,8 @@ public class ChildrenDefinition
     /// <summary>
     /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
-    [ProtoMember(5)]
-    public FromEveryDefinition All { get; set; }
+    [ProtoMember(5, IsRequired = true)]
+    public FromEveryDefinition All { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
