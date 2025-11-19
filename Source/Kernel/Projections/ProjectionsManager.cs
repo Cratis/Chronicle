@@ -42,8 +42,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions)
     {
-        var definitionsForEventStore = _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(kvp => kvp.Value);
-        foreach (var definition in definitionsForEventStore)
+        foreach (var definition in _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(kvp => kvp.Value))
         {
             var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
             var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
