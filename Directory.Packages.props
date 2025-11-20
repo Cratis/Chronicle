@@ -15,7 +15,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.2.3" />
