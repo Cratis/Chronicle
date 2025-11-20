@@ -4,11 +4,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
-using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Seeding;
 using Microsoft.Extensions.Logging;
@@ -23,8 +23,8 @@ namespace Cratis.Chronicle.Grains.Seeding;
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSeeding)]
 public class EventSeeding(
-    [PersistentState(nameof(EventSeedingData), WellKnownGrainStorageProviders.EventSeeding)]
-    IPersistentState<EventSeedingData> state,
+    [PersistentState(nameof(EventSeeds), WellKnownGrainStorageProviders.EventSeeding)]
+    IPersistentState<EventSeeds> state,
     ILogger<EventSeeding> logger) : Grain, IEventSeeding
 {
     EventSeedingKey _key = EventSeedingKey.NotSet;
@@ -53,9 +53,7 @@ public class EventSeeding(
         // Initialize storage if needed
         if (state.State == null!)
         {
-            state.State = new EventSeedingData(
-                _key.EventStore,
-                _key.Namespace,
+            state.State = new EventSeeds(
                 new Dictionary<EventTypeId, IList<SeededEventEntry>>(),
                 new Dictionary<EventSourceId, IList<SeededEventEntry>>());
         }
@@ -138,17 +136,21 @@ public class EventSeeding(
     void TrackSeededEvent(SeededEventEntry entry)
     {
         // Track by event type
-        if (!state.State.ByEventType.ContainsKey(entry.EventTypeId))
+        if (!state.State.ByEventType.TryGetValue(entry.EventTypeId, out var value))
         {
-            state.State.ByEventType[entry.EventTypeId] = new List<SeededEventEntry>();
+            value = new List<SeededEventEntry>();
+            state.State.ByEventType[entry.EventTypeId] = value;
         }
-        state.State.ByEventType[entry.EventTypeId].Add(entry);
+
+        value.Add(entry);
 
         // Track by event source
-        if (!state.State.ByEventSource.ContainsKey(entry.EventSourceId))
+        if (!state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var value))
         {
-            state.State.ByEventSource[entry.EventSourceId] = new List<SeededEventEntry>();
+            value = new List<SeededEventEntry>();
+            state.State.ByEventSource[entry.EventSourceId] = value;
         }
-        state.State.ByEventSource[entry.EventSourceId].Add(entry);
+
+        value.Add(entry);
     }
 }

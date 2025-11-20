@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Grains.Seeding.for_EventSeeding.given;
 public class an_event_seeding_grain
 {
     protected EventSeeding _grain;
-    protected IPersistentState<EventSeedingData> _state;
+    protected IPersistentState<EventSeeds> _state;
     protected IEventSequence _eventSequence;
     protected EventSeedingKey _key;
     protected ILogger<EventSeeding> _logger;
@@ -22,13 +22,11 @@ public class an_event_seeding_grain
     protected void Establish()
     {
         _key = new EventSeedingKey("TestEventStore", "TestNamespace");
-        _state = Substitute.For<IPersistentState<EventSeedingData>>();
+        _state = Substitute.For<IPersistentState<EventSeeds>>();
         _eventSequence = Substitute.For<IEventSequence>();
         _logger = Substitute.For<ILogger<EventSeeding>>();
 
-        _state.State.Returns(new EventSeedingData(
-            _key.EventStore,
-            _key.Namespace,
+        _state.State.Returns(new EventSeeds(
             new Dictionary<EventTypeId, IList<SeededEventEntry>>(),
             new Dictionary<EventSourceId, IList<SeededEventEntry>>()));
 

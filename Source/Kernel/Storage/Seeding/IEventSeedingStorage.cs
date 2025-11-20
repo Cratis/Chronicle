@@ -11,13 +11,13 @@ public interface IEventSeedingStorage
     /// <summary>
     /// Get the seeding data.
     /// </summary>
-    /// <returns><see cref="EventSeedingData"/>.</returns>
-    Task<EventSeedingData> Get();
+    /// <returns><see cref="EventSeeds"/>.</returns>
+    Task<EventSeeds> Get();
 
     /// <summary>
     /// Save the seeding data.
     /// </summary>
-    /// <param name="data"><see cref="EventSeedingData"/> to save.</param>
+    /// <param name="data"><see cref="EventSeeds"/> to save.</param>
     /// <returns>Awaitable task.</returns>
-    Task Save(EventSeedingData data);
+    Task Save(EventSeeds data);
 }

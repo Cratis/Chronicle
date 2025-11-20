@@ -9,7 +9,7 @@ using Orleans.Storage;
 namespace Cratis.Chronicle.Grains.Seeding;
 
 /// <summary>
-/// Represents an implementation of <see cref="IGrainStorage"/> for <see cref="EventSeedingData"/>.
+/// Represents an implementation of <see cref="IGrainStorage"/> for <see cref="EventSeeds"/>.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
@@ -25,7 +25,7 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var key = EventSeedingKey.Parse(grainId.Key.ToString()!);
-        var actualGrainState = (grainState as IGrainState<EventSeedingData>)!;
+        var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
         var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
         actualGrainState.State = await eventSeedingStorage.Get();
@@ -35,7 +35,7 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var key = EventSeedingKey.Parse(grainId.Key.ToString()!);
-        var actualGrainState = (grainState as IGrainState<EventSeedingData>)!;
+        var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
         var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
         await eventSeedingStorage.Save(actualGrainState.State);

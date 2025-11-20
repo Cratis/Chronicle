@@ -12,23 +12,20 @@ namespace Cratis.Chronicle.Storage.MongoDB.Seeding;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
 public class EventSeedingStorage(IEventStoreNamespaceDatabase database) : IEventSeedingStorage
 {
-    IMongoCollection<EventSeedingData> Collection => database.GetCollection<EventSeedingData>(WellKnownCollectionNames.EventSeeding);
+    IMongoCollection<EventSeeds> Collection => database.GetCollection<EventSeeds>(WellKnownCollectionNames.EventSeeding);
 
     /// <inheritdoc/>
-    public async Task<EventSeedingData> Get()
+    public async Task<EventSeeds> Get()
     {
-        var filter = Builders<EventSeedingData>.Filter.Empty;
+        var filter = Builders<EventSeeds>.Filter.Empty;
         using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        var result = cursor.FirstOrDefault();
-
-        // Return result even if null, grain will handle initialization
-        return result!;
+        return cursor.FirstOrDefault();
     }
 
     /// <inheritdoc/>
-    public async Task Save(EventSeedingData data)
+    public async Task Save(EventSeeds data)
     {
-        var filter = Builders<EventSeedingData>.Filter.Empty;
+        var filter = Builders<EventSeeds>.Filter.Empty;
         await Collection.ReplaceOneAsync(filter, data, new ReplaceOptions { IsUpsert = true });
     }
 }
