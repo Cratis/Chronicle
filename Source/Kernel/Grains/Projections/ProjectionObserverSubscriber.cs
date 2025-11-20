@@ -28,14 +28,12 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
 /// </remarks>
-/// <param name="projectionManager"><see cref="Chronicle.Projections.IProjectionsManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
-    Chronicle.Projections.IProjectionsManager projectionManager,
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
@@ -71,12 +69,6 @@ public class ProjectionObserverSubscriber(
     public async Task OnProjectionDefinitionsChanged()
     {
         await ReadStateAsync();
-
-        if (_pipeline is not null)
-        {
-            await _pipeline.DisposeAsync();
-        }
-
         await HandlePipeline();
     }
 
@@ -124,7 +116,8 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();\n        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
+        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
     }
