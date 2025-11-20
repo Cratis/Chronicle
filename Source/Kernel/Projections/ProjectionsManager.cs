@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Cratis.Chronicle;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
