@@ -5,6 +5,7 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
@@ -75,6 +76,9 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; private set; } = [];
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventTypeMigrators { get; private set; } = [];
+
+    /// <inheritdoc/>
     public void Initialize()
     {
         if (_initialized) return;
@@ -100,6 +104,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         ConstraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
         UniqueConstraints = EventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
         UniqueEventTypeConstraints = EventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
+        EventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
 
         _initialized = true;
     }
