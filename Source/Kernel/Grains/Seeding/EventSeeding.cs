@@ -42,7 +42,7 @@ public class EventSeeding(
     /// <inheritdoc/>
     public async Task Seed(IEnumerable<SeedingEntry> entries)
     {
-        logger.LogInformation("Seeding events for event store '{EventStore}' in namespace '{Namespace}'", _key.EventStore, _key.Namespace);
+        logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
 
         var entriesList = entries.ToList();
         if (entriesList.Count == 0)
@@ -90,7 +90,7 @@ public class EventSeeding(
         // Append all new events in one operation if there are any
         if (eventsToAppend.Count > 0)
         {
-            logger.LogInformation("Appending {Count} new seeded events", eventsToAppend.Count);
+            logger.AppendingSeededEvents(eventsToAppend.Count);
 
             await _eventSequence.AppendMany(
                 eventsToAppend,
@@ -104,7 +104,7 @@ public class EventSeeding(
         }
         else
         {
-            logger.LogInformation("All events have already been seeded, skipping");
+            logger.AllEventsAlreadySeeded();
         }
     }
 
