@@ -11,4 +11,5 @@ This section contains different recipes for different aspects of Cratis:
 | [Constraints](./constraints.md) | How to define constraints to maintain data integrity |
 | [Custom Rules](./rules/extending-rules.md) | How to create your own custom rules to be applied in your domain. |
 | [Configuration](./configuration/index.md) | How to configure Chronicle for different scenarios and environments |
-| [Docker Compose](./docker-compose.md) | How to use docker compose with Cratis. |
+| [Event Seeding](./event-seeding.md) | How to seed your event store with predefined events. |
+| [Docker Compose](./docker-compose.md) | How to use docker compose with Cratis Chronicle. |
