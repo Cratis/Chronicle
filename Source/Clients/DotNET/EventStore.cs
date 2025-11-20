@@ -254,7 +254,8 @@ public class EventStore : IEventStore
             Constraints.Discover(),
             Reactors.Discover(),
             Reducers.Discover(),
-            Projections.Discover());
+            Projections.Discover(),
+            Seeding.Discover());
     }
 
     /// <inheritdoc/>
@@ -271,7 +272,8 @@ public class EventStore : IEventStore
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register());
+            Projections.Register(),
+            Seeding.Register());
     }
 
     /// <inheritdoc/>

@@ -74,8 +74,23 @@ public class EventSeeding : IEventSeeding
     }
 
     /// <inheritdoc/>
-    public async Task Apply(CancellationToken cancellationToken = default)
+    public Task Discover()
     {
+        // Discovery happens through IClientArtifactsProvider, no additional work needed here
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task Register()
+    {
+        // Invoke all discovered seeders
+        foreach (var seederType in _clientArtifactsProvider.EventSeeders)
+        {
+            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
+            seeder?.Seed(this);
+        }
+
+        // Send all collected entries to the server
         if (_entries.Count == 0)
         {
             return;
@@ -107,25 +122,6 @@ public class EventSeeding : IEventSeeding
             });
 
         _entries.Clear();
-    }
-
-    /// <summary>
-    /// Discovers and invokes all registered event seeders.
-    /// </summary>
-    /// <param name="cancellationToken">Optional cancellation token.</param>
-    /// <returns>Awaitable task.</returns>
-    public async Task DiscoverAndSeed(CancellationToken cancellationToken = default)
-    {
-        foreach (var seederType in _clientArtifactsProvider.EventSeeders)
-        {
-            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
-            if (seeder != null)
-            {
-                seeder.Seed(this);
-            }
-        }
-
-        await Apply(cancellationToken);
     }
 
     record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event);

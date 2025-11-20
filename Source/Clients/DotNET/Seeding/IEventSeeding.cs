@@ -9,9 +9,14 @@ namespace Cratis.Chronicle.Seeding;
 public interface IEventSeeding : IEventSeedingBuilder
 {
     /// <summary>
-    /// Discovers and invokes all registered event seeders.
+    /// Discovers all registered event seeders.
     /// </summary>
-    /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>Awaitable task.</returns>
-    Task DiscoverAndSeed(CancellationToken cancellationToken = default);
+    Task Discover();
+
+    /// <summary>
+    /// Registers all discovered event seeders by invoking them and sending seed data to the server.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Register();
 }

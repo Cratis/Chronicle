@@ -27,11 +27,4 @@ public interface IEventSeedingBuilder
     /// <param name="events">Collection of events to seed.</param>
     /// <returns>The builder for continuation.</returns>
     IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events);
-
-    /// <summary>
-    /// Apply the seeding to the event store.
-    /// </summary>
-    /// <param name="cancellationToken">Optional cancellation token.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Apply(CancellationToken cancellationToken = default);
 }

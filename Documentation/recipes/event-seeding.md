@@ -4,38 +4,11 @@ Event seeding allows you to populate your event store with predefined data durin
 
 ## Basic Usage
 
-Chronicle provides a fluent API for seeding events through the `IEventStore.Seeding` property.
+Chronicle provides a fluent API for seeding events through declarative classes that implement `ICanSeedEvents`. These are automatically discovered and invoked when your application starts.
 
-### Seeding Events by Type
+### Declarative Seeding with ICanSeedEvents
 
-When you want to seed multiple events of the same type for a specific event source:
-
-```csharp
-await eventStore.Seeding
-    .For<UserRegistered>("user-123", [
-        new("john@example.com", "John"),
-        new("jane@example.com", "Jane")
-    ])
-    .Apply();
-```
-
-### Seeding Mixed Event Types
-
-When you want to seed different event types for the same event source:
-
-```csharp
-await eventStore.Seeding
-    .ForEventSource("user-123", [
-        new UserRegistered("john@example.com", "John"),
-        new EmailVerified("john@example.com"),
-        new ProfileUpdated("John Doe")
-    ])
-    .Apply();
-```
-
-## Declarative Seeding with ICanSeedEvents
-
-For more organized seeding, implement the `ICanSeedEvents` interface. Chronicle will automatically discover and invoke these seeders:
+Implement the `ICanSeedEvents` interface to define your seed data. Chronicle will automatically discover and invoke these seeders on startup:
 
 ```csharp
 public class UserSeeding : ICanSeedEvents
@@ -54,10 +27,27 @@ public class UserSeeding : ICanSeedEvents
 }
 ```
 
-To trigger automatic discovery and seeding:
+### Seeding Events by Type
+
+When you want to seed multiple events of the same type for a specific event source:
 
 ```csharp
-await eventStore.Seeding.DiscoverAndSeed();
+builder.For<UserRegistered>("user-123", [
+    new("john@example.com", "John"),
+    new("jane@example.com", "Jane")
+]);
+```
+
+### Seeding Mixed Event Types
+
+When you want to seed different event types for the same event source:
+
+```csharp
+builder.ForEventSource("user-123", [
+    new UserRegistered("john@example.com", "John"),
+    new EmailVerified("john@example.com"),
+    new ProfileUpdated("John Doe")
+]);
 ```
 
 ## Development-Only Seeding
@@ -76,14 +66,6 @@ public class DevelopmentSeeding : ICanSeedEvents
             ]);
     }
 }
-#endif
-```
-
-You can also conditionally invoke seeding in your application startup:
-
-```csharp
-#if DEBUG
-await eventStore.Seeding.DiscoverAndSeed();
 #endif
 ```
 
@@ -119,13 +101,15 @@ public class OrderDevelopmentSeeding : ICanSeedEvents
 
 ## How It Works
 
-1. **Deduplication**: Chronicle tracks which events have been seeded and won't seed them again, making it safe to run seeding multiple times.
+1. **Automatic Discovery**: Classes implementing `ICanSeedEvents` are automatically discovered using the same mechanism as projections and reactors during application startup.
 
-2. **Automatic Discovery**: Classes implementing `ICanSeedEvents` are automatically discovered using the same mechanism as projections and reactors.
+2. **Automatic Registration**: Discovered seeders are automatically invoked when the event store connects, and the seed data is sent to the server.
 
-3. **Batch Operations**: All events are appended in a single batch operation for optimal performance.
+3. **Deduplication**: Chronicle tracks which events have been seeded and won't seed them again, making it safe to run seeding multiple times.
 
-4. **Per Namespace**: Seeding data is tracked per event store and namespace, so different namespaces can have different seed data.
+4. **Batch Operations**: All events are appended in a single batch operation for optimal performance.
+
+5. **Per Namespace**: Seeding data is tracked per event store and namespace, so different namespaces can have different seed data.
 
 ## Best Practices
 
@@ -178,16 +162,4 @@ public class ProductCatalogSeeding : ICanSeedEvents
 #endif
 ```
 
-In your application startup (e.g., `Program.cs`):
-
-```csharp
-var app = builder.Build();
-
-#if DEBUG
-// Automatically discover and seed all development data
-var eventStore = app.Services.GetRequiredService<IEventStore>();
-await eventStore.Seeding.DiscoverAndSeed();
-#endif
-
-await app.RunAsync();
-```
+That's it! No additional code is needed in your application startup - the seeding happens automatically when the event store is registered and connected.
