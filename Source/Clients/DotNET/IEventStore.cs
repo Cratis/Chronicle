@@ -5,7 +5,6 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
-using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
@@ -13,6 +12,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle;

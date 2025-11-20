@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Seeding;
-using NSubstitute;
+using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Seeding.for_EventSeeding;
 
@@ -21,8 +20,8 @@ public class when_adding_events_with_for_event_source : Specification
         var clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
         var serviceProvider = Substitute.For<IServiceProvider>();
 
-        eventTypes.GetEventTypeFor(typeof(TestEvent)).Returns(new Events.EventType("test-event", 1));
-        eventTypes.GetEventTypeFor(typeof(AnotherTestEvent)).Returns(new Events.EventType("another-test-event", 1));
+        eventTypes.GetEventTypeFor(typeof(TestEvent)).Returns(new EventType("test-event", 1));
+        eventTypes.GetEventTypeFor(typeof(AnotherTestEvent)).Returns(new EventType("another-test-event", 1));
 
         _seeding = new EventSeeding(
             "TestEventStore",

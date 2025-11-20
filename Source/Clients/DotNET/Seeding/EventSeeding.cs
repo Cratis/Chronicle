@@ -11,44 +11,33 @@ namespace Cratis.Chronicle.Seeding;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSeeding"/>.
 /// </summary>
-public class EventSeeding : IEventSeeding
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSeeding"/> class.
+/// </remarks>
+/// <param name="eventStoreName">The event store name.</param>
+/// <param name="namespace">The namespace.</param>
+/// <param name="connection">The Chronicle connection.</param>
+/// <param name="eventTypes">The event types.</param>
+/// <param name="eventSerializer">The event serializer.</param>
+/// <param name="clientArtifactsProvider">The client artifacts provider.</param>
+/// <param name="serviceProvider">The service provider.</param>
+public class EventSeeding(
+    EventStoreName eventStoreName,
+    EventStoreNamespaceName @namespace,
+    IChronicleConnection connection,
+    IEventTypes eventTypes,
+    IEventSerializer eventSerializer,
+    IClientArtifactsProvider clientArtifactsProvider,
+    IServiceProvider serviceProvider) : IEventSeeding
 {
-    readonly EventStoreName _eventStoreName;
-    readonly EventStoreNamespaceName _namespace;
-    readonly IChronicleConnection _connection;
-    readonly IEventTypes _eventTypes;
-    readonly IEventSerializer _eventSerializer;
-    readonly IClientArtifactsProvider _clientArtifactsProvider;
-    readonly IServiceProvider _serviceProvider;
+    readonly EventStoreName _eventStoreName = eventStoreName;
+    readonly EventStoreNamespaceName _namespace = @namespace;
+    readonly IChronicleConnection _connection = connection;
+    readonly IEventTypes _eventTypes = eventTypes;
+    readonly IEventSerializer _eventSerializer = eventSerializer;
+    readonly IClientArtifactsProvider _clientArtifactsProvider = clientArtifactsProvider;
+    readonly IServiceProvider _serviceProvider = serviceProvider;
     readonly List<SeedingEntry> _entries = [];
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventSeeding"/> class.
-    /// </summary>
-    /// <param name="eventStoreName">The event store name.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <param name="connection">The Chronicle connection.</param>
-    /// <param name="eventTypes">The event types.</param>
-    /// <param name="eventSerializer">The event serializer.</param>
-    /// <param name="clientArtifactsProvider">The client artifacts provider.</param>
-    /// <param name="serviceProvider">The service provider.</param>
-    public EventSeeding(
-        EventStoreName eventStoreName,
-        EventStoreNamespaceName @namespace,
-        IChronicleConnection connection,
-        IEventTypes eventTypes,
-        IEventSerializer eventSerializer,
-        IClientArtifactsProvider clientArtifactsProvider,
-        IServiceProvider serviceProvider)
-    {
-        _eventStoreName = eventStoreName;
-        _namespace = @namespace;
-        _connection = connection;
-        _eventTypes = eventTypes;
-        _eventSerializer = eventSerializer;
-        _clientArtifactsProvider = clientArtifactsProvider;
-        _serviceProvider = serviceProvider;
-    }
 
     /// <inheritdoc/>
     public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
@@ -76,21 +65,17 @@ public class EventSeeding : IEventSeeding
     /// <inheritdoc/>
     public Task Discover()
     {
-        // Discovery happens through IClientArtifactsProvider, no additional work needed here
+        foreach (var seederType in _clientArtifactsProvider.EventSeeders)
+        {
+            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
+            seeder?.Seed(this);
+        }
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task Register()
     {
-        // Invoke all discovered seeders
-        foreach (var seederType in _clientArtifactsProvider.EventSeeders)
-        {
-            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
-            seeder?.Seed(this);
-        }
-
-        // Send all collected entries to the server
         if (_entries.Count == 0)
         {
             return;
@@ -113,12 +98,12 @@ public class EventSeeding : IEventSeeding
             {
                 EventStore = _eventStoreName,
                 Namespace = _namespace,
-                Entries = serializedEntries.Select(e => new Contracts.Seeding.SeedingEntry
+                Entries = serializedEntries.ConvertAll(e => new Contracts.Seeding.SeedingEntry
                 {
                     EventSourceId = e.EventSourceId,
                     EventTypeId = e.EventTypeId,
                     Content = e.Content
-                }).ToList()
+                })
             });
 
         _entries.Clear();

@@ -14,7 +14,7 @@ public interface IEventSeeding
     /// </summary>
     /// <param name="request">The <see cref="SeedRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>The <see cref="SeedResponse"/>.</returns>
+    /// <returns>Awaitable task.</returns>
     [Operation]
-    Task<SeedResponse> Seed(SeedRequest request, CallContext context = default);
+    Task Seed(SeedRequest request, CallContext context = default);
 }

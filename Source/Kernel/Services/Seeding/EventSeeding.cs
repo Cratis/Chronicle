@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Services.Seeding;
 internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
 {
     /// <inheritdoc/>
-    public async Task<SeedResponse> Seed(SeedRequest request, CallContext context = default)
+    public async Task Seed(SeedRequest request, CallContext context = default)
     {
         var key = new EventSeedingKey(request.EventStore, request.Namespace);
         var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
@@ -25,7 +25,5 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             e.Content));
 
         await grain.Seed(entries);
-
-        return new SeedResponse();
     }
 }
