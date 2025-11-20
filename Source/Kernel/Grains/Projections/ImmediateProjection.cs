@@ -82,6 +82,15 @@ public class ImmediateProjection(
             projectionChanged = State.LastUpdated > _lastUpdated;
             _lastUpdated = State.LastUpdated ?? DateTimeOffset.UtcNow;
 
+            if (projectionChanged)
+            {
+                var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey!.EventStore)).GetDefinition();
+                _projection = await projectionFactory.Create(_projectionKey!.EventStore, _projectionKey!.Namespace, State, readModel);
+                _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+                _initialState = null;
+                fromSequenceNumber = EventSequenceNumber.First;
+            }
+
             var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
             var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
             var tail = await eventSequence.GetTailSequenceNumberForEventTypes(_projection!.EventTypes);
