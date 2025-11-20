@@ -1,0 +1,48 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Seeding;
+using NSubstitute;
+
+namespace Cratis.Chronicle.Seeding.for_EventSeeding;
+
+public class when_adding_events_with_for_event_source : Specification
+{
+    EventSeeding seeding;
+    EventSourceId event_source_id;
+    TestEvent first_event;
+    AnotherTestEvent second_event;
+
+    void Establish()
+    {
+        var eventTypes = Substitute.For<IEventTypes>();
+        var eventSerializer = Substitute.For<IEventSerializer>();
+        var connection = Substitute.For<Connections.IChronicleConnection>();
+        var clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
+        var serviceProvider = Substitute.For<IServiceProvider>();
+
+        eventTypes.GetEventTypeFor(typeof(TestEvent)).Returns(new Events.EventType("test-event", 1));
+        eventTypes.GetEventTypeFor(typeof(AnotherTestEvent)).Returns(new Events.EventType("another-test-event", 1));
+        
+        seeding = new EventSeeding(
+            "TestEventStore",
+            "TestNamespace",
+            connection,
+            eventTypes,
+            eventSerializer,
+            clientArtifactsProvider,
+            serviceProvider);
+
+        event_source_id = "test-source-id";
+        first_event = new TestEvent("first");
+        second_event = new AnotherTestEvent(42);
+    }
+
+    void Because() => seeding.ForEventSource(event_source_id, [first_event, second_event]);
+
+    [Fact] void should_return_builder() => seeding.ShouldBeOfExactType<EventSeeding>();
+
+    record TestEvent(string Value);
+    record AnotherTestEvent(int Number);
+}
