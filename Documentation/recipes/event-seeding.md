@@ -1,6 +1,9 @@
 # Event Seeding
 
-Event seeding allows you to populate your event store with predefined data during development. This is particularly useful when developing and testing features, as you can quickly restore a known state after clearing databases.
+Event seeding allows you to populate your event store with predefined data. This can be useful for production scenarios were you want to
+ship your solution with events predefined that needs to be there for the system to work.
+
+For local development this can be particularly useful, as you can quickly restore a known state after clearing your event store.
 
 ## Basic Usage
 
@@ -52,7 +55,8 @@ builder.ForEventSource("user-123", [
 
 ## Development-Only Seeding
 
-**Important**: Event seeding should only be used during development. Use conditional compilation to ensure seeding code doesn't end up in production builds:
+If you have seeding data that should only be used during development.
+You can use conditional compilation to ensure seeding code doesn't end up in production builds:
 
 ```csharp
 #if DEBUG
@@ -69,12 +73,16 @@ public class DevelopmentSeeding : ICanSeedEvents
 #endif
 ```
 
-### Organizing Development Data
+> Note: Cratis Chronicle does not distinguish between development or production purpose events
+> you need to be conscious about this yourself. You can of course chose to leverage other mechanisms
+> than the conditional compilation by injecting things you have accessible at runtime to decide,
+> or an environment variable.
 
-For larger applications, organize your development seed data by feature or domain:
+### Organizing Events
+
+For larger applications, organize your development seed events by feature or domain:
 
 ```csharp
-#if DEBUG
 public class UserDevelopmentSeeding : ICanSeedEvents
 {
     public void Seed(IEventSeedingBuilder builder)
@@ -99,6 +107,9 @@ public class OrderDevelopmentSeeding : ICanSeedEvents
 #endif
 ```
 
+> Note: These can of course be in separate files in separate namespaces, they will be discovered and
+> seeded individually.
+
 ## How It Works
 
 1. **Automatic Discovery**: Classes implementing `ICanSeedEvents` are automatically discovered using the same mechanism as projections and reactors during application startup.
@@ -119,10 +130,9 @@ public class OrderDevelopmentSeeding : ICanSeedEvents
 - **Use Meaningful IDs**: Use descriptive event source IDs (e.g., "test-user-admin") to make debugging easier.
 - **Document Scenarios**: Add comments explaining what scenario each seed data represents.
 
-## Example: Complete Development Seeding Setup
+## Example: Complete Seeding Setup
 
 ```csharp
-#if DEBUG
 namespace MyApp.Development;
 
 /// <summary>
