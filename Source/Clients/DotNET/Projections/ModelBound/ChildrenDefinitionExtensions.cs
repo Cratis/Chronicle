@@ -88,6 +88,61 @@ static class ChildrenDefinitionExtensions
                 fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
             }
 
+            // For records, process constructor parameters to pick up attributes
+            var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .OrderByDescending(c => c.GetParameters().Length)
+                .FirstOrDefault();
+
+            if (primaryConstructor is not null)
+            {
+                var fromDefinition = childrenDef.From[eventTypeId];
+
+                foreach (var parameter in primaryConstructor.GetParameters())
+                {
+                    var paramPath = new PropertyPath(parameter.Name!);
+                    var paramPropertyName = namingPolicy.GetPropertyName(paramPath);
+
+                    // Process SetFromContext attributes on constructor parameters
+                    var setFromContextAttrs = parameter.GetCustomAttributes()
+                        .Where(a => a.GetType().IsGenericType &&
+                                     a.GetType().GetGenericTypeDefinition() == typeof(SetFromContextAttribute<>))
+                        .ToList();
+
+                    foreach (var contextAttr in setFromContextAttrs)
+                    {
+                        var contextPropertyNameProperty = contextAttr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
+                        var contextPropertyName = contextPropertyNameProperty?.GetValue(contextAttr) as string;
+                        var propertyToUse = contextPropertyName ?? parameter.Name!;
+                        fromDefinition.Properties[paramPropertyName] = $"$eventContext({propertyToUse})";
+                    }
+
+                    // Check if this parameter has any explicit mapping attributes
+                    var hasExplicitMapping = parameter.GetCustomAttributes()
+                        .Any(a => a.GetType().IsGenericType &&
+                                   (a.GetType().GetGenericTypeDefinition() == typeof(SetFromContextAttribute<>) ||
+                                    a.GetType().GetGenericTypeDefinition() == typeof(SetFromAttribute<>) ||
+                                    a.GetType().GetGenericTypeDefinition() == typeof(AddFromAttribute<>) ||
+                                    a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
+
+                    // Only auto-map Id/Key to EventSourceId if autoMap is enabled and there's no explicit mapping
+                    if (autoMap && !hasExplicitMapping)
+                    {
+                        // If this is the identified property and has no explicit mapping, default to EventSourceId
+                        if (parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
+                        {
+                            fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
+                        }
+
+                        // Check if parameter has [Key] attribute and no explicit mapping
+                        if (parameter.GetCustomAttribute<KeyAttribute>() is not null)
+                        {
+                            fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
+                        }
+                    }
+                }
+            }
+
+            // Process properties for attributes (this handles SetFromContext and other attributes on properties)
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 processMember(childProperty, definition, [], false, childrenDef);
