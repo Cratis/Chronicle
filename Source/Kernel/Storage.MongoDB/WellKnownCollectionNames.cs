@@ -116,5 +116,5 @@ public static class WellKnownCollectionNames
     /// <summary>
     /// The collection that holds event seeding data.
     /// </summary>
-    public const string EventSeeding = "event-seeding";
+    public const string EventSeeds = "seeds";
 }
