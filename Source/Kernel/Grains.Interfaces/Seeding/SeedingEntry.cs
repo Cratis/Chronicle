@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Storage.EventSeeding;
+namespace Cratis.Chronicle.Grains.Seeding;
 
 /// <summary>
-/// Represents a single seeded event entry.
+/// Represents a seeding entry to be processed.
 /// </summary>
 /// <param name="EventSourceId">The event source identifier.</param>
 /// <param name="EventTypeId">The event type identifier.</param>
-/// <param name="Content">The JSON content of the event.</param>
-public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content);
+/// <param name="Content">The JSON content.</param>
+public record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content);

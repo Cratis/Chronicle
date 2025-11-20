@@ -6,7 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSeeding;
+namespace Cratis.Chronicle.Seeding;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSeeding"/>.
@@ -93,12 +93,12 @@ public class EventSeeding : IEventSeeding
                 JsonSerializer.Serialize(content)));
         }
 
-        await servicesAccessor.Services.EventSeeding.Seed(
-            new Contracts.EventSeeding.SeedRequest
+        await servicesAccessor.Services.Seeding.Seed(
+            new Contracts.Seeding.SeedRequest
             {
                 EventStore = _eventStoreName,
                 Namespace = _namespace,
-                Entries = serializedEntries.Select(e => new Contracts.EventSeeding.SeedingEntry
+                Entries = serializedEntries.Select(e => new Contracts.Seeding.SeedingEntry
                 {
                     EventSourceId = e.EventSourceId,
                     EventTypeId = e.EventTypeId,

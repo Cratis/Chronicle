@@ -4,17 +4,17 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
-using Cratis.Chronicle.Concepts.EventSeeding;
+using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Storage.EventSeeding;
+using Cratis.Chronicle.Storage.Seeding;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
-namespace Cratis.Chronicle.Grains.EventSeeding;
+namespace Cratis.Chronicle.Grains.Seeding;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSeeding"/>.

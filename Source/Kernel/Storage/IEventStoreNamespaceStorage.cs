@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
-using Cratis.Chronicle.Storage.EventSeeding;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;

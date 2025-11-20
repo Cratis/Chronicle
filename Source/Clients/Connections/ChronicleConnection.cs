@@ -147,7 +147,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IProjections>(clientFactory),
                 callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
-                callInvoker.CreateGrpcService<Contracts.EventSeeding.IEventSeeding>(clientFactory),
+                callInvoker.CreateGrpcService<Contracts.Seeding.IEventSeeding>(clientFactory),
                 callInvoker.CreateGrpcService<IServer>(clientFactory));
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));

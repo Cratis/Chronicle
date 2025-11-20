@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSeeding;
+namespace Cratis.Chronicle.Seeding;
 
 /// <summary>
 /// Defines a builder for seeding events in the event store.

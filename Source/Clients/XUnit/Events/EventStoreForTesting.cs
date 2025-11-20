@@ -73,7 +73,7 @@ public class EventStoreForTesting : IEventStore
     public IReadModels ReadModels => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public EventSeeding.IEventSeeding Seeding => throw new NotImplementedException();
+    public Seeding.IEventSeeding Seeding => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;

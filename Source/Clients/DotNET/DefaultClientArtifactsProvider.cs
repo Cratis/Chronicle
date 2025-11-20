@@ -5,7 +5,7 @@ using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
-using Cratis.Chronicle.EventSeeding;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.EventSeeding;
+using Cratis.Chronicle.Storage.Seeding;
 using MongoDB.Driver;
 
-namespace Cratis.Chronicle.Storage.MongoDB.EventSeeding;
+namespace Cratis.Chronicle.Storage.MongoDB.Seeding;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSeedingStorage"/> for MongoDB.

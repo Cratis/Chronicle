@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSeeding;
+using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -94,5 +94,5 @@ public interface IServices
     /// <summary>
     /// Gets the <see cref="IEventSeeding"/> service.
     /// </summary>
-    IEventSeeding EventSeeding { get; }
+    IEventSeeding Seeding { get; }
 }

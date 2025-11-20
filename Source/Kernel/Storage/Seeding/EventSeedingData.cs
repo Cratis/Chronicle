@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Storage.EventSeeding;
+namespace Cratis.Chronicle.Storage.Seeding;
 
 /// <summary>
 /// Represents the seeding data stored per event store and namespace.

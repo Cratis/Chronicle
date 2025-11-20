@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSeeding;
-using Cratis.Chronicle.Contracts.EventSeeding;
+using Cratis.Chronicle.Concepts.Seeding;
+using Cratis.Chronicle.Contracts.Seeding;
 using ProtoBuf.Grpc;
 
-namespace Cratis.Chronicle.Services.EventSeeding;
+namespace Cratis.Chronicle.Services.Seeding;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSeeding"/>.
@@ -17,9 +17,9 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     public async Task<SeedResponse> Seed(SeedRequest request, CallContext context = default)
     {
         var key = new EventSeedingKey(request.EventStore, request.Namespace);
-        var grain = grainFactory.GetGrain<Grains.EventSeeding.IEventSeeding>(key.ToString());
+        var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
 
-        var entries = request.Entries.Select(e => new Grains.EventSeeding.SeedingEntry(
+        var entries = request.Entries.Select(e => new Grains.Seeding.SeedingEntry(
             e.EventSourceId,
             e.EventTypeId,
             e.Content));

@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSeeding;
+using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.EventSeeding;
+using Cratis.Chronicle.Storage.Seeding;
 using Orleans.Storage;
 
-namespace Cratis.Chronicle.Grains.EventSeeding;
+namespace Cratis.Chronicle.Grains.Seeding;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for <see cref="EventSeedingData"/>.

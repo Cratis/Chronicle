@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 
-namespace Cratis.Chronicle.Concepts.EventSeeding;
+namespace Cratis.Chronicle.Concepts.Seeding;
 
 /// <summary>
 /// Represents a key for event seeding.
