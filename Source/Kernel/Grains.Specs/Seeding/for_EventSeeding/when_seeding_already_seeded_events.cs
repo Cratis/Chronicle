@@ -11,11 +11,9 @@ public class when_seeding_already_seeded_events : given.an_event_seeding_grain
 
     void Establish()
     {
-        base.Establish();
-
         // Add an entry to the state to simulate it was already seeded
         var seededEntry = new Storage.Seeding.SeededEventEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}");
-        _state.State!.ByEventType["test-event-type"] = [seededEntry];
+        _state.State.ByEventType["test-event-type"] = [seededEntry];
 
         _entries = [
             new SeedingEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}")
@@ -26,7 +24,7 @@ public class when_seeding_already_seeded_events : given.an_event_seeding_grain
 
     [Fact] void should_not_append_events() => _eventSequence.DidNotReceive().AppendMany(
         Arg.Any<IEnumerable<EventToAppend>>(),
-        Arg.Any<Cratis.Execution.CorrelationId>(),
+        Arg.Any<CorrelationId>(),
         Arg.Any<IEnumerable<Concepts.Auditing.Causation>>(),
         Arg.Any<Concepts.Identities.Identity>(),
         Arg.Any<Concepts.EventSequences.Concurrency.ConcurrencyScopes>());

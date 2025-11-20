@@ -171,7 +171,7 @@ public class EventStore : IEventStore
             rulesProjections.ReadModels,
             schemaGenerator);
 
-        Seeding = new Seeding.EventSeeding(
+        Seeding = new EventSeeding(
             eventStoreName,
             @namespace,
             connection,

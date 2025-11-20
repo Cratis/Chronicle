@@ -54,8 +54,8 @@ public class EventSeeding(
         if (state.State == null!)
         {
             state.State = new EventSeeds(
-                new Dictionary<EventTypeId, IList<SeededEventEntry>>(),
-                new Dictionary<EventSourceId, IList<SeededEventEntry>>());
+                new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
+                new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
         }
 
         // Collect new events that haven't been seeded yet
@@ -76,11 +76,11 @@ public class EventSeeding(
                 // Prepare for appending
                 var content = JsonSerializer.Deserialize<JsonObject>(entry.Content)!;
                 eventsToAppend.Add(new EventToAppend(
-                    string.Empty, // EventSourceType - empty for seeded events
+                    EventSourceType.Default,
                     entry.EventSourceId,
                     EventStreamType.All,
                     EventStreamId.Default,
-                    new EventType((EventTypeId)entry.EventTypeId, 1), // EventType with generation 1
+                    new EventType(entry.EventTypeId, EventTypeGeneration.First),
                     content));
             }
         }
@@ -109,25 +109,21 @@ public class EventSeeding(
     bool IsAlreadySeeded(SeededEventEntry entry)
     {
         // Check in ByEventType
-        if (state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries))
-        {
-            if (byTypeEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
+        if (state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries) &&
+            byTypeEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
                                       e.EventTypeId == entry.EventTypeId &&
                                       e.Content == entry.Content))
-            {
-                return true;
-            }
+        {
+            return true;
         }
 
         // Check in ByEventSource
-        if (state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries))
-        {
-            if (bySourceEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
+        if (state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries) &&
+            bySourceEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
                                         e.EventTypeId == entry.EventTypeId &&
                                         e.Content == entry.Content))
-            {
-                return true;
-            }
+        {
+            return true;
         }
 
         return false;
@@ -135,22 +131,21 @@ public class EventSeeding(
 
     void TrackSeededEvent(SeededEventEntry entry)
     {
-        // Track by event type
-        if (!state.State.ByEventType.TryGetValue(entry.EventTypeId, out var value))
+#pragma warning disable CA1854 // Prefer the 'IDictionary.TryGetValue(TKey, out TValue)' method
+        if (!state.State.ByEventType.ContainsKey(entry.EventTypeId))
         {
-            value = new List<SeededEventEntry>();
-            state.State.ByEventType[entry.EventTypeId] = value;
+            state.State.ByEventType[entry.EventTypeId] = [];
         }
 
-        value.Add(entry);
+        state.State.ByEventType[entry.EventTypeId] = [..state.State.ByEventType[entry.EventTypeId], ..new SeededEventEntry[] { entry }];
 
         // Track by event source
-        if (!state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var value))
+        if (!state.State.ByEventSource.ContainsKey(entry.EventSourceId))
         {
-            value = new List<SeededEventEntry>();
-            state.State.ByEventSource[entry.EventSourceId] = value;
+            state.State.ByEventSource[entry.EventSourceId] = [];
         }
 
-        value.Add(entry);
+        state.State.ByEventSource[entry.EventSourceId] = [..state.State.ByEventSource[entry.EventSourceId], ..new SeededEventEntry[] { entry }];
+#pragma warning restore CA1854 // Prefer the 'IDictionary.TryGetValue(TKey, out TValue)' method
     }
 }

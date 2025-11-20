@@ -6,12 +6,10 @@ using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Seeding;
 using Microsoft.Extensions.Logging;
-using NSubstitute;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Grains.Seeding.for_EventSeeding.given;
 
-public class an_event_seeding_grain
+public class an_event_seeding_grain : Specification
 {
     protected EventSeeding _grain;
     protected IPersistentState<EventSeeds> _state;
@@ -19,7 +17,7 @@ public class an_event_seeding_grain
     protected EventSeedingKey _key;
     protected ILogger<EventSeeding> _logger;
 
-    protected void Establish()
+    void Establish()
     {
         _key = new EventSeedingKey("TestEventStore", "TestNamespace");
         _state = Substitute.For<IPersistentState<EventSeeds>>();
@@ -27,16 +25,16 @@ public class an_event_seeding_grain
         _logger = Substitute.For<ILogger<EventSeeding>>();
 
         _state.State.Returns(new EventSeeds(
-            new Dictionary<EventTypeId, IList<SeededEventEntry>>(),
-            new Dictionary<EventSourceId, IList<SeededEventEntry>>()));
+            new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
+            new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>()));
 
         _grain = new EventSeeding(_state, _logger);
 
         // Simulate OnActivateAsync by setting internal fields via reflection
         var keyField = typeof(EventSeeding).GetField("_key", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        keyField!.SetValue(_grain, _key);
+        keyField.SetValue(_grain, _key);
 
         var eventSequenceField = typeof(EventSeeding).GetField("_eventSequence", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        eventSequenceField!.SetValue(_grain, _eventSequence);
+        eventSequenceField.SetValue(_grain, _eventSequence);
     }
 }
