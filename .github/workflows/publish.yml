@@ -350,3 +350,10 @@ jobs:
           repository: cratis/documentation
           event-type: build-docs
 
+      - name: Trigger Dependency Updates on Sample Repository
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          repository: cratis/samples
+          event-type: update-dependencies
+
