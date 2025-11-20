@@ -12,6 +12,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle;
@@ -90,6 +91,11 @@ public interface IEventStore
     /// Gets the <see cref="IReadModels"/> for the event store.
     /// </summary>
     IReadModels ReadModels { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSeeding"/> for the event store.
+    /// </summary>
+    IEventSeeding Seeding { get; }
 
     /// <summary>
     /// Discover all artifacts for the event store.

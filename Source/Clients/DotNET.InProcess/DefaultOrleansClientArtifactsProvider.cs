@@ -65,5 +65,8 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
     public IEnumerable<Type> UniqueEventTypeConstraints => provider.UniqueEventTypeConstraints;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> EventSeeders => provider.EventSeeders;
+
+    /// <inheritdoc/>
     public void Initialize() => provider.Initialize();
 }
