@@ -50,15 +50,33 @@ public class EventSeeding(
             return;
         }
 
-        // Initialize storage if needed
-        if (state.State == null!)
-        {
-            state.State = new EventSeeds(
+        state.State ??= new EventSeeds(
                 new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
                 new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
-        }
 
-        // Collect new events that haven't been seeded yet
+        var eventsToAppend = GetEventsToSeed(entriesList);
+        if (eventsToAppend.Count > 0)
+        {
+            logger.AppendingSeededEvents(eventsToAppend.Count);
+            var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
+
+            await _eventSequence.AppendMany(
+                eventsToAppend,
+                CorrelationId.New(),
+                causation,
+                Identity.System,
+                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+
+            await state.WriteStateAsync();
+        }
+        else
+        {
+            logger.AllEventsAlreadySeeded();
+        }
+    }
+
+    List<EventToAppend> GetEventsToSeed(List<SeedingEntry> entriesList)
+    {
         var eventsToAppend = new List<EventToAppend>();
 
         foreach (var entry in entriesList)
@@ -85,25 +103,7 @@ public class EventSeeding(
             }
         }
 
-        // Append all new events in one operation if there are any
-        if (eventsToAppend.Count > 0)
-        {
-            logger.AppendingSeededEvents(eventsToAppend.Count);
-
-            await _eventSequence.AppendMany(
-                eventsToAppend,
-                CorrelationId.New(),
-                [new Causation(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>())],
-                Identity.System,
-                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
-
-            // Save state
-            await state.WriteStateAsync();
-        }
-        else
-        {
-            logger.AllEventsAlreadySeeded();
-        }
+        return eventsToAppend;
     }
 
     bool IsAlreadySeeded(SeededEventEntry entry)
@@ -137,7 +137,7 @@ public class EventSeeding(
             state.State.ByEventType[entry.EventTypeId] = [];
         }
 
-        state.State.ByEventType[entry.EventTypeId] = [..state.State.ByEventType[entry.EventTypeId], ..new SeededEventEntry[] { entry }];
+        state.State.ByEventType[entry.EventTypeId] = [.. state.State.ByEventType[entry.EventTypeId], .. new SeededEventEntry[] { entry }];
 
         // Track by event source
         if (!state.State.ByEventSource.ContainsKey(entry.EventSourceId))
@@ -145,7 +145,7 @@ public class EventSeeding(
             state.State.ByEventSource[entry.EventSourceId] = [];
         }
 
-        state.State.ByEventSource[entry.EventSourceId] = [..state.State.ByEventSource[entry.EventSourceId], ..new SeededEventEntry[] { entry }];
+        state.State.ByEventSource[entry.EventSourceId] = [.. state.State.ByEventSource[entry.EventSourceId], .. new SeededEventEntry[] { entry }];
 #pragma warning restore CA1854 // Prefer the 'IDictionary.TryGetValue(TKey, out TValue)' method
     }
 }
