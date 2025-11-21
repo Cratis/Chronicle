@@ -1,15 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma warning disable SA1649 // File name should match first type name
 #pragma warning disable SA1402 // File may only contain a single type
 
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder;
+namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model.with_children_having;
 
-public class when_building_model_with_children_having_id_by_convention_should_default_to_event_source_id : given.a_model_bound_projection_builder
+public class id_by_convention_should_default_to_event_source_id : given.a_model_bound_projection_builder
 {
     ProjectionDefinition _result;
 

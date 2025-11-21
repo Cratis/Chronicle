@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Keys;
 
-namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder;
+namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model.with_from_event;
 
-public class when_building_model_with_from_event_with_invalid_key : given.a_model_bound_projection_builder
+public class with_invalid_key : given.a_model_bound_projection_builder
 {
     Exception _exception;
 
