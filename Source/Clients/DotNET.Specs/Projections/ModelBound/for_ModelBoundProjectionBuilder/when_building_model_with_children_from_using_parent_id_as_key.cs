@@ -35,13 +35,13 @@ public class when_building_model_with_children_from_using_parent_id_as_key : giv
 
     [Fact] void should_use_parent_id_property_as_parent_key()
     {
-        // This test verifies the issue where the builder defaults to EventSourceId
-        // instead of using the parent's Id property (WarehousesForSimulation.Id)
-        // when no explicit parentKey is specified in the ChildrenFrom attribute
+        // This test verifies the builder discovers the event property that identifies the parent
+        // by matching the property type with the parent's Id property type (WarehouseSimulationId)
+        // The event has SimulationId property which matches the parent's Id property type
         var eventType = event_types.GetEventTypeFor(typeof(WarehouseAddedToSimulation)).ToContract();
         var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.ParentKey.ShouldEqual(nameof(WarehousesForSimulation.Id));
+        fromDef.ParentKey.ShouldEqual(nameof(WarehouseAddedToSimulation.SimulationId));
     }
 }
 

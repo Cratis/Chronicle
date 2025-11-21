@@ -49,7 +49,7 @@ static class ChildrenDefinitionExtensions
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
         var explicitParentKey = parentKeyProperty?.GetValue(attr) as string;
-        var discoveredParentKey = explicitParentKey is null ? DiscoverParentKey(parentModelType) : null;
+        var discoveredParentKey = explicitParentKey is null ? DiscoverEventPropertyForParentId(eventType, parentModelType, namingPolicy) : null;
         var parentKey = explicitParentKey ?? discoveredParentKey ?? WellKnownExpressions.EventSourceId;
         var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
 
@@ -207,40 +207,50 @@ static class ChildrenDefinitionExtensions
         return WellKnownExpressions.EventSourceId;
     }
 
-    static string? DiscoverParentKey(Type? parentModelType)
+    static string? DiscoverEventPropertyForParentId(Type eventType, Type? parentModelType, INamingPolicy namingPolicy)
     {
         if (parentModelType is null)
         {
             return null;
         }
 
-        // Look for a property or parameter named "Id" (case-insensitive)
-        var idProperty = parentModelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        // First, find the parent model's Id property and its type
+        var parentIdProperty = parentModelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
 
-        if (idProperty is not null)
+        if (parentIdProperty is null)
         {
-            return idProperty.Name;
-        }
+            // Check constructor parameters for record types
+            var constructor = parentModelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .OrderByDescending(c => c.GetParameters().Length)
+                .FirstOrDefault();
 
-        // Check primary constructor parameters for Id
-        var primaryConstructor = parentModelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-            .OrderByDescending(c => c.GetParameters().Length)
-            .FirstOrDefault();
-
-        if (primaryConstructor is not null)
-        {
-            var idParameter = primaryConstructor.GetParameters()
+            var idParameter = constructor?.GetParameters()
                 .FirstOrDefault(p => p.Name?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
 
-            if (idParameter is not null)
+            if (idParameter is null)
             {
-                // Convert parameter name to property name (capitalize first letter for records)
-                var paramName = idParameter.Name!;
-                return char.ToUpperInvariant(paramName[0]) + paramName.Substring(1);
+                return null;
             }
+
+            // Get the type from constructor parameter
+            var parentIdType = idParameter.ParameterType;
+
+            // Search event for a property with matching type
+            var matchingEventProperty = eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(p => p.PropertyType == parentIdType);
+
+            return matchingEventProperty is not null
+                ? namingPolicy.GetPropertyName(new PropertyPath(matchingEventProperty.Name))
+                : null;
         }
 
-        return null;
+        // Search event for a property with matching type
+        var eventProperty = eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(p => p.PropertyType == parentIdProperty.PropertyType);
+
+        return eventProperty is not null
+            ? namingPolicy.GetPropertyName(new PropertyPath(eventProperty.Name))
+            : null;
     }
 }
