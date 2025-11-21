@@ -60,11 +60,16 @@ static class ChildrenDefinitionExtensions
             identifiedBy = DiscoverKeyPropertyName(childType);
         }
 
+        // Apply naming policy to identifiedBy to ensure consistent casing
+        var identifiedByWithNaming = string.IsNullOrEmpty(identifiedBy) || identifiedBy == WellKnownExpressions.EventSourceId
+            ? identifiedBy
+            : namingPolicy.GetPropertyName(new PropertyPath(identifiedBy));
+
         if (!definition.Children.TryGetValue(propertyName, out var childrenDef))
         {
             childrenDef = new ChildrenDefinition
             {
-                IdentifiedBy = identifiedBy,
+                IdentifiedBy = identifiedByWithNaming,
                 From = new Dictionary<EventType, FromDefinition>(),
                 Join = new Dictionary<EventType, JoinDefinition>(),
                 All = new FromEveryDefinition(),
@@ -128,21 +133,25 @@ static class ChildrenDefinitionExtensions
                                     a.GetType().GetGenericTypeDefinition() == typeof(AddFromAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
 
-                    // Only auto-map Id/Key to EventSourceId if autoMap is enabled, there's no explicit mapping,
-                    // AND the key parameter was not explicitly specified in the ChildrenFrom attribute
-                    if (autoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId)
+                    // If this is the identified property and has no explicit mapping, map it to the key
+                    if (autoMap && !hasExplicitMapping && parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
                     {
-                        // If this is the identified property and has no explicit mapping, default to EventSourceId
-                        if (parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
+                        // If key is EventSourceId, use event context, otherwise use the key property from the event
+                        if (key == WellKnownExpressions.EventSourceId)
                         {
                             fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
                         }
+                        else
+                        {
+                            // Map to the key from the event (keyExpression already has naming policy applied)
+                            fromDefinition.Properties[paramPropertyName] = keyExpression;
+                        }
+                    }
 
-                        // Check if parameter has [Key] attribute and no explicit mapping
-                        if (parameter.GetCustomAttribute<KeyAttribute>() is not null)
-                        {
-                            fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
-                        }
+                    // Check if parameter has [Key] attribute and no explicit mapping and key is EventSourceId
+                    if (autoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
+                    {
+                        fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
                     }
                 }
             }
