@@ -128,8 +128,9 @@ static class ChildrenDefinitionExtensions
                                     a.GetType().GetGenericTypeDefinition() == typeof(AddFromAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
 
-                    // Only auto-map Id/Key to EventSourceId if autoMap is enabled and there's no explicit mapping
-                    if (autoMap && !hasExplicitMapping)
+                    // Only auto-map Id/Key to EventSourceId if autoMap is enabled, there's no explicit mapping,
+                    // AND the key parameter was not explicitly specified in the ChildrenFrom attribute
+                    if (autoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId)
                     {
                         // If this is the identified property and has no explicit mapping, default to EventSourceId
                         if (parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))

@@ -33,6 +33,14 @@ public class when_building_model_with_children_from_using_parent_id_as_key : giv
         fromDef.Key.ShouldEqual(nameof(WarehouseAddedToSimulation.Id));
     }
 
+    [Fact] void should_map_warehouse_id_property_to_event_id_not_event_source_id()
+    {
+        var eventType = event_types.GetEventTypeFor(typeof(WarehouseAddedToSimulation)).ToContract();
+        var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
+        var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+        fromDef.Properties[nameof(Warehouse.Id)].ShouldEqual(nameof(WarehouseAddedToSimulation.Id));
+    }
+
     [Fact] void should_use_parent_id_property_as_parent_key()
     {
         // This test verifies the builder discovers the event property that identifies the parent
