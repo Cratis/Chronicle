@@ -10,6 +10,12 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Microsoft -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.2.3" />
@@ -90,24 +96,30 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Microsoft.NET.Test.SDK" Version="18.0.1" />
-  </ItemGroup>
-
-  <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
-  <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET9.props" Condition=" '$(TargetFramework)' == 'net9.0' " />
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
+    <PackageVersion Update="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyModel" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.Resilience" Version="9.10.0" />
+    <PackageVersion Update="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.11" />
+    <PackageVersion Update="Microsoft.Extensions.Telemetry.Abstractions" Version="9.10.0" />
+    <PackageVersion Update="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Configuration" Version="9.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
   </ItemGroup>
 </Project>
