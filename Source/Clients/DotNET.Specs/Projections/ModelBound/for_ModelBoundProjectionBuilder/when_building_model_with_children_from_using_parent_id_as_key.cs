@@ -33,15 +33,29 @@ public class when_building_model_with_children_from_using_parent_id_as_key : giv
         fromDef.Key.ShouldEqual(nameof(WarehouseAddedToSimulation.Id));
     }
 
-    [Fact] void should_use_parent_id_property_as_parent_key()
+    [Fact] void should_map_warehouse_id_property_to_event_id_not_event_source_id()
     {
-        // This test verifies the issue where the builder defaults to EventSourceId
-        // instead of using the parent's Id property (WarehousesForSimulation.Id)
-        // when no explicit parentKey is specified in the ChildrenFrom attribute
         var eventType = event_types.GetEventTypeFor(typeof(WarehouseAddedToSimulation)).ToContract();
         var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.ParentKey.ShouldEqual(nameof(WarehousesForSimulation.Id));
+        fromDef.Properties[nameof(Warehouse.Id)].ShouldEqual(nameof(WarehouseAddedToSimulation.Id));
+    }
+
+    [Fact] void should_use_parent_id_property_as_parent_key()
+    {
+        // This test verifies the builder discovers the event property that identifies the parent
+        // by matching the property type with the parent's Id property type (WarehouseSimulationId)
+        // The event has SimulationId property which matches the parent's Id property type
+        var eventType = event_types.GetEventTypeFor(typeof(WarehouseAddedToSimulation)).ToContract();
+        var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
+        var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+        fromDef.ParentKey.ShouldEqual(nameof(WarehouseAddedToSimulation.SimulationId));
+    }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(Warehouse.Id))));
     }
 }
 

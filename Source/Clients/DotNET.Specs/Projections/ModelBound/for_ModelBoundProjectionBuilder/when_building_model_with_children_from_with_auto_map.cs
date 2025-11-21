@@ -63,6 +63,20 @@ public class when_building_model_with_children_from_with_auto_map : given.a_mode
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         fromDef.Properties.Keys.ShouldContain(nameof(OrderLineItem.Price));
     }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(OrderLineItem.Id))));
+    }
+
+    [Fact] void should_apply_naming_policy_to_key()
+    {
+        var eventType = event_types.GetEventTypeFor(typeof(LineItemAdded)).ToContract();
+        var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
+        var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+        fromDef.Key.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(LineItemAdded.ItemId))));
+    }
 }
 
 [EventType]

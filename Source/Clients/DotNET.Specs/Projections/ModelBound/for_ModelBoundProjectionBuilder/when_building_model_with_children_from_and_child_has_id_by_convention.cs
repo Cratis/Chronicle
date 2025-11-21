@@ -30,6 +30,12 @@ public class when_building_model_with_children_from_and_child_has_id_by_conventi
         var childrenDef = _result.Children[nameof(OrderWithChildHavingIdByConvention.Items)];
         childrenDef.IdentifiedBy.ShouldEqual(nameof(ItemWithIdByConvention.Id));
     }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(OrderWithChildHavingIdByConvention.Items)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(ItemWithIdByConvention.Id))));
+    }
 }
 
 [EventType]

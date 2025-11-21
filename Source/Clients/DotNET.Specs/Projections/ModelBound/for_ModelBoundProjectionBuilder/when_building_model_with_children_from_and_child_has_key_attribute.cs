@@ -30,6 +30,12 @@ public class when_building_model_with_children_from_and_child_has_key_attribute 
         var childrenDef = _result.Children[nameof(OrderWithChildHavingKeyAttribute.Items)];
         childrenDef.IdentifiedBy.ShouldEqual(nameof(ItemWithKeyAttribute.ItemId));
     }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(OrderWithChildHavingKeyAttribute.Items)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(ItemWithKeyAttribute.ItemId))));
+    }
 }
 
 [EventType]
