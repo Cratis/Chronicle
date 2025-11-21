@@ -26,6 +26,7 @@ static class ChildrenDefinitionExtensions
     /// <param name="attr">The ChildrenFrom attribute to process.</param>
     /// <param name="eventType">The event type to create children from.</param>
     /// <param name="processMember">The action to process child members recursively.</param>
+    /// <param name="parentModelType">The type of the parent model that contains this children collection.</param>
     internal static void ProcessChildrenFromAttribute(
         this ProjectionDefinition definition,
         Func<Type, EventType> getOrCreateEventType,
@@ -34,7 +35,8 @@ static class ChildrenDefinitionExtensions
         Type memberType,
         Attribute attr,
         Type eventType,
-        Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, ChildrenDefinition?> processMember)
+        Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
+        Type? parentModelType = null)
     {
         var propertyPath = new PropertyPath(memberName);
         var propertyName = namingPolicy.GetPropertyName(propertyPath);
@@ -46,7 +48,9 @@ static class ChildrenDefinitionExtensions
         var autoMapProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.AutoMap));
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
-        var parentKey = parentKeyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
+        var explicitParentKey = parentKeyProperty?.GetValue(attr) as string;
+        var discoveredParentKey = explicitParentKey is null ? DiscoverParentKey(parentModelType) : null;
+        var parentKey = explicitParentKey ?? discoveredParentKey ?? WellKnownExpressions.EventSourceId;
         var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
 
         var childType = GetChildType(memberType);
@@ -145,7 +149,7 @@ static class ChildrenDefinitionExtensions
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                processMember(childProperty, definition, [], false, childrenDef);
+                processMember(childProperty, definition, [], false, null, childrenDef);
             }
         }
     }
@@ -201,5 +205,42 @@ static class ChildrenDefinitionExtensions
         }
 
         return WellKnownExpressions.EventSourceId;
+    }
+
+    static string? DiscoverParentKey(Type? parentModelType)
+    {
+        if (parentModelType is null)
+        {
+            return null;
+        }
+
+        // Look for a property or parameter named "Id" (case-insensitive)
+        var idProperty = parentModelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
+
+        if (idProperty is not null)
+        {
+            return idProperty.Name;
+        }
+
+        // Check primary constructor parameters for Id
+        var primaryConstructor = parentModelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        if (primaryConstructor is not null)
+        {
+            var idParameter = primaryConstructor.GetParameters()
+                .FirstOrDefault(p => p.Name?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
+
+            if (idParameter is not null)
+            {
+                // Convert parameter name to property name (capitalize first letter for records)
+                var paramName = idParameter.Name!;
+                return char.ToUpperInvariant(paramName[0]) + paramName.Substring(1);
+            }
+        }
+
+        return null;
     }
 }
