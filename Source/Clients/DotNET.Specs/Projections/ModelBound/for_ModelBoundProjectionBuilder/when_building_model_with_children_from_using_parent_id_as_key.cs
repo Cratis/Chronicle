@@ -51,6 +51,12 @@ public class when_building_model_with_children_from_using_parent_id_as_key : giv
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         fromDef.ParentKey.ShouldEqual(nameof(WarehouseAddedToSimulation.SimulationId));
     }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(Warehouse.Id))));
+    }
 }
 
 [EventType]

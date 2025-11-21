@@ -44,4 +44,11 @@ public class when_building_model_with_from_event_with_custom_key : given.a_model
         var fromDefinition = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         fromDefinition.Key.ShouldEqual(nameof(UserRegisteredWithCustomId.UserId));
     }
+
+    [Fact] void should_apply_naming_policy_to_custom_key()
+    {
+        var eventType = event_types.GetEventTypeFor(typeof(UserRegisteredWithCustomId)).ToContract();
+        var fromDefinition = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+        fromDefinition.Key.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(UserRegisteredWithCustomId.UserId))));
+    }
 }

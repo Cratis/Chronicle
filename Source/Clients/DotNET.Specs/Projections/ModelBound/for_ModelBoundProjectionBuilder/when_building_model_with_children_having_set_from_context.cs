@@ -60,6 +60,12 @@ public class when_building_model_with_children_having_set_from_context : given.a
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         fromDef.Properties.Keys.ShouldContain(nameof(TransportType.Co2PerKm));
     }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(TransportTypesForSimulation.TransportTypes)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(TransportType.Id))));
+    }
 }
 
 [EventType]

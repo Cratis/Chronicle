@@ -53,6 +53,12 @@ public class when_building_model_with_children_having_key_attribute_should_defau
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         fromDef.Properties.Keys.ShouldContain(nameof(Employee.Name));
     }
+
+    [Fact] void should_apply_naming_policy_to_identified_by()
+    {
+        var childrenDef = _result.Children[nameof(Department.Employees)];
+        childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(Employee.EmployeeNumber))));
+    }
 }
 
 [EventType]
