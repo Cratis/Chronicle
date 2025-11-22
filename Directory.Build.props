@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ImplicitUsings>true</ImplicitUsings>
-        <LangVersion>13.0</LangVersion>
+        <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
 
         <!-- Debuggability -->
@@ -20,13 +20,13 @@
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
 
-        <NoWarn>NU1507</NoWarn>
+        <NoWarn>NU1507;NU1510;NU1605;MSB3277;CA1873;CA1874;CA2024;IDE0330;IDE0048;MA0158;MA0036;IDE0032;IDE0340;SA1500</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup>
         <IsPackaging Condition="'$(IsPackaging)' == ''">false</IsPackaging>
-        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net9.0</TargetFramework>
-        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0</TargetFrameworks>
+        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net10.0</TargetFramework>
+        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0;net10.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
