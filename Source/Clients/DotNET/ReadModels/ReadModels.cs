@@ -38,6 +38,12 @@ public class ReadModels(
         readModels.AddRange(reducers.GetAllHandlers());
         readModels.AddRange(additionalReadModels);
 
+        // Don't register if there are no read models - this would overwrite existing registrations
+        if (readModels.Count == 0)
+        {
+            return;
+        }
+
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
             Identifier = readModel.ReadModelType.GetReadModelIdentifier(),

@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Chronicle.Projections;
@@ -44,6 +46,7 @@ public class Projection(
         {
             logger.ProjectionHasChanged(key.ProjectionId);
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged());
+            await DeactivateGrains();
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
@@ -64,6 +67,30 @@ public class Projection(
     {
         _definitionObservers.Unsubscribe(subscriber);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task DeactivateGrains()
+    {
+        var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
+
+        // Deactivate all ProjectionObserverSubscriber grains for this projection by unsubscribing them
+        // This causes them to disconnect and deactivate, forcing reload on next activation
+        foreach (var @namespace in namespaceNames)
+        {
+            try
+            {
+                // Request the grain to deactivate itself by unsubscribing from the observer
+                // This will cause it to deactivate and reload on next activation
+                var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
+                await observer.Unsubscribe();
+            }
+            catch
+            {
+                // Grain might not be active, which is fine
+            }
+        }
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)

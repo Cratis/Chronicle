@@ -19,6 +19,8 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
     public async Task Register(IEnumerable<ReadModelDefinition> definitions)
     {
         State.ReadModels = definitions.ToList();
+        await WriteStateAsync();
+
         foreach (var definition in definitions)
         {
             var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());

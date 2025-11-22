@@ -28,7 +28,13 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
         {
             var definitionKey = $"{eventStore}{KeyHelper.Separator}{definition.Identifier}";
             _definitions[definitionKey] = definition;
-            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
+                throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
+            }
+            var readModel = readModelDefinition;
             foreach (var @namespace in namespaces)
             {
                 var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
