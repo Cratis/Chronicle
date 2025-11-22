@@ -22,7 +22,7 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options) =>
-        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle);
+        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering);
 
     /// <summary>
     /// Configure Chronicle to use MongoDB.
@@ -30,19 +30,20 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
     /// <param name="server">Connection string for the MongoDB server.</param>
     /// <param name="database">Name of the database to use. Defaults to the <see cref="WellKnownDatabaseNames.Chronicle"/>.</param>
+    /// <param name="clustering">Clustering configuration to use.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle)
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, Clustering? clustering = null)
     {
         builder.SiloBuilder.AddStartupTask<CustomSerializersRegistrationService>(ServiceLifecycleStage.First);
         builder.SiloBuilder
-            .UseMongoDBClient(server)
+            .UseMongoDBClient(server);
 
-            // .UseMongoDBClustering(options =>
-            // {
-            //     options.DatabaseName = database;
-            //     options.Strategy = MongoDBMembershipStrategy.Multiple;
-            // })
-            .UseMongoDBReminders(options => options.DatabaseName = database);
+        if (clustering?.Enabled == true)
+        {
+            builder.SiloBuilder.UseMongoDBClustering(options => options.DatabaseName = database);
+        }
+
+        builder.SiloBuilder.UseMongoDBReminders(options => options.DatabaseName = database);
 
         builder.ConfigureServices(services =>
         {

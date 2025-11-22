@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - chronicle
+
+  chronicle1:
+    image: chronicle-server:latest
+    build:
+      context: ../..
+      dockerfile: Source/Kernel/Server/Dockerfile
+    ports:
+      - "35000:35000"
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - Cratis__Chronicle__port=35000
+      - Cratis__Chronicle__apiPort=8080
+      - Cratis__Chronicle__clustering__enabled=true
+      - Cratis__Chronicle__clustering__clusterId=chronicle-cluster
+      - Cratis__Chronicle__clustering__serviceId=chronicle
+      - Cratis__Chronicle__storage__connectionDetails=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
+    networks:
+      - chronicle
+
+  chronicle2:
+    image: chronicle-server:latest
+    build:
+      context: ../..
+      dockerfile: Source/Kernel/Server/Dockerfile
+    ports:
+      - "35001:35000"
+      - "8082:8080"
+      - "8083:8081"
+    environment:
+      - Cratis__Chronicle__port=35000
+      - Cratis__Chronicle__apiPort=8080
+      - Cratis__Chronicle__clustering__enabled=true
+      - Cratis__Chronicle__clustering__clusterId=chronicle-cluster
+      - Cratis__Chronicle__clustering__serviceId=chronicle
+      - Cratis__Chronicle__storage__connectionDetails=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
+    networks:
+      - chronicle
+
+networks:
+  chronicle:
+    driver: bridge
+
+volumes:
+  mongodb_data:
