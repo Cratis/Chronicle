@@ -41,11 +41,30 @@ if (chronicleOptions.Features.Api)
 
 builder.WebHost.UseKestrel(options =>
 {
+    var certificate = CertificateLoader.LoadCertificate(chronicleOptions);
+
     if (chronicleOptions.Features.Api)
     {
         options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
     }
-    options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+
+    options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2;
+
+        if (!chronicleOptions.DisableTls)
+        {
+            if (certificate is not null)
+            {
+                listenOptions.UseHttps(certificate);
+            }
+            else
+            {
+                listenOptions.UseHttps();
+            }
+        }
+    });
+
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
