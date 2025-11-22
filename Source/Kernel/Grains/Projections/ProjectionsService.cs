@@ -46,6 +46,13 @@ public class ProjectionsService(
         var readModelDefinitions = await grainFactory.GetReadModelsManager(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
         var allNamespaces = await namespaces.GetAll();
+
+        // Invalidate cache for projections being re-registered so they get recreated with new definitions
+        foreach (var definition in definitions)
+        {
+            projections.InvalidateProjection(eventStore, definition.Identifier);
+        }
+
         await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
     }
 

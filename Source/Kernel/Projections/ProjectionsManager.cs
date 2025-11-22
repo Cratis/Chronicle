@@ -55,4 +55,15 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection) =>
         _projections.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out projection);
+
+    /// <inheritdoc/>
+    public void InvalidateProjection(EventStoreName eventStore, ProjectionId id)
+    {
+        _definitions.TryRemove($"{eventStore}{KeyHelper.Separator}{id}", out _);
+
+        foreach (var key in _projections.Keys.Where(k => k.Contains($"{KeyHelper.Separator}{id}")).ToList())
+        {
+            _projections.TryRemove(key, out _);
+        }
+    }
 }
