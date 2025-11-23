@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="projections"><see cref="Chronicle.Projections.IProjectionsManager"/> for managing projections.</param>
+/// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [ImplicitChannelSubscription]
 public class ProjectionsService(
@@ -26,6 +28,7 @@ public class ProjectionsService(
     IGrainFactory grainFactory,
     IStorage storage,
     Chronicle.Projections.IProjectionsManager projections,
+    IProjectionPipelineManager projectionPipelines,
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>
@@ -50,7 +53,12 @@ public class ProjectionsService(
         // Invalidate cache for projections being re-registered so they get recreated with new definitions
         foreach (var definition in definitions)
         {
-            projections.InvalidateProjection(eventStore, definition.Identifier);
+            projections.Evict(eventStore, definition.Identifier);
+
+            foreach (var @namespace in allNamespaces)
+            {
+                projectionPipelines.EvictFor(eventStore, @namespace, definition.Identifier);
+            }
         }
 
         await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
