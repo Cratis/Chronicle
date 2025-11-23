@@ -129,6 +129,21 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
+    /// Gets or sets the path to the certificate file for TLS.
+    /// </summary>
+    public string? CertificatePath { get; set; }
+
+    /// <summary>
+    /// Gets or sets the password for the certificate file.
+    /// </summary>
+    public string? CertificatePassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether TLS is disabled. Default is false (TLS enabled).
+    /// </summary>
+    public bool DisableTls { get; set; }
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
