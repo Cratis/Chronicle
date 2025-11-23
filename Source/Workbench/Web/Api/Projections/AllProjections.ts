@@ -7,9 +7,6 @@
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { Projection } from './Projection';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/projections');
 
 class AllProjectionsSortBy {
     private _id: SortingActionsForQuery<Projection[]>;
@@ -55,7 +52,6 @@ export interface AllProjectionsParameters {
 
 export class AllProjections extends QueryFor<Projection[], AllProjectionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/projections';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
     private readonly _sortBy: AllProjectionsSortBy;
     private static readonly _sortBy: AllProjectionsSortByWithoutQuery = new AllProjectionsSortByWithoutQuery();

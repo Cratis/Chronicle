@@ -6,9 +6,6 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-stores/observe');
 
 class AllEventStoresSortBy {
 
@@ -23,7 +20,6 @@ class AllEventStoresSortByWithoutQuery {
 
 export class AllEventStores extends ObservableQueryFor<string[]> {
     readonly route: string = '/api/event-stores/observe';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
     private readonly _sortBy: AllEventStoresSortBy;
     private static readonly _sortBy: AllEventStoresSortByWithoutQuery = new AllEventStoresSortByWithoutQuery();

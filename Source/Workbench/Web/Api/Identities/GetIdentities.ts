@@ -7,9 +7,6 @@
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { Identity } from './Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/identities');
 
 class GetIdentitiesSortBy {
     private _subject: SortingActionsForQuery<Identity[]>;
@@ -65,7 +62,6 @@ export interface GetIdentitiesParameters {
 
 export class GetIdentities extends QueryFor<Identity[], GetIdentitiesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Identity[] = [];
     private readonly _sortBy: GetIdentitiesSortBy;
     private static readonly _sortBy: GetIdentitiesSortByWithoutQuery = new GetIdentitiesSortByWithoutQuery();
