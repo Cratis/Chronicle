@@ -3,18 +3,18 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 272 days, 16:00:50 | 121 days, 12:21:42 | 824 days, 23:41:26 |
+| Time to close | 272 days, 4:48:02 | 119 days, 18:25:24 | 824 days, 4:45:29 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 274 |
-| Number of items closed | 581 |
+| Number of items that remain open | 273 |
+| Number of items closed | 582 |
 | Total number of items created | 855 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Support of seeding a system with events | https://github.com/Cratis/Chronicle/issues/2278 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Support of seeding a system with events | https://github.com/Cratis/Chronicle/issues/2278 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 17:49:05 | None |
 | Enable running integration specs for different setups | https://github.com/Cratis/Chronicle/issues/2268 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Authentication for connecting to Kernel | https://github.com/Cratis/Chronicle/issues/2263 | None | [einari](https://github.com/einari) | None | None | None |
 | TLS for secure connection between client and server | https://github.com/Cratis/Chronicle/issues/2261 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -341,4 +341,4 @@
 | Add the ability to associate custom metadata with events | https://github.com/Cratis/Chronicle/issues/1057 | None | [einari](https://github.com/einari) | None | None | None |
 | Add an Orleans  serializer codec for JSON types (e.g. events) - avoid using Json serializer | https://github.com/Cratis/Chronicle/issues/1056 | None | [einari](https://github.com/einari) | None | None | None |
 | Add an Orleans Serializer codec for concepts - avoid using Json for all types internally | https://github.com/Cratis/Chronicle/issues/1055 | None | [einari](https://github.com/einari) | None | 425 days, 1:12:23 | None |
-| Exactly Once Processing (EOP) for reducers, reactors and projections | https://github.com/Cratis/Chronicle/issues/1054 | None | [einari](https://github.com/einari) | None | None | None |
+| Exactly Once Processing (EOP) for reducers, reactors and projections | https://github.com/Cratis/Chronicle/issues/1054 | None | [einari](https://github.com/einari) | None | None | None

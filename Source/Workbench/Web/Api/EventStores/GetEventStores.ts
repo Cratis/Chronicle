@@ -6,9 +6,6 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-stores');
 
 class GetEventStoresSortBy {
 
@@ -23,7 +20,6 @@ class GetEventStoresSortByWithoutQuery {
 
 export class GetEventStores extends QueryFor<string[]> {
     readonly route: string = '/api/event-stores';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
     private readonly _sortBy: GetEventStoresSortBy;
     private static readonly _sortBy: GetEventStoresSortByWithoutQuery = new GetEventStoresSortByWithoutQuery();

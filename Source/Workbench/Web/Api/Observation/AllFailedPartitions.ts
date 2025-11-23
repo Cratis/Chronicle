@@ -7,9 +7,6 @@
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { FailedPartition } from './FailedPartition';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId?}}');
 
 class AllFailedPartitionsSortBy {
     private _id: SortingActionsForObservableQuery<FailedPartition[]>;
@@ -65,7 +62,6 @@ export interface AllFailedPartitionsParameters {
 }
 export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/failed-partitions/{observerId?}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: FailedPartition[] = [];
     private readonly _sortBy: AllFailedPartitionsSortBy;
     private static readonly _sortBy: AllFailedPartitionsSortByWithoutQuery = new AllFailedPartitionsSortByWithoutQuery();

@@ -28,7 +28,7 @@ public sealed class ChildrenFromAttribute<TEvent>(
     public string Key { get; } = key ?? WellKnownExpressions.EventSourceId;
 
     /// <inheritdoc/>
-    public string ParentKey { get; } = parentKey ?? WellKnownExpressions.EventSourceId;
+    public string? ParentKey { get; } = parentKey;
 
     /// <inheritdoc/>
     public string? IdentifiedBy { get; } = identifiedBy;

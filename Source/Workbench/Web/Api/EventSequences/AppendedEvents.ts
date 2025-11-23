@@ -7,9 +7,6 @@
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { AppendedEvent } from '../Events/AppendedEvent';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}?eventSourceId={{eventSourceId}}');
 
 class AppendedEventsSortBy {
     private _context: SortingActionsForQuery<AppendedEvent[]>;
@@ -49,7 +46,6 @@ export interface AppendedEventsParameters {
 
 export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}?eventSourceId={eventSourceId}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
     private readonly _sortBy: AppendedEventsSortBy;
     private static readonly _sortBy: AppendedEventsSortByWithoutQuery = new AppendedEventsSortByWithoutQuery();

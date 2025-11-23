@@ -10,9 +10,6 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { Guid } from '@cratis/fundamentals';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/stop');
 
 export interface IStopJob {
     eventStore?: string;
@@ -30,7 +27,6 @@ export class StopJobValidator extends CommandValidator {
 
 export class StopJob extends Command<IStopJob> implements IStopJob {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs/{jobId}/stop';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new StopJobValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

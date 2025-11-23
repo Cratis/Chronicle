@@ -10,9 +10,6 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { EventTypeRegistration } from './EventTypeRegistration';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
 
 export interface IRegister {
     eventStore?: string;
@@ -28,7 +25,6 @@ export class RegisterValidator extends CommandValidator {
 
 export class Register extends Command<IRegister> implements IRegister {
     readonly route: string = '/api/event-store/{eventStore}/types';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RegisterValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

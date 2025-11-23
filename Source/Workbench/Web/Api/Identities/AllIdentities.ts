@@ -7,9 +7,6 @@
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { Identity } from './Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/identities/observe');
 
 class AllIdentitiesSortBy {
     private _subject: SortingActionsForObservableQuery<Identity[]>;
@@ -64,7 +61,6 @@ export interface AllIdentitiesParameters {
 }
 export class AllIdentities extends ObservableQueryFor<Identity[], AllIdentitiesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities/observe';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Identity[] = [];
     private readonly _sortBy: AllIdentitiesSortBy;
     private static readonly _sortBy: AllIdentitiesSortByWithoutQuery = new AllIdentitiesSortByWithoutQuery();

@@ -7,9 +7,6 @@
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { EventType } from '../Events/EventType';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
 
 class AllEventTypesSortBy {
     private _id: SortingActionsForQuery<EventType[]>;
@@ -55,7 +52,6 @@ export interface AllEventTypesParameters {
 
 export class AllEventTypes extends QueryFor<EventType[], AllEventTypesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/types';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventType[] = [];
     private readonly _sortBy: AllEventTypesSortBy;
     private static readonly _sortBy: AllEventTypesSortByWithoutQuery = new AllEventTypesSortByWithoutQuery();

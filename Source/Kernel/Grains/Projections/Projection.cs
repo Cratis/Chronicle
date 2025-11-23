@@ -43,7 +43,7 @@ public class Projection(
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
             logger.ProjectionHasChanged(key.ProjectionId);
-            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged());
+            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
