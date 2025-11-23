@@ -105,6 +105,6 @@
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" />
-        <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.11" />
+        <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
     </ItemGroup>
 </Project>
