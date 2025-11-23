@@ -22,10 +22,10 @@ public interface IProjectionPipelineManager
     IProjectionPipeline GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection);
 
     /// <summary>
-    /// Invalidate cached projection pipeline for a specific projection identifier.
+    /// Evict any projection pipeline for a specific projection identifier.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the projection is for.</param>
-    /// <param name="id"><see cref="ProjectionId"/> of the projection to invalidate.</param>
-    void InvalidateProjection(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id);
+    /// <param name="id"><see cref="ProjectionId"/> of the projection to evict.</param>
+    void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id);
 }

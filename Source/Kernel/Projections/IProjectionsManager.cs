@@ -44,9 +44,9 @@ public interface IProjectionsManager
     bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection);
 
     /// <summary>
-    /// Invalidate cached projection for a specific projection identifier.
+    /// Evict any projection for a specific projection identifier.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
-    /// <param name="id"><see cref="ProjectionId"/> of the projection to invalidate.</param>
-    void InvalidateProjection(EventStoreName eventStore, ProjectionId id);
+    /// <param name="id"><see cref="ProjectionId"/> of the projection to evict.</param>
+    void Evict(EventStoreName eventStore, ProjectionId id);
 }

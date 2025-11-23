@@ -63,7 +63,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
         _projections.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out projection);
 
     /// <inheritdoc/>
-    public void InvalidateProjection(EventStoreName eventStore, ProjectionId id)
+    public void Evict(EventStoreName eventStore, ProjectionId id)
     {
         _definitions.TryRemove(GetKeyFor(eventStore, id), out _);
 
