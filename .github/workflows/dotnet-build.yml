@@ -162,6 +162,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Docker image
+        working-directory: ./Integration/Api
         run: dotnet build -t:BuildDocker -v D
       - name: Run API integration tests for .Net 9
         working-directory: ./Integration/Api
