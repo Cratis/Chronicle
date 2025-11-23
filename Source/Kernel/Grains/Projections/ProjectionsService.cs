@@ -49,17 +49,7 @@ public class ProjectionsService(
         var readModelDefinitions = await grainFactory.GetReadModelsManager(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
         var allNamespaces = await namespaces.GetAll();
-
-        // Invalidate cache for projections being re-registered so they get recreated with new definitions
-        foreach (var definition in definitions)
-        {
-            projections.Evict(eventStore, definition.Identifier);
-
-            foreach (var @namespace in allNamespaces)
-            {
-                projectionPipelines.EvictFor(eventStore, @namespace, definition.Identifier);
-            }
-        }
+        EvictProjections(eventStore, definitions, allNamespaces);
 
         await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
     }
@@ -69,5 +59,18 @@ public class ProjectionsService(
     {
         var readModelDefinitions = await grainFactory.GetGrain<IReadModelsManager>(eventStore).GetDefinitions();
         await projections.AddNamespace(eventStore, @namespace, readModelDefinitions);
+    }
+
+    void EvictProjections(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> allNamespaces)
+    {
+        foreach (var definition in definitions)
+        {
+            projections.Evict(eventStore, definition.Identifier);
+
+            foreach (var @namespace in allNamespaces)
+            {
+                projectionPipelines.EvictFor(eventStore, @namespace, definition.Identifier);
+            }
+        }
     }
 }
