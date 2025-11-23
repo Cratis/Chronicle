@@ -41,13 +41,12 @@ public class ImmediateProjection(
     Chronicle.Projections.IProjectionsManager projectionManager,
     IObjectComparer objectComparer,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection
+    ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection, INotifyProjectionDefinitionsChanged
 {
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
     EventSequenceNumber _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
     ExpandoObject? _initialState;
-    DateTimeOffset _lastUpdated = DateTimeOffset.MinValue;
     EngineProjection? _projection;
 
     /// <inheritdoc/>
@@ -65,6 +64,26 @@ public class ImmediateProjection(
                                     .GetEventStore(_projectionKey.EventStore)
                                     .GetNamespace(_projectionKey.Namespace)
                                     .GetEventSequence(_projectionKey.EventSequenceId);
+
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey.ProjectionId, _projectionKey.EventStore));
+        await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey!.ProjectionId, _projectionKey!.EventStore));
+        await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
+    public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
+    {
+        State = definition;
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey!.EventStore)).GetDefinition();
+        _projection = await projectionFactory.Create(_projectionKey!.EventStore, _projectionKey!.Namespace, State, readModel);
+        _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+        _initialState = null;
     }
 
     /// <inheritdoc/>
@@ -76,25 +95,12 @@ public class ImmediateProjection(
 
         try
         {
-            var projectionChanged = false;
-
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
-            projectionChanged = State.LastUpdated > _lastUpdated;
-            _lastUpdated = State.LastUpdated ?? DateTimeOffset.UtcNow;
-
-            if (projectionChanged)
-            {
-                var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey!.EventStore)).GetDefinition();
-                _projection = await projectionFactory.Create(_projectionKey!.EventStore, _projectionKey!.Namespace, State, readModel);
-                _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
-                _initialState = null;
-                fromSequenceNumber = EventSequenceNumber.First;
-            }
 
             var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
             var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
             var tail = await eventSequence.GetTailSequenceNumberForEventTypes(_projection!.EventTypes);
-            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
+            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
             {
                 logger.UsingCachedModelInstance();
                 var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _projection!.ReadModel.GetSchemaForLatestGeneration());

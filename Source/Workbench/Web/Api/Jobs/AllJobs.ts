@@ -7,9 +7,6 @@
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { Job } from './Job';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs');
 
 class AllJobsSortBy {
     private _id: SortingActionsForObservableQuery<Job[]>;
@@ -91,7 +88,6 @@ export interface AllJobsParameters {
 }
 export class AllJobs extends ObservableQueryFor<Job[], AllJobsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Job[] = [];
     private readonly _sortBy: AllJobsSortBy;
     private static readonly _sortBy: AllJobsSortByWithoutQuery = new AllJobsSortByWithoutQuery();

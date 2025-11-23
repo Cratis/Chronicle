@@ -9,9 +9,6 @@ import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/ap
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}/{{partition}}');
 
 export interface IReplayPartition {
     eventStore?: string;
@@ -31,7 +28,6 @@ export class ReplayPartitionValidator extends CommandValidator {
 
 export class ReplayPartition extends Command<IReplayPartition> implements IReplayPartition {
     readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/replay/{observerId}/{partition}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ReplayPartitionValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

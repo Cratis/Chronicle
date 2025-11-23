@@ -11,9 +11,6 @@ import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/redact-events');
 
 export interface IRedactMany {
     eventStore?: string;
@@ -41,7 +38,6 @@ export class RedactManyValidator extends CommandValidator {
 
 export class RedactMany extends Command<IRedactMany> implements IRedactMany {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/redact-events';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RedactManyValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

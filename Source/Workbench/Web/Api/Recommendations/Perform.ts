@@ -10,9 +10,6 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { Guid } from '@cratis/fundamentals';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations/{{recommendationId}}/perform');
 
 export interface IPerform {
     eventStore?: string;
@@ -30,7 +27,6 @@ export class PerformValidator extends CommandValidator {
 
 export class Perform extends Command<IPerform> implements IPerform {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations/{recommendationId}/perform';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new PerformValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

@@ -9,9 +9,6 @@ import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/ap
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}');
 
 export interface IReplay {
     eventStore?: string;
@@ -29,7 +26,6 @@ export class ReplayValidator extends CommandValidator {
 
 export class Replay extends Command<IReplay> implements IReplay {
     readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/replay/{observerId}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ReplayValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

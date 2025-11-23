@@ -7,9 +7,6 @@
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
 import { ObserverInformation } from './ObserverInformation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/all-observers/observe');
 
 class AllObserversSortBy {
     private _id: SortingActionsForObservableQuery<ObserverInformation[]>;
@@ -109,7 +106,6 @@ export interface AllObserversParameters {
 }
 export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers/observe';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
     private readonly _sortBy: AllObserversSortBy;
     private static readonly _sortBy: AllObserversSortByWithoutQuery = new AllObserversSortByWithoutQuery();

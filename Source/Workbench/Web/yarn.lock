@@ -309,12 +309,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/applications.react.mvvm@npm:^17.23.2":
-  version: 17.23.2
-  resolution: "@cratis/applications.react.mvvm@npm:17.23.2"
+"@cratis/applications.react.mvvm@npm:^17.24.5":
+  version: 17.24.5
+  resolution: "@cratis/applications.react.mvvm@npm:17.24.5"
   dependencies:
-    "@cratis/applications": "npm:17.23.2"
-    "@cratis/applications.react": "npm:17.23.2"
+    "@cratis/applications": "npm:17.24.5"
+    "@cratis/applications.react": "npm:17.24.5"
     "@cratis/fundamentals": "npm:^7.2.3"
     mobx: "npm:^6.15.0"
     mobx-react: "npm:^9.2.1"
@@ -325,44 +325,41 @@ __metadata:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
     react-router-dom: ^7.0.0
-  checksum: 10/b7b43502751c77d7aa0d7054ac4786be338db47117309da8cc3974c1142fab4739b58aec26750b52c72810655cace0ad53cbd0d0ff667c41b67524a16a2f7d0c
+  checksum: 10/b5399df1efc820a106d2233be96a5b9293136207bfee43596bcf98af685f813f08b7dfe188711d56f9e5b326b5c9b601c8d111cad117ca74276480b74bdf2d5e
   languageName: node
   linkType: hard
 
-"@cratis/applications.react@npm:17.23.2, @cratis/applications.react@npm:^17.23.2":
-  version: 17.23.2
-  resolution: "@cratis/applications.react@npm:17.23.2"
+"@cratis/applications.react@npm:17.24.5, @cratis/applications.react@npm:^17.24.5":
+  version: 17.24.5
+  resolution: "@cratis/applications.react@npm:17.24.5"
   dependencies:
-    "@cratis/applications": "npm:17.23.2"
+    "@cratis/applications": "npm:17.24.5"
     "@cratis/fundamentals": "npm:^7.2.3"
-    handlebars: "npm:^4.7.8"
     tsyringe: "npm:^4.10.0"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/9191b1ca14c1b15efaa9069f1f273331c7512248a76e40d19964cff6f0a0e5ec1f61415b32aa3961e47dcb88ceba68e14a4685233a6810774ec495f74cc94f58
+  checksum: 10/429947552997ea899ec337ccb8edbfce1d683b0e536a01ed6a1828174b09963c83f7b4cf266b2ef9f12dbc0bfe1ae45506f3ad1cf87a216421ab0f441cf55d1a
   languageName: node
   linkType: hard
 
-"@cratis/applications.vite@npm:^17.23.2":
-  version: 17.23.2
-  resolution: "@cratis/applications.vite@npm:17.23.2"
+"@cratis/applications.vite@npm:^17.24.5":
+  version: 17.24.5
+  resolution: "@cratis/applications.vite@npm:17.24.5"
   dependencies:
-    "@cratis/applications": "npm:17.23.2"
+    "@cratis/applications": "npm:17.24.5"
     "@cratis/fundamentals": "npm:^7.2.3"
-    handlebars: "npm:^4.7.8"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/133183b22af5816cee5be567c793ec59b046d2415938af39e56ec0328731fde1af51b6338717ee0c940d60f476e1b8404c16340c3e618d8f27009a7469714c3c
+  checksum: 10/37baa439ed1e219c4afe3341c84d2a99a3a7705fe8c0f4e2f5ab90d0e4eee9336759db98213a6d6254f87b6592b94a8a6ba5b9ed4970e67e68a6a773652537df
   languageName: node
   linkType: hard
 
-"@cratis/applications@npm:17.23.2, @cratis/applications@npm:^17.23.2":
-  version: 17.23.2
-  resolution: "@cratis/applications@npm:17.23.2"
+"@cratis/applications@npm:17.24.5, @cratis/applications@npm:^17.24.5":
+  version: 17.24.5
+  resolution: "@cratis/applications@npm:17.24.5"
   dependencies:
     "@cratis/fundamentals": "npm:^7.2.3"
-    handlebars: "npm:^4.7.8"
-  checksum: 10/169ab1e85b138c31737e9030edfe52e64b5a2bf9d05034486cfae59252f971d9534f9862405a094f46de0550aae697d33be2147bb5398a5fd11398e676193e93
+  checksum: 10/1802d4a82d184efa5a506177c8d6778d108b1cff2dc8bebfac8a1a57f4e0aa67aa0092997b0eb0023a8fe3a6f1a3d7c3a02865aca3856cdb381430caee96afb8
   languageName: node
   linkType: hard
 
@@ -1628,12 +1625,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/coverage-v8@npm:4.0.10":
-  version: 4.0.10
-  resolution: "@vitest/coverage-v8@npm:4.0.10"
+"@vitest/coverage-v8@npm:4.0.13":
+  version: 4.0.13
+  resolution: "@vitest/coverage-v8@npm:4.0.13"
   dependencies:
     "@bcoe/v8-coverage": "npm:^1.0.2"
-    "@vitest/utils": "npm:4.0.10"
+    "@vitest/utils": "npm:4.0.13"
     ast-v8-to-istanbul: "npm:^0.3.8"
     debug: "npm:^4.4.3"
     istanbul-lib-coverage: "npm:^3.2.2"
@@ -1644,12 +1641,12 @@ __metadata:
     std-env: "npm:^3.10.0"
     tinyrainbow: "npm:^3.0.3"
   peerDependencies:
-    "@vitest/browser": 4.0.10
-    vitest: 4.0.10
+    "@vitest/browser": 4.0.13
+    vitest: 4.0.13
   peerDependenciesMeta:
     "@vitest/browser":
       optional: true
-  checksum: 10/04ed34af43f82f99def10d1ebda51d27f9cee4375251768ecc58a470bbfb68c0fd3a8c8305d2f1e6f31bcf5e06bdf063bdd31890b77418cfbc287dffc2704d8b
+  checksum: 10/5bbbf72f8da7931c120636b12feb655ae102b4f1ef67481c03fd9a007727fe9d707653896798ff6c477fff3a0f260151ae753e0b69a2493522b5007c84bf9a43
   languageName: node
   linkType: hard
 
@@ -1694,12 +1691,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/pretty-format@npm:4.0.10":
-  version: 4.0.10
-  resolution: "@vitest/pretty-format@npm:4.0.10"
+"@vitest/pretty-format@npm:4.0.13":
+  version: 4.0.13
+  resolution: "@vitest/pretty-format@npm:4.0.13"
   dependencies:
     tinyrainbow: "npm:^3.0.3"
-  checksum: 10/5a51a9f83e2dbb3c829455c6e807e06797dfcf2f43c18030a06b6b00cbf618728bfba18f4fe0a3e5c1dc22eb8bfbaee2a08028f68d6180e24d449b7977c90914
+  checksum: 10/734c6a4d1f7c567bbff7a7855aa90360a46d4f0c221db66d9d63ff7a690a4fd89e36e9eb8db9acf5647bcab9eb3c6625e8d06cc7e1b46321bf7d514375524c8d
   languageName: node
   linkType: hard
 
@@ -1745,13 +1742,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/utils@npm:4.0.10":
-  version: 4.0.10
-  resolution: "@vitest/utils@npm:4.0.10"
+"@vitest/utils@npm:4.0.13":
+  version: 4.0.13
+  resolution: "@vitest/utils@npm:4.0.13"
   dependencies:
-    "@vitest/pretty-format": "npm:4.0.10"
+    "@vitest/pretty-format": "npm:4.0.13"
     tinyrainbow: "npm:^3.0.3"
-  checksum: 10/bf9b3ab30b6603c42dfd68e80bdbd8660a58bcfd35ee5082e547eaba2526d75691c5042aa08800602c5b44cee70cfc058564b1cbb5a2034e082c00109a5fde57
+  checksum: 10/0b0a5d4cc23a4b1cb481f1b31e51fe0f8021bc67478b494f08490f6690d866dedc026275850ce3104c34462ee7b415afb35a3692ced642dfa8339890fa88649e
   languageName: node
   linkType: hard
 
@@ -3594,24 +3591,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"handlebars@npm:^4.7.8":
-  version: 4.7.8
-  resolution: "handlebars@npm:4.7.8"
-  dependencies:
-    minimist: "npm:^1.2.5"
-    neo-async: "npm:^2.6.2"
-    source-map: "npm:^0.6.1"
-    uglify-js: "npm:^3.1.4"
-    wordwrap: "npm:^1.0.0"
-  dependenciesMeta:
-    uglify-js:
-      optional: true
-  bin:
-    handlebars: bin/handlebars
-  checksum: 10/bd528f4dd150adf67f3f857118ef0fa43ff79a153b1d943fa0a770f2599e38b25a7a0dbac1a3611a4ec86970fd2325a81310fb788b5c892308c9f8743bd02e11
-  languageName: node
-  linkType: hard
-
 "has-bigints@npm:^1.0.2":
   version: 1.1.0
   resolution: "has-bigints@npm:1.1.0"
@@ -4616,7 +4595,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimist@npm:^1.2.0, minimist@npm:^1.2.5, minimist@npm:^1.2.6":
+"minimist@npm:^1.2.0, minimist@npm:^1.2.6":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
   checksum: 10/908491b6cc15a6c440ba5b22780a0ba89b9810e1aea684e253e43c4e3b8d56ec1dcdd7ea96dde119c29df59c936cde16062159eae4225c691e19c70b432b6e6f
@@ -4799,13 +4778,6 @@ __metadata:
   version: 1.0.0
   resolution: "negotiator@npm:1.0.0"
   checksum: 10/b5734e87295324fabf868e36fb97c84b7d7f3156ec5f4ee5bf6e488079c11054f818290fc33804cef7b1ee21f55eeb14caea83e7dafae6492a409b3e573153e5
-  languageName: node
-  linkType: hard
-
-"neo-async@npm:^2.6.2":
-  version: 2.6.2
-  resolution: "neo-async@npm:2.6.2"
-  checksum: 10/1a7948fea86f2b33ec766bc899c88796a51ba76a4afc9026764aedc6e7cde692a09067031e4a1bf6db4f978ccd99e7f5b6c03fe47ad9865c3d4f99050d67e002
   languageName: node
   linkType: hard
 
@@ -5843,13 +5815,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"source-map@npm:^0.6.1":
-  version: 0.6.1
-  resolution: "source-map@npm:0.6.1"
-  checksum: 10/59ef7462f1c29d502b3057e822cdbdae0b0e565302c4dd1a95e11e793d8d9d62006cdc10e0fd99163ca33ff2071360cf50ee13f90440806e7ed57d81cba2f7ff
-  languageName: node
-  linkType: hard
-
 "sprintf-js@npm:~1.0.2":
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
@@ -6390,15 +6355,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uglify-js@npm:^3.1.4":
-  version: 3.19.3
-  resolution: "uglify-js@npm:3.19.3"
-  bin:
-    uglifyjs: bin/uglifyjs
-  checksum: 10/6b9639c1985d24580b01bb0ab68e78de310d38eeba7db45bec7850ab4093d8ee464d80ccfaceda9c68d1c366efbee28573b52f95e69ac792354c145acd380b11
-  languageName: node
-  linkType: hard
-
 "unbox-primitive@npm:^1.1.0":
   version: 1.1.0
   resolution: "unbox-primitive@npm:1.1.0"
@@ -6580,7 +6536,62 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:7.2.2, vite@npm:^5.0.0 || ^6.0.0 || ^7.0.0-0":
+"vite@npm:7.2.4":
+  version: 7.2.4
+  resolution: "vite@npm:7.2.4"
+  dependencies:
+    esbuild: "npm:^0.25.0"
+    fdir: "npm:^6.5.0"
+    fsevents: "npm:~2.3.3"
+    picomatch: "npm:^4.0.3"
+    postcss: "npm:^8.5.6"
+    rollup: "npm:^4.43.0"
+    tinyglobby: "npm:^0.2.15"
+  peerDependencies:
+    "@types/node": ^20.19.0 || >=22.12.0
+    jiti: ">=1.21.0"
+    less: ^4.0.0
+    lightningcss: ^1.21.0
+    sass: ^1.70.0
+    sass-embedded: ^1.70.0
+    stylus: ">=0.54.8"
+    sugarss: ^5.0.0
+    terser: ^5.16.0
+    tsx: ^4.8.1
+    yaml: ^2.4.2
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+    jiti:
+      optional: true
+    less:
+      optional: true
+    lightningcss:
+      optional: true
+    sass:
+      optional: true
+    sass-embedded:
+      optional: true
+    stylus:
+      optional: true
+    sugarss:
+      optional: true
+    terser:
+      optional: true
+    tsx:
+      optional: true
+    yaml:
+      optional: true
+  bin:
+    vite: bin/vite.js
+  checksum: 10/25962e65159e62fa6b643ac5bc79457c61c9b2cec9a1a17763b067b1e5ecac6483ad84247d6d457d81e25c5d1f8c553372bedf71dee09d8c1bd41af6c7b016a5
+  languageName: node
+  linkType: hard
+
+"vite@npm:^5.0.0 || ^6.0.0 || ^7.0.0-0":
   version: 7.2.2
   resolution: "vite@npm:7.2.2"
   dependencies:
@@ -6800,21 +6811,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wordwrap@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "wordwrap@npm:1.0.0"
-  checksum: 10/497d40beb2bdb08e6d38754faa17ce20b0bf1306327f80cb777927edb23f461ee1f6bc659b3c3c93f26b08e1cf4b46acc5bae8fda1f0be3b5ab9a1a0211034cd
-  languageName: node
-  linkType: hard
-
 "workbench@workspace:.":
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/applications": "npm:^17.23.2"
-    "@cratis/applications.react": "npm:^17.23.2"
-    "@cratis/applications.react.mvvm": "npm:^17.23.2"
-    "@cratis/applications.vite": "npm:^17.23.2"
+    "@cratis/applications": "npm:^17.24.5"
+    "@cratis/applications.react": "npm:^17.24.5"
+    "@cratis/applications.react.mvvm": "npm:^17.24.5"
+    "@cratis/applications.vite": "npm:^17.24.5"
     "@tailwindcss/postcss": "npm:4.1.17"
     "@tailwindcss/vite": "npm:4.1.17"
     "@types/chai": "npm:5.2.3"
@@ -6828,7 +6832,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:8.47.0"
     "@typescript-eslint/parser": "npm:8.47.0"
     "@vitejs/plugin-react": "npm:5.1.1"
-    "@vitest/coverage-v8": "npm:4.0.10"
+    "@vitest/coverage-v8": "npm:4.0.13"
     allotment: "npm:^1.20.4"
     autoprefixer: "npm:10.4.22"
     chai: "npm:6.2.1"
@@ -6861,7 +6865,7 @@ __metadata:
     typescript: "npm:5.9.3"
     typescript-eslint: "npm:8.47.0"
     usehooks-ts: "npm:3.1.1"
-    vite: "npm:7.2.2"
+    vite: "npm:7.2.4"
     vite-plugin-commonjs: "npm:0.10.4"
     vite-tsconfig-paths: "npm:5.1.4"
     vitest: "npm:3.2.4"

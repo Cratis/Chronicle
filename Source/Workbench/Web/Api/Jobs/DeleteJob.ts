@@ -10,9 +10,6 @@ import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applic
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
 import { Guid } from '@cratis/fundamentals';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/delete');
 
 export interface IDeleteJob {
     eventStore?: string;
@@ -30,7 +27,6 @@ export class DeleteJobValidator extends CommandValidator {
 
 export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs/{jobId}/delete';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new DeleteJobValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

@@ -9,9 +9,6 @@ import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/ap
 import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
 import { Validator } from '@cratis/applications/validation';
 import { PropertyDescriptor } from '@cratis/applications/reflection';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/failed-partitions/{{observerId}}/try-recover-failed-partition/{{partition}}');
 
 export interface ITryRecoverFailedPartition {
     eventStore?: string;
@@ -31,7 +28,6 @@ export class TryRecoverFailedPartitionValidator extends CommandValidator {
 
 export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartition> implements ITryRecoverFailedPartition {
     readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/try-recover-failed-partition/{partition}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new TryRecoverFailedPartitionValidator();
     readonly propertyDescriptors: PropertyDescriptor[] = [
         new PropertyDescriptor('eventStore', String),

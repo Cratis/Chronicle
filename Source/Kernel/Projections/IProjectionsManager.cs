@@ -42,4 +42,11 @@ public interface IProjectionsManager
     /// <param name="projection">The <see cref="IProjection"/> if it was found, null if not.</param>
     /// <returns>True if it was found, false if not.</returns>
     bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection);
+
+    /// <summary>
+    /// Evict any projection for a specific projection identifier.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
+    /// <param name="id"><see cref="ProjectionId"/> of the projection to evict.</param>
+    void Evict(EventStoreName eventStore, ProjectionId id);
 }

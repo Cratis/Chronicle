@@ -26,9 +26,15 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     {
         foreach (var definition in definitions)
         {
-            var definitionKey = $"{eventStore}{KeyHelper.Separator}{definition.Identifier}";
+            var definitionKey = GetKeyFor(eventStore, definition.Identifier);
             _definitions[definitionKey] = definition;
-            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
+                throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
+            }
+            var readModel = readModelDefinition;
             foreach (var @namespace in namespaces)
             {
                 var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
@@ -55,4 +61,17 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection) =>
         _projections.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out projection);
+
+    /// <inheritdoc/>
+    public void Evict(EventStoreName eventStore, ProjectionId id)
+    {
+        _definitions.TryRemove(GetKeyFor(eventStore, id), out _);
+
+        foreach (var key in _projections.Keys.Where(k => k.Contains($"{KeyHelper.Separator}{id}")).ToList())
+        {
+            _projections.TryRemove(key, out _);
+        }
+    }
+
+    string GetKeyFor(EventStoreName eventStore, ProjectionId id) => KeyHelper.Combine(eventStore, id);
 }
