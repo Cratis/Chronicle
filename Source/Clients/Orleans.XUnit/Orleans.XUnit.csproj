@@ -53,5 +53,6 @@
         <PackageReference Include="OrleansTestKit">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
     </ItemGroup>
 </Project>
