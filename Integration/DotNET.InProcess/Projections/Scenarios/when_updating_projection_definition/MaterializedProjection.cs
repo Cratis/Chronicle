@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition;
 
-public class InitialProjection : IProjectionFor<TestReadModel>
+public class MaterializedProjection : IProjectionFor<TestReadModel>
 {
     public static bool MapBothProperties { get; set; }
 

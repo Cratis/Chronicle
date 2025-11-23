@@ -1,26 +1,23 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition.and_projection_is_updated.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition.for_materialized_projection.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition;
 
 [Collection(ChronicleCollection.Name)]
-public class and_projection_is_updated(context context) : Given<context>(context)
+public class for_immediate_projection(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<InitialProjection, TestReadModel>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<ImmediateProjection, TestReadModel>(chronicleInProcessFixture)
     {
         public TestReadModel ResultAfterUpdate;
         public TestEvent SecondEvent;
-        public InitialProjection ProjectionInstance;
-
         public override IEnumerable<Type> EventTypes => [typeof(TestEvent)];
 
         protected override void ConfigureServices(IServiceCollection services)
         {
-            InitialProjection.MapBothProperties = false;
-            ProjectionInstance = new InitialProjection();
-            services.AddSingleton(ProjectionInstance);
+            ImmediateProjection.MapBothProperties = false;
+            services.AddSingleton(new ImmediateProjection());
         }
 
         void Establish()
@@ -31,24 +28,19 @@ public class and_projection_is_updated(context context) : Given<context>(context
 
         async Task Because()
         {
-            // Update the projection to map both properties
-            InitialProjection.MapBothProperties = true;
+            Result = (await EventStore.Projections.GetInstanceById<TestReadModel>(EventSourceId)).ReadModel;
+            ImmediateProjection.MapBothProperties = true;
 
-            // Re-register the projection
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
 
-            // Wait for projection to become active
             await Projection.WaitTillActive();
 
-            // Append second event
             var appendResult = await EventStore.EventLog.Append(EventSourceId, SecondEvent);
 
-            // Wait for it to be processed
             await Projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            // Get the updated result
-            ResultAfterUpdate = await GetReadModel(EventSourceId);
+            ResultAfterUpdate = (await EventStore.Projections.GetInstanceById<TestReadModel>(EventSourceId)).ReadModel;
         }
     }
 
