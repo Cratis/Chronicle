@@ -26,7 +26,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     {
         foreach (var definition in definitions)
         {
-            var definitionKey = $"{eventStore}{KeyHelper.Separator}{definition.Identifier}";
+            var definitionKey = GetKeyFor(eventStore, definition.Identifier);
             _definitions[definitionKey] = definition;
             var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
             if (readModelDefinition is null)
@@ -65,11 +65,13 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public void InvalidateProjection(EventStoreName eventStore, ProjectionId id)
     {
-        _definitions.TryRemove($"{eventStore}{KeyHelper.Separator}{id}", out _);
+        _definitions.TryRemove(GetKeyFor(eventStore, id), out _);
 
         foreach (var key in _projections.Keys.Where(k => k.Contains($"{KeyHelper.Separator}{id}")).ToList())
         {
             _projections.TryRemove(key, out _);
         }
     }
+
+    string GetKeyFor(EventStoreName eventStore, ProjectionId id) => KeyHelper.Combine(eventStore, id);
 }
