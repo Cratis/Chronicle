@@ -66,9 +66,13 @@ public class ProjectionObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task OnProjectionDefinitionsChanged()
+    public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        await ReadStateAsync();
+        // Update state with the new definition
+        State = definition;
+        await WriteStateAsync();
+
+        // Rebuild the pipeline with the updated definition
         await HandlePipeline();
     }
 
