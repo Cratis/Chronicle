@@ -36,10 +36,4 @@ public interface IProjection : IGrainWithStringKey
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
     Task UnsubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
-
-    /// <summary>
-    /// Deactivate all projection grains (observer subscribers and immediate projections) to force reload.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task DeactivateGrains();
 }
