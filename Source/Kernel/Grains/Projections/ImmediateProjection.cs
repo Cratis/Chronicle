@@ -77,9 +77,9 @@ public class ImmediateProjection(
     }
 
     /// <inheritdoc/>
-    public async Task OnProjectionDefinitionsChanged()
+    public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        await ReadStateAsync();
+        State = definition;
         var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey!.EventStore)).GetDefinition();
         _projection = await projectionFactory.Create(_projectionKey!.EventStore, _projectionKey!.Namespace, State, readModel);
         _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
