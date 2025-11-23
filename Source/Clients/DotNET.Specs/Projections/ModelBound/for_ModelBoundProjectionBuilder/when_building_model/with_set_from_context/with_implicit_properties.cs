@@ -5,9 +5,9 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 
-namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model;
+namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model.with_set_from_context;
 
-public class with_set_from_context : given.a_model_bound_projection_builder
+public class with_implicit_properties : given.a_model_bound_projection_builder
 {
     ProjectionDefinition _result;
 
