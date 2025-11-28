@@ -7,6 +7,7 @@ using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
+using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
@@ -37,6 +38,12 @@ builder.Services.AddHealthChecks()
 if (chronicleOptions.Features.Api)
 {
     builder.Services.AddCratisChronicleApi(useGrpc: false);
+}
+
+// Add controllers if OAuth Authority is enabled
+if (chronicleOptions.Features.OAuthAuthority)
+{
+    builder.Services.AddControllers();
 }
 
 builder.WebHost.UseKestrel(options =>
@@ -83,10 +90,29 @@ builder.Host
           .AddSingleton(BinderConfiguration.Default);
 
        services.AddCodeFirstGrpc();
+
+       // Add authentication services
+       services.AddChronicleAuthentication(chronicleOptions);
    });
 
 var app = builder.Build();
+
+// Initialize default admin user if authentication is enabled
+if (chronicleOptions.Authentication.Enabled)
+{
+    var authService = app.Services.GetRequiredService<IAuthenticationService>();
+    await authService.EnsureDefaultAdminUser();
+}
+
 app.UseRouting();
+
+// Add authentication and authorization middleware if authentication is enabled
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.UseCratisApplicationModel();
 
 if (chronicleOptions.Features.Api)
@@ -101,6 +127,13 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 
     app.MapFallbackToFile("index.html");
 }
+
+// Map controllers if OAuth Authority is enabled
+if (chronicleOptions.Features.OAuthAuthority)
+{
+    app.MapControllers();
+}
+
 app.MapGrpcServices();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
