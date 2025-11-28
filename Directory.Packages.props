@@ -7,17 +7,17 @@
         <!-- System -->
         <PackageVersion Include="System.Reactive" Version="6.1.0" />
         <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-        <PackageVersion Include="System.Text.Json" Version="9.0.11" />
+        <PackageVersion Include="System.Text.Json" Version="10.0.0" />
         <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="7.2.3" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.2.3" />
-        <PackageVersion Include="Cratis.Applications" Version="17.24.10" />
-        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.24.10" />
-        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.24.9" />
-        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.24.9" />
-        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.24.9" />
-        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.24.9" />
+        <PackageVersion Include="Cratis.Applications" Version="17.25.1" />
+        <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.25.1" />
+        <PackageVersion Include="Cratis.Applications.Orleans" Version="17.25.1" />
+        <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.25.1" />
+        <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.25.1" />
+        <PackageVersion Include="Cratis.Applications.Swagger" Version="17.25.1" />
         <!-- Microsoft -->
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
@@ -60,25 +60,25 @@
         <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.14.0" />
         <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0" />
         <!-- Roslyn-->
-        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
         <!-- Analysis -->
         <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.1" />
         <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
         <PackageVersion Include="Roslynator.Analyzers" Version="4.14.1" />
-        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.253" />
+        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.257" />
         <!-- Not categorized -->
         <PackageVersion Include="BenchmarkDotNet" Version="0.15.6" />
         <PackageVersion Include="castle.core" Version="5.2.1" />
         <PackageVersion Include="docfx.console" Version="2.59.4" />
-        <PackageVersion Include="humanizer" Version="2.14.1" />
+        <PackageVersion Include="humanizer" Version="3.0.1" />
         <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="2.0.44.1">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageVersion>
         <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
         <PackageVersion Include="NJsonSchema" Version="11.5.2" />
-        <PackageVersion Include="Polly.Core" Version="8.6.4" />
+        <PackageVersion Include="Polly.Core" Version="8.6.5" />
         <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.52">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
@@ -86,10 +86,10 @@
         <PackageVersion Include="protobuf-net.Grpc" Version="1.2.5" />
         <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
         <PackageVersion Include="Grpc.Net.Client" Version="2.71.0" />
-        <PackageVersion Include="mongodb.driver" Version="3.5.1" />
+        <PackageVersion Include="mongodb.driver" Version="3.5.2" />
         <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.1" />
-        <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.0" />
+        <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
         <PackageVersion Include="FluentValidation" Version="12.1.0" />
         <PackageVersion Include="handlebars.net" Version="2.1.6" />
         <PackageVersion Include="OneOf" Version="3.0.271" />
@@ -97,7 +97,7 @@
         <!-- Testing & Specifications -->
         <PackageVersion Include="Cratis.Specifications" Version="3.0.4" />
         <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
-        <PackageVersion Include="Testcontainers" Version="4.8.1" />
+        <PackageVersion Include="Testcontainers" Version="4.9.0" />
         <PackageVersion Include="xunit" Version="2.9.3" />
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
