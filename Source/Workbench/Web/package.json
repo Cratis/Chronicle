@@ -15,10 +15,10 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@cratis/applications": "^17.26.0",
-        "@cratis/applications.react": "^17.26.0",
-        "@cratis/applications.react.mvvm": "^17.26.0",
-        "@cratis/applications.vite": "^17.26.0",
+        "@cratis/arc": "^18.0.0",
+        "@cratis/arc.react": "^18.0.0",
+        "@cratis/arc.react.mvvm": "^18.0.0",
+        "@cratis/arc.vite": "^18.0.0",
         "allotment": "^1.20.4",
         "echarts": "^6.0.0",
         "primeicons": "^7.0.0",

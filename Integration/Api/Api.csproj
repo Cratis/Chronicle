@@ -13,11 +13,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
-        <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Swagger" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
+        <PackageReference Include="Cratis.Arc.Orleans" />
+        <PackageReference Include="Cratis.Arc.Orleans.MongoDB" />
+        <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
