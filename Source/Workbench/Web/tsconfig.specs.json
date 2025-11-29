@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "composite": true,
+        "noEmit": false,
+        "types": ["vitest/globals", "chai", "sinon", "mocha", "node"]
+    },
+    "include": [
+        "**/for_*/**/*.ts",
+        "**/for_*/**/*.tsx",
+        "vitest.setup.ts",
+        "given.ts"
+    ],
+    "exclude": []
+}

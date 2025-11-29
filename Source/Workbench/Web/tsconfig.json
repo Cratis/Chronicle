@@ -60,6 +60,9 @@
     "references": [
         {
             "path": "./tsconfig.node.json"
+        },
+        {
+            "path": "./tsconfig.specs.json"
         }
     ]
 }
