@@ -44,7 +44,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(double);
 
         return (@event, target, arrayIndexers) =>
         {
@@ -52,22 +52,15 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                valueAsObject = 0;
+                valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
-            var originalValue = value;
-            var eventValue = (int)Convert.ChangeType(eventValueProvider(@event), typeof(int));
-            value += eventValue;
-            if (targetType?.Equals(typeof(int)) == false)
-            {
-                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
-            }
-            else
-            {
-                actualTarget[lastSegment.Value] = value;
-            }
-            return new(targetProperty, originalValue, value, arrayIndexers);
+            var currentValue = Convert.ToDecimal(valueAsObject);
+            var originalValue = currentValue;
+            var eventValue = Convert.ToDecimal(eventValueProvider(@event));
+            var result = currentValue + eventValue;
+            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
+            return new(targetProperty, originalValue, result, arrayIndexers);
         };
     }
 
@@ -81,7 +74,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(double);
 
         return (@event, target, arrayIndexers) =>
         {
@@ -89,22 +82,15 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                valueAsObject = 0;
+                valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
-            var originalValue = value;
-            var eventValue = (int)Convert.ChangeType(eventValueProvider(@event), typeof(int));
-            value -= eventValue;
-            if (targetType?.Equals(typeof(int)) == false)
-            {
-                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
-            }
-            else
-            {
-                actualTarget[lastSegment.Value] = value;
-            }
-            return new(targetProperty, originalValue, value, arrayIndexers);
+            var currentValue = Convert.ToDecimal(valueAsObject);
+            var originalValue = currentValue;
+            var eventValue = Convert.ToDecimal(eventValueProvider(@event));
+            var result = currentValue - eventValue;
+            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
+            return new(targetProperty, originalValue, result, arrayIndexers);
         };
     }
 
@@ -117,7 +103,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> Count(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
-        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(int);
 
         return (@event, target, arrayIndexers) =>
         {
@@ -125,21 +111,14 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                valueAsObject = 0;
+                valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
-            var originalValue = value;
-            value++;
-            if (targetType?.Equals(typeof(int)) == false)
-            {
-                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
-            }
-            else
-            {
-                actualTarget[lastSegment.Value] = value;
-            }
-            return new(targetProperty, originalValue, value, arrayIndexers);
+            var currentValue = Convert.ToDecimal(valueAsObject);
+            var originalValue = currentValue;
+            var result = currentValue + 1;
+            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
+            return new(targetProperty, originalValue, result, arrayIndexers);
         };
     }
 
@@ -152,7 +131,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> Increment(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
-        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(int);
 
         return (@event, target, arrayIndexers) =>
         {
@@ -160,26 +139,19 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                valueAsObject = 0;
+                valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
-            var originalValue = value;
-            value++;
-            if (targetType?.Equals(typeof(int)) == false)
-            {
-                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
-            }
-            else
-            {
-                actualTarget[lastSegment.Value] = value;
-            }
-            return new(targetProperty, originalValue, value, arrayIndexers);
+            var currentValue = Convert.ToDecimal(valueAsObject);
+            var originalValue = currentValue;
+            var result = currentValue + 1;
+            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
+            return new(targetProperty, originalValue, result, arrayIndexers);
         };
     }
 
     /// <summary>
-    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can increment the target property when called.
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can decrement the target property when called.
     /// </summary>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> to use.</param>
     /// <param name="targetProperty">Target property.</param>
@@ -187,7 +159,7 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> Decrement(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
-        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(int);
 
         return (@event, target, arrayIndexers) =>
         {
@@ -195,21 +167,14 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
-                valueAsObject = 0;
+                valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var value = (int)Convert.ChangeType(valueAsObject, typeof(int));
-            var originalValue = value;
-            value--;
-            if (targetType?.Equals(typeof(int)) == false)
-            {
-                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
-            }
-            else
-            {
-                actualTarget[lastSegment.Value] = value;
-            }
-            return new(targetProperty, originalValue, value, arrayIndexers);
+            var currentValue = Convert.ToDecimal(valueAsObject);
+            var originalValue = currentValue;
+            var result = currentValue - 1;
+            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
+            return new(targetProperty, originalValue, result, arrayIndexers);
         };
     }
 }
