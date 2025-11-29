@@ -4,8 +4,8 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/applications/reflection';
 import { Job } from './Job';
 
