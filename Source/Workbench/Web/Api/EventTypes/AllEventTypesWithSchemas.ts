@@ -6,7 +6,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
-import { ParameterDescriptor } from '@cratis/applications/reflection';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { EventTypeRegistration } from '../Events/EventTypeRegistration';
 
 class AllEventTypesWithSchemasSortBy {

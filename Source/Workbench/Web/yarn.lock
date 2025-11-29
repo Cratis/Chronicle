@@ -309,12 +309,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/applications.react.mvvm@npm:^17.26.0":
-  version: 17.26.0
-  resolution: "@cratis/applications.react.mvvm@npm:17.26.0"
+"@cratis/arc.react.mvvm@npm:^18.0.2":
+  version: 18.0.2
+  resolution: "@cratis/arc.react.mvvm@npm:18.0.2"
   dependencies:
-    "@cratis/applications": "npm:17.26.0"
-    "@cratis/applications.react": "npm:17.26.0"
+    "@cratis/arc": "npm:18.0.2"
+    "@cratis/arc.react": "npm:18.0.2"
     "@cratis/fundamentals": "npm:^7.2.3"
     mobx: "npm:^6.15.0"
     mobx-react: "npm:^9.2.1"
@@ -325,41 +325,41 @@ __metadata:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
     react-router-dom: ^7.0.0
-  checksum: 10/0cbb56e3b947c069cead9c1eb5a04fabe13e4cf1c793c04a5faa603915f9d03bf3531d8797673cfaba140c26fd6fbe27c6be6b20f033c1e8ccc86766c6f355c2
+  checksum: 10/9ceb8f084829aad2d00f319d76dc2d47b1d248bee7504cc8afc5a57c8b6fc41908561642466a1e9b0ae84e29aa32f4834a08a41609eae01ee0245e93e046500c
   languageName: node
   linkType: hard
 
-"@cratis/applications.react@npm:17.26.0, @cratis/applications.react@npm:^17.26.0":
-  version: 17.26.0
-  resolution: "@cratis/applications.react@npm:17.26.0"
+"@cratis/arc.react@npm:18.0.2, @cratis/arc.react@npm:^18.0.2":
+  version: 18.0.2
+  resolution: "@cratis/arc.react@npm:18.0.2"
   dependencies:
-    "@cratis/applications": "npm:17.26.0"
+    "@cratis/arc": "npm:18.0.2"
     "@cratis/fundamentals": "npm:^7.2.3"
     tsyringe: "npm:^4.10.0"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/916759904f4454a58d2b0cabe6d41bfca567f1b9e8e09d295cdf02681525df60e0a61c5d8196aa80cc41ea3bc3732335031288449dedcdf160c46b8134021b08
+  checksum: 10/a3c9956bed6733e6b1c514fdcd6d2f5859b27a6fb0a521fe576686a7f440c06bc4fe6e077c236d427905918338075ce311ba1a200f62f8f4df5e4d1c54ab3097
   languageName: node
   linkType: hard
 
-"@cratis/applications.vite@npm:^17.26.0":
-  version: 17.26.0
-  resolution: "@cratis/applications.vite@npm:17.26.0"
+"@cratis/arc.vite@npm:^18.0.2":
+  version: 18.0.2
+  resolution: "@cratis/arc.vite@npm:18.0.2"
   dependencies:
-    "@cratis/applications": "npm:17.26.0"
+    "@cratis/arc": "npm:18.0.2"
     "@cratis/fundamentals": "npm:^7.2.3"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/df9a7953c9d1cefcf72179725ff03198553315c5f35719af780c441763b8e72e9cc827e74ccc4c97ba440eee0fea6a8c01d566382c03bc70ec708ad29b503980
+  checksum: 10/3dd6e5204e9ac6081efc4de7c880fe00c5a363bb6e8ce00ef27ae2c133e5deeac954f5cce8451ef464ccb028a758c9790aae051d5e6b370769dbad187fca7f43
   languageName: node
   linkType: hard
 
-"@cratis/applications@npm:17.26.0, @cratis/applications@npm:^17.26.0":
-  version: 17.26.0
-  resolution: "@cratis/applications@npm:17.26.0"
+"@cratis/arc@npm:18.0.2, @cratis/arc@npm:^18.0.2":
+  version: 18.0.2
+  resolution: "@cratis/arc@npm:18.0.2"
   dependencies:
     "@cratis/fundamentals": "npm:^7.2.3"
-  checksum: 10/77a55402dcd1d133fef2f62ee37503bb25ba537218a22bd3d0819970ec14740bd0cee71705c7c2086e09feccd2651b7acef961de32d9caa3cd4a1f670121bb10
+  checksum: 10/4cdd7ae427a45ad0f8299e0b0f22b598acf09ab906c1275abf1e5d1cf509fc2a608f1ef684a66e24ec1099cb817265da84b7ec15bebf391da3ec7e32c1a3b98e
   languageName: node
   linkType: hard
 
@@ -6661,10 +6661,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/applications": "npm:^17.26.0"
-    "@cratis/applications.react": "npm:^17.26.0"
-    "@cratis/applications.react.mvvm": "npm:^17.26.0"
-    "@cratis/applications.vite": "npm:^17.26.0"
+    "@cratis/arc": "npm:^18.0.2"
+    "@cratis/arc.react": "npm:^18.0.2"
+    "@cratis/arc.react.mvvm": "npm:^18.0.2"
+    "@cratis/arc.vite": "npm:^18.0.2"
     "@tailwindcss/postcss": "npm:4.1.17"
     "@tailwindcss/vite": "npm:4.1.17"
     "@types/chai": "npm:5.2.3"

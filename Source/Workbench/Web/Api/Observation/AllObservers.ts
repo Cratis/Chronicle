@@ -6,7 +6,7 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
-import { ParameterDescriptor } from '@cratis/applications/reflection';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ObserverInformation } from './ObserverInformation';
 
 class AllObserversSortBy {
