@@ -6,6 +6,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ParameterDescriptor } from '@cratis/applications/reflection';
 import { Identity } from './Identity';
 
 class GetIdentitiesSortBy {
@@ -77,6 +78,14 @@ export class GetIdentities extends QueryFor<Identity[], GetIdentitiesParameters>
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): GetIdentitiesSortBy {
         return this._sortBy;

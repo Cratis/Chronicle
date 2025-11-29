@@ -84,6 +84,7 @@ export class Perform extends Command<IPerform> implements IPerform {
     }
 
     static use(initialValues?: IPerform): [Perform, SetCommandValues<IPerform>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'Perform' does not satisfy the constraint 'Command<IPerform, any>'.
         return useCommand<Perform, IPerform>(Perform, initialValues);
     }
 }

@@ -6,6 +6,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ParameterDescriptor } from '@cratis/applications/reflection';
 
 class AllEventSequencesSortBy {
 
@@ -38,6 +39,12 @@ export class AllEventSequences extends QueryFor<string[], AllEventSequencesParam
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllEventSequencesSortBy {
         return this._sortBy;

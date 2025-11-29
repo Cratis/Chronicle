@@ -6,6 +6,7 @@
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
 import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ParameterDescriptor } from '@cratis/applications/reflection';
 import { EventTypeRegistration } from '../Events/EventTypeRegistration';
 
 class AllEventTypesWithSchemasSortBy {
@@ -57,6 +58,12 @@ export class AllEventTypesWithSchemas extends QueryFor<EventTypeRegistration[], 
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllEventTypesWithSchemasSortBy {
         return this._sortBy;

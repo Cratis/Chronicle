@@ -68,6 +68,7 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
     }
 
     static use(initialValues?: IEnsureNamespace): [EnsureNamespace, SetCommandValues<IEnsureNamespace>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'EnsureNamespace' does not satisfy the constraint 'Command<IEnsureNamespace, any>'.
         return useCommand<EnsureNamespace, IEnsureNamespace>(EnsureNamespace, initialValues);
     }
 }

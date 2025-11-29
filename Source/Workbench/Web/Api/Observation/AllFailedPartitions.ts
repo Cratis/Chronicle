@@ -6,6 +6,7 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ParameterDescriptor } from '@cratis/applications/reflection';
 import { FailedPartition } from './FailedPartition';
 
 class AllFailedPartitionsSortBy {
@@ -77,6 +78,16 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+        new ParameterDescriptor('observerId', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
+    observerId!: string;
 
     get sortBy(): AllFailedPartitionsSortBy {
         return this._sortBy;

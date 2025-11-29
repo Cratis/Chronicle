@@ -97,6 +97,7 @@ export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartitio
     }
 
     static use(initialValues?: ITryRecoverFailedPartition): [TryRecoverFailedPartition, SetCommandValues<ITryRecoverFailedPartition>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'TryRecoverFailedPartition' does not satisfy the constraint 'Command<ITryRecoverFailedPartition, any>'.
         return useCommand<TryRecoverFailedPartition, ITryRecoverFailedPartition>(TryRecoverFailedPartition, initialValues);
     }
 }

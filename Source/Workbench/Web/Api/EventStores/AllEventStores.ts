@@ -6,6 +6,7 @@
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
 import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ParameterDescriptor } from '@cratis/applications/reflection';
 
 class AllEventStoresSortBy {
 
@@ -33,6 +34,10 @@ export class AllEventStores extends ObservableQueryFor<string[]> {
         return [
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+    ];
+
 
     get sortBy(): AllEventStoresSortBy {
         return this._sortBy;
