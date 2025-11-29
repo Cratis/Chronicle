@@ -3,7 +3,7 @@
 
 import { injectable } from 'tsyringe';
 import { AddEventTypeResponse, type AddEventTypeRequest } from './AddEventType';
-import { DialogContextContent, DialogResult } from '@cratis/applications.react/dialogs';
+import { DialogContextContent, DialogResult } from '@cratis/arc.react/dialogs';
 
 @injectable()
 export class AddEventTypeViewModel {

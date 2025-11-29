@@ -4,8 +4,9 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ObserverInformation } from './ObserverInformation';
 
 class GetObserversSortBy {
@@ -122,6 +123,14 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversPa
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): GetObserversSortBy {
         return this._sortBy;

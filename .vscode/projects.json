@@ -2,27 +2,27 @@
     {
         "name": "Server",
         "path": "${workspaceFolder}/Source/Kernel/Server",
-        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net9.0/Cratis.Chronicle.Server.dll"
+        "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net10.0/Cratis.Chronicle.Server.dll"
     },
     {
         "name": "Api",
         "path": "${workspaceFolder}/Source/Clients/Api",
-        "outputPath": "${workspaceFolder}/Source/Clients/Api/bin/Debug/net9.0/Cratis.Chronicle.Api.dll"
+        "outputPath": "${workspaceFolder}/Source/Clients/Api/bin/Debug/net10.0/Cratis.Chronicle.Api.dll"
     },
     {
         "name": "AspNetCore Sample",
         "path": "${workspaceFolder}/Samples/AspNetCore",
-        "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net9.0/AspNetCore.dll"
+        "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net10.0/AspNetCore.dll"
     },
     {
         "name": "Basic Sample",
         "path": "${workspaceFolder}/Samples/Basic",
-        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net9.0/Basic.dll"
+        "outputPath": "${workspaceFolder}/Samples/Basic/bin/Debug/net10.0/Basic.dll"
     },
     {
         "name": "Orleans Sample",
         "path": "${workspaceFolder}/Samples/Orleans",
-        "outputPath": "${workspaceFolder}/Samples/Orleans/bin/Debug/net9.0/Orleans.dll"
+        "outputPath": "${workspaceFolder}/Samples/Orleans/bin/Debug/net10.0/Orleans.dll"
     },
     {
         "name": "DotNET Client",
@@ -31,21 +31,21 @@
     {
         "name": "AssemblyFixer",
         "path": "${workspaceFolder}/Source/Tools/AssemblyFixer",
-        "outputPath": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll"
+        "outputPath": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net10.0/AssemblyFixer.dll"
     },
     {
         "name": "ResourceEmbedder",
         "path": "${workspaceFolder}/Source/Tools/ResourceEmbedder",
-        "outputPath": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net9.0/ResourceEmbedder.dll"
+        "outputPath": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net10.0/ResourceEmbedder.dll"
     },
     {
         "name": "InternalsVerifier",
         "path": "${workspaceFolder}/Source/Tools/InternalsVerifier",
-        "outputPath": "${workspaceFolder}/Source/Tools/InternalsVerifier/bin/Debug/net9.0/InternalsVerifier.dll"
+        "outputPath": "${workspaceFolder}/Source/Tools/InternalsVerifier/bin/Debug/net10.0/InternalsVerifier.dll"
     },
     {
         "name": "GrpcClients",
         "path": "${workspaceFolder}/Source/Tools/GrpcClients",
-        "outputPath": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net9.0/GrpcClients.dll"
+        "outputPath": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net10.0/GrpcClients.dll"
     }
 ]

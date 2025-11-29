@@ -10,6 +10,7 @@ public class TypeFormats : ITypeFormats
 {
     readonly Dictionary<Type, string> _typesFormatInfo = new()
     {
+        { typeof(short), "int16" },
         { typeof(int), "int32" },
         { typeof(uint), "uint32" },
         { typeof(long), "int64" },

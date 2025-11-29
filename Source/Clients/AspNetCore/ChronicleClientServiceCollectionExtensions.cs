@@ -18,10 +18,10 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class ChronicleClientServiceCollectionExtensions
 {
-#if NET9_0
-    static readonly Lock _eventStoreInitLock = new();
-#else
+#if NET8_0
     static readonly object _eventStoreInitLock = new();
+#else
+    static readonly Lock _eventStoreInitLock = new();
 #endif
 
     static readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStore> _eventStores = new();

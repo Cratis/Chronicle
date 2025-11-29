@@ -11,7 +11,7 @@ import { Column } from 'primereact/column';
 import { Recommendation } from 'Api/Recommendations/Recommendation';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { DataPage, MenuItem } from 'Components';
 
 const defaultFilters: DataTableFilterMeta = {

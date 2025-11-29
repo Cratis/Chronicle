@@ -4,8 +4,9 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Recommendation } from './Recommendation';
 
 class AllRecommendationsSortBy {
@@ -85,6 +86,14 @@ export class AllRecommendations extends ObservableQueryFor<Recommendation[], All
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): AllRecommendationsSortBy {
         return this._sortBy;

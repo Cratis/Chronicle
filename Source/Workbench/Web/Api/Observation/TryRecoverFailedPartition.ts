@@ -5,10 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import { PropertyDescriptor } from '@cratis/applications/reflection';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface ITryRecoverFailedPartition {
     eventStore?: string;
@@ -97,6 +97,7 @@ export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartitio
     }
 
     static use(initialValues?: ITryRecoverFailedPartition): [TryRecoverFailedPartition, SetCommandValues<ITryRecoverFailedPartition>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'TryRecoverFailedPartition' does not satisfy the constraint 'Command<ITryRecoverFailedPartition, any>'.
         return useCommand<TryRecoverFailedPartition, ITryRecoverFailedPartition>(TryRecoverFailedPartition, initialValues);
     }
 }

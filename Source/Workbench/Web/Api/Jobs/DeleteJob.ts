@@ -5,10 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import { PropertyDescriptor } from '@cratis/applications/reflection';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Guid } from '@cratis/fundamentals';
 
 export interface IDeleteJob {
@@ -84,6 +84,7 @@ export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
     }
 
     static use(initialValues?: IDeleteJob): [DeleteJob, SetCommandValues<IDeleteJob>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'DeleteJob' does not satisfy the constraint 'Command<IDeleteJob, any>'.
         return useCommand<DeleteJob, IDeleteJob>(DeleteJob, initialValues);
     }
 }

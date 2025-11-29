@@ -3,7 +3,7 @@
 
 import { Constructor } from '@cratis/fundamentals';
 import { NullObservableQueryConnection } from './NullObservableQueryConnection';
-import { ObservableQuerySubscription, OnNextResult, QueryResult } from '@cratis/applications/queries';
+import { ObservableQuerySubscription, OnNextResult, QueryResult } from '@cratis/arc/queries';
 import { container } from 'tsyringe';
 import { AllObservers } from 'Api/Observation/AllObservers';
 import { ObserverInformation } from 'Api/Observation';

@@ -5,10 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import { PropertyDescriptor } from '@cratis/applications/reflection';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface IReplay {
     eventStore?: string;
@@ -83,6 +83,7 @@ export class Replay extends Command<IReplay> implements IReplay {
     }
 
     static use(initialValues?: IReplay): [Replay, SetCommandValues<IReplay>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'Replay' does not satisfy the constraint 'Command<IReplay, any>'.
         return useCommand<Replay, IReplay>(Replay, initialValues);
     }
 }

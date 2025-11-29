@@ -5,10 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import { PropertyDescriptor } from '@cratis/applications/reflection';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
 
@@ -150,6 +150,7 @@ export class RedactMany extends Command<IRedactMany> implements IRedactMany {
     }
 
     static use(initialValues?: IRedactMany): [RedactMany, SetCommandValues<IRedactMany>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'RedactMany' does not satisfy the constraint 'Command<IRedactMany, any>'.
         return useCommand<RedactMany, IRedactMany>(RedactMany, initialValues);
     }
 }

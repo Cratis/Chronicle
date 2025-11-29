@@ -6,7 +6,7 @@
 import { defineConfig } from 'vitest/config';
 import react from "@vitejs/plugin-react";
 import path from 'path';
-import { EmitMetadataPlugin } from '@cratis/applications.vite';
+import { EmitMetadataPlugin } from '@cratis/arc.vite';
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
@@ -87,6 +87,7 @@ export default defineConfig({
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),
             'Strings': path.resolve('./Strings'),
+            'given': path.resolve('./given.ts'),
         }
     }
 });

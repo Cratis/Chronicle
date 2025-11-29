@@ -6,7 +6,7 @@ import { Page } from '../Common/Page';
 import React from 'react';
 import { MenuItem as PrimeMenuItem } from 'primereact/menuitem';
 import { Menubar } from 'primereact/menubar';
-import { IObservableQueryFor, IQueryFor, QueryFor } from '@cratis/applications/queries';
+import { IObservableQueryFor, IQueryFor, QueryFor } from '@cratis/arc/queries';
 import { DataTableForObservableQuery } from '../DataTables/DataTableForObservableQuery';
 import { DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 import { DataTableForQuery } from '../DataTables/DataTableForQuery';

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
+using Cratis.Arc.Queries;
 using Cratis.Chronicle.Api.EventStores;
 using context = Cratis.Chronicle.Integration.Api.for_EventStoreQueries.when_getting_event_stores.context;
 

@@ -6,7 +6,7 @@ import { useRef } from 'react';
 import { ImDatabase } from "react-icons/im";
 import { ItemsList } from 'Components/ItemsList/ItemsList';
 import { EventStoreViewModel } from './EventStoreViewModel';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 
 export const EventStore = withViewModel(EventStoreViewModel, ({ viewModel }) => {
     const selectEventStorePanel = useRef<OverlayPanel>(null);

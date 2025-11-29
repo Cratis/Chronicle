@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -14,6 +13,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Grains.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;

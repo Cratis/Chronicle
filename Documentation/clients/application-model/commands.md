@@ -321,7 +321,7 @@ Command handlers should not throw exceptions for business rule violations. Inste
 #### Using OneOf with Validation Results
 
 ```csharp
-using Cratis.Applications.Validation;
+using Cratis.Arc.Validation;
 
 [Command]
 public record TransferFunds([Key] Guid AccountId, decimal Amount, Guid ToAccountId)
@@ -351,7 +351,7 @@ public record TransferFunds([Key] Guid AccountId, decimal Amount, Guid ToAccount
 For commands that return single events, use `OneOf<ValidationResult, Event>`:
 
 ```csharp
-using Cratis.Applications.Validation;
+using Cratis.Arc.Validation;
 
 [Command]
 public record CreateUser(string Email, string Name)
@@ -384,7 +384,7 @@ public record CreateUser(string Email, string Name)
 For commands that return multiple events, use `OneOf<ValidationResult, IEnumerable<object>>`:
 
 ```csharp
-using Cratis.Applications.Validation;
+using Cratis.Arc.Validation;
 
 [Command]
 public record ProcessOrder([Key] Guid OrderId)

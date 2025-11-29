@@ -6,7 +6,7 @@ import sinon, { SinonStubbedInstance } from 'sinon';
 import { ObserversViewModel } from '../../../ObserversViewModel';
 import { INamespaces } from 'State/Namespaces';
 import { Replay } from 'Api/Observation';
-import { Dialogs } from '@cratis/applications.react.mvvm/dialogs';
+import { Dialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export class a_view_model {

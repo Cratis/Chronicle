@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { SequencesViewModel } from './SequencesViewModel';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { Page } from 'Components/Common/Page';
 import { Bookmark } from './Bookmark/Bookmark';
 import { Query } from './Query';

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications;
+using Cratis.Arc;
 
 namespace Cratis.Chronicle.Workbench.Embedded;
 
@@ -26,7 +26,7 @@ public class ChronicleWorkbenchOptions
     public string BasePath { get; set; } = "/";
 
     /// <summary>
-    /// Gets or sets the <see cref="ApplicationModelOptions"/> for the Workbench.
+    /// Gets or sets the <see cref="ArcOptions"/> for the Workbench.
     /// </summary>
-    public ApplicationModelOptions ApplicationModel { get; set; } = new();
+    public ArcOptions ArcOptions { get; set; } = new();
 }

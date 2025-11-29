@@ -9,7 +9,7 @@ import { FilterMatchMode } from 'primereact/api';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { FailedPartition } from 'Api/Observation';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';

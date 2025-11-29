@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IDialogs } from '@cratis/applications.react.mvvm/dialogs';
+import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { inject, injectable } from 'tsyringe';
 import { AddNamespaceRequest, AddNamespaceResponse } from './AddNamespace';
 import { EnsureNamespace } from 'Api/Namespaces';

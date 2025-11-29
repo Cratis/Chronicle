@@ -21,10 +21,10 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
-#if NET9_0
-    static readonly Lock _registerLock = new();
-#else
+#if NET8_0
     static readonly object _registerLock = new();
+#else
+    static readonly Lock _registerLock = new();
 #endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;

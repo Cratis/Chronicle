@@ -27,7 +27,7 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .UseCratisApplicationModel();
+   .AddCratisArc(b => { });
 
 builder.WebHost.UseKestrel(options =>
 {
@@ -38,7 +38,7 @@ builder.WebHost.UseKestrel(options =>
 var app = builder.Build();
 app
     .UseRouting()
-    .UseCratisApplicationModel()
+    .UseCratisArc()
     .UseCratisChronicleApi();
 
 Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ApiPort}");
