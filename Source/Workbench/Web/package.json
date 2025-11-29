@@ -15,10 +15,10 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@cratis/applications": "^17.24.5",
-        "@cratis/applications.react": "^17.24.5",
-        "@cratis/applications.react.mvvm": "^17.24.5",
-        "@cratis/applications.vite": "^17.24.5",
+        "@cratis/applications": "^17.26.0",
+        "@cratis/applications.react": "^17.26.0",
+        "@cratis/applications.react.mvvm": "^17.26.0",
+        "@cratis/applications.vite": "^17.26.0",
         "allotment": "^1.20.4",
         "echarts": "^6.0.0",
         "primeicons": "^7.0.0",
@@ -38,7 +38,7 @@
         "@types/react-dom": "19.2.3",
         "@types/sinon": "21.0.0",
         "@types/sinon-chai": "4.0.0",
-        "@typescript-eslint/eslint-plugin": "8.47.0",
+        "@typescript-eslint/eslint-plugin": "8.48.0",
         "@typescript-eslint/parser": "8.48.0",
         "@vitejs/plugin-react": "5.1.1",
         "@vitest/coverage-v8": "4.0.14",
