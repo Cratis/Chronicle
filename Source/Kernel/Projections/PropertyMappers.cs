@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Numerics;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
@@ -175,75 +176,37 @@ public static class PropertyMappers
 
     static object PerformAdd(Type targetType, object currentValue, object valueToAdd)
     {
-        // Perform arithmetic in the target type to avoid precision loss
-        if (targetType == typeof(double))
+        return targetType switch
         {
-            return (double)Convert.ChangeType(currentValue, typeof(double)) + (double)Convert.ChangeType(valueToAdd, typeof(double));
-        }
-        if (targetType == typeof(float))
-        {
-            return (float)Convert.ChangeType(currentValue, typeof(float)) + (float)Convert.ChangeType(valueToAdd, typeof(float));
-        }
-        if (targetType == typeof(decimal))
-        {
-            return (decimal)Convert.ChangeType(currentValue, typeof(decimal)) + (decimal)Convert.ChangeType(valueToAdd, typeof(decimal));
-        }
-        if (targetType == typeof(long))
-        {
-            return (long)Convert.ChangeType(currentValue, typeof(long)) + (long)Convert.ChangeType(valueToAdd, typeof(long));
-        }
-        if (targetType == typeof(int))
-        {
-            return (int)Convert.ChangeType(currentValue, typeof(int)) + (int)Convert.ChangeType(valueToAdd, typeof(int));
-        }
-        if (targetType == typeof(short))
-        {
-            return (short)((short)Convert.ChangeType(currentValue, typeof(short)) + (short)Convert.ChangeType(valueToAdd, typeof(short)));
-        }
-        if (targetType == typeof(byte))
-        {
-            return (byte)((byte)Convert.ChangeType(currentValue, typeof(byte)) + (byte)Convert.ChangeType(valueToAdd, typeof(byte)));
-        }
-
-        // Fallback to double arithmetic and convert to target type
-        var result = (double)Convert.ChangeType(currentValue, typeof(double)) + (double)Convert.ChangeType(valueToAdd, typeof(double));
-        return TypeConversion.Convert(targetType, result);
+            _ when targetType == typeof(double) => Add((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToAdd, typeof(double))),
+            _ when targetType == typeof(float) => Add((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToAdd, typeof(float))),
+            _ when targetType == typeof(decimal) => Add((decimal)Convert.ChangeType(currentValue, typeof(decimal)), (decimal)Convert.ChangeType(valueToAdd, typeof(decimal))),
+            _ when targetType == typeof(long) => Add((long)Convert.ChangeType(currentValue, typeof(long)), (long)Convert.ChangeType(valueToAdd, typeof(long))),
+            _ when targetType == typeof(int) => Add((int)Convert.ChangeType(currentValue, typeof(int)), (int)Convert.ChangeType(valueToAdd, typeof(int))),
+            _ when targetType == typeof(short) => Add((short)Convert.ChangeType(currentValue, typeof(short)), (short)Convert.ChangeType(valueToAdd, typeof(short))),
+            _ when targetType == typeof(byte) => Add((byte)Convert.ChangeType(currentValue, typeof(byte)), (byte)Convert.ChangeType(valueToAdd, typeof(byte))),
+            _ => TypeConversion.Convert(targetType, Add((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToAdd, typeof(double))))
+        };
     }
 
     static object PerformSubtract(Type targetType, object currentValue, object valueToSubtract)
     {
-        // Perform arithmetic in the target type to avoid precision loss
-        if (targetType == typeof(double))
+        return targetType switch
         {
-            return (double)Convert.ChangeType(currentValue, typeof(double)) - (double)Convert.ChangeType(valueToSubtract, typeof(double));
-        }
-        if (targetType == typeof(float))
-        {
-            return (float)Convert.ChangeType(currentValue, typeof(float)) - (float)Convert.ChangeType(valueToSubtract, typeof(float));
-        }
-        if (targetType == typeof(decimal))
-        {
-            return (decimal)Convert.ChangeType(currentValue, typeof(decimal)) - (decimal)Convert.ChangeType(valueToSubtract, typeof(decimal));
-        }
-        if (targetType == typeof(long))
-        {
-            return (long)Convert.ChangeType(currentValue, typeof(long)) - (long)Convert.ChangeType(valueToSubtract, typeof(long));
-        }
-        if (targetType == typeof(int))
-        {
-            return (int)Convert.ChangeType(currentValue, typeof(int)) - (int)Convert.ChangeType(valueToSubtract, typeof(int));
-        }
-        if (targetType == typeof(short))
-        {
-            return (short)((short)Convert.ChangeType(currentValue, typeof(short)) - (short)Convert.ChangeType(valueToSubtract, typeof(short)));
-        }
-        if (targetType == typeof(byte))
-        {
-            return (byte)((byte)Convert.ChangeType(currentValue, typeof(byte)) - (byte)Convert.ChangeType(valueToSubtract, typeof(byte)));
-        }
-
-        // Fallback to double arithmetic and convert to target type
-        var result = (double)Convert.ChangeType(currentValue, typeof(double)) - (double)Convert.ChangeType(valueToSubtract, typeof(double));
-        return TypeConversion.Convert(targetType, result);
+            _ when targetType == typeof(double) => Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))),
+            _ when targetType == typeof(float) => Subtract((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToSubtract, typeof(float))),
+            _ when targetType == typeof(decimal) => Subtract((decimal)Convert.ChangeType(currentValue, typeof(decimal)), (decimal)Convert.ChangeType(valueToSubtract, typeof(decimal))),
+            _ when targetType == typeof(long) => Subtract((long)Convert.ChangeType(currentValue, typeof(long)), (long)Convert.ChangeType(valueToSubtract, typeof(long))),
+            _ when targetType == typeof(int) => Subtract((int)Convert.ChangeType(currentValue, typeof(int)), (int)Convert.ChangeType(valueToSubtract, typeof(int))),
+            _ when targetType == typeof(short) => Subtract((short)Convert.ChangeType(currentValue, typeof(short)), (short)Convert.ChangeType(valueToSubtract, typeof(short))),
+            _ when targetType == typeof(byte) => Subtract((byte)Convert.ChangeType(currentValue, typeof(byte)), (byte)Convert.ChangeType(valueToSubtract, typeof(byte))),
+            _ => TypeConversion.Convert(targetType, Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))))
+        };
     }
+
+    static T Add<T>(T left, T right)
+        where T : INumber<T> => left + right;
+
+    static T Subtract<T>(T left, T right)
+        where T : INumber<T> => left - right;
 }
