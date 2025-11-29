@@ -55,12 +55,11 @@ public static class PropertyMappers
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var currentValue = Convert.ToDecimal(valueAsObject);
-            var originalValue = currentValue;
-            var eventValue = Convert.ToDecimal(eventValueProvider(@event));
-            var result = currentValue + eventValue;
-            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
-            return new(targetProperty, originalValue, result, arrayIndexers);
+
+            var eventValueObject = eventValueProvider(@event);
+            var result = PerformAdd(targetType, valueAsObject, eventValueObject);
+            actualTarget[lastSegment.Value] = result;
+            return new(targetProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -85,12 +84,11 @@ public static class PropertyMappers
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var currentValue = Convert.ToDecimal(valueAsObject);
-            var originalValue = currentValue;
-            var eventValue = Convert.ToDecimal(eventValueProvider(@event));
-            var result = currentValue - eventValue;
-            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
-            return new(targetProperty, originalValue, result, arrayIndexers);
+
+            var eventValueObject = eventValueProvider(@event);
+            var result = PerformSubtract(targetType, valueAsObject, eventValueObject);
+            actualTarget[lastSegment.Value] = result;
+            return new(targetProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -114,11 +112,10 @@ public static class PropertyMappers
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var currentValue = Convert.ToDecimal(valueAsObject);
-            var originalValue = currentValue;
-            var result = currentValue + 1;
-            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
-            return new(targetProperty, originalValue, result, arrayIndexers);
+
+            var result = PerformAdd(targetType, valueAsObject, 1);
+            actualTarget[lastSegment.Value] = result;
+            return new(targetProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -142,11 +139,10 @@ public static class PropertyMappers
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var currentValue = Convert.ToDecimal(valueAsObject);
-            var originalValue = currentValue;
-            var result = currentValue + 1;
-            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
-            return new(targetProperty, originalValue, result, arrayIndexers);
+
+            var result = PerformAdd(targetType, valueAsObject, 1);
+            actualTarget[lastSegment.Value] = result;
+            return new(targetProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -170,11 +166,84 @@ public static class PropertyMappers
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
             }
-            var currentValue = Convert.ToDecimal(valueAsObject);
-            var originalValue = currentValue;
-            var result = currentValue - 1;
-            actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, result);
-            return new(targetProperty, originalValue, result, arrayIndexers);
+
+            var result = PerformSubtract(targetType, valueAsObject, 1);
+            actualTarget[lastSegment.Value] = result;
+            return new(targetProperty, valueAsObject, result, arrayIndexers);
         };
+    }
+
+    static object PerformAdd(Type targetType, object currentValue, object valueToAdd)
+    {
+        // Perform arithmetic in the target type to avoid precision loss
+        if (targetType == typeof(double))
+        {
+            return (double)Convert.ChangeType(currentValue, typeof(double)) + (double)Convert.ChangeType(valueToAdd, typeof(double));
+        }
+        if (targetType == typeof(float))
+        {
+            return (float)Convert.ChangeType(currentValue, typeof(float)) + (float)Convert.ChangeType(valueToAdd, typeof(float));
+        }
+        if (targetType == typeof(decimal))
+        {
+            return (decimal)Convert.ChangeType(currentValue, typeof(decimal)) + (decimal)Convert.ChangeType(valueToAdd, typeof(decimal));
+        }
+        if (targetType == typeof(long))
+        {
+            return (long)Convert.ChangeType(currentValue, typeof(long)) + (long)Convert.ChangeType(valueToAdd, typeof(long));
+        }
+        if (targetType == typeof(int))
+        {
+            return (int)Convert.ChangeType(currentValue, typeof(int)) + (int)Convert.ChangeType(valueToAdd, typeof(int));
+        }
+        if (targetType == typeof(short))
+        {
+            return (short)((short)Convert.ChangeType(currentValue, typeof(short)) + (short)Convert.ChangeType(valueToAdd, typeof(short)));
+        }
+        if (targetType == typeof(byte))
+        {
+            return (byte)((byte)Convert.ChangeType(currentValue, typeof(byte)) + (byte)Convert.ChangeType(valueToAdd, typeof(byte)));
+        }
+
+        // Fallback to double arithmetic and convert to target type
+        var result = (double)Convert.ChangeType(currentValue, typeof(double)) + (double)Convert.ChangeType(valueToAdd, typeof(double));
+        return TypeConversion.Convert(targetType, result);
+    }
+
+    static object PerformSubtract(Type targetType, object currentValue, object valueToSubtract)
+    {
+        // Perform arithmetic in the target type to avoid precision loss
+        if (targetType == typeof(double))
+        {
+            return (double)Convert.ChangeType(currentValue, typeof(double)) - (double)Convert.ChangeType(valueToSubtract, typeof(double));
+        }
+        if (targetType == typeof(float))
+        {
+            return (float)Convert.ChangeType(currentValue, typeof(float)) - (float)Convert.ChangeType(valueToSubtract, typeof(float));
+        }
+        if (targetType == typeof(decimal))
+        {
+            return (decimal)Convert.ChangeType(currentValue, typeof(decimal)) - (decimal)Convert.ChangeType(valueToSubtract, typeof(decimal));
+        }
+        if (targetType == typeof(long))
+        {
+            return (long)Convert.ChangeType(currentValue, typeof(long)) - (long)Convert.ChangeType(valueToSubtract, typeof(long));
+        }
+        if (targetType == typeof(int))
+        {
+            return (int)Convert.ChangeType(currentValue, typeof(int)) - (int)Convert.ChangeType(valueToSubtract, typeof(int));
+        }
+        if (targetType == typeof(short))
+        {
+            return (short)((short)Convert.ChangeType(currentValue, typeof(short)) - (short)Convert.ChangeType(valueToSubtract, typeof(short)));
+        }
+        if (targetType == typeof(byte))
+        {
+            return (byte)((byte)Convert.ChangeType(currentValue, typeof(byte)) - (byte)Convert.ChangeType(valueToSubtract, typeof(byte)));
+        }
+
+        // Fallback to double arithmetic and convert to target type
+        var result = (double)Convert.ChangeType(currentValue, typeof(double)) - (double)Convert.ChangeType(valueToSubtract, typeof(double));
+        return TypeConversion.Convert(targetType, result);
     }
 }
