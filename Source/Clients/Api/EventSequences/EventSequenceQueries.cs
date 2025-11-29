@@ -42,7 +42,7 @@ public class EventSequenceQueries : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
-        [FromQuery] string? eventSourceId = null!)
+        [FromQuery] string? eventSourceId = default)
     {
         var queryContext = _queryContextManager.Current;
 
@@ -62,7 +62,7 @@ public class EventSequenceQueries : ControllerBase
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = from,
             ToEventSequenceNumber = queryContext.Paging.IsPaged ? from + (ulong)(queryContext.Paging.Size - 1) : null!,
-            EventSourceId = eventSourceId ?? null!
+            EventSourceId = eventSourceId
         });
 
         return response.Events.ToApi();
