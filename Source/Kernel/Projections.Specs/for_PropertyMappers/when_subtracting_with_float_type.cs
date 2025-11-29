@@ -10,17 +10,15 @@ using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
-public class when_adding_to_a_deep_nested_property_without_existing_value_from_an_event_value_provider : Specification
+public class when_subtracting_with_float_type : Specification
 {
     PropertyMapper<AppendedEvent, ExpandoObject> _propertyMapper;
     AppendedEvent _event;
     ExpandoObject _result;
-    AppendedEvent _providedEvent;
 
     void Establish()
     {
         _result = new();
-
         _event = new(
             new(
                 new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
@@ -37,15 +35,13 @@ public class when_adding_to_a_deep_nested_property_without_existing_value_from_a
                 Identity.System),
             new ExpandoObject());
 
-        _propertyMapper = PropertyMappers.AddWithEventValueProvider(new TypeFormats(), "deep.nested.property", new JsonSchemaProperty { Type = JsonObjectType.Integer }, _ =>
-        {
-            _providedEvent = _;
-            return 42;
-        });
+        dynamic target = _result;
+        target.property = 42f;
+        _propertyMapper = PropertyMappers.SubtractWithEventValueProvider(new TypeFormats(), "property", new JsonSchemaProperty { Type = JsonObjectType.Number, Format = "float" }, _ => 10f);
     }
 
     void Because() => _propertyMapper(_event, _result, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_result_in_expected_value() => ((object)((dynamic)_result).deep.nested.property).ShouldEqual(42);
-    [Fact] void should_pass_the_event_to_the_value_provider() => _providedEvent.ShouldEqual(_event);
+    [Fact] void should_convert_result_to_float() => ((object)((dynamic)_result).property).ShouldBeOfExactType<float>();
+    [Fact] void should_result_in_expected_value() => ((float)((dynamic)_result).property).ShouldEqual(32f);
 }

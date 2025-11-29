@@ -20,8 +20,8 @@ public class ReadModelPropertyExpressionResolvers(IEventValueProviderExpressionR
 {
     readonly IReadModelPropertyExpressionResolver[] _resolvers =
         [
-            new AddExpressionResolver(eventValueProviderExpressionResolvers),
-            new SubtractExpressionResolver(eventValueProviderExpressionResolvers),
+            new AddExpressionResolver(eventValueProviderExpressionResolvers, typeFormats),
+            new SubtractExpressionResolver(eventValueProviderExpressionResolvers, typeFormats),
             new CountExpressionResolver(typeFormats),
             new IncrementExpressionResolver(typeFormats),
             new DecrementExpressionResolver(typeFormats),
