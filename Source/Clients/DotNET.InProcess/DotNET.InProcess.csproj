@@ -110,7 +110,6 @@
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="OneOf" />
         <PackageReference Include="protobuf-net.Grpc" />
-        <PackageReference Include="Cratis.Arc.Orleans" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="Polly.Core" />
     </ItemGroup>

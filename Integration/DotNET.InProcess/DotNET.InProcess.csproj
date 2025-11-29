@@ -19,9 +19,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Arc" />
-      <PackageReference Include="Cratis.Arc.MongoDB" />
-    <PackageReference Include="Cratis.Arc.Orleans" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Polly.Core" />
