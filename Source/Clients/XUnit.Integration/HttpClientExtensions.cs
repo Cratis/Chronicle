@@ -4,8 +4,8 @@
 using System.Net.Http.Json;
 using System.Reactive.Subjects;
 using System.Text.Json;
-using Cratis.Applications.Commands;
-using Cratis.Applications.Queries;
+using Cratis.Arc.Commands;
+using Cratis.Arc.Queries;
 using Cratis.Json;
 namespace Cratis.Chronicle.XUnit.Integration;
 
