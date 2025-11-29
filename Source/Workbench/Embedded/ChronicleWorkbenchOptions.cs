@@ -26,7 +26,7 @@ public class ChronicleWorkbenchOptions
     public string BasePath { get; set; } = "/";
 
     /// <summary>
-    /// Gets or sets the <see cref="ApplicationModelOptions"/> for the Workbench.
+    /// Gets or sets the <see cref="ArcOptions"/> for the Workbench.
     /// </summary>
-    public ApplicationModelOptions ApplicationModel { get; set; } = new();
+    public ArcOptions ArcOptions { get; set; } = new();
 }

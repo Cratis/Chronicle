@@ -37,7 +37,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
         var chronicleOptions = new Configuration.ChronicleOptions();
 
-        builder.UseCratisMongoDB(
+        builder.AddCratisMongoDB(
             mongo =>
             {
                 mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}";
@@ -53,7 +53,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
             {
-                services.AddCratisApplicationModelMeter();
+                services.AddCratisArcMeter();
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
                 services.AddChronicleTelemetry(ctx.Configuration);
