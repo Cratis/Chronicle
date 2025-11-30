@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "tsc && vite build",
+        "build": "vite build",
         "lint": "eslint --cache --quiet --fix",
         "lint:ci": "eslint --cache --quiet",
         "test": "vitest run",
@@ -15,10 +15,10 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@cratis/arc": "^18.0.2",
-        "@cratis/arc.react": "^18.0.2",
-        "@cratis/arc.react.mvvm": "^18.0.2",
-        "@cratis/arc.vite": "^18.0.2",
+        "@cratis/arc": "^18.0.3",
+        "@cratis/arc.react": "^18.0.3",
+        "@cratis/arc.react.mvvm": "^18.0.3",
+        "@cratis/arc.vite": "^18.0.3",
         "allotment": "^1.20.4",
         "echarts": "^6.0.0",
         "primeicons": "^7.0.0",
