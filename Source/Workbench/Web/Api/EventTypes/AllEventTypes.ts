@@ -4,8 +4,9 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { EventType } from '../Events/EventType';
 
 class AllEventTypesSortBy {
@@ -66,6 +67,12 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesParameters
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllEventTypesSortBy {
         return this._sortBy;

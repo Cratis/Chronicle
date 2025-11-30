@@ -14,10 +14,8 @@
     <!-- 3rd party package references -->
     <ItemGroup>
         <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
-        <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry" />

@@ -4,10 +4,10 @@
 import { CardFooter } from 'Components/Common/CardFooter';
 import { EventStoreCard } from 'Components/Common/EventStoreCard';
 import { HomeViewModel } from './HomeViewModel';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
-import { useDialog } from '@cratis/applications.react/dialogs';
+import { useDialog } from '@cratis/arc.react/dialogs';
 import { AddEventStore } from './AddEventStore';
 import { Button } from 'primereact/button';
 import { ImPlus } from "react-icons/im";
