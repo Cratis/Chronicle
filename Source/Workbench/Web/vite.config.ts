@@ -36,11 +36,6 @@ export default defineConfig({
         isolate: false,
         fileParallelism: false,
         pool: 'threads',
-        poolOptions: {
-            forks: {
-                isolate: false,
-            },
-        },
         coverage: {
             provider: 'v8',
             exclude: [
