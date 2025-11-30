@@ -67,7 +67,7 @@ public class EventTypeMigrations(
         foreach (var migration in migrations.Where(migration => migration.FromGeneration == currentGeneration))
         {
             // Apply the upcast migration
-            currentContent = ApplyMigration(currentContent, migration);
+            currentContent = ApplyUpcastMigration(currentContent, migration);
             currentGeneration = migration.ToGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
             result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
@@ -94,7 +94,7 @@ public class EventTypeMigrations(
         foreach (var migration in migrations.Where(migration => migration.ToGeneration == currentGeneration))
         {
             // Apply the downcast migration (reverse direction)
-            currentContent = ApplyMigration(currentContent, migration);
+            currentContent = ApplyDowncastMigration(currentContent, migration);
             currentGeneration = migration.FromGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
             result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
@@ -103,15 +103,25 @@ public class EventTypeMigrations(
         await Task.CompletedTask;
     }
 
-    JsonObject ApplyMigration(JsonObject content, EventTypeMigrationDefinition migration)
+    JsonObject ApplyUpcastMigration(JsonObject content, EventTypeMigrationDefinition migration)
+    {
+        return ApplyJmesPathTransformation(content, migration.UpcastJmesPath);
+    }
+
+    JsonObject ApplyDowncastMigration(JsonObject content, EventTypeMigrationDefinition migration)
+    {
+        return ApplyJmesPathTransformation(content, migration.DowncastJmesPath);
+    }
+
+    JsonObject ApplyJmesPathTransformation(JsonObject content, JsonObject? jmesPath)
     {
         // Apply JmesPath transformation if defined
-        if (migration.JmesPath?.Count > 0)
+        if (jmesPath?.Count > 0)
         {
             try
             {
                 // The JmesPath expression defines the transformation
-                var jmesPathExpr = migration.JmesPath.ToJsonString();
+                var jmesPathExpr = jmesPath.ToJsonString();
 
                 // Convert JsonObject to JsonElement for JsonTransformer
                 var contentJson = content.ToJsonString();

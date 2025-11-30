@@ -28,8 +28,14 @@ public class EventTypeMigrationDefinition
     public IList<EventTypeMigrationOperation> Operations { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the JmesPath expression for the migration as JSON.
+    /// Gets or sets the JmesPath expression for upcast migration (From → To) as JSON.
     /// </summary>
     [ProtoMember(4)]
-    public string JmesPath { get; set; } = string.Empty;
+    public string UpcastJmesPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the JmesPath expression for downcast migration (To → From) as JSON.
+    /// </summary>
+    [ProtoMember(5)]
+    public string DowncastJmesPath { get; set; } = string.Empty;
 }

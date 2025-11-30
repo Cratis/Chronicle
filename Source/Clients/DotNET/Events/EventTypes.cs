@@ -106,7 +106,8 @@ public class EventTypes : IEventTypes
                 {
                     FromGeneration = migrator.From,
                     ToGeneration = migrator.To,
-                    JmesPath = upcastBuilder.ToJson().ToJsonString()
+                    UpcastJmesPath = upcastBuilder.ToJson().ToJsonString(),
+                    DowncastJmesPath = downcastBuilder.ToJson().ToJsonString()
                 });
             }
 
