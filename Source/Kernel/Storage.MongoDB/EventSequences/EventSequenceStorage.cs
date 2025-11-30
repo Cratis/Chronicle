@@ -136,7 +136,7 @@ public class EventSequenceStorage(
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
             // Return the content for the event type's generation
-            var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.First();
+            var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? [];
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(

@@ -144,13 +144,17 @@ public class EventTypesStorage(
         throw new NotImplementedException("Getting all event type definitions is not yet implemented");
 
     /// <inheritdoc/>
-    public Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId) =>
-        Task.FromResult(new EventTypeDefinition(
+    public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
+    {
+        // Get the latest schema for the event type to build a minimal definition
+        var schema = await GetFor(eventTypeId);
+        return new EventTypeDefinition(
             eventTypeId,
             EventTypeOwner.None,
             false,
-            [],
-            []));
+            [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+            []);
+    }
 
     IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);
 
