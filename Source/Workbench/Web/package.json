@@ -10,7 +10,7 @@
         "lint:ci": "eslint --cache --quiet",
         "test": "vitest run",
         "test:watch": "vitest --watch",
-        "ci": "cd $INIT_CWD && yarn test && yarn lint:ci && tsc -b",
+        "ci": "cd $INIT_CWD && yarn test && yarn lint:ci && tsc -b && tsc -p tsconfig.specs.json",
         "up": "cd $INIT_CWD && ncu -u \\!'@cratis/*'",
         "preview": "vite preview"
     },
