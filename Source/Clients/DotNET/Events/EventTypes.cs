@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
@@ -19,6 +20,7 @@ public class EventTypes : IEventTypes
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
+    readonly IEventTypeMigrators _eventTypeMigrators;
     readonly IChronicleServicesAccessor _servicesAccessor;
 
     /// <summary>
@@ -27,15 +29,18 @@ public class EventTypes : IEventTypes
     /// <param name="eventStore">The <see cref="IEventStore"/> the event types belong to.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas from types.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+    /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for discovering event type migrators.</param>
     public EventTypes(
         IEventStore eventStore,
         IJsonSchemaGenerator jsonSchemaGenerator,
-        IClientArtifactsProvider clientArtifacts)
+        IClientArtifactsProvider clientArtifacts,
+        IEventTypeMigrators eventTypeMigrators)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
+        _eventTypeMigrators = eventTypeMigrators;
     }
 
     /// <inheritdoc/>
@@ -69,11 +74,44 @@ public class EventTypes : IEventTypes
     /// <inheritdoc/>
     public async Task Register()
     {
-        var registrations = _typesByEventType.Select(_ => new EventTypeRegistration
+        var registrations = new List<EventTypeRegistration>();
+
+        foreach (var (eventType, clrType) in _typesByEventType)
         {
-            Type = _.Key.ToContract(),
-            Schema = _schemasByEventType[_.Key].ToJson()
-        }).ToList();
+            var schema = _schemasByEventType[eventType];
+
+            var registration = new EventTypeRegistration
+            {
+                Type = eventType.ToContract(),
+                Schema = schema.ToJson()
+            };
+
+            // Add generation definitions
+            registration.Generations.Add(new Contracts.Events.EventTypeGenerationDefinition
+            {
+                Generation = eventType.Generation,
+                Schema = schema.ToJson()
+            });
+
+            // Add migration definitions from discovered migrators
+            foreach (var migrator in _eventTypeMigrators.GetMigratorsFor(clrType))
+            {
+                var upcastBuilder = new EventMigrationBuilder();
+                migrator.Upcast(upcastBuilder);
+
+                var downcastBuilder = new EventMigrationBuilder();
+                migrator.Downcast(downcastBuilder);
+
+                registration.Migrations.Add(new Contracts.Events.EventTypeMigrationDefinition
+                {
+                    FromGeneration = migrator.From,
+                    ToGeneration = migrator.To,
+                    JmesPath = upcastBuilder.ToJson().ToJsonString()
+                });
+            }
+
+            registrations.Add(registration);
+        }
 
         await _servicesAccessor.Services.EventTypes.Register(new()
         {

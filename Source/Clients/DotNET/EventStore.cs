@@ -8,6 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -47,6 +48,7 @@ public class EventStore : IEventStore
     /// <param name="namespace">Namespace for the event store.</param>
     /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
+    /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for getting event type migrators.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
     /// <param name="concurrencyScopeStrategies"><see cref="IConcurrencyScopeStrategies"/> for managing concurrency scopes.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
@@ -62,6 +64,7 @@ public class EventStore : IEventStore
         EventStoreNamespaceName @namespace,
         IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
+        IEventTypeMigrators eventTypeMigrators,
         ICorrelationIdAccessor correlationIdAccessor,
         IConcurrencyScopeStrategies concurrencyScopeStrategies,
         ICausationManager causationManager,
@@ -84,7 +87,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
 

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
@@ -30,6 +31,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
+    readonly IEventTypeMigrators _eventTypeMigrators;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -61,6 +63,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
+        _eventTypeMigrators = new EventTypeMigrators(options.ArtifactsProvider, options.ServiceProvider);
 
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
@@ -86,6 +89,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
+        _eventTypeMigrators = new EventTypeMigrators(options.ArtifactsProvider, options.ServiceProvider);
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
@@ -121,6 +125,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             @namespace,
             _connection,
             Options.ArtifactsProvider,
+            _eventTypeMigrators,
             Options.CorrelationIdAccessor,
             _concurrencyScopeStrategies,
             CausationManager,
