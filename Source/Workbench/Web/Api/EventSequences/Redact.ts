@@ -137,7 +137,6 @@ export class Redact extends Command<IRedact> implements IRedact {
     }
 
     static use(initialValues?: IRedact): [Redact, SetCommandValues<IRedact>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'Redact' does not satisfy the constraint 'Command<IRedact, any>'.
         return useCommand<Redact, IRedact>(Redact, initialValues);
     }
 }

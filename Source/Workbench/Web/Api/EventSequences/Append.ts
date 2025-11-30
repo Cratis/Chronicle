@@ -177,7 +177,6 @@ export class Append extends Command<IAppend> implements IAppend {
     }
 
     static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'Append' does not satisfy the constraint 'Command<IAppend, any>'.
         return useCommand<Append, IAppend>(Append, initialValues);
     }
 }

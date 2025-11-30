@@ -97,7 +97,6 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
     }
 
     static use(initialValues?: IReplayPartition): [ReplayPartition, SetCommandValues<IReplayPartition>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'ReplayPartition' does not satisfy the constraint 'Command<IReplayPartition, any>'.
         return useCommand<ReplayPartition, IReplayPartition>(ReplayPartition, initialValues);
     }
 }
