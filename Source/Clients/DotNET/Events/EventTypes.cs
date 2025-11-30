@@ -87,7 +87,7 @@ public class EventTypes : IEventTypes
             };
 
             // Add generation definitions
-            registration.Generations.Add(new Contracts.Events.EventTypeGenerationDefinition
+            registration.Generations.Add(new EventTypeGenerationDefinition
             {
                 Generation = eventType.Generation,
                 Schema = schema.ToJson()
@@ -102,7 +102,7 @@ public class EventTypes : IEventTypes
                 var downcastBuilder = new EventMigrationBuilder();
                 migrator.Downcast(downcastBuilder);
 
-                registration.Migrations.Add(new Contracts.Events.EventTypeMigrationDefinition
+                registration.Migrations.Add(new EventTypeMigrationDefinition
                 {
                     FromGeneration = migrator.From,
                     ToGeneration = migrator.To,
