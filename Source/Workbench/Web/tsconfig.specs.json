@@ -16,7 +16,13 @@
         "State/**/*.ts",
         "Shared/**/*.ts",
         "Features/**/*.ts",
-        "Features/**/*.tsx"
+        "Features/**/*.tsx",
+        "Components/**/*.ts",
+        "Components/**/*.tsx",
+        "Layout/**/*.ts",
+        "Layout/**/*.tsx",
+        "Utils/**/*.ts",
+        "Strings.ts"
     ],
     "exclude": []
 }
