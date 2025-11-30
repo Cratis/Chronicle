@@ -49,4 +49,4 @@ When a `UserCreated` event is appended to the event log:
 3. Properties with matching names are copied from event to read model
 4. The read model is stored and can be queried
 
-Auto-mapping works when property names and types match between the event and read model. For more control over the mapping, see [projection with custom properties](./with-properties.md).
+Auto-mapping works when property names and types match between the event and read model. For more control over the mapping, see [projection with custom properties](./set-properties.md).
