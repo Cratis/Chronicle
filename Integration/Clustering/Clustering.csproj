@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Clustering.Integration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Clustering.Integration</RootNamespace>
+    </PropertyGroup>
+
+    <!-- Override Directory.Build.props to exclude XUnit.Integration which causes type conflicts -->
+    <ItemGroup>
+        <ProjectReference Remove="$(MSBuildThisFileDirectory)../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+        <Compile Remove="$(MSBuildThisFileDirectory)../GlobalUsings.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Cratis.Applications.Orleans" />
+    </ItemGroup>
+</Project>
