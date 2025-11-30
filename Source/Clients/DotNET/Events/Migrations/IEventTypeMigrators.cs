@@ -18,5 +18,5 @@ public interface IEventTypeMigrators
     /// </summary>
     /// <param name="eventType">The event type to get migrators for.</param>
     /// <returns>Collection of migrators.</returns>
-    IEnumerable<object> GetMigratorsFor(Type eventType);
+    IEnumerable<IEventTypeMigration> GetMigratorsFor(Type eventType);
 }

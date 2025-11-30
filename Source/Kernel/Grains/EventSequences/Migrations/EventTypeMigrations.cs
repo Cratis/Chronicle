@@ -64,17 +64,13 @@ public class EventTypeMigrations(
             .OrderBy(m => m.FromGeneration.Value)
             .ToList();
 
-        foreach (var migration in migrations)
+        foreach (var migration in migrations.Where(migration => migration.FromGeneration == currentGeneration))
         {
-            if (migration.FromGeneration == currentGeneration)
-            {
-                // Apply the upcast migration
-                currentContent = ApplyMigration(currentContent, migration);
-                currentGeneration = migration.ToGeneration;
-
-                var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
-                result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
-            }
+            // Apply the upcast migration
+            currentContent = ApplyMigration(currentContent, migration);
+            currentGeneration = migration.ToGeneration;
+            var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
+            result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
         }
 
         await Task.CompletedTask;
@@ -95,17 +91,13 @@ public class EventTypeMigrations(
             .OrderByDescending(m => m.ToGeneration.Value)
             .ToList();
 
-        foreach (var migration in migrations)
+        foreach (var migration in migrations.Where(migration => migration.ToGeneration == currentGeneration))
         {
-            if (migration.ToGeneration == currentGeneration)
-            {
-                // Apply the downcast migration (reverse direction)
-                currentContent = ApplyMigration(currentContent, migration);
-                currentGeneration = migration.FromGeneration;
-
-                var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
-                result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
-            }
+            // Apply the downcast migration (reverse direction)
+            currentContent = ApplyMigration(currentContent, migration);
+            currentGeneration = migration.FromGeneration;
+            var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
+            result[currentGeneration] = expandoObjectConverter.ToExpandoObject(currentContent, targetGenerationDef.Schema);
         }
 
         await Task.CompletedTask;

@@ -13,13 +13,13 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating instances.</param>
 public class EventTypeMigrators(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider serviceProvider) : IEventTypeMigrators
 {
-    readonly Dictionary<Type, List<object>> _migratorsByEventType = [];
+    readonly Dictionary<Type, List<IEventTypeMigration>> _migratorsByEventType = [];
 
     /// <inheritdoc/>
     public IEnumerable<Type> AllMigrators => clientArtifactsProvider.EventTypeMigrators;
 
     /// <inheritdoc/>
-    public IEnumerable<object> GetMigratorsFor(Type eventType)
+    public IEnumerable<IEventTypeMigration> GetMigratorsFor(Type eventType)
     {
         if (!_migratorsByEventType.TryGetValue(eventType, out var migrators))
         {
@@ -29,7 +29,7 @@ public class EventTypeMigrators(IClientArtifactsProvider clientArtifactsProvider
 
             foreach (var migratorType in migratorTypes)
             {
-                var migrator = ActivatorUtilities.CreateInstance(serviceProvider, migratorType);
+                var migrator = (IEventTypeMigration)ActivatorUtilities.CreateInstance(serviceProvider, migratorType);
                 migrators.Add(migrator);
             }
 
