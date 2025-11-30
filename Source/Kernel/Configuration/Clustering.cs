@@ -9,11 +9,6 @@ namespace Cratis.Chronicle.Configuration;
 public class Clustering
 {
     /// <summary>
-    /// Gets a value indicating whether clustering is enabled.
-    /// </summary>
-    public bool Enabled { get; init; }
-
-    /// <summary>
     /// Gets the cluster identifier.
     /// </summary>
     public string ClusterId { get; init; } = "chronicle-cluster";

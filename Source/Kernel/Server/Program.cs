@@ -71,11 +71,6 @@ builder.Host
            options.ServiceId = chronicleOptions.Clustering.ServiceId;
        });
 
-       if (!chronicleOptions.Clustering.Enabled)
-       {
-           siloBuilder.UseLocalhostClustering();
-       }
-
        siloBuilder
            .AddChronicleToSilo(_ => _
               .WithMongoDB(chronicleOptions))

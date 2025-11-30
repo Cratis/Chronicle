@@ -22,7 +22,6 @@ services:
     environment:
       - Cratis__Chronicle__port=35000
       - Cratis__Chronicle__apiPort=8080
-      - Cratis__Chronicle__clustering__enabled=true
       - Cratis__Chronicle__clustering__clusterId=chronicle-cluster
       - Cratis__Chronicle__clustering__serviceId=chronicle
       - Cratis__Chronicle__storage__connectionDetails=mongodb://mongodb:27017
@@ -43,7 +42,6 @@ services:
     environment:
       - Cratis__Chronicle__port=35000
       - Cratis__Chronicle__apiPort=8080
-      - Cratis__Chronicle__clustering__enabled=true
       - Cratis__Chronicle__clustering__clusterId=chronicle-cluster
       - Cratis__Chronicle__clustering__serviceId=chronicle
       - Cratis__Chronicle__storage__connectionDetails=mongodb://mongodb:27017

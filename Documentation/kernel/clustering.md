@@ -1,6 +1,6 @@
 # Orleans Clustering Support
 
-Chronicle Kernel now supports Orleans clustering, allowing you to run multiple instances of the Chronicle Server that can work together as a cluster. This provides high availability and scalability for your event store.
+Chronicle Kernel uses Orleans clustering to allow running multiple instances of the Chronicle Server that work together. This provides high availability and scalability for your event store. Clustering is always enabled through MongoDB.
 
 ## Configuration
 
@@ -9,7 +9,6 @@ Clustering is configured through the `chronicle.json` configuration file or envi
 ```json
 {
     "clustering": {
-        "enabled": true,
         "clusterId": "chronicle-cluster",
         "serviceId": "chronicle"
     },
@@ -22,7 +21,6 @@ Clustering is configured through the `chronicle.json` configuration file or envi
 
 ### Configuration Options
 
-- **enabled**: Set to `true` to enable clustering. When `false`, the server will use localhost clustering (single instance mode).
 - **clusterId**: A unique identifier for the cluster. All instances that should form a cluster must use the same `clusterId`.
 - **serviceId**: A unique identifier for the service. All instances in the cluster must use the same `serviceId`.
 
@@ -31,7 +29,6 @@ Clustering is configured through the `chronicle.json` configuration file or envi
 You can also configure clustering using environment variables:
 
 ```bash
-export Cratis__Chronicle__clustering__enabled=true
 export Cratis__Chronicle__clustering__clusterId=chronicle-cluster
 export Cratis__Chronicle__clustering__serviceId=chronicle
 export Cratis__Chronicle__storage__connectionDetails=mongodb://localhost:27017
@@ -39,9 +36,9 @@ export Cratis__Chronicle__storage__connectionDetails=mongodb://localhost:27017
 
 ## Storage Requirements
 
-Orleans clustering requires a shared storage backend for cluster membership information. Chronicle uses MongoDB for this purpose through the `Orleans.Providers.MongoDB` package.
+Orleans clustering uses MongoDB as a shared storage backend for cluster membership information.
 
-The MongoDB database specified in `storage.connectionDetails` will be used to store:
+The MongoDB database specified in `storage.connectionDetails` stores:
 - Cluster membership information
 - Reminder data  
 - Grain storage (if configured)
@@ -52,8 +49,7 @@ To run multiple Chronicle Server instances in a cluster:
 
 1. Ensure MongoDB is running and accessible to all instances
 2. Configure all instances with the same `clusterId` and `serviceId`
-3. Set `clustering.enabled` to `true` in all instances
-4. Start each instance on different ports:
+3. Start each instance on different ports:
 
 ### Instance 1
 
@@ -62,7 +58,6 @@ To run multiple Chronicle Server instances in a cluster:
     "port": 35000,
     "apiPort": 8080,
     "clustering": {
-        "enabled": true,
         "clusterId": "chronicle-cluster",
         "serviceId": "chronicle"
     },
@@ -80,7 +75,6 @@ To run multiple Chronicle Server instances in a cluster:
     "port": 35001,
     "apiPort": 8081,
     "clustering": {
-        "enabled": true,
         "clusterId": "chronicle-cluster",
         "serviceId": "chronicle"
     },
