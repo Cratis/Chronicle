@@ -5,8 +5,9 @@
         <RootNamespace>Cratis.Chronicle.Clustering.Integration</RootNamespace>
     </PropertyGroup>
 
-    <!-- Override Directory.Build.props to exclude XUnit.Integration which causes type conflicts -->
+    <!-- Override Directory.Build.props to exclude XUnit and XUnit.Integration which causes type conflicts -->
     <ItemGroup>
+        <ProjectReference Remove="$(MSBuildThisFileDirectory)../../Source/Clients/XUnit/XUnit.csproj" />
         <ProjectReference Remove="$(MSBuildThisFileDirectory)../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
         <Compile Remove="$(MSBuildThisFileDirectory)../GlobalUsings.cs" />
     </ItemGroup>

@@ -21,8 +21,9 @@ public class ClusteringFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var builder = new TestClusterBuilder(2);
-        builder.AddSiloBuilderConfigurator<ClusteringSiloConfigurator>();
-        builder.AddClientBuilderConfigurator<ClusteringClientConfigurator>();
+        builder
+            .AddSiloBuilderConfigurator<ClusteringSiloConfigurator>()
+            .AddClientBuilderConfigurator<ClusteringClientConfigurator>();
         _cluster = builder.Build();
         await _cluster.DeployAsync();
     }
