@@ -107,13 +107,18 @@ public class EventSequenceStorage(
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        ExpandoObject content)
+        IDictionary<EventTypeGeneration, ExpandoObject> content)
     {
         try
         {
-            var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-            var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-            var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            var generationalContent = new Dictionary<string, BsonDocument>();
+            foreach (var (generation, expandoContent) in content)
+            {
+                var schema = await eventTypesStorage.GetFor(eventType.Id, generation);
+                var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
+                generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            }
+
             var @event = new Event(
                 sequenceNumber,
                 correlationId,
@@ -125,13 +130,13 @@ public class EventSequenceStorage(
                 eventSourceId,
                 eventStreamType,
                 eventStreamId,
-                new Dictionary<string, BsonDocument>
-                {
-                    { eventType.Generation.ToString(), document }
-                },
+                generationalContent,
                 []);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
+
+            // Return the content for the event type's generation
+            var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.First();
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
@@ -147,7 +152,7 @@ public class EventSequenceStorage(
                     correlationId,
                     causation,
                     await identityStorage.GetFor(causedByChain)),
-                content));
+                returnContent));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {

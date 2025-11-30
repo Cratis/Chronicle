@@ -7,7 +7,4 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// Defines a migrator for a specific event type.
 /// </summary>
 /// <typeparam name="TEvent">The event type to migrate.</typeparam>
-public interface IEventTypeMigrationFor<TEvent> : IEventTypeMigration
-{
-
-}
+public interface IEventTypeMigrationFor<TEvent> : IEventTypeMigration;

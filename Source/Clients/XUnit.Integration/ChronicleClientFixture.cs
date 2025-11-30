@@ -100,6 +100,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> EventTypes => GetArtifactTypes(provider => provider.EventTypes);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventTypeMigrators => GetArtifactTypes(provider => provider.EventTypeMigrators);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Projections => GetArtifactTypes(provider => provider.Projections);
 
     /// <inheritdoc/>

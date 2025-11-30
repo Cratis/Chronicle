@@ -26,6 +26,9 @@ public class DefaultOrleansClientArtifactsProvider(IClientArtifactsProvider prov
     public IEnumerable<Type> EventTypes => provider.EventTypes;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> EventTypeMigrators => provider.EventTypeMigrators;
+
+    /// <inheritdoc/>
     public IEnumerable<Type> Projections => provider.Projections;
 
     /// <inheritdoc/>
