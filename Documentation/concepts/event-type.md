@@ -15,5 +15,4 @@ The concept of migration is very important when working with systems that evolve
 Being then able to just roll out new versions with changes and automatically have the events
 migrated to different generations is critical for evolving systems.
 
-> Note: Migrations are not supported yet. But the internals of Chronicle
-> has been designed and prepared for this and will come in a future version.
+For detailed information on how to define and use migrations, see [Event Type Migrations](./event-type-migrations.md).

@@ -2,6 +2,8 @@
   href: event.md
 - name: Event Type
   href: event-type.md
+- name: Event Type Migrations
+  href: event-type-migrations.md
 - name: Event Source
   href: event-source.md
 - name: Event Store
