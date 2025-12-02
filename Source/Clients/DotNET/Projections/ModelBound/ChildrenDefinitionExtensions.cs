@@ -156,11 +156,30 @@ static class ChildrenDefinitionExtensions
                 }
             }
 
+            // Process class-level RemovedWith attributes on the child type
+            ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, childrenDef);
+
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 processMember(childProperty, definition, [], false, null, childrenDef);
             }
+        }
+    }
+
+    static void ProcessChildTypeLevelRemovedWith(
+        Type childType,
+        Func<Type, EventType> getOrCreateEventType,
+        ChildrenDefinition childrenDef)
+    {
+        foreach (var (attr, eventType) in childType.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+        {
+            childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, attr, eventType);
+        }
+
+        foreach (var (attr, eventType) in childType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        {
+            childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, attr, eventType);
         }
     }
 

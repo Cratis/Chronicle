@@ -127,5 +127,44 @@ public record UserProfile(
 
     string Name);
 
+[RemovedWith<ReadModelRemoved>]
+public record RemovableReadModel(
+    [Key]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Name);
+
+[RemovedWith<ReadModelRemoved>]
+[RemovedWithJoin<ReadModelRemovedJoin>]
+public record ReadModelWithMultipleRemovalOptions(
+    [Key]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Name);
+
+[RemovedWith<ReadModelRemoved>(key: nameof(ReadModelRemoved.Id))]
+public record RemovableReadModelWithKey(
+    [Key]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Name);
+
+[RemovedWith<ChildItemRemoved>(key: nameof(ChildItemRemoved.ItemId), parentKey: nameof(ChildItemRemoved.ParentId))]
+public record RemovableChildItem(
+    [Key]
+    Guid Id,
+
+    string Name);
+
+public record ParentWithRemovableChildren(
+    [Key]
+    Guid Id,
+
+    [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(RemovableChildItem.Id))]
+    IEnumerable<RemovableChildItem> Items);
+
 #pragma warning restore SA1402 // File may only contain a single type
 #pragma warning restore SA1649 // File name should match first type name
