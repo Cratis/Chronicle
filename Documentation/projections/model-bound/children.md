@@ -132,7 +132,9 @@ When a `QuantityIncreased` event occurs later:
 
 ## Removing Children
 
-Use `RemovedWith` to remove children from collections:
+Use `RemovedWith` to remove children from collections. You can apply it either on the collection property or on the child type class:
+
+### Property-Level Removal
 
 ```csharp
 public record Order(
@@ -148,9 +150,29 @@ public record OrderLine(
     string Description);
 ```
 
+### Class-Level Removal
+
+Apply `RemovedWith` directly on the child type for better separation of concerns:
+
+```csharp
+public record Order(
+    [Key]
+    Guid OrderId,
+
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
+    IEnumerable<OrderLine> Lines);
+
+[RemovedWith<LineItemRemoved>(
+    key: nameof(LineItemRemoved.ItemId),
+    parentKey: nameof(LineItemRemoved.OrderId))]
+public record OrderLine(
+    [Key] Guid Id,
+    string Description);
+```
+
 ### RemovedWithJoin
 
-For more complex removal scenarios using joins:
+For removal based on events from different streams (joins), use `RemovedWithJoin`:
 
 ```csharp
 public record Subscription(
@@ -161,6 +183,17 @@ public record Subscription(
     [RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
     IEnumerable<Feature> Features);
 ```
+
+Or at the class level:
+
+```csharp
+[RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
+public record Feature(
+    [Key] Guid FeatureId,
+    string Name);
+```
+
+> **Note**: For comprehensive documentation on removal options including removing root read models, see [Removal](./removal.md).
 
 ## Complete Example
 

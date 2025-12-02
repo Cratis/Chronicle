@@ -72,6 +72,7 @@ internal class ModelBoundProjectionBuilder(
                           attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
             .ToList();
 
+        ProcessClassLevelRemovedWith(modelType, definition);
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
         BuildFromEveryDefinition(definition);
@@ -130,6 +131,19 @@ internal class ModelBoundProjectionBuilder(
             Properties = properties,
             IncludeChildren = true
         };
+    }
+
+    void ProcessClassLevelRemovedWith(Type modelType, ProjectionDefinition definition)
+    {
+        foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+        {
+            definition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
+        }
+
+        foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        {
+            definition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
+        }
     }
 
     void ProcessProperties(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents, ConstructorInfo? primaryConstructor)
