@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -20,10 +21,10 @@ public class when_providing : Specification
     EventType _secondEventWithFirstConstraintEventType;
     EventType _firstEventWithSecondConstraintEventType;
     EventType _secondEventWithSecondConstraintEventType;
-    JsonSchema _firstEventWithFirstConstraintSchema;
-    JsonSchema _secondEventWithFirstConstraintSchema;
-    JsonSchema _firstEventWithSecondConstraintSchema;
-    JsonSchema _secondEventWithSecondConstraintSchema;
+    IJsonSchemaDocument _firstEventWithFirstConstraintSchema;
+    IJsonSchemaDocument _secondEventWithFirstConstraintSchema;
+    IJsonSchemaDocument _firstEventWithSecondConstraintSchema;
+    IJsonSchemaDocument _secondEventWithSecondConstraintSchema;
     INamingPolicy _namingPolicy;
 
     void Establish()
@@ -31,23 +32,30 @@ public class when_providing : Specification
         _clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
         _eventTypes = Substitute.For<IEventTypes>();
 
+        _namingPolicy = new DefaultNamingPolicy();
+        var schemaGenerator = new JsonSchemaGenerator(
+            new ComplianceMetadataResolver(
+                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
+                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
+            _namingPolicy);
+
         _firstEventWithFirstConstraintEventType = new EventType(nameof(FirstEventWithFirstConstraint), EventTypeGeneration.First);
-        _firstEventWithFirstConstraintSchema = JsonSchema.FromType<FirstEventWithFirstConstraint>();
+        _firstEventWithFirstConstraintSchema = schemaGenerator.Generate(typeof(FirstEventWithFirstConstraint));
         _eventTypes.GetEventTypeFor(typeof(FirstEventWithFirstConstraint)).Returns(_firstEventWithFirstConstraintEventType);
         _eventTypes.GetSchemaFor(_firstEventWithFirstConstraintEventType.Id).Returns(_firstEventWithFirstConstraintSchema);
 
         _secondEventWithFirstConstraintEventType = new EventType(nameof(SecondEventWithFirstConstraint), EventTypeGeneration.First);
-        _secondEventWithFirstConstraintSchema = JsonSchema.FromType<SecondEventWithFirstConstraint>();
+        _secondEventWithFirstConstraintSchema = schemaGenerator.Generate(typeof(SecondEventWithFirstConstraint));
         _eventTypes.GetEventTypeFor(typeof(SecondEventWithFirstConstraint)).Returns(_secondEventWithFirstConstraintEventType);
         _eventTypes.GetSchemaFor(_secondEventWithFirstConstraintEventType.Id).Returns(_secondEventWithFirstConstraintSchema);
 
         _firstEventWithSecondConstraintEventType = new EventType(nameof(FirstEventWithSecondConstraint), EventTypeGeneration.First);
-        _firstEventWithSecondConstraintSchema = JsonSchema.FromType<FirstEventWithSecondConstraint>();
+        _firstEventWithSecondConstraintSchema = schemaGenerator.Generate(typeof(FirstEventWithSecondConstraint));
         _eventTypes.GetEventTypeFor(typeof(FirstEventWithSecondConstraint)).Returns(_firstEventWithSecondConstraintEventType);
         _eventTypes.GetSchemaFor(_firstEventWithSecondConstraintEventType.Id).Returns(_firstEventWithSecondConstraintSchema);
 
         _secondEventWithSecondConstraintEventType = new EventType(nameof(SecondEventWithSecondConstraint), EventTypeGeneration.First);
-        _secondEventWithSecondConstraintSchema = JsonSchema.FromType<SecondEventWithSecondConstraint>();
+        _secondEventWithSecondConstraintSchema = schemaGenerator.Generate(typeof(SecondEventWithSecondConstraint));
         _eventTypes.GetEventTypeFor(typeof(SecondEventWithSecondConstraint)).Returns(_secondEventWithSecondConstraintEventType);
         _eventTypes.GetSchemaFor(_secondEventWithSecondConstraintEventType.Id).Returns(_secondEventWithSecondConstraintSchema);
 
@@ -59,7 +67,6 @@ public class when_providing : Specification
             typeof(SecondEventWithSecondConstraint)
         ]);
 
-        _namingPolicy = new DefaultNamingPolicy();
         _provider = new UniqueConstraintProvider(_clientArtifactsProvider, _eventTypes, _namingPolicy);
     }
 

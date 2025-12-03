@@ -20,6 +20,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     readonly IComplianceMetadataResolver _metadataResolver;
     readonly TypeFormats _typeFormats;
     readonly JsonSerializerOptions _serializerOptions;
+    readonly INamingPolicy _namingPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
@@ -30,6 +31,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     {
         _metadataResolver = metadataResolver;
         _typeFormats = new TypeFormats();
+        _namingPolicy = namingPolicy;
 
         _serializerOptions = new JsonSerializerOptions
         {
@@ -47,6 +49,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             throw new InvalidOperationException($"Expected JsonObject for schema generation, got {jsonNode?.GetType()}");
         }
 
+        // Convert property names to match naming policy
+        ConvertPropertyNames(jsonObject);
+
         // Apply compliance metadata processing
         ApplyComplianceMetadata(jsonObject, type);
 
@@ -54,6 +59,20 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         ApplyTypeFormats(jsonObject, type);
 
         return new DotNet9JsonSchemaDocument(jsonObject);
+    }
+
+    void ConvertPropertyNames(JsonObject schema)
+    {
+        if (schema["properties"] is JsonObject properties)
+        {
+            var convertedProperties = new JsonObject();
+            foreach (var property in properties)
+            {
+                var convertedName = _namingPolicy.GetPropertyName(property.Key);
+                convertedProperties[convertedName] = property.Value?.DeepClone();
+            }
+            schema["properties"] = convertedProperties;
+        }
     }
 
     void ApplyComplianceMetadata(JsonObject schema, Type type)
@@ -107,9 +126,17 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                     var propertyType = clrProperty.PropertyType;
 
                     // Handle nullable types
+                    var wasNullable = false;
                     if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
                     {
                         propertyType = Nullable.GetUnderlyingType(propertyType)!;
+                        wasNullable = true;
+                    }
+
+                    // Handle enum types - they are represented as integers
+                    if (propertyType.IsEnum)
+                    {
+                        propertyType = Enum.GetUnderlyingType(propertyType);
                     }
 
                     if (_typeFormats.IsKnown(propertyType))
@@ -117,8 +144,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                         var format = _typeFormats.GetFormatForType(propertyType);
 
                         // Add nullable marker if the property is nullable
-                        if (clrProperty.PropertyType.IsGenericType &&
-                            clrProperty.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                        if (wasNullable)
                         {
                             format = $"{format}?";
                         }

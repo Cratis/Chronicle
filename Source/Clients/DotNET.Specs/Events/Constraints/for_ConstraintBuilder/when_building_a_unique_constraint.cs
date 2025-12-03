@@ -13,7 +13,7 @@ public class when_building_a_unique_constraint : given.a_constraint_builder_with
     void Because()
     {
         var eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
-        _eventTypes.GetSchemaFor(eventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
+        _eventTypes.GetSchemaFor(eventType.Id).Returns(_schemaGenerator.Generate(typeof(EventWithStringProperty)));
         _constraintBuilder.Unique(_ =>
         {
             _.On(eventType, [nameof(EventWithStringProperty.SomeProperty)]);

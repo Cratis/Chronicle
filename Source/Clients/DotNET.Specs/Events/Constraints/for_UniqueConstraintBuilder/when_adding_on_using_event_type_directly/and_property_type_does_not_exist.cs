@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using NJsonSchema.Generation;
-using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
+using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_adding_on_using_event_type_directly;
 
@@ -14,9 +14,13 @@ public class and_property_type_does_not_exist : given.a_unique_constraint_builde
 
     void Establish()
     {
-        var generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
+        var schemaGenerator = new JsonSchemaGenerator(
+            new ComplianceMetadataResolver(
+                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
+                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
+            _namingPolicy);
         _eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
-        var firstEventTypeSchema = generator.Generate(typeof(EventWithStringProperty));
+        var firstEventTypeSchema = schemaGenerator.Generate(typeof(EventWithStringProperty));
         _eventTypes.GetSchemaFor(_eventType.Id).Returns(firstEventTypeSchema);
     }
 
