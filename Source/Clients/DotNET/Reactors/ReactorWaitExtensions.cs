@@ -14,6 +14,8 @@ namespace Cratis.Chronicle.Reactors;
 /// </remarks>
 public static class ReactorWaitExtensions
 {
+    const int DefaultDelay = 50;
+
     /// <summary>
     /// Wait for the reactor to reach a specific running state.
     /// </summary>
@@ -21,7 +23,7 @@ public static class ReactorWaitExtensions
     /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitForState(this ReactorHandler reactor, ObserverRunningState runningState, TimeSpan? timeout = default)
+    public static async Task WaitForState(this IReactorHandler reactor, ObserverRunningState runningState, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
 
@@ -31,7 +33,7 @@ public static class ReactorWaitExtensions
         {
             var state = await reactor.GetState();
             currentRunningState = state.RunningState;
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -41,7 +43,7 @@ public static class ReactorWaitExtensions
     /// <param name="reactor">Reactor to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    public static Task WaitTillActive(this ReactorHandler reactor, TimeSpan? timeout = default) =>
+    public static Task WaitTillActive(this IReactorHandler reactor, TimeSpan? timeout = default) =>
          reactor.WaitForState(ObserverRunningState.Active, timeout);
 
     /// <summary>
@@ -50,7 +52,7 @@ public static class ReactorWaitExtensions
     /// <param name="reactor">Reactor to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillSubscribed(this ReactorHandler reactor, TimeSpan? timeout = default)
+    public static async Task WaitTillSubscribed(this IReactorHandler reactor, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
@@ -61,7 +63,7 @@ public static class ReactorWaitExtensions
             {
                 break;
             }
-            await Task.Delay(100, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -72,7 +74,7 @@ public static class ReactorWaitExtensions
     /// <param name="eventSequenceNumber">The expected <see cref="EventSequenceNumber"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task WaitTillReachesEventSequenceNumber(this ReactorHandler reactor, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
+    public static async Task WaitTillReachesEventSequenceNumber(this IReactorHandler reactor, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var state = await reactor.GetState();
@@ -80,7 +82,7 @@ public static class ReactorWaitExtensions
         while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
         {
             state = await reactor.GetState();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
     }
 
@@ -90,7 +92,7 @@ public static class ReactorWaitExtensions
     /// <param name="reactor">Reactor to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this ReactorHandler reactor, TimeSpan? timeout = default)
+    public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IReactorHandler reactor, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var failedPartitions = await reactor.GetFailedPartitions();
@@ -98,7 +100,7 @@ public static class ReactorWaitExtensions
         while (!failedPartitions.Any() && !cts.IsCancellationRequested)
         {
             failedPartitions = await reactor.GetFailedPartitions();
-            await Task.Delay(20, cts.Token);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
         return failedPartitions;
     }

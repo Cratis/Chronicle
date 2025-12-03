@@ -10,7 +10,6 @@ public class multiple_validators_and_one_has_violation : given.a_constraint_vali
     ConstraintValidationResult _result;
     ConstraintViolation _violation;
 
-
     void Establish()
     {
         _firstValidator.Validate(Arg.Any<ConstraintValidationContext>()).Returns(new ConstraintValidationResult());

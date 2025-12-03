@@ -4,27 +4,30 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of the <see cref="IJoinBuilder{TModel, TEvent}"/>.
+/// Represents an implementation of the <see cref="IJoinBuilder{TReadModel, TEvent}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilder{TReadModel, TParentBuilder}"/>.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
-/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilder{TModel, TParentBuilder}"/>.</param>
-public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
-    : ModelPropertiesBuilder<TModel, TEvent, IJoinBuilder<TModel, TEvent>, TParentBuilder>(projectionBuilder), IJoinBuilder<TModel, TEvent>
+public class JoinBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder, INamingPolicy namingPolicy)
+    : ReadModelPropertiesBuilder<TReadModel, TEvent, IJoinBuilder<TReadModel, TEvent>, TParentBuilder>(projectionBuilder, namingPolicy), IJoinBuilder<TReadModel, TEvent>
         where TParentBuilder : class
 {
-    readonly IProjectionBuilder<TModel, TParentBuilder> _projectionBuilder = projectionBuilder;
+    readonly IProjectionBuilder<TReadModel, TParentBuilder> _projectionBuilder = projectionBuilder;
+    readonly INamingPolicy _namingPolicy = namingPolicy;
     PropertyPath? _on;
 
     /// <inheritdoc/>
-    public IJoinBuilder<TModel, TEvent> On<TProperty>(Expression<Func<TModel, TProperty>> keyAccessor)
+    public IJoinBuilder<TReadModel, TEvent> On<TProperty>(Expression<Func<TReadModel, TProperty>> keyAccessor)
     {
-        _on = keyAccessor.GetPropertyPath();
+        _on = _namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath());
         return this;
     }
 
@@ -55,7 +58,7 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     {
         if (_on is null && _projectionBuilder is not IChildrenBuilder)
         {
-            throw new MissingOnPropertyExpressionWhenJoiningWithEvent(typeof(TModel), typeof(TEvent));
+            throw new MissingOnPropertyExpressionWhenJoiningWithEvent(typeof(TReadModel), typeof(TEvent));
         }
     }
 
@@ -63,7 +66,7 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     {
         if (_on is not null && _projectionBuilder is IChildrenBuilder)
         {
-            throw new OnPropertyShouldNotBeSpecifiedForChildJoin(typeof(TModel), typeof(TEvent));
+            throw new OnPropertyShouldNotBeSpecifiedForChildJoin(typeof(TReadModel), typeof(TEvent));
         }
     }
 
@@ -71,7 +74,7 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TMod
     {
         if (_on is null && _projectionBuilder is IChildrenBuilder childrenBuilder && !childrenBuilder.HasIdentifiedBy)
         {
-            throw new MissingIdentifiedByPropertyExpressionWhenJoiningWithEvent(typeof(TModel), typeof(TEvent));
+            throw new MissingIdentifiedByPropertyExpressionWhenJoiningWithEvent(typeof(TReadModel), typeof(TEvent));
         }
     }
 }

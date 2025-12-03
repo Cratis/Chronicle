@@ -51,7 +51,18 @@ public interface IEventSequenceStorage
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<Result<AppendedEvent, AppendEventError>> Append(EventSequenceNumber sequenceNumber, EventSourceType eventSourceType, EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred,
+        ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -104,8 +115,16 @@ public interface IEventSequenceStorage
     /// </summary>
     /// <param name="eventTypes">Optional event types to get for.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/>.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/>.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/>.</param>
     /// <returns>The last sequence number. If providing event types, this will give the last sequence number from the selection of event types.</returns>
-    Task<EventSequenceNumber> GetTailSequenceNumber(IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+    Task<EventSequenceNumber> GetTailSequenceNumber(
+        IEnumerable<EventType>? eventTypes = null,
+        EventSourceId? eventSourceId = null,
+        EventSourceType? eventSourceType = null,
+        EventStreamId? eventStreamId = null,
+        EventStreamType? eventStreamType = null);
 
     /// <summary>
     /// Get the tail sequence numbers for a specific event sequence and any of a given set of event types.

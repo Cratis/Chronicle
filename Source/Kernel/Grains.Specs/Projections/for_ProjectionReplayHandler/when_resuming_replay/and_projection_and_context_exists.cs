@@ -11,8 +11,8 @@ public class and_projection_and_context_exists : given.a_projection_replay_handl
 
     void Establish()
     {
-        _replayContext = new ReplayContext(_modelName, "TheRevertModel", DateTimeOffset.UtcNow);
-        _replayContexts.TryGet(_replayContext.Model).Returns(_replayContext);
+        _replayContext = new ReplayContext(_readModelId, _readModelName, "TheRevertModel", DateTimeOffset.UtcNow);
+        _replayContexts.TryGet(_readModelId).Returns(_replayContext);
     }
 
     Task Because() => _handler.ResumeReplayFor(_observerDetails);

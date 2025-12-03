@@ -8,11 +8,10 @@ using context = Cratis.Chronicle.InProcess.Integration.for_Reactors.when_appendi
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Reactors.when_appending_event;
 
-
 [Collection(ChronicleCollection.Name)]
 public class and_waiting_for_observer_to_be_active(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
         public static TaskCompletionSource Tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public EventSourceId EventSourceId;

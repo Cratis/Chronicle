@@ -9,6 +9,7 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Transactions;
 
@@ -67,6 +68,12 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IJobs Jobs => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public IReadModels ReadModels => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Seeding.IEventSeeding Seeding => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;

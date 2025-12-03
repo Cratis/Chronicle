@@ -3,20 +3,14 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Chronicle;
-using Cratis.Chronicle.Connections;
 
 namespace Microsoft.AspNetCore.Builder;
 
 /// <summary>
 /// Represents the settings for connecting to Chronicle.
 /// </summary>
-public class ChronicleAspNetCoreOptions
+public class ChronicleAspNetCoreOptions : ChronicleOptions
 {
-    /// <summary>
-    /// Gets or sets the <see cref="Url"/> to use.
-    /// </summary>
-    public ChronicleUrl Url { get; set; } = ChronicleUrl.Default;
-
     /// <summary>
     /// Gets or sets the name of the event store to use.
     /// </summary>
@@ -30,17 +24,10 @@ public class ChronicleAspNetCoreOptions
     public string NamespaceHttpHeader { get; set; } = "x-cratis-tenant-id";
 
     /// <summary>
-    /// Gets or sets the software version.
+    /// Gets or sets the type of the <see cref="IEventStoreNamespaceResolver"/> to use.
+    /// If not set, defaults to <see cref="Cratis.Chronicle.AspNetCore.HttpHeaderEventStoreNamespaceResolver"/>.
+    /// If an <see cref="IEventStoreNamespaceResolver"/> instance is set (via the base class property) and is not
+    /// a <see cref="DefaultEventStoreNamespaceResolver"/>, it will be used instead of this type.
     /// </summary>
-    public string SoftwareVersion { get; set; } = "0.0.0";
-
-    /// <summary>
-    /// Gets or sets the software commit.
-    /// </summary>
-    public string SoftwareCommit { get; set; } = "[N/A]";
-
-    /// <summary>
-    /// Gets or sets the program identifier.
-    /// </summary>
-    public string ProgramIdentifier { get; set; } = "[N/A]";
+    public Type EventStoreNamespaceResolverType { get; set; } = typeof(Cratis.Chronicle.AspNetCore.HttpHeaderEventStoreNamespaceResolver);
 }

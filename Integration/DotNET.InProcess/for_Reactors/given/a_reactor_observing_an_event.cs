@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Reactors.given;
 
-public class a_reactor_observing_an_event(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class a_reactor_observing_an_event(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
 {
     public TaskCompletionSource Tcs;
     public SomeReactor Reactor;

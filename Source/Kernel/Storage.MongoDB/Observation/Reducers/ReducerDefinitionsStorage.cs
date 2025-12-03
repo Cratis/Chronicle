@@ -1,12 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Concepts.Observation.Reducers.Json;
 using Cratis.Chronicle.Storage.Observation.Reducers;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
@@ -18,52 +15,38 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
 /// </remarks>
 /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/>.</param>
-/// <param name="reducerDefinitionSerializer">Serializer for <see cref="ReducerDefinition"/>.</param>
 public class ReducerDefinitionsStorage(
-    IEventStoreDatabase eventStoreDatabase,
-    IJsonReducerDefinitionSerializer reducerDefinitionSerializer) : IReducerDefinitionsStorage
+    IEventStoreDatabase eventStoreDatabase) : IReducerDefinitionsStorage
 {
-    IMongoCollection<BsonDocument> Collection => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.ReducerDefinitions);
+    IMongoCollection<ReducerDefinition> Collection => eventStoreDatabase.GetCollection<ReducerDefinition>(WellKnownCollectionNames.ReducerDefinitions);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ReducerDefinition>> GetAll()
+    public async Task<IEnumerable<Concepts.Observation.Reducers.ReducerDefinition>> GetAll()
     {
-        using var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
-        var definitionsAsBson = result.ToList();
-        return definitionsAsBson.Select(_ =>
-        {
-            _.Remove("_id");
-            var definitionAsJson = _.ToJson();
-            return reducerDefinitionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
-        }).ToArray();
+        using var result = await Collection.FindAsync(FilterDefinition<ReducerDefinition>.Empty);
+        var definitions = result.ToList();
+        return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
 
     /// <inheritdoc/>
     public Task<bool> Has(ReducerId id) =>
-        Collection.Find(new BsonDocument("_id", id.Value)).AnyAsync();
+        Collection.Find(r => r.Id == id).AnyAsync();
 
     /// <inheritdoc/>
-    public async Task<ReducerDefinition> Get(ReducerId id)
+    public async Task<Concepts.Observation.Reducers.ReducerDefinition> Get(ReducerId id)
     {
-        using var result = await Collection.FindAsync(filter: new BsonDocument("_id", id.Value));
-        var document = result.Single();
-        return reducerDefinitionSerializer.Deserialize(JsonNode.Parse(document.ToJson())!);
+        using var result = await Collection.FindAsync(definition => definition.Id == id);
+        return result.Single().ToKernel();
     }
 
     /// <inheritdoc/>
     public Task Delete(ReducerId id) =>
-        Collection.DeleteOneAsync(new BsonDocument("_id", id.Value));
+        Collection.DeleteOneAsync(definition => definition.Id == id);
 
     /// <inheritdoc/>
-    public async Task Save(ReducerDefinition definition)
-    {
-        var json = reducerDefinitionSerializer.Serialize(definition);
-        var document = BsonDocument.Parse(json.ToJsonString());
-        document["_id"] = definition.Identifier.Value;
-
-        await Collection.ReplaceOneAsync(
-            filter: new BsonDocument("_id", definition.Identifier.Value),
-            replacement: document,
+    public Task Save(Concepts.Observation.Reducers.ReducerDefinition definition) =>
+        Collection.ReplaceOneAsync(
+            filter: def => def.Id == definition.Identifier,
+            replacement: definition.ToMongoDB(),
             options: new ReplaceOptions { IsUpsert = true });
-    }
 }

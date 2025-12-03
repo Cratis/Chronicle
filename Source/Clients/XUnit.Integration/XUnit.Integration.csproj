@@ -1,4 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
@@ -6,19 +8,39 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration"/>
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
+    </ItemGroup>
+
+    <Target Name="BuildDependencies">
+        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
+        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.dll" DestinationFolder="$(OutDir)"/>
+        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.pdb')"/>
+    </Target>
+
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+    <PropertyGroup Condition="'$(Repack)' == 'true'">
+        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(Repack)' == 'true'">
+        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" ReferenceOutputAssembly="false"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
+        <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Repack)' != 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
-        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
-        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
-        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj"/>
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -29,7 +51,7 @@
         <PackageReference Include="Testcontainers" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
-        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
-        <PackageReference Include="Cratis.Applications.MongoDB"/>
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
     </ItemGroup>
 </Project>

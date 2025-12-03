@@ -1,4 +1,4 @@
-﻿// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
@@ -27,7 +27,7 @@ internal sealed class Projections(
     public Task Register(RegisterRequest request, CallContext context = default)
     {
         var projectionsManager = grainFactory.GetGrain<Grains.Projections.IProjectionsManager>(request.EventStore);
-        var projections = request.Projections.Select(_ => _.ToChronicle()).ToArray();
+        var projections = request.Projections.Select(_ => _.ToChronicle((Concepts.Projections.ProjectionOwner)(int)request.Owner)).ToArray();
 
         _ = Task.Run(() => projectionsManager.Register(projections));
         return Task.CompletedTask;
@@ -41,12 +41,12 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey);
+            request.ReadModelKey);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
 
         var result = await projection.GetModelInstance();
-        return result.ToContract();
+        return result.ToContract(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -57,13 +57,13 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey,
+            request.ReadModelKey,
             request.SessionId);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
 
         var result = await projection.GetModelInstance();
-        return result.ToContract();
+        return result.ToContract(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -74,14 +74,14 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey,
+            request.ReadModelKey,
             request.SessionId);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
 
         var eventsToApply = request.Events.Select(_ => _.ToChronicle()).ToArray();
         var result = await projection.GetCurrentModelInstanceWithAdditionalEventsApplied(eventsToApply);
-        return result.ToContract();
+        return result.ToContract(jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -100,8 +100,8 @@ internal sealed class Projections(
                 observer.OnNext(new ProjectionChangeset
                 {
                     Namespace = changeset.Namespace,
-                    ModelKey = changeset.ModelKey,
-                    Model = changeset.Model.ToJsonString(jsonSerializerOptions)
+                    ReadModelKey = changeset.ReadModelKey,
+                    ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions)
                 });
 
                 return Task.CompletedTask;
@@ -122,7 +122,7 @@ internal sealed class Projections(
             request.EventStore,
             request.Namespace,
             request.EventSequenceId,
-            request.ModelKey,
+            request.ReadModelKey,
             request.SessionId);
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);

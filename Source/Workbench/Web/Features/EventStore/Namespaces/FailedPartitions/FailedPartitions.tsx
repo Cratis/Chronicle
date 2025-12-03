@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { AllFailedPartitions, AllFailedPartitionsArguments } from 'Api/Observation';
+import { AllFailedPartitions, AllFailedPartitionsParameters } from 'Api/Observation';
 import { Column } from 'primereact/column';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { FailedPartition } from 'Api/Observation';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
@@ -34,7 +34,7 @@ const lastAttempt = (failedPartition: FailedPartition) => {
 export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
 
-    const queryArgs: AllFailedPartitionsArguments = {
+    const queryArgs: AllFailedPartitionsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };

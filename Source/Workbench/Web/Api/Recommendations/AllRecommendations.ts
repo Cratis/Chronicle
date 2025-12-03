@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Recommendation } from './Recommendation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations/all-recommendations/observe');
 
 class AllRecommendationsSortBy {
     private _id: SortingActionsForObservableQuery<Recommendation[]>;
@@ -67,13 +65,12 @@ class AllRecommendationsSortByWithoutQuery {
     }
 }
 
-export interface AllRecommendationsArguments {
+export interface AllRecommendationsParameters {
     eventStore: string;
     namespace: string;
 }
-export class AllRecommendations extends ObservableQueryFor<Recommendation[], AllRecommendationsArguments> {
+export class AllRecommendations extends ObservableQueryFor<Recommendation[], AllRecommendationsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations/all-recommendations/observe';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Recommendation[] = [];
     private readonly _sortBy: AllRecommendationsSortBy;
     private static readonly _sortBy: AllRecommendationsSortByWithoutQuery = new AllRecommendationsSortByWithoutQuery();
@@ -83,12 +80,20 @@ export class AllRecommendations extends ObservableQueryFor<Recommendation[], All
         this._sortBy = new AllRecommendationsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): AllRecommendationsSortBy {
         return this._sortBy;
@@ -98,11 +103,11 @@ export class AllRecommendations extends ObservableQueryFor<Recommendation[], All
         return this._sortBy;
     }
 
-    static use(args?: AllRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, SetSorting] {
-        return useObservableQuery<Recommendation[], AllRecommendations, AllRecommendationsArguments>(AllRecommendations, args, sorting);
+    static use(args?: AllRecommendationsParameters, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, SetSorting] {
+        return useObservableQuery<Recommendation[], AllRecommendations, AllRecommendationsParameters>(AllRecommendations, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllRecommendationsArguments, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllRecommendationsParameters, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<Recommendation[], AllRecommendations>(AllRecommendations, new Paging(0, pageSize), args, sorting);
     }
 }

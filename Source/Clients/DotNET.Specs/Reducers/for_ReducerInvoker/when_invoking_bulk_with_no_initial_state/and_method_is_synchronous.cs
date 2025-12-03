@@ -25,7 +25,7 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
     async Task Because()
     {
         _reduceResult = (await _invoker.Invoke(_serviceProvider, _eventsAndContexts, null))!;
-        _result = _reduceResult.ModelState as ReadModel;
+        _result = _reduceResult.ReadModelState as ReadModel;
     }
 
     [Fact] void should_only_create_one_instance_of_the_reducer() => _serviceProvider.Received(1).GetService(typeof(SyncReducer));

@@ -9,14 +9,14 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an implementation of <see cref="IPropertyExpressionBuilder"/> for decrementing a property.
 /// </summary>
 /// <param name="targetProperty">Target property we're building for.</param>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
-public class DecrementBuilder<TModel, TEvent, TProperty>(PropertyPath targetProperty) : IPropertyExpressionBuilder
+public class DecrementBuilder<TReadModel, TEvent, TProperty>(PropertyPath targetProperty) : IPropertyExpressionBuilder
 {
     /// <inheritdoc/>
     public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
-    public string Build() => "$increment()";
+    public string Build() => $"{WellKnownExpressions.Decrement}()";
 }

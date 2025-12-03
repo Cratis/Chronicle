@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Applications.Orleans.StateMachines;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -14,6 +13,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Jobs;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Grains.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,17 +25,17 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Observer"/> class.
-/// </remarks>
+/// <param name="observerDefinition"><see cref="IPersistentState{T}"/> for the observer definition.</param>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 public partial class Observer(
+    [PersistentState(nameof(ObserverDefinition), WellKnownGrainStorageProviders.ObserverDefinitions)]
+    IPersistentState<ObserverDefinition> observerDefinition,
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
@@ -55,6 +55,8 @@ public partial class Observer(
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
+
+    ObserverDefinition Definition => observerDefinition.State;
 
     FailedPartitions Failures => failures.State;
 
@@ -79,14 +81,20 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        await TransitionTo<Disconnected>();
-        await base.OnDeactivateAsync(reason, cancellationToken);
+        if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
+        {
+            await TransitionTo<Disconnected>();
+            await base.OnDeactivateAsync(reason, cancellationToken);
+        }
     }
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
 
 #pragma warning disable CA1721 // Property names should not match get methods
+    /// <inheritdoc/>
+    public Task<ObserverDefinition> GetDefinition() => Task.FromResult(observerDefinition.State);
+
     /// <inheritdoc/>
     public Task<ObserverState> GetState() => Task.FromResult(State);
 #pragma warning restore CA1721 // Property namTes should not match get methods
@@ -98,21 +106,31 @@ public partial class Observer(
     public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
+    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
 
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
-        object? subscriberArgs = null)
+        object? subscriberArgs = null,
+        bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber
     {
+        var owner = GetOwner<TObserverSubscriber>();
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         logger.Subscribing();
 
-        State = State with { Type = type, EventTypes = eventTypes };
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = eventTypes,
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
 
         _subscription = new(
             _observerId,
@@ -120,7 +138,8 @@ public partial class Observer(
             eventTypes,
             typeof(TObserverSubscriber),
             siloAddress,
-            subscriberArgs);
+            subscriberArgs,
+            isReplayable);
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())
@@ -139,11 +158,13 @@ public partial class Observer(
 
         new Routing(
             _observerKey,
+            observerDefinition,
             _eventSequence,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
             _observerKey,
+            observerDefinition,
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
 
@@ -152,6 +173,7 @@ public partial class Observer(
             _observerKey.EventStore,
             _observerKey.Namespace,
             _observerKey.EventSequenceId,
+            observerDefinition,
             loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 
@@ -204,6 +226,14 @@ public partial class Observer(
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
     }
+
+    ObserverOwner GetOwner<TObserverSubscriber>()
+        where TObserverSubscriber : IObserverSubscriber => typeof(TObserverSubscriber) switch
+        {
+            Type t when t.IsAssignableTo(typeof(IAmOwnedByClient)) => ObserverOwner.Client,
+            Type t when t.IsAssignableTo(typeof(IAmOwnedByKernel)) => ObserverOwner.Kernel,
+            _ => ObserverOwner.None
+        };
 
     async Task ResumeJobs()
     {

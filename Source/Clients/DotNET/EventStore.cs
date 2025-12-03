@@ -9,16 +9,19 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
-using Cratis.Models;
+using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -31,8 +34,10 @@ public class EventStore : IEventStore
     readonly EventStoreName _eventStoreName;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
+    readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IEventSerializer _eventSerializer;
     readonly ILogger<EventStore> _logger;
 
@@ -44,11 +49,13 @@ public class EventStore : IEventStore
     /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
+    /// <param name="concurrencyScopeStrategies"><see cref="IConcurrencyScopeStrategies"/> for managing concurrency scopes.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
@@ -57,11 +64,13 @@ public class EventStore : IEventStore
         IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
         ICorrelationIdAccessor correlationIdAccessor,
+        IConcurrencyScopeStrategies concurrencyScopeStrategies,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IJsonSchemaGenerator schemaGenerator,
-        IModelNameConvention modelNameConvention,
+        INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
     {
@@ -69,11 +78,13 @@ public class EventStore : IEventStore
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _jsonSerializerOptions = jsonSerializerOptions;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
+        _concurrencyScopeStrategies = concurrencyScopeStrategies;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
@@ -87,8 +98,8 @@ public class EventStore : IEventStore
         Constraints = new Constraints(
             this,
             [
-                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, serviceProvider),
-                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes),
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, namingPolicy, serviceProvider),
+                new UniqueConstraintProvider(clientArtifactsProvider, EventTypes, namingPolicy),
                 new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
             ]);
 
@@ -100,9 +111,11 @@ public class EventStore : IEventStore
             Constraints,
             _eventSerializer,
             correlationIdAccessor,
+            concurrencyScopeStrategies,
             causationManager,
             UnitOfWorkManager,
-            identityProvider);
+            identityProvider,
+            jsonSerializerOptions);
 
         Jobs = new Jobs.Jobs(this);
 
@@ -114,10 +127,9 @@ public class EventStore : IEventStore
             new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
+            identityProvider,
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
-
-        var modelNameResolver = new ModelNameResolver(modelNameConvention);
 
         Reducers = new Reducers.Reducers(
             this,
@@ -126,24 +138,47 @@ public class EventStore : IEventStore
             new ReducerValidator(),
             EventTypes,
             _eventSerializer,
-            modelNameResolver,
-            schemaGenerator,
+            namingPolicy,
             jsonSerializerOptions,
+            identityProvider,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(
             this,
             EventTypes,
-            new ProjectionWatcherManager(new ProjectionWatcherFactory(this), this),
+            new ProjectionWatcherManager(new ProjectionWatcherFactory(this, jsonSerializerOptions), this),
             clientArtifactsProvider,
-            schemaGenerator,
-            modelNameResolver,
+            namingPolicy,
             _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
-        projections.SetRulesProjections(new RulesProjections(serviceProvider, clientArtifactsProvider, EventTypes, modelNameResolver, schemaGenerator, jsonSerializerOptions));
+
+        var rulesProjections = new RulesProjections(
+                    serviceProvider,
+                    clientArtifactsProvider,
+                    EventTypes,
+                    namingPolicy,
+                    jsonSerializerOptions);
+        projections.SetRulesProjections(rulesProjections);
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
+
+        ReadModels = new ReadModels.ReadModels(
+            this,
+            namingPolicy,
+            projections,
+            Reducers,
+            rulesProjections.ReadModels,
+            schemaGenerator);
+
+        Seeding = new EventSeeding(
+            eventStoreName,
+            @namespace,
+            connection,
+            EventTypes,
+            _eventSerializer,
+            clientArtifactsProvider,
+            serviceProvider);
 
         AggregateRootFactory = new AggregateRootFactory(
             this,
@@ -155,6 +190,11 @@ public class EventStore : IEventStore
                 correlationIdAccessor),
             UnitOfWorkManager,
             serviceProvider);
+
+        if (autoDiscoverAndRegister)
+        {
+            Connection.Lifecycle.OnConnected += RegisterAll;
+        }
     }
 
     /// <inheritdoc/>
@@ -197,18 +237,25 @@ public class EventStore : IEventStore
     public IFailedPartitions FailedPartitions { get; }
 
     /// <inheritdoc/>
+    public IReadModels ReadModels { get; }
+
+    /// <inheritdoc/>
+    public IEventSeeding Seeding { get; }
+
+    /// <inheritdoc/>
     public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
 
         // We need to discover all event types first, as they are used by the other artifacts
         await EventTypes.Discover();
-        await Constraints.Discover();
 
         await Task.WhenAll(
+            Constraints.Discover(),
             Reactors.Discover(),
             Reducers.Discover(),
-            Projections.Discover());
+            Projections.Discover(),
+            Seeding.Discover());
     }
 
     /// <inheritdoc/>
@@ -216,14 +263,17 @@ public class EventStore : IEventStore
     {
         _logger.RegisterAllArtifacts();
 
-        // We need to register event types first, as they are used by the other artifacts
-        await EventTypes.Register();
-        await Constraints.Register();
+        // We need to register event types and read models first, as they are used by the other artifacts
+        await Task.WhenAll(
+            EventTypes.Register(),
+            ReadModels.Register());
 
         await Task.WhenAll(
+            Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register());
+            Projections.Register(),
+            Seeding.Register());
     }
 
     /// <inheritdoc/>
@@ -237,9 +287,11 @@ public class EventStore : IEventStore
             Constraints,
             _eventSerializer,
             _correlationIdAccessor,
+            _concurrencyScopeStrategies,
             _causationManager,
             UnitOfWorkManager,
-            _identityProvider);
+            _identityProvider,
+            _jsonSerializerOptions);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)

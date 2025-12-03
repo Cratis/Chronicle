@@ -8,12 +8,12 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a builder for building add operations for properties - represented as expressions.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-public interface IAddBuilder<TModel, TEvent, TProperty, TParentBuilder> : IPropertyExpressionBuilder
-    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
+public interface IAddBuilder<TReadModel, TEvent, TProperty, TParentBuilder> : IPropertyExpressionBuilder
+    where TParentBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TParentBuilder>
 {
     /// <summary>
     /// Add with a property on the event.

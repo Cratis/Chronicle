@@ -4,28 +4,30 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IFromEveryBuilder{TModel}"/>.
+/// Represents an implementation of <see cref="IFromEveryBuilder{TReadModel}"/>.
 /// </summary>
-/// <typeparam name="TModel">Type of model to build for.</typeparam>
-public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
+/// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEveryBuilder<TReadModel>
 {
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = [];
     bool _includeChildren = true;
 
     /// <inheritdoc/>
-    public IAllSetBuilder<TModel, IFromEveryBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var setBuilder = new AllSetBuilder<TModel, IFromEveryBuilder<TModel>>(this, modelPropertyAccessor.GetPropertyPath());
+        var setBuilder = new AllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>>(this, namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath()), namingPolicy);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }
 
     /// <inheritdoc/>
-    public IFromEveryBuilder<TModel> ExcludeChildProjections()
+    public IFromEveryBuilder<TReadModel> ExcludeChildProjections()
     {
         _includeChildren = false;
         return this;

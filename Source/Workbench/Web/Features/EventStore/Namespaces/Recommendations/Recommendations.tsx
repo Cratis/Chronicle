@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { AllRecommendations, AllRecommendationsArguments } from 'Api/Recommendations';
+import { AllRecommendations, AllRecommendationsParameters } from 'Api/Recommendations';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -11,7 +11,7 @@ import { Column } from 'primereact/column';
 import { Recommendation } from 'Api/Recommendations/Recommendation';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { DataPage, MenuItem } from 'Components';
 
 const defaultFilters: DataTableFilterMeta = {
@@ -25,7 +25,7 @@ const occurred = (recommendation: Recommendation) => {
 export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
 
-    const queryArgs: AllRecommendationsArguments = {
+    const queryArgs: AllRecommendationsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };

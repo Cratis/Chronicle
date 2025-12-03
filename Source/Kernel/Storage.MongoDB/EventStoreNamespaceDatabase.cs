@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -113,6 +113,15 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
             collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventSourceType",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
                     Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
                     new CreateIndexOptions
                     {
@@ -143,6 +152,18 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
             collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
                     Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventStreamType_eventStreamId_eventSourceType",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
                         Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
                         Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
                         Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
@@ -156,12 +177,39 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                 new CreateIndexModel<Event>(
                     Builders<Event>.IndexKeys.Combine(
                         Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventSourceId_eventStreamType_eventStreamId_eventSourceType",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
                         Builders<Event>.IndexKeys.Ascending(_ => _.Type),
                         Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
                         Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
                     new CreateIndexOptions
                     {
                         Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Combine(
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
+                    new CreateIndexOptions
+                    {
+                        Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId_eventSourceType",
                         Background = true
                     }));
 

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation;
 
@@ -16,24 +17,26 @@ internal static class ObserverInformationConverters
     /// </summary>
     /// <param name="information"><see cref="IEnumerable{ObserverInformation}"/> to convert from.</param>
     /// <returns>Converted <see cref="IEnumerable{ObserverInformation}"/>.</returns>
-    public static IEnumerable<ObserverInformation> ToContract(this IEnumerable<Concepts.Observation.ObserverInformation> information) =>
-        information.Select(_ => _.ToContract());
+    public static IEnumerable<ObserverInformation> ToContract(this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information) =>
+        information.Select(_ => _.Definition.ToContract(_.State));
 
     /// <summary>
     /// Convert to contract.
     /// </summary>
-    /// <param name="information"><see cref="Concepts.Observation.ObserverInformation"/> to convert from.</param>
+    /// <param name="definition"><see cref="ObserverDefinition"/> to convert from.</param>
+    /// <param name="state"><see cref="ObserverState"/> to convert from.</param>
     /// <returns>Converted <see cref="ObserverInformation"/>.</returns>
-    public static ObserverInformation ToContract(this Concepts.Observation.ObserverInformation information) =>
+    public static ObserverInformation ToContract(this ObserverDefinition definition, ObserverState state) =>
         new()
         {
-            Id = information.Id,
-            EventSequenceId = information.EventSequenceId,
-            Type = information.Type.ToContract(),
-            EventTypes = information.EventTypes.ToContract(),
-            NextEventSequenceNumber = information.NextEventSequenceNumber,
-            LastHandledEventSequenceNumber = information.LastHandledEventSequenceNumber,
-            RunningState = information.RunningState.ToContract()
+            Id = definition.Identifier,
+            EventSequenceId = definition.EventSequenceId,
+            Type = definition.Type.ToContract(),
+            Owner = definition.Owner.ToContract(),
+            EventTypes = definition.EventTypes.ToContract(),
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
+            RunningState = state.RunningState.ToContract()
         };
 
     /// <summary>
@@ -63,5 +66,18 @@ internal static class ObserverInformationConverters
             Concepts.Observation.ObserverRunningState.Replaying => ObserverRunningState.Replaying,
             Concepts.Observation.ObserverRunningState.Disconnected => ObserverRunningState.Disconnected,
             _ => ObserverRunningState.Unknown
+        };
+
+    /// <summary>
+    /// Convert to contract.
+    /// </summary>
+    /// <param name="owner"><see cref="Concepts.Observation.ObserverOwner"/> to convert from.</param>
+    /// <returns>Converted <see cref="ObserverOwner"/>.</returns>
+    public static ObserverOwner ToContract(this Concepts.Observation.ObserverOwner owner) =>
+        owner switch
+        {
+            Concepts.Observation.ObserverOwner.Client => ObserverOwner.Client,
+            Concepts.Observation.ObserverOwner.Kernel => ObserverOwner.Kernel,
+            _ => ObserverOwner.None
         };
 }

@@ -1,16 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+
 namespace Cratis.Chronicle.Projections.Expressions.EventValues.for_EventSourceIdExpressionResolver;
 
 public class when_asking_can_resolve_for_event_source_id : Specification
 {
-    EventSourceIdExpressionResolver resolvers;
-    bool result;
+    EventSourceIdExpressionResolver _resolvers;
+    bool _result;
 
-    void Establish() => resolvers = new EventSourceIdExpressionResolver();
+    void Establish() => _resolvers = new EventSourceIdExpressionResolver();
 
-    void Because() => result = resolvers.CanResolve("$eventSourceId");
+    void Because() => _result = _resolvers.CanResolve(WellKnownExpressions.EventSourceId);
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

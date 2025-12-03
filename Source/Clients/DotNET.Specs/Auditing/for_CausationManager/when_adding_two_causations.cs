@@ -5,18 +5,18 @@ namespace Cratis.Chronicle.Auditing.for_CausationManager;
 
 public class when_adding_two_causations : Specification
 {
-    const string first_type = "FirstType";
-    const string second_type = "SecondType";
-    const string first_type_first_property = "FirstTypeFirstProperty";
-    const string first_type_first_property_value = "FirstTypeFirstPropertyValue";
-    const string first_type_second_property = "FirstTypeSecondProperty";
-    const string first_type_second_property_value = "FirstTypeSecondPropertyValue";
-    const string second_type_first_property = "SecondTypeFirstProperty";
-    const string second_type_first_property_value = "SecondTypeFirstPropertyValue";
-    const string second_type_second_property = "SecondTypeSecondProperty";
-    const string second_type_second_property_value = "SecondTypeSecondPropertyValue";
+    const string FirstType = "FirstType";
+    const string SecondType = "SecondType";
+    const string FirstTypeFirstProperty = "FirstTypeFirstProperty";
+    const string FirstTypeFirstPropertyValue = "FirstTypeFirstPropertyValue";
+    const string FirstTypeSecondProperty = "FirstTypeSecondProperty";
+    const string FirstTypeSecondPropertyValue = "FirstTypeSecondPropertyValue";
+    const string SecondTypeFirstProperty = "SecondTypeFirstProperty";
+    const string SecondTypeFirstPropertyValue = "SecondTypeFirstPropertyValue";
+    const string SecondTypeSecondProperty = "SecondTypeSecondProperty";
+    const string SecondTypeSecondPropertyValue = "SecondTypeSecondPropertyValue";
 
-    CausationManager manager;
+    CausationManager _manager;
 
     public when_adding_two_causations()
     {
@@ -24,29 +24,29 @@ public class when_adding_two_causations : Specification
         // Use default behavior, since we need to have control over the async context.
 
         // Establish
-        manager = new();
+        _manager = new();
 
         // Because
-        manager.Add(first_type, new Dictionary<string, string>
+        _manager.Add(FirstType, new Dictionary<string, string>
         {
-            { first_type_first_property, first_type_first_property_value },
-            { first_type_second_property, first_type_second_property_value }
+            { FirstTypeFirstProperty, FirstTypeFirstPropertyValue },
+            { FirstTypeSecondProperty, FirstTypeSecondPropertyValue }
         });
 
-        manager.Add(second_type, new Dictionary<string, string>
+        _manager.Add(SecondType, new Dictionary<string, string>
         {
-            { second_type_first_property, second_type_first_property_value },
-            { second_type_second_property, second_type_second_property_value }
+            { SecondTypeFirstProperty, SecondTypeFirstPropertyValue },
+            { SecondTypeSecondProperty, SecondTypeSecondPropertyValue }
         });
     }
 
-    [Fact] void should_have_three_causations() => manager.GetCurrentChain().Count.ShouldEqual(3);
-    [Fact] void should_have_first_causation_with_correct_type() => manager.GetCurrentChain()[1].Type.Value.ShouldEqual(first_type);
-    [Fact] void should_have_first_causation_with_correct_properties() => manager.GetCurrentChain()[1].Properties.Count.ShouldEqual(2);
-    [Fact] void should_have_first_causation_with_correct_first_property() => manager.GetCurrentChain()[1].Properties[first_type_first_property].ShouldEqual(first_type_first_property_value);
-    [Fact] void should_have_first_causation_with_correct_second_property() => manager.GetCurrentChain()[1].Properties[first_type_second_property].ShouldEqual(first_type_second_property_value);
-    [Fact] void should_have_second_causation_with_correct_type() => manager.GetCurrentChain()[2].Type.Value.ShouldEqual(second_type);
-    [Fact] void should_have_second_causation_with_correct_properties() => manager.GetCurrentChain()[2].Properties.Count.ShouldEqual(2);
-    [Fact] void should_have_second_causation_with_correct_first_property() => manager.GetCurrentChain()[2].Properties[second_type_first_property].ShouldEqual(second_type_first_property_value);
-    [Fact] void should_have_second_causation_with_correct_second_property() => manager.GetCurrentChain()[2].Properties[second_type_second_property].ShouldEqual(second_type_second_property_value);
+    [Fact] void should_have_three_causations() => _manager.GetCurrentChain().Count.ShouldEqual(3);
+    [Fact] void should_have_first_causation_with_correct_type() => _manager.GetCurrentChain()[1].Type.Value.ShouldEqual(FirstType);
+    [Fact] void should_have_first_causation_with_correct_properties() => _manager.GetCurrentChain()[1].Properties.Count.ShouldEqual(2);
+    [Fact] void should_have_first_causation_with_correct_first_property() => _manager.GetCurrentChain()[1].Properties[FirstTypeFirstProperty].ShouldEqual(FirstTypeFirstPropertyValue);
+    [Fact] void should_have_first_causation_with_correct_second_property() => _manager.GetCurrentChain()[1].Properties[FirstTypeSecondProperty].ShouldEqual(FirstTypeSecondPropertyValue);
+    [Fact] void should_have_second_causation_with_correct_type() => _manager.GetCurrentChain()[2].Type.Value.ShouldEqual(SecondType);
+    [Fact] void should_have_second_causation_with_correct_properties() => _manager.GetCurrentChain()[2].Properties.Count.ShouldEqual(2);
+    [Fact] void should_have_second_causation_with_correct_first_property() => _manager.GetCurrentChain()[2].Properties[SecondTypeFirstProperty].ShouldEqual(SecondTypeFirstPropertyValue);
+    [Fact] void should_have_second_causation_with_correct_second_property() => _manager.GetCurrentChain()[2].Properties[SecondTypeSecondProperty].ShouldEqual(SecondTypeSecondPropertyValue);
 }

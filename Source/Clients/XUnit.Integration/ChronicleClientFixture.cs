@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.ServiceModel;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
@@ -24,15 +23,14 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
+#pragma warning disable CA2213, SA1600, CA1051
+    protected IAsyncDisposable? _webApplicationFactory;
+#pragma warning restore CA2213, SA1600, CA1051
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
     static MethodInfo _createClientWithOptionsMethod = null!;
     static bool _isInitialized;
-
-#pragma warning disable CA2213
-    IAsyncDisposable? _webApplicationFactory;
-#pragma warning restore CA2213
     bool _backupPerformed;
     string _name = string.Empty;
     IServiceProvider? _services;
@@ -61,7 +59,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <summary>
     /// Gets the value indicating whether to auto discover artifacts.
     /// </summary>
-    public virtual bool AutoDiscoverArtifacts { get; }
+    public virtual bool AutoDiscoverArtifacts { get; } = true;
 
     /// <summary>
     /// Gets the docker network.
@@ -105,6 +103,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> Projections => GetArtifactTypes(provider => provider.Projections);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> ModelBoundProjections => GetArtifactTypes(provider => provider.ModelBoundProjections);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);
 
     /// <inheritdoc/>
@@ -139,6 +140,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
@@ -208,7 +212,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         if (!_backupPerformed)
         {
@@ -217,12 +221,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
 
         await ChronicleFixture.RemoveAllDatabases();
-        _ = Task.Run(async () =>
-        {
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        });
     }
 
     /// <summary>
@@ -355,7 +353,7 @@ public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChro
                 return parameters.Length == 2 && parameters[0].ParameterType == typeof(IChronicleSetupFixture) && parameters[1].ParameterType == typeof(ContentRoot);
             }))
         {
-            throw new ServiceActivationException($"{nameof(WebApplicationFactory<object>)} must have a public constructor that only takes {nameof(IChronicleSetupFixture)}, {nameof(Action<IWebHostBuilder>)} and {nameof(ContentRoot)} parameters");
+            throw new InvalidWebApplicationFactory();
         }
         return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
     }

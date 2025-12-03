@@ -24,7 +24,7 @@ internal class ChronicleConnection(
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
     IServices? _services;
-    Cratis.Chronicle.Services.Clients.ConnectionService? _connectionService;
+    Services.Clients.ConnectionService? _connectionService;
 
     /// <inheritdoc/>
     IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
@@ -34,7 +34,7 @@ internal class ChronicleConnection(
     {
         get
         {
-            ConnectIfNotConnected();
+            ConnectIfNotConnected().GetAwaiter().GetResult();
             return _services!;
         }
     }
@@ -42,6 +42,13 @@ internal class ChronicleConnection(
     /// <inheritdoc/>
     public void Dispose()
     {
+        lifecycle.Disconnected().GetAwaiter().GetResult();
+    }
+
+    /// <inheritdoc/>
+    Task IChronicleConnection.Connect()
+    {
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -50,23 +57,23 @@ internal class ChronicleConnection(
     /// <param name="services">Services to set.</param>
     internal void SetServices(IServices services) => _services = services;
 
-    void ConnectIfNotConnected()
+    async Task ConnectIfNotConnected()
     {
         if (!lifecycle.IsConnected)
         {
-            Connect();
+            await Connect();
         }
     }
 
-    void Connect()
+    async Task Connect()
     {
-        _connectionService = new Cratis.Chronicle.Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Cratis.Chronicle.Services.Clients.ConnectionService>());
+        _connectionService = new Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Services.Clients.ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
-        lifecycle.Connected();
+        await lifecycle.Connected();
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)

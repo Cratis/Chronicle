@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
-using Cratis.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -20,12 +20,14 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
 /// <param name="configureServices">Action to configure the services.</param>
+/// <param name="configureMongoDB">Action to configure MongoDB options.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
 public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     IChronicleSetupFixture fixture,
     Action<IServiceCollection> configureServices,
+    Action<IMongoDBBuilder> configureMongoDB,
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
@@ -35,12 +37,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
         var chronicleOptions = new Configuration.ChronicleOptions();
 
-        builder.UseCratisMongoDB(
+        builder.AddCratisMongoDB(
             mongo =>
             {
                 mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}";
                 mongo.Database = "orleans";
-            });
+            },
+            configureMongoDB);
         builder.ConfigureLogging(_ =>
         {
             _.ClearProviders();
@@ -50,8 +53,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
             {
-                services.AddCratisApplicationModelMeter();
-                services.AddSingleton(Globals.JsonSerializerOptions);
+                services.AddCratisArcMeter();
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
                 services.AddChronicleTelemetry(ctx.Configuration);

@@ -35,7 +35,7 @@ public class JobsManager(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         this.GetPrimaryKeyLong(out var key);
-        _key = key;
+        _key = key!;
 
         _namespaceStorage = storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace);
         _jobStorage = _namespaceStorage.Jobs;
@@ -287,7 +287,7 @@ public class JobsManager(
         return Task.CompletedTask;
     }
 
-    Task HandleResumeJobError(JobId jobId, ResumeJobError error) => error.Match<Task>(
+    Task HandleResumeJobError(JobId jobId, ResumeJobError error) => error.Match(
         cannotResumeError => HandleCannotResumeError(jobId, cannotResumeError),
         failedResumingSteps =>
         {

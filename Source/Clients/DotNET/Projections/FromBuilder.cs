@@ -2,18 +2,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IFromBuilder{TModel, TEvent}"/>.
+/// Represents an implementation of <see cref="IFromBuilder{TReadModel, TEvent}"/>.
 /// </summary>
-/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TModel}"/>.</param>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <param name="projectionBuilder">The parent <see cref="IProjectionBuilderFor{TReadModel}"/>.</param>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
-public class FromBuilder<TModel, TEvent, TParentBuilder>(IProjectionBuilder<TModel, TParentBuilder> projectionBuilder)
-    : ModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>, TParentBuilder>(projectionBuilder), IFromBuilder<TModel, TEvent>
+public class FromBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<TReadModel, TParentBuilder> projectionBuilder, INamingPolicy namingPolicy)
+    : ReadModelPropertiesBuilder<TReadModel, TEvent, IFromBuilder<TReadModel, TEvent>, TParentBuilder>(projectionBuilder, namingPolicy), IFromBuilder<TReadModel, TEvent>
         where TParentBuilder : class
 {
     /// <summary>

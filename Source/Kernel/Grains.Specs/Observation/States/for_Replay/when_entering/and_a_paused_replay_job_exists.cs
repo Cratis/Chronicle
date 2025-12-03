@@ -16,7 +16,7 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
 
     void Establish()
     {
-        _storedState = _storedState with
+        _observerDefinition = _observerDefinition with
         {
             Type = ObserverType.Reactor
         };

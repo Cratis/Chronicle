@@ -24,7 +24,7 @@ public class ReplayEvaluator(
     /// <inheritdoc/>
     public async Task<bool> Evaluate(ReplayEvaluationContext context)
     {
-        if (!NeedsToReplay(context))
+        if (!CanReplay(context))
         {
             return false;
         }
@@ -36,17 +36,19 @@ public class ReplayEvaluator(
             {
                 ObserverId = context.Id,
                 ObserverKey = context.Key,
-                ObserverType = context.State.Type,
                 Reasons =
                 [
                     new EventTypesChangedReplayCandidateReason(
-                        context.State.EventTypes,
+                        context.Definition.EventTypes,
                         context.Subscription.EventTypes)
                 ]
             });
 
         return false;
     }
+
+    static bool CanReplay(ReplayEvaluationContext context) =>
+        context.Definition.IsReplayable && NeedsToReplay(context);
 
     static bool NeedsToReplay(ReplayEvaluationContext context) =>
         HasDefinitionChanged(context) && HasEventsInSequence(context);
@@ -55,6 +57,6 @@ public class ReplayEvaluator(
         context.TailEventSequenceNumber.IsActualValue && context.TailEventSequenceNumberForEventTypes.IsActualValue;
 
     static bool HasDefinitionChanged(ReplayEvaluationContext context) =>
-            context.State.EventTypes.Count() != context.Subscription.EventTypes.Count() ||
-            !context.Subscription.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(context.State.EventTypes.OrderBy(_ => _.Id.Value));
+            context.Definition.EventTypes.Count() != context.Subscription.EventTypes.Count() ||
+            !context.Subscription.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(context.Definition.EventTypes.OrderBy(_ => _.Id.Value));
 }

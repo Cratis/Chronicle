@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -19,7 +20,12 @@ public interface IReducerInvoker
     /// <summary>
     /// Gets the type of the read model.
     /// </summary>
-    Type ReadModelType { get; }
+    Type ReadModelType { get; }
+
+    /// <summary>
+    /// Gets the name of the read model.
+    /// </summary>
+    ReadModelName ReadModelName { get; }
 
     /// <summary>
     /// Invoke the reducer for a set of events.

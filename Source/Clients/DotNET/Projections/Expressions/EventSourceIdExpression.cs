@@ -9,5 +9,5 @@ namespace Cratis.Chronicle.Projections.Expressions;
 public class EventSourceIdExpression : IEventValueExpression
 {
     /// <inheritdoc/>
-    public PropertyExpression Build() => "$eventSourceId";
+    public PropertyExpression Build() => WellKnownExpressions.EventSourceId;
 }

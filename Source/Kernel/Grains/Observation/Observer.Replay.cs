@@ -13,6 +13,11 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Replay()
     {
+        if (!Definition.IsReplayable)
+        {
+            return;
+        }
+
         if (State.RunningState != ObserverRunningState.Replaying)
         {
             await TransitionTo<Replay>();
@@ -25,9 +30,14 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber)
     {
+        if (!Definition.IsReplayable)
+        {
+            return;
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, State.Type, partition, EventSequenceNumber.First, sequenceNumber, State.EventTypes));
+        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, Definition.EventTypes));
 
         State.ReplayingPartitions.Add(partition);
         await WriteStateAsync();
@@ -73,8 +83,9 @@ public partial class Observer
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
         var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
         if (!await replayEvaluator.Evaluate(new(
-                State.Id,
+                State.Identifier,
                 _subscription.ObserverKey,
+                Definition,
                 State,
                 _subscription,
                 tailSequenceNumber,

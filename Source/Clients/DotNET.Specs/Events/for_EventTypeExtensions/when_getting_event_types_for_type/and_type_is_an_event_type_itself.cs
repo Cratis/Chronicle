@@ -8,9 +8,9 @@ public class and_type_is_an_event_type_itself : Specification
     [EventType("01547ac7-25f6-439b-bc20-2422479ef29a")]
     class MyEvent;
 
-    IEnumerable<Type> result;
+    IEnumerable<Type> _result;
 
-    void Because() => result = typeof(MyEvent).GetEventTypes([typeof(MyEvent)]);
+    void Because() => _result = typeof(MyEvent).GetEventTypes([typeof(MyEvent)]);
 
-    [Fact] void should_return_the_type() => result.ShouldContainOnly(typeof(MyEvent));
+    [Fact] void should_return_the_type() => _result.ShouldContainOnly(typeof(MyEvent));
 }

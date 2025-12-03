@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using ProtoBuf.Grpc;
-using ProtoBuf.Grpc.Configuration;
-
 namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
@@ -16,7 +13,7 @@ public interface IFailedPartitions
     /// Get all failed partitions for an event store and namespace and optionally filter by observer id.
     /// </summary>
     /// <param name="request">The <see cref="GetFailedPartitionsRequest"/>.</param>
-    /// /// <param name="context">gRPC call context.</param>
+    /// <param name="context">gRPC call context.</param>
     /// <returns>A collection of <see cref="FailedPartition"/>.</returns>
     Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default);
 

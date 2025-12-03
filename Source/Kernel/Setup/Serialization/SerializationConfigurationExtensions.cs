@@ -3,13 +3,14 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Applications.Orleans.Concepts;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
+using NJsonSchema;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Serializers;
@@ -38,13 +39,14 @@ public static class SerializationConfigurationExtensions
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddAppendedEventSerializer(this IServiceCollection services)
+    public static IServiceCollection AddCustomSerializers(this IServiceCollection services)
     {
         services.AddSerializer(builder =>
         {
             builder.Services
                 .AddCompleteSerializer<AppendedEventSerializer>()
-                .AddCompleteSerializer<OneOfSerializer>();
+                .AddCompleteSerializer<OneOfSerializer>()
+                .AddCompleteSerializer<ConcurrencyScopesSerializer>();
         });
         return services;
     }
@@ -68,23 +70,39 @@ public static class SerializationConfigurationExtensions
 
     static void Configure(this IServiceCollection services)
     {
-        var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
-        options.Converters.Add(new KeyJsonConverter());
-        options.Converters.Add(new PropertyPathJsonConverter());
-        options.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());
-        options.Converters.Add(new PropertyExpressionDictionaryConverter());
-        options.Converters.Add(new FromDefinitionsConverter());
-        options.Converters.Add(new JoinDefinitionsConverter());
-        options.Converters.Add(new RemovedWithDefinitionsConverter());
-        options.Converters.Add(new RemovedWithJoinDefinitionsConverter());
-        options.Converters.Add(new JobStateConverter());
-        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>());
-        options.Converters.Add(new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>());
+        var options = new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters =
+            {
+                new EnumConverterFactory(),
+                new EnumerableConceptAsJsonConverterFactory(),
+                new ConceptAsJsonConverterFactory(),
+                new DateOnlyJsonConverter(),
+                new TimeOnlyJsonConverter(),
+                new TypeJsonConverter(),
+                new UriJsonConverter(),
+                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+                new KeyJsonConverter(),
+                new PropertyPathJsonConverter(),
+                new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
+                new PropertyExpressionDictionaryConverter(),
+                new FromDefinitionsConverter(),
+                new JoinDefinitionsConverter(),
+                new RemovedWithDefinitionsConverter(),
+                new RemovedWithJoinDefinitionsConverter(),
+                new JobStateConverter(),
+                new JsonSchemaConverter(),
+                new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>(),
+                new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>()
+            }
+        };
+        services.AddSingleton(options);
         services.AddConceptSerializer();
-        services.AddAppendedEventSerializer();
+        services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Cratis") ?? false),
+            _ => _ == typeof(JsonObject) || _ == typeof(JsonSchema) || (_.Namespace?.StartsWith("Cratis") ?? false),
             options));
     }
 }

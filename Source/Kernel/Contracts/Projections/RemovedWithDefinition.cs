@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using ProtoBuf;
-
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
@@ -18,7 +16,7 @@ public class RemovedWithDefinition
     public string Key { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional parent key expression, typically used in child relationships for identifying parent model.
+    /// Gets or sets the optional parent key expression, typically used in child relationships for identifying parent read model.
     /// </summary>
     [ProtoMember(2)]
     public string? ParentKey { get; set; }

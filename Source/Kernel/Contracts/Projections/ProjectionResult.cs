@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using ProtoBuf;
-
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
@@ -15,7 +13,7 @@ public class ProjectionResult
     /// Gets or sets the result of the projection as JSON.
     /// </summary>
     [ProtoMember(1)]
-    public string Model { get; set; } = string.Empty;
+    public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the affected properties.
@@ -28,4 +26,10 @@ public class ProjectionResult
     /// </summary>
     [ProtoMember(3)]
     public int ProjectedEventsCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last handled event sequence number.
+    /// </summary>
+    [ProtoMember(4)]
+    public ulong LastHandledEventSequenceNumber { get; set; }
 }

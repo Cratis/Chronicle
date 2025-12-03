@@ -4,8 +4,8 @@
 using System.Net.Http.Json;
 using System.Reactive.Subjects;
 using System.Text.Json;
-using Cratis.Applications.Commands;
-using Cratis.Applications.Queries;
+using Cratis.Arc.Commands;
+using Cratis.Arc.Queries;
 using Cratis.Json;
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -36,7 +36,7 @@ public static class HttpClientExtensions
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
     public static async Task<CommandResult<TCommandResult>?> ExecuteCommand<TCommand, TCommandResult>(this HttpClient client, string requestUri, TCommand command)
     {
-        var response = await PostCommand(client, requestUri, command);
+        var response = await Post(client, requestUri, command);
         CommandResult<TCommandResult>? commandResult = null;
         try
         {
@@ -53,14 +53,14 @@ public static class HttpClientExtensions
     /// <summary>
     /// Posts a command request.
     /// </summary>
-    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <typeparam name="TPayload">The payload type.</typeparam>
     /// <param name="client">The http client.</param>
     /// <param name="requestUri">The request uri string.</param>
-    /// <param name="command">The command.</param>
+    /// <param name="body">The command.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static async Task<HttpResponseMessage> PostCommand<TCommand>(this HttpClient client, string requestUri, TCommand command)
+    public static async Task<HttpResponseMessage> Post<TPayload>(this HttpClient client, string requestUri, TPayload body)
     {
-        using var request = JsonContent.Create(command, options: Globals.JsonSerializerOptions);
+        using var request = JsonContent.Create(body, options: Globals.JsonSerializerOptions);
         return await client.PostAsync(requestUri, request);
     }
 
@@ -70,23 +70,19 @@ public static class HttpClientExtensions
     /// <param name="client">The http client.</param>
     /// <param name="requestUri">The request uri string.</param>
     /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static Task<QueryResult<object>?> ExecuteQuery(this HttpClient client, string requestUri)
-        => ExecuteQuery<object>(client, requestUri);
-
-    /// <summary>
-    /// Executes a query.
-    /// </summary>
-    /// <typeparam name="TQueryResult">The type of the query result.</typeparam>
-    /// <param name="client">The http client.</param>
-    /// <param name="requestUri">The request uri string.</param>
-    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-    public static async Task<QueryResult<TQueryResult>?> ExecuteQuery<TQueryResult>(this HttpClient client, string requestUri)
+    /// <typeparam name="TData">The type of the data.</typeparam>
+    public static async Task<QueryResult?> ExecuteQuery<TData>(this HttpClient client, string requestUri)
     {
         var response = await DoQuery(client, requestUri);
-        QueryResult<TQueryResult>? queryResult = null;
+        QueryResult? queryResult = null;
         try
         {
-            queryResult = await response.Content.ReadFromJsonAsync<QueryResult<TQueryResult>>(options: Globals.JsonSerializerOptions);
+            queryResult = await response.Content.ReadFromJsonAsync<QueryResult>(options: Globals.JsonSerializerOptions);
+
+            if (queryResult?.Data is JsonElement jsonElement && typeof(TData) != typeof(object))
+            {
+                queryResult.Data = jsonElement.Deserialize<TData>(Globals.JsonSerializerOptions)!;
+            }
         }
         catch
         {

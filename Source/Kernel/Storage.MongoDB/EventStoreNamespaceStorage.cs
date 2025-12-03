@@ -26,6 +26,7 @@ using Cratis.Chronicle.Storage.MongoDB.Recommendations;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -57,6 +58,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
+    /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
     /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
@@ -69,6 +71,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         EventStoreNamespaceName @namespace,
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventTypesStorage eventTypesStorage,
+        IObserverDefinitionsStorage observerDefinitionsStorage,
         IJsonComplianceManager complianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
@@ -91,13 +94,14 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
         Jobs = new JobStorage(eventStoreNamespaceDatabase, jobTypes);
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
-        Observers = new ObserverStorage(eventStoreNamespaceDatabase);
+        Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
-        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, Observers);
+        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
+        EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
 
         _converter = new EventConverter(
             eventStore,
@@ -121,7 +125,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     public IJobStepStorage JobSteps { get; }
 
     /// <inheritdoc/>
-    public IObserverStorage Observers { get; }
+    public IObserverStateStorage Observers { get; }
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; }
@@ -140,6 +144,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IReplayedModelsStorage ReplayedModels { get; }
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

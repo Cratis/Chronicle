@@ -50,7 +50,7 @@ public class FailedPartitions
     /// <param name="partition">Partition to get.</param>
     /// <param name="failedPartition">The optional failed partition.</param>
     /// <returns>True when failed partition exists, false if not.</returns>
-    public bool TryGet(Key partition, [NotNullWhen(true)]out FailedPartition? failedPartition) => _partitions.TryGetValue(partition, out failedPartition);
+    public bool TryGet(Key partition, [NotNullWhen(true)] out FailedPartition? failedPartition) => _partitions.TryGetValue(partition, out failedPartition);
 
     /// <summary>
     /// Register an attempt for a partition.

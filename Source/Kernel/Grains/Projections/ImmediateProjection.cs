@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
@@ -40,13 +41,12 @@ public class ImmediateProjection(
     Chronicle.Projections.IProjectionsManager projectionManager,
     IObjectComparer objectComparer,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection
+    ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection, INotifyProjectionDefinitionsChanged
 {
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
     EventSequenceNumber _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
     ExpandoObject? _initialState;
-    DateTimeOffset _lastUpdated = DateTimeOffset.MinValue;
     EngineProjection? _projection;
 
     /// <inheritdoc/>
@@ -54,15 +54,36 @@ public class ImmediateProjection(
     {
         _projectionKey = ImmediateProjectionKey.Parse(this.GetPrimaryKeyString());
 
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey.EventStore)).GetDefinition();
         if (!projectionManager.TryGet(_projectionKey.EventStore, _projectionKey.Namespace, _projectionKey.ProjectionId, out _projection))
         {
-            _projection = await projectionFactory.Create(_projectionKey.EventStore, _projectionKey.Namespace, State);
+            _projection = await projectionFactory.Create(_projectionKey.EventStore, _projectionKey.Namespace, State, readModel);
         }
 
         _eventSequenceStorage = storage
                                     .GetEventStore(_projectionKey.EventStore)
                                     .GetNamespace(_projectionKey.Namespace)
                                     .GetEventSequence(_projectionKey.EventSequenceId);
+
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey.ProjectionId, _projectionKey.EventStore));
+        await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey!.ProjectionId, _projectionKey!.EventStore));
+        await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
+    public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
+    {
+        State = definition;
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _projectionKey!.EventStore)).GetDefinition();
+        _projection = await projectionFactory.Create(_projectionKey!.EventStore, _projectionKey!.Namespace, State, readModel);
+        _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+        _initialState = null;
     }
 
     /// <inheritdoc/>
@@ -74,20 +95,16 @@ public class ImmediateProjection(
 
         try
         {
-            var projectionChanged = false;
-
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
-            projectionChanged = State.LastUpdated > _lastUpdated;
-            _lastUpdated = State.LastUpdated ?? DateTimeOffset.UtcNow;
 
             var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
             var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
             var tail = await eventSequence.GetTailSequenceNumberForEventTypes(_projection!.EventTypes);
-            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null && !projectionChanged)
+            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
             {
                 logger.UsingCachedModelInstance();
-                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _projection!.Model.Schema);
-                return new(initialStateAsJson, [], 0);
+                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _projection!.ReadModel.GetSchemaForLatestGeneration());
+                return new(initialStateAsJson, [], 0, tail);
             }
 
             if (!_projection!.EventTypes.Any())
@@ -98,7 +115,7 @@ public class ImmediateProjection(
 
             var affectedProperties = new HashSet<PropertyPath>();
 
-            var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
+            var modelKey = _projectionKey.ReadModelKey.IsSpecified ? (EventSourceId)_projectionKey.ReadModelKey.Value : null!;
             using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: _projection!.EventTypes);
             var projectedEventsCount = 0;
             var state = GetInitialState();
@@ -114,12 +131,12 @@ public class ImmediateProjection(
                 projectedEventsCount += result.ProjectedEventsCount;
                 state = result.State;
 
-                _lastHandledEventSequenceNumber = events[^1].Metadata.SequenceNumber;
+                _lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
             }
 
             _initialState = state;
-            var jsonObject = expandoObjectConverter.ToJsonObject(state, _projection!.Model.Schema);
-            return new(jsonObject, affectedProperties, projectedEventsCount);
+            var jsonObject = expandoObjectConverter.ToJsonObject(state, _projection!.ReadModel.GetSchemaForLatestGeneration());
+            return new(jsonObject, affectedProperties, projectedEventsCount, _lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
         {
@@ -146,8 +163,8 @@ public class ImmediateProjection(
         var initialState = _initialState ?? new ExpandoObject();
         var result = await HandleEvents(affectedProperties, initialState, eventsToApply);
         _initialState = result.State;
-        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _projection!.Model.Schema);
-        return new(jsonObject, affectedProperties, result.ProjectedEventsCount);
+        var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _projection!.ReadModel.GetSchemaForLatestGeneration());
+        return new(jsonObject, affectedProperties, result.ProjectedEventsCount, result.Tail);
     }
 
     /// <inheritdoc/>
@@ -160,40 +177,42 @@ public class ImmediateProjection(
     ExpandoObject GetInitialState()
     {
         return _initialState ?? (State.InitialModelState is not null
-            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _projection!.Model.Schema)
+            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _projection!.ReadModel.GetSchemaForLatestGeneration())
             : new ExpandoObject());
     }
 
-    async Task<(int ProjectedEventsCount, ExpandoObject State)> HandleEvents(HashSet<PropertyPath> affectedProperties, ExpandoObject initialState, AppendedEvent[] events)
+    async Task<(int ProjectedEventsCount, ExpandoObject State, EventSequenceNumber Tail)> HandleEvents(HashSet<PropertyPath> affectedProperties, ExpandoObject initialState, AppendedEvent[] events)
     {
         var projectedEventsCount = 0;
         var state = initialState;
+        var eventSequenceNumber = EventSequenceNumber.Unavailable;
 
         foreach (var @event in events)
         {
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
-            var keyResolver = _projection!.GetKeyResolverFor(@event.Metadata.Type);
+            var keyResolver = _projection!.GetKeyResolverFor(@event.Context.EventType);
             var key = await keyResolver(_eventSequenceStorage!, @event);
             var context = new ProjectionEventContext(
                 key,
                 @event,
                 changeset,
-                _projection.GetOperationTypeFor(@event.Metadata.Type),
+                _projection.GetOperationTypeFor(@event.Context.EventType),
                 false);
 
             await HandleEventFor(_projection!, context);
 
+            eventSequenceNumber = @event.Context.SequenceNumber;
             projectedEventsCount++;
 
             state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState, affectedProperties);
         }
 
-        return (projectedEventsCount, state);
+        return (projectedEventsCount, state, eventSequenceNumber);
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
     {
-        if (projection.Accepts(context.Event.Metadata.Type))
+        if (projection.Accepts(context.Event.Context.EventType))
         {
             projection.OnNext(context);
         }

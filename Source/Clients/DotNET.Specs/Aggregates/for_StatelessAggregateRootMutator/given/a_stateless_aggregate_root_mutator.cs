@@ -37,6 +37,7 @@ public class a_stateless_aggregate_root_mutator : Specification
             _eventSequence,
             _aggregateRoot,
             _unitOfWork,
+            EventSequenceNumber.First,
             EventSequenceNumber.First);
 
         _eventSerializer = Substitute.For<IEventSerializer>();

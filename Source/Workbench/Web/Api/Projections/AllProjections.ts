@@ -4,22 +4,20 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Projection } from './Projection';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/projections');
 
 class AllProjectionsSortBy {
     private _id: SortingActionsForQuery<Projection[]>;
     private _isActive: SortingActionsForQuery<Projection[]>;
-    private _modelName: SortingActionsForQuery<Projection[]>;
+    private _readModelName: SortingActionsForQuery<Projection[]>;
 
     constructor(readonly query: AllProjections) {
         this._id = new SortingActionsForQuery<Projection[]>('id', query);
         this._isActive = new SortingActionsForQuery<Projection[]>('isActive', query);
-        this._modelName = new SortingActionsForQuery<Projection[]>('modelName', query);
+        this._readModelName = new SortingActionsForQuery<Projection[]>('readModelName', query);
     }
 
     get id(): SortingActionsForQuery<Projection[]> {
@@ -28,15 +26,15 @@ class AllProjectionsSortBy {
     get isActive(): SortingActionsForQuery<Projection[]> {
         return this._isActive;
     }
-    get modelName(): SortingActionsForQuery<Projection[]> {
-        return this._modelName;
+    get readModelName(): SortingActionsForQuery<Projection[]> {
+        return this._readModelName;
     }
 }
 
 class AllProjectionsSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
     private _isActive: SortingActions  = new SortingActions('isActive');
-    private _modelName: SortingActions  = new SortingActions('modelName');
+    private _readModelName: SortingActions  = new SortingActions('readModelName');
 
     get id(): SortingActions {
         return this._id;
@@ -44,18 +42,17 @@ class AllProjectionsSortByWithoutQuery {
     get isActive(): SortingActions {
         return this._isActive;
     }
-    get modelName(): SortingActions {
-        return this._modelName;
+    get readModelName(): SortingActions {
+        return this._readModelName;
     }
 }
 
-export interface AllProjectionsArguments {
+export interface AllProjectionsParameters {
     eventStore: string;
 }
 
-export class AllProjections extends QueryFor<Projection[], AllProjectionsArguments> {
+export class AllProjections extends QueryFor<Projection[], AllProjectionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/projections';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
     private readonly _sortBy: AllProjectionsSortBy;
     private static readonly _sortBy: AllProjectionsSortByWithoutQuery = new AllProjectionsSortByWithoutQuery();
@@ -65,11 +62,17 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         this._sortBy = new AllProjectionsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllProjectionsSortBy {
         return this._sortBy;
@@ -79,11 +82,11 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         return this._sortBy;
     }
 
-    static use(args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsArguments>, SetSorting] {
-        return useQuery<Projection[], AllProjections, AllProjectionsArguments>(AllProjections, args, sorting);
+    static use(args?: AllProjectionsParameters, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsParameters>, SetSorting] {
+        return useQuery<Projection[], AllProjections, AllProjectionsParameters>(AllProjections, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllProjectionsArguments, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllProjectionsParameters, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useQueryWithPaging<Projection[], AllProjections>(AllProjections, new Paging(0, pageSize), args, sorting);
     }
 }

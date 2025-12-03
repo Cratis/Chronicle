@@ -9,9 +9,9 @@ public class and_type_is_a_base_type_for_event_types : Specification
 
     class MyDerivedEvent : MyEvent;
 
-    bool result;
+    bool _result;
 
-    void Because() => result = typeof(MyEvent).IsEventType([typeof(MyDerivedEvent)]);
+    void Because() => _result = typeof(MyEvent).IsEventType([typeof(MyDerivedEvent)]);
 
-    [Fact] void should_be_considered_an_event_type() => result.ShouldBeTrue();
+    [Fact] void should_be_considered_an_event_type() => _result.ShouldBeTrue();
 }

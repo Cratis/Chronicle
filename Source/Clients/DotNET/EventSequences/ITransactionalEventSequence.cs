@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -24,13 +25,15 @@ public interface ITransactionalEventSequence
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Append(
         EventSourceId eventSourceId,
         object @event,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default);
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
     /// Append a collection of events to the event store.
@@ -40,11 +43,13 @@ public interface ITransactionalEventSequence
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task AppendMany(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default);
+        EventSourceType? eventSourceType = default,
+        ConcurrencyScope? concurrencyScope = default);
 }

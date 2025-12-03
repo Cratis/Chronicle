@@ -87,7 +87,7 @@ public partial class PropertyPath
     /// </summary>
     /// <param name="property"><see cref="PropertyPath"/> to convert from.</param>
     /// <returns>Converted path.</returns>
-    public static implicit operator string(PropertyPath property) => property.Path;
+    public static implicit operator string(PropertyPath property) => property?.Path ?? string.Empty;
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to a <see cref="PropertyPath"/>.
@@ -346,12 +346,12 @@ public partial class PropertyPath
         var match = ArrayIndexRegex!.Match(segment);
         if (match.Success)
         {
-            return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
+            return new ArrayProperty(match.Groups["property"].Value);
         }
         if (segment == ThisAccessorValue)
         {
             return new ThisAccessor();
         }
-        return new PropertyName(segment.ToCamelCase());
+        return new PropertyName(segment);
     }
 }

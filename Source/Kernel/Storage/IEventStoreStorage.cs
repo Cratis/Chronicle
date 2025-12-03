@@ -5,9 +5,11 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.ReadModels;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -37,6 +39,11 @@ public interface IEventStoreStorage
     IConstraintsStorage Constraints { get; }
 
     /// <summary>
+    /// Gets the <see cref="IObserverDefinitionsStorage"/> for the event store.
+    /// </summary>
+    IObserverDefinitionsStorage Observers { get; }
+
+    /// <summary>
     /// Gets the <see cref="IReactorDefinitionsStorage"/> for the event store.
     /// </summary>
     IReactorDefinitionsStorage Reactors { get; }
@@ -50,6 +57,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.
     /// </summary>
     IProjectionDefinitionsStorage Projections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IReadModelDefinitionsStorage"/> for the event store.
+    /// </summary>
+    IReadModelDefinitionsStorage ReadModels { get; }
 
     /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.

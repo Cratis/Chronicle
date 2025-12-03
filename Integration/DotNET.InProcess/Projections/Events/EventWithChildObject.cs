@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Models;
+using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Events;
 
 [EventType]
-public record EventWithChildObject(Model Child)
+public record EventWithChildObject(ReadModel Child)
 {
-    public static EventWithChildObject Create() => new(Model.CreateWithRandomValues());
+    public static EventWithChildObject Create() => new(ReadModel.CreateWithRandomValues());
 }

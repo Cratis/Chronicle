@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintBuilder;
 
@@ -17,7 +16,7 @@ public class when_building_a_unique_constraint : given.a_constraint_builder_with
         _eventTypes.GetSchemaFor(eventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
         _constraintBuilder.Unique(_ =>
         {
-            _.On(eventType, [nameof(EventWithStringProperty.SomeProperty).ToCamelCase()]);
+            _.On(eventType, [nameof(EventWithStringProperty.SomeProperty)]);
             _builderCallbackCalled = true;
         });
         _result = _constraintBuilder.Build();

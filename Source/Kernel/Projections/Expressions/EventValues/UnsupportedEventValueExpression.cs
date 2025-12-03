@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 /// Exception that gets thrown when an event value expression is not supported.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
+/// Initializes a new instance of the <see cref="UnsupportedReadModelPropertyExpression"/> class.
 /// </remarks>
 /// <param name="property">The property that has unsupported expression.</param>
 /// <param name="expression">The unsupported expression.</param>

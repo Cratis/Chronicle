@@ -6,11 +6,11 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueAttributeExtensions.when
 public class and_attribute_has_name : Specification
 {
     const string Name = "TheName";
-    string result;
+    string _result;
 
-    void Because() => result = typeof(SomeType).GetConstraintName();
+    void Because() => _result = typeof(SomeType).GetConstraintName();
 
-    [Fact] void should_return_name_of_member() => result.ShouldEqual(Name);
+    [Fact] void should_return_name_of_member() => _result.ShouldEqual(Name);
 
     [Unique(Name)]
     record SomeType();

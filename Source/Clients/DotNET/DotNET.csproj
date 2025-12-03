@@ -27,7 +27,7 @@
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj"/>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -37,9 +37,9 @@
         <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
     </ItemGroup>
 
-    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging">
+    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging" Condition=" '$(TargetFramework)' != '' ">
         <Message Text="Generating gRPC clients" Importance="high" />
-        <Exec Command="dotnet run -f $(TargetFramework) &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+        <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
     </Target>
 
     <ItemGroup>

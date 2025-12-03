@@ -14,7 +14,7 @@ public class and_a_replay_job_is_already_running : given.a_replay_state
 {
     async Task Establish()
     {
-        _storedState = _storedState with
+        _observerDefinition = _observerDefinition with
         {
             Type = ObserverType.Reactor
         };

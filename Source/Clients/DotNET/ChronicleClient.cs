@@ -6,7 +6,9 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Schemas;
+using Cratis.Json;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
@@ -27,6 +29,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IChronicleConnection _connection;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
+    readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -57,6 +60,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var result = Initialize();
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
+        _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
 
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
@@ -81,6 +85,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var result = Initialize();
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
+        _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
@@ -100,10 +105,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public async Task<IEventStore> GetEventStore(
         EventStoreName name,
-        EventStoreNamespaceName? @namespace = null,
-        bool skipDiscovery = false)
+        EventStoreNamespaceName? @namespace = null)
     {
-        @namespace ??= EventStoreNamespaceName.Default;
+        @namespace ??= Options.EventStoreNamespaceResolver.Resolve();
         var key = new EventStoreKey(name, @namespace);
         if (_eventStores.TryGetValue(key, out var eventStore))
         {
@@ -118,21 +122,23 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _connection,
             Options.ArtifactsProvider,
             Options.CorrelationIdAccessor,
+            _concurrencyScopeStrategies,
             CausationManager,
             Options.IdentityProvider,
             _jsonSchemaGenerator,
-            Options.ModelNameConvention,
+            Options.NamingPolicy,
             Options.ServiceProvider,
+            Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
             Options.LoggerFactory);
+        _eventStores[key] = eventStore;
 
-        if (Options.AutoDiscoverAndRegister && !skipDiscovery)
+        if (Options.AutoDiscoverAndRegister)
         {
             await eventStore.DiscoverAll();
-            await eventStore.RegisterAll();
         }
 
-        _eventStores[key] = eventStore;
+        await _connection.Connect();
         return eventStore;
     }
 
@@ -143,7 +149,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return eventStores.Select(_ => (EventStoreName)_).ToArray();
     }
 
-    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator) Initialize()
+    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies) Initialize()
     {
         var causationManager = new CausationManager();
         causationManager.DefineRoot(new Dictionary<string, string>
@@ -159,9 +165,25 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var complianceMetadataResolver = new ComplianceMetadataResolver(
             new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, Options.ServiceProvider),
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, Options.ServiceProvider));
-        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver);
+        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
+        var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, Options.ServiceProvider);
 
-        return (causationManager, jsonSchemaGenerator);
+        InitializeJsonSerializationOptions();
+
+        return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
+    }
+
+    void InitializeJsonSerializationOptions()
+    {
+        Options.JsonSerializerOptions.PropertyNamingPolicy = Options.NamingPolicy.JsonPropertyNamingPolicy;
+        Options.JsonSerializerOptions.Converters.Add(new EnumConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new EnumerableConceptAsJsonConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new TypeJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new UriJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
     }
 
     record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);

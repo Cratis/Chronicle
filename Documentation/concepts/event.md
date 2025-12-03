@@ -1,10 +1,10 @@
 # Event
 
 Chronicle is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).
-Figuring out the correct name of an [event type](./event-type.md) and what properties it should have is hard.
+Figuring out the correct name of an [event type](./event-type.md) and what properties it should have can be hard.
 This page walks through some general guidance on how to do so. Recommend also reading the [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) on this.
 
-> Note: Read more about the relationship to [event source](../event-source.md)
+> Note: Read more about the relationship to [event source](./event-source.md)
 
 ## Past tense
 
@@ -35,7 +35,7 @@ As with singular purpose, nullables means its up for interpretation and logic ne
 for every observers and consumers of the event.
 
 > Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
-> For instance, a person might not have a middle name. Recommend reading up on concepts and nullability [here](../../Fundamentals/concepts.md)
+> For instance, a person might not have a middle name. Recommend reading up on concepts and nullability [here](../../Fundamentals/csharp/concepts.md)
 
 ## Cohesion
 

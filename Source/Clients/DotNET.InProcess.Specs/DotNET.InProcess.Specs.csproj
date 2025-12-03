@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.InProcess.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.InProcess</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Arc" />
+        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
+        <ProjectReference Include="../Connections/Connections.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+    </ItemGroup>
+</Project>

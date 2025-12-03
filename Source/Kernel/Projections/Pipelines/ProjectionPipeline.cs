@@ -35,7 +35,7 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
-        await changesetStorage.BeginReplay(projection.Model.Name);
+        await changesetStorage.BeginReplay(projection.ReadModel.Name);
         await sink.BeginReplay(context);
     }
 
@@ -46,16 +46,16 @@ public class ProjectionPipeline(
     public async Task EndReplay(ReplayContext context)
     {
         await sink.EndReplay(context);
-        await changesetStorage.EndReplay(projection.Model.Name);
+        await changesetStorage.EndReplay(projection.ReadModel.Name);
     }
 
     /// <inheritdoc/>
     public async Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event)
     {
-        logger.StartingPipeline(@event.Metadata.SequenceNumber);
+        logger.StartingPipeline(@event.Context.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
-            OperationType = projection.GetOperationTypeFor(@event.Metadata.Type),
+            OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
 
         };
 
@@ -67,11 +67,11 @@ public class ProjectionPipeline(
             }
             catch (Exception ex)
             {
-                logger.ErrorPerformingStep(ex, step.GetType(), @event.Metadata.SequenceNumber);
+                logger.ErrorPerformingStep(ex, step.GetType(), @event.Context.SequenceNumber);
                 throw;
             }
         }
-        logger.CompletedAllSteps(@event.Metadata.SequenceNumber);
+        logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context.Changeset;
     }

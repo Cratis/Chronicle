@@ -5,23 +5,24 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
 public class when_subtracting_a_deep_nested_property_without_existing_value_from_an_event_value_provider : Specification
 {
-    PropertyMapper<AppendedEvent, ExpandoObject> property_mapper;
-    AppendedEvent @event;
-    ExpandoObject result;
-    AppendedEvent provided_event;
+    PropertyMapper<AppendedEvent, ExpandoObject> _propertyMapper;
+    AppendedEvent _event;
+    ExpandoObject _result;
+    AppendedEvent _providedEvent;
 
     void Establish()
     {
-        result = new();
-        @event = new(
-            new(0,
-            new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
+        _result = new();
+        _event = new(
             new(
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
@@ -35,15 +36,15 @@ public class when_subtracting_a_deep_nested_property_without_existing_value_from
                 Identity.System),
             new ExpandoObject());
 
-        property_mapper = PropertyMappers.SubtractWithEventValueProvider("deep.nested.property", _ =>
+        _propertyMapper = PropertyMappers.SubtractWithEventValueProvider(new TypeFormats(), "deep.nested.property", new JsonSchemaProperty { Type = JsonObjectType.Integer }, _ =>
         {
-            provided_event = _;
-            return 2d;
+            _providedEvent = _;
+            return 2;
         });
     }
 
-    void Because() => property_mapper(@event, result, ArrayIndexers.NoIndexers);
+    void Because() => _propertyMapper(_event, _result, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_result_in_expected_value() => ((object)((dynamic)result).deep.nested.property).ShouldEqual(-2d);
-    [Fact] void should_pass_the_event_to_the_value_provider() => provided_event.ShouldEqual(@event);
+    [Fact] void should_result_in_expected_value() => ((object)((dynamic)_result).deep.nested.property).ShouldEqual(-2);
+    [Fact] void should_pass_the_event_to_the_value_provider() => _providedEvent.ShouldEqual(_event);
 }

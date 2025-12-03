@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Job } from './Job';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs');
 
 class AllJobsSortBy {
     private _id: SortingActionsForObservableQuery<Job[]>;
@@ -85,13 +83,12 @@ class AllJobsSortByWithoutQuery {
     }
 }
 
-export interface AllJobsArguments {
+export interface AllJobsParameters {
     eventStore: string;
     namespace: string;
 }
-export class AllJobs extends ObservableQueryFor<Job[], AllJobsArguments> {
+export class AllJobs extends ObservableQueryFor<Job[], AllJobsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Job[] = [];
     private readonly _sortBy: AllJobsSortBy;
     private static readonly _sortBy: AllJobsSortByWithoutQuery = new AllJobsSortByWithoutQuery();
@@ -101,12 +98,20 @@ export class AllJobs extends ObservableQueryFor<Job[], AllJobsArguments> {
         this._sortBy = new AllJobsSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): AllJobsSortBy {
         return this._sortBy;
@@ -116,11 +121,11 @@ export class AllJobs extends ObservableQueryFor<Job[], AllJobsArguments> {
         return this._sortBy;
     }
 
-    static use(args?: AllJobsArguments, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting] {
-        return useObservableQuery<Job[], AllJobs, AllJobsArguments>(AllJobs, args, sorting);
+    static use(args?: AllJobsParameters, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting] {
+        return useObservableQuery<Job[], AllJobs, AllJobsParameters>(AllJobs, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllJobsArguments, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllJobsParameters, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<Job[], AllJobs>(AllJobs, new Paging(0, pageSize), args, sorting);
     }
 }

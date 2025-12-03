@@ -2,15 +2,13 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
     <PropertyGroup>
         <IsTestProject>true</IsTestProject>
-        <Nullable>disable</Nullable>
-
         <IsPackable>false</IsPackable>
         <ImplicitUsings>true</ImplicitUsings>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);SA1600;CA1034;CS8981;SA1201;ORLEANS0010</NoWarn>
         <NuGetAuditMode>all</NuGetAuditMode>
 
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -32,6 +30,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs" />
     </ItemGroup>
 </Project>

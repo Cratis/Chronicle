@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml;
 using System.Xml.XPath;
-using Cratis.Applications.Swagger;
+using Cratis.Arc.Swagger;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Execution;
@@ -61,8 +61,8 @@ public static class ApiServiceCollectionExtensions
         {
             services.AddCratisChronicleConnection(urlFactory: sp =>
             {
-                var options = sp.GetRequiredService<IOptions<ChronicleApiOptions>>();
-                return options.Value.ChronicleUrl;
+                var options = sp.GetRequiredService<IOptions<ChronicleOptions>>();
+                return options.Value.Url;
             });
         }
 

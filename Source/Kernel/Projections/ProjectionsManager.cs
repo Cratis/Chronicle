@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -17,33 +18,42 @@ namespace Cratis.Chronicle.Projections;
 [Singleton]
 public class ProjectionsManager(IProjectionFactory projectionFactory) : IProjectionsManager
 {
-    readonly ConcurrentDictionary<EventStoreName, ProjectionDefinition> _definitions = new();
+    readonly ConcurrentDictionary<string, ProjectionDefinition> _definitions = new();
     readonly ConcurrentDictionary<string, IProjection> _projections = new();
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> namespaces)
+    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         foreach (var definition in definitions)
         {
-            _definitions[eventStore] = definition;
+            var definitionKey = GetKeyFor(eventStore, definition.Identifier);
+            _definitions[definitionKey] = definition;
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
+                throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
+            }
+            var readModel = readModelDefinition;
             foreach (var @namespace in namespaces)
             {
-                var projection = await projectionFactory.Create(eventStore, @namespace, definition);
-                var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
+                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
+                var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
                 _projections[key] = projection;
             }
         }
     }
 
     /// <inheritdoc/>
-    public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions)
     {
-        foreach (var definition in _definitions.Values)
+        foreach (var definition in _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(kvp => kvp.Value))
         {
             var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
+            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
             if (!_projections.ContainsKey(key))
             {
-                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition);
+                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
             }
         }
     }
@@ -51,4 +61,17 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection) =>
         _projections.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out projection);
+
+    /// <inheritdoc/>
+    public void Evict(EventStoreName eventStore, ProjectionId id)
+    {
+        _definitions.TryRemove(GetKeyFor(eventStore, id), out _);
+
+        foreach (var key in _projections.Keys.Where(k => k.Contains($"{KeyHelper.Separator}{id}")).ToList())
+        {
+            _projections.TryRemove(key, out _);
+        }
+    }
+
+    string GetKeyFor(EventStoreName eventStore, ProjectionId id) => KeyHelper.Combine(eventStore, id);
 }

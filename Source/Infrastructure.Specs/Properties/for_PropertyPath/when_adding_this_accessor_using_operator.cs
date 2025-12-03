@@ -5,15 +5,15 @@ namespace Cratis.Chronicle.Properties.for_PropertyPath;
 
 public class when_adding_this_accessor_using_operator : Specification
 {
-    const string first_segment = "FirstSegment";
-    const string second_segment = "SecondSegment";
+    const string FirstSegment = "FirstSegment";
+    const string SecondSegment = "SecondSegment";
 
-    PropertyPath initial;
-    PropertyPath result;
+    PropertyPath _initial;
+    PropertyPath _result;
 
-    void Establish() => initial = new PropertyPath($"{first_segment}.{second_segment}");
+    void Establish() => _initial = new PropertyPath($"{FirstSegment}.{SecondSegment}");
 
-    void Because() => result = initial + "$this";
+    void Because() => _result = _initial + PropertyPath.ThisAccessorValue;
 
-    [Fact] void should_have_last_segment_be_array_index() => result.LastSegment.ShouldBeOfExactType<ThisAccessor>();
+    [Fact] void should_have_last_segment_be_array_index() => _result.LastSegment.ShouldBeOfExactType<ThisAccessor>();
 }

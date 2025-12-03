@@ -6,7 +6,6 @@ namespace Cratis.Chronicle.Rules.for_Rules.given;
 public class one_rule_for_type : all_dependencies
 {
     protected Rules rules;
-
     protected RulesForTypeForRules rules_for_type;
 
     void Establish()
@@ -14,7 +13,7 @@ public class one_rule_for_type : all_dependencies
         _clientArtifacts.Rules.Returns([typeof(RulesForTypeForRules)]);
 
         rules = new(
-            _jsonSerializerOptions,
+            _namingPolicy,
             _projections,
             _clientArtifacts);
     }

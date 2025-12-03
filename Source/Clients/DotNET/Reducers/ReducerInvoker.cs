@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ReadModels;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Reducers;
@@ -22,13 +23,16 @@ public class ReducerInvoker : IReducerInvoker
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>
+    /// <param name="readModelName">Name of the read model for the reducer.</param>
     public ReducerInvoker(
         IEventTypes eventTypes,
         Type targetType,
-        Type readModelType)
+        Type readModelType,
+        ReadModelName readModelName)
     {
         _targetType = targetType;
         ReadModelType = readModelType;
+        ReadModelName = readModelName;
         _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                                         .Where(_ => _.IsReducerMethod(readModelType, eventTypes.AllClrTypes))
                                         .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
@@ -44,11 +48,15 @@ public class ReducerInvoker : IReducerInvoker
     public Type ReadModelType { get; }
 
     /// <inheritdoc/>
+    public ReadModelName ReadModelName { get; }
+
+    /// <inheritdoc/>
     public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
         var actualReducer = serviceProvider.GetRequiredService(_targetType);
 
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
+        var currentModelState = initialReadModelContent;
 
         foreach (var eventAndContext in eventsAndContexts)
         {
@@ -63,22 +71,36 @@ public class ReducerInvoker : IReducerInvoker
 
                     if (parameters.Length == 3)
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent!, eventAndContext.Context])!;
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, currentModelState, eventAndContext.Context])!;
                     }
                     else
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, initialReadModelContent!])!;
+                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, currentModelState])!;
                     }
 
-                    if (returnValue.GetType() == ReadModelType)
+                    if (returnValue == null)
                     {
-                        initialReadModelContent = returnValue;
+                        currentModelState = null;
                     }
-                    else
+                    else if (returnValue.GetType() == ReadModelType)
                     {
-                        var task = (Task)returnValue;
+                        currentModelState = returnValue;
+                    }
+                    else if (returnValue is Task task)
+                    {
                         await task;
-                        initialReadModelContent = task.GetType().GetProperty(nameof(Task<int>.Result))?.GetValue(task);
+
+                        if (task.GetType() == typeof(Task) ||
+                            (task.GetType().IsGenericType &&
+                             task.GetType().GetGenericTypeDefinition() == typeof(Task<>) &&
+                             task.GetType().GetGenericArguments()[0].Name == "VoidTaskResult"))
+                        {
+                            currentModelState = null;
+                        }
+                        else
+                        {
+                            currentModelState = task.GetType().GetProperty(nameof(Task<int>.Result))?.GetValue(task);
+                        }
                     }
 
                     lastSuccessfulObservedEventAndContext = eventAndContext;
@@ -87,7 +109,7 @@ public class ReducerInvoker : IReducerInvoker
             catch (Exception ex)
             {
                 return new ReduceResult(
-                            initialReadModelContent,
+                            currentModelState,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                             ex.GetAllMessages(),
                             ex.StackTrace ?? string.Empty);
@@ -95,7 +117,7 @@ public class ReducerInvoker : IReducerInvoker
         }
 
         return new ReduceResult(
-                initialReadModelContent,
+                currentModelState,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
                 string.Empty);

@@ -10,7 +10,9 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Chronicle.Contracts.Seeding;
 
 namespace Cratis.Chronicle.Contracts;
 
@@ -80,7 +82,17 @@ public interface IServices
     IProjections Projections { get; }
 
     /// <summary>
+    /// Gets the <see cref="IReadModels"/> service.
+    /// </summary>
+    IReadModels ReadModels { get; }
+
+    /// <summary>
     /// Gets the <see cref="IJobs"/> service.
     /// </summary>
     IJobs Jobs { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSeeding"/> service.
+    /// </summary>
+    IEventSeeding Seeding { get; }
 }

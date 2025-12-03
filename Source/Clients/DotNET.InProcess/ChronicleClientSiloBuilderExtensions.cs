@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
@@ -12,7 +11,6 @@ using Cratis.Chronicle.InProcess;
 using Cratis.Chronicle.Orleans.Transactions;
 using Cratis.Chronicle.Rules;
 using Cratis.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,29 +30,24 @@ public static class ChronicleClientSiloBuilderExtensions
     /// </summary>
     public static readonly string[] DefaultSectionPaths = ["Cratis", "Chronicle"];
 
-#if NET9_0
-    static readonly Lock _eventStoreInitLock = new();
-#else
+#if NET8_0
     static readonly object _eventStoreInitLock = new();
+#else
+    static readonly Lock _eventStoreInitLock = new();
 #endif
 
     /// <summary>
     /// Add Chronicle to the silo. This enables running Chronicle in process in the same process as the silo.
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
-    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
+    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="Cratis.Chronicle.Configuration.IChronicleBuilder"/>.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddCratisChronicle(
         this ISiloBuilder builder,
-        Action<IChronicleBuilder>? configureChronicle = default,
+        Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default,
         string? configSection = default)
     {
-        // We disable the AspNet client registration.
-        // The AspNetCore client uses an `IHostedService` to register the client, which then runs before the Silo is ready.
-        // Leading to crashing the entire process.
-        ChronicleClientStartupTask.RegistrationEnabled = false;
-
         builder.ConfigureServices(services => AddOptions(services)
                 .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)));
 
@@ -68,12 +61,12 @@ public static class ChronicleClientSiloBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
     /// <param name="configureOptions">Callback for providing options.</param>
-    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
+    /// <param name="configureChronicle">Optional delegate for configuring the <see cref="Cratis.Chronicle.Configuration.IChronicleBuilder"/>.</param>
     /// <returns>The <see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddCratisChronicle(
         this ISiloBuilder builder,
         Action<ChronicleOrleansInProcessOptions> configureOptions,
-        Action<IChronicleBuilder>? configureChronicle = default)
+        Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default)
     {
         builder.ConfigureServices(services => AddOptions(services, configureOptions));
         ConfigureChronicle(builder, configureChronicle);
@@ -96,14 +89,13 @@ public static class ChronicleClientSiloBuilderExtensions
         return builder;
     }
 
-    static void ConfigureChronicle(this ISiloBuilder builder, Action<IChronicleBuilder>? configureChronicle = default)
+    static void ConfigureChronicle(this ISiloBuilder builder, Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default)
     {
         // Add Chronicle to the silo as the first thing we do, order matters - this is especially important for the different call filters.
         builder.AddChronicleToSilo(configureChronicle);
         builder.AddActivityPropagation();
         builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
-        builder.AddStartupTask<ChronicleOrleansClientStartupTask>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();
@@ -115,7 +107,7 @@ public static class ChronicleClientSiloBuilderExtensions
             services.AddSingleton<IRules, Rules>();
 
             services.AddSingleton<IClientArtifactsProvider>(sp => new DefaultOrleansClientArtifactsProvider(sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider));
-            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ModelNameConvention);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.NamingPolicy);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
             services.AddHttpContextAccessor();
@@ -145,7 +137,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 {
                     var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
                     var client = sp.GetRequiredService<IChronicleClient>();
-                    return client.GetEventStore(options.EventStoreName, skipDiscovery: true).GetAwaiter().GetResult();
+                    return client.GetEventStore(options.EventStoreName).GetAwaiter().GetResult();
                 }
             });
 

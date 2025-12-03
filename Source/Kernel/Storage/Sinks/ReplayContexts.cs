@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -13,35 +13,35 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
 {
-    readonly ConcurrentDictionary<ModelName, ReplayContext> _contexts = new();
+    readonly ConcurrentDictionary<ReadModelIdentifier, ReplayContext> _contexts = new();
 
     /// <inheritdoc/>
-    public async Task<ReplayContext> Establish(ModelName model)
+    public async Task<ReplayContext> Establish(ReadModelIdentifier readModelIdentifier, ReadModelName readModelName)
     {
         var replayStarted = DateTimeOffset.UtcNow;
-        var rewoundCollectionsPrefix = $"{model}-";
+        var rewoundCollectionsPrefix = $"{readModelName}-";
         var revertModelName = $"{rewoundCollectionsPrefix}{replayStarted:yyyyMMddHHmmss}";
-        var context = new ReplayContext(model, revertModelName, replayStarted);
-        _contexts[model] = context;
+        var context = new ReplayContext(readModelIdentifier, readModelName, revertModelName, replayStarted);
+        _contexts[readModelIdentifier] = context;
         await storage.Save(context);
         return context;
     }
 
     /// <inheritdoc/>
-    public async Task<Result<ReplayContext, GetContextError>> TryGet(ModelName model)
+    public async Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel)
     {
-        if (_contexts.TryGetValue(model, out var context))
+        if (_contexts.TryGetValue(readModel, out var context))
         {
             return Result.Success<ReplayContext, GetContextError>(context);
         }
 
-        var result = await storage.TryGet(model);
+        var result = await storage.TryGet(readModel);
         return result.Match(
             Result.Success<ReplayContext, GetContextError>,
             Result.Failed<ReplayContext, GetContextError>);
     }
 
     /// <inheritdoc/>
-    public Task Evict(ModelName model) =>
-        storage.Remove(model);
+    public Task Evict(ReadModelIdentifier readModel) =>
+        storage.Remove(readModel);
 }

@@ -21,12 +21,14 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the Reactor is for.</param>
 /// <param name="reactorInvoker">The actual invoker.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
+/// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
 public class ReactorHandler(
     IEventStore eventStore,
     ReactorId reactorId,
     EventSequenceId eventSequenceId,
     IReactorInvoker reactorInvoker,
-    ICausationManager causationManager) : IDisposable
+    ICausationManager causationManager,
+    IIdentityProvider identityProvider) : IDisposable, IReactorHandler
 {
     /// <summary>
     /// The Reactor id causation property.
@@ -60,50 +62,35 @@ public class ReactorHandler(
 
     readonly CancellationTokenSource _cancellationTokenSource = new();
 
-    /// <summary>
-    /// Gets the unique identifier of the Reactor.
-    /// </summary>
+    /// <inheritdoc/>
     public ReactorId Id { get; } = reactorId;
 
-    /// <summary>
-    /// Gets the event log for the Reactor.
-    /// </summary>
+    /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; } = eventSequenceId;
 
-    /// <summary>
-    /// Gets the event types for the Reactor.
-    /// </summary>
+    /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes => reactorInvoker.EventTypes;
 
-    /// <summary>
-    /// Gets the <see cref="CancellationToken"/> for the handler.
-    /// </summary>
+    /// <inheritdoc/>
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
-    /// <summary>
-    /// Handle next event.
-    /// </summary>
-    /// <param name="metadata"><see cref="EventMetadata"/> for the event.</param>
-    /// <param name="context"><see cref="EventContext"/> for the event.</param>
-    /// <param name="content">Actual content.</param>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reactor.</param>
-    /// <returns>Awaitable task.</returns>
-    public async Task OnNext(EventMetadata metadata, EventContext context, object content, IServiceProvider serviceProvider)
+    /// <inheritdoc/>
+    public async Task OnNext(EventContext context, object content, IServiceProvider serviceProvider)
     {
-        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+        identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
         causationManager.Add(CausationType, new Dictionary<string, string>
         {
             { CausationReactorIdProperty, Id.ToString() },
-            { CausationEventTypeIdProperty, metadata.Type.Id.ToString() },
-            { CausationEventTypeGenerationProperty, metadata.Type.Generation.ToString() },
+            { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
+            { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
             { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-            { CausationEventSequenceNumberProperty, metadata.SequenceNumber.ToString() }
+            { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
         });
 
         await reactorInvoker.Invoke(serviceProvider, content, context);
 
-        BaseIdentityProvider.ClearCurrentIdentity();
+        identityProvider.ClearCurrentIdentity();
     }
 
     /// <summary>

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.when_starting.j
 [Collection(ChronicleCollection.Name)]
 public class and_job_is_stopped(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_jobs_manager(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
@@ -22,11 +22,11 @@ public class and_job_is_stopped(context context) : Given<context>(context)
         async Task Because()
         {
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            TheJobStepProcessor.SetStartTask(taskCompletionSource.Task);
+            JobStepProcessor.SetStartTask(taskCompletionSource.Task);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             JobId = StartJobResult.AsT0;
             var job = await EventStore.Jobs.GetJob(JobId.Value);
-            await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
+            await JobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await JobsManager.Stop(JobId);
             taskCompletionSource.SetResult();
             CompletedJobState = await EventStore.Jobs.WaitTillJobProgressStopped(JobId.Value);
@@ -56,8 +56,8 @@ public class and_job_is_stopped(context context) : Given<context>(context)
     public void should_have_job_progress_with_one_stopped_step() => Context.CompletedJobState.Progress.StoppedSteps.ShouldEqual(1);
 
     [Fact]
-    public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
+    public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_stopped_work_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.Stopped, 1);
+    public void should_have_stopped_work_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.Stopped, 1);
 }

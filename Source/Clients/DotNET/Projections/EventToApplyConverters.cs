@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Events;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -16,19 +15,21 @@ internal static class EventToApplyConverters
     /// Convert to contract representation.
     /// </summary>
     /// <param name="eventToApply"><see cref="EventToApply"/> to convert from.</param>
+    /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
     /// <returns>Converted <see cref="Contracts.Projections.EventToApply"/>.</returns>
-    internal static Contracts.Projections.EventToApply ToContract(this EventToApply eventToApply) =>
+    internal static Contracts.Projections.EventToApply ToContract(this EventToApply eventToApply, JsonSerializerOptions jsonSerializerOptions) =>
         new()
         {
             EventType = eventToApply.EventType.ToContract(),
-            Content = JsonSerializer.Serialize(eventToApply.Content, Globals.JsonSerializerOptions)
+            Content = JsonSerializer.Serialize(eventToApply.Content, jsonSerializerOptions)
         };
 
     /// <summary>
     /// Convert to a collection to contract representation.
     /// </summary>
     /// <param name="eventsToApply">Collection <see cref="EventToApply"/> to convert from.</param>
+    /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
     /// <returns>Converted collection of <see cref="Contracts.Projections.EventToApply"/>.</returns>
-    internal static IList<Contracts.Projections.EventToApply> ToContract(this IEnumerable<EventToApply> eventsToApply) =>
-        eventsToApply.Select(_ => _.ToContract()).ToList();
+    internal static IList<Contracts.Projections.EventToApply> ToContract(this IEnumerable<EventToApply> eventsToApply, JsonSerializerOptions jsonSerializerOptions) =>
+        eventsToApply.Select(_ => _.ToContract(jsonSerializerOptions)).ToList();
 }

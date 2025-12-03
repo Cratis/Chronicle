@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8" ?>
+
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ImplicitUsings>true</ImplicitUsings>
-        <LangVersion>13.0</LangVersion>
+        <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
 
         <!-- Debuggability -->
@@ -17,34 +17,22 @@
         <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
         <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
         <RunAnalyzers>True</RunAnalyzers>
+        <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
 
-        <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
-        <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
-        <RunAnalyzers>True</RunAnalyzers>
-        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
-
-        <NoWarn>NU1507</NoWarn>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)'==''">
-        <Configuration>Debug</Configuration>
+        <NoWarn>NU1507;NU1510;NU1605;MSB3277;CA1873;CA1874;CA2024;IDE0330;IDE0048;MA0158;MA0036;IDE0032;IDE0340;SA1500</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(SolutionPath)' == ''">
-        <TargetFrameworks>net9.0</TargetFrameworks>
+        <IsPackaging Condition="'$(IsPackaging)' == ''">false</IsPackaging>
+        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net10.0</TargetFramework>
+        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0;net10.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" PrivateAssets="All"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="All"/>
-        <PackageReference Include="StyleCop.Analyzers" PrivateAssets="All"/>
-        <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All"/>
-        <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All"/>
-        <PackageReference Include="System.Text.Json"/>
+        <PackageReference Include="StyleCop.Analyzers" PrivateAssets="All" />
+        <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All" />
+        <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All" />
+        <PackageReference Include="System.Text.Json" />
     </ItemGroup>
 </Project>

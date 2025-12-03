@@ -5,9 +5,9 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.Expressions;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
@@ -28,7 +28,7 @@ namespace Cratis.Chronicle.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
 /// </remarks>
-/// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
+/// <param name="propertyMapperExpressionResolvers"><see cref="IReadModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving expressions for accessing values on events.</param>
 /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="logger">The logger.</param>
 [Singleton]
 public class ProjectionFactory(
-    IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
+    IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
     IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
     IKeyExpressionResolvers keyExpressionResolvers,
     IExpandoObjectConverter expandoObjectConverter,
@@ -46,12 +46,14 @@ public class ProjectionFactory(
     ILogger<ProjectionFactory> logger) : IProjectionFactory
 {
     /// <inheritdoc/>
-    public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition)
+    public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
         return CreateProjectionFrom(
             eventSequenceStorage,
             definition,
+            readModelDefinition,
+            readModelDefinition.GetSchemaForLatestGeneration(),
             PropertyPath.Root,
             PropertyPath.Root,
             ProjectionPath.GetRootFor(definition.Identifier),
@@ -97,18 +99,18 @@ public class ProjectionFactory(
         }
     }
 
-    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema modelSchema, Model model) =>
+    static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
-            CreateInitialState(model) :
-            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+            CreateInitialState(readModelSchema) :
+            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, readModelSchema);
 
-    static ExpandoObject CreateInitialState(Model model)
+    static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
         // If there is no initial state, we create one with empty collections for all arrays.
         // This is to ensure that we can add to them without having to check for null.
         // And that any sinks don't fail when trying to access them.
         var initialState = new ExpandoObject();
-        foreach (var collection in model.Schema.GetFlattenedProperties().Where(_ => _.IsArray))
+        foreach (var collection in readModelSchema.GetFlattenedProperties().Where(_ => _.IsArray))
         {
             ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
         }
@@ -119,26 +121,33 @@ public class ProjectionFactory(
     async Task<IProjection> CreateProjectionFrom(
         IEventSequenceStorage eventSequenceStorage,
         ProjectionDefinition projectionDefinition,
+        ReadModelDefinition rootReadModel,
+        JsonSchema currentReadModelSchema,
         PropertyPath childrenAccessorProperty,
         PropertyPath identifiedByProperty,
         ProjectionPath path,
         bool isChild)
     {
-        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
-        var model = new Model(projectionDefinition.Model.Name, modelSchema);
-        var hasIdProperty = modelSchema.GetFlattenedProperties().Any(_ => _.Name == "id");
-        var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
+        var schema = rootReadModel.GetSchemaForLatestGeneration();
+        var hasIdProperty = schema.HasKeyProperty();
+        var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath(schema.GetKeyProperty().Name) : identifiedByProperty;
 
-        var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
+        var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
+        {
+            var childrenProperty = currentReadModelSchema.Properties[kvp.Key.LastSegment.Value]!;
+            return await CreateProjectionFrom(
                 eventSequenceStorage,
                 kvp.Value,
+                rootReadModel,
+                childrenProperty.Item?.ActualSchema ?? currentReadModelSchema,
                 childrenAccessorProperty.AddArrayIndex(kvp.Key),
                 kvp.Value.IdentifiedBy,
                 $"{path} -> ChildrenAt({kvp.Key.Path})",
-                true));
+                true);
+        });
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, modelSchema, model);
+        var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, currentReadModelSchema);
 
         var projection = new Projection(
             projectionDefinition.EventSequenceId,
@@ -147,7 +156,8 @@ public class ProjectionFactory(
             initialState,
             path,
             childrenAccessorProperty,
-            model,
+            rootReadModel,
+            currentReadModelSchema,
             projectionDefinition.IsRewindable,
             childProjections);
 
@@ -156,11 +166,11 @@ public class ProjectionFactory(
 
         if (projectionDefinition.FromEventProperty is not null)
         {
-            var schemaProperty = model.Schema.GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
+            var schemaProperty = rootReadModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(childrenAccessorProperty);
             schemaProperty ??= new JsonSchemaProperty
             {
-                Type = projection.Model.Schema.Type,
-                Format = projection.Model.Schema.Format
+                Type = projection.TargetReadModelSchema.Type,
+                Format = projection.TargetReadModelSchema.Format
             };
 
             var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
@@ -187,6 +197,7 @@ public class ProjectionFactory(
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
                 projection,
+                currentReadModelSchema,
                 fromDefinition,
                 isChild);
         }
@@ -225,6 +236,7 @@ public class ProjectionFactory(
                         childrenAccessorProperty,
                         actualIdentifiedByProperty,
                         projection,
+                        currentReadModelSchema,
                         fromDerivativesDefinition.From,
                         isChild);
                 }
@@ -280,6 +292,7 @@ public class ProjectionFactory(
         PropertyPath childrenAccessorProperty,
         PropertyPath actualIdentifiedByProperty,
         Projection projection,
+        JsonSchema currentReadModelSchema,
         FromDefinition fromDefinition,
         bool hasParent)
     {
@@ -291,7 +304,8 @@ public class ProjectionFactory(
             : projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key)).ToArray();
 
         // Include join expressions that join on the id property
-        joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == "id")];
+        var keyPropertyName = currentReadModelSchema.HasKeyProperty() ? currentReadModelSchema.GetKeyProperty().Name : currentReadModelSchema.GetLikelyKeyPropertyName();
+        joinExpressions = [.. joinExpressions, .. projectionDefinition.Join.Where(join => join.Value.On == keyPropertyName)];
 
         if (joinExpressions.Length == 0)
         {
@@ -313,13 +327,13 @@ public class ProjectionFactory(
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
     {
-        var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(propertyPath);
+        var schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(propertyPath);
         if (propertyPath.LastSegment is ThisAccessor)
         {
             schemaProperty = new JsonSchemaProperty
             {
-                Type = projection.Model.Schema.Type,
-                Format = projection.Model.Schema.Format
+                Type = projection.TargetReadModelSchema.Type,
+                Format = projection.TargetReadModelSchema.Format
             };
         }
 

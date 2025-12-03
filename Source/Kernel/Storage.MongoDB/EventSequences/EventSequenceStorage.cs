@@ -34,7 +34,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
 /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
 /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
-/// /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
+/// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -96,7 +96,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AppendedEvent, AppendEventError>> Append(
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -133,9 +133,9 @@ public class EventSequenceStorage(
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
-            return Result<AppendedEvent, AppendEventError>.Success(new AppendedEvent(
-                new(sequenceNumber, eventType),
+            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
+                    eventType,
                     eventSourceType,
                     eventSourceId,
                     eventStreamType,
@@ -151,7 +151,14 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            return AppendEventError.DuplicateEventSequenceNumber;
+            // Get the highest sequence number in the collection and add 1 to get the next available
+            var highest = await _collection.Find(FilterDefinition<Event>.Empty)
+                                          .SortByDescendingSequenceNumber()
+                                          .Limit(1)
+                                          .SingleOrDefaultAsync()
+                                          .ConfigureAwait(false);
+            var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
+            return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
         }
     }
 
@@ -178,7 +185,7 @@ public class EventSequenceStorage(
         var collection = _collection;
 
         var @event = await GetEventAt(sequenceNumber);
-        if (@event.Metadata.Type == GlobalEventTypes.Redaction)
+        if (@event.Context.EventType == GlobalEventTypes.Redaction)
         {
             logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
             return @event;
@@ -210,14 +217,14 @@ public class EventSequenceStorage(
         {
             foreach (var @event in cursor.Current)
             {
-                if (@event.Metadata.Type.Id == GlobalEventTypes.Redaction)
+                if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
                 {
-                    logger.RedactionAlreadyApplied(eventSequenceId, @event.Metadata.SequenceNumber);
+                    logger.RedactionAlreadyApplied(eventSequenceId, @event.Context.SequenceNumber);
                     continue;
                 }
 
                 updates.Add(CreateRedactionUpdateModelFor(@event, reason, correlationId, causation, causedByChain, occurred));
-                affectedEventTypes.Add(@event.Metadata.Type);
+                affectedEventTypes.Add(@event.Context.EventType);
             }
 
             await collection.BulkWriteAsync(updates).ConfigureAwait(false);
@@ -258,20 +265,41 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumber(
         IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null)
+        EventSourceId? eventSourceId = null,
+        EventSourceType? eventSourceType = null,
+        EventStreamId? eventStreamId = null,
+        EventStreamType? eventStreamType = null)
     {
         logger.GettingTailSequenceNumber(eventSequenceId);
 
         var collection = _collection;
         var filters = new List<FilterDefinition<Event>>();
-        if (eventTypes?.Any() ?? false)
+
+        if (eventTypes?.Any() == true)
         {
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
+
         if (eventSourceId?.IsSpecified == true)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
         }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceType, eventSourceType));
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamType, eventStreamType));
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamId, eventStreamId));
+        }
+
         if (filters.Count == 0)
         {
             filters.Add(FilterDefinition<Event>.Empty);
@@ -563,7 +591,7 @@ public class EventSequenceStorage(
     {
         var content = new RedactionEventContent(
             reason,
-            @event.Metadata.Type.Id,
+            @event.Context.EventType.Id,
             occurred,
             correlationId,
             causation,
@@ -576,7 +604,7 @@ public class EventSequenceStorage(
                 };
 
         return new UpdateOneModel<Event>(
-            Builders<Event>.Filter.Eq(e => e.SequenceNumber, @event.Metadata.SequenceNumber),
+            Builders<Event>.Filter.Eq(e => e.SequenceNumber, @event.Context.SequenceNumber),
             Builders<Event>.Update
                 .Set(e => e.Type, GlobalEventTypes.Redaction)
                 .Set(e => e.Content, generationalContent));

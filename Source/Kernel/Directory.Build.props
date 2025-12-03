@@ -1,5 +1,5 @@
 <Project>
-    <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props"/>
+    <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
 
     <PropertyGroup>
         <InvariantGlobalization>true</InvariantGlobalization>
@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs" />
     </ItemGroup>
 
 </Project>

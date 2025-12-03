@@ -17,7 +17,6 @@
     </ItemGroup>
 
     <Target Name="BuildDependencies">
-        <MSBuild Projects="../DotNET/DotNET.csproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);TargetFrameworks=$(TargetFrameworks);Repack=$(Repack)" />
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
         <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
     </Target>
@@ -29,10 +28,12 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' != 'true'">
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -55,8 +56,8 @@
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.Swagger" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
@@ -78,7 +79,7 @@
 
     <Target Name="EmbedXmlDocs" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
         <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
-        <Exec Command="dotnet run -f $(TargetFramework) $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
+        <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
     </Target>
 
     <ItemGroup>
@@ -86,6 +87,7 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 </Project>

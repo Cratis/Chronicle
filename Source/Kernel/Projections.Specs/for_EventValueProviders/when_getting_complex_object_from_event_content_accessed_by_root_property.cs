@@ -10,21 +10,20 @@ namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 
 public class when_getting_complex_object_from_event_content_accessed_by_root_property : Specification
 {
-    const string expected = "Forty two";
-    ValueProvider<AppendedEvent> value_provider;
-    AppendedEvent @event;
-    dynamic result;
+    const string Expected = "Forty two";
+    ValueProvider<AppendedEvent> _valueProvider;
+    AppendedEvent _event;
+    dynamic _result;
 
     void Establish()
     {
         var content = new ExpandoObject();
         ((dynamic)content).complex_object = new ExpandoObject();
-        ((dynamic)content).complex_object.sourceString = expected;
+        ((dynamic)content).complex_object.sourceString = Expected;
 
-        @event = new(
-            new(0,
-            new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
+        _event = new(
             new(
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
@@ -37,10 +36,10 @@ public class when_getting_complex_object_from_event_content_accessed_by_root_pro
                 [],
                 Identity.System),
             content);
-        value_provider = EventValueProviders.EventContent("complex_object");
+        _valueProvider = EventValueProviders.EventContent("complex_object");
     }
 
-    void Because() => result = value_provider(@event);
+    void Because() => _result = _valueProvider(_event);
 
-    [Fact] void should_return_content_of_source_property() => ((string)result.sourceString).ShouldEqual(expected);
+    [Fact] void should_return_content_of_source_property() => ((string)_result.sourceString).ShouldEqual(Expected);
 }

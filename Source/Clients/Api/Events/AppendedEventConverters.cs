@@ -14,7 +14,6 @@ internal static class AppendedEventConverters
     /// <param name="appendedEvent">The contract appended event to convert.</param>
     /// <returns>The converted appended event.</returns>
     public static AppendedEvent ToApi(this Contracts.Events.AppendedEvent appendedEvent) => new(
-        appendedEvent.Metadata.ToApi(),
         appendedEvent.Context.ToApi(),
         appendedEvent.Content);
 
@@ -33,7 +32,6 @@ internal static class AppendedEventConverters
     /// <returns>The converted contract appended event.</returns>
     public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent appendedEvent) => new()
     {
-        Metadata = appendedEvent.Metadata.ToContract(),
         Context = appendedEvent.Context.ToContract(),
         Content = appendedEvent.Content
     };

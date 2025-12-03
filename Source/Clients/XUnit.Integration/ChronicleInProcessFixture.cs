@@ -3,6 +3,8 @@
 
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
+using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Networks;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -16,10 +18,8 @@ public class ChronicleInProcessFixture : ChronicleFixture
     /// </summary>
     public const string HostName = "mongo";
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="ChronicleInProcessFixture"/>.
-    /// </summary>
-    public ChronicleInProcessFixture() : base(network =>
+    /// <inheritdoc/>
+    protected override IContainer BuildContainer(INetwork network)
     {
         var builder = new ContainerBuilder()
             .WithImage("mongo")
@@ -28,9 +28,7 @@ public class ChronicleInProcessFixture : ChronicleFixture
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(27017));
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(27017));
         return builder.Build();
-    })
-    {
     }
 }

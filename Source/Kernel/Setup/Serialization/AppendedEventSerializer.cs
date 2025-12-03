@@ -30,7 +30,7 @@ internal sealed class AppendedEventSerializer(
     IStorage storage) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     /// <inheritdoc/>
-    public object DeepCopy(object input, CopyContext context) => input;
+    public object? DeepCopy(object? input, CopyContext context) => input;
 
     /// <inheritdoc/>
     public bool IsSupportedType(Type type) => type == typeof(AppendedEvent);
@@ -65,7 +65,7 @@ internal sealed class AppendedEventSerializer(
     {
         var appendedEvent = (AppendedEvent)value;
         var eventStore = storage.GetEventStore(appendedEvent.Context.EventStore);
-        var eventType = eventStore.EventTypes.GetFor(appendedEvent.Metadata.Type.Id, appendedEvent.Metadata.Type.Generation).GetAwaiter().GetResult();
+        var eventType = eventStore.EventTypes.GetFor(appendedEvent.Context.EventType.Id, appendedEvent.Context.EventType.Generation).GetAwaiter().GetResult();
         var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, eventType.Schema.ToJson());
 
         var json = JsonSerializer.Serialize(appendedEventWithSchema, jsonSerializerOptions);

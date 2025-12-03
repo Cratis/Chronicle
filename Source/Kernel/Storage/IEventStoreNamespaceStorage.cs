@@ -10,6 +10,7 @@ using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage;
@@ -40,9 +41,9 @@ public interface IEventStoreNamespaceStorage
     IJobStepStorage JobSteps { get; }
 
     /// <summary>
-    /// Gets the <see cref="IObserverStorage"/> for the event store namespace.
+    /// Gets the <see cref="IObserverStateStorage"/> for the event store namespace.
     /// </summary>
-    IObserverStorage Observers { get; }
+    IObserverStateStorage Observers { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
@@ -73,6 +74,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IReplayedModelsStorage"/> for the event store namespace.
     /// </summary>
     IReplayedModelsStorage ReplayedModels { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSeedingStorage"/> for the event store namespace.
+    /// </summary>
+    IEventSeedingStorage EventSeeding { get; }
 
     /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.

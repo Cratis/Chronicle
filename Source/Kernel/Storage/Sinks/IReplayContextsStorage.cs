@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -21,14 +21,14 @@ public interface IReplayContextsStorage
     /// <summary>
     /// Try to get the replay context for a given observer.
     /// </summary>
-    /// <param name="model">The <see cref="ModelName"/> to get the context for.</param>
+    /// <param name="readModel">The <see cref="ReadModelIdentifier"/> to get the context for.</param>
     /// <returns><see cref="Result"/> of either the <see cref="ReplayContext"/> or an error.</returns>
-    Task<Result<ReplayContext, GetContextError>> TryGet(ModelName model);
+    Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel);
 
     /// <summary>
     /// Remove a replay context.
     /// </summary>
-    /// <param name="model">The <see cref="ModelName"/> to get the context for.</param>
+    /// <param name="readModel">The <see cref="ReadModelIdentifier"/> to get the context for.</param>
     /// <returns>Awaitable task.</returns>
-    Task Remove(ModelName model);
+    Task Remove(ReadModelIdentifier readModel);
 }

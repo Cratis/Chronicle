@@ -10,21 +10,20 @@ namespace Cratis.Chronicle.Projections.for_EventValueProviders;
 
 public class when_getting_from_event_content_nested_property : Specification
 {
-    const string expected = "Forty two";
-    ValueProvider<AppendedEvent> value_provider;
-    AppendedEvent @event;
-    object result;
+    const string Expected = "Forty two";
+    ValueProvider<AppendedEvent> _valueProvider;
+    AppendedEvent _event;
+    object _result;
 
     void Establish()
     {
         var content = new ExpandoObject();
-        ((dynamic)content).nested = new ExpandoObject();
-        ((dynamic)content).nested.sourceString = expected;
+        ((dynamic)content).Nested = new ExpandoObject();
+        ((dynamic)content).Nested.SourceString = Expected;
 
-        @event = new(
-            new(0,
-            new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
+        _event = new(
             new(
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
@@ -37,10 +36,10 @@ public class when_getting_from_event_content_nested_property : Specification
                 [],
                 Identity.System),
             content);
-        value_provider = EventValueProviders.EventContent("Nested.SourceString");
+        _valueProvider = EventValueProviders.EventContent("Nested.SourceString");
     }
 
-    void Because() => result = value_provider(@event);
+    void Because() => _result = _valueProvider(_event);
 
-    [Fact] void should_return_content_of_source_property() => result.ShouldEqual(expected);
+    [Fact] void should_return_content_of_source_property() => _result.ShouldEqual(Expected);
 }

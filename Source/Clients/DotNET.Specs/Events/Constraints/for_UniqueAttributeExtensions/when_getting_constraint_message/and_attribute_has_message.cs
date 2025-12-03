@@ -6,11 +6,11 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueAttributeExtensions.when
 public class and_attribute_has_message : Specification
 {
     const string Message = "TheMessage";
-    string result;
+    string _result;
 
-    void Because() => result = typeof(SomeType).GetConstraintMessage();
+    void Because() => _result = typeof(SomeType).GetConstraintMessage();
 
-    [Fact] void should_return_message() => result.ShouldEqual(Message);
+    [Fact] void should_return_message() => _result.ShouldEqual(Message);
 
     [Unique(message: Message)]
     record SomeType();

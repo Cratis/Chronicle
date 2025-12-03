@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using ProtoBuf;
-
 namespace Cratis.Chronicle.Contracts.Observation.Reactors;
 
 /// <summary>
@@ -28,4 +26,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
     public IList<EventTypeWithKeyExpression> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the reactor supports replay scenarios.
+    /// </summary>
+    [ProtoMember(4), DefaultValue(true)]
+    public bool IsReplayable { get; set; } = true;
 }

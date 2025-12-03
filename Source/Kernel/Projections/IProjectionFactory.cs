@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -15,8 +16,13 @@ public interface IProjectionFactory
     /// Create a <see cref="IProjection"/> from a <see cref="ProjectionDefinition"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> to create from.</param>
-    /// /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to create from.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to create from.</param>
     /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
+    /// <param name="readModelDefinition"><see cref="ReadModelDefinition"/> for the projection.</param>
     /// <returns>A new <see cref="IProjection"/> instance.</returns>
-    Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition);
+    Task<IProjection> Create(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        ProjectionDefinition definition,
+        ReadModelDefinition readModelDefinition);
 }

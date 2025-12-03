@@ -2,10 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Models;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Sinks;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
 
@@ -28,10 +25,10 @@ public class ProjectionDefinition
     public string Identifier { get; set; }
 
     /// <summary>
-    /// Gets or sets the target <see cref="ModelDefinition"/>.
+    /// Gets or sets the target read model.
     /// </summary>
     [ProtoMember(3)]
-    public ModelDefinition Model { get; set; }
+    public string ReadModel { get; set; }
 
     /// <summary>
     /// Gets or sets whether or not the projection is an actively observing projection.
@@ -78,8 +75,8 @@ public class ProjectionDefinition
     /// <summary>
     /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
-    [ProtoMember(11)]
-    public FromEveryDefinition All { get; set; }
+    [ProtoMember(11, IsRequired = true)]
+    public FromEveryDefinition All { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.

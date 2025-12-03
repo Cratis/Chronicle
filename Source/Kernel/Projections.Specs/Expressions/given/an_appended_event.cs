@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Projections.Expressions.given;
 
@@ -21,13 +20,12 @@ public class an_appended_event : Specification
 
         var content = new ExpandoObject();
         var contentAsDictionary = content as IDictionary<string, object?>;
-        contentAsDictionary.Add(nameof(MyEvent.Something).ToCamelCase(), my_event.Something);
-        contentAsDictionary.Add(nameof(MyEvent.SomethingElse).ToCamelCase(), my_event.SomethingElse);
+        contentAsDictionary.Add(nameof(MyEvent.Something), my_event.Something);
+        contentAsDictionary.Add(nameof(MyEvent.SomethingElse), my_event.SomethingElse);
 
         @event = new(
-            new(0,
-            new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new(
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1),
                 EventSourceType.Default,
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,

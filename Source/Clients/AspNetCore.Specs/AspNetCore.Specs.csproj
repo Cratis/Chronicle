@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.AspNetCore.Specs</AssemblyName>
-        <RootNamespace>Cratis.AspNetCore</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.AspNetCore.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.AspNetCore</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Clients/AspNetCore/AspNetCore.csproj" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
 </Project>

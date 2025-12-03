@@ -8,17 +8,17 @@ namespace Cratis.Chronicle.Grains.Observation.for_ObserverState.when_Setting_nex
 
 public class and_value_is_unavailable : Specification
 {
-    ObserverState state;
+    ObserverState _state;
 
     void Establish()
     {
-        state = new ObserverState
+        _state = new ObserverState
         {
             NextEventSequenceNumber = 42
         };
     }
 
-    void Because() => state = state with { NextEventSequenceNumber = EventSequenceNumber.Unavailable };
+    void Because() => _state = _state with { NextEventSequenceNumber = EventSequenceNumber.Unavailable };
 
-    [Fact] void should_set_next_event_sequence_number_to_first() => state.NextEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
+    [Fact] void should_set_next_event_sequence_number_to_first() => _state.NextEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
 }

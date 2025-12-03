@@ -18,5 +18,5 @@ public static class WellKnownProperties
     /// <summary>
     /// The property name for whether an model instance is initialized.
     /// </summary>
-    public const string ModelInstanceInitialized = "__initialized";
+    public const string ReadModelInstanceInitialized = "__initialized";
 }

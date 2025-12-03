@@ -3,23 +3,22 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="ISubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.
+/// Represents an implementation of <see cref="ISubtractBuilder{TReadModel, TEvent, TProperty, TParentBuilder}"/>.
 /// </summary>
-/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TReadModel">Read model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
-/// <remarks>
-/// /// Initializes a new instance of the <see cref="SubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
-/// </remarks>
 /// <param name="parent">Parent builder.</param>
 /// <param name="targetProperty">Target property we're building for.</param>
-public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty) : ISubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>
-    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
+/// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for property names.</param>
+public class SubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBuilder parent, PropertyPath targetProperty, INamingPolicy namingPolicy) : ISubtractBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
+    where TParentBuilder : class, IReadModelPropertiesBuilder<TReadModel, TEvent, TParentBuilder>
 {
     string _expression = string.Empty;
 
@@ -29,7 +28,7 @@ public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentB
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        _expression = $"$subtract({eventPropertyAccessor.GetPropertyPath()})";
+        _expression = $"{WellKnownExpressions.Subtract}({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
         return parent;
     }
 
@@ -45,7 +44,7 @@ public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>(TParentB
     {
         if (string.IsNullOrEmpty(_expression))
         {
-            throw new MissingSubtractWithExpression(typeof(TModel), TargetProperty);
+            throw new MissingSubtractWithExpression(typeof(TReadModel), TargetProperty);
         }
     }
 }

@@ -7,10 +7,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_conve
 
 public class with_single_level_array_property_without_array_indexers : given.a_mongodb_converter
 {
-    MongoDBProperty result;
+    MongoDBProperty _result;
 
-    void Because() => result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), ArrayIndexers.NoIndexers);
+    void Because() => _result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), ArrayIndexers.NoIndexers);
 
-    [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("arrayProperty");
-    [Fact] void should_not_have_any_array_filters() => result.ArrayFilters.ShouldBeEmpty();
+    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("ArrayProperty");
+    [Fact] void should_not_have_any_array_filters() => _result.ArrayFilters.ShouldBeEmpty();
 }

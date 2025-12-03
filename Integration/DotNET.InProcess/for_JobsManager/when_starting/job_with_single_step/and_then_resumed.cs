@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.when_starting.j
 [Collection(ChronicleCollection.Name)]
 public class and_then_resumed(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_jobs_manager(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
@@ -22,10 +22,10 @@ public class and_then_resumed(context context) : Given<context>(context)
         async Task Because()
         {
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            TheJobStepProcessor.SetStartTask(taskCompletionSource.Task);
+            JobStepProcessor.SetStartTask(taskCompletionSource.Task);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true });
             JobId = StartJobResult.AsT0;
-            await TheJobStepProcessor.WaitForAllPreparedStepsToBeStarted();
+            await JobStepProcessor.WaitForAllPreparedStepsToBeStarted();
             await EventStore.Jobs.Resume(JobId.Value);
             taskCompletionSource.SetResult();
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully);
@@ -52,8 +52,8 @@ public class and_then_resumed(context context) : Given<context>(context)
     public void should_have_job_progress_with_one_successful_step() => Context.CompletedJobState.Progress.SuccessfulSteps.ShouldEqual(1);
 
     [Fact]
-    public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
+    public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }

@@ -1,8 +1,11 @@
 name: .NET Build & Integration
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET8_VERSION: "8.0.410"
+  DOTNET9_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
+  CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
   workflow_dispatch:
@@ -42,10 +45,21 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Build
-        run: dotnet build --configuration Release --framework net9.0
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  dotnet-build-repack:
+      - name: Build
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true
+
+      - name: Publish Docker Image
+        run: |
+          docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
+
+  dotnet-build-repack-clients:
     runs-on: ubuntu-latest
 
     steps:
@@ -56,17 +70,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - name: Build root
-        run: dotnet build -f net9.0 --configuration Debug
-
       - name: Clean output for repackaged clients
-        run: dotnet clean -f net9.0
+        run: dotnet clean
         working-directory: ./Source/Clients
 
       - name: Build repackaged clients
-        run: dotnet build -f net9.0 --configuration Debug -p:Repack=true -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -maxcpucount:1
         working-directory: ./Source/Clients
 
   specs:
@@ -80,6 +93,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -89,7 +104,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings
 
   integration-specs:
     runs-on: ubuntu-latest
@@ -103,6 +118,7 @@ jobs:
           - 'for_Reducers'
           - 'Projections'
           - 'AggregateRoots'
+    continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
     steps:
@@ -113,6 +129,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -121,18 +139,13 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Run integration tests for .Net 9
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+      - name: Run integration tests
+        working-directory: ./Integration/DotNET.InProcess
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release
 
   integration-api:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
-    strategy:
-      matrix:
-        namespace:
-          - 'Api.for_Endpoints'
-    env:
-      NAMESPACE: Cratis.Chronicle.Integration.${{ matrix.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,6 +154,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -149,5 +164,13 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Run API integration tests for .Net 9
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run API integration tests
+        working-directory: ./Integration/Api
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release

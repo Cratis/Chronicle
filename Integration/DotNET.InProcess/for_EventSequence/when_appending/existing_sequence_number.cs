@@ -11,9 +11,9 @@ namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appendin
 [Collection(ChronicleCollection.Name)]
 public class existing_sequence_number(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
-        public Events.EventSourceId EventSourceId { get; } = "source";
+        public EventSourceId EventSourceId { get; } = "source";
         public SomeEvent FirstEvent;
         public SomeEvent SecondEvent;
 

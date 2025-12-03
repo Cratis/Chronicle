@@ -4,17 +4,16 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ObserverInformation } from './ObserverInformation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/all-observers/observe');
 
 class AllObserversSortBy {
     private _id: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _eventSequenceId: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _type: SortingActionsForObservableQuery<ObserverInformation[]>;
+    private _owner: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _eventTypes: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _nextEventSequenceNumber: SortingActionsForObservableQuery<ObserverInformation[]>;
     private _lastHandledEventSequenceNumber: SortingActionsForObservableQuery<ObserverInformation[]>;
@@ -25,6 +24,7 @@ class AllObserversSortBy {
         this._id = new SortingActionsForObservableQuery<ObserverInformation[]>('id', query);
         this._eventSequenceId = new SortingActionsForObservableQuery<ObserverInformation[]>('eventSequenceId', query);
         this._type = new SortingActionsForObservableQuery<ObserverInformation[]>('type', query);
+        this._owner = new SortingActionsForObservableQuery<ObserverInformation[]>('owner', query);
         this._eventTypes = new SortingActionsForObservableQuery<ObserverInformation[]>('eventTypes', query);
         this._nextEventSequenceNumber = new SortingActionsForObservableQuery<ObserverInformation[]>('nextEventSequenceNumber', query);
         this._lastHandledEventSequenceNumber = new SortingActionsForObservableQuery<ObserverInformation[]>('lastHandledEventSequenceNumber', query);
@@ -40,6 +40,9 @@ class AllObserversSortBy {
     }
     get type(): SortingActionsForObservableQuery<ObserverInformation[]> {
         return this._type;
+    }
+    get owner(): SortingActionsForObservableQuery<ObserverInformation[]> {
+        return this._owner;
     }
     get eventTypes(): SortingActionsForObservableQuery<ObserverInformation[]> {
         return this._eventTypes;
@@ -62,6 +65,7 @@ class AllObserversSortByWithoutQuery {
     private _id: SortingActions  = new SortingActions('id');
     private _eventSequenceId: SortingActions  = new SortingActions('eventSequenceId');
     private _type: SortingActions  = new SortingActions('type');
+    private _owner: SortingActions  = new SortingActions('owner');
     private _eventTypes: SortingActions  = new SortingActions('eventTypes');
     private _nextEventSequenceNumber: SortingActions  = new SortingActions('nextEventSequenceNumber');
     private _lastHandledEventSequenceNumber: SortingActions  = new SortingActions('lastHandledEventSequenceNumber');
@@ -76,6 +80,9 @@ class AllObserversSortByWithoutQuery {
     }
     get type(): SortingActions {
         return this._type;
+    }
+    get owner(): SortingActions {
+        return this._owner;
     }
     get eventTypes(): SortingActions {
         return this._eventTypes;
@@ -94,13 +101,12 @@ class AllObserversSortByWithoutQuery {
     }
 }
 
-export interface AllObserversArguments {
+export interface AllObserversParameters {
     eventStore: string;
     namespace: string;
 }
-export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversArguments> {
+export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllObserversParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers/observe';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
     private readonly _sortBy: AllObserversSortBy;
     private static readonly _sortBy: AllObserversSortByWithoutQuery = new AllObserversSortByWithoutQuery();
@@ -110,12 +116,20 @@ export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllO
         this._sortBy = new AllObserversSortBy(this);
     }
 
-    get requiredRequestArguments(): string[] {
+    get requiredRequestParameters(): string[] {
         return [
             'eventStore',
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): AllObserversSortBy {
         return this._sortBy;
@@ -125,11 +139,11 @@ export class AllObservers extends ObservableQueryFor<ObserverInformation[], AllO
         return this._sortBy;
     }
 
-    static use(args?: AllObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting] {
-        return useObservableQuery<ObserverInformation[], AllObservers, AllObserversArguments>(AllObservers, args, sorting);
+    static use(args?: AllObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting] {
+        return useObservableQuery<ObserverInformation[], AllObservers, AllObserversParameters>(AllObservers, args, sorting);
     }
 
-    static useWithPaging(pageSize: number, args?: AllObserversArguments, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting, SetPage, SetPageSize] {
+    static useWithPaging(pageSize: number, args?: AllObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, SetSorting, SetPage, SetPageSize] {
         return useObservableQueryWithPaging<ObserverInformation[], AllObservers>(AllObservers, new Paging(0, pageSize), args, sorting);
     }
 }

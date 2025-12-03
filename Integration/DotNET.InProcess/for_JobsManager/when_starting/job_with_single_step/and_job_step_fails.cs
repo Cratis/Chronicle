@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.when_starting.j
 [Collection(ChronicleCollection.Name)]
 public class and_job_step_fails(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_jobs_manager(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
@@ -21,9 +21,9 @@ public class and_job_step_fails(context context) : Given<context>(context)
 
         async Task Because()
         {
-            TheJobStepProcessor.SetNumJobStepsToComplete(1);
+            JobStepProcessor.SetNumJobStepsToComplete(1);
             StartJobResult = await JobsManager.Start<IJobWithSingleStep, JobWithSingleStepRequest>(new() { KeepAfterCompleted = true, ShouldFail = true });
-            await TheJobStepProcessor.WaitForStepsToBeCompleted();
+            await JobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
             var getJobState = await JobStorage.GetJob(JobId);
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
@@ -59,8 +59,8 @@ public class and_job_step_fails(context context) : Given<context>(context)
     public void should_have_job_progress_with_one_failed_step() => Context.CompletedJobState.Progress.FailedSteps.ShouldEqual(1);
 
     [Fact]
-    public void should_perform_work_for_job_step_only_once() => Context.TheJobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
+    public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.TheJobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedWithFailure, 1);
+    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedWithFailure, 1);
 }

@@ -8,18 +8,18 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_conve
 
 public class with_single_level_array_property_with_array_indexers : given.a_mongodb_converter
 {
-    MongoDBProperty result;
-    Guid key;
-    ArrayIndexers array_indexers;
+    MongoDBProperty _result;
+    Guid _key;
+    ArrayIndexers _arrayIndexers;
 
     void Establish()
     {
-        key = Guid.NewGuid();
-        array_indexers = new ArrayIndexers([new ArrayIndexer("[ArrayProperty]", "Identifier", key)]);
+        _key = Guid.NewGuid();
+        _arrayIndexers = new ArrayIndexers([new ArrayIndexer("[ArrayProperty]", "Identifier", _key)]);
     }
 
-    void Because() => result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), array_indexers);
+    void Because() => _result = _converter.ToMongoDBProperty(new PropertyPath("[ArrayProperty]"), _arrayIndexers);
 
-    [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("arrayProperty.$[arrayProperty]");
-    [Fact] void should_have_array_filter_for_property() => result.ArrayFilters.First().Document["arrayProperty.identifier"].ShouldEqual(new BsonBinaryData(key, GuidRepresentation.Standard));
+    [Fact] void should_have_the_correct_property_name() => _result.Property.ShouldEqual("ArrayProperty.$[arrayProperty]");
+    [Fact] void should_have_array_filter_for_property() => _result.ArrayFilters.First().Document["arrayProperty.Identifier"].ShouldEqual(new BsonBinaryData(_key, GuidRepresentation.Standard));
 }

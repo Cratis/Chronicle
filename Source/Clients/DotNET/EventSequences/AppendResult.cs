@@ -3,17 +3,16 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// Represents the result of an append operation.
 /// </summary>
-public record AppendResult
+public record AppendResult : IAppendResult
 {
-    /// <summary>
-    /// Gets the <see cref="CorrelationId"/> for the operation.
-    /// </summary>
+    /// <inheritdoc />
     public CorrelationId CorrelationId { get; init; } = CorrelationId.NotSet;
 
     /// <summary>
@@ -21,29 +20,27 @@ public record AppendResult
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; init; } = EventSequenceNumber.Unavailable;
 
-    /// <summary>
-    /// Gets a value indicating whether the operation was successful.
-    /// </summary>
-    public bool IsSuccess => !HasConstraintViolations && !HasErrors;
+    /// <inheritdoc />
+    public bool IsSuccess => !HasConstraintViolations && !HasErrors && !HasConcurrencyViolations;
 
-    /// <summary>
-    /// Gets whether or not there are any violations that occurred.
-    /// </summary>
+    /// <inheritdoc />
     public bool HasConstraintViolations => ConstraintViolations.Any();
 
-    /// <summary>
-    /// Gets whether or not there are any errors that occurred.
-    /// </summary>
+    /// <inheritdoc />
+    public bool HasConcurrencyViolations => ConcurrencyViolation is not null;
+
+    /// <inheritdoc />
     public bool HasErrors => Errors.Any();
 
-    /// <summary>
-    /// Gets any violations that occurred during the operation.
-    /// </summary>
+    /// <inheritdoc />
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
-    /// Gets any exception messages that might have occurred.
+    /// Gets any concurrency violation that occurred during the operation.
     /// </summary>
+    public ConcurrencyViolation? ConcurrencyViolation { get; init; }
+
+    /// <inheritdoc />
     public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>

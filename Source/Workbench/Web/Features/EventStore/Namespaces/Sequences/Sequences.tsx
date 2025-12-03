@@ -3,7 +3,7 @@
 
 import { DataPage } from 'Components';
 import strings from 'Strings';
-import { AppendedEvents, AppendedEventsArguments } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
@@ -31,14 +31,14 @@ function GetPathFor<T>(lambda: Lambda<T>): string {
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AppendedEventsArguments = {
+    const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         eventSequenceId: 'event-log'
     };
 
-    const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.metadata.sequenceNumber);
-    const typePath = GetPathFor<AppendedEvent>(et => et.metadata.type.id);
+    const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.context.sequenceNumber);
+    const typePath = GetPathFor<AppendedEvent>(et => et.context.eventType.id);
     const eventSourceIdPath = GetPathFor<AppendedEvent>(et => et.context.eventSourceId);
     const occurredPath = GetPathFor<AppendedEvent>(et => et.context.occurred);
 
@@ -55,9 +55,8 @@ export const Sequences = () => {
 
     const handler = new PropertyPathResolverProxyHandler();
     const proxy = new Proxy({}, handler);
-    const accessor = (et: AppendedEvent) => et.metadata.type.id;
+    const accessor = (et: AppendedEvent) => et.context.eventType.id;
     accessor(proxy);
-    console.log(handler.path);
 
     const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
         return (
@@ -80,7 +79,7 @@ export const Sequences = () => {
             emptyMessage={strings.eventStore.namespaces.sequences.empty}
             dataKey={sequenceNumberPath}
             defaultFilters={filters}
-            globalFilterFields={['metadata.type.id']}
+            globalFilterFields={['context.eventType.id']}
             detailsComponent={EventDetails}>
             <DataPage.Columns>
                 <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />

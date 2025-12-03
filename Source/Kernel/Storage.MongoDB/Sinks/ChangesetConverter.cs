@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
@@ -20,12 +20,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ChangesetConverter"/> class.
 /// </remarks>
-/// <param name="model">The <see cref="Model"/> the sink is for.</param>
+/// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 public class ChangesetConverter(
-    Model model,
+    ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
@@ -50,6 +50,11 @@ public class ChangesetConverter(
             arrayFiltersForDocument,
             eventSequenceNumber);
 
+        if (hasChanges)
+        {
+            BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
+        }
+
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         return new(updateBuilder!, distinctArrayFilters, hasChanges);
@@ -71,16 +76,16 @@ public class ChangesetConverter(
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged, eventSequenceNumber);
+                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged);
                     break;
 
                 case ChildAdded childAdded:
-                    BuildChildAdded(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childAdded, eventSequenceNumber);
+                    BuildChildAdded(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childAdded);
                     hasChanges = true;
                     break;
 
                 case ChildRemoved childRemoved:
-                    BuildChildRemoved(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childRemoved, eventSequenceNumber);
+                    BuildChildRemoved(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childRemoved);
                     hasChanges = true;
                     break;
 
@@ -112,7 +117,7 @@ public class ChangesetConverter(
         }
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged, EventSequenceNumber eventSequenceNumber)
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
@@ -134,16 +139,10 @@ public class ChangesetConverter(
         }
 
         arrayFiltersForDocument.AddRange(allArrayFilters);
-        var hasChanges = propertiesChanged.Differences.Any();
-        if (hasChanges)
-        {
-            BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
-        }
-
-        return hasChanges;
+        return propertiesChanged.Differences.Any();
     }
 
-    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded, EventSequenceNumber eventSequenceNumber)
+    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded)
     {
         BsonValue bsonValue;
 
@@ -153,7 +152,7 @@ public class ChangesetConverter(
         }
         else
         {
-            var schema = model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+            var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childAdded.ChildrenProperty);
             bsonValue = expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
         }
 
@@ -165,11 +164,9 @@ public class ChangesetConverter(
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Push(property, bsonValue)
             : updateDefinitionBuilder.Push(property, bsonValue);
-
-        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
     }
 
-    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved, EventSequenceNumber eventSequenceNumber)
+    void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
     {
         BsonValue bsonValue;
 
@@ -179,7 +176,7 @@ public class ChangesetConverter(
         }
         else
         {
-            var schema = model.Schema.GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
+            var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
             bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema);
         }
 
@@ -191,8 +188,6 @@ public class ChangesetConverter(
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Pull(property, bsonValue)
             : updateDefinitionBuilder.Pull(property, bsonValue);
-
-        BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
     }
 
     void PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, List<Task> joinTasks, Joined joined, EventSequenceNumber eventSequenceNumber)

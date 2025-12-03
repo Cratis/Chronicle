@@ -14,8 +14,6 @@ API and in the future, other clients for other programming languages.
 
 With C# you define an event simply by creating a `record` and adorning it with the
 attribute `[EventType]` located in the `Cratis.Chronicle.Events` namespace.
-The first and required parameter it takes on the attribute is the unique identifier in
-the form of a string representation of a [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid?view=net-6.0).
 
 ```csharp
 using Cratis.Chronicle.Events;
@@ -28,7 +26,7 @@ You can also create event types using classes and properties. However, since eve
 to considered immutable, `record` gives you that out of the box without having to resort
 to either `init` properties or private properties with a constructor that sets them.
 
-> Note: Notice the use of [concepts](../fundamentals/concepts.md) for the value types
+> Note: Notice the use of [concepts](../../Fundamentals/csharp/concepts.md) for the value types
 > on the events.
 
 All events are automatically discovered at runtime and registered in the Cratis Schema Store.

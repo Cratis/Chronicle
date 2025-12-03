@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
-using Cratis.Json;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -36,8 +35,6 @@ public class the_job : Specification
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _jobStorage = Substitute.For<IJobStorage>();
         _jobStepStorage = Substitute.For<IJobStepStorage>();
-
-        _silo.AddService(Globals.JsonSerializerOptions);
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);

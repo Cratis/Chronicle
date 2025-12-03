@@ -18,5 +18,5 @@ public class ValueExpression(string value) : IEventValueExpression
     public static readonly ValueExpression Null = new("null");
 
     /// <inheritdoc/>
-    public PropertyExpression Build() => $"$value({value})";
+    public PropertyExpression Build() => $"{WellKnownExpressions.Value}({value})";
 }

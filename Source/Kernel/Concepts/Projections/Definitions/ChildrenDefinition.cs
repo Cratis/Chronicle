@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Models;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 
@@ -13,8 +13,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// Represents the definition of a children projection.
 /// </summary>
 /// <param name="IdentifiedBy">Property on model that identifies the unique object, typically the key - or id (event source id).</param>
-/// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
-/// <param name="InitialModelState">The initial values to use with the model for new instances.</param>
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Join">All the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
@@ -24,8 +22,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
-    ModelDefinition Model,
-    JsonObject InitialModelState,
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
@@ -34,12 +30,13 @@ public record ChildrenDefinition(
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default) :
     ProjectionDefinition(
+        ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,
         ProjectionId.Unspecified,
-        Model,
+        ReadModelIdentifier.NotSet,
         true,
         false,
-        InitialModelState,
+        new JsonObject(),
         From,
         Join,
         Children,

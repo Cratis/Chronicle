@@ -3,14 +3,14 @@
 
 import { Column } from 'primereact/column';
 import strings from 'Strings';
-import { AllEventTypesArguments, AllEventTypesWithSchemas } from 'Api/EventTypes';
+import { AllEventTypesParameters, AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { TypesViewModel } from './TypesViewModel';
-import { withViewModel } from '@cratis/applications.react.mvvm';
-import { useDialog } from '@cratis/applications.react.mvvm/dialogs';
+import { withViewModel } from '@cratis/arc.react.mvvm';
+import { useDialog } from '@cratis/arc.react.mvvm/dialogs';
 import { AddEventType, AddEventTypeRequest, AddEventTypeResponse } from './AddEventType';
 import { DataPage } from 'Components';
 import { TypeDetails } from './TypeDetails';
@@ -27,7 +27,7 @@ export const Types = withViewModel(TypesViewModel, () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeDialog] = useDialog<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest, AddEventType);
 
-    const queryArgs: AllEventTypesArguments = {
+    const queryArgs: AllEventTypesParameters = {
         eventStore: params.eventStore!
     };
 

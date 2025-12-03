@@ -20,9 +20,6 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 /// and not perform a network hop. The <see cref="ObserverKey"/> contains a <see cref="ConnectionId"/> which
 /// will make the observer unique per connection, helping us to achieve this.
 /// </remarks>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ReactorObserverSubscriber"/> class.
-/// </remarks>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying actual clients.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -51,7 +48,7 @@ public class ReactorObserverSubscriber(
                 _key.ObserverId,
                 _key.EventStore,
                 _key.Namespace,
-                @event.Metadata.Type.Id,
+                @event.Context.EventType.Id,
                 _key.EventSequenceId,
                 @event.Context.SequenceNumber);
         }

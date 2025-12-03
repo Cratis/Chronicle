@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
-using Cratis.Strings;
 
 namespace Cratis.Chronicle.Changes.for_ObjectComparer;
 
@@ -10,21 +9,21 @@ public class when_comparing_object_with_unequal_collections_and_different_elemen
 {
     record TheType(IEnumerable Collection);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(new object[] { 1, "2", 3 });
-        right = new(new int[] { 1, 2, 3 });
+        _left = new(new object[] { 1, "2", 3 });
+        _right = new(new int[] { 1, 2, 3 });
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_not_be_equal() => result.ShouldBeFalse();
-    [Fact] void should_have_one_property_difference() => differences.Count().ShouldEqual(1);
-    [Fact] void should_have_concept_property_as_difference() => differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Collection).ToCamelCase());
+    [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
+    [Fact] void should_have_one_property_difference() => _differences.Count().ShouldEqual(1);
+    [Fact] void should_have_concept_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Collection));
 }

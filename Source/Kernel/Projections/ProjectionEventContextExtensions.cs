@@ -29,7 +29,7 @@ public static class ProjectionEventContextExtensions
     public static IObservable<ProjectionEventContext> WhereEventTypeEquals(
         this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
-        return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
+        return observable.Where(_ => _.Event.Context.EventType.Id == eventType.Id);
     }
 
     /// <summary>
@@ -100,9 +100,9 @@ public static class ProjectionEventContextExtensions
                 // TODO: We need to have a fulfillment strategy here: https://github.com/Cratis/Chronicle/issues/50
                 tryGetLastEvent.Switch(HandleResolveJoin, error =>
                 {
-                    #pragma warning disable CA1848
+#pragma warning disable CA1848
                     logger.LogError("Error when trying to resolve join: {Error}", error);
-                    #pragma warning restore CA1848
+#pragma warning restore CA1848
                     throw error;
                 });
             }

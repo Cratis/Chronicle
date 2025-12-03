@@ -33,14 +33,16 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
         var observer = grainFactory.GetObserver(request);
+        var definition = await observer.GetDefinition();
         var state = await observer.GetState();
         var subscribed = await observer.IsSubscribed();
         return new ObserverInformation
         {
             Id = request.ObserverId,
-            EventSequenceId = state.EventSequenceId,
-            Type = state.Type.ToContract(),
-            EventTypes = state.EventTypes.ToContract(),
+            EventSequenceId = definition.EventSequenceId,
+            Type = definition.Type.ToContract(),
+            Owner = definition.Owner.ToContract(),
+            EventTypes = definition.EventTypes.ToContract(),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             RunningState = state.RunningState.ToContract(),
@@ -51,7 +53,12 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
-        var observers = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observers =
+            from definition in observerDefinitions
+            join state in observerStates on definition.Identifier equals state.Identifier
+            select (definition, state);
         return observers.ToContract();
     }
 
@@ -62,5 +69,14 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             .GetNamespace(request.Namespace).Observers
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
-            .Select(_ => _.ToContract());
+            .Select(observerStates =>
+            {
+                // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
+                var observerDefinitions = storage.GetEventStore(request.EventStore).Observers.GetAll().GetAwaiter().GetResult();
+                var observers =
+                    from definition in observerDefinitions
+                    join state in observerStates on definition.Identifier equals state.Identifier
+                    select (definition, state);
+                return observers.ToContract();
+            });
 }

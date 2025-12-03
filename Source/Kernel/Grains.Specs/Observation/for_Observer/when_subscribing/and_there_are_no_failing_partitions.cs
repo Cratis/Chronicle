@@ -9,19 +9,19 @@ namespace Cratis.Chronicle.Grains.Observation.for_Observer.when_subscribing;
 
 public class and_there_are_no_failing_partitions : given.an_observer
 {
-    static Exception error;
-    static ObserverType type;
+    static Exception _error;
+    static ObserverType _type;
 
     void Establish()
     {
-        type = ObserverType.Reactor;
+        _type = ObserverType.Reactor;
     }
 
-    async Task Because() => error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(type, [EventType.Unknown], SiloAddress.Zero));
+    async Task Because() => _error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(_type, [EventType.Unknown], SiloAddress.Zero));
 
-    [Fact] void should_not_fail() => error.ShouldBeNull();
+    [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_write_state_at_least_once() => _storageStats.Writes.ShouldBeGreaterThanOrEqual(1);
-    [Fact] void should_store_type_to_state() => _stateStorage.State.Type.ShouldEqual(type);
+    [Fact] void should_store_type_to_state() => _definitionStorage.State.Type.ShouldEqual(_type);
     [Fact] async Task should_get_the_subscription()
     {
         var subscription = await _observer.GetSubscription();

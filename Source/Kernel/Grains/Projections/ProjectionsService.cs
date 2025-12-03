@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +19,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="projections"><see cref="Chronicle.Projections.IProjectionsManager"/> for managing projections.</param>
+/// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [ImplicitChannelSubscription]
 public class ProjectionsService(
@@ -25,6 +28,7 @@ public class ProjectionsService(
     IGrainFactory grainFactory,
     IStorage storage,
     Chronicle.Projections.IProjectionsManager projections,
+    IProjectionPipelineManager projectionPipelines,
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>
@@ -42,12 +46,31 @@ public class ProjectionsService(
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
+        var readModelDefinitions = await grainFactory.GetReadModelsManager(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
         var allNamespaces = await namespaces.GetAll();
-        await projections.Register(eventStore, definitions, allNamespaces);
+        EvictProjections(eventStore, definitions, allNamespaces);
+
+        await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
     }
 
     /// <inheritdoc/>
-    public Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        projections.AddNamespace(eventStore, @namespace);
+    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var readModelDefinitions = await grainFactory.GetGrain<IReadModelsManager>(eventStore).GetDefinitions();
+        await projections.AddNamespace(eventStore, @namespace, readModelDefinitions);
+    }
+
+    void EvictProjections(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> allNamespaces)
+    {
+        foreach (var definition in definitions)
+        {
+            projections.Evict(eventStore, definition.Identifier);
+
+            foreach (var @namespace in allNamespaces)
+            {
+                projectionPipelines.EvictFor(eventStore, @namespace, definition.Identifier);
+            }
+        }
+    }
 }

@@ -21,6 +21,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Projections { get; }
 
     /// <summary>
+    /// Gets all the available model-bound projection types.
+    /// </summary>
+    IEnumerable<Type> ModelBoundProjections { get; }
+
+    /// <summary>
     /// Gets all the available Reactor types.
     /// </summary>
     IEnumerable<Type> Reactors { get; }
@@ -79,6 +84,11 @@ public interface IClientArtifactsProvider
     /// Gets all the available unique event type constraints represented by event types having <see cref="UniqueAttribute"/>.
     /// </summary>
     IEnumerable<Type> UniqueEventTypeConstraints { get; }
+
+    /// <summary>
+    /// Gets all the available event seeder types.
+    /// </summary>
+    IEnumerable<Type> EventSeeders { get; }
 
     /// <summary>
     /// Initializes the provider.

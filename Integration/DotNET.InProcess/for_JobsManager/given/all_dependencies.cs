@@ -5,15 +5,15 @@ using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;
 
-public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixture) : IntegrationSpecificationContext(chronicleInProcessFixture)
+public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
 {
-    public TheJobStepProcessor TheJobStepProcessor;
+    public TheJobStepProcessor JobStepProcessor;
     public IJobStorage JobStorage;
     public IJobStepStorage JobStepStorage;
 
     void Establish()
     {
-        TheJobStepProcessor = Services.GetRequiredService<TheJobStepProcessor>();
+        JobStepProcessor = Services.GetRequiredService<TheJobStepProcessor>();
         JobStorage = EventStoreStorage.GetNamespace(EventStore.Namespace.Value).Jobs;
         JobStepStorage = EventStoreStorage.GetNamespace(EventStore.Namespace.Value).JobSteps;
     }

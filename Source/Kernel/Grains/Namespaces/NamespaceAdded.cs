@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Grains.Namespaces;
 
@@ -10,4 +11,5 @@ namespace Cratis.Chronicle.Grains.Namespaces;
 /// </summary>
 /// <param name="EventStore">Event store that the namespace was added to.</param>
 /// <param name="Namespace">Namespace that was added.</param>
+[EventType]
 public record NamespaceAdded(EventStoreName EventStore, EventStoreNamespaceName Namespace);

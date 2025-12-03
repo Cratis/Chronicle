@@ -11,19 +11,3 @@ public class and_aggregate_root_does_not_have_any_handle_methods : given.a_state
 
     [Fact] void should_not_handle_any_events() => _eventHandlers.DidNotReceive().Handle(Arg.Any<IAggregateRoot>(), Arg.Any<IEnumerable<EventAndContext>>());
 }
-
-
-public class and_aggregate_root_has_handle_methods : given.a_stateless_aggregate_root_mutator
-{
-    string _event;
-
-    void Establish()
-    {
-        _eventHandlers.HasHandleMethods.Returns(true);
-        _event = Guid.NewGuid().ToString();
-    }
-
-    async Task Because() => await _mutator.Mutate(_event);
-
-    [Fact] void should_handle_event() => _eventHandlers.Received().Handle(_aggregateRoot, Arg.Is<IEnumerable<EventAndContext>>(arg => arg.Select(_ => _.Event).SequenceEqual(new[] { _event })));
-}

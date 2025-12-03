@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -44,7 +43,7 @@ public class Projection(
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
             logger.ProjectionHasChanged(key.ProjectionId);
-            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged());
+            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
@@ -78,7 +77,6 @@ public class Projection(
                 {
                     ObserverId = key.ProjectionId,
                     ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
-                    ObserverType = ObserverType.Projection,
                     Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
                 });
         }

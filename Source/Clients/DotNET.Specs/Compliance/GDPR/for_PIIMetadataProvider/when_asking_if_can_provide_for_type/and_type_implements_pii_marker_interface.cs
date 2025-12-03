@@ -7,8 +7,9 @@ public class and_type_implements_pii_marker_interface : given.a_provider
 {
     class MyType : IHoldPII;
 
-    bool result;
-    void Because() => result = provider.CanProvide(typeof(MyType));
+    bool _result;
 
-    [Fact] void should_be_able_to_provide() => result.ShouldBeTrue();
+    void Because() => _result = provider.CanProvide(typeof(MyType));
+
+    [Fact] void should_be_able_to_provide() => _result.ShouldBeTrue();
 }

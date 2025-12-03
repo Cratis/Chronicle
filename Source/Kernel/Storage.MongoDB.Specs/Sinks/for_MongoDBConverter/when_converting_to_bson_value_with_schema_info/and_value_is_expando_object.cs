@@ -10,26 +10,26 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_conve
 
 public class and_value_is_expando_object : given.a_mongodb_converter
 {
-    ExpandoObject value;
-    BsonValue result;
-    JsonSchemaProperty schema_property;
-    BsonDocument bson_document;
+    ExpandoObject _value;
+    BsonValue _result;
+    JsonSchemaProperty _schemaProperty;
+    BsonDocument _bsonDocument;
 
     void Establish()
     {
-        value = new ExpandoObject();
-        ((dynamic)value).SomeProperty = "Some value";
-        schema_property = _model.Schema.GetSchemaPropertyForPropertyPath(nameof(given.ReadModel.SomeProperty));
+        _value = new ExpandoObject();
+        ((dynamic)_value).SomeProperty = "Some value";
+        _schemaProperty = _model.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(nameof(given.ReadModel.SomeProperty));
 
-        bson_document = new()
+        _bsonDocument = new()
         {
-            { "someProperty", "Some value" }
+            { "SomeProperty", "Some value" }
         };
-        _expandoObjectConverter.ToBsonDocument(value, schema_property).Returns(bson_document);
+        _expandoObjectConverter.ToBsonDocument(_value, _schemaProperty).Returns(_bsonDocument);
     }
 
-    void Because() => result = _converter.ToBsonValue(value, schema_property);
+    void Because() => _result = _converter.ToBsonValue(_value, _schemaProperty);
 
-    [Fact] void should_convert_using_expando_object_converter() => _expandoObjectConverter.Received(1).ToBsonDocument(value, schema_property);
-    [Fact] void should_return_the_converted_object() => result.ShouldEqual(bson_document);
+    [Fact] void should_convert_using_expando_object_converter() => _expandoObjectConverter.Received(1).ToBsonDocument(_value, _schemaProperty);
+    [Fact] void should_return_the_converted_object() => _result.ShouldEqual(_bsonDocument);
 }

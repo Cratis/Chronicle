@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Strings;
-
 namespace Cratis.Chronicle.Changes.for_ObjectComparer.when_comparing_object_with_dictionary_with_complex_type;
 
 public class and_key_is_the_same_but_class_object_is_different : given.an_object_comparer
@@ -14,15 +12,15 @@ public class and_key_is_the_same_but_class_object_is_different : given.an_object
 
     record TheType(IDictionary<string, OtherType> Dictionary);
 
-    TheType left;
-    TheType right;
+    TheType _left;
+    TheType _right;
 
-    bool result;
-    IEnumerable<PropertyDifference> differences;
+    bool _result;
+    IEnumerable<PropertyDifference> _differences;
 
     void Establish()
     {
-        left = new(new Dictionary<string, OtherType>
+        _left = new(new Dictionary<string, OtherType>
         {
             { "Key", new()
                 {
@@ -30,7 +28,7 @@ public class and_key_is_the_same_but_class_object_is_different : given.an_object
                 }
             }
         });
-        right = new(new Dictionary<string, OtherType>
+        _right = new(new Dictionary<string, OtherType>
         {
             { "Key", new()
                 {
@@ -40,9 +38,9 @@ public class and_key_is_the_same_but_class_object_is_different : given.an_object
         });
     }
 
-    void Because() => result = comparer.Compare(left, right, out differences);
+    void Because() => _result = comparer.Compare(_left, _right, out _differences);
 
-    [Fact] void should_not_be_equal() => result.ShouldBeFalse();
-    [Fact] void should_only_have_one_property_difference() => differences.Count().ShouldEqual(1);
-    [Fact] void should_have_dictionary_property_as_difference() => differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Dictionary).ToCamelCase());
+    [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
+    [Fact] void should_only_have_one_property_difference() => _differences.Count().ShouldEqual(1);
+    [Fact] void should_have_dictionary_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Dictionary));
 }

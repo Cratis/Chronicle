@@ -5,14 +5,13 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Chronicle.Storage.MongoDB;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Cratis.Events.MongoDB.EventTypes;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypesStorage"/>.
@@ -28,7 +27,7 @@ public class EventTypesStorage(
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    ConcurrentDictionary<EventTypeId, ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>> _schemasByTypeAndGeneration = [];
+    ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
     public async Task Populate()
@@ -36,48 +35,42 @@ public class EventTypesStorage(
         logger.Populating(eventStore);
 
         using var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
-        var allSchemas = findResult.ToList();
-
-        _schemasByTypeAndGeneration = new(
-            allSchemas!.GroupBy(_ => _.EventType)
-            .ToDictionary(
-                _ => (EventTypeId)_.Key,
-                _ => new ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>(_.ToDictionary(es => (EventTypeGeneration)es.Generation, es => es.ToEventSchema()))));
+        _eventTypes = new ConcurrentBag<EventType>(findResult.ToList());
     }
 
     /// <inheritdoc/>
-    public async Task Register(EventType type, JsonSchema schema)
+    public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
+        logger.Registering(type.Id, type.Generation, eventStore);
+
         // If we have a schema for the event type on the given generation and the schemas differ - throw an exception (only in production)
         // .. if they're the same. Ignore saving.
         // If this is a new generation, there must be an upcaster and downcaster associated with the schema
         // .. do not allow generational gaps
         // if (await HasFor(type.Id, type.Generation)) return;
-        var eventSchema = new EventTypeSchema(type, schema);
-        if (!_schemasByTypeAndGeneration.TryGetValue(type.Id, out var value))
-        {
-            value = [];
-            _schemasByTypeAndGeneration[type.Id] = value;
-        }
+        var generationAsString = type.Generation.ToString();
+        var existingEventType = _eventTypes
+            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(generationAsString));
 
-        eventSchema.Schema.ResetFlattenedProperties();
-
-        if (value.TryGetValue(type.Generation, out var existingSchema))
+        if (existingEventType is not null)
         {
-            existingSchema.Schema.ResetFlattenedProperties();
-            if (existingSchema.Schema.ToJson() == schema.ToJson())
+            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[generationAsString].ToJson());
+            if (existingSchema.ToJson() == schema.ToJson())
             {
                 return;
             }
         }
 
-        schema.EnsureFlattenedProperties();
-        logger.Registering(type.Id, type.Generation, eventStore);
+        var eventSchema = new EventTypeSchema(type, schema);
+        if (_eventTypes.Any(_ => _.Id == type.Id))
+        {
+            _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
+        }
+        _eventTypes.Add(eventSchema.ToMongoDB());
 
         var mongoEventSchema = eventSchema.ToMongoDB();
-        value[type.Generation] = eventSchema;
         await GetCollection().ReplaceOneAsync(
-            _ => _.EventType == mongoEventSchema.EventType,
+            _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -87,36 +80,32 @@ public class EventTypesStorage(
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = result.ToList();
-        return schemas
-            .GroupBy(_ => _.EventType)
-            .Select(_ => _.OrderByDescending(_ => _.Generation).First().ToEventSchema());
+        return schemas.Select(_ => _.ToKernel());
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType)
+    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)
     {
         var collection = GetCollection();
-        var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
+        var filter = GetFilterForSpecificEventType(eventType.Id);
         using var result = await collection.FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        return schemas
-            .OrderBy(_ => _.Generation)
-            .Select(_ => _.ToEventSchema());
+        return schemas.Select(_ => _.ToKernel());
     }
 
     /// <inheritdoc/>
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-        if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.TryGetValue(generation, out var schema))
+        var generationAsString = generation.ToString();
+        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
         {
-            return schema;
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToKernel();
         }
 
-        var filter = GetFilterForSpecificSchema(type, generation);
+        var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
-        _schemasByTypeAndGeneration[type] = new ConcurrentDictionary<EventTypeGeneration, EventTypeSchema>(schemas.ToDictionary(_ => (EventTypeGeneration)_.Generation, _ => _.ToEventSchema()));
 
         if (schemas.Count == 0)
         {
@@ -126,27 +115,27 @@ public class EventTypesStorage(
                 generation);
         }
 
-        return schemas[0].ToEventSchema();
+        return schemas[0].ToKernel();
     }
 
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-        if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.ContainsKey(generation))
+        var generationAsString = generation.ToString();
+
+        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
         {
             return true;
         }
 
-        var filter = GetFilterForSpecificSchema(type, generation);
+        var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
         return schemas.Count == 1;
     }
 
-    IMongoCollection<EventSchemaMongoDB> GetCollection() => sharedDatabase.GetCollection<EventSchemaMongoDB>(WellKnownCollectionNames.Schemas);
+    IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);
 
-    FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventTypeGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
-                   Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
-                   Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? EventTypeGeneration.First).Value));
+    FilterDefinition<EventType> GetFilterForSpecificEventType(EventTypeId type) => Builders<EventType>.Filter.Eq(et => et.Id, type);
 }

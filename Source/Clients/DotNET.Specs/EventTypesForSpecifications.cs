@@ -85,8 +85,9 @@ public class EventTypesForSpecifications : IEventTypes
             var eventTypeAttribute = clrType.GetCustomAttribute<EventTypeAttribute>();
             if (eventTypeAttribute is not null)
             {
-                _eventTypes[clrType] = new(eventTypeAttribute.Id, eventTypeAttribute.Generation);
-                _clrTypesByEventType[eventTypeAttribute.Id] = clrType;
+                var eventType = clrType.GetEventType(); // Use the extension method for consistency
+                _eventTypes[clrType] = eventType;
+                _clrTypesByEventType[eventType.Id] = clrType;
             }
         }
     }

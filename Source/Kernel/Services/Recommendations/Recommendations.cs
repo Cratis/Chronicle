@@ -41,6 +41,6 @@ internal sealed class Recommendations(IGrainFactory grainFactory, IStorage stora
             .CompletedBy(context.CancellationToken)
             .Select(_ => _.ToContract());
 
-    IRecommendationsManager GetRecommendationsManager(Cratis.Chronicle.Concepts.EventStoreName eventStore, Cratis.Chronicle.Concepts.EventStoreNamespaceName @namespace) =>
+    IRecommendationsManager GetRecommendationsManager(Concepts.EventStoreName eventStore, Concepts.EventStoreNamespaceName @namespace) =>
         grainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(eventStore, @namespace));
 }

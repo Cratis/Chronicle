@@ -56,7 +56,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
-        _metrics = _meter.BeginScope(key, queueId);
+        _metrics = _meter.BeginScope(key!, queueId);
         return base.OnActivateAsync(cancellationToken);
     }
 
@@ -229,7 +229,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var @event = events.First();
         foreach (var subscription in _subscriptions)
         {
-            if (!subscription.EventTypeIds.Contains(@event.Metadata.Type.Id))
+            if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
             {
                 continue;
             }
@@ -246,7 +246,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var tasks = new List<Task>();
             foreach (var subscription in _subscriptions)
             {
-                var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Metadata.Type.Id)).ToList();
+                var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id)).ToList();
                 if (actualEvents.Count == 0)
                 {
                     continue;

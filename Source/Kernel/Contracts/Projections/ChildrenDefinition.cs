@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Models;
-using ProtoBuf;
 
 namespace Cratis.Chronicle.Contracts.Projections;
 
@@ -20,56 +18,44 @@ public class ChildrenDefinition
     public string IdentifiedBy { get; set; }
 
     /// <summary>
-    /// Gets or sets the target <see cref="ModelDefinition"/>.
-    /// </summary>
-    [ProtoMember(2)]
-    public ModelDefinition Model { get; set; }
-
-    /// <summary>
-    /// Gets or sets the initial state to use for new instances of the model.
-    /// </summary>
-    [ProtoMember(3)]
-    public string InitialModelState { get; set; }
-
-    /// <summary>
     /// Gets or sets all the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(4, IsRequired = true)]
+    [ProtoMember(2, IsRequired = true)]
     public IDictionary<EventType, FromDefinition> From { get; set; } = new Dictionary<EventType, FromDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.
     /// </summary>
-    [ProtoMember(5, IsRequired = true)]
+    [ProtoMember(3, IsRequired = true)]
     public IDictionary<EventType, JoinDefinition> Join { get; set; } = new Dictionary<EventType, JoinDefinition>();
 
     /// <summary>
     /// Gets or sets all the <see cref="ChildrenDefinition"/> for properties on model.
     /// </summary>
-    [ProtoMember(6, IsRequired = true)]
+    [ProtoMember(4, IsRequired = true)]
     public IDictionary<string, ChildrenDefinition> Children { get; set; } = new Dictionary<string, ChildrenDefinition>();
 
     /// <summary>
     /// Gets or sets the full <see cref="FromEveryDefinition"/>.
     /// </summary>
-    [ProtoMember(7)]
-    public FromEveryDefinition All { get; set; }
+    [ProtoMember(5, IsRequired = true)]
+    public FromEveryDefinition All { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the optional <see cref="FromEventPropertyDefinition"/> definition.
     /// </summary>
-    [ProtoMember(8)]
+    [ProtoMember(6)]
     public FromEventPropertyDefinition? FromEventProperty { get; set; }
 
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(9, IsRequired = true)]
+    [ProtoMember(7, IsRequired = true)]
     public IDictionary<EventType, RemovedWithDefinition> RemovedWith { get; set; } = new Dictionary<EventType, RemovedWithDefinition>();
 
     /// <summary>
     /// Gets or sets the definition of what removes a child, if any.
     /// </summary>
-    [ProtoMember(10, IsRequired = true)]
+    [ProtoMember(8, IsRequired = true)]
     public IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin { get; set; } = new Dictionary<EventType, RemovedWithJoinDefinition>();
 }

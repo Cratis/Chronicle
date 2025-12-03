@@ -5,12 +5,12 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues.for_EventContentE
 
 public class when_asking_can_resolve_for_system_type_property : Specification
 {
-    EventContentExpressionResolver resolvers;
-    bool result;
+    EventContentExpressionResolver _resolvers;
+    bool _result;
 
-    void Establish() => resolvers = new EventContentExpressionResolver();
+    void Establish() => _resolvers = new EventContentExpressionResolver();
 
-    void Because() => result = resolvers.CanResolve("$someProperty");
+    void Because() => _result = _resolvers.CanResolve("$SomeProperty");
 
-    [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
+    [Fact] void should_not_be_able_to_resolve() => _result.ShouldBeFalse();
 }

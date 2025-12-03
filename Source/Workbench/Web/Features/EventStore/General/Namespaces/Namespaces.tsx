@@ -1,22 +1,22 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { NamespacesViewModel } from './NamespacesViewModel';
-import { AllNamespaces, AllNamespacesArguments } from 'Api/Namespaces';
+import { AllNamespaces, AllNamespacesParameters } from 'Api/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { DataPage, MenuItem } from 'Components';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
-import { useDialog } from '@cratis/applications.react.mvvm/dialogs';
+import { useDialog } from '@cratis/arc.react.mvvm/dialogs';
 import { AddNamespace, AddNamespaceRequest, AddNamespaceResponse } from './AddNamespace';
 
 export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddNamespaceDialog] = useDialog<AddNamespaceRequest, AddNamespaceResponse>(AddNamespaceRequest, AddNamespace);
-    const queryArgs: AllNamespacesArguments = {
+    const queryArgs: AllNamespacesParameters = {
         eventStore: params.eventStore!
     };
 

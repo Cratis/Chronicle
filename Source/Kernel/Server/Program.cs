@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -9,7 +10,6 @@ using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
-using Cratis.Json;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -23,12 +23,16 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.Zero);
-builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
+ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 
-var chronicleOptions = new ChronicleOptions();
-builder.Configuration.Bind(chronicleOptions);
-builder.Services.Configure<ChronicleOptions>(builder.Configuration);
+var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHealthChecks()
+    .AddMongoDb(
+        _ => new MongoDB.Driver.MongoClient(chronicleOptions.Storage.ConnectionDetails),
+        name: "mongodb",
+        timeout: TimeSpan.FromSeconds(3));
 
 if (chronicleOptions.Features.Api)
 {
@@ -51,12 +55,14 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .UseCratisApplicationModel()
-   .UseCratisMongoDB(mongo =>
-   {
-       mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-       mongo.Database = WellKnownDatabaseNames.Chronicle;
-   })
+   .AddCratisArc()
+   .AddCratisMongoDB(
+       configureOptions: mongo =>
+       {
+           mongo.Server = chronicleOptions.Storage.ConnectionDetails;
+           mongo.Database = WellKnownDatabaseNames.Chronicle;
+       },
+       builder => builder.WithCamelCaseNamingPolicy())
    .UseOrleans(_ => _
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
@@ -70,7 +76,6 @@ builder.Host
    .ConfigureServices((context, services) =>
    {
        services
-          .AddSingleton(Globals.JsonSerializerOptions)
           .AddBindingsByConvention()
           .AddChronicleTelemetry(context.Configuration)
           .AddSelfBindings()
@@ -82,7 +87,7 @@ builder.Host
 
 var app = builder.Build();
 app.UseRouting();
-app.UseCratisApplicationModel();
+app.UseCratisArc();
 
 if (chronicleOptions.Features.Api)
 {
@@ -97,8 +102,17 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
     app.MapFallbackToFile("index.html");
 }
 app.MapGrpcServices();
+app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
-await app.RunAsync();
+using var cancellationToken = new CancellationTokenSource();
+Console.CancelKeyPress += (sender, eventArgs) =>
+{
+    Console.WriteLine("******* SHUTTING DOWN CHRONICLE SERVER *******");
+    cancellationToken.Cancel();
+    eventArgs.Cancel = true;
+};
+
+await app.RunAsync(cancellationToken.Token);
 
 static void PrintExceptionInfo(Exception exception)
 {

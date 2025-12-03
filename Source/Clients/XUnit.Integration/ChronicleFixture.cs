@@ -18,28 +18,49 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     public const int MongoDBPort = 27018;
 
+#if NET8_0
+    readonly object _containerLock = new();
+#else
+    readonly Lock _containerLock = new();
+#endif
+
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
+    IContainer? _container;
+    bool _started;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
     /// </summary>
-    /// <param name="createMongoDBContainer">The factory for the mongodb container.</param>
-    protected ChronicleFixture(Func<INetwork, IContainer> createMongoDBContainer)
+    protected ChronicleFixture()
     {
         Directory.CreateDirectory("backups");
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
-        MongoDBContainer = createMongoDBContainer(Network);
+
         StartContainer(MongoDBContainer).GetAwaiter().GetResult();
     }
 
     /// <summary>
     /// Get the MongoDB container.
     /// </summary>
-    public IContainer MongoDBContainer { get; }
+    public IContainer MongoDBContainer
+    {
+        get
+        {
+            lock (_containerLock)
+            {
+                if (_container is null)
+                {
+                    _container = BuildContainer(Network);
+                    StartContainer(_container).GetAwaiter().GetResult();
+                }
+                return _container;
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public INetwork Network { get; }
@@ -56,7 +77,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
     {
-        await MongoDBContainer.DisposeAsync();
+        await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
+        await Network.DisposeAsync();
     }
 
     /// <inheritdoc/>
@@ -101,23 +123,50 @@ public abstract class ChronicleFixture : IChronicleFixture
         }
     }
 
-    static async Task StartContainer(IContainer container)
+    /// <summary>
+    /// Builds the container with the specified network.
+    /// </summary>
+    /// <param name="network">The network to use.</param>
+    /// <returns>The built container.</returns>
+    protected abstract IContainer BuildContainer(INetwork network);
+
+    async Task StartContainer(IContainer container)
     {
+        if (_started) return;
+
         var retryCount = 0;
         Exception? failure;
         do
         {
             try
             {
+                Console.WriteLine($"Starting container image '{container.Image.FullName}'...");
+
                 failure = null;
+
                 await container.StartAsync();
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
             {
+                Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;
                 await Task.Delay(2000);
             }
+
+            var logs = await container.GetLogsAsync();
+            Console.WriteLine(logs.Stdout);
+            Console.WriteLine(logs.Stderr);
         }
         while (failure is not null && ++retryCount < 10);
+
+        if (failure is not null)
+        {
+            Console.WriteLine($"Failed to start the container after {retryCount} attempts.");
+        }
+        else
+        {
+            _started = true;
+            Console.WriteLine("We have started the container successfully.");
+        }
     }
 }
