@@ -9,19 +9,16 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 public class SimulationProjection : IProjectionFor<Simulation>
 {
     public void Define(IProjectionBuilderFor<Simulation> builder) => builder
+        .AutoMap()
         .From<SimulationAdded>(b => b.Set(m => m.Name).To(e => e.Name))
         .Children(_ => _.Configurations, _ => _
             .IdentifiedBy(c => c.ConfigurationId)
             .From<ConfigurationAddedToSimulation>(b => b
                 .UsingParentKey(e => e.SimulationId)
-                .UsingKey(e => e.ConfigurationId)
-                .Set(m => m.ConfigurationId).To(e => e.ConfigurationId)
-                .Set(m => m.Name).To(e => e.Name))
+                .UsingKey(e => e.ConfigurationId))
             .Children(c => c.Hubs, h => h
                 .IdentifiedBy(hub => hub.HubId)
                 .From<HubAddedToConfiguration>(b => b
                     .UsingParentKey(e => e.ConfigurationId)
-                    .UsingKey(e => e.HubId)
-                    .Set(m => m.HubId).To(e => e.HubId)
-                    .Set(m => m.Name).To(e => e.Name))));
+                    .UsingKey(e => e.HubId))));
 }
