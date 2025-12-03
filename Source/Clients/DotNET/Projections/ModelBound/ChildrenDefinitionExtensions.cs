@@ -231,6 +231,24 @@ static class ChildrenDefinitionExtensions
                     {
                         fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
                     }
+
+                    // Process Join attributes on constructor parameters
+                    foreach (var (joinAttr, joinEventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
+                    {
+                        childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName);
+                    }
+
+                    // Process RemovedWith attributes on constructor parameters
+                    foreach (var (removedAttr, removedEventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+                    {
+                        childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, removedAttr, removedEventType);
+                    }
+
+                    // Process RemovedWithJoin attributes on constructor parameters
+                    foreach (var (removedJoinAttr, removedJoinEventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+                    {
+                        childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, removedJoinAttr, removedJoinEventType);
+                    }
                 }
             }
 
