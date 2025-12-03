@@ -122,12 +122,12 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 {
                     logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
                     var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
-                    if (optionalEvent.IsT1)
+                    if (!optionalEvent.TryGetValue(out var foundEvent))
                     {
                         logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
                         return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
                     }
-                    parentEvent = optionalEvent.AsT0;
+                    parentEvent = foundEvent;
                 }
 
                 logger.FromParentHierarchyFoundParentEvent(parentEvent.Context.EventType.Id.ToString());
