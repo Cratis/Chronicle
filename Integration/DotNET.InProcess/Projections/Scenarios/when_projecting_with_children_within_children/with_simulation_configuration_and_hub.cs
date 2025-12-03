@@ -18,7 +18,7 @@ public class with_simulation_configuration_and_hub(context context) : Given<cont
     const string ConfigurationName = "Test Configuration";
     const string HubName = "Test Hub";
 
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture fixture) : Specification(fixture)
     {
         public SimulationId SimulationId;
         public ConfigurationId ConfigurationId;
@@ -66,7 +66,7 @@ public class with_simulation_configuration_and_hub(context context) : Given<cont
             FailedPartitions = await projection.GetFailedPartitions();
 
             // Get the result
-            var collection = chronicleInProcessFixture.ReadModels.Database.GetCollection<Simulation>();
+            var collection = ChronicleFixture.ReadModels.Database.GetCollection<Simulation>();
             var queryResult = await collection.FindAsync(_ => true);
             Result = queryResult.FirstOrDefault();
         }
