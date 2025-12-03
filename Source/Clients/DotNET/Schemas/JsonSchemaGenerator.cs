@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
-using System.Text.Json.Serialization;
 using Cratis.Chronicle.Compliance;
+using Cratis.Serialization;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Schemas;
@@ -25,14 +25,15 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
     /// </summary>
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
-    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver)
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy)
     {
         _metadataResolver = metadataResolver;
         _typeFormats = new TypeFormats();
 
         _serializerOptions = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
             TypeInfoResolver = JsonSerializerOptions.Default.TypeInfoResolver
         };
     }

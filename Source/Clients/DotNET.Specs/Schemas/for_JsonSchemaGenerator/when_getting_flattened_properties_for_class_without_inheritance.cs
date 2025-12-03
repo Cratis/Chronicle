@@ -13,7 +13,7 @@ public class when_getting_flattened_properties_for_class_without_inheritance : g
 
     IEnumerable<IJsonSchemaProperty> result;
 
-    void Establish() => schema = generator.Generate(typeof(SimpleType));
+    void Establish() => schema = _generator.Generate(typeof(SimpleType));
 
     void Because() => result = schema.GetFlattenedProperties();
 
