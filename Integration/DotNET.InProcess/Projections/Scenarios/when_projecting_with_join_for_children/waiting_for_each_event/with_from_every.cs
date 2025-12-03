@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Concepts;
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
 using MongoDB.Driver;
