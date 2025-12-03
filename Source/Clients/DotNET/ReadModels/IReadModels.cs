@@ -20,4 +20,20 @@ public interface IReadModels
     /// <typeparam name="TReadModel">The type of the read model to register.</typeparam>
     /// <returns>An awaitable task.</returns>
     Task Register<TReadModel>();
+
+    /// <summary>
+    /// Get a read model instance by its key.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
+    /// <returns>The read model instance.</returns>
+    Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key);
+
+    /// <summary>
+    /// Get a read model instance by its key.
+    /// </summary>
+    /// <param name="readModelType">The read model type.</param>
+    /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
+    /// <returns>The read model instance.</returns>
+    Task<object> GetInstanceById(Type readModelType, ReadModelKey key);
 }
