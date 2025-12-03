@@ -7,4 +7,4 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecti
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.Events;
 
 [EventType]
-public record ConfigurationAddedToSimulation(ConfigurationId ConfigurationId, string Name);
+public record ConfigurationAddedToSimulation(SimulationId SimulationId, ConfigurationId ConfigurationId, string Name);

@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.Concepts;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.ReadModels;
+using Cratis.Chronicle.Observation;
+using MongoDB.Driver;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.with_simulation_configuration_and_hub.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children;
@@ -15,29 +18,61 @@ public class with_simulation_configuration_and_hub(context context) : Given<cont
     const string ConfigurationName = "Test Configuration";
     const string HubName = "Test Hub";
 
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<SimulationProjection, Simulation>(chronicleInProcessFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
         public SimulationId SimulationId;
         public ConfigurationId ConfigurationId;
         public HubId HubId;
+        public IEnumerable<FailedPartition> FailedPartitions = [];
+        public Simulation Result;
+        public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
 
         public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(ConfigurationAddedToSimulation), typeof(HubAddedToConfiguration)];
+        public override IEnumerable<Type> Projections => [typeof(SimulationProjection)];
+
+        protected override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddSingleton(new SimulationProjection());
+        }
 
         void Establish()
         {
             SimulationId = SimulationId.New();
             ConfigurationId = ConfigurationId.New();
             HubId = HubId.New();
+        }
 
-            EventSourceId = SimulationId;
-            ReadModelId = SimulationId.Value.ToString();
+        async Task Because()
+        {
+            var projection = EventStore.Projections.GetHandlerFor<SimulationProjection>();
+            await projection.WaitTillActive();
 
-            EventsWithEventSourceIdToAppend.Add(new(SimulationId, new SimulationAdded(SimulationName)));
-            EventsWithEventSourceIdToAppend.Add(new(SimulationId, new ConfigurationAddedToSimulation(ConfigurationId, ConfigurationName)));
-            EventsWithEventSourceIdToAppend.Add(new(ConfigurationId, new HubAddedToConfiguration(HubId, HubName)));
+            // Append root event to SimulationId event source
+            var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));
+            LastEventSequenceNumber = appendResult.SequenceNumber;
+
+            // Append first level child to ConfigurationId event source with SimulationId in content
+            appendResult = await EventStore.EventLog.Append(ConfigurationId, new ConfigurationAddedToSimulation(SimulationId, ConfigurationId, ConfigurationName));
+            LastEventSequenceNumber = appendResult.SequenceNumber;
+
+            // Append second level child to HubId event source with ConfigurationId in content
+            appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToConfiguration(ConfigurationId, HubId, HubName));
+            LastEventSequenceNumber = appendResult.SequenceNumber;
+
+            // Wait for processing
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            // Get failures if any
+            FailedPartitions = await projection.GetFailedPartitions();
+
+            // Get the result
+            var collection = chronicleInProcessFixture.ReadModels.Database.GetCollection<Simulation>();
+            var queryResult = await collection.FindAsync(_ => true);
+            Result = queryResult.FirstOrDefault();
         }
     }
 
+    [Fact] void should_have_no_failed_partitions() => Context.FailedPartitions.ShouldBeEmpty();
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_simulation_name() => Context.Result.Name.ShouldEqual(SimulationName);
     [Fact] void should_have_one_configuration() => Context.Result.Configurations.Count.ShouldEqual(1);

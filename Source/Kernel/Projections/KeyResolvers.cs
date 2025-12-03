@@ -91,6 +91,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, @event) =>
             {
                 var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
+                logger.FromParentHierarchyStart(projection.Path, projection.HasParent, parentKey.Value);
+
                 if (!projection.HasParent)
                 {
                     return parentKey with { ArrayIndexers = ArrayIndexers.NoIndexers };
@@ -99,9 +101,13 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 var arrayIndexers = new List<ArrayIndexer>();
 
                 var key = await keyResolver(eventSequenceStorage, @event);
+                logger.FromParentHierarchyChildKey(key.Value, projection.ChildrenPropertyPath, identifiedByProperty);
+
                 arrayIndexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
                 var parentProjection = projection.Parent!;
                 var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
+                logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", parentEventTypeIds));
+
                 if (parentEventTypeIds.Length == 0)
                 {
                     return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
@@ -114,9 +120,17 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 }
                 else
                 {
-                    var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value.ToString()!, parentEventTypeIds);
+                    logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
+                    var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
+                    if (optionalEvent.IsT1)
+                    {
+                        logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
+                        return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+                    }
                     parentEvent = optionalEvent.AsT0;
                 }
+
+                logger.FromParentHierarchyFoundParentEvent(parentEvent.Context.EventType.Id.ToString());
 
                 var eventType =
                     parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
@@ -124,6 +138,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, parentEvent);
                 parentKey = resolvedParentKey;
                 arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
+
+                logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
 
                 return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
             });

@@ -13,13 +13,14 @@ public class SimulationProjection : IProjectionFor<Simulation>
         .Children(_ => _.Configurations, _ => _
             .IdentifiedBy(c => c.ConfigurationId)
             .From<ConfigurationAddedToSimulation>(b => b
+                .UsingParentKey(e => e.SimulationId)
                 .UsingKey(e => e.ConfigurationId)
                 .Set(m => m.ConfigurationId).To(e => e.ConfigurationId)
                 .Set(m => m.Name).To(e => e.Name))
             .Children(c => c.Hubs, h => h
                 .IdentifiedBy(hub => hub.HubId)
                 .From<HubAddedToConfiguration>(b => b
-                    .UsingParentKeyFromContext(ctx => ctx.EventSourceId)
+                    .UsingParentKey(e => e.ConfigurationId)
                     .UsingKey(e => e.HubId)
                     .Set(m => m.HubId).To(e => e.HubId)
                     .Set(m => m.Name).To(e => e.Name))));

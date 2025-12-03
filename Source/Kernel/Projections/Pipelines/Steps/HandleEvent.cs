@@ -30,14 +30,18 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ILogger<Han
         }
         foreach (var child in projection.ChildProjections)
         {
+            logger.ProcessingChildProjection(child.Path, eventType.Id, context.Event.Context.SequenceNumber);
             if (child.HasKeyResolverFor(eventType))
             {
                 var keyResolver = child.GetKeyResolverFor(eventType);
                 var key = await keyResolver(eventSequenceStorage, context.Event);
-                await Perform(child, context with { Key = key, OperationType = child.OperationTypes[eventType] });
+                logger.ChildHasKeyResolver(child.Path, eventType.Id, key.Value);
+                var operationType = child.GetOperationTypeFor(eventType);
+                await Perform(child, context with { Key = key, OperationType = operationType });
             }
             else
             {
+                logger.ChildNoKeyResolver(child.Path, eventType.Id);
                 await Perform(child, context);
             }
         }
