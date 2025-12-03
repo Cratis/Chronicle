@@ -27,4 +27,9 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
+
+    <!-- Embedded certificates -->
+    <ItemGroup>
+        <Content Include="Certs\shared-dev.pfx" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>
