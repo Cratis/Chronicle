@@ -30,7 +30,8 @@ public static class EventsShouldExtensions
         Assert.Equal(@event.Context.EventSourceId.Value, eventSourceId.Value);
         Assert.Equal(@event.Context.SequenceNumber.Value, sequenceNumber.Value);
         Assert.Equal(@event.Context.EventType.Id.Value, eventType.Id.Value);
-        var eventObject = await fixture.Services.GetRequiredService<IEventSerializer>().Deserialize(eventClrType, @event.Content);
+        var contentAsJson = System.Text.Json.JsonSerializer.SerializeToNode(@event.Content)!.AsObject();
+        var eventObject = await fixture.Services.GetRequiredService<IEventSerializer>().Deserialize(eventClrType, contentAsJson);
         Assert.IsType<TEvent>(eventObject);
         var theEvent = (TEvent)eventObject;
         validator(theEvent);

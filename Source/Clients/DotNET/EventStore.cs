@@ -135,7 +135,6 @@ public class EventStore : IEventStore
             serviceProvider,
             new ReducerValidator(),
             EventTypes,
-            _eventSerializer,
             namingPolicy,
             jsonSerializerOptions,
             identityProvider,

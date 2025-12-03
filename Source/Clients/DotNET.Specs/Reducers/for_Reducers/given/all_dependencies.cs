@@ -66,7 +66,6 @@ public class all_dependencies : Specification
             _serviceProvider,
             _reducerValidator,
             _eventTypes,
-            _eventSerializer,
             _namingPolicy,
             _jsonSerializerOptions,
             _identityProvider,

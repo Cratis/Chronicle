@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
@@ -36,7 +35,6 @@ public class Reducers : IReducers
     readonly IServiceProvider _serviceProvider;
     readonly IReducerValidator _reducerValidator;
     readonly IEventTypes _eventTypes;
-    readonly IEventSerializer _eventSerializer;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
@@ -54,7 +52,6 @@ public class Reducers : IReducers
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
     /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
-    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
@@ -65,7 +62,6 @@ public class Reducers : IReducers
         IServiceProvider serviceProvider,
         IReducerValidator reducerValidator,
         IEventTypes eventTypes,
-        IEventSerializer eventSerializer,
         INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
         IIdentityProvider identityProvider,
@@ -82,7 +78,6 @@ public class Reducers : IReducers
         _serviceProvider = serviceProvider;
         _reducerValidator = reducerValidator;
         _eventTypes = eventTypes;
-        _eventSerializer = eventSerializer;
         _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
         _identityProvider = identityProvider;
@@ -238,7 +233,6 @@ public class Reducers : IReducers
                 reducerType,
                 readModelType,
                 _namingPolicy.GetReadModelName(readModelType)),
-            _eventSerializer,
             ShouldReducerBeActive(reducerType));
 
         CancellationTokenRegistration? register = null;
@@ -304,10 +298,11 @@ public class Reducers : IReducers
         var appendedEvents = operation.Events.Select(@event =>
         {
             var context = @event.Context.ToClient();
-            var contentAsExpando = JsonSerializer.Deserialize<ExpandoObject>(@event.Content)!;
+            var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
+            var content = JsonSerializer.Deserialize(@event.Content, eventType, _jsonSerializerOptions)!;
             return new AppendedEvent(
                 context,
-                contentAsExpando);
+                content);
         }).ToList();
 
         try

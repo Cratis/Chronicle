@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +14,6 @@ namespace Cratis.Chronicle.Events;
 public class EventSerializer : IEventSerializer
 {
     readonly IEnumerable<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
-    readonly IEventTypes _eventTypes;
     readonly JsonSerializerOptions _serializerOptions;
 
     /// <summary>
@@ -31,7 +29,6 @@ public class EventSerializer : IEventSerializer
         IEventTypes eventTypes,
         JsonSerializerOptions serializerOptions)
     {
-        _eventTypes = eventTypes;
         _serializerOptions = new JsonSerializerOptions(serializerOptions)
         {
             Converters =
@@ -61,18 +58,9 @@ public class EventSerializer : IEventSerializer
     }
 
     /// <inheritdoc/>
-    public async Task<object> Deserialize(Type type, ExpandoObject expandoObject)
+    public Task<object> Deserialize(AppendedEvent @event)
     {
-        var json = await Serialize(expandoObject);
-        return await Deserialize(type, json);
-    }
-
-    /// <inheritdoc/>
-    public async Task<object> Deserialize(AppendedEvent @event)
-    {
-        var eventType = _eventTypes.GetClrTypeFor(@event.Context.EventType.Id);
-
-        var json = await Serialize(@event.Content);
-        return await Deserialize(eventType, json);
+        // Content is already deserialized to the correct type
+        return Task.FromResult(@event.Content);
     }
 }

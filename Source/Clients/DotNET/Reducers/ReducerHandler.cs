@@ -19,14 +19,12 @@ namespace Cratis.Chronicle.Reducers;
 /// <param name="reducerId">The identifier of the reducer.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="invoker">The actual invoker.</param>
-/// <param name="eventSerializer">The event serializer to use.</param>
 /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
 public class ReducerHandler(
     IEventStore eventStore,
     ReducerId reducerId,
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
-    IEventSerializer eventSerializer,
     bool isActive) : IReducerHandler, IDisposable
 {
     readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -58,12 +56,7 @@ public class ReducerHandler(
     /// <inheritdoc/>
     public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider)
     {
-        var tasks = events.Select(async @event =>
-        {
-            var content = await eventSerializer.Deserialize(@event);
-            return new EventAndContext(content, @event.Context);
-        });
-        var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
+        var eventAndContexts = events.Select(@event => new EventAndContext(@event.Content, @event.Context));
         return await invoker.Invoke(serviceProvider, eventAndContexts, initial);
     }
 
