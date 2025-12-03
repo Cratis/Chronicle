@@ -1,12 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.AspNetCore;
 using Microsoft.AspNetCore.Http;
 
-namespace Cratis.Chronicle.for_SubdomainNamespaceResolver;
+namespace Cratis.Chronicle.AspNetCore.Namespaces.for_SubdomainNamespaceResolver;
 
-public class when_resolving_without_http_context : Specification
+public class when_resolving_without_subdomain : Specification
 {
     SubdomainNamespaceResolver _resolver;
     IHttpContextAccessor _httpContextAccessor;
@@ -15,7 +14,12 @@ public class when_resolving_without_http_context : Specification
     void Establish()
     {
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
-        _httpContextAccessor.HttpContext.Returns((HttpContext)null);
+        var httpContext = Substitute.For<HttpContext>();
+        var request = Substitute.For<HttpRequest>();
+
+        request.Host.Returns(new HostString("example.com"));
+        httpContext.Request.Returns(request);
+        _httpContextAccessor.HttpContext.Returns(httpContext);
 
         _resolver = new SubdomainNamespaceResolver(_httpContextAccessor);
     }
