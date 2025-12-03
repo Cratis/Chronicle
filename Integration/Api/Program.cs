@@ -28,7 +28,7 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .UseCratisApplicationModel();
+   .AddCratisArc();
 
 builder.WebHost.UseKestrel(options =>
 {
@@ -39,7 +39,7 @@ builder.WebHost.UseKestrel(options =>
 var app = builder.Build();
 app
     .UseRouting()
-    .UseCratisApplicationModel()
+    .UseCratisArc()
     .UseCratisChronicle()
     .UseCratisChronicleApi();
 
@@ -72,5 +72,3 @@ static void PrintExceptionInfo(Exception exception)
     Console.WriteLine($"Exception message: {exception.Message}");
     Console.WriteLine($"Stack Trace: {exception.StackTrace}");
 }
-
-public partial class Program;

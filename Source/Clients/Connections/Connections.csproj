@@ -25,6 +25,7 @@
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
 
     <!-- Embedded certificates -->

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { AddEventTypeViewModel } from './AddEventTypeViewModel';

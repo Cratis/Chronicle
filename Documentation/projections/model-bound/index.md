@@ -57,6 +57,7 @@ See the following pages for detailed information on each feature:
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count
 - [Children](./children.md) - Managing child collections
+- [Removal](./removal.md) - Removing read models and children with RemovedWith, RemovedWithJoin
 - [Joins](./joins.md) - Joining with other events
 - [Event Sequence Source](./event-sequence-source.md) - Reading from specific event sequences
 - [Not Rewindable](./not-rewindable.md) - Forward-only projections

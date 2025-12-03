@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Identity } from './Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/identities/observe');
 
 class AllIdentitiesSortBy {
     private _subject: SortingActionsForObservableQuery<Identity[]>;
@@ -64,7 +62,6 @@ export interface AllIdentitiesParameters {
 }
 export class AllIdentities extends ObservableQueryFor<Identity[], AllIdentitiesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities/observe';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Identity[] = [];
     private readonly _sortBy: AllIdentitiesSortBy;
     private static readonly _sortBy: AllIdentitiesSortByWithoutQuery = new AllIdentitiesSortByWithoutQuery();
@@ -80,6 +77,14 @@ export class AllIdentities extends ObservableQueryFor<Identity[], AllIdentitiesP
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): AllIdentitiesSortBy {
         return this._sortBy;

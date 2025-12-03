@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Cratis.Arc" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>

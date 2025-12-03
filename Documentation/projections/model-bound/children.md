@@ -14,24 +14,29 @@ public record Order(
     [Key]
     Guid OrderId,
 
-    [ChildrenFrom<LineItemAdded>(
-        key: nameof(LineItemAdded.ItemId),
-        identifiedBy: nameof(LineItem.Id))]
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
     IEnumerable<LineItem> Items);
 
 public record LineItem(
-    [Key] Guid Id,
+    [Key] Guid Id,  // Chronicle automatically discovers this as the key
     string ProductName,
     int Quantity,
     decimal Price);
 ```
 
+In this example, the `[Key]` attribute on the `LineItem.Id` property is automatically discovered by Chronicle, so you don't need to specify `identifiedBy` explicitly in the `ChildrenFrom` attribute.
+
 ### Parameters
 
 - **key** (optional): Property on the event that identifies the child. Defaults to `EventSourceId`
-- **identifiedBy** (optional): Property on the child model that identifies it. Defaults to `Id`
+- **identifiedBy** (optional): Property on the child model that identifies it. If not specified, Chronicle will:
+  1. Look for a property with the `[Key]` attribute
+  2. Look for a property named `Id` (case-insensitive)
+  3. Fall back to `EventSourceId` if neither is found
 - **parentKey** (optional): Property that identifies the parent. Defaults to `EventSourceId`
 - **autoMap** (optional): Whether to automatically map matching properties from the event to the child model. Defaults to `true`
+
+> **Note**: With automatic key discovery, you typically don't need to specify `identifiedBy` explicitly. Just mark your child model's key property with `[Key]` attribute, or name it `Id`, and Chronicle will automatically discover it.
 
 ### Auto-Mapping
 
@@ -127,7 +132,9 @@ When a `QuantityIncreased` event occurs later:
 
 ## Removing Children
 
-Use `RemovedWith` to remove children from collections:
+Use `RemovedWith` to remove children from collections. You can apply it either on the collection property or on the child type class:
+
+### Property-Level Removal
 
 ```csharp
 public record Order(
@@ -143,9 +150,29 @@ public record OrderLine(
     string Description);
 ```
 
+### Class-Level Removal
+
+Apply `RemovedWith` directly on the child type for better separation of concerns:
+
+```csharp
+public record Order(
+    [Key]
+    Guid OrderId,
+
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
+    IEnumerable<OrderLine> Lines);
+
+[RemovedWith<LineItemRemoved>(
+    key: nameof(LineItemRemoved.ItemId),
+    parentKey: nameof(LineItemRemoved.OrderId))]
+public record OrderLine(
+    [Key] Guid Id,
+    string Description);
+```
+
 ### RemovedWithJoin
 
-For more complex removal scenarios using joins:
+For removal based on events from different streams (joins), use `RemovedWithJoin`:
 
 ```csharp
 public record Subscription(
@@ -156,6 +183,17 @@ public record Subscription(
     [RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
     IEnumerable<Feature> Features);
 ```
+
+Or at the class level:
+
+```csharp
+[RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
+public record Feature(
+    [Key] Guid FeatureId,
+    string Name);
+```
+
+> **Note**: For comprehensive documentation on removal options including removing root read models, see [Removal](./removal.md).
 
 ## Complete Example
 

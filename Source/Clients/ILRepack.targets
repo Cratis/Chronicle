@@ -38,5 +38,11 @@
 
     <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />
     <Exec Command="dotnet run $(TargetPath) &quot;$(InternalAssemblyPaths)&quot; &quot;$(ExplicitPublicTypes)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/InternalsVerifier" />
+
+    <!-- Remove PDB files for merged assemblies to prevent symbol package validation errors on NuGet -->
+    <ItemGroup>
+        <MergedAssemblyPdbs Include="@(InputAssemblies->'%(RootDir)%(Directory)%(Filename).pdb')" Exclude="$(TargetDir)$(TargetName).pdb" />
+    </ItemGroup>
+    <Delete Files="@(MergedAssemblyPdbs)" />
   </Target>
 </Project>
