@@ -73,4 +73,30 @@ public class ReadModels(
             ReadModels = readModelDefinitions
         });
     }
+
+    /// <inheritdoc/>
+    public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key)
+    {
+        var readModelType = typeof(TReadModel);
+        var result = await GetInstanceById(readModelType, key);
+        return (TReadModel)result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key)
+    {
+        if (projections.HasFor(readModelType))
+        {
+            var result = await projections.GetInstanceById(readModelType, key);
+            return result.ReadModel;
+        }
+
+        if (reducers.HasFor(readModelType))
+        {
+            var result = await reducers.GetInstanceById(readModelType, key);
+            return result.ReadModel ?? throw new InvalidOperationException($"Reducer returned null for read model type '{readModelType.Name}'");
+        }
+
+        throw new UnknownReadModel(readModelType);
+    }
 }
