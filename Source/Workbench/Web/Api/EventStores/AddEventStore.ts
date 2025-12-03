@@ -54,6 +54,7 @@ export class AddEventStore extends Command<IAddEventStore> implements IAddEventS
     }
 
     static use(initialValues?: IAddEventStore): [AddEventStore, SetCommandValues<IAddEventStore>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'AddEventStore' does not satisfy the constraint 'Command<IAddEventStore, any>'.
         return useCommand<AddEventStore, IAddEventStore>(AddEventStore, initialValues);
     }
 }
