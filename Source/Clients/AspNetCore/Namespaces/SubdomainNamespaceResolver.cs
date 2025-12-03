@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Http;
 
-namespace Cratis.Chronicle.AspNetCore;
+namespace Cratis.Chronicle.AspNetCore.Namespaces;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreNamespaceResolver"/> that resolves the namespace from the subdomain of the HTTP request host.
