@@ -12,7 +12,7 @@ public class and_event_type_has_already_been_added : given.a_unique_constraint_b
     void Establish()
     {
         _eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
-        _eventTypes.GetSchemaFor(_eventType.Id).Returns(_generator.Generate(typeof(EventWithStringProperty)));
+        _eventTypes.GetSchemaFor(_eventType.Id).Returns(_schemaGenerator.Generate(typeof(EventWithStringProperty)));
         _constraintBuilder.On(_eventType, nameof(EventWithStringProperty.SomeProperty));
     }
 

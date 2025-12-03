@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using NJsonSchema;
-
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
 public class when_getting_target_type_for_enum_type : given.a_json_schema_generator
@@ -15,17 +13,17 @@ public class when_getting_target_type_for_enum_type : given.a_json_schema_genera
 
     public record TypeWithEnum(MyEnum Value);
 
-    JsonSchema _schema;
-    JsonSchemaProperty _property;
-    Type _type;
+    IJsonSchemaDocument schema;
+    IJsonSchemaProperty property;
+    Type type;
 
     void Establish()
     {
-        _schema = _generator.Generate(typeof(TypeWithEnum));
-        _property = _schema.ActualProperties.Values.First();
+        schema = _generator.Generate(typeof(TypeWithEnum));
+        property = schema.ActualProperties.Values.First();
     }
 
-    void Because() => _type = _property.GetTargetTypeForJsonSchemaProperty(_typeFormats);
+    void Because() => type = property.GetTargetTypeForJsonSchemaProperty(_typeFormats);
 
-    [Fact] void should_be_integer() => _type.ShouldEqual(typeof(int));
+    [Fact] void should_be_integer() => type.ShouldEqual(typeof(int));
 }

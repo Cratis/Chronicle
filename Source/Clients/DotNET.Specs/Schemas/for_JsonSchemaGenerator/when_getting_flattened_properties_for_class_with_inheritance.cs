@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using NJsonSchema;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
@@ -10,18 +10,18 @@ public class when_getting_flattened_properties_for_class_with_inheritance : give
     record BaseType(int BaseInteger, string BaseString);
     record SimpleType(int SomeInteger, string SomeString) : BaseType(42, string.Empty);
 
-    JsonSchema _schema;
+    IJsonSchemaDocument schema;
 
-    IEnumerable<JsonSchemaProperty> _result;
+    IEnumerable<IJsonSchemaProperty> result;
 
-    void Establish() => _schema = _generator.Generate(typeof(SimpleType));
+    void Establish() => schema = _generator.Generate(typeof(SimpleType));
 
-    void Because() => _result = _schema.GetFlattenedProperties();
+    void Because() => result = schema.GetFlattenedProperties();
 
     [Fact]
-    void should_get_all_properties() => _result.Select(_ => _.Name).ShouldContainOnly(
-            nameof(SimpleType.SomeInteger),
-            nameof(SimpleType.SomeString),
-            nameof(BaseType.BaseInteger),
-            nameof(BaseType.BaseString));
+    void should_get_all_properties() => result.Select(_ => _.Name).ShouldContainOnly(
+            nameof(SimpleType.SomeInteger).ToCamelCase(),
+            nameof(SimpleType.SomeString).ToCamelCase(),
+            nameof(BaseType.BaseInteger).ToCamelCase(),
+            nameof(BaseType.BaseString).ToCamelCase());
 }

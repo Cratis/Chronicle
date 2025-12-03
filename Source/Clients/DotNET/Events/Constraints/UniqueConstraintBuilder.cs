@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Serialization;
-using NJsonSchema;
+using Cratis.Strings;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -21,7 +21,7 @@ public class UniqueConstraintBuilder(
     Type? owner = default) : IUniqueConstraintBuilder
 {
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
-    readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
+    readonly Dictionary<EventTypeId, IJsonSchemaDocument> _eventTypeSchemas = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
     EventTypeId? _removedWith;
@@ -38,7 +38,8 @@ public class UniqueConstraintBuilder(
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On(EventType eventType, params string[] properties)
     {
-        properties = properties.Select(namingPolicy.GetPropertyName).ToArray();
+        // Convert properties to camelCase for schema lookup
+        properties = properties.Select(_ => _.ToCamelCase()).ToArray();
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         ThrowIfEventTypeAlreadyAdded(eventType, properties);
         ThrowIfPropertyIsMissing(eventType, schema, properties);
@@ -109,12 +110,11 @@ public class UniqueConstraintBuilder(
         }
     }
 
-    void ThrowIfPropertyIsMissing(EventType eventType, JsonSchema schema, IEnumerable<string> properties)
+    void ThrowIfPropertyIsMissing(EventType eventType, IJsonSchemaDocument schema, IEnumerable<string> properties)
     {
-        var schemaProperties = schema.GetFlattenedProperties();
         foreach (var property in properties)
         {
-            if (!schemaProperties.Any(_ => _.Name == property))
+            if (!schema.Properties.ContainsKey(property))
             {
                 throw new PropertyDoesNotExistOnEventType(eventType, property);
             }

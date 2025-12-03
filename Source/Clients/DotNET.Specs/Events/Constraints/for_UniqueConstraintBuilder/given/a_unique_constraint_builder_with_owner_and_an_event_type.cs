@@ -12,6 +12,6 @@ public class a_unique_constraint_builder_with_owner_and_an_event_type : a_unique
     {
         _eventTypeId = nameof(EventWithStringProperty);
         _eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
-        _eventTypes.GetSchemaFor(_eventTypeId).Returns(_generator.Generate(typeof(EventWithStringProperty)));
+        _eventTypes.GetSchemaFor(_eventTypeId).Returns(_schemaGenerator.Generate(typeof(EventWithStringProperty)));
     }
 }
