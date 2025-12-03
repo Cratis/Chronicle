@@ -239,7 +239,11 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public async Task<ReducerInstanceResult> GetInstanceById(Type readModelType, ReadModelKey key)
     {
-        var handler = _handlersByModelType[readModelType];
+        if (!_handlersByModelType.TryGetValue(readModelType, out var handler))
+        {
+            throw new UnknownReducerType(readModelType);
+        }
+
         var eventSequence = _eventStore.GetEventSequence(handler.EventSequenceId);
 
         var events = await eventSequence.GetForEventSourceIdAndEventTypes(

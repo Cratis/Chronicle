@@ -94,7 +94,7 @@ public class ReadModels(
         if (reducers.HasFor(readModelType))
         {
             var result = await reducers.GetInstanceById(readModelType, key);
-            return result.ReadModel ?? throw new InvalidOperationException($"Reducer returned null for read model type '{readModelType.Name}'");
+            return result.ReadModel ?? throw new InvalidOperationException($"Reducer returned null for read model type '{readModelType.Name}' with key '{key.Value}'");
         }
 
         throw new UnknownReadModel(readModelType);
