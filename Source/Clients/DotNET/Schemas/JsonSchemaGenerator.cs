@@ -35,7 +35,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         _serializerOptions = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
+            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy ?? JsonNamingPolicy.CamelCase,
             TypeInfoResolver = JsonSerializerOptions.Default.TypeInfoResolver
         };
     }
@@ -49,9 +49,6 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             throw new InvalidOperationException($"Expected JsonObject for schema generation, got {jsonNode?.GetType()}");
         }
 
-        // Convert property names to match naming policy
-        ConvertPropertyNames(jsonObject);
-
         // Apply compliance metadata processing
         ApplyComplianceMetadata(jsonObject, type);
 
@@ -59,20 +56,6 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         ApplyTypeFormats(jsonObject, type);
 
         return new DotNet9JsonSchemaDocument(jsonObject);
-    }
-
-    void ConvertPropertyNames(JsonObject schema)
-    {
-        if (schema["properties"] is JsonObject properties)
-        {
-            var convertedProperties = new JsonObject();
-            foreach (var property in properties)
-            {
-                var convertedName = _namingPolicy.GetPropertyName(property.Key);
-                convertedProperties[convertedName] = property.Value?.DeepClone();
-            }
-            schema["properties"] = convertedProperties;
-        }
     }
 
     void ApplyComplianceMetadata(JsonObject schema, Type type)

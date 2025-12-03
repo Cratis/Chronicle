@@ -38,7 +38,8 @@ public class UniqueConstraintBuilder(
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On(EventType eventType, params string[] properties)
     {
-        properties = properties.Select(namingPolicy.GetPropertyName).ToArray();
+        // Convert properties to camelCase for schema lookup
+        properties = properties.Select(_ => _.ToCamelCase()).ToArray();
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         ThrowIfEventTypeAlreadyAdded(eventType, properties);
         ThrowIfPropertyIsMissing(eventType, schema, properties);
