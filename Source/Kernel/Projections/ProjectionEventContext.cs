@@ -24,12 +24,17 @@ public record ProjectionEventContext(
     ProjectionOperationType OperationType,
     bool NeedsInitialState)
 {
-    List<ProjectionFuture> _deferredFutures = [];
+    readonly List<ProjectionFuture> _deferredFutures = [];
 
     /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
     /// </summary>
     public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
+
+    /// <summary>
+    /// Gets whether this event has been deferred (has futures that couldn't be resolved).
+    /// </summary>
+    public bool IsDeferred => _deferredFutures.Count > 0;
 
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
