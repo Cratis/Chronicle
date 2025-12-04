@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Storage.Projections;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Projections;
@@ -22,4 +24,10 @@ internal static partial class ProjectionObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for projection pipeline for key {Key}")]
     internal static partial void SuccessfullyHandledAllEvents(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
+
+    [LoggerMessage(LogLevel.Information, "Resolved future {ProjectionFutureId} for projection {ProjectionId}")]
+    internal static partial void ResolvedFuture(this ILogger<ProjectionObserverSubscriber> logger, ProjectionFutureId projectionFutureId, ProjectionId projectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to resolve future {ProjectionFutureId} for projection {ProjectionId}")]
+    internal static partial void FailedToResolveFuture(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ProjectionFutureId projectionFutureId, ProjectionId projectionId);
 }
