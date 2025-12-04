@@ -3,7 +3,8 @@ name: Publish
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   DOTNET8_VERSION: "8.0.410"
-  DOTNET_VERSION: "9.0.x"
+  DOTNET9_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
@@ -70,6 +71,7 @@ jobs:
         with:
           dotnet-version: |
             ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -80,7 +82,7 @@ jobs:
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -f net9.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
+        run: dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
 
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
@@ -96,6 +98,7 @@ jobs:
         with:
           dotnet-version: |
             ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -106,7 +109,7 @@ jobs:
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -f net9.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
+        run: dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -168,6 +171,7 @@ jobs:
         with:
           dotnet-version: |
             ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - name: Remove any existing artifacts
@@ -345,4 +349,11 @@ jobs:
           token: ${{ secrets.PAT_DOCUMENTATION }}
           repository: cratis/documentation
           event-type: build-docs
+
+      - name: Trigger Dependency Updates on Sample Repository
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          repository: cratis/samples
+          event-type: update-dependencies
 

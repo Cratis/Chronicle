@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Properties;
@@ -39,8 +40,8 @@ public class when_trying_to_resolve_valid_increment_expression_against_model_wit
 
     void Because()
     {
-        _resolver.Resolve("targetProperty", new(), "$increment()")(_event, _target, ArrayIndexers.NoIndexers);
-        _resolver.Resolve("targetProperty", new(), "$increment()")(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Increment}()")(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Increment}()")(_event, _target, ArrayIndexers.NoIndexers);
     }
 
     [Fact] void should_resolve_to_a_propertymapper_that_counts_increments_the_property() => ((double)((dynamic)_target).targetProperty).ShouldEqual(2d);

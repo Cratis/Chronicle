@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Rules;
 using Cratis.Serialization;
@@ -58,7 +59,7 @@ public class Projections(
     public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
-    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByType.Values;
+    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByModelType.Values;
 
     /// <inheritdoc/>
     public IProjectionHandler GetHandlerFor<TProjection>()
@@ -234,6 +235,12 @@ public class Projections(
     /// <inheritdoc/>
     public Task Discover()
     {
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
+        var modelBoundDefinitions = modelBoundProjections.Discover();
+        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+
         _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
@@ -247,11 +254,13 @@ public class Projections(
         _handlersByModelType = _handlersByType.ToDictionary(
             _ => _.Key.GetReadModelType(),
             _ => _.Value);
+        _handlersByModelType = _handlersByModelType.Concat(modelBoundHandlers).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
                 .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
-                .. _definitionsByType.Values.Select(_ => _).ToList()
+                .. _definitionsByType.Values.Select(_ => _).ToList(),
+                .. modelBoundDefinitions.Values
             ]).ToImmutableList();
 
         return Task.CompletedTask;

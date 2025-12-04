@@ -1,9 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Commands;
+using Cratis.Arc.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.Applications.Commands.for_SingleEventCommandResponseValueHandler.given;
 
@@ -28,6 +29,17 @@ public class a_single_event_command_response_value_handler : Specification
             { WellKnownCommandContextKeys.EventSourceId, command.EventSourceId }
         };
         _commandContext = new CommandContext(_correlationId, typeof(TestCommand), command, [], commandContextValues, null);
+
+        // Set up default successful append result - handle all optional parameters
+        var successfulResult = AppendResult.Success(_correlationId, EventSequenceNumber.First);
+        _eventLog.Append(
+            Arg.Any<EventSourceId>(),
+            Arg.Any<object>(),
+            Arg.Any<EventStreamType?>(),
+            Arg.Any<EventStreamId?>(),
+            Arg.Any<EventSourceType?>(),
+            Arg.Any<CorrelationId?>(),
+            Arg.Any<ConcurrencyScope?>()).Returns(successfulResult);
     }
 
     protected class TestCommand

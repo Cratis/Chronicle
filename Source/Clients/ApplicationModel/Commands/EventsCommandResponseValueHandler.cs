@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Commands;
+using Cratis.Arc.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
@@ -18,7 +18,7 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
     public bool CanHandle(CommandContext commandContext, object value) =>
         (value is IEnumerable<object> objects) &&
         objects.All(o => eventTypes.HasFor(o.GetType())) &&
-        commandContext.Values.TryGetValue(WellKnownCommandContextKeys.EventSourceId, out var id) && id is EventSourceId;
+        commandContext.HasEventSourceId();
 
     /// <inheritdoc/>
     public async Task<CommandResult> Handle(CommandContext commandContext, object value)
@@ -27,7 +27,20 @@ public class EventsCommandResponseValueHandler(IEventLog eventLog, IEventTypes e
         var events = (IEnumerable<object>)value;
         if (events.Any())
         {
-            await eventLog.Append(eventSourceId, events);
+            var concurrencyScope = ConcurrencyScopeBuilder.BuildFromCommandContext(commandContext);
+            var result = await eventLog.AppendMany(
+                eventSourceId,
+                events,
+                commandContext.GetEventStreamType(),
+                commandContext.GetEventStreamId(),
+                commandContext.GetEventSourceType(),
+                correlationId: default,
+                concurrencyScope: concurrencyScope);
+
+            if (!result.IsSuccess)
+            {
+                return result.ToCommandResult();
+            }
         }
 
         return CommandResult.Success(commandContext.CorrelationId);

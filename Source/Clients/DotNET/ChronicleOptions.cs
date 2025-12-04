@@ -21,6 +21,7 @@ namespace Cratis.Chronicle;
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like event types, Reactors, reducers, projections and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
 /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
 /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/> to use. Will revert to default if not configured.</param>
+/// <param name="eventStoreNamespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/> to use. Will revert to default if not configured.</param>
 /// <param name="concurrencyOptions">Optional <see cref="ConcurrencyOptions"/> to use. Will revert to default if not configured.</param>
 /// <param name="autoDiscoverAndRegister">Optional disable automatic discovery of artifacts and registering these.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
@@ -33,6 +34,7 @@ public class ChronicleOptions(
     IServiceProvider? serviceProvider = null,
     IClientArtifactsProvider? artifactsProvider = null,
     ICorrelationIdAccessor? correlationIdAccessor = null,
+    IEventStoreNamespaceResolver? eventStoreNamespaceResolver = null,
     ConcurrencyOptions? concurrencyOptions = null,
     bool autoDiscoverAndRegister = true,
     int connectTimeout = 5,
@@ -91,6 +93,11 @@ public class ChronicleOptions(
     public ICorrelationIdAccessor CorrelationIdAccessor { get; set; } = correlationIdAccessor ?? new CorrelationIdAccessor();
 
     /// <summary>
+    /// Gets the <see cref="IEventStoreNamespaceResolver"/> to use.
+    /// </summary>
+    public IEventStoreNamespaceResolver EventStoreNamespaceResolver { get; set; } = eventStoreNamespaceResolver ?? new DefaultEventStoreNamespaceResolver();
+
+    /// <summary>
     /// Gets the <see cref="ConcurrencyOptions"/> to use for concurrency management.
     /// </summary>
     public ConcurrencyOptions ConcurrencyOptions { get; set; } = concurrencyOptions ?? new ConcurrencyOptions();
@@ -114,6 +121,12 @@ public class ChronicleOptions(
     /// Gets the <see cref="ILoggerFactory"/> to use internally in the client.
     /// </summary>
     public ILoggerFactory LoggerFactory { get; set; } = loggerFactory ?? new LoggerFactory();
+
+    /// <summary>
+    /// Gets or sets the claim type to use for claims-based namespace resolution.
+    /// This is used by the <see cref="ClaimsBasedNamespaceResolver"/> when configured via the WithClaimsBasedNamespaceResolver extension method.
+    /// </summary>
+    public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.

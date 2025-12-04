@@ -31,8 +31,8 @@ public static class ExpressionExtensions
                 members.Insert(0, memberExpression.Member.Name);
             }
             return new PropertyPath(string.Join('.', members));
-         }
+        }
 
         return new PropertyPath(string.Empty);
-     }
+    }
 }

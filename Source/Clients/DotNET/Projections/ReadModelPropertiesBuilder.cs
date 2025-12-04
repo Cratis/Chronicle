@@ -107,7 +107,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue()
     {
-        var propertyPath = new PropertyPath("$this");
+        var propertyPath = new PropertyPath(WellKnownExpressions.This);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, false);
         _propertyExpressions[propertyPath] = setBuilder;
         return setBuilder;

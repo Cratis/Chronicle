@@ -6,9 +6,11 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
+using Cratis.Chronicle.Seeding;
 using Cratis.Reflection;
 using Cratis.Types;
 
@@ -33,6 +35,9 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Projections { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> ModelBoundProjections { get; private set; } = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors { get; private set; } = [];
@@ -71,6 +76,9 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; private set; } = [];
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSeeders { get; private set; } = [];
+
+    /// <inheritdoc/>
     public void Initialize()
     {
         if (_initialized) return;
@@ -81,6 +89,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
         Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
         Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
+        ModelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
         Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
         ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
         Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
@@ -95,6 +104,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         ConstraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
         UniqueConstraints = EventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
         UniqueEventTypeConstraints = EventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
+        EventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
 
         _initialized = true;
     }

@@ -34,6 +34,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
+        services.AddSingleton<Contracts.Seeding.IEventSeeding, Services.Seeding.EventSeeding>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
 
         return services;
@@ -63,6 +64,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.Jobs.Jobs>();
+            _.MapGrpcService<Services.Seeding.EventSeeding>();
             _.MapGrpcService<Services.Host.Server>();
         });
 

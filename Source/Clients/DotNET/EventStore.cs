@@ -19,6 +19,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
@@ -172,6 +173,15 @@ public class EventStore : IEventStore
             rulesProjections.ReadModels,
             schemaGenerator);
 
+        Seeding = new EventSeeding(
+            eventStoreName,
+            @namespace,
+            connection,
+            EventTypes,
+            _eventSerializer,
+            clientArtifactsProvider,
+            serviceProvider);
+
         AggregateRootFactory = new AggregateRootFactory(
             this,
             new AggregateRootMutatorFactory(
@@ -235,6 +245,9 @@ public class EventStore : IEventStore
     public IReadModels ReadModels { get; }
 
     /// <inheritdoc/>
+    public IEventSeeding Seeding { get; }
+
+    /// <inheritdoc/>
     public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
@@ -246,7 +259,8 @@ public class EventStore : IEventStore
             Constraints.Discover(),
             Reactors.Discover(),
             Reducers.Discover(),
-            Projections.Discover());
+            Projections.Discover(),
+            Seeding.Discover());
     }
 
     /// <inheritdoc/>
@@ -263,7 +277,8 @@ public class EventStore : IEventStore
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register());
+            Projections.Register(),
+            Seeding.Register());
     }
 
     /// <inheritdoc/>

@@ -25,10 +25,10 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 public class Reducers : IReducers
 {
-#if NET9_0
-    static readonly Lock _registerLock = new();
-#else
+#if NET8_0
     static readonly object _registerLock = new();
+#else
+    static readonly Lock _registerLock = new();
 #endif
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IEventStore _eventStore;
@@ -269,7 +269,7 @@ public class Reducers : IReducers
             {
                 ReducerId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
                 Sink = new SinkDefinition
                 {

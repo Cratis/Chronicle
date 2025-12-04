@@ -40,5 +40,5 @@ public class ObserverDefinition
     /// <summary>
     /// Gets or sets a value indicating whether the observer supports replay scenarios.
     /// </summary>
-    public bool IsReplayable { get; set; }
+    public bool IsReplayable { get; set; }
 }

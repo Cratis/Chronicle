@@ -101,5 +101,5 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     /// <param name="eventSequenceNumber">The outputted <see cref="EventSequenceNumber"/> of the last committed event.</param>
     /// <returns>True if events were committed, false if not.</returns>
-    bool TryGetLastCommittedEventSequenceNumber([NotNullWhen(true)]out EventSequenceNumber? eventSequenceNumber);
+    bool TryGetLastCommittedEventSequenceNumber([NotNullWhen(true)] out EventSequenceNumber? eventSequenceNumber);
 }

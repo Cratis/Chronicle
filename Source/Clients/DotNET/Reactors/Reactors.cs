@@ -21,10 +21,10 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
-#if NET9_0
-    static readonly Lock _registerLock = new();
-#else
+#if NET8_0
     static readonly object _registerLock = new();
+#else
+    static readonly Lock _registerLock = new();
 #endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
@@ -179,7 +179,7 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Replay(ReactorId reactorId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        return _servicesAccessor.Services.Observers.Replay(new Replay
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
@@ -227,7 +227,7 @@ public class Reactors : IReactors
             {
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray()
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray()
             }
         };
 

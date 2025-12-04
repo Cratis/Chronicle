@@ -5,8 +5,8 @@ import { inject, injectable } from 'tsyringe';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { Replay } from 'Api/Observation';
 import { INamespaces } from 'State/Namespaces';
-import { IDialogs } from '@cratis/applications.react.mvvm/dialogs';
-import { DialogButtons, DialogResult } from '@cratis/applications.react/dialogs';
+import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
+import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
 @injectable()

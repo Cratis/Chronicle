@@ -4,6 +4,11 @@ Chronicle is a comprehensive event sourcing platform built with ease of use, pro
 
 As an event sourcing database, Chronicle captures and stores all application state changes as a sequence of immutable events. Rather than persisting only current state, Chronicle preserves the complete history of system changes, unlocking powerful capabilities such as time travel debugging, comprehensive audit trails, and robust event-driven architectures.
 
+## Artifacts
+
+[![Nuget](https://img.shields.io/nuget/v/Cratis.Chronicle?logo=nuget)](http://nuget.org/packages/cratis.chronicle)
+[![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
+
 ## Key Features
 
 ### 🏗️ Event Sourcing Foundation
@@ -80,6 +85,7 @@ Explore Chronicle's comprehensive documentation organized by topic:
 | **[Get Started](./get-started/toc.yml)** | Quick start guides for console and ASP.NET Core applications |
 | **[Concepts](./concepts/toc.yml)** | Core concepts including events, projections, observers, and constraints |
 | **[Clients](./clients/toc.yml)** | .NET client SDK documentation and application model guidance |
+| **[Projections](./projections/index.md)** | How to create read models from events using projections |
 | **[Hosting](./hosting/toc.yml)** | Deployment options including production and development environments |
 | **[Recipes](./recipes/toc.yml)** | Practical examples and common patterns for Chronicle usage |
 | **[Contributing](./contributing/toc.yml)** | Guidelines for contributing to Chronicle development |

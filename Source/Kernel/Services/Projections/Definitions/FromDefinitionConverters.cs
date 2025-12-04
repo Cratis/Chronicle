@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
@@ -22,7 +23,7 @@ internal static class FromDefinitionConverters
         {
             Properties = definition.Properties.ToDictionary(_ => (string)_.Key, _ => _.Value),
             Key = definition.Key,
-            ParentKey = definition.ParentKey ?? null!
+            ParentKey = definition.ParentKey ?? PropertyExpression.NotSet
         };
     }
 
@@ -36,7 +37,7 @@ internal static class FromDefinitionConverters
         return new(
             contract.Properties.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value),
             contract.Key,
-            contract.ParentKey ?? null!
+            contract.ParentKey ?? PropertyExpression.NotSet
         );
     }
 }

@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { EventTypeRegistration } from '../Events/EventTypeRegistration';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types/schemas');
 
 class AllEventTypesWithSchemasSortBy {
     private _type: SortingActionsForQuery<EventTypeRegistration[]>;
@@ -46,7 +44,6 @@ export interface AllEventTypesWithSchemasParameters {
 
 export class AllEventTypesWithSchemas extends QueryFor<EventTypeRegistration[], AllEventTypesWithSchemasParameters> {
     readonly route: string = '/api/event-store/{eventStore}/types/schemas';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventTypeRegistration[] = [];
     private readonly _sortBy: AllEventTypesWithSchemasSortBy;
     private static readonly _sortBy: AllEventTypesWithSchemasSortByWithoutQuery = new AllEventTypesWithSchemasSortByWithoutQuery();
@@ -61,6 +58,12 @@ export class AllEventTypesWithSchemas extends QueryFor<EventTypeRegistration[], 
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllEventTypesWithSchemasSortBy {
         return this._sortBy;

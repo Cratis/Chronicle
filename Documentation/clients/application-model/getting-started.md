@@ -64,7 +64,7 @@ public record UserRegistered(string Email, string Name);
 ```csharp
 // Commands/RegisterUserCommand.cs
 using System.ComponentModel.DataAnnotations;
-using Cratis.Applications.Commands.ModelBound;
+using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Events;
 
 [Command]
@@ -118,11 +118,11 @@ When you configure Chronicle with `.WithApplicationModel()`, the following servi
 
 Now that you have Application Model configured, you can explore the key features:
 
-### Learn About Event Source IDs
+### Learn About Event Metadata
 
-Event Source IDs are fundamental to Chronicle's operation. Learn how they're resolved and managed:
+Event metadata is fundamental to Chronicle's operation. Learn how Event Source IDs, Event Source Types, Event Stream Types, and Event Stream IDs are used to organize and categorize events:
 
-[Read more about Event Source ID →](event-source-id.md)
+[Read more about Event Metadata →](event-metadata/index.md)
 
 ### Working with Aggregate Roots
 

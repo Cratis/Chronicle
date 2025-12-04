@@ -30,10 +30,10 @@ public static class ChronicleClientSiloBuilderExtensions
     /// </summary>
     public static readonly string[] DefaultSectionPaths = ["Cratis", "Chronicle"];
 
-#if NET9_0
-    static readonly Lock _eventStoreInitLock = new();
-#else
+#if NET8_0
     static readonly object _eventStoreInitLock = new();
+#else
+    static readonly Lock _eventStoreInitLock = new();
 #endif
 
     /// <summary>

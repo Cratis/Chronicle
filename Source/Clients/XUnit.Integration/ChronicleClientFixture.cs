@@ -103,6 +103,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> Projections => GetArtifactTypes(provider => provider.Projections);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> ModelBoundProjections => GetArtifactTypes(provider => provider.ModelBoundProjections);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);
 
     /// <inheritdoc/>
@@ -137,6 +140,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.

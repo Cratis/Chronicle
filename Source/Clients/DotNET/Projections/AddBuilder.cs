@@ -28,7 +28,7 @@ public class AddBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        _expression = $"$add({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
+        _expression = $"{WellKnownExpressions.Add}({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
         return parent;
     }
 

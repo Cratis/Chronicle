@@ -101,6 +101,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
+                new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Host.Server(clusterClient));
         });
 

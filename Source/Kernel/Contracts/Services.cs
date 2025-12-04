@@ -14,6 +14,7 @@ using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Chronicle.Contracts.Seeding;
 
 namespace Cratis.Chronicle.Contracts;
 
@@ -35,6 +36,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Webhooks"><see cref="IWebhooks"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
+/// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="server"><see cref="IServer"/> instance.</param>
 public sealed record Services(
     IEventStores EventStores,
@@ -52,4 +54,5 @@ public sealed record Services(
     IWebhooks Webhooks,
     IReadModels ReadModels,
     IJobs Jobs,
+    IEventSeeding Seeding,
     IServer server) : IServices;

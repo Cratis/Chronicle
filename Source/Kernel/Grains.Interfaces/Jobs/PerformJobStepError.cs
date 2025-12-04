@@ -78,7 +78,7 @@ public record PerformJobStepError(object? PartialResult, IList<string>? ErrorMes
     /// <param name="result">The outputted partial <typeparamref name="TResult"/> result.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <returns>True if present, false if not.</returns>
-    public bool TryGetPartialResult<TResult>([NotNullWhen(true)]out TResult? result)
+    public bool TryGetPartialResult<TResult>([NotNullWhen(true)] out TResult? result)
         where TResult : class
     {
         result = PartialResult as TResult;

@@ -43,7 +43,21 @@ The Application Model client includes two main response value handlers:
 - `SingleEventCommandResponseValueHandler`: Handles single event responses
 - `EventsCommandResponseValueHandler`: Handles collections of events
 
-These handlers automatically append events to the event log using the event source ID from the command context.
+These handlers automatically append events to the event log using the event source ID and other metadata from the command context.
+
+## Event Metadata
+
+Commands can be decorated with metadata attributes that provide additional context when events are appended. This metadata helps organize and categorize events for better querying and processing.
+
+For a complete overview of event metadata tags in Chronicle, see [Event Metadata Tags](../../concepts/event-metadata-tags.md).
+
+Chronicle supports the following event metadata:
+
+- **[Event Source Type](event-metadata/event-source-type.md)** - Specifies the overarching entity or domain concept (e.g., "Account", "Customer")
+- **[Event Stream Type](event-metadata/event-stream-type.md)** - Identifies the specific process or workflow (e.g., "Onboarding", "Transactions")
+- **[Event Stream ID](event-metadata/event-stream-id.md)** - Provides a marker for separating independent streams (e.g., "Monthly", "Yearly")
+
+For complete details on using these metadata attributes, including code examples and best practices, see the [Event Metadata documentation](event-metadata/index.md).
 
 ## Single Event Responses
 
@@ -307,7 +321,7 @@ Command handlers should not throw exceptions for business rule violations. Inste
 #### Using OneOf with Validation Results
 
 ```csharp
-using Cratis.Applications.Validation;
+using Cratis.Arc.Validation;
 
 [Command]
 public record TransferFunds([Key] Guid AccountId, decimal Amount, Guid ToAccountId)
@@ -337,7 +351,7 @@ public record TransferFunds([Key] Guid AccountId, decimal Amount, Guid ToAccount
 For commands that return single events, use `OneOf<ValidationResult, Event>`:
 
 ```csharp
-using Cratis.Applications.Validation;
+using Cratis.Arc.Validation;
 
 [Command]
 public record CreateUser(string Email, string Name)
@@ -370,7 +384,7 @@ public record CreateUser(string Email, string Name)
 For commands that return multiple events, use `OneOf<ValidationResult, IEnumerable<object>>`:
 
 ```csharp
-using Cratis.Applications.Validation;
+using Cratis.Arc.Validation;
 
 [Command]
 public record ProcessOrder([Key] Guid OrderId)

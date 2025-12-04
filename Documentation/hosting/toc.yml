@@ -1,2 +1,4 @@
 - name: Production
   href: production.md
+- name: Configuration
+  href: configuration.md

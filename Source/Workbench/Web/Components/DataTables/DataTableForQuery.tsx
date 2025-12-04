@@ -3,8 +3,8 @@
 
 import { DataTable, DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
 import { Constructor } from '@cratis/fundamentals';
-import { IQueryFor, Paging } from '@cratis/applications/queries';
-import { useQueryWithPaging } from '@cratis/applications.react/queries';
+import { IQueryFor, Paging } from '@cratis/arc/queries';
+import { useQueryWithPaging } from '@cratis/arc.react/queries';
 import { ReactNode, useState } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

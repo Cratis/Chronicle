@@ -13,7 +13,7 @@ name: "CodeQL Advanced"
 
 env:
   DOTNET8_VERSION: "8.0.410"
-  DOTNET_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
 
 on:
   push:

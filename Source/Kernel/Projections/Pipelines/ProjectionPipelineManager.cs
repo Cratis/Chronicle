@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Pipelines.Steps;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -64,4 +65,8 @@ public class ProjectionPipelineManager(
             steps,
             loggerFactory.CreateLogger<ProjectionPipeline>());
     }
+
+    /// <inheritdoc/>
+    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
+        _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
 }
