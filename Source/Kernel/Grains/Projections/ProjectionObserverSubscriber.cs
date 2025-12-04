@@ -106,6 +106,9 @@ public class ProjectionObserverSubscriber(
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }
 
+            // Attempt to resolve any pending futures now that we've processed new events
+            await TryResolvePendingFutures(projectionGrain);
+
             // Note: We don't want to send changesets if the projection is not active
             if (changeset?.HasChanges == true && State.IsActive)
             {
@@ -124,6 +127,45 @@ public class ProjectionObserverSubscriber(
                 lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty);
+        }
+    }
+
+    async Task TryResolvePendingFutures(IProjection projectionGrain)
+    {
+        if (_pipeline is null) return;
+
+        // Get all pending futures for this projection
+        var futures = await projectionGrain.GetFutures(_key.Namespace, _key.EventSourceId);
+        if (!futures.Any()) return;
+
+        foreach (var future in futures)
+        {
+            try
+            {
+                // Attempt to reprocess the event - the pipeline will check if parent data now exists
+                var pipelineContext = await _pipeline.Handle(future.Event);
+
+                // If the event was successfully processed (no deferred futures created),
+                // then the parent data now exists and we can resolve this future
+                if (!pipelineContext.DeferredFutures.Any())
+                {
+                    await projectionGrain.ResolveFuture(_key.Namespace, _key.EventSourceId, future.Id);
+                    logger.LogInformation(
+                        "Resolved future {FutureId} for projection {ProjectionId} after parent data became available",
+                        future.Id,
+                        future.ProjectionId);
+                }
+                // Otherwise, the parent is still missing, keep the future for next attempt
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail the whole batch - we'll try again next time
+                logger.LogWarning(
+                    ex,
+                    "Failed to resolve future {FutureId} for projection {ProjectionId}",
+                    future.Id,
+                    future.ProjectionId);
+            }
         }
     }
 
