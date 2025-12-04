@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Storage.Projections;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
@@ -38,14 +37,7 @@ public class ResolveFutures(
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
-        // Store any deferred futures that were created during processing
-        foreach (var future in context.DeferredFutures)
-        {
-            await projectionFutures.AddFuture(eventStore, @namespace, projection.Identifier, future);
-            logger.StoredFuture(future.Id, future.ProjectionId);
-        }
-
-        // If this event was deferred, don't try to resolve futures (we have no valid partition key)
+        // If this event was deferred, don't try to resolve futures (we have no valid data yet)
         if (context.IsDeferred)
         {
             return context;

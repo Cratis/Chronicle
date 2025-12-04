@@ -13,9 +13,6 @@ internal static partial class ResolveFuturesLogging
     [LoggerMessage(LogLevel.Warning, "Pipeline not set for ResolveFutures step - cannot resolve pending futures")]
     internal static partial void PipelineNotSet(this ILogger<ResolveFutures> logger);
 
-    [LoggerMessage(LogLevel.Debug, "Stored future {FutureId} for projection {ProjectionId}")]
-    internal static partial void StoredFuture(this ILogger<ResolveFutures> logger, ProjectionFutureId futureId, ProjectionId projectionId);
-
     [LoggerMessage(LogLevel.Debug, "Found {Count} pending futures for projection {ProjectionId}")]
     internal static partial void FoundPendingFutures(this ILogger<ResolveFutures> logger, int count, ProjectionId projectionId);
 
