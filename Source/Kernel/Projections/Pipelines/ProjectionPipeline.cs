@@ -63,12 +63,6 @@ public class ProjectionPipeline(
             try
             {
                 context = await step.Perform(projection, context);
-
-                // If the event has been deferred, skip remaining steps
-                if (context.IsDeferred)
-                {
-                    break;
-                }
             }
             catch (Exception ex)
             {

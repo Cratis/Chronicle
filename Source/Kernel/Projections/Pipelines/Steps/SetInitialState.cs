@@ -21,6 +21,12 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
+        // Don't set initial state if the event was deferred (key is undefined)
+        if (context.IsDeferred)
+        {
+            return context;
+        }
+
         if (context.IsJoin)
         {
             return context;

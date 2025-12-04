@@ -60,24 +60,34 @@ public class ResolveFutures(
 
         logger.FoundPendingFutures(futures.Count(), projection.Identifier);
 
-        foreach (var future in futures)
+        // Keep trying to resolve futures until we can't resolve any more
+        // This handles the case where resolving one future creates the parent data needed by another future
+        var resolvedAny = true;
+        while (resolvedAny)
         {
-            try
-            {
-                // Attempt to reprocess the event - the pipeline will check if parent data now exists
-                var pipelineContext = await _pipeline.Handle(future.Event);
+            resolvedAny = false;
+            futures = await projectionFutures.GetFutures(eventStore, @namespace, projection.Identifier);
 
-                // If the event was successfully processed (no deferred futures created),
-                // then the parent data now exists and we can resolve this future
-                if (!pipelineContext.IsDeferred)
-                {
-                    await projectionFutures.ResolveFuture(eventStore, @namespace, projection.Identifier, future.Id);
-                    logger.ResolvedFuture(future.Id, future.ProjectionId);
-                }
-            }
-            catch (Exception ex)
+            foreach (var future in futures)
             {
-                logger.FailedToResolveFuture(ex, future.Id, future.ProjectionId);
+                try
+                {
+                    // Attempt to reprocess the event - the pipeline will check if parent data now exists
+                    var pipelineContext = await _pipeline.Handle(future.Event);
+
+                    // If the event was successfully processed (no deferred futures created),
+                    // then the parent data now exists and we can resolve this future
+                    if (!pipelineContext.IsDeferred)
+                    {
+                        await projectionFutures.ResolveFuture(eventStore, @namespace, projection.Identifier, future.Id);
+                        logger.ResolvedFuture(future.Id, future.ProjectionId);
+                        resolvedAny = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.FailedToResolveFuture(ex, future.Id, future.ProjectionId);
+                }
             }
         }
 
