@@ -123,7 +123,6 @@ public partial class Observer(
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
-        Console.WriteLine($"DEBUG Observer: Subscribing {_observerId} with {eventTypes.Count()} event types: {string.Join(", ", eventTypes.Select(et => et.Id))}");
 
         observerDefinition.State = observerDefinition.State with
         {

@@ -25,15 +25,3 @@ public abstract record KeyResolverResult
     /// <returns>A <see cref="DeferredKey"/> result.</returns>
     public static KeyResolverResult Deferred(ProjectionFuture future) => new DeferredKey(future);
 }
-
-/// <summary>
-/// Represents a successfully resolved key.
-/// </summary>
-/// <param name="Key">The resolved key.</param>
-public record ResolvedKey(Key Key) : KeyResolverResult;
-
-/// <summary>
-/// Represents a key resolution that was deferred to a future.
-/// </summary>
-/// <param name="Future">The projection future.</param>
-public record DeferredKey(ProjectionFuture Future) : KeyResolverResult;

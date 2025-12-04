@@ -485,7 +485,6 @@ public class ProjectionFactory(
             var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Exists(e => e.EventType == _.EventType));
             var childEventTypeIds = string.Join(", ", child.EventTypesWithKeyResolver.Select(et => et.EventType.Id));
             logger.CollectingEventsFromChild(childTypes.Count(), child.Path);
-            Console.WriteLine($"DEBUG ProjectionFactory: Child {child.Path} has {child.EventTypesWithKeyResolver.Count()} total event types: {childEventTypeIds}, adding {childTypes.Count()} new ones");
             eventsForProjection.AddRange(childTypes);
         }
 
@@ -508,7 +507,6 @@ public class ProjectionFactory(
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)
     {
-        Console.WriteLine($"DEBUG GetEventTypeWithKeyResolver: eventType={eventType.Id}, projection.Path={projection.Path}, hasParent={hasParent}, parentKey={parentKey?.Value ?? "null"}, projection.HasParent={projection.HasParent}");
         logger.GetEventTypeWithKeyResolverStart(
             eventType.Id.ToString(),
             hasParent,
@@ -519,11 +517,9 @@ public class ProjectionFactory(
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
         if (!hasParent)
         {
-            Console.WriteLine($"DEBUG GetEventTypeWithKeyResolver: NO PARENT for eventType={eventType.Id}, projection={projection.Path} - returning simple keyResolver");
             return new EventTypeWithKeyResolver(eventType, keyResolver);
         }
 
-        Console.WriteLine($"DEBUG GetEventTypeWithKeyResolver: HAS PARENT for eventType={eventType.Id}, projection={projection.Path}");
         // If no explicit parent key is specified, try to infer it from the parent's IdentifiedByProperty
         // This allows events to contain a property matching the parent's identifier without explicit UsingParentKey()
         var isInferredParentKey = false;
@@ -541,7 +537,6 @@ public class ProjectionFactory(
         }
 
         var parentKeyResolver = GetParentKeyResolverFor(projection, effectiveParentKey, actualIdentifiedByProperty, isInferredParentKey);
-        Console.WriteLine($"DEBUG GetEventTypeWithKeyResolver: Wrapping with FromParentHierarchy for eventType={eventType.Id}, projection={projection.Path}, isInferredParentKey={isInferredParentKey}");
         keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
 
         return new EventTypeWithKeyResolver(eventType, keyResolver);

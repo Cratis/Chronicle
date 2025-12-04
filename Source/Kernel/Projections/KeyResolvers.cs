@@ -41,7 +41,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     public KeyResolver FromEventValueProviderWithFallbackToEventSourceId(ValueProvider<AppendedEvent> eventValueProvider) =>
         CreateKeyResolver(nameof(FromEventValueProviderWithFallbackToEventSourceId), (_, _, @event) =>
         {
-            Console.WriteLine($"DEBUG FromEventValueProviderWithFallbackToEventSourceId CALLED: Event={@event.Context.EventType.Id}, EventSourceId={@event.Context.EventSourceId}, Seq={@event.Context.SequenceNumber.Value}");
             var key = eventValueProvider(@event);
             var willUseFallback = key is null;
             logger.FromEventValueProviderWithFallback(key, willUseFallback);
@@ -51,7 +50,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             // but doesn't contain the parent key in its content
             key ??= EventValueProviders.EventSourceId(@event);
 
-            Console.WriteLine($"DEBUG FromEventValueProviderWithFallbackToEventSourceId RESULT: key={key}, ArrayIndexers=NoIndexers");
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)))!;
         });
 
@@ -119,7 +117,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty) =>
         CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, sink, @event) =>
             {
-                Console.WriteLine($"DEBUG FromParentHierarchy ENTRY: Event={@event.Context.EventType.Id}, EventSourceId={@event.Context.EventSourceId}, SequenceNumber={@event.Context.SequenceNumber.Value}");
                 logger.FromParentHierarchyEntry(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), @event.Context.SequenceNumber.Value);
 
                 var parentKeyResult = await parentKeyResolver(eventSequenceStorage, sink, @event);
@@ -131,7 +128,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 }
 
                 var parentKey = (parentKeyResult as ResolvedKey)!.Key;
-                Console.WriteLine($"DEBUG FromParentHierarchy: parentKey={parentKey.Value}, projection.Path={projection.Path}, projection.HasParent={projection.HasParent}");
                 logger.FromParentHierarchyStart(projection.Path, projection.HasParent, parentKey.Value);
 
                 if (!projection.HasParent)
@@ -167,14 +163,12 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 }
                 else
                 {
-                    Console.WriteLine($"DEBUG FromParentHierarchy: Looking for parent event with parentKey={parentKey.Value}");
                     logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
 
                     // First, try to find the parent event by EventSourceId (traditional approach)
                     var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
                     if (!optionalEvent.TryGetValue(out var foundEvent))
                     {
-                        Console.WriteLine($"DEBUG FromParentHierarchy: Parent event NOT FOUND, will try Sink lookup");
                         // If not found by EventSourceId, try to find the root key by querying the Sink
                         // This supports scenarios where events are appended to a different EventSourceId
                         // but contain the parent key in their content
@@ -184,11 +178,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                         // For example, for Hub this would be [Configurations].[Hubs], not just [Configurations]
                         // Then append the current projection's IdentifiedByProperty to query for the specific child
                         var childPropertyPath = projection.ChildrenPropertyPath + identifiedByProperty;
-                        Console.WriteLine($"DEBUG FromParentHierarchy: Sink lookup - childPropertyPath={childPropertyPath.Path}, childValue={key.Value}");
                         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, key.Value?.ToString() ?? "null");
 
                         var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, key.Value!);
-                        Console.WriteLine($"DEBUG FromParentHierarchy: Sink lookup result - found={optionalRootKey.HasValue}");
                         if (optionalRootKey.TryGetValue(out var rootKey))
                         {
                             logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
@@ -208,7 +200,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                         }
 
                         // Couldn't find parent in Sink - create a future for deferred resolution
-                        Console.WriteLine($"DEBUG FromParentHierarchy: Creating future - parent not found in Sink");
                         logger.FromParentHierarchyCreatingFuture(projection.Path, key.Value?.ToString() ?? "null");
 
                         var future = new ProjectionFuture(
