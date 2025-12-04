@@ -21,7 +21,7 @@ public class a_resolver : Specification
         _model = new("SomethingId", "Something", ReadModelOwner.Client, new Dictionary<ReadModelGeneration, JsonSchema>
         {
             { ReadModelGeneration.First, new JsonSchema() }
-        });
+        }, []);
         _projection = Substitute.For<IProjection>();
         _projection.Identifier.Returns((ProjectionId)Guid.NewGuid().ToString());
         _projection.ReadModel.Returns(_model);

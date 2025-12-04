@@ -21,7 +21,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromEventSourceId =>
-        CreateKeyResolver(nameof(FromEventSourceId), (_, @event) =>
+        CreateKeyResolver(nameof(FromEventSourceId), (_, _, @event) =>
             Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers)));
 
     /// <summary>
@@ -30,9 +30,25 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="eventValueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider) =>
-        CreateKeyResolver(nameof(FromEventValueProvider), (_, @event) =>
+        CreateKeyResolver(nameof(FromEventValueProvider), (_, _, @event) =>
         {
             var key = eventValueProvider(@event);
+            return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
+        });
+
+    /// <inheritdoc/>
+    public KeyResolver FromEventValueProviderWithFallbackToEventSourceId(ValueProvider<AppendedEvent> eventValueProvider) =>
+        CreateKeyResolver(nameof(FromEventValueProviderWithFallbackToEventSourceId), (_, _, @event) =>
+        {
+            var key = eventValueProvider(@event);
+            var willUseFallback = key is null;
+            logger.FromEventValueProviderWithFallback(key, willUseFallback);
+
+            // If the value provider returns null (property not found in event), fall back to EventSourceId
+            // This supports scenarios where an event is appended to the parent's EventSourceId
+            // but doesn't contain the parent key in its content
+            key ??= EventValueProviders.EventSourceId(@event);
+
             return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
         });
 
@@ -42,7 +58,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="propertiesWithKeyValueProviders">Target property paths in key and resolvers to use for resolving.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver Composite(IDictionary<PropertyPath, ValueProvider<AppendedEvent>> propertiesWithKeyValueProviders) =>
-        CreateKeyResolver(nameof(Composite), (_, @event) =>
+        CreateKeyResolver(nameof(Composite), (_, _, @event) =>
         {
             var key = new ExpandoObject();
             foreach (var keyValue in propertiesWithKeyValueProviders)
@@ -63,9 +79,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> for the identified by property in the join relationship.</param>
     /// <returns><see cref="KeyResolver"/> that will be used to resolve.</returns>
     public KeyResolver ForJoin(IProjection projection, KeyResolver keyResolver, PropertyPath identifiedByProperty) =>
-        CreateKeyResolver(nameof(ForJoin), async (eventSequenceStorage, @event) =>
+        CreateKeyResolver(nameof(ForJoin), async (eventSequenceStorage, sink, @event) =>
         {
-            var key = await keyResolver(eventSequenceStorage, @event);
+            var key = await keyResolver(eventSequenceStorage, sink, @event);
             if (!projection.HasParent)
             {
                 return key with { ArrayIndexers = ArrayIndexers.NoIndexers };
@@ -88,9 +104,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty) =>
-        CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, @event) =>
+        CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, sink, @event) =>
             {
-                var parentKey = await parentKeyResolver(eventSequenceStorage, @event);
+                var parentKey = await parentKeyResolver(eventSequenceStorage, sink, @event);
                 logger.FromParentHierarchyStart(projection.Path, projection.HasParent, parentKey.Value);
 
                 if (!projection.HasParent)
@@ -98,58 +114,160 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                     return parentKey with { ArrayIndexers = ArrayIndexers.NoIndexers };
                 }
 
-                var arrayIndexers = new List<ArrayIndexer>();
-
-                var key = await keyResolver(eventSequenceStorage, @event);
+                var key = await keyResolver(eventSequenceStorage, sink, @event);
                 logger.FromParentHierarchyChildKey(key.Value, projection.ChildrenPropertyPath, identifiedByProperty);
 
-                arrayIndexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
                 var parentProjection = projection.Parent!;
                 var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
                 logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", parentEventTypeIds));
 
                 if (parentEventTypeIds.Length == 0)
                 {
-                    return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+                    return parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)]) };
                 }
 
                 AppendedEvent parentEvent;
-                if (parentEventTypeIds.Any(id => id == @event.Context.EventType.Id))
+                var eventTypeMatchesParent = parentEventTypeIds.Any(id => id == @event.Context.EventType.Id);
+                if (eventTypeMatchesParent)
                 {
                     parentEvent = @event;
                 }
                 else
                 {
                     logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
+
+                    // First, try to find the parent event by EventSourceId (traditional approach)
                     var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
                     if (!optionalEvent.TryGetValue(out var foundEvent))
                     {
+                        // If not found by EventSourceId, try to find the root key by querying the Sink
+                        // This supports scenarios where events are appended to a different EventSourceId
+                        // but contain the parent key in their content
                         logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
-                        return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+
+                        var parentIdentifiedByProperty = GetParentIdentifiedByProperty(parentProjection);
+                        if (parentIdentifiedByProperty is not null)
+                        {
+                            var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+                            logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
+
+                            var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, parentKey.Value!);
+                            if (optionalRootKey.TryGetValue(out var rootKey))
+                            {
+                                logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
+
+                                // Recursively resolve up the hierarchy from this point
+                                // This builds the indexers in the correct order (root to leaf)
+                                return await ResolveParentHierarchyFromSink(
+                                    parentProjection,
+                                    rootKey,
+                                    sink,
+                                    parentKey.Value!,
+                                    projection.ChildrenPropertyPath,
+                                    identifiedByProperty,
+                                    key.Value);
+                            }
+                        }
+
+                        // Couldn't find parent, return with just the child indexer
+                        return parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)]) };
                     }
                     parentEvent = foundEvent;
                 }
 
                 logger.FromParentHierarchyFoundParentEvent(parentEvent.Context.EventType.Id.ToString());
 
-                var eventType =
-                    parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
+                var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
                 var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
-                var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, parentEvent);
+                var resolvedParentKey = await keyResolverForEventType(eventSequenceStorage, sink, parentEvent);
                 parentKey = resolvedParentKey;
-                arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
+
+                // Build array indexers from parent down to current child
+                var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
+                arrayIndexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
 
                 logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
 
                 return parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
             });
 
-    KeyResolver CreateKeyResolver(string keyResolverName, KeyResolver keyResolver) => async (eventSequenceStorage, @event) =>
+    static PropertyPath? GetParentIdentifiedByProperty(IProjection projection)
+    {
+        // Get the identified by property from the projection
+        // This is the property that identifies items in the children collection
+        if (projection.IdentifiedByProperty.IsSet)
+        {
+            return projection.IdentifiedByProperty;
+        }
+
+        return null;
+    }
+
+    async Task<Key> ResolveParentHierarchyFromSink(
+        IProjection projection,
+        Key currentKey,
+        Storage.Sinks.ISink sink,
+        object intermediateKeyValue,
+        PropertyPath leafChildrenProperty,
+        PropertyPath leafIdentifiedByProperty,
+        object leafKeyValue)
+    {
+        // Build indexers from root down to leaf
+        var arrayIndexers = new List<ArrayIndexer>();
+
+        // Recursively walk up to collect all parent levels
+        await CollectParentIndexers(projection, currentKey, sink, arrayIndexers, intermediateKeyValue);
+
+        // Add the final leaf indexer
+        arrayIndexers.Add(new ArrayIndexer(leafChildrenProperty, leafIdentifiedByProperty, leafKeyValue));
+
+        return currentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
+    }
+
+    async Task CollectParentIndexers(
+        IProjection projection,
+        Key currentKey,
+        Storage.Sinks.ISink sink,
+        List<ArrayIndexer> indexers,
+        object childKeyValue)
+    {
+        // If this projection has a parent and is itself a nested child
+        if (projection.HasParent && projection.Parent!.ChildrenPropertyPath.IsSet)
+        {
+            var parentProjection = projection.Parent!;
+            var parentIdentifiedByProperty = GetParentIdentifiedByProperty(parentProjection);
+
+            if (parentIdentifiedByProperty is not null)
+            {
+                var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+                var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, currentKey.Value!);
+
+                if (optionalRootKey.TryGetValue(out var rootKey))
+                {
+                    // Recursively collect parent's indexers first (to maintain root-to-leaf order)
+                    await CollectParentIndexers(parentProjection, rootKey, sink, indexers, currentKey.Value!);
+                    currentKey = rootKey;
+                }
+            }
+        }
+
+        // Add this level's indexer after collecting parents (maintains root-to-leaf order)
+        if (projection.ChildrenPropertyPath.IsSet)
+        {
+            var identifiedBy = GetParentIdentifiedByProperty(projection);
+            if (identifiedBy is not null)
+            {
+                indexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedBy, childKeyValue));
+            }
+        }
+    }
+
+    KeyResolver CreateKeyResolver(string keyResolverName, KeyResolver keyResolver) => async (eventSequenceStorage, sink, @event) =>
     {
         try
         {
             logger.ResolvingKey(keyResolverName);
-            return await keyResolver(eventSequenceStorage, @event);
+            return await keyResolver(eventSequenceStorage, sink, @event);
         }
         catch (Exception ex)
         {

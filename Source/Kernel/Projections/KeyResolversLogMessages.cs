@@ -34,6 +34,15 @@ internal static partial class KeyResolversLogMessages
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: parent event lookup returned no event for parentKey='{ParentKey}'")]
     internal static partial void FromParentHierarchyNoParentEventFound(this ILogger<KeyResolvers> logger, string parentKey);
 
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: looking up root key by sink query with childPropertyPath='{ChildPropertyPath}', parentKey='{ParentKey}'")]
+    internal static partial void FromParentHierarchyLookupBySink(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKey);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found root key by sink query, rootKey='{RootKey}'")]
+    internal static partial void FromParentHierarchyFoundRootKeyBySink(this ILogger<KeyResolvers> logger, string rootKey);
+
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: final result - parentKey='{ParentKey}', arrayIndexers count={ArrayIndexerCount}")]
     internal static partial void FromParentHierarchyResult(this ILogger<KeyResolvers> logger, object? parentKey, int arrayIndexerCount);
+
+    [LoggerMessage(LogLevel.Debug, "FromEventValueProviderWithFallbackToEventSourceId: eventValueProvider returned key='{Key}', will use fallback={WillUseFallback}")]
+    internal static partial void FromEventValueProviderWithFallback(this ILogger<KeyResolvers> logger, object? key, bool willUseFallback);
 }

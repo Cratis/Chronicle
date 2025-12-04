@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -29,6 +30,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     IProjection _forthLevelProjection;
 
     IEventSequenceStorage _storage;
+    ISink _sink;
     Key _result;
 
     static EventType _rootEventType = new("root", 1);
@@ -82,7 +84,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         }
         else
         {
-            projection.GetKeyResolverFor(eventType).Returns((_, __) => Task.FromResult(new Key(key, ArrayIndexers.NoIndexers)));
+            projection.GetKeyResolverFor(eventType).Returns((_, __, ___) => Task.FromResult(new Key(key, ArrayIndexers.NoIndexers)));
         }
         return projection;
     }
@@ -103,6 +105,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         _forthLevelProjection = SetupProjection(_forthLevelEventType, ForthLevelKey, "forthLevels", _thirdLevelProjection);
 
         _storage = Substitute.For<IEventSequenceStorage>();
+        _sink = Substitute.For<ISink>();
         _storage.TryGetLastInstanceOfAny(RootKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _rootEventType.Id }))).Returns(new Option<AppendedEvent>(_rootEvent));
         _storage.TryGetLastInstanceOfAny(FirstLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _firstLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_firstLevelEvent));
         _storage.TryGetLastInstanceOfAny(SecondLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _secondLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_secondLevelEvent));
@@ -114,7 +117,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         _forthLevelProjection,
         _keyResolvers.FromEventSourceId,
         _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
-        "childId")(_storage, _forthLevelEvent);
+        "childId")(_storage, _sink, _forthLevelEvent);
 
     [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(RootKey);
     [Fact] void should_hold_array_indexer_for_first_level_with_correct_identifier() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "firstLevels").Identifier.ToString().ShouldEqual(FirstLevelKey);
