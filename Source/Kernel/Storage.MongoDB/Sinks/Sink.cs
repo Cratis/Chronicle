@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
-using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -201,7 +200,7 @@ public class Sink(
     }
 
     static string ConvertToMongoPath(PropertyPath propertyPath) =>
-        string.Join('.', propertyPath.Segments.Select(s => s.Value.ToCamelCase()));
+        string.Join('.', propertyPath.Segments.Select(s => s.Value));
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
 }

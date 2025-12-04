@@ -174,13 +174,33 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                         // but contain the parent key in their content
                         logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
 
-                        // Use the CURRENT projection's ChildrenPropertyPath which contains the full path from root
-                        // For example, for Hub this would be [Configurations].[Hubs], not just [Configurations]
-                        // Then append the current projection's IdentifiedByProperty to query for the specific child
-                        var childPropertyPath = projection.ChildrenPropertyPath + identifiedByProperty;
-                        logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, key.Value?.ToString() ?? "null");
+                        // Use the PARENT projection's ChildrenPropertyPath to find where the parent lives
+                        // For example, for Hub's parent Configuration, this would be [Configurations], not [Configurations].[Hubs]
+                        // Then append the parent's IdentifiedByProperty to query for the specific parent
+                        var parentIdentifiedByProperty = GetParentIdentifiedByProperty(parentProjection);
+                        if (parentIdentifiedByProperty is null)
+                        {
+                            logger.FromParentHierarchyCreatingFuture(projection.Path, key.Value?.ToString() ?? "null");
 
-                        var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, key.Value!);
+                            var deferredFuture = new ProjectionFuture(
+                                ProjectionFutureId.New(),
+                                projection.Identifier,
+                                @event,
+                                key.Value!,
+                                parentProjection.ChildrenPropertyPath.Path,
+                                projection.ChildrenPropertyPath.Path,
+                                identifiedByProperty.Path,
+                                string.Empty,
+                                parentKey.Value!,
+                                DateTimeOffset.UtcNow);
+
+                            return KeyResolverResult.Deferred(deferredFuture);
+                        }
+
+                        var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+                        logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
+
+                        var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, parentKey.Value!);
                         if (optionalRootKey.TryGetValue(out var rootKey))
                         {
                             logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
