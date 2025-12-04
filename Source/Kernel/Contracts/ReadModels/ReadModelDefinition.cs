@@ -36,6 +36,6 @@ public class ReadModelDefinition
     /// <summary>
     /// Gets or sets the indexes defined for the model.
     /// </summary>
-    [ProtoMember(5)]
-    public List<IndexDefinition> Indexes { get; set; } = [];
+    [ProtoMember(5, IsRequired = true)]
+    public IList<IndexDefinition> Indexes { get; set; } = [];
 }
