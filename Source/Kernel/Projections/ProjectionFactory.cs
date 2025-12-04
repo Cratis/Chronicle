@@ -109,8 +109,9 @@ public class ProjectionFactory(
         // If there is no initial state, we create one with empty collections for all arrays.
         // This is to ensure that we can add to them without having to check for null.
         // And that any sinks don't fail when trying to access them.
+        // Only add direct properties (not nested ones from child schemas) to avoid polluting the root object
         var initialState = new ExpandoObject();
-        foreach (var collection in readModelSchema.GetFlattenedProperties().Where(_ => _.IsArray))
+        foreach (var collection in readModelSchema.ActualProperties.Values.Where(_ => _.IsArray))
         {
             ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
         }
