@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains;
+using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -197,9 +198,13 @@ internal sealed class Projections(
             var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
             var firstOccurred = orderedEvents[0].Context.Occurred;
 
-            // Serialize events as JSON array
+            // Serialize events as AppendedEvent array with context and content
             var eventsJson = JsonSerializer.Serialize(
-                orderedEvents.Select(e => e.Content).ToArray(),
+                orderedEvents.Select(e => new Contracts.Events.AppendedEvent
+                {
+                    Context = e.Context.ToContract(),
+                    Content = JsonSerializer.Serialize(e.Content, jsonSerializerOptions)
+                }).ToArray(),
                 jsonSerializerOptions);
 
             // For now, we'll return empty read model as we can't easily replay without full projection engine setup
