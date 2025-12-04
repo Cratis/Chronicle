@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks.InMemory;
 using NJsonSchema;
 
@@ -72,6 +73,7 @@ public class an_in_memory_sink : Specification
             },
             []);
 
-        _sink = new InMemorySink(readModelDefinition);
+        var typeFormats = Substitute.For<ITypeFormats>();
+        _sink = new InMemorySink(readModelDefinition, typeFormats);
     }
 }

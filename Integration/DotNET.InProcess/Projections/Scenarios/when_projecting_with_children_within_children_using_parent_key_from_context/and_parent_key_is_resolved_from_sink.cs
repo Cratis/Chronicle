@@ -2,17 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.Concepts;
-using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.ReadModels;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.Events;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.ReadModels;
 using Cratis.Chronicle.Observation;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.with_simulation_configuration_and_hub.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.and_parent_key_is_resolved_from_sink.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children;
+namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context;
 
 [Collection(ChronicleCollection.Name)]
-public class with_simulation_configuration_and_hub(context context) : Given<context>(context)
+public class and_parent_key_is_resolved_from_sink(context context) : Given<context>(context)
 {
     const string SimulationName = "Test Simulation";
     const string ConfigurationName = "Test Configuration";
@@ -24,15 +24,15 @@ public class with_simulation_configuration_and_hub(context context) : Given<cont
         public ConfigurationId ConfigurationId;
         public HubId HubId;
         public IEnumerable<FailedPartition> FailedPartitions = [];
-        public Simulation Result;
+        public SimulationDashboard Result;
         public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(ConfigurationAddedToSimulation), typeof(HubAddedToConfiguration)];
-        public override IEnumerable<Type> Projections => [typeof(SimulationProjection)];
+        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration)];
+        public override IEnumerable<Type> Projections => [typeof(SimulationDashboardProjection)];
 
         protected override void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(new SimulationProjection());
+            services.AddSingleton(new SimulationDashboardProjection());
         }
 
         void Establish()
@@ -44,35 +44,44 @@ public class with_simulation_configuration_and_hub(context context) : Given<cont
 
         async Task Because()
         {
-            var projection = EventStore.Projections.GetHandlerFor<SimulationProjection>();
+            var projection = EventStore.Projections.GetHandlerFor<SimulationDashboardProjection>();
             await projection.WaitTillActive();
 
-            // Append root event to SimulationId event source
+            // Root and configuration events on SimulationId source
             var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
-            // Append first level child to ConfigurationId event source with SimulationId in content
-            appendResult = await EventStore.EventLog.Append(ConfigurationId, new ConfigurationAddedToSimulation(SimulationId, ConfigurationId, ConfigurationName));
+            appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationConfigurationAdded(ConfigurationId, ConfigurationName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
-            // Append second level child to HubId event source with ConfigurationId in content
-            appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToConfiguration(ConfigurationId, HubId, HubName));
+            // Hub event on HubId source (different event source) - the Sink resolves the parent hierarchy
+            appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
-            // Wait for processing
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpanFactory.DefaultTimeout());
 
-            // Get failures if any
             FailedPartitions = await projection.GetFailedPartitions();
 
-            // Get the result
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<Simulation>();
+            var collection = ChronicleFixture.ReadModels.Database.GetCollection<SimulationDashboard>();
             var queryResult = await collection.FindAsync(_ => true);
-            Result = queryResult.FirstOrDefault();
+            var allResults = await queryResult.ToListAsync();
+            Result = allResults.FirstOrDefault();
         }
     }
 
-    [Fact] void should_have_no_failed_partitions() => Context.FailedPartitions.ShouldBeEmpty();
+    [Fact]
+    void should_have_no_failed_partitions()
+    {
+        if (Context.FailedPartitions.Any())
+        {
+            var failures = Context.FailedPartitions.ToList();
+            var messages = failures.SelectMany(f => f.Attempts.Select(a => a.Messages)).SelectMany(m => m).ToList();
+            var stackTraces = failures.SelectMany(f => f.Attempts.Select(a => a.StackTrace)).ToList();
+            var combined = string.Join("\n\n", messages.Zip(stackTraces, (msg, stack) => $"Message: {msg}\nStack: {stack}"));
+            throw new Xunit.Sdk.XunitException($"Failed partitions:\n{combined}");
+        }
+    }
+
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_simulation_name() => Context.Result.Name.ShouldEqual(SimulationName);
     [Fact] void should_have_one_configuration() => Context.Result.Configurations.Count.ShouldEqual(1);

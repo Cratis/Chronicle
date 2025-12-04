@@ -14,5 +14,6 @@
 
     <ItemGroup>
         <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="NSubstitute" />
     </ItemGroup>
 </Project>

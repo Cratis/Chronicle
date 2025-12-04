@@ -329,7 +329,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
                     // Recursively collect parent's indexers first (to maintain root-to-leaf order)
                     await CollectParentIndexers(parentProjection, rootKey, sink, indexers, currentKey.Value!);
-                    currentKey = rootKey;
                 }
                 else
                 {
