@@ -72,27 +72,27 @@ public class Projection(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionFuture>> GetFutures(EventStoreNamespaceName @namespace, Key key)
+    public Task<IEnumerable<ProjectionFuture>> GetFutures(EventStoreNamespaceName @namespace)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var futuresStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(@namespace).ProjectionFutures;
-        return futuresStorage.GetForProjectionAndKey(projectionKey.ProjectionId, key);
+        return futuresStorage.GetForProjection(projectionKey.ProjectionId);
     }
 
     /// <inheritdoc/>
-    public async Task AddFuture(EventStoreNamespaceName @namespace, Key key, ProjectionFuture future)
+    public async Task AddFuture(EventStoreNamespaceName @namespace, ProjectionFuture future)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var futuresStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(@namespace).ProjectionFutures;
-        await futuresStorage.Save(projectionKey.ProjectionId, key, future);
+        await futuresStorage.Save(projectionKey.ProjectionId, future);
     }
 
     /// <inheritdoc/>
-    public async Task ResolveFuture(EventStoreNamespaceName @namespace, Key key, ProjectionFutureId futureId)
+    public async Task ResolveFuture(EventStoreNamespaceName @namespace, ProjectionFutureId futureId)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var futuresStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(@namespace).ProjectionFutures;
-        await futuresStorage.Remove(projectionKey.ProjectionId, key, futureId);
+        await futuresStorage.Remove(projectionKey.ProjectionId, futureId);
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)

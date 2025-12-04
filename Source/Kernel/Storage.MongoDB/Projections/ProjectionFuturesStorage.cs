@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Driver;
@@ -17,7 +16,7 @@ public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : I
     const string CollectionName = "projection-futures";
 
     /// <inheritdoc/>
-    public async Task Save(ProjectionId projectionId, Key key, ProjectionFuture future)
+    public async Task Save(ProjectionId projectionId, ProjectionFuture future)
     {
         var collection = database.GetCollection<ProjectionFuture>(CollectionName);
         var filter = Builders<ProjectionFuture>.Filter.And(
@@ -31,7 +30,7 @@ public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : I
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionFuture>> GetForProjectionAndKey(ProjectionId projectionId, Key key)
+    public async Task<IEnumerable<ProjectionFuture>> GetForProjection(ProjectionId projectionId)
     {
         var collection = database.GetCollection<ProjectionFuture>(CollectionName);
         var filter = Builders<ProjectionFuture>.Filter.Eq(f => f.ProjectionId, projectionId);
@@ -41,7 +40,7 @@ public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : I
     }
 
     /// <inheritdoc/>
-    public async Task Remove(ProjectionId projectionId, Key key, ProjectionFutureId futureId)
+    public async Task Remove(ProjectionId projectionId, ProjectionFutureId futureId)
     {
         var collection = database.GetCollection<ProjectionFuture>(CollectionName);
         var filter = Builders<ProjectionFuture>.Filter.And(
@@ -52,7 +51,7 @@ public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : I
     }
 
     /// <inheritdoc/>
-    public async Task RemoveAllForProjectionAndKey(ProjectionId projectionId, Key key)
+    public async Task RemoveAllForProjection(ProjectionId projectionId)
     {
         var collection = database.GetCollection<ProjectionFuture>(CollectionName);
         var filter = Builders<ProjectionFuture>.Filter.Eq(f => f.ProjectionId, projectionId);

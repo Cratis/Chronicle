@@ -19,26 +19,23 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ProjectionFutures(IGrainFactory grainFactory) : Chronicle.Projections.IProjectionFutures
 {
     /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionFuture>> GetFutures(EventStoreName eventStore, EventStoreNamespaceName @namespace, Key key)
+    public Task<IEnumerable<ProjectionFuture>> GetFutures(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId)
     {
-        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(key.Value.ToString()!, eventStore));
-        return projection.GetFutures(@namespace, key);
+        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
+        return projection.GetFutures(@namespace);
     }
 
     /// <inheritdoc/>
-    public Task AddFuture(EventStoreName eventStore, EventStoreNamespaceName @namespace, Key key, ProjectionFuture future)
+    public Task AddFuture(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId, ProjectionFuture future)
     {
-        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(future.ProjectionId, eventStore));
-        return projection.AddFuture(@namespace, key, future);
+        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
+        return projection.AddFuture(@namespace, future);
     }
 
     /// <inheritdoc/>
-    public Task ResolveFuture(EventStoreName eventStore, EventStoreNamespaceName @namespace, Key key, ProjectionFutureId futureId)
+    public Task ResolveFuture(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId, ProjectionFutureId futureId)
     {
-        // We need to get the projection from the future, but we don't have access to it here.
-        // We'll need to store which projection the future belongs to in the storage key.
-        // For now, we'll use the key value as the projection ID - this may need refinement.
-        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(key.Value.ToString()!, eventStore));
-        return projection.ResolveFuture(@namespace, key, futureId);
+        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
+        return projection.ResolveFuture(@namespace, futureId);
     }
 }

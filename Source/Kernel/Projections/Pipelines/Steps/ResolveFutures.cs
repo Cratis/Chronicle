@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Projections;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
@@ -41,12 +39,10 @@ public class ResolveFutures(
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
         // Store any deferred futures that were created during processing
-        // Futures are stored using the PARENT key so they can be retrieved when the parent is created
         foreach (var future in context.DeferredFutures)
         {
-            var futureStorageKey = new Key(future.ParentKeyValue, ArrayIndexers.NoIndexers);
-            await projectionFutures.AddFuture(eventStore, @namespace, futureStorageKey, future);
-            logger.StoredFuture(future.Id, future.ProjectionId, futureStorageKey);
+            await projectionFutures.AddFuture(eventStore, @namespace, projection.Identifier, future);
+            logger.StoredFuture(future.Id, future.ProjectionId);
         }
 
         // If this event was deferred, don't try to resolve futures (we have no valid partition key)
@@ -56,8 +52,8 @@ public class ResolveFutures(
         }
 
         // Attempt to resolve any pending futures now that we've processed a new event
-        // Check if any futures are waiting for THIS partition (parent) key
-        var futures = await projectionFutures.GetFutures(eventStore, @namespace, context.Key);
+        // Try all futures for this projection - we don't need to track specific keys
+        var futures = await projectionFutures.GetFutures(eventStore, @namespace, projection.Identifier);
         if (!futures.Any())
         {
             return context;
@@ -70,7 +66,7 @@ public class ResolveFutures(
             return context;
         }
 
-        logger.FoundPendingFutures(futures.Count(), context.Key);
+        logger.FoundPendingFutures(futures.Count(), projection.Identifier);
 
         foreach (var future in futures)
         {
@@ -83,7 +79,7 @@ public class ResolveFutures(
                 // then the parent data now exists and we can resolve this future
                 if (!pipelineContext.IsDeferred)
                 {
-                    await projectionFutures.ResolveFuture(eventStore, @namespace, context.Key, future.Id);
+                    await projectionFutures.ResolveFuture(eventStore, @namespace, projection.Identifier, future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                 }
             }
