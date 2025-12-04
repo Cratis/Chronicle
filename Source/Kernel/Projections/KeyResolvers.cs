@@ -212,6 +212,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         PropertyPath leafIdentifiedByProperty,
         object leafKeyValue)
     {
+        logger.ResolveParentHierarchyFromSinkStart(currentKey.Value, intermediateKeyValue, leafChildrenProperty.Path, leafIdentifiedByProperty.Path, leafKeyValue);
+
         // Build indexers from root down to leaf
         var arrayIndexers = new List<ArrayIndexer>();
 
@@ -220,6 +222,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         // Add the final leaf indexer
         arrayIndexers.Add(new ArrayIndexer(leafChildrenProperty, leafIdentifiedByProperty, leafKeyValue));
+
+        logger.ResolveParentHierarchyFromSinkResult(arrayIndexers.Count, currentKey.Value);
 
         return currentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) };
     }
@@ -231,6 +235,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         List<ArrayIndexer> indexers,
         object childKeyValue)
     {
+        logger.CollectParentIndexersStart(projection.Path, currentKey.Value, childKeyValue);
+        logger.CollectParentIndexersProjectionInfo(projection.HasParent, projection.Parent?.ChildrenPropertyPath.IsSet ?? false);
+
         // If this projection has a parent and is itself a nested child
         if (projection.HasParent && projection.Parent!.ChildrenPropertyPath.IsSet)
         {
@@ -240,13 +247,21 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             if (parentIdentifiedByProperty is not null)
             {
                 var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
-                var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, currentKey.Value!);
+                logger.CollectParentIndexersLookup(childPropertyPath.Path, childKeyValue);
+
+                var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, childKeyValue);
 
                 if (optionalRootKey.TryGetValue(out var rootKey))
                 {
+                    logger.CollectParentIndexersFoundRoot(rootKey.Value);
+
                     // Recursively collect parent's indexers first (to maintain root-to-leaf order)
                     await CollectParentIndexers(parentProjection, rootKey, sink, indexers, currentKey.Value!);
                     currentKey = rootKey;
+                }
+                else
+                {
+                    logger.CollectParentIndexersNoRootFound();
                 }
             }
         }
@@ -257,9 +272,12 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             var identifiedBy = GetParentIdentifiedByProperty(projection);
             if (identifiedBy is not null)
             {
+                logger.CollectParentIndexersAddingIndexer(projection.ChildrenPropertyPath.Path, identifiedBy.Path, childKeyValue);
                 indexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedBy, childKeyValue));
             }
         }
+
+        logger.CollectParentIndexersCompleted(indexers.Count);
     }
 
     KeyResolver CreateKeyResolver(string keyResolverName, KeyResolver keyResolver) => async (eventSequenceStorage, sink, @event) =>

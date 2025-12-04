@@ -45,4 +45,31 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "FromEventValueProviderWithFallbackToEventSourceId: eventValueProvider returned key='{Key}', will use fallback={WillUseFallback}")]
     internal static partial void FromEventValueProviderWithFallback(this ILogger<KeyResolvers> logger, object? key, bool willUseFallback);
+
+    [LoggerMessage(LogLevel.Debug, "ResolveParentHierarchyFromSink: starting with currentKey='{CurrentKey}', intermediateKeyValue='{IntermediateKeyValue}', leafChildrenProperty='{LeafChildrenProperty}', leafIdentifiedByProperty='{LeafIdentifiedByProperty}', leafKeyValue='{LeafKeyValue}'")]
+    internal static partial void ResolveParentHierarchyFromSinkStart(this ILogger<KeyResolvers> logger, object? currentKey, object? intermediateKeyValue, string leafChildrenProperty, string leafIdentifiedByProperty, object? leafKeyValue);
+
+    [LoggerMessage(LogLevel.Debug, "ResolveParentHierarchyFromSink: collected {Count} indexers, final result with root key='{RootKey}'")]
+    internal static partial void ResolveParentHierarchyFromSinkResult(this ILogger<KeyResolvers> logger, int count, object? rootKey);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: starting with projection path='{Path}', currentKey='{CurrentKey}', childKeyValue='{ChildKeyValue}'")]
+    internal static partial void CollectParentIndexersStart(this ILogger<KeyResolvers> logger, string path, object? currentKey, object? childKeyValue);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: projection hasParent={HasParent}, parent.ChildrenPropertyPath.IsSet={ChildrenPropertyPathIsSet}")]
+    internal static partial void CollectParentIndexersProjectionInfo(this ILogger<KeyResolvers> logger, bool hasParent, bool childrenPropertyPathIsSet);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: looking up parent with childPropertyPath='{ChildPropertyPath}', currentKey='{CurrentKey}'")]
+    internal static partial void CollectParentIndexersLookup(this ILogger<KeyResolvers> logger, string childPropertyPath, object? currentKey);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: found root key='{RootKey}', recursing to collect parent's indexers")]
+    internal static partial void CollectParentIndexersFoundRoot(this ILogger<KeyResolvers> logger, object? rootKey);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: no root key found via sink, stopping recursion")]
+    internal static partial void CollectParentIndexersNoRootFound(this ILogger<KeyResolvers> logger);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: adding indexer for childrenProperty='{ChildrenProperty}', identifiedByProperty='{IdentifiedByProperty}', childKeyValue='{ChildKeyValue}'")]
+    internal static partial void CollectParentIndexersAddingIndexer(this ILogger<KeyResolvers> logger, string childrenProperty, string identifiedByProperty, object? childKeyValue);
+
+    [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: completed with {Count} indexers collected")]
+    internal static partial void CollectParentIndexersCompleted(this ILogger<KeyResolvers> logger, int count);
 }
