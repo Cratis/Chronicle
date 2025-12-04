@@ -32,7 +32,7 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
         if (keyResult is DeferredKey deferredKey)
         {
             logger.KeyResolutionDeferred(context.Event.Context.SequenceNumber, projection.Identifier, projection.Path);
-            context.DeferredFutures.Add(deferredKey.Future);
+            context.AddDeferredFuture(deferredKey.Future);
             return context;
         }
 

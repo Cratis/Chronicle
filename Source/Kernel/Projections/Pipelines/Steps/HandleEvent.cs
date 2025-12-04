@@ -42,7 +42,7 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
                 if (keyResult is DeferredKey deferredChild)
                 {
                     logger.ChildKeyResolutionDeferred(child.Path, eventType.Id, context.Event.Context.SequenceNumber);
-                    context.DeferredFutures.Add(deferredChild.Future);
+                    context.AddDeferredFuture(deferredChild.Future);
                     continue;
                 }
 

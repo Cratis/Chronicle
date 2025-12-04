@@ -24,10 +24,12 @@ public record ProjectionEventContext(
     ProjectionOperationType OperationType,
     bool NeedsInitialState)
 {
+    List<ProjectionFuture> _deferredFutures = [];
+
     /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
     /// </summary>
-    public IEnumerable<ProjectionFuture> DeferredFutures { get; init; } = [];
+    public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
 
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
@@ -55,6 +57,12 @@ public record ProjectionEventContext(
     public bool ChildrenAffected => OperationType.HasFlag(ProjectionOperationType.ChildrenAffected);
 
     /// <summary>
+    /// Adds a deferred future to the context.
+    /// </summary>
+    /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
+    public void AddDeferredFuture(ProjectionFuture future) => _deferredFutures.Add(future);
+
+    /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
     /// <see cref="AppendedEvent"/>.
     /// </summary>
@@ -66,8 +74,5 @@ public record ProjectionEventContext(
         @event,
         new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
         ProjectionOperationType.None,
-        false)
-    {
-        DeferredFutures = []
-    };
+        false);
 }
