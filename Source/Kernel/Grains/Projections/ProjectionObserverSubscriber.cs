@@ -15,7 +15,6 @@ using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
-using Cratis.Chronicle.Properties;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
 using Orleans.Providers;
@@ -90,28 +89,15 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
-            var projectionGrain = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
 
             foreach (var @event in events)
             {
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
 
-                // Store any deferred futures that were created during processing
-                // Futures are stored using the PARENT key so they can be retrieved when the parent is created
-                foreach (var future in pipelineContext.DeferredFutures)
-                {
-                    var futureStorageKey = new Key(future.ParentKeyValue, ArrayIndexers.NoIndexers);
-                    await projectionGrain.AddFuture(_key.Namespace, futureStorageKey, future);
-                }
-
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }
-
-            // Attempt to resolve any pending futures now that we've processed new events
-            // Check if any futures are waiting for THIS partition (parent) key
-            await TryResolvePendingFutures(projectionGrain, partition);
 
             // Note: We don't want to send changesets if the projection is not active
             if (changeset?.HasChanges == true && State.IsActive)
@@ -131,36 +117,6 @@ public class ProjectionObserverSubscriber(
                 lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty);
-        }
-    }
-
-    async Task TryResolvePendingFutures(IProjection projectionGrain, Key partitionKey)
-    {
-        if (_pipeline is null) return;
-
-        // Get all pending futures that are waiting for this partition (parent) key
-        var futures = await projectionGrain.GetFutures(_key.Namespace, partitionKey);
-        if (!futures.Any()) return;
-
-        foreach (var future in futures)
-        {
-            try
-            {
-                // Attempt to reprocess the event - the pipeline will check if parent data now exists
-                var pipelineContext = await _pipeline.Handle(future.Event);
-
-                // If the event was successfully processed (no deferred futures created),
-                // then the parent data now exists and we can resolve this future
-                if (!pipelineContext.IsDeferred)
-                {
-                    await projectionGrain.ResolveFuture(_key.Namespace, partitionKey, future.Id);
-                    logger.ResolvedFuture(future.Id, future.ProjectionId);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.FailedToResolveFuture(ex, future.Id, future.ProjectionId);
-            }
         }
     }
 
