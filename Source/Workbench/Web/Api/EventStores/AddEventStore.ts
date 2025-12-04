@@ -54,6 +54,8 @@ export class AddEventStore extends Command<IAddEventStore> implements IAddEventS
     }
 
     static use(initialValues?: IAddEventStore): [AddEventStore, SetCommandValues<IAddEventStore>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<AddEventStore, IAddEventStore>(AddEventStore, initialValues);
     }
 }
