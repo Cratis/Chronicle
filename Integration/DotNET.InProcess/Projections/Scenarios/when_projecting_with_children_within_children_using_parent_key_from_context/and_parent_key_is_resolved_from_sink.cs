@@ -58,7 +58,7 @@ public class and_parent_key_is_resolved_from_sink(context context) : Given<conte
             appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
-            await Task.Delay(TimeSpanFactory.DefaultTimeout());
+            await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             FailedPartitions = await projection.GetFailedPartitions();
 

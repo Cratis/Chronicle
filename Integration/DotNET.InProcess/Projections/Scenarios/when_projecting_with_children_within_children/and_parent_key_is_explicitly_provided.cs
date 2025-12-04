@@ -59,8 +59,8 @@ public class and_parent_key_is_explicitly_provided(context context) : Given<cont
             appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToConfiguration(ConfigurationId, HubId, HubName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
-            // Wait for processing
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            // Wait for projection to process all events
+            await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             // Get failures if any
             FailedPartitions = await projection.GetFailedPartitions();
