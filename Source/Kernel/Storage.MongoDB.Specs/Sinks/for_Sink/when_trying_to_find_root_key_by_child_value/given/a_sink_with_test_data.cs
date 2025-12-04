@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
