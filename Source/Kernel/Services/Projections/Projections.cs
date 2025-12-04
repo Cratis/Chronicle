@@ -7,6 +7,8 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Services.Projections.Definitions;
+using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -17,10 +19,12 @@ namespace Cratis.Chronicle.Services.Projections;
 /// </summary>
 /// <param name="clusterClient"><see cref="IClusterClient"/> for interacting with the cluster.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class Projections(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
+    IServiceProvider serviceProvider,
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
     /// <inheritdoc/>
@@ -127,5 +131,88 @@ internal sealed class Projections(
 
         var projection = grainFactory.GetGrain<Grains.Projections.IImmediateProjection>(projectionKey);
         await projection.Dehydrate();
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetSnapshotsByIdResponse> GetSnapshotsById(GetSnapshotsByIdRequest request, CallContext context = default)
+    {
+        var projectionGrain = grainFactory.GetGrain<Grains.Projections.IProjection>(
+            new ProjectionKey(request.ProjectionId, request.EventStore));
+        
+        var definition = await projectionGrain.GetDefinition();
+        var snapshots = await GetSnapshotsForProjection(
+            request.EventStore,
+            request.Namespace,
+            request.EventSequenceId,
+            definition);
+
+        return new GetSnapshotsByIdResponse
+        {
+            Snapshots = snapshots.ToList()
+        };
+    }
+
+    async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
+        string eventStoreName,
+        string namespaceName,
+        string eventSequenceId,
+        Concepts.Projections.Definitions.ProjectionDefinition definition)
+    {
+        var storage = serviceProvider.GetRequiredService<IStorage>();
+        var eventSequenceStorage = storage
+            .GetEventStore(eventStoreName)
+            .GetNamespace(namespaceName)
+            .GetEventSequence(eventSequenceId);
+
+        // For now, we'll get all events - in the future we could filter by projection event types
+        var tailSequenceNumber = await eventSequenceStorage.GetTailSequenceNumber();
+
+        if (tailSequenceNumber == Concepts.Events.EventSequenceNumber.Unavailable)
+        {
+            return [];
+        }
+
+        var cursor = await eventSequenceStorage.GetFromSequenceNumber(
+            Concepts.Events.EventSequenceNumber.First);
+
+        var eventsByCorrelation = new Dictionary<Guid, List<Concepts.Events.AppendedEvent>>();
+
+        while (await cursor.MoveNext())
+        {
+            foreach (var appendedEvent in cursor.Current)
+            {
+                var correlationId = appendedEvent.Context.CorrelationId;
+                if (!eventsByCorrelation.ContainsKey(correlationId))
+                {
+                    eventsByCorrelation[correlationId] = [];
+                }
+                eventsByCorrelation[correlationId].Add(appendedEvent);
+            }
+        }
+
+        var snapshots = new List<ProjectionSnapshot>();
+
+        foreach (var (correlationId, events) in eventsByCorrelation)
+        {
+            var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
+            var firstOccurred = orderedEvents[0].Context.Occurred;
+
+            // Serialize events as JSON array
+            var eventsJson = JsonSerializer.Serialize(
+                orderedEvents.Select(e => e.Content).ToArray(),
+                jsonSerializerOptions);
+
+            // For now, we'll return empty read model as we can't easily replay without full projection engine setup
+            snapshots.Add(new ProjectionSnapshot
+            {
+                ReadModel = "{}",
+                Events = eventsJson,
+                Occurred = firstOccurred,
+                CorrelationId = correlationId
+            });
+        }
+
+        cursor.Dispose();
+        return snapshots;
     }
 }
