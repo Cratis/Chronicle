@@ -137,6 +137,8 @@ export class Redact extends Command<IRedact> implements IRedact {
     }
 
     static use(initialValues?: IRedact): [Redact, SetCommandValues<IRedact>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Redact, IRedact>(Redact, initialValues);
     }
 }
