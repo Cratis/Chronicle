@@ -42,8 +42,7 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
                 if (keyResult is DeferredKey deferredChild)
                 {
                     logger.ChildKeyResolutionDeferred(child.Path, eventType.Id, context.Event.Context.SequenceNumber);
-                    // TODO: Store the future via the child projection grain for later resolution
-                    // Skip processing this child for now
+                    context.DeferredFutures.Add(deferredChild.Future);
                     continue;
                 }
 

@@ -38,6 +38,6 @@ public interface IProjectionPipeline
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
-    /// <returns>The <see cref="IChangeset{TSource, TResult}"/> containing what changed.</returns>
-    Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event);
+    /// <returns>The <see cref="ProjectionEventContext"/> with the result of processing.</returns>
+    Task<ProjectionEventContext> Handle(AppendedEvent @event);
 }

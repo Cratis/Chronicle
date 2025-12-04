@@ -89,10 +89,19 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
+            var projectionGrain = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
 
             foreach (var @event in events)
             {
-                changeset = await _pipeline.Handle(@event);
+                var pipelineContext = await _pipeline.Handle(@event);
+                changeset = pipelineContext.Changeset;
+
+                // Store any deferred futures that were created during processing
+                foreach (var future in pipelineContext.DeferredFutures)
+                {
+                    await projectionGrain.AddFuture(_key.Namespace, pipelineContext.Key, future);
+                }
+
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }

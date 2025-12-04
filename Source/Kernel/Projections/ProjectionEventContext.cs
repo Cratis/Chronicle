@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Storage.Projections;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -23,6 +24,11 @@ public record ProjectionEventContext(
     ProjectionOperationType OperationType,
     bool NeedsInitialState)
 {
+    /// <summary>
+    /// Gets the collection of deferred futures that need to be stored.
+    /// </summary>
+    public IEnumerable<ProjectionFuture> DeferredFutures { get; init; } = [];
+
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
     /// </summary>
@@ -60,5 +66,8 @@ public record ProjectionEventContext(
         @event,
         new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
         ProjectionOperationType.None,
-        false);
+        false)
+    {
+        DeferredFutures = []
+    };
 }

@@ -50,7 +50,7 @@ public class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public async Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event)
+    public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
         logger.StartingPipeline(@event.Context.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
@@ -73,6 +73,6 @@ public class ProjectionPipeline(
         }
         logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
-        return context.Changeset;
+        return context;
     }
 }

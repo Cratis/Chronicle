@@ -32,8 +32,7 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
         if (keyResult is DeferredKey deferredKey)
         {
             logger.KeyResolutionDeferred(context.Event.Context.SequenceNumber, projection.Identifier, projection.Path);
-            // TODO: Store the future via the projection grain for later resolution
-            // For now, return the context as-is to skip this event
+            context.DeferredFutures.Add(deferredKey.Future);
             return context;
         }
 
