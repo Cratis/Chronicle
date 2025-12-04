@@ -36,7 +36,18 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
             if (child.HasKeyResolverFor(eventType))
             {
                 var keyResolver = child.GetKeyResolverFor(eventType);
-                var key = await keyResolver(eventSequenceStorage, sink, context.Event);
+                var keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+
+                // Handle deferred key resolution for child projections
+                if (keyResult is DeferredKey deferredChild)
+                {
+                    logger.ChildKeyResolutionDeferred(child.Path, eventType.Id, context.Event.Context.SequenceNumber);
+                    // TODO: Store the future via the child projection grain for later resolution
+                    // Skip processing this child for now
+                    continue;
+                }
+
+                var key = (keyResult as ResolvedKey)!.Key;
                 logger.ChildHasKeyResolver(child.Path, eventType.Id, key.Value);
                 var operationType = child.GetOperationTypeFor(eventType);
                 await Perform(child, context with { Key = key, OperationType = operationType });

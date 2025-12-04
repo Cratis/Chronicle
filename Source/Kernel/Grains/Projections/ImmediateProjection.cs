@@ -192,7 +192,15 @@ public class ImmediateProjection(
         {
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
             var keyResolver = _projection!.GetKeyResolverFor(@event.Context.EventType);
-            var key = await keyResolver(_eventSequenceStorage!, NullSink.Instance, @event);
+            var keyResult = await keyResolver(_eventSequenceStorage!, NullSink.Instance, @event);
+
+            // Skip deferred keys in immediate projections - they need parent data that's not yet available
+            if (keyResult is DeferredKey)
+            {
+                continue;
+            }
+
+            var key = (keyResult as ResolvedKey)!.Key;
             var context = new ProjectionEventContext(
                 key,
                 @event,

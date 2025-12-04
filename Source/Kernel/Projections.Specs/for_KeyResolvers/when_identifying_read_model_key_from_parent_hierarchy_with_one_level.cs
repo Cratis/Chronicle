@@ -86,14 +86,18 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
         _sink = Substitute.For<ISink>();
 
         _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(_rootEventType.Id))).Returns(new Option<AppendedEvent>(_rootEvent));
-        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, ___) => Task.FromResult(new Key(ParentKey, ArrayIndexers.NoIndexers)));
+        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, ___) => Task.FromResult(KeyResolverResult.Resolved(new Key(ParentKey, ArrayIndexers.NoIndexers))));
     }
 
-    async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
-        _childProjection,
-        _keyResolvers.FromEventSourceId,
-        _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+    async Task Because()
+    {
+        var keyResult = await _keyResolvers.FromParentHierarchy(
+            _childProjection,
+            _keyResolvers.FromEventSourceId,
+            _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
         "childId")(_storage, _sink, _event);
+        _result = (keyResult as ResolvedKey)!.Key;
+    }
 
     [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(ParentKey);
 }

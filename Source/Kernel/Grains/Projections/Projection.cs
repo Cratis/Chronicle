@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -9,6 +10,8 @@ using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.States;
 using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Projections;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Utilities;
@@ -21,10 +24,12 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Projection"/> class.
 /// </remarks>
+/// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class Projection(
+    IStorage storage,
     IProjectionDefinitionComparer projectionDefinitionComparer,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
@@ -64,6 +69,30 @@ public class Projection(
     {
         _definitionObservers.Unsubscribe(subscriber);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionFuture>> GetFutures(EventStoreNamespaceName @namespace, Key key)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var futuresStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(@namespace).ProjectionFutures;
+        return futuresStorage.GetForProjectionAndKey(projectionKey.ProjectionId, key);
+    }
+
+    /// <inheritdoc/>
+    public async Task AddFuture(EventStoreNamespaceName @namespace, Key key, ProjectionFuture future)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var futuresStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(@namespace).ProjectionFutures;
+        await futuresStorage.Save(projectionKey.ProjectionId, key, future);
+    }
+
+    /// <inheritdoc/>
+    public async Task ResolveFuture(EventStoreNamespaceName @namespace, Key key, ProjectionFutureId futureId)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var futuresStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(@namespace).ProjectionFutures;
+        await futuresStorage.Remove(projectionKey.ProjectionId, key, futureId);
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)

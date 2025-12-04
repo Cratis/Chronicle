@@ -16,6 +16,9 @@ internal static partial class KeyResolversLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while resolving the key resolver: {KeyResolverName}")]
     internal static partial void ErrorResolving(this ILogger<KeyResolvers> logger, Exception ex, string keyResolverName);
 
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: ENTRY - eventType='{EventType}', eventSourceId='{EventSourceId}', sequenceNumber={SequenceNumber}")]
+    internal static partial void FromParentHierarchyEntry(this ILogger<KeyResolvers> logger, string eventType, string eventSourceId, ulong sequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: projection path '{Path}', hasParent={HasParent}, parentKey='{ParentKey}'")]
     internal static partial void FromParentHierarchyStart(this ILogger<KeyResolvers> logger, string path, bool hasParent, object? parentKey);
 
@@ -39,6 +42,9 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found root key by sink query, rootKey='{RootKey}'")]
     internal static partial void FromParentHierarchyFoundRootKeyBySink(this ILogger<KeyResolvers> logger, string rootKey);
+
+    [LoggerMessage(LogLevel.Information, "FromParentHierarchy: creating future for deferred resolution - projection='{Path}', childKey='{ChildKey}'")]
+    internal static partial void FromParentHierarchyCreatingFuture(this ILogger<KeyResolvers> logger, string path, string childKey);
 
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: final result - parentKey='{ParentKey}', arrayIndexers count={ArrayIndexerCount}")]
     internal static partial void FromParentHierarchyResult(this ILogger<KeyResolvers> logger, object? parentKey, int arrayIndexerCount);

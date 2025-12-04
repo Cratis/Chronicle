@@ -84,7 +84,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         }
         else
         {
-            projection.GetKeyResolverFor(eventType).Returns((_, __, ___) => Task.FromResult(new Key(key, ArrayIndexers.NoIndexers)));
+            projection.GetKeyResolverFor(eventType).Returns((_, __, ___) => Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers))));
         }
         return projection;
     }
@@ -113,11 +113,15 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         _storage.TryGetLastInstanceOfAny(ForthLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _forthLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_forthLevelEvent));
     }
 
-    async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
-        _forthLevelProjection,
-        _keyResolvers.FromEventSourceId,
-        _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
-        "childId")(_storage, _sink, _forthLevelEvent);
+    async Task Because()
+    {
+        var keyResult = await _keyResolvers.FromParentHierarchy(
+            _forthLevelProjection,
+            _keyResolvers.FromEventSourceId,
+            _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+            "childId")(_storage, _sink, _forthLevelEvent);
+        _result = (keyResult as ResolvedKey)!.Key;
+    }
 
     [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(RootKey);
     [Fact] void should_hold_array_indexer_for_first_level_with_correct_identifier() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "firstLevels").Identifier.ToString().ShouldEqual(FirstLevelKey);

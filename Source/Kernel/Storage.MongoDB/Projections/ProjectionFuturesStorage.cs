@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Projections.Futures;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Driver;
 
@@ -12,8 +11,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <summary>
 /// Represents a MongoDB implementation of <see cref="IProjectionFuturesStorage"/>.
 /// </summary>
-/// <param name="database">The <see cref="IMongoDatabase"/> to use.</param>
-public class ProjectionFuturesStorage(IMongoDatabase database) : IProjectionFuturesStorage
+/// <param name="database">The <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
+public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : IProjectionFuturesStorage
 {
     const string CollectionName = "projection-futures";
 

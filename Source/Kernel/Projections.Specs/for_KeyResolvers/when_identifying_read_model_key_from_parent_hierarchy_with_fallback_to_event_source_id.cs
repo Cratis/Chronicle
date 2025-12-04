@@ -93,7 +93,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
         _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(_rootEventType.Id))).Returns(_rootEvent);
 
         // Root projection's key resolver returns the EventSourceId as the key
-        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, @event) => Task.FromResult(new Key(@event.Context.EventSourceId.ToString(), ArrayIndexers.NoIndexers)));
+        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, @event) => Task.FromResult(KeyResolverResult.Resolved(new Key(@event.Context.EventSourceId.ToString(), ArrayIndexers.NoIndexers))));
     }
 
     async Task Because()
@@ -105,11 +105,12 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
         // Use the fallback key resolver which falls back to EventSourceId if value provider returns null
         var parentKeyResolver = _keyResolvers.FromEventValueProviderWithFallbackToEventSourceId(valueProvider);
 
-        _result = await _keyResolvers.FromParentHierarchy(
+        var keyResult = await _keyResolvers.FromParentHierarchy(
             _childProjection,
             _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("childId")),
             parentKeyResolver,
             "childId")(_storage, _sink, _childEvent);
+        _result = (keyResult as ResolvedKey)!.Key;
     }
 
     [Fact] void should_return_parent_key_as_the_root_key() => _result.Value.ShouldEqual(ParentKey);

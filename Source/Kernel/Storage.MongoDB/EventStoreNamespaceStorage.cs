@@ -22,9 +22,11 @@ using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
+using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.MongoDB.Recommendations;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
@@ -102,7 +104,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
-        ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase.Database);
+        ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase);
 
         _converter = new EventConverter(
             eventStore,

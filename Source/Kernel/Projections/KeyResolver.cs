@@ -14,5 +14,5 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> used.</param>
 /// <param name="sink"><see cref="ISink"/> for querying the read model.</param>
 /// <param name="event">The <see cref="AppendedEvent"/> to resolve from.</param>
-/// <returns>Resolved key.</returns>
-public delegate Task<Key> KeyResolver(IEventSequenceStorage eventSequenceStorage, ISink sink, AppendedEvent @event);
+/// <returns>Resolved key or deferred future.</returns>
+public delegate Task<KeyResolverResult> KeyResolver(IEventSequenceStorage eventSequenceStorage, ISink sink, AppendedEvent @event);

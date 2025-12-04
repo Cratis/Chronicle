@@ -125,6 +125,7 @@ public class Sink(
         var bsonValue = childValue.ToBsonValue();
 
         var filter = Builders<BsonDocument>.Filter.Eq(mongoPropertyPath, bsonValue);
+        Console.WriteLine($"DEBUG Sink.TryFindRootKeyByChildValue: collection={collection.CollectionNamespace.CollectionName}, mongoPropertyPath={mongoPropertyPath}, childValue={childValue}");
 
         using var result = await collection.FindAsync(
             filter,
@@ -135,6 +136,11 @@ public class Sink(
             });
 
         var document = await result.FirstOrDefaultAsync();
+        Console.WriteLine($"DEBUG Sink.TryFindRootKeyByChildValue: document found={document != null}");
+        if (document is not null)
+        {
+            Console.WriteLine($"DEBUG Sink.TryFindRootKeyByChildValue: document={document.ToJson()}");
+        }
         if (document is not null && document.TryGetValue("_id", out var idValue))
         {
             var key = new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers);
