@@ -58,9 +58,6 @@ public class all_dependencies : Specification
         _handlersByType = new Dictionary<Type, IReducerHandler>();
         _handlersByModelType = new Dictionary<Type, IReducerHandler>();
 
-        _clientArtifacts.Reducers.Returns([]);
-        _clientArtifacts.AggregateRootStateTypes.Returns([]);
-
         _identityProvider = Substitute.For<IIdentityProvider>();
 
         _reducers = new Reducers(

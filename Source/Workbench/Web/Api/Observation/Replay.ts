@@ -83,6 +83,7 @@ export class Replay extends Command<IReplay> implements IReplay {
     }
 
     static use(initialValues?: IReplay): [Replay, SetCommandValues<IReplay>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'Replay' does not satisfy the constraint 'Command<IReplay, any>'.
         return useCommand<Replay, IReplay>(Replay, initialValues);
     }
 }

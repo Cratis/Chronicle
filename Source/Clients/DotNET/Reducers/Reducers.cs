@@ -41,7 +41,6 @@ public class Reducers : IReducers
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
-    IEnumerable<Type> _aggregateRootStateTypes = [];
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
 
@@ -93,7 +92,6 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public Task Discover()
     {
-        _aggregateRootStateTypes = _clientArtifacts.AggregateRootStateTypes;
         _handlersByType = _clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _,
@@ -241,7 +239,7 @@ public class Reducers : IReducers
                 readModelType,
                 _namingPolicy.GetReadModelName(readModelType)),
             _eventSerializer,
-            ShouldReducerBeActive(reducerType, readModelType));
+            ShouldReducerBeActive(reducerType));
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
@@ -353,10 +351,10 @@ public class Reducers : IReducers
         messages.OnNext(new(new(result)));
     }
 
-    bool ShouldReducerBeActive(Type reducerType, Type readModelType)
+    bool ShouldReducerBeActive(Type reducerType)
     {
         var active = reducerType.IsActive();
-        if (!active || _aggregateRootStateTypes.Contains(readModelType))
+        if (!active)
         {
             return false;
         }

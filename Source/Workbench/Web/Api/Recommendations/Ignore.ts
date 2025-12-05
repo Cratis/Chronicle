@@ -84,6 +84,7 @@ export class Ignore extends Command<IIgnore> implements IIgnore {
     }
 
     static use(initialValues?: IIgnore): [Ignore, SetCommandValues<IIgnore>, ClearCommandValues] {
+        // @ts-expect-error TS2344 Type argument 'Ignore' does not satisfy the constraint 'Command<IIgnore, any>'.
         return useCommand<Ignore, IIgnore>(Ignore, initialValues);
     }
 }

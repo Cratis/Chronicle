@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Aggregates;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency;
@@ -16,8 +15,4 @@ public class ConcurrencyScopeStrategies(ConcurrencyOptions options, IServiceProv
     /// <inheritdoc/>
     public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) =>
         (ActivatorUtilities.CreateInstance(serviceProvider, options.DefaultStrategy, eventSequence) as IConcurrencyScopeStrategy)!;
-
-    /// <inheritdoc/>
-    public IConcurrencyScopeStrategy GetFor(IAggregateRootContext aggregateRootContext) =>
-        (ActivatorUtilities.CreateInstance(serviceProvider, options.AggregateRootStrategy, aggregateRootContext) as IConcurrencyScopeStrategy)!;
 }

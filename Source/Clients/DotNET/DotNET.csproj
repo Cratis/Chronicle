@@ -48,7 +48,6 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <PackageReference Include="FluentValidation" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
