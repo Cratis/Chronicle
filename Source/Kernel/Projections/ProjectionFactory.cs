@@ -132,6 +132,7 @@ public class ProjectionFactory(
         // Phase 1: Create the projection structure with all parent-child relationships
         var (projection, childProjections, actualIdentifiedByProperty) = await CreateProjectionStructure(
             eventSequenceStorage,
+            projectionDefinition.Identifier,
             projectionDefinition,
             rootReadModel,
             currentReadModelSchema,
@@ -190,6 +191,7 @@ public class ProjectionFactory(
 
     async Task<(Projection Projection, IProjection[] ChildProjections, PropertyPath ActualIdentifiedByProperty)> CreateProjectionStructure(
         IEventSequenceStorage eventSequenceStorage,
+        ProjectionId projectionId,
         ProjectionDefinition projectionDefinition,
         ReadModelDefinition rootReadModel,
         JsonSchema currentReadModelSchema,
@@ -207,6 +209,7 @@ public class ProjectionFactory(
             var childrenProperty = currentReadModelSchema.Properties[kvp.Key.LastSegment.Value]!;
             return await CreateProjectionStructure(
                 eventSequenceStorage,
+                projectionId,
                 kvp.Value,
                 rootReadModel,
                 childrenProperty.Item?.ActualSchema ?? currentReadModelSchema,
@@ -221,7 +224,7 @@ public class ProjectionFactory(
 
         var projection = new Projection(
             projectionDefinition.EventSequenceId,
-            projectionDefinition.Identifier,
+            projectionId,
             projectionDefinition.Sink,
             initialState,
             path,
