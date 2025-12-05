@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
@@ -20,11 +21,13 @@ namespace Cratis.Chronicle.Projections.Pipelines.Steps;
 /// <param name="eventStore">The <see cref="EventStoreName"/> for the event store.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the namespace.</param>
 /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
+/// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ResolveFutures(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     IProjectionFutures projectionFutures,
+    ITypeFormats typeFormats,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
@@ -57,8 +60,20 @@ public class ResolveFutures(
             {
                 try
                 {
-                    // TEMP
-                    var parentKey = Guid.Parse(future.ParentKey.Value.ToString()!);
+                    var parentIdentifierPath = future.ParentPath + future.ParentIdentifiedByProperty;
+                    var type = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(parentIdentifierPath, typeFormats);
+                    var parentKey = future.ParentKey.Value;
+                    if (type is not null)
+                    {
+                        if (type == typeof(Guid))
+                        {
+                            parentKey = Guid.Parse(parentKey.ToString()!);
+                        }
+                        else
+                        {
+                            parentKey = Convert.ChangeType(parentKey.ToString(), type) ?? parentKey;
+                        }
+                    }
 
                     // Find the child projection that this future belongs to by navigating the property path
                     var childProjection = FindChildProjectionByPath(projection, future.ChildPath);
@@ -86,10 +101,20 @@ public class ResolveFutures(
                     logger.ParentExistsInCurrentState(future.Id);
                     logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
 
+                    var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
+                    var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
+
+                    object childKey = future.Event.Context.EventSourceId;
+
+                    if (childType == typeof(Guid))
+                    {
+                        childKey = Guid.Parse(future.Event.Context.EventSourceId);
+                    }
+
                     var key = new Key(parentKey, new ArrayIndexers(
                     [
                         new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, parentKey),
-                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, Guid.Parse(future.Event.Context.EventSourceId))
+                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, childKey)
                     ]));
 
                     var futureContext = context with

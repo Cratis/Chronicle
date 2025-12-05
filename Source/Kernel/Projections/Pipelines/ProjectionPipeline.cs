@@ -55,7 +55,6 @@ public class ProjectionPipeline(
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
-
         };
 
         foreach (var step in steps)
