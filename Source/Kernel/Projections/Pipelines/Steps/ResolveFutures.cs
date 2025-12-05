@@ -117,22 +117,23 @@ public class ResolveFutures(
 
     static EngineProjection? FindChildProjectionByPath(EngineProjection projection, PropertyPath childPath)
     {
-        // Navigate through the projection hierarchy to find the child projection
-        // ChildPath is like "Configurations.Hubs" - navigate from root down to the leaf
-        var current = projection;
-
-        foreach (var segment in childPath.Segments)
+        // Check if this projection's ChildrenPropertyPath matches the target path
+        if (projection.ChildrenPropertyPath.Path == childPath.Path)
         {
-            // Find the child projection whose ChildrenPropertyPath matches this segment
-            var nextChild = current.ChildProjections.FirstOrDefault(c => c.ChildrenPropertyPath.Path == segment.ToString());
-            if (nextChild is null)
-            {
-                return null;
-            }
-            current = nextChild;
+            return projection;
         }
 
-        return current;
+        // Recursively search through child projections
+        foreach (var child in projection.ChildProjections)
+        {
+            var found = FindChildProjectionByPath(child, childPath);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     static bool ParentExistsInCurrentState(ExpandoObject? currentState, string parentChildrenPath, string parentIdentifiedByProperty, object parentKey)
