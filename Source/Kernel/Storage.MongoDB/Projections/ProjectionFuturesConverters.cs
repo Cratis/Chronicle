@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <summary>
 /// Conversion extensions for projection futures between Kernel and MongoDB storage models.
 /// </summary>
-public static class ProjectionFuturesStorageConversion
+public static class ProjectionFuturesConverters
 {
     /// <summary>
     /// Converts a kernel projection future to the MongoDB projection future model.
@@ -38,7 +38,7 @@ public static class ProjectionFuturesStorageConversion
             future.ChildPath,
             future.IdentifiedByProperty,
             future.ParentIdentifiedByProperty,
-            future.ParentKey,
+            future.ParentKey.Value,
             future.Created);
     }
 

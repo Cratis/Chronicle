@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
@@ -25,7 +26,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     TTarget _initialState = initialState;
 
     /// <inheritdoc/>
-    public TSource Incoming { get; } = incoming;
+    public TSource Incoming { get; set; } = incoming;
 
     /// <inheritdoc/>
     public TTarget InitialState
@@ -98,7 +99,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, ArrayIndexers.NoIndexers);
         items.Add(child);
-        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!));
+        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers));
         CurrentState = workingState;
     }
 
@@ -111,23 +112,38 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         ArrayIndexers arrayIndexers)
         where TChild : new()
     {
-        // Check if there's already a ChildAdded change that matches this child
+        var workingState = CurrentState.Clone();
+
+        // Check if there's already a ChildAdded change that matches this child in the same parent context
+        var parentKey = arrayIndexers.All.First().Identifier;
         var existingChildAdded = _changes
             .OfType<ChildAdded>()
-            .FirstOrDefault(_ =>
-                _.ChildrenProperty == childrenProperty &&
-                _.IdentifiedByProperty == identifiedByProperty &&
-                Equals(_.Key, key));
+            .FirstOrDefault(_ => Equals(_.Key.ToString(), parentKey.ToString()));
 
         if (existingChildAdded is not null)
         {
             // Optimize by updating the existing child in-memory instead of creating a new change
-            var childToUpdate = existingChildAdded.Child.Clone();
-            ApplyPropertyMappers(childToUpdate, propertyMappers, arrayIndexers);
+            ApplyPropertyMappers(workingState!, propertyMappers, arrayIndexers);
+
+            var existingCollection = workingState.EnsureCollection<TTarget, object>(
+                existingChildAdded.ChildrenProperty,
+                existingChildAdded.ArrayIndexers);
+            var childToUpdate = existingCollection.FindByKey(existingChildAdded.IdentifiedByProperty, existingChildAdded.Key);
+            if (childToUpdate is null)
+            {
+                return;
+            }
 
             // Replace the existing ChildAdded with a new one containing the updated child
             var index = _changes.IndexOf(existingChildAdded);
-            _changes[index] = new ChildAdded(childToUpdate, childrenProperty, identifiedByProperty, key);
+            var child = JsonSerializer.Serialize(childToUpdate);
+            File.WriteAllText("childToUpdate.json", child);
+            _changes[index] = new ChildAdded(
+                childToUpdate,
+                existingChildAdded.ChildrenProperty,
+                existingChildAdded.IdentifiedByProperty,
+                existingChildAdded.Key,
+                existingChildAdded.ArrayIndexers);
 
             // Update the item in the current state's collection
             var collection = CurrentState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
@@ -138,10 +154,10 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 list[itemIndex] = childToUpdate;
             }
 
+            CurrentState = workingState;
             return;
         }
 
-        var workingState = CurrentState.Clone();
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
         object? item = null;
 
@@ -175,7 +191,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         {
             items.Add(item);
             SetProperties(workingState, propertyMappers, arrayIndexers);
-            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
+            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
         }
 
         CurrentState = workingState;

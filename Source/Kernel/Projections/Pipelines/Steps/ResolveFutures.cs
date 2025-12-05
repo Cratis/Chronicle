@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
@@ -56,6 +57,8 @@ public class ResolveFutures(
             {
                 try
                 {
+                    var parentKey = Guid.Parse(future.ParentKey.Value.ToString()!);
+
                     // Find the child projection that this future belongs to by navigating the property path
                     var childProjection = FindChildProjectionByPath(projection, future.ChildPath);
                     if (childProjection is null)
@@ -67,26 +70,39 @@ public class ResolveFutures(
                     logger.FoundChildProjection(childProjection.Path, future.Id);
                     logger.CheckingParentInCurrentState(future.Id);
 
-                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ParentIdentifiedByProperty, future.ParentKey))
+                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ParentIdentifiedByProperty, parentKey))
                     {
                         // Parent still doesn't exist, skip this future
                         logger.ParentNotInCurrentState(future.Id);
                         continue;
                     }
 
+                    var before = JsonSerializer.Serialize(context.Changeset.CurrentState);
+                    await File.WriteAllTextAsync("before.json", before);
+
                     var keyResolver = projection.GetKeyResolverFor(future.Event.Context.EventType);
 
                     logger.ParentExistsInCurrentState(future.Id);
                     logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
 
-                    var key = new Key(future.ParentKey, new ArrayIndexers(
+                    var key = new Key(parentKey, new ArrayIndexers(
                     [
-                        new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, future.ParentKey),
-                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, context.Event.Context.EventSourceId)
+                        new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, parentKey),
+                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, future.Event.Context.EventSourceId)
                     ]));
 
-                    var futureContext = context with { Event = future.Event, Key = key };
+                    var futureContext = context with
+                    {
+                        Event = future.Event,
+                        Key = key
+                    };
+
+                    var contextEvent = futureContext.Changeset.Incoming;
+                    futureContext.Changeset.Incoming = future.Event;
                     childProjection.OnNext(futureContext);
+                    var after = JsonSerializer.Serialize(futureContext.Changeset.CurrentState);
+                    await File.WriteAllTextAsync("after.json", after);
+                    futureContext.Changeset.Incoming = contextEvent;
 
                     // Successfully resolved the future
                     await projectionFutures.ResolveFuture(eventStore, @namespace, projection.Identifier, future.Id);

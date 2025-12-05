@@ -262,7 +262,7 @@ public partial class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            return innerInstance!.TryGetValue(LastSegment.Value, out var value) ? value : null;
+            return innerInstance.TryGetValue(LastSegment.Value, out var value) ? value : null;
         }
 
         var inner = target.EnsurePath(this, arrayIndexers);
