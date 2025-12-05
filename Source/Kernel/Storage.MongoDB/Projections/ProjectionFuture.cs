@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="ChildPath">The property path to the child collection (e.g., "Configurations.Hubs").</param>
 /// <param name="IdentifiedByProperty">The property that identifies the child (e.g., "HubId").</param>
 /// <param name="ParentIdentifiedByProperty">The property that identifies the parent (e.g., "ConfigurationId").</param>
-/// <param name="ParentKeyValue">The value of the parent key from the event (e.g., ConfigurationId value).</param>
+/// <param name="ParentKey">The value of the parent key from the event (e.g., ConfigurationId value).</param>
 /// <param name="Created">When this future was created.</param>
 public record ProjectionFuture(
     ProjectionFutureId Id,
@@ -25,5 +25,5 @@ public record ProjectionFuture(
     string ChildPath,
     string IdentifiedByProperty,
     string ParentIdentifiedByProperty,
-    object ParentKeyValue,
+    object ParentKey,
     DateTimeOffset Created);

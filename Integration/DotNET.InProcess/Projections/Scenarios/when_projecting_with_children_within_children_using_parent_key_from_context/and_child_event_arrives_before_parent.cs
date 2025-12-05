@@ -37,9 +37,9 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
 
         void Establish()
         {
-            SimulationId = SimulationId.New();
-            ConfigurationId = ConfigurationId.New();
-            HubId = HubId.New();
+            SimulationId = Guid.Parse("fec29e06-1032-4c6d-a012-7c14ccb956e0");
+            ConfigurationId = Guid.Parse("1660ecdd-e13c-42f9-914f-3c8c16becde7");
+            HubId = Guid.Parse("77bb288e-8bcc-4cd9-8178-ed69a8149f48");
         }
 
         async Task Because()
@@ -53,7 +53,7 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
 
             // OUT OF ORDER: Append Hub event BEFORE its Configuration parent
             // This should create a future since Configuration doesn't exist yet
-            appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
+            await EventStore.EventLog.Append(HubId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
 
             // Now append the Configuration parent - this should resolve the Hub future
             appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationConfigurationAdded(ConfigurationId, ConfigurationName));
@@ -89,8 +89,8 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
     [Fact] void should_have_one_configuration() => Context.Result.Configurations.Count.ShouldEqual(1);
     [Fact] void should_have_configuration_id_on_child() => Context.Result.Configurations[0].ConfigurationId.ShouldEqual(Context.ConfigurationId);
     [Fact] void should_have_configuration_name_on_child() => Context.Result.Configurations[0].Name.ShouldEqual(ConfigurationName);
-    [Fact(Skip = "Temporary")] void should_have_one_hub_on_configuration() => Context.Result.Configurations[0].Hubs.Count.ShouldEqual(1);
-    [Fact(Skip = "Temporary")] void should_have_hub_id_on_nested_child() => Context.Result.Configurations[0].Hubs[0].HubId.ShouldEqual(Context.HubId);
-    [Fact(Skip = "Temporary")] void should_have_hub_name_on_nested_child() => Context.Result.Configurations[0].Hubs[0].Name.ShouldEqual(HubName);
+    [Fact] void should_have_one_hub_on_configuration() => Context.Result.Configurations[0].Hubs.Count.ShouldEqual(1);
+    [Fact] void should_have_hub_id_on_nested_child() => Context.Result.Configurations[0].Hubs[0].HubId.ShouldEqual(Context.HubId);
+    [Fact] void should_have_hub_name_on_nested_child() => Context.Result.Configurations[0].Hubs[0].Name.ShouldEqual(HubName);
     [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

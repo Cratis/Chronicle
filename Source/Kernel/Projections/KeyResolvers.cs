@@ -190,7 +190,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                                 projection.ChildrenPropertyPath,
                                 identifiedByProperty,
                                 PropertyPath.Root,
-                                parentKey.Value!,
+                                parentKey,
                                 DateTimeOffset.UtcNow);
 
                             return KeyResolverResult.Deferred(deferredFuture);
@@ -230,7 +230,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                             projection.ChildrenPropertyPath,
                             identifiedByProperty.Path,
                             GetParentIdentifiedByProperty(parentProjection) ?? PropertyPath.Root,
-                            parentKey.Value!,
+                            parentKey,
                             DateTimeOffset.UtcNow);
 
                         return KeyResolverResult.Deferred(future);

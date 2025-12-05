@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Microsoft.Extensions.Logging;
 
@@ -33,7 +34,7 @@ internal static partial class ResolveFuturesLogging
     internal static partial void KeyResolutionDeferred(this ILogger<ResolveFutures> logger, ProjectionFutureId futureId);
 
     [LoggerMessage(LogLevel.Debug, "Resolved key {Key} for future {FutureId}, calling OnNext")]
-    internal static partial void ResolvedKeyCallingOnNext(this ILogger<ResolveFutures> logger, string key, ProjectionFutureId futureId);
+    internal static partial void ResolvedKeyCallingOnNext(this ILogger<ResolveFutures> logger, Key key, ProjectionFutureId futureId);
 
     [LoggerMessage(LogLevel.Debug, "Found child projection at path {ProjectionPath} for future {FutureId}")]
     internal static partial void FoundChildProjection(this ILogger<ResolveFutures> logger, string projectionPath, ProjectionFutureId futureId);

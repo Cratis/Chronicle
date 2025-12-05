@@ -3,9 +3,8 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
@@ -19,15 +18,11 @@ namespace Cratis.Chronicle.Projections.Pipelines.Steps;
 /// </remarks>
 /// <param name="eventStore">The <see cref="EventStoreName"/> for the event store.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the namespace.</param>
-/// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for event sequences.</param>
-/// <param name="sink"><see cref="ISink"/> for querying the read model.</param>
 /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ResolveFutures(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
-    IEventSequenceStorage eventSequenceStorage,
-    ISink sink,
     IProjectionFutures projectionFutures,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
 {
@@ -70,33 +65,26 @@ public class ResolveFutures(
                     }
 
                     logger.FoundChildProjection(childProjection.Path, future.Id);
-
-                    // Check if the parent exists in the current state
                     logger.CheckingParentInCurrentState(future.Id);
-                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ParentIdentifiedByProperty, future.ParentKeyValue))
+
+                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ParentIdentifiedByProperty, future.ParentKey))
                     {
                         // Parent still doesn't exist, skip this future
                         logger.ParentNotInCurrentState(future.Id);
                         continue;
                     }
 
+                    var keyResolver = projection.GetKeyResolverFor(future.Event.Context.EventType);
+
                     logger.ParentExistsInCurrentState(future.Id);
+                    logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
 
-                    // Resolve the key for the child using the child projection's key resolver
-                    var keyResolver = childProjection.GetKeyResolverFor(future.Event.Context.EventType);
-                    var keyResult = await keyResolver(eventSequenceStorage, sink, future.Event);
+                    var key = new Key(future.ParentKey, new ArrayIndexers(
+                    [
+                        new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, future.ParentKey),
+                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, context.Event.Context.EventSourceId)
+                    ]));
 
-                    // If key resolution is still deferred, skip this future
-                    if (keyResult is DeferredKey)
-                    {
-                        logger.KeyResolutionDeferred(future.Id);
-                        continue;
-                    }
-
-                    var key = (keyResult as ResolvedKey)!.Key;
-                    logger.ResolvedKeyCallingOnNext(key.Value.ToString() ?? "null", future.Id);
-
-                    // Call OnNext with the resolved key - this adds the child to the parent in the changeset
                     var futureContext = context with { Event = future.Event, Key = key };
                     childProjection.OnNext(futureContext);
 
@@ -136,43 +124,16 @@ public class ResolveFutures(
         return null;
     }
 
-    static bool ParentExistsInCurrentState(ExpandoObject? currentState, string parentChildrenPath, string parentIdentifiedByProperty, object parentKey)
+    static bool ParentExistsInCurrentState(ExpandoObject? currentState, PropertyPath parentChildrenPath, PropertyPath parentIdentifiedByProperty, object parentKey)
     {
         if (currentState is null)
         {
             return false;
         }
 
-        // Navigate through the current state to find the parent collection
-        var pathSegments = parentChildrenPath.Split('.');
+        var idPath = parentChildrenPath + parentIdentifiedByProperty;
+        var arrayIndex = new ArrayIndexer(parentChildrenPath, parentIdentifiedByProperty, parentKey);
 
-        object? current = currentState;
-        foreach (var segment in pathSegments)
-        {
-            if (current is not IDictionary<string, object?> dict || !dict.TryGetValue(segment, out var value))
-            {
-                return false;
-            }
-            current = value;
-        }
-
-        // current should now be a collection of parent items
-        if (current is not IEnumerable<object> collection)
-        {
-            return false;
-        }
-
-        // Check if any item in the collection has the matching parent key in the specified property
-        foreach (var item in collection)
-        {
-            if (item is IDictionary<string, object?> itemDict &&
-                itemDict.TryGetValue(parentIdentifiedByProperty, out var value) &&
-                Equals(value, parentKey))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return idPath.HasValue(currentState, new([arrayIndex]));
     }
 }

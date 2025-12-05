@@ -487,7 +487,6 @@ public class ProjectionFactory(
         foreach (var child in childProjections)
         {
             var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Exists(e => e.EventType == _.EventType));
-            var childEventTypeIds = string.Join(", ", child.EventTypesWithKeyResolver.Select(et => et.EventType.Id));
             logger.CollectingEventsFromChild(childTypes.Count(), child.Path);
             eventsForProjection.AddRange(childTypes);
         }

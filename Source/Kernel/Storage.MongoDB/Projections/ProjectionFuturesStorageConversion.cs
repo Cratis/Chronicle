@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Properties;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
@@ -36,7 +38,7 @@ public static class ProjectionFuturesStorageConversion
             future.ChildPath,
             future.IdentifiedByProperty,
             future.ParentIdentifiedByProperty,
-            future.ParentKeyValue,
+            future.ParentKey,
             future.Created);
     }
 
@@ -68,7 +70,7 @@ public static class ProjectionFuturesStorageConversion
             document.ChildPath,
             document.IdentifiedByProperty,
             document.ParentIdentifiedByProperty,
-            document.ParentKeyValue,
+            new Key(document.ParentKey, ArrayIndexers.NoIndexers),
             document.Created);
     }
 }
