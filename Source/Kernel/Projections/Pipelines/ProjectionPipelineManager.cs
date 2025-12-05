@@ -48,13 +48,14 @@ public class ProjectionPipelineManager(
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
         var sink = namespaceStorage.Sinks.GetFor(projection.Sink.TypeId, projection.Sink.ConfigurationId, projection.ReadModel);
 
-        var resolveFuturesStep = new ResolveFutures(eventStore, @namespace, projectionFutures, loggerFactory.CreateLogger<ResolveFutures>());
+        var handleEventStep = new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>());
+        var resolveFuturesStep = new ResolveFutures(eventStore, @namespace, projectionFutures, eventSequenceStorage, sink, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
             new ResolveKey(eventSequenceStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
-            new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
+            handleEventStep,
             new StoreFutures(eventStore, @namespace, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
             new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
@@ -68,8 +69,8 @@ public class ProjectionPipelineManager(
             steps,
             loggerFactory.CreateLogger<ProjectionPipeline>());
 
-        // Set the pipeline on the ResolveFutures step so it can recursively process deferred events
-        resolveFuturesStep.SetPipeline(newPipeline);
+        // Set the HandleEvent step on the ResolveFutures step so it can process deferred events
+        resolveFuturesStep.SetHandleEventStep(handleEventStep);
 
         return _pipelines[key] = newPipeline;
     }

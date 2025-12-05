@@ -95,7 +95,11 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     /// <inheritdoc/>
     public void AddChild(PropertyPath childrenProperty, object child)
     {
+        var workingState = CurrentState.Clone()!;
+        var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, ArrayIndexers.NoIndexers);
+        items.Add(child);
         Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!));
+        CurrentState = workingState;
     }
 
     /// <inheritdoc/>

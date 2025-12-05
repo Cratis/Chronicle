@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.Projections.Pipelines.Steps;
 
 internal static partial class ResolveFuturesLogging
 {
-    [LoggerMessage(LogLevel.Warning, "Pipeline not set for ResolveFutures step - cannot resolve pending futures")]
-    internal static partial void PipelineNotSet(this ILogger<ResolveFutures> logger);
+    [LoggerMessage(LogLevel.Warning, "HandleEvent step not set for ResolveFutures step - cannot resolve pending futures")]
+    internal static partial void HandleEventStepNotSet(this ILogger<ResolveFutures> logger);
 
     [LoggerMessage(LogLevel.Debug, "Found {Count} pending futures for projection {ProjectionId}")]
     internal static partial void FoundPendingFutures(this ILogger<ResolveFutures> logger, int count, ProjectionId projectionId);

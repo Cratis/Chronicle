@@ -7,9 +7,9 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecti
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context;
 
 /// <summary>
-/// Projection that tests Sink-based parent key resolution.
-/// Instead of using UsingParentKey(), this projection relies on the Sink to find the parent document
-/// by querying for the child's identified by property value.
+/// Projection that tests parent key resolution from context for nested children.
+/// Uses UsingParentKeyFromContext() to get the parent key from the event's event source ID
+/// rather than from a property in the event itself.
 /// </summary>
 public class SimulationDashboardProjection : IProjectionFor<SimulationDashboard>
 {
@@ -19,9 +19,11 @@ public class SimulationDashboardProjection : IProjectionFor<SimulationDashboard>
         .Children(m => m.Configurations, m => m
             .IdentifiedBy(r => r.ConfigurationId)
             .From<SimulationConfigurationAdded>(b => b
+                .UsingParentKeyFromContext(ctx => ctx.EventSourceId)
                 .UsingKey(e => e.ConfigurationId))
             .Children(m => m.Hubs, m => m
                 .IdentifiedBy(r => r.HubId)
                 .From<HubAddedToSimulationConfiguration>(e => e
+                    .UsingParentKey(e => e.ConfigurationId)
                     .UsingKey(e => e.HubId))));
 }

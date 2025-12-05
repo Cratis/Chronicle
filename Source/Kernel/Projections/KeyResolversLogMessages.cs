@@ -40,6 +40,9 @@ internal static partial class KeyResolversLogMessages
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: looking up root key by sink query with childPropertyPath='{ChildPropertyPath}', parentKey='{ParentKey}'")]
     internal static partial void FromParentHierarchyLookupBySink(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKey);
 
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found root key in current state, rootKey='{RootKey}'")]
+    internal static partial void FromParentHierarchyFoundRootKeyInCurrentState(this ILogger<KeyResolvers> logger, string rootKey);
+
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found root key by sink query, rootKey='{RootKey}'")]
     internal static partial void FromParentHierarchyFoundRootKeyBySink(this ILogger<KeyResolvers> logger, string rootKey);
 

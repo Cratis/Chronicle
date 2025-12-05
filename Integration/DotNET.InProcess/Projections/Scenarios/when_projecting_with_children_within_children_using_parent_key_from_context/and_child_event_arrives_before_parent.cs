@@ -15,8 +15,6 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 /// Tests the projection futures mechanism by appending events out of order.
 /// The Hub event arrives before the Configuration parent, which should create a future
 /// that gets resolved once the Configuration event is processed.
-/// NOTE: This scenario is currently skipped as the futures resolution mechanism
-/// needs additional work to handle truly out-of-order events across different event sources.
 /// </summary>
 [Collection(ChronicleCollection.Name)]
 public class and_child_event_arrives_before_parent(context context) : Given<context>(context)
