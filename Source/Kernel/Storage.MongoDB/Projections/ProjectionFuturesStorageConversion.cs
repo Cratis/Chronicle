@@ -18,7 +18,7 @@ public static class ProjectionFuturesStorageConversion
     /// <param name="future">The kernel projection future.</param>
     /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
     /// <returns>The MongoDB projection future.</returns>
-    public static ProjectionFuture ToMongoDB(this Chronicle.Storage.Projections.ProjectionFuture future, JsonSerializerOptions jsonSerializerOptions)
+    public static ProjectionFuture ToMongoDB(this Concepts.Projections.ProjectionFuture future, JsonSerializerOptions jsonSerializerOptions)
     {
         var content = BsonDocument.Parse(JsonSerializer.Serialize(future.Event.Content, jsonSerializerOptions));
 
@@ -46,7 +46,7 @@ public static class ProjectionFuturesStorageConversion
     /// <param name="document">The MongoDB projection future.</param>
     /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
     /// <returns>The kernel projection future.</returns>
-    public static Chronicle.Storage.Projections.ProjectionFuture ToKernel(this ProjectionFuture document, JsonSerializerOptions jsonSerializerOptions)
+    public static Concepts.Projections.ProjectionFuture ToKernel(this ProjectionFuture document, JsonSerializerOptions jsonSerializerOptions)
     {
         var contentJson = document.Event.Content.ToJson();
         var content = JsonSerializer.Deserialize<System.Dynamic.ExpandoObject>(contentJson, jsonSerializerOptions)!;
@@ -60,7 +60,7 @@ public static class ProjectionFuturesStorageConversion
             },
             content);
 
-        return new Chronicle.Storage.Projections.ProjectionFuture(
+        return new Concepts.Projections.ProjectionFuture(
             document.Id,
             document.ProjectionId,
             appendedEvent,
