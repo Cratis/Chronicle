@@ -186,11 +186,10 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                                 ProjectionFutureId.New(),
                                 projection.Identifier,
                                 @event,
-                                key.Value!,
-                                parentProjection.ChildrenPropertyPath.Path,
-                                projection.ChildrenPropertyPath.Path,
-                                identifiedByProperty.Path,
-                                string.Empty,
+                                parentProjection.ChildrenPropertyPath,
+                                projection.ChildrenPropertyPath,
+                                identifiedByProperty,
+                                PropertyPath.Root,
                                 parentKey.Value!,
                                 DateTimeOffset.UtcNow);
 
@@ -227,11 +226,10 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                             ProjectionFutureId.New(),
                             projection.Identifier,
                             @event,
-                            key.Value!,
-                            parentProjection.ChildrenPropertyPath.Path,
-                            projection.ChildrenPropertyPath.Path,
+                            parentProjection.ChildrenPropertyPath,
+                            projection.ChildrenPropertyPath,
                             identifiedByProperty.Path,
-                            GetParentIdentifiedByProperty(parentProjection)?.Path ?? string.Empty,
+                            GetParentIdentifiedByProperty(parentProjection) ?? PropertyPath.Root,
                             parentKey.Value!,
                             DateTimeOffset.UtcNow);
 

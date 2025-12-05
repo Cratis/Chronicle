@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Storage.Projections;
 
@@ -12,7 +13,6 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// <param name="Id">Unique identifier for the future.</param>
 /// <param name="ProjectionId">The projection this future belongs to.</param>
 /// <param name="Event">The event that triggered this future.</param>
-/// <param name="UnresolvedKey">The key that could not be resolved (e.g., HubId when parent ConfigurationId was not found).</param>
 /// <param name="ParentPath">The property path to the parent in the projection hierarchy (e.g., "Configurations").</param>
 /// <param name="ChildPath">The property path to the child collection (e.g., "Configurations.Hubs").</param>
 /// <param name="IdentifiedByProperty">The property that identifies the child (e.g., "HubId").</param>
@@ -23,10 +23,9 @@ public record ProjectionFuture(
     ProjectionFutureId Id,
     ProjectionId ProjectionId,
     AppendedEvent Event,
-    object UnresolvedKey,
-    string ParentPath,
-    string ChildPath,
-    string IdentifiedByProperty,
-    string ParentIdentifiedByProperty,
+    PropertyPath ParentPath,
+    PropertyPath ChildPath,
+    PropertyPath IdentifiedByProperty,
+    PropertyPath ParentIdentifiedByProperty,
     object ParentKeyValue,
     DateTimeOffset Created);
