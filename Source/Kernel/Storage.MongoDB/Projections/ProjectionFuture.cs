@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 
@@ -22,9 +21,9 @@ public record ProjectionFuture(
     ProjectionFutureId Id,
     ProjectionId ProjectionId,
     Event Event,
-    PropertyPath ParentPath,
-    PropertyPath ChildPath,
-    PropertyPath IdentifiedByProperty,
-    PropertyPath ParentIdentifiedByProperty,
+    string ParentPath,
+    string ChildPath,
+    string IdentifiedByProperty,
+    string ParentIdentifiedByProperty,
     object ParentKeyValue,
     DateTimeOffset Created);
