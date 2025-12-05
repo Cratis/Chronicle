@@ -22,7 +22,6 @@ using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
-using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.MongoDB.Recommendations;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;

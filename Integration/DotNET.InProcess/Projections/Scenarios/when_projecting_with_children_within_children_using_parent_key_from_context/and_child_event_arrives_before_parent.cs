@@ -11,11 +11,6 @@ using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.whe
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context;
 
-/// <summary>
-/// Tests the projection futures mechanism by appending events out of order.
-/// The Hub event arrives before the Configuration parent, which should create a future
-/// that gets resolved once the Configuration event is processed.
-/// </summary>
 [Collection(ChronicleCollection.Name)]
 public class and_child_event_arrives_before_parent(context context) : Given<context>(context)
 {

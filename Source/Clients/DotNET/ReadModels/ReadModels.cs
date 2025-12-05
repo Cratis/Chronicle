@@ -111,7 +111,7 @@ public class ReadModels(
             if (propertyType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(propertyType))
             {
                 var elementType = propertyType.GetGenericArguments().FirstOrDefault();
-                if (elementType is not null && !elementType.IsPrimitive && elementType != typeof(string))
+                if (elementType?.IsPrimitive == false && elementType != typeof(string))
                 {
                     CollectIndexes(elementType, propertyPath, indexes, visitedTypes);
                 }
