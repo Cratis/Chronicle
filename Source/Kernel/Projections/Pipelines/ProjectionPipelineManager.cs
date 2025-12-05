@@ -49,7 +49,7 @@ public class ProjectionPipelineManager(
         var sink = namespaceStorage.Sinks.GetFor(projection.Sink.TypeId, projection.Sink.ConfigurationId, projection.ReadModel);
 
         var handleEventStep = new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>());
-        var resolveFuturesStep = new ResolveFutures(eventStore, @namespace, projectionFutures, eventSequenceStorage, sink, loggerFactory.CreateLogger<ResolveFutures>());
+        var resolveFuturesStep = new ResolveFutures(eventStore, @namespace, eventSequenceStorage, sink, projectionFutures, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
@@ -68,9 +68,6 @@ public class ProjectionPipelineManager(
             objectComparer,
             steps,
             loggerFactory.CreateLogger<ProjectionPipeline>());
-
-        // Set the HandleEvent step on the ResolveFutures step so it can process deferred events
-        resolveFuturesStep.SetHandleEventStep(handleEventStep);
 
         return _pipelines[key] = newPipeline;
     }
