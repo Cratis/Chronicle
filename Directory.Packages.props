@@ -12,10 +12,10 @@
         <!-- Cratis -->
         <PackageVersion Include="Cratis.Fundamentals" Version="7.2.3" />
         <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.2.3" />
-        <PackageVersion Include="Cratis.Arc" Version="18.1.1" />
-        <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.1.1" />
-        <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.1.1" />
-        <PackageVersion Include="Cratis.Arc.Swagger" Version="18.1.1" />
+        <PackageVersion Include="Cratis.Arc" Version="18.1.2" />
+        <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.1.2" />
+        <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.1.2" />
+        <PackageVersion Include="Cratis.Arc.Swagger" Version="18.1.2" />
         <!-- Microsoft -->
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
@@ -88,7 +88,7 @@
         <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.1" />
         <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
-        <PackageVersion Include="FluentValidation" Version="12.1.0" />
+        <PackageVersion Include="FluentValidation" Version="12.1.1" />
         <PackageVersion Include="handlebars.net" Version="2.1.6" />
         <PackageVersion Include="OneOf" Version="3.0.271" />
         <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
