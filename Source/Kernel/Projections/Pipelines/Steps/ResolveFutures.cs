@@ -57,6 +57,7 @@ public class ResolveFutures(
             {
                 try
                 {
+                    // TEMP
                     var parentKey = Guid.Parse(future.ParentKey.Value.ToString()!);
 
                     // Find the child projection that this future belongs to by navigating the property path
@@ -88,7 +89,7 @@ public class ResolveFutures(
                     var key = new Key(parentKey, new ArrayIndexers(
                     [
                         new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, parentKey),
-                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, future.Event.Context.EventSourceId)
+                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, Guid.Parse(future.Event.Context.EventSourceId))
                     ]));
 
                     var futureContext = context with
