@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.Keys;
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.Projections.Expressions.Keys;
 /// </remarks>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event value expressions.</param>
 /// <param name="defaultKeyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
-public class KeyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, IKeyResolvers defaultKeyResolvers) : IKeyExpressionResolvers
+/// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+public partial class KeyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, IKeyResolvers defaultKeyResolvers, ILogger<KeyExpressionResolvers> logger) : IKeyExpressionResolvers
 {
     readonly IKeyExpressionResolver[] _resolvers =
         [
@@ -51,10 +53,11 @@ public class KeyExpressionResolvers(IEventValueProviderExpressionResolvers event
         return keyResolvers.FromEventValueProviderWithFallbackToEventSourceId(valueProvider);
     }
 
-    static void ThrowIfUnsupportedKeyExpression(string expression, IKeyExpressionResolver? resolver)
+    void ThrowIfUnsupportedKeyExpression(string expression, IKeyExpressionResolver? resolver)
     {
         if (resolver == default)
         {
+            logger.UnsupportedKeyExpression(expression);
             throw new UnsupportedKeyExpression(expression);
         }
     }
