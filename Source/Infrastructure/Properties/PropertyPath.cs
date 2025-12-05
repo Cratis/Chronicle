@@ -73,7 +73,7 @@ public partial class PropertyPath
     /// <summary>
     /// Gets whether or not this is the root path.
     /// </summary>
-    public bool IsRoot => Path?.Length == 0;
+    public bool IsRoot => Path == Root;
 
     /// <summary>
     /// Gets whether or not the value is set.
