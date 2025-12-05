@@ -9,15 +9,11 @@ using MongoDB.Bson;
 namespace Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value;
 
 [Collection(MongoDBCollection.Name)]
-public class and_child_value_does_not_exist : given.a_sink_with_test_data
+public class and_child_value_does_not_exist(ChronicleInProcessFixture fixture) : given.a_sink_with_test_data(fixture)
 {
     Guid _rootKey;
     Guid _nonExistentId;
     Option<Key> _result;
-
-    public and_child_value_does_not_exist(XUnit.Integration.ChronicleInProcessFixture fixture) : base(fixture)
-    {
-    }
 
     void Establish()
     {

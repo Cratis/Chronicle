@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_trying_to_find_ro
 
 public class a_sink_with_test_data : Specification
 {
+    const string CollectionName = "test_read_model";
     protected Sink _sink;
     protected IMongoDatabase _database;
     protected IMongoCollection<BsonDocument> _collection;
@@ -19,8 +20,7 @@ public class a_sink_with_test_data : Specification
     {
         var client = new MongoClient("mongodb://localhost:27017");
         _database = client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
-        var collectionName = "test_read_model";
-        _collection = _database.GetCollection<BsonDocument>(collectionName);
+        _collection = _database.GetCollection<BsonDocument>(CollectionName);
 
         var schema = new JsonSchema
         {
@@ -82,7 +82,7 @@ public class a_sink_with_test_data : Specification
             []);
 
         var mongoDBConverter = Substitute.For<IMongoDBConverter>();
-        var collections = new TestCollections(_database, collectionName);
+        var collections = new TestCollections(_database, CollectionName);
         var changesetConverter = Substitute.For<IChangesetConverter>();
         var expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _sink = new Sink(
