@@ -1,38 +1,42 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
+using Orleans.Providers;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="Chronicle.Projections.IProjectionFutures"/> that forwards to projection grains.
+/// Represents an implementation of <see cref="IProjectionFutures"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ProjectionFutures"/> class.
-/// </remarks>
-/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting projection grains.</param>
-public class ProjectionFutures(IGrainFactory grainFactory) : Chronicle.Projections.IProjectionFutures
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionFutures)]
+public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutures
 {
     /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionFuture>> GetFutures(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId)
+    public async Task<IEnumerable<ProjectionFuture>> GetFutures() => State.Futures;
+
+    /// <inheritdoc/>
+    public async Task AddFuture(ProjectionFuture future)
     {
-        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
-        return projection.GetFutures(@namespace);
+        if (State.Futures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        {
+            return;
+        }
+
+        State.Futures.Add(future);
+        State.AddedFutures.Add(future);
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
-    public Task AddFuture(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId, ProjectionFuture future)
+    public async Task ResolveFuture(ProjectionFutureId futureId)
     {
-        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
-        return projection.AddFuture(@namespace, future);
-    }
-
-    /// <inheritdoc/>
-    public Task ResolveFuture(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId, ProjectionFutureId futureId)
-    {
-        var projection = grainFactory.GetGrain<IProjection>(new ProjectionKey(projectionId, eventStore));
-        return projection.ResolveFuture(@namespace, futureId);
+        var future = State.Futures.FirstOrDefault(f => f.Id == futureId);
+        if (future is not null)
+        {
+            State.Futures.Remove(future);
+            State.ResolvedFutures.Add(future);
+        }
+        await WriteStateAsync();
     }
 }

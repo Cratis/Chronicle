@@ -23,7 +23,7 @@ public static class ProjectionsServiceExtensions
         siloBuilder.ConfigureServices(_ =>
         {
             _.AddSingleton<IProjectionsServiceClient, ProjectionsServiceClient>();
-            _.AddSingleton<Projections.IProjectionFutures, ProjectionFutures>();
+            _.AddSingleton<Projections.IProjectionFutures, ProjectionFuturesBridge>();
         });
         return siloBuilder;
     }
