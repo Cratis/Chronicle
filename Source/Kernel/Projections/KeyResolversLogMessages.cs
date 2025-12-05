@@ -46,7 +46,7 @@ internal static partial class KeyResolversLogMessages
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found root key by sink query, rootKey='{RootKey}'")]
     internal static partial void FromParentHierarchyFoundRootKeyBySink(this ILogger<KeyResolvers> logger, string rootKey);
 
-    [LoggerMessage(LogLevel.Information, "FromParentHierarchy: creating future for deferred resolution - projection='{Path}', childKey='{ChildKey}'")]
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: creating future for deferred resolution - projection='{Path}', childKey='{ChildKey}'")]
     internal static partial void FromParentHierarchyCreatingFuture(this ILogger<KeyResolvers> logger, string path, string childKey);
 
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: final result - parentKey='{ParentKey}', arrayIndexers count={ArrayIndexerCount}")]
