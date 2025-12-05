@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
@@ -27,12 +28,12 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
     /// </summary>
-    /// <param name="valueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
+    /// <param name="eventValueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> valueProvider) =>
+    public KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider) =>
         CreateKeyResolver(nameof(FromEventValueProvider), (_, _, @event) =>
         {
-            var key = valueProvider(@event);
+            var key = eventValueProvider(@event);
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)))!;
         });
 
@@ -65,7 +66,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             {
                 var actualTarget =
                     key.EnsurePath(keyValue.Key, ArrayIndexers.NoIndexers) as IDictionary<string, object>;
-                actualTarget![keyValue.Key.LastSegment.Value] = keyValue.Value(@event);
+                actualTarget[keyValue.Key.LastSegment.Value] = keyValue.Value(@event);
             }
 
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));

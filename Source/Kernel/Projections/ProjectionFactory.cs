@@ -506,7 +506,7 @@ public class ProjectionFactory(
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolver(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolver(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)
     {
         logger.GetEventTypeWithKeyResolverStart(
             eventType.Id.ToString(),
