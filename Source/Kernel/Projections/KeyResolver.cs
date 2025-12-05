@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -15,7 +13,5 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> used.</param>
 /// <param name="sink"><see cref="ISink"/> for querying the read model.</param>
 /// <param name="event">The <see cref="AppendedEvent"/> to resolve from.</param>
-/// <param name="currentState">The current in-memory state as an <see cref="ExpandoObject"/>. Used to resolve parents that exist in memory but haven't been persisted yet.</param>
-/// <param name="currentKey">The current key of the projection being processed. Used with currentState to identify the root.</param>
 /// <returns>Resolved key or deferred future.</returns>
-public delegate Task<KeyResolverResult> KeyResolver(IEventSequenceStorage eventSequenceStorage, ISink sink, AppendedEvent @event, ExpandoObject? currentState = null, Key? currentKey = null);
+public delegate Task<KeyResolverResult> KeyResolver(IEventSequenceStorage eventSequenceStorage, ISink sink, AppendedEvent @event);

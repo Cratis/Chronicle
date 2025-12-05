@@ -36,7 +36,7 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
             if (child.HasKeyResolverFor(eventType))
             {
                 var keyResolver = child.GetKeyResolverFor(eventType);
-                var keyResult = await keyResolver(eventSequenceStorage, sink, context.Event, context.Changeset.CurrentState, context.Key);
+                var keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
 
                 // Handle deferred key resolution for child projections
                 if (keyResult is DeferredKey deferredChild)

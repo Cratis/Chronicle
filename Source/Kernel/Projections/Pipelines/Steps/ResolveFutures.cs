@@ -82,9 +82,8 @@ public class ResolveFutures(
                     logger.ParentExistsInCurrentState(future.Id);
 
                     // Resolve the key for the child using the child projection's key resolver
-                    // This will find the parent in currentState and build the correct key with array indexers
                     var keyResolver = childProjection.GetKeyResolverFor(future.Event.Context.EventType);
-                    var keyResult = await keyResolver(eventSequenceStorage, sink, future.Event, context.Changeset.CurrentState, context.Key);
+                    var keyResult = await keyResolver(eventSequenceStorage, sink, future.Event);
 
                     // If key resolution is still deferred, skip this future
                     if (keyResult is DeferredKey)
