@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
-namespace Cratis.Chronicle.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter{T}"/> that can convert to and from <see cref="Uri"/>.
