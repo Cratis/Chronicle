@@ -24,6 +24,11 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
+        if (context.Event.Context.EventType.Id == "HubAddedToSimulationConfiguration")
+        {
+            Console.WriteLine("Debugging");
+        }
+
         logger.ResolvingKey(context.Event.Context.SequenceNumber);
         var keyResolver = projection.GetKeyResolverFor(context.Event.Context.EventType);
         var keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);

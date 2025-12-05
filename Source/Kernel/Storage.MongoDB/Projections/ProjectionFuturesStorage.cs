@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Projections;
 using MongoDB.Driver;
+using ProjectionFutureMongo = Cratis.Chronicle.Storage.MongoDB.Projections.ProjectionFuture;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 
@@ -11,41 +13,42 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// Represents a MongoDB implementation of <see cref="IProjectionFuturesStorage"/>.
 /// </summary>
 /// <param name="database">The <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
-public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : IProjectionFuturesStorage
+/// <param name="jsonSerializerOptions">The JSON serializer options.</param>
+public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database, JsonSerializerOptions jsonSerializerOptions) : IProjectionFuturesStorage
 {
-    const string CollectionName = "projection-futures";
-
     /// <inheritdoc/>
-    public async Task Save(ProjectionId projectionId, ProjectionFuture future)
+    public async Task Save(ProjectionId projectionId, Concepts.Projections.ProjectionFuture future)
     {
-        var collection = database.GetCollection<ProjectionFuture>(CollectionName);
-        var filter = Builders<ProjectionFuture>.Filter.And(
-            Builders<ProjectionFuture>.Filter.Eq(f => f.ProjectionId, projectionId),
-            Builders<ProjectionFuture>.Filter.Eq(f => f.Id, future.Id));
+        var collection = database.GetCollection<ProjectionFutureMongo>(WellKnownCollectionNames.ProjectionFutures);
+        var filter = Builders<ProjectionFutureMongo>.Filter.And(
+            Builders<ProjectionFutureMongo>.Filter.Eq(f => f.ProjectionId, projectionId),
+            Builders<ProjectionFutureMongo>.Filter.Eq(f => f.Id, future.Id));
 
         await collection.ReplaceOneAsync(
             filter,
-            future,
+            future.ToMongoDB(jsonSerializerOptions),
             new ReplaceOptions { IsUpsert = true });
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionFuture>> GetForProjection(ProjectionId projectionId)
+    public async Task<IEnumerable<Concepts.Projections.ProjectionFuture>> GetForProjection(ProjectionId projectionId)
     {
-        var collection = database.GetCollection<ProjectionFuture>(CollectionName);
-        var filter = Builders<ProjectionFuture>.Filter.Eq(f => f.ProjectionId, projectionId);
+        var collection = database.GetCollection<ProjectionFutureMongo>(WellKnownCollectionNames.ProjectionFutures);
+        var filter = Builders<ProjectionFutureMongo>.Filter.Eq(f => f.ProjectionId, projectionId);
 
         var cursor = await collection.FindAsync(filter);
-        return await cursor.ToListAsync();
+        var documents = await cursor.ToListAsync();
+
+        return documents.Select(future => future.ToKernel(jsonSerializerOptions));
     }
 
     /// <inheritdoc/>
     public async Task Remove(ProjectionId projectionId, ProjectionFutureId futureId)
     {
-        var collection = database.GetCollection<ProjectionFuture>(CollectionName);
-        var filter = Builders<ProjectionFuture>.Filter.And(
-            Builders<ProjectionFuture>.Filter.Eq(f => f.ProjectionId, projectionId),
-            Builders<ProjectionFuture>.Filter.Eq(f => f.Id, futureId));
+        var collection = database.GetCollection<ProjectionFutureMongo>(WellKnownCollectionNames.ProjectionFutures);
+        var filter = Builders<ProjectionFutureMongo>.Filter.And(
+            Builders<ProjectionFutureMongo>.Filter.Eq(f => f.ProjectionId, projectionId),
+            Builders<ProjectionFutureMongo>.Filter.Eq(f => f.Id, futureId));
 
         await collection.DeleteOneAsync(filter);
     }
@@ -53,8 +56,8 @@ public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database) : I
     /// <inheritdoc/>
     public async Task RemoveAllForProjection(ProjectionId projectionId)
     {
-        var collection = database.GetCollection<ProjectionFuture>(CollectionName);
-        var filter = Builders<ProjectionFuture>.Filter.Eq(f => f.ProjectionId, projectionId);
+        var collection = database.GetCollection<ProjectionFutureMongo>(WellKnownCollectionNames.ProjectionFutures);
+        var filter = Builders<ProjectionFutureMongo>.Filter.Eq(f => f.ProjectionId, projectionId);
 
         await collection.DeleteManyAsync(filter);
     }

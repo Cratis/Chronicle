@@ -103,7 +103,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
-        ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase);
+        ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
 
         _converter = new EventConverter(
             eventStore,

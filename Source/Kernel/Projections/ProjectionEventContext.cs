@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Projections;
 

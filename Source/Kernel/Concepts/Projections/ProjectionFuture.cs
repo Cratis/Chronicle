@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Storage.Projections;
+namespace Cratis.Chronicle.Concepts.Projections;
 
 /// <summary>
 /// Represents a deferred projection operation that could not be resolved immediately due to missing parent data.
@@ -19,6 +18,8 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// <param name="ParentIdentifiedByProperty">The property that identifies the parent (e.g., "ConfigurationId").</param>
 /// <param name="ParentKeyValue">The value of the parent key from the event (e.g., ConfigurationId value).</param>
 /// <param name="Created">When this future was created.</param>
+[GenerateSerializer]
+[Alias(nameof(ProjectionFuture))]
 public record ProjectionFuture(
     ProjectionFutureId Id,
     ProjectionId ProjectionId,

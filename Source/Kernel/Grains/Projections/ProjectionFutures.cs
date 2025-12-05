@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Storage.Projections;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
