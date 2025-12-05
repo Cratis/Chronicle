@@ -39,7 +39,7 @@ public class ProjectionFuturesStorage(IEventStoreNamespaceDatabase database, Jso
         var cursor = await collection.FindAsync(filter);
         var documents = await cursor.ToListAsync();
 
-        return documents.Select(future => future.ToKernel(jsonSerializerOptions));
+        return documents.Select(future => future.ToKernel(jsonSerializerOptions)).ToArray();
     }
 
     /// <inheritdoc/>
