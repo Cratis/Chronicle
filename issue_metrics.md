@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 276 |
+| Number of items that remain open | 277 |
 | Number of items closed | 582 |
-| Total number of items created | 858 |
+| Total number of items created | 859 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Add a way to immediately query projections and get a collection of snapshots per CorrelationId | https://github.com/Cratis/Chronicle/issues/2311 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | AppendedEvent in the .NET Client should hold the actual deserialized ready to go event instead of an ExpandoObject | https://github.com/Cratis/Chronicle/issues/2303 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Improve Read Model APIs and consistency between Reducers and Projections | https://github.com/Cratis/Chronicle/issues/2301 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Investigate ReadModels.Register() behavior for reactor-only applications | https://github.com/Cratis/Chronicle/issues/2290 | None | [einari](https://github.com/einari) | None | None | None |
@@ -340,5 +341,4 @@
 | Change to the concept of namespace within an Event Store rather than using the concept of a Tenant | https://github.com/Cratis/Chronicle/issues/1064 | None | [einari](https://github.com/einari) | None | 198 days, 23:01:35 | None |
 | Separate EventContext into client and server representation | https://github.com/Cratis/Chronicle/issues/1063 | None | [einari](https://github.com/einari) | None | 215 days, 22:13:43 | None |
 | Get rid of Serilog | https://github.com/Cratis/Chronicle/issues/1059 | None | [einari](https://github.com/einari) | None | 237 days, 12:42:12 | None |
-| Make projection definitions versionable | https://github.com/Cratis/Chronicle/issues/1058 | None | [einari](https://github.com/einari) | None | None | None |
-| Add the ability to associate custom metadata with events | https://github.com/Cratis/Chronicle/issues/1057 |
+| Make projection defi
