@@ -104,16 +104,10 @@ public class a_sink_with_test_data : Specification
         _database.Client.DropDatabase(_database.DatabaseNamespace.DatabaseName);
     }
 
-    class TestCollections : ISinkCollections
+    class TestCollections(IMongoDatabase database, string collectionName) : ISinkCollections
     {
-        readonly IMongoDatabase _database;
-        readonly string _collectionName;
-
-        public TestCollections(IMongoDatabase database, string collectionName)
-        {
-            _database = database;
-            _collectionName = collectionName;
-        }
+        readonly IMongoDatabase _database = database;
+        readonly string _collectionName = collectionName;
 
         public IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(_collectionName);
         public Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;

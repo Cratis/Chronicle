@@ -95,7 +95,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
             _childProjection,
             _keyResolvers.FromEventSourceId,
             _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
-        "childId")(_storage, _sink, _event);
+            "childId")(_storage, _sink, _event);
         _result = (keyResult as ResolvedKey)!.Key;
     }
 

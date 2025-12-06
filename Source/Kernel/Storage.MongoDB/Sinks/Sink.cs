@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -82,10 +81,6 @@ public class Sink(
 
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
         if (!converted.hasChanges) return;
-
-        var serializer = global::MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>();
-        var registry = global::MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry;
-        var args = new RenderArgs<BsonDocument>(serializer, registry);
 
         var result = await Collection.UpdateOneAsync(
             filter,

@@ -18,7 +18,10 @@ namespace Cratis.Chronicle.Projections.Expressions;
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> to use for value provider resolvers.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-public partial class ReadModelPropertyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats, ILogger<ReadModelPropertyExpressionResolvers> logger) : IReadModelPropertyExpressionResolvers
+public partial class ReadModelPropertyExpressionResolvers(
+    IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
+    ITypeFormats typeFormats,
+    ILogger<ReadModelPropertyExpressionResolvers> logger) : IReadModelPropertyExpressionResolvers
 {
     readonly IReadModelPropertyExpressionResolver[] _resolvers =
         [
