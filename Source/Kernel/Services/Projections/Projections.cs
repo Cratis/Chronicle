@@ -137,15 +137,10 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<GetSnapshotsByIdResponse> GetSnapshotsById(GetSnapshotsByIdRequest request, CallContext context = default)
     {
-        var projectionGrain = grainFactory.GetGrain<Grains.Projections.IProjection>(
-            new ProjectionKey(request.ProjectionId, request.EventStore));
-        
-        var definition = await projectionGrain.GetDefinition();
         var snapshots = await GetSnapshotsForProjection(
             request.EventStore,
             request.Namespace,
-            request.EventSequenceId,
-            definition);
+            request.EventSequenceId);
 
         return new GetSnapshotsByIdResponse
         {
@@ -156,8 +151,7 @@ internal sealed class Projections(
     async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
         string eventStoreName,
         string namespaceName,
-        string eventSequenceId,
-        Concepts.Projections.Definitions.ProjectionDefinition definition)
+        string eventSequenceId)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
@@ -212,7 +206,7 @@ internal sealed class Projections(
             {
                 ReadModel = "{}",
                 Events = eventsJson,
-                Occurred = firstOccurred,
+                Occurred = firstOccurred!,
                 CorrelationId = correlationId
             });
         }
