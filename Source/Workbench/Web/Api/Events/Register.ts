@@ -69,6 +69,8 @@ export class Register extends Command<IRegister> implements IRegister {
     }
 
     static use(initialValues?: IRegister): [Register, SetCommandValues<IRegister>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Register, IRegister>(Register, initialValues);
     }
 }

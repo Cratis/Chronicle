@@ -97,6 +97,8 @@ export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartitio
     }
 
     static use(initialValues?: ITryRecoverFailedPartition): [TryRecoverFailedPartition, SetCommandValues<ITryRecoverFailedPartition>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<TryRecoverFailedPartition, ITryRecoverFailedPartition>(TryRecoverFailedPartition, initialValues);
     }
 }

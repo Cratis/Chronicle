@@ -33,10 +33,14 @@ public class EventTypesForSpecifications : IEventTypes
         _jsonSchemasByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => generator.Generate(_.Key));
 
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
+        All = _eventTypes.Values.ToImmutableList();
     }
 
     /// <inheritdoc/>
     public IImmutableList<Type> AllClrTypes { get; }
+
+    /// <inheritdoc/>
+    public IImmutableList<EventType> All { get; }
 
     /// <inheritdoc/>
     public Task Discover() => Task.CompletedTask;

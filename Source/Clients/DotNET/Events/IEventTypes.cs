@@ -18,6 +18,11 @@ public interface IEventTypes
     IImmutableList<Type> AllClrTypes { get; }
 
     /// <summary>
+    /// Get all <see cref="EventType"/> discovered event types.
+    /// </summary>
+    IImmutableList<EventType> All { get; }
+
+    /// <summary>
     /// Discover all event types from the entry assembly and dependencies.
     /// </summary>
     /// <returns>Awaitable task.</returns>

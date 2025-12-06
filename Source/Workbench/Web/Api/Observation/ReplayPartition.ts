@@ -97,6 +97,8 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
     }
 
     static use(initialValues?: IReplayPartition): [ReplayPartition, SetCommandValues<IReplayPartition>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<ReplayPartition, IReplayPartition>(ReplayPartition, initialValues);
     }
 }

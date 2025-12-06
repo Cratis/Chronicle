@@ -34,8 +34,7 @@ public class ReactorObserverSubscriber(
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var subscriberKey = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
-        _key = new(subscriberKey.ObserverId, subscriberKey.EventStore, subscriberKey.Namespace, subscriberKey.EventSequenceId);
+        (_key, _) = this.GetKeys();
         return Task.CompletedTask;
     }
 

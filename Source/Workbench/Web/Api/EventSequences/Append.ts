@@ -177,6 +177,8 @@ export class Append extends Command<IAppend> implements IAppend {
     }
 
     static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Append, IAppend>(Append, initialValues);
     }
 }
