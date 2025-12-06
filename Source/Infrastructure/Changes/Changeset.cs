@@ -136,8 +136,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
             // Replace the existing ChildAdded with a new one containing the updated child
             var index = _changes.IndexOf(existingChildAdded);
-            var child = JsonSerializer.Serialize(childToUpdate);
-            File.WriteAllText("childToUpdate.json", child);
             _changes[index] = new ChildAdded(
                 childToUpdate,
                 existingChildAdded.ChildrenProperty,

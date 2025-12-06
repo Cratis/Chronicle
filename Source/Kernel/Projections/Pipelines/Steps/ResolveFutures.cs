@@ -93,9 +93,6 @@ public class ResolveFutures(
                         continue;
                     }
 
-                    var before = JsonSerializer.Serialize(context.Changeset.CurrentState);
-                    await File.WriteAllTextAsync("before.json", before);
-
                     var keyResolver = projection.GetKeyResolverFor(future.Event.Context.EventType);
 
                     logger.ParentExistsInCurrentState(future.Id);
@@ -126,8 +123,6 @@ public class ResolveFutures(
                     var contextEvent = futureContext.Changeset.Incoming;
                     futureContext.Changeset.Incoming = future.Event;
                     childProjection.OnNext(futureContext);
-                    var after = JsonSerializer.Serialize(futureContext.Changeset.CurrentState);
-                    await File.WriteAllTextAsync("after.json", after);
                     futureContext.Changeset.Incoming = contextEvent;
 
                     // Successfully resolved the future
