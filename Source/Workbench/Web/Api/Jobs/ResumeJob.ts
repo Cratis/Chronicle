@@ -84,6 +84,8 @@ export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
     }
 
     static use(initialValues?: IResumeJob): [ResumeJob, SetCommandValues<IResumeJob>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<ResumeJob, IResumeJob>(ResumeJob, initialValues);
     }
 }

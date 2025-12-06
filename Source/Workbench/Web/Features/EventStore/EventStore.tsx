@@ -21,7 +21,6 @@ import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
-import { Webhooks } from './General/Webhooks/Webhooks';
 import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 
@@ -42,7 +41,6 @@ export const EventStore = () => {
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
-                { label: strings.mainMenu.general.webhooks, url: 'webhooks', icon: mdIcons.MdApps },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
@@ -61,7 +59,6 @@ export const EventStore = () => {
 
                 <Route path={'types'} element={<Types />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
-                <Route path={'webhooks'} element={<Webhooks />} /> 
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />
                 <Route path={'reducers'} element={<Reducers />} />
