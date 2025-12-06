@@ -12,6 +12,6 @@ public class GetSnapshotsByIdResponse
     /// <summary>
     /// Gets or sets the collection of snapshots.
     /// </summary>
-    [ProtoMember(1)]
+    [ProtoMember(1, IsRequired = true)]
     public IList<ProjectionSnapshot> Snapshots { get; set; } = [];
 }
