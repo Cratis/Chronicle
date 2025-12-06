@@ -277,6 +277,47 @@ public class Projections(
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>()
+    {
+        var handler = _handlersByModelType[typeof(TReadModel)];
+        var request = new GetSnapshotsByIdRequest
+        {
+            ProjectionId = handler.Id,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log
+        };
+
+        var response = await _servicesAccessor.Services.Projections.GetSnapshotsById(request);
+        var snapshots = new List<ProjectionSnapshot<TReadModel>>();
+
+        foreach (var snapshot in response.Snapshots)
+        {
+            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
+
+            // Deserialize the events array as AppendedEvent objects
+            var appendedEvents = JsonSerializer.Deserialize<Contracts.Events.AppendedEvent[]>(snapshot.Events, jsonSerializerOptions)!;
+
+            // Deserialize each AppendedEvent to its actual CLR type using IEventSerializer
+            var eventTasks = appendedEvents.Select(async appendedEvent =>
+            {
+                var clientAppendedEvent = appendedEvent.ToClient(jsonSerializerOptions);
+                return await eventSerializer.Deserialize(clientAppendedEvent);
+            });
+
+            var events = await Task.WhenAll(eventTasks);
+
+            snapshots.Add(new ProjectionSnapshot<TReadModel>(
+                readModel,
+                events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        return snapshots;
+    }
+
     /// <summary>
     /// Sets the <see cref="IRulesProjections"/>.
     /// </summary>
