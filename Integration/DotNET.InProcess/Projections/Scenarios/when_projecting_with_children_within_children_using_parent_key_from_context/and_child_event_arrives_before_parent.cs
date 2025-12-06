@@ -71,19 +71,7 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
         }
     }
 
-    [Fact]
-    void should_have_no_failed_partitions()
-    {
-        if (Context.FailedPartitions.Any())
-        {
-            var failures = Context.FailedPartitions.ToList();
-            var messages = failures.SelectMany(f => f.Attempts.Select(a => a.Messages)).SelectMany(m => m).ToList();
-            var stackTraces = failures.SelectMany(f => f.Attempts.Select(a => a.StackTrace)).ToList();
-            var combined = string.Join("\n\n", messages.Zip(stackTraces, (msg, stack) => $"Message: {msg}\nStack: {stack}"));
-            throw new Xunit.Sdk.XunitException($"Failed partitions:\n{combined}");
-        }
-    }
-
+    [Fact] void should_have_no_failed_partitions() => Context.FailedPartitions.ShouldBeEmpty();
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_simulation_name() => Context.Result.Name.ShouldEqual(SimulationName);
     [Fact] void should_have_one_configuration() => Context.Result.Configurations.Count.ShouldEqual(1);
