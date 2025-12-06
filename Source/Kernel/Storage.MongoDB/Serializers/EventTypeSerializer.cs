@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Chronicle.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 
 /// <summary>
 /// Represents a BSON serializer for <see cref="EventType"/>.

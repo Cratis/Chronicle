@@ -84,6 +84,8 @@ export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
     }
 
     static use(initialValues?: IDeleteJob): [DeleteJob, SetCommandValues<IDeleteJob>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<DeleteJob, IDeleteJob>(DeleteJob, initialValues);
     }
 }

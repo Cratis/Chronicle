@@ -15,7 +15,7 @@ public interface IChangeset<TSource, TTarget>
     /// <summary>
     /// Gets the <typeparamref name="TSource"/> the <see cref="IChangeset{TSource, TTarget}"/> is for.
     /// </summary>
-    TSource Incoming { get; }
+    TSource Incoming { get; set; }
 
     /// <summary>
     /// Gets the initial state of before changes in changeset occurred.

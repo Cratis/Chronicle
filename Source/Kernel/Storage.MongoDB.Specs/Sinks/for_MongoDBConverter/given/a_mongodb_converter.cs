@@ -29,7 +29,8 @@ public class a_mongodb_converter : Specification
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(ReadModel)) },
-            });
+            },
+            []);
         _converter = new(_expandoObjectConverter, _typeFormats, _model);
     }
 }

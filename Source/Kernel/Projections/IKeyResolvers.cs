@@ -25,6 +25,17 @@ public interface IKeyResolvers
     KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider);
 
     /// <summary>
+    /// Create a <see cref="KeyResolver"/> that provides a value from the event content, falling back to EventSourceId if the value is null.
+    /// </summary>
+    /// <param name="eventValueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
+    /// <returns>A new <see cref="KeyResolver"/>.</returns>
+    /// <remarks>
+    /// This is useful when auto-inferring a parent key from event content, where the property might not exist
+    /// in the event but the event is appended to the parent's EventSourceId.
+    /// </remarks>
+    KeyResolver FromEventValueProviderWithFallbackToEventSourceId(ValueProvider<AppendedEvent> eventValueProvider);
+
+    /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a key value which is a composite of a set of <see cref="ValueProvider{T}"/>.
     /// </summary>
     /// <param name="propertiesWithKeyValueProviders">Target property paths in key and resolvers to use for resolving.</param>

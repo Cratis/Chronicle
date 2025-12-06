@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using KernelDefs = Cratis.Chronicle.Concepts.Projections.Definitions;
 
@@ -20,12 +19,12 @@ public static class ChildrenDefinitionConverters
     public static KernelDefs.ChildrenDefinition ToKernel(this ChildrenDefinition source) =>
         new(
             source.IdentifiedBy,
-            source.From.ToDictionary(kv => EventType.Parse(kv.Key), kv => kv.Value.ToKernel()),
-            source.Join.ToDictionary(kv => EventType.Parse(kv.Key), kv => kv.Value.ToKernel()),
+            source.From.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
+            source.Join.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
             source.Children.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()),
             source.FromEvery.ToKernel(),
-            source.RemovedWith.ToDictionary(kv => EventType.Parse(kv.Key), kv => kv.Value.ToKernel()),
-            source.RemovedWithJoin.ToDictionary(kv => EventType.Parse(kv.Key), kv => kv.Value.ToKernel()),
+            source.RemovedWith.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
+            source.RemovedWithJoin.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
             source.FromEventProperty?.ToKernel());
 
     /// <summary>
@@ -37,12 +36,12 @@ public static class ChildrenDefinitionConverters
         new()
         {
             IdentifiedBy = source.IdentifiedBy,
-            From = source.From.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
-            Join = source.Join.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
+            From = source.From.ToDictionary(kv => kv.Key.ToMongoDB().ToString(), kv => kv.Value.ToMongoDB()),
+            Join = source.Join.ToDictionary(kv => kv.Key.ToMongoDB().ToString(), kv => kv.Value.ToMongoDB()),
             Children = source.Children.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
             FromEvery = source.FromEvery.ToMongoDB(),
-            RemovedWith = source.RemovedWith.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
-            RemovedWithJoin = source.RemovedWithJoin.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
+            RemovedWith = source.RemovedWith.ToDictionary(kv => kv.Key.ToMongoDB().ToString(), kv => kv.Value.ToMongoDB()),
+            RemovedWithJoin = source.RemovedWithJoin.ToDictionary(kv => kv.Key.ToMongoDB().ToString(), kv => kv.Value.ToMongoDB()),
             FromEventProperty = source.FromEventProperty?.ToMongoDB()
         };
 }

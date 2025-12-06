@@ -84,6 +84,8 @@ export class StopJob extends Command<IStopJob> implements IStopJob {
     }
 
     static use(initialValues?: IStopJob): [StopJob, SetCommandValues<IStopJob>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<StopJob, IStopJob>(StopJob, initialValues);
     }
 }

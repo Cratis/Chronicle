@@ -16,4 +16,7 @@ internal static partial class SaveChangesLogging
 
     [LoggerMessage(LogLevel.Trace, "No changes to save for event with sequence number {SequenceNumber}")]
     internal static partial void NotSaving(this ILogger<SaveChanges> logger, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Not saving for event with sequence number {SequenceNumber} - event was deferred")]
+    internal static partial void NotSavingDueToDeferred(this ILogger<SaveChanges> logger, ulong sequenceNumber);
 }

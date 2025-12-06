@@ -24,7 +24,8 @@ public class a_projection : Specification
             new ExpandoObject(),
             string.Empty,
             string.Empty,
-            new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema>()),
+            string.Empty,
+            new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema>(), []),
             new JsonSchema(),
             true,
             []);

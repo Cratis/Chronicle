@@ -25,7 +25,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     TTarget _initialState = initialState;
 
     /// <inheritdoc/>
-    public TSource Incoming { get; } = incoming;
+    public TSource Incoming { get; set; } = incoming;
 
     /// <inheritdoc/>
     public TTarget InitialState
@@ -95,7 +95,11 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     /// <inheritdoc/>
     public void AddChild(PropertyPath childrenProperty, object child)
     {
-        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!));
+        var workingState = CurrentState.Clone()!;
+        var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, ArrayIndexers.NoIndexers);
+        items.Add(child);
+        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers));
+        CurrentState = workingState;
     }
 
     /// <inheritdoc/>
@@ -107,7 +111,50 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         ArrayIndexers arrayIndexers)
         where TChild : new()
     {
-        var workingState = CurrentState.Clone()!;
+        var workingState = CurrentState.Clone();
+
+        // Check if there's already a ChildAdded change that matches this child in the same parent context
+        var parentKey = arrayIndexers.All.First().Identifier;
+        var existingChildAdded = _changes
+            .OfType<ChildAdded>()
+            .FirstOrDefault(_ => Equals(_.Key.ToString(), parentKey.ToString()));
+
+        if (existingChildAdded is not null)
+        {
+            // Optimize by updating the existing child in-memory instead of creating a new change
+            ApplyPropertyMappers(workingState!, propertyMappers, arrayIndexers);
+
+            var existingCollection = workingState.EnsureCollection<TTarget, object>(
+                existingChildAdded.ChildrenProperty,
+                existingChildAdded.ArrayIndexers);
+            var childToUpdate = existingCollection.FindByKey(existingChildAdded.IdentifiedByProperty, existingChildAdded.Key);
+            if (childToUpdate is null)
+            {
+                return;
+            }
+
+            // Replace the existing ChildAdded with a new one containing the updated child
+            var index = _changes.IndexOf(existingChildAdded);
+            _changes[index] = new ChildAdded(
+                childToUpdate,
+                existingChildAdded.ChildrenProperty,
+                existingChildAdded.IdentifiedByProperty,
+                existingChildAdded.Key,
+                existingChildAdded.ArrayIndexers);
+
+            // Update the item in the current state's collection
+            var collection = CurrentState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
+            var existingItem = collection.FindByKey(identifiedByProperty, key);
+            if (existingItem is not null && collection is IList<object> list)
+            {
+                var itemIndex = list.IndexOf(existingItem);
+                list[itemIndex] = childToUpdate;
+            }
+
+            CurrentState = workingState;
+            return;
+        }
+
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
         object? item = null;
 
@@ -141,7 +188,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         {
             items.Add(item);
             SetProperties(workingState, propertyMappers, arrayIndexers);
-            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
+            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
         }
 
         CurrentState = workingState;
@@ -269,5 +316,17 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         return differences;
+    }
+
+    void ApplyPropertyMappers(object target, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
+    {
+        foreach (var propertyMapper in propertyMappers)
+        {
+            var difference = propertyMapper(Incoming, (TTarget)target, arrayIndexers);
+            if (difference.HasChanges())
+            {
+                difference.PropertyPath.SetValue(target, difference.Changed!, difference.ArrayIndexers);
+            }
+        }
     }
 }

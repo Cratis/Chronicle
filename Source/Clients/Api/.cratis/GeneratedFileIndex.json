@@ -1,0 +1,109 @@
+{
+  "entries": {
+    "Recommendations": {
+      "folders": {},
+      "files": [
+        "Perform.ts",
+        "Ignore.ts",
+        "GetRecommendations.ts",
+        "AllRecommendations.ts",
+        "Recommendation.ts"
+      ]
+    },
+    "Observation": {
+      "folders": {},
+      "files": [
+        "Replay.ts",
+        "TryRecoverFailedPartition.ts",
+        "ReplayPartition.ts",
+        "AllFailedPartitions.ts",
+        "GetObservers.ts",
+        "AllObservers.ts",
+        "FailedPartition.ts",
+        "FailedPartitionAttempt.ts",
+        "ObserverInformation.ts",
+        "ObserverType.ts",
+        "ObserverOwner.ts",
+        "ObserverRunningState.ts"
+      ]
+    },
+    "Namespaces": {
+      "folders": {},
+      "files": [
+        "EnsureNamespace.ts",
+        "AllNamespaces.ts"
+      ]
+    },
+    "Jobs": {
+      "folders": {},
+      "files": [
+        "ResumeJob.ts",
+        "StopJob.ts",
+        "DeleteJob.ts",
+        "AllJobs.ts",
+        "Job.ts",
+        "JobStatusChanged.ts",
+        "JobProgress.ts",
+        "JobStatus.ts"
+      ]
+    },
+    "EventStores": {
+      "folders": {},
+      "files": [
+        "AddEventStore.ts",
+        "GetEventStores.ts",
+        "AllEventStores.ts"
+      ]
+    },
+    "EventSequences": {
+      "folders": {},
+      "files": [
+        "Append.ts",
+        "AppendMany.ts",
+        "Redact.ts",
+        "RedactMany.ts",
+        "AppendedEvents.ts",
+        "AllEventSequences.ts",
+        "EventToAppend.ts"
+      ]
+    },
+    "Events": {
+      "folders": {},
+      "files": [
+        "Register.ts",
+        "EventType.ts",
+        "EventTypeRegistration.ts",
+        "AppendedEvent.ts",
+        "EventContext.ts"
+      ]
+    },
+    "Projections": {
+      "folders": {},
+      "files": [
+        "AllProjections.ts",
+        "Projection.ts"
+      ]
+    },
+    "Identities": {
+      "folders": {},
+      "files": [
+        "GetIdentities.ts",
+        "AllIdentities.ts",
+        "Identity.ts"
+      ]
+    },
+    "EventTypes": {
+      "folders": {},
+      "files": [
+        "AllEventTypes.ts",
+        "AllEventTypesWithSchemas.ts"
+      ]
+    },
+    "Auditing": {
+      "folders": {},
+      "files": [
+        "Causation.ts"
+      ]
+    }
+  }
+}

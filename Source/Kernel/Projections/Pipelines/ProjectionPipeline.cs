@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Pipelines.Steps;
@@ -50,13 +49,12 @@ public class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public async Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event)
+    public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
         logger.StartingPipeline(@event.Context.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
-
         };
 
         foreach (var step in steps)
@@ -73,6 +71,6 @@ public class ProjectionPipeline(
         }
         logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
-        return context.Changeset;
+        return context;
     }
 }

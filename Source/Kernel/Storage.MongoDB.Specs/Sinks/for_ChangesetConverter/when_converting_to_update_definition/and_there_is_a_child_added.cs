@@ -25,7 +25,7 @@ public class and_there_is_a_child_added : given.a_changeset_converter
         _expectedBsonValue = BsonValue.Create(42UL);
 
         var childState = new ExpandoObject();
-        var childAdded = new ChildAdded(childState, new PropertyPath("Children"), new PropertyPath("Id"), "child-key");
+        var childAdded = new ChildAdded(childState, new PropertyPath("Children"), new PropertyPath("Id"), "child-key", ArrayIndexers.NoIndexers);
 
         _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         _changeset.Changes.Returns([childAdded]);

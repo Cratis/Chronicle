@@ -1,0 +1,6 @@
+POST http://localhost:8080/api/event-store/Identigo/observers/Default/replay/Core.Simulations.Dashboard.SimulationDashboard
+Content-Type: application/json
+
+{
+}
+

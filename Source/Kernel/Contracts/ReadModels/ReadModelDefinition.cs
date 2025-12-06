@@ -32,4 +32,10 @@ public class ReadModelDefinition
     /// </summary>
     [ProtoMember(4)]
     public string Schema { get; set; }
+
+    /// <summary>
+    /// Gets or sets the indexes defined for the model.
+    /// </summary>
+    [ProtoMember(5, IsRequired = true)]
+    public IList<IndexDefinition> Indexes { get; set; } = [];
 }

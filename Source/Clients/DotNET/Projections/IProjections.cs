@@ -169,4 +169,11 @@ public interface IProjections
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
+
+    /// <summary>
+    /// Get snapshots of a projection grouped by CorrelationId by walking through events from the beginning.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model.</typeparam>
+    /// <returns>Collection of <see cref="ProjectionSnapshot{TReadModel}"/>.</returns>
+    Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>();
 }

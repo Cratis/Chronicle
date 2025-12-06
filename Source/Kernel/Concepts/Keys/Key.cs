@@ -38,4 +38,11 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
 
     /// <inheritdoc/>
     public override string ToString() => Value?.ToString() ?? base.ToString() ?? string.Empty;
+
+    /// <summary>
+    /// Determines whether the key is equal to the provided value.
+    /// </summary>
+    /// <param name="value">Value to compare to.</param>
+    /// <returns>True if the key is equal to the provided value; otherwise, false.</returns>
+    public bool IsEqualTo(object value) => Value.Equals(value);
 }

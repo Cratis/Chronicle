@@ -6,6 +6,8 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Properties;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -30,6 +32,18 @@ public interface ISink
     /// <param name="key">Key of the read model to find.</param>
     /// <returns>A read model instance with the data from the source, or an empty object.</returns>
     Task<ExpandoObject?> FindOrDefault(Key key);
+
+    /// <summary>
+    /// Find the root key of a read model that contains a child with the specified value at the given property path.
+    /// </summary>
+    /// <param name="childPropertyPath">The property path to the child property (e.g., "configurations.configurationId").</param>
+    /// <param name="childValue">The value to search for.</param>
+    /// <returns>An <see cref="Option{T}"/> containing the root key if found, otherwise None.</returns>
+    /// <remarks>
+    /// This method is used to resolve parent keys when projecting nested children.
+    /// For optimal performance, ensure the child property path has an index defined using <c>[Index]</c> attribute.
+    /// </remarks>
+    Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue);
 
     /// <summary>
     /// Update or insert read model based on key.
@@ -70,4 +84,15 @@ public interface ISink
     /// the idempotency of the projection.
     /// </remarks>
     Task PrepareInitialRun();
+
+    /// <summary>
+    /// Ensure that all required indexes are created on the sink.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method is called during projection registration to ensure that all indexes
+    /// defined on the read model are created. This is important for performance when
+    /// using nested children with <c>UsingParentKeyFromContext</c>.
+    /// </remarks>
+    Task EnsureIndexes();
 }

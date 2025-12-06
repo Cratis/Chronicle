@@ -7,6 +7,7 @@ using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Expressions.ReadModelProperties;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions;
@@ -16,7 +17,11 @@ namespace Cratis.Chronicle.Projections.Expressions;
 /// </summary>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> to use for value provider resolvers.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
-public class ReadModelPropertyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats) : IReadModelPropertyExpressionResolvers
+/// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+public partial class ReadModelPropertyExpressionResolvers(
+    IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers,
+    ITypeFormats typeFormats,
+    ILogger<ReadModelPropertyExpressionResolvers> logger) : IReadModelPropertyExpressionResolvers
 {
     readonly IReadModelPropertyExpressionResolver[] _resolvers =
         [
@@ -36,14 +41,15 @@ public class ReadModelPropertyExpressionResolvers(IEventValueProviderExpressionR
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
         var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetProperty, expression));
-        ThrowIfUnsupportedModelPropertyExpression(expression, resolver);
+        ThrowIfUnsupportedModelPropertyExpression(targetProperty, expression, resolver);
         return resolver!.Resolve(targetProperty, targetPropertySchema, expression);
     }
 
-    static void ThrowIfUnsupportedModelPropertyExpression(string expression, IReadModelPropertyExpressionResolver? resolver)
+    void ThrowIfUnsupportedModelPropertyExpression(PropertyPath targetProperty, string expression, IReadModelPropertyExpressionResolver? resolver)
     {
         if (resolver == default)
         {
+            logger.UnsupportedReadModelPropertyExpression(expression, targetProperty);
             throw new UnsupportedReadModelPropertyExpression(expression);
         }
     }

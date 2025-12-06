@@ -18,9 +18,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjection"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Projection"/> class.
-/// </remarks>
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]

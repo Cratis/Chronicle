@@ -66,6 +66,6 @@ public class ReadModelDefinitionsStorage(
             var generation = (ReadModelGeneration)key!;
             schemas[generation] = await JsonSchema.FromJsonAsync(schema.ToJson());
         }
-        return new(readModel.Id, readModel.Name, readModel.Owner, schemas);
+        return new(readModel.Id, readModel.Name, readModel.Owner, schemas, []);
     }
 }

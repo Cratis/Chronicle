@@ -6,6 +6,8 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Properties;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -14,6 +16,11 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// </summary>
 public class NullSink : ISink
 {
+    /// <summary>
+    /// Gets a singleton instance of <see cref="NullSink"/>.
+    /// </summary>
+    public static readonly NullSink Instance = new();
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.Null;
 
@@ -36,5 +43,11 @@ public class NullSink : ISink
     public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult<ExpandoObject?>(null);
 
     /// <inheritdoc/>
+    public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue) => Task.FromResult(Option<Key>.None());
+
+    /// <inheritdoc/>
     public Task PrepareInitialRun() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
 }

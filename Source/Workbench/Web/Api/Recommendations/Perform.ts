@@ -84,6 +84,8 @@ export class Perform extends Command<IPerform> implements IPerform {
     }
 
     static use(initialValues?: IPerform): [Perform, SetCommandValues<IPerform>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Perform, IPerform>(Perform, initialValues);
     }
 }

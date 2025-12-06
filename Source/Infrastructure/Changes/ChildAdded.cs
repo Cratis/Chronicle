@@ -12,4 +12,5 @@ namespace Cratis.Chronicle.Changes;
 /// <param name="ChildrenProperty">The property holding the children in the parent object.</param>
 /// <param name="IdentifiedByProperty">The property that identifies the key on the child object.</param>
 /// <param name="Key">Key of the object.</param>
-public record ChildAdded(object Child, PropertyPath ChildrenProperty, PropertyPath IdentifiedByProperty, object Key) : Change(Child);
+/// <param name="ArrayIndexers">The array indexers identifying the parent context.</param>
+public record ChildAdded(object Child, PropertyPath ChildrenProperty, PropertyPath IdentifiedByProperty, object Key, ArrayIndexers ArrayIndexers) : Change(Child);
