@@ -82,7 +82,7 @@ public class Sink(
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
         if (!converted.hasChanges) return;
 
-        var result = await Collection.UpdateOneAsync(
+        await Collection.UpdateOneAsync(
             filter,
             converted.UpdateDefinition,
             new UpdateOptions
@@ -90,7 +90,6 @@ public class Sink(
                 IsUpsert = true,
                 ArrayFilters = converted.ArrayFilters
             });
-        Console.WriteLine(result);
     }
 
     /// <inheritdoc/>
