@@ -25,7 +25,6 @@ public interface IExpandoObjectConverter
     /// </summary>
     /// <param name="expandoObject">The <see cref="ExpandoObject"/> to convert.</param>
     /// <param name="schema">The <see cref="JsonSchema"/> with the type information.</param>
-    /// <param name="rootDocument">Indicates whether the document is the root document. Defaults to true.</param>
     /// <returns>A new <see cref="BsonDocument"/> instance.</returns>
-    BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema, bool rootDocument = true);
+    BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema);
 }

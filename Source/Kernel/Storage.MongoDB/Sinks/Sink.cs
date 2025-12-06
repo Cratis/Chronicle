@@ -88,7 +88,7 @@ public class Sink(
         var def = converted.UpdateDefinition.Render(args).ToJson();
         await File.WriteAllTextAsync("updateDefinition.json", def);
 
-        var result = await Collection.UpdateOneAsync(
+        await Collection.UpdateOneAsync(
             filter,
             converted.UpdateDefinition,
             new UpdateOptions
@@ -96,7 +96,6 @@ public class Sink(
                 IsUpsert = true,
                 ArrayFilters = converted.ArrayFilters
             });
-        Console.WriteLine(result);
     }
 
     /// <inheritdoc/>

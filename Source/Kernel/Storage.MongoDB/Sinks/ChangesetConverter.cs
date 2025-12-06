@@ -153,7 +153,7 @@ public class ChangesetConverter(
         else
         {
             var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childAdded.ChildrenProperty);
-            bsonValue = expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema, false);
+            bsonValue = expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
         }
 
         var childrenProperty = childAdded.ChildrenProperty.GetChildrenProperty();
@@ -177,7 +177,7 @@ public class ChangesetConverter(
         else
         {
             var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
-            bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema, false);
+            bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema);
         }
 
         var childrenProperty = childRemoved.ChildrenProperty.GetChildrenProperty();

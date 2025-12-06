@@ -60,7 +60,12 @@ public class MongoDBConverter(
                             var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
                             propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
                             var filter = new ExpandoObject();
-                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier);
+                            var key = arrayIndexer.IdentifierProperty.Path;
+                            if (key.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                key = "_id";
+                            }
+                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{key}", arrayIndexer.Identifier);
                             var document = ToBsonValue(filter) as BsonDocument;
                             arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(document));
                         }

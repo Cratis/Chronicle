@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
     /// <inheritdoc/>
-    public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema, bool rootDocument = true)
+    public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema)
     {
         var document = new BsonDocument();
         var schemaProperties = schema.GetFlattenedProperties();
@@ -32,14 +32,14 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
             if (schemaProperty is null)
             {
-                value = ConvertUnknownSchemaTypeToBsonValue(keyValue.Value, rootDocument);
+                value = ConvertUnknownSchemaTypeToBsonValue(keyValue.Value);
             }
             else
             {
-                value = ConvertToBsonValue(keyValue.Value, schemaProperty, rootDocument);
+                value = ConvertToBsonValue(keyValue.Value, schemaProperty);
             }
 
-            name = GetNameForPropertyInBsonDocument(name, rootDocument);
+            name = GetNameForPropertyInBsonDocument(name);
             document[name] = value;
         }
 
@@ -77,11 +77,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
-    BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty, bool rootDocument)
+    BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty)
     {
         if (schemaProperty.IsDictionary)
         {
-            return ConvertUnknownSchemaTypeToBsonValue(value, rootDocument);
+            return ConvertUnknownSchemaTypeToBsonValue(value);
         }
 
         if (value is ExpandoObject expando)
@@ -96,7 +96,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var items = new List<BsonValue>();
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToBsonValue(item, schemaProperty.Item!.Reference ?? schemaProperty.Item, false));
+                items.Add(ConvertToBsonValue(item, schemaProperty.Item!.Reference ?? schemaProperty.Item));
             }
             return new BsonArray(items);
         }
@@ -147,7 +147,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return dictionary;
     }
 
-    BsonValue ConvertUnknownSchemaTypeToBsonValue(object? value, bool rootDocument)
+    BsonValue ConvertUnknownSchemaTypeToBsonValue(object? value)
     {
         if (value is ExpandoObject expandoObject)
         {
@@ -156,7 +156,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             foreach (var kvp in expandoObjectAsDictionary)
             {
-                document[GetNameForPropertyInBsonDocument(kvp.Key, rootDocument)] = ConvertUnknownSchemaTypeToBsonValue(kvp.Value, false);
+                document[GetNameForPropertyInBsonDocument(kvp.Key)] = ConvertUnknownSchemaTypeToBsonValue(kvp.Value);
             }
 
             return document;
@@ -179,7 +179,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
             foreach (var item in enumerable)
             {
-                array.Add(ConvertUnknownSchemaTypeToBsonValue(item, false));
+                array.Add(ConvertUnknownSchemaTypeToBsonValue(item));
             }
 
             return array;
@@ -280,9 +280,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return name;
     }
 
-    string GetNameForPropertyInBsonDocument(string name, bool rootDocument)
+    string GetNameForPropertyInBsonDocument(string name)
     {
-        if (name == "id" && rootDocument)
+        if (name == "id")
         {
             return "_id";
         }
