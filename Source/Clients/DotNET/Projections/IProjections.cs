@@ -174,6 +174,7 @@ public interface IProjections
     /// Get snapshots of a projection grouped by CorrelationId by walking through events from the beginning.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model.</typeparam>
+    /// <param name="readModelKey"><see cref="ReadModelKey"/> to get snapshots for.</param>
     /// <returns>Collection of <see cref="ProjectionSnapshot{TReadModel}"/>.</returns>
-    Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>();
+    Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey);
 }

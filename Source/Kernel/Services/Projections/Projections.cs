@@ -158,7 +158,8 @@ internal sealed class Projections(
             request.ProjectionId,
             request.EventStore,
             request.Namespace,
-            request.EventSequenceId);
+            request.EventSequenceId,
+            request.ReadModelKey);
 
         return new GetSnapshotsByIdResponse
         {
@@ -170,7 +171,8 @@ internal sealed class Projections(
         string projectionId,
         string eventStoreName,
         string namespaceName,
-        string eventSequenceId)
+        string eventSequenceId,
+        string readModelKey)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
@@ -192,8 +194,7 @@ internal sealed class Projections(
             return [];
         }
 
-        var cursor = await eventSequenceStorage.GetFromSequenceNumber(
-            EventSequenceNumber.First);
+        var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey);
 
         var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
 

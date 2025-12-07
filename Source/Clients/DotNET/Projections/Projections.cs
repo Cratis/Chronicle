@@ -278,7 +278,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>()
+    public async Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
         var handler = _handlersByModelType[typeof(TReadModel)];
         var request = new GetSnapshotsByIdRequest
@@ -287,6 +287,7 @@ public class Projections(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             EventSequenceId = EventSequenceId.Log
+            ReadModelKey = readModelKey
         };
 
         var response = await _servicesAccessor.Services.Projections.GetSnapshotsById(request);

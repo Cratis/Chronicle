@@ -32,4 +32,10 @@ public class GetSnapshotsByIdRequest
     /// </summary>
     [ProtoMember(4)]
     public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the read model key.
+    /// </summary>
+    [ProtoMember(5)]
+    public string ReadModelKey { get; set; }
 }
