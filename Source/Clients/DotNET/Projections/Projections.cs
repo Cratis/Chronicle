@@ -286,7 +286,7 @@ public class Projections(
             ProjectionId = handler.Id,
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log
+            EventSequenceId = EventSequenceId.Log,
             ReadModelKey = readModelKey
         };
 
