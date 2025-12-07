@@ -297,21 +297,18 @@ public class Projections(
         {
             var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
 
-            // Deserialize the events array as AppendedEvent objects
-            var appendedEvents = JsonSerializer.Deserialize<Contracts.Events.AppendedEvent[]>(snapshot.Events, jsonSerializerOptions)!;
-
-            // Deserialize each AppendedEvent to its actual CLR type using IEventSerializer
-            var eventTasks = appendedEvents.Select(async appendedEvent =>
-            {
-                var clientAppendedEvent = appendedEvent.ToClient(jsonSerializerOptions);
-                return await eventSerializer.Deserialize(clientAppendedEvent);
-            });
-
-            var events = await Task.WhenAll(eventTasks);
-
+            // // Deserialize the events array as AppendedEvent objects
+            // var appendedEvents = JsonSerializer.Deserialize<Contracts.Events.AppendedEvent[]>(snapshot.Events, jsonSerializerOptions)!;
+            // // Deserialize each AppendedEvent to its actual CLR type using IEventSerializer
+            // var eventTasks = appendedEvents.Select(async appendedEvent =>
+            // {
+            //     var clientAppendedEvent = appendedEvent.ToClient(jsonSerializerOptions);
+            //     return await eventSerializer.Deserialize(clientAppendedEvent);
+            // });
+            // var events = await Task.WhenAll(eventTasks);
             snapshots.Add(new ProjectionSnapshot<TReadModel>(
                 readModel,
-                events,
+                [],
                 snapshot.Occurred,
                 snapshot.CorrelationId));
         }
