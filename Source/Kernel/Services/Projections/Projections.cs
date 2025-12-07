@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelProjections;
+
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
@@ -13,16 +15,15 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
+using KernelProjections::Cratis.Chronicle.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Services.Projections;
 
@@ -43,7 +44,7 @@ internal sealed class Projections(
     IObjectComparer objectComparer,
     IExpandoObjectConverter expandoObjectConverter,
     IServiceProvider serviceProvider,
-    JsonSerializerOptions jsonSerializerOptions) : IProjections
+    JsonSerializerOptions jsonSerializerOptions) : Contracts.Projections.IProjections
 {
     /// <inheritdoc/>
     public Task Register(RegisterRequest request, CallContext context = default)
@@ -246,7 +247,7 @@ internal sealed class Projections(
     }
 
     async Task<ExpandoObject> HandleEvents(
-        EngineProjection projection,
+        KernelProjections::Cratis.Chronicle.Projections.IProjection projection,
         IEventSequenceStorage eventSequenceStorage,
         ExpandoObject initialState,
         AppendedEvent[] events)
@@ -284,7 +285,7 @@ internal sealed class Projections(
         return state;
     }
 
-    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
+    async Task HandleEventFor(KernelProjections::Cratis.Chronicle.Projections.IProjection projection, ProjectionEventContext context)
     {
         if (projection.Accepts(context.Event.Context.EventType))
         {

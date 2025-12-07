@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelProjections;
+
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -12,7 +14,6 @@ using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Events.Constraints;
@@ -22,6 +23,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using KernelProjections::Cratis.Chronicle.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
