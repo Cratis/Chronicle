@@ -195,7 +195,7 @@ internal sealed class Projections(
             return [];
         }
 
-        var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey);
+        var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: projectionInstance.EventTypes);
 
         var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
 
@@ -218,6 +218,12 @@ internal sealed class Projections(
         {
             var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
             var firstOccurred = orderedEvents[0].Context.Occurred;
+
+            if (!projectionInstance.Accepts(orderedEvents[0].Context.EventType))
+            {
+                // Skip correlations that don't apply to the projection
+                continue;
+            }
 
             // Serialize events as AppendedEvent array with context and content
             var eventsJson = JsonSerializer.Serialize(
