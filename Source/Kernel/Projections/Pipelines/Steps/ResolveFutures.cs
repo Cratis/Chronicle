@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
@@ -64,14 +65,7 @@ public class ResolveFutures(
                     var parentKey = future.ParentKey.Value;
                     if (type is not null)
                     {
-                        if (type == typeof(Guid))
-                        {
-                            parentKey = Guid.Parse(parentKey.ToString()!);
-                        }
-                        else
-                        {
-                            parentKey = Convert.ChangeType(parentKey.ToString(), type) ?? parentKey;
-                        }
+                        parentKey = TypeConversion.Convert(type, parentKey);
                     }
 
                     // Find the child projection that this future belongs to by navigating the property path
@@ -101,10 +95,9 @@ public class ResolveFutures(
                     var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
 
                     object childKey = future.Event.Context.EventSourceId;
-
-                    if (childType == typeof(Guid))
+                    if (childType is not null)
                     {
-                        childKey = Guid.Parse(future.Event.Context.EventSourceId);
+                        childKey = TypeConversion.Convert(childType, childKey);
                     }
 
                     var key = new Key(parentKey, new ArrayIndexers(
