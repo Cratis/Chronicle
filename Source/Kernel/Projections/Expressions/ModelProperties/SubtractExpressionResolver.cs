@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
@@ -33,6 +34,6 @@ public partial class SubtractExpressionResolver(IEventValueProviderExpressionRes
         return PropertyMappers.SubtractWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
     }
 
-    [GeneratedRegex($"\\$subtract\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SubtractRegEx();
 }
