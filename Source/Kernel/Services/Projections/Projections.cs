@@ -213,6 +213,7 @@ internal sealed class Projections(
         }
 
         var snapshots = new List<ProjectionSnapshot>();
+        var initialState = new ExpandoObject();
 
         foreach (var (correlationId, events) in eventsByCorrelation)
         {
@@ -234,10 +235,10 @@ internal sealed class Projections(
                 }).ToArray(),
                 jsonSerializerOptions);
 
-            var initialState = new ExpandoObject();
             var result = await HandleEvents(projectionInstance, eventSequenceStorage, initialState, orderedEvents.ToArray());
             var jsonObject = expandoObjectConverter.ToJsonObject(result, projectionInstance.ReadModel.GetSchemaForLatestGeneration());
             var readModel = JsonSerializer.Serialize(jsonObject, jsonSerializerOptions);
+            initialState = result;
 
             snapshots.Add(new ProjectionSnapshot
             {
