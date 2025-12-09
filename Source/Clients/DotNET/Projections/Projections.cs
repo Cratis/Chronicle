@@ -11,7 +11,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Rules;
 using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -42,7 +41,6 @@ public class Projections(
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-    IRulesProjections? _rulesProjections;
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
@@ -258,7 +256,6 @@ public class Projections(
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
-                .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
                 .. _definitionsByType.Values.Select(_ => _).ToList(),
                 .. modelBoundDefinitions.Values
             ]).ToImmutableList();
@@ -276,12 +273,6 @@ public class Projections(
             Projections = [.. Definitions]
         });
     }
-
-    /// <summary>
-    /// Sets the <see cref="IRulesProjections"/>.
-    /// </summary>
-    /// <param name="rulesProjections"><see cref="IRulesProjections"/> instance to set.</param>
-    internal void SetRulesProjections(IRulesProjections rulesProjections) => _rulesProjections = rulesProjections;
 
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,

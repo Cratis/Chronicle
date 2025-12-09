@@ -47,7 +47,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
-        <ProjectReference Include="../Orleans/Orleans.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">

@@ -1,8 +1,0 @@
-// Copyright (c) Cratis. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
-
-namespace Cratis.Chronicle.InProcess.Integration.AggregateRoots;
-
-public record UserInternalState(StateProperty<UserName> Name, StateProperty<bool> Deleted);

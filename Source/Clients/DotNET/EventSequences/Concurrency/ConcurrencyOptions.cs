@@ -9,7 +9,6 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 public class ConcurrencyOptions
 {
     Type _defaultStrategy = typeof(OptimisticConcurrencyStrategy);
-    Type _aggregateRootStrategy = typeof(OptimisticConcurrencyStrategyForAggregateRoot);
 
     /// <summary>
     /// Gets or sets the default concurrency strategy to use when no specific strategy is provided.
@@ -21,19 +20,6 @@ public class ConcurrencyOptions
         {
             TypeIsNotAConcurrencyStrategy.ThrowIfNotAConcurrencyStrategy(value);
             _defaultStrategy = value;
-        }
-    }
-
-    /// <summary>
-    /// Gets or sets the aggregate root strategy to use for concurrency control on aggregate roots.
-    /// </summary>
-    public Type AggregateRootStrategy
-    {
-        get => _aggregateRootStrategy;
-        set
-        {
-            TypeIsNotAConcurrencyStrategy.ThrowIfNotAConcurrencyStrategy(value);
-            _aggregateRootStrategy = value;
         }
     }
 }
