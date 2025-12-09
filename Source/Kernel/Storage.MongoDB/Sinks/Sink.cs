@@ -82,12 +82,6 @@ public class Sink(
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
         if (!converted.hasChanges) return;
 
-        var serializer = global::MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>();
-        var registry = global::MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry;
-        var args = new RenderArgs<BsonDocument>(serializer, registry);
-        var def = converted.UpdateDefinition.Render(args).ToJson();
-        await File.WriteAllTextAsync("updateDefinition.json", def);
-
         await Collection.UpdateOneAsync(
             filter,
             converted.UpdateDefinition,
