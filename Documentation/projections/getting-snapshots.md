@@ -54,7 +54,7 @@ When investigating why a read model has a particular state, you can retrieve all
 public async Task DiagnoseOrderState(OrderId orderId)
 {
     var snapshots = await _eventStore.Projections.GetSnapshotsById<Order>(orderId);
-    
+
     foreach (var snapshot in snapshots)
     {
         Console.WriteLine($"Correlation: {snapshot.CorrelationId}");
@@ -74,7 +74,7 @@ Create an audit log showing how a read model changed through different operation
 public async Task<AuditTrail> GetAuditTrail(AccountId accountId)
 {
     var snapshots = await _eventStore.Projections.GetSnapshotsById<Account>(accountId);
-    
+
     return new AuditTrail
     {
         AccountId = accountId,
@@ -98,9 +98,9 @@ Verify that a series of events produces the expected read model state:
 public async Task should_calculate_correct_balance_after_multiple_operations()
 {
     var snapshots = await _eventStore.Projections.GetSnapshotsById<Account>(accountId);
-    
+
     var finalSnapshot = snapshots.Last();
-    
+
     finalSnapshot.Instance.Balance.ShouldEqual(expectedBalance);
     finalSnapshot.Events.Count().ShouldEqual(expectedEventCount);
 }
