@@ -3,9 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
@@ -39,7 +37,7 @@ public class ProjectionObserverSubscriber(
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
-    ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
+    ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
     IAsyncStream<ProjectionChangeset>? _changeStream;
     JsonSchema? _schema;
@@ -48,7 +46,7 @@ public class ProjectionObserverSubscriber(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var streamProvider = this.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
-        _key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        (_, _key) = this.GetKeys();
 
         var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, _key.ObserverId));
         _changeStream = streamProvider.GetStream<ProjectionChangeset>(streamId);

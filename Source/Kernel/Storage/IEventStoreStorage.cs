@@ -8,6 +8,7 @@ using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
+using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 
@@ -57,6 +58,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IProjectionDefinitionsStorage"/> for the event store.
     /// </summary>
     IProjectionDefinitionsStorage Projections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IWebhookDefinitionsStorage"/> for the event store.
+    /// </summary>
+    IWebhookDefinitionsStorage Webhooks { get; }
 
     /// <summary>
     /// Gets the <see cref="IReadModelDefinitionsStorage"/> for the event store.
