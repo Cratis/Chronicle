@@ -148,7 +148,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
                 var parentProjection = projection.Parent!;
                 var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
-                logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", parentEventTypeIds));
+                logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
 
                 if (parentEventTypeIds.Length == 0)
                 {
