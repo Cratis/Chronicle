@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
@@ -11,4 +13,4 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Events">The deserialized events that were applied.</param>
 /// <param name="Occurred">When the first event occurred.</param>
 /// <param name="CorrelationId">The CorrelationId the events were for.</param>
-public record ProjectionSnapshot<TReadModel>(TReadModel Instance, IEnumerable<object> Events, DateTimeOffset Occurred, CorrelationId CorrelationId);
+public record ProjectionSnapshot<TReadModel>(TReadModel Instance, IEnumerable<AppendedEvent> Events, DateTimeOffset Occurred, CorrelationId CorrelationId);
