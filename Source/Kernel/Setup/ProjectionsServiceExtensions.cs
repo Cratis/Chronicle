@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelProjections;
-
 using Cratis.Chronicle.Grains.Projections;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,7 +23,7 @@ public static class ProjectionsServiceExtensions
         siloBuilder.ConfigureServices(_ =>
         {
             _.AddSingleton<IProjectionsServiceClient, ProjectionsServiceClient>();
-            _.AddSingleton<KernelProjections::Cratis.Chronicle.Projections.IProjectionFutures, ProjectionFuturesBridge>();
+            _.AddSingleton<Projections.IProjectionFutures, ProjectionFuturesBridge>();
         });
         return siloBuilder;
     }

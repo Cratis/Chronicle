@@ -38,7 +38,6 @@
         </ProjectReference>
         <ProjectReference Include="../Projections/Projections.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <Aliases>KernelProjections</Aliases>
         </ProjectReference>
     </ItemGroup>
 </Project>

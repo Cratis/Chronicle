@@ -76,7 +76,6 @@
 
         <ProjectReference Include="../../Kernel/Projections/Projections.csproj">
             <PrivateAssets>all</PrivateAssets>
-            <Aliases>KernelProjections</Aliases>
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
