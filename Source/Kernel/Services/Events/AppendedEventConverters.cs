@@ -31,7 +31,7 @@ internal static class AppendedEventConverters
     /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>Converted collection of <see cref="Contracts.Events.AppendedEvent"/>.</returns>
     public static IEnumerable<Contracts.Events.AppendedEvent> ToContract(this IEnumerable<AppendedEvent> events, JsonSerializerOptions jsonSerializerOptions) =>
-        events.Select(e => e.ToContract(jsonSerializerOptions));
+        events.Select(e => e.ToContract(jsonSerializerOptions)).ToArray();
 
     /// <summary>
     /// Convert to Chronicle version of <see cref="AppendedEvent"/>.
