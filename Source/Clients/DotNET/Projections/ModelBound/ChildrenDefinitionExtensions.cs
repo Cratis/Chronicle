@@ -203,6 +203,51 @@ static class ChildrenDefinitionExtensions
                         fromDefinition.Properties[paramPropertyName] = $"$eventContext({propertyToUse})";
                     }
 
+                    // Process SetFrom attributes on constructor parameters
+                    foreach (var (setFromAttr, setFromEventType) in parameter.GetAttributesOfGenericType<SetFromAttribute<object>>())
+                    {
+                        var eventPropertyNameProperty = setFromAttr.GetType().GetProperty(nameof(SetFromAttribute<object>.EventPropertyName));
+                        var eventPropertyName = eventPropertyNameProperty?.GetValue(setFromAttr) as string;
+                        var propertyToUse = eventPropertyName ?? parameter.Name!;
+                        childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse);
+                    }
+
+                    // Process AddFrom attributes on constructor parameters
+                    foreach (var (addFromAttr, addFromEventType) in parameter.GetAttributesOfGenericType<AddFromAttribute<object>>())
+                    {
+                        var eventPropertyNameProperty = addFromAttr.GetType().GetProperty(nameof(AddFromAttribute<object>.EventPropertyName));
+                        var eventPropertyName = eventPropertyNameProperty?.GetValue(addFromAttr) as string;
+                        var propertyToUse = eventPropertyName ?? parameter.Name!;
+                        childrenDef.From.AddAddMapping(getOrCreateEventType, namingPolicy, addFromEventType, paramPropertyName, propertyToUse);
+                    }
+
+                    // Process SubtractFrom attributes on constructor parameters
+                    foreach (var (subtractFromAttr, subtractFromEventType) in parameter.GetAttributesOfGenericType<SubtractFromAttribute<object>>())
+                    {
+                        var eventPropertyNameProperty = subtractFromAttr.GetType().GetProperty(nameof(SubtractFromAttribute<object>.EventPropertyName));
+                        var eventPropertyName = eventPropertyNameProperty?.GetValue(subtractFromAttr) as string;
+                        var propertyToUse = eventPropertyName ?? parameter.Name!;
+                        childrenDef.From.AddSubtractMapping(getOrCreateEventType, namingPolicy, subtractFromEventType, paramPropertyName, propertyToUse);
+                    }
+
+                    // Process Increment attributes on constructor parameters
+                    foreach (var (incrementAttr, incrementEventType) in parameter.GetAttributesOfGenericType<IncrementAttribute<object>>())
+                    {
+                        childrenDef.From.AddIncrementMapping(getOrCreateEventType, incrementEventType, paramPropertyName);
+                    }
+
+                    // Process Decrement attributes on constructor parameters
+                    foreach (var (decrementAttr, decrementEventType) in parameter.GetAttributesOfGenericType<DecrementAttribute<object>>())
+                    {
+                        childrenDef.From.AddDecrementMapping(getOrCreateEventType, decrementEventType, paramPropertyName);
+                    }
+
+                    // Process Count attributes on constructor parameters
+                    foreach (var (countAttr, countEventType) in parameter.GetAttributesOfGenericType<CountAttribute<object>>())
+                    {
+                        childrenDef.From.AddCountMapping(getOrCreateEventType, countEventType, paramPropertyName);
+                    }
+
                     // Check if this parameter has any explicit mapping attributes
                     var hasExplicitMapping = parameter.GetCustomAttributes()
                         .Any(a => a.GetType().IsGenericType &&
@@ -255,10 +300,16 @@ static class ChildrenDefinitionExtensions
             // Process class-level RemovedWith attributes on the child type
             ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, childrenDef);
 
+            // Collect class-level FromEvent attributes on the child type
+            var childClassLevelFromEvents = childType.GetCustomAttributes()
+                .Where(attr => attr.GetType().IsGenericType &&
+                              attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
+                .ToList();
+
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                processMember(childProperty, definition, [], false, null, childrenDef);
+                processMember(childProperty, definition, childClassLevelFromEvents, false, null, childrenDef);
             }
         }
 
