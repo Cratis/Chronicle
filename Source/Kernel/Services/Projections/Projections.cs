@@ -173,15 +173,6 @@ internal sealed class Projections(
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
         var definition = await projection.GetDefinition();
         var readModelDefinition = await storage.GetEventStore(eventStoreName).ReadModels.Get(definition.ReadModel);
-
-        // For now, we'll get all events - in the future we could filter by projection event types
-        var tailSequenceNumber = await eventSequenceStorage.GetTailSequenceNumber();
-
-        if (tailSequenceNumber == EventSequenceNumber.Unavailable)
-        {
-            return [];
-        }
-
         var eventTypes = await projection.GetEventTypes();
         var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: eventTypes);
 
