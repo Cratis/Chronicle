@@ -97,6 +97,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationModel", "Source\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationModel.Specs", "Source\Clients\ApplicationModel.Specs\ApplicationModel.Specs.csproj", "{6C3E6573-EB8B-46CC-9E81-98A04E5C9002}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clustering", "Integration\Clustering\Clustering.csproj", "{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -635,6 +637,18 @@ Global
 		{6C3E6573-EB8B-46CC-9E81-98A04E5C9002}.Release|x64.Build.0 = Release|Any CPU
 		{6C3E6573-EB8B-46CC-9E81-98A04E5C9002}.Release|x86.ActiveCfg = Release|Any CPU
 		{6C3E6573-EB8B-46CC-9E81-98A04E5C9002}.Release|x86.Build.0 = Release|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Debug|x64.Build.0 = Debug|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Debug|x86.Build.0 = Debug|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Release|x64.ActiveCfg = Release|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Release|x64.Build.0 = Release|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Release|x86.ActiveCfg = Release|Any CPU
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -685,5 +699,6 @@ Global
 		{E05E6FF2-5847-4D22-826D-9A8E7E0D8706} = {823D4020-332D-2C13-F261-6F510F11A57E}
 		{2AD5DB3E-FCB1-4072-B765-16EBBF3129AA} = {A81B7D94-0155-67C9-365B-A79B854B2753}
 		{6C3E6573-EB8B-46CC-9E81-98A04E5C9002} = {A81B7D94-0155-67C9-365B-A79B854B2753}
+		{2B0F942D-B31B-40F8-9430-0EA6A8EA0B67} = {823D4020-332D-2C13-F261-6F510F11A57E}
 	EndGlobalSection
 EndGlobal
