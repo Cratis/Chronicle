@@ -21,7 +21,7 @@ public class ProjectionSnapshot
     /// Gets or sets the events that were applied as JSON array.
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
-    public IEnumerable<AppendedEvent> Events { get; set; } = [];
+    public IList<AppendedEvent> Events { get; set; } = [];
 
     /// <summary>
     /// Gets or sets when the first event occurred.
