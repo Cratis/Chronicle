@@ -25,4 +25,18 @@ public interface IKeyExpressionResolvers
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
     /// <returns><see cref="KeyResolver"/> it resolves to.</returns>
     KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty);
+
+    /// <summary>
+    /// Called to resolve the expression with a fallback to EventSourceId when the resolved value is null.
+    /// </summary>
+    /// <param name="projection"><see cref="IProjection"/> to resolve key for.</param>
+    /// <param name="expression">Expression to resolve.</param>
+    /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
+    /// <param name="keyResolvers"><see cref="IKeyResolvers"/> to access the fallback resolver.</param>
+    /// <returns><see cref="KeyResolver"/> it resolves to.</returns>
+    /// <remarks>
+    /// This is useful when auto-inferring a parent key from event content, where the property might not exist
+    /// in the event but the event is appended to the parent's EventSourceId.
+    /// </remarks>
+    KeyResolver ResolveWithFallbackToEventSourceId(IProjection projection, string expression, PropertyPath identifiedByProperty, IKeyResolvers keyResolvers);
 }

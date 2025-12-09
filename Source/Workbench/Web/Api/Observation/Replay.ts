@@ -83,6 +83,8 @@ export class Replay extends Command<IReplay> implements IReplay {
     }
 
     static use(initialValues?: IReplay): [Replay, SetCommandValues<IReplay>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Replay, IReplay>(Replay, initialValues);
     }
 }

@@ -68,6 +68,8 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
     }
 
     static use(initialValues?: IEnsureNamespace): [EnsureNamespace, SetCommandValues<IEnsureNamespace>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<EnsureNamespace, IEnsureNamespace>(EnsureNamespace, initialValues);
     }
 }

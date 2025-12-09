@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
@@ -33,6 +34,6 @@ public partial class AddExpressionResolver(IEventValueProviderExpressionResolver
         return PropertyMappers.AddWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
     }
 
-    [GeneratedRegex($"\\$add\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"\\{WellKnownExpressions.Add}\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex AddRegEx();
 }

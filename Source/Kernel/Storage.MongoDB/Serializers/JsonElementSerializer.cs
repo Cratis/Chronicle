@@ -6,7 +6,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
-namespace Orleans.Hosting;
+namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 
 /// <summary>
 /// Represents a <see cref="IBsonSerializationProvider"/> for <see cref="JsonElement"/>.

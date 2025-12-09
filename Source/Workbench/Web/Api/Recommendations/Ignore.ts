@@ -84,6 +84,8 @@ export class Ignore extends Command<IIgnore> implements IIgnore {
     }
 
     static use(initialValues?: IIgnore): [Ignore, SetCommandValues<IIgnore>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Ignore, IIgnore>(Ignore, initialValues);
     }
 }
