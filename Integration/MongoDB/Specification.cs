@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.XUnit.Integration;
-
 namespace Cratis.Chronicle.MongoDB.Integration;
 
-public abstract class Specification(ChronicleInProcessFixture fixture) : XUnit.Integration.Specification<ChronicleInProcessFixture>(fixture);
+public abstract class Specification(ChronicleInProcessFixture fixture) : Specification<ChronicleInProcessFixture>(fixture);
