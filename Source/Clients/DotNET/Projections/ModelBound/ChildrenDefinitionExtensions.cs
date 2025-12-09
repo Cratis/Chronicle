@@ -168,13 +168,6 @@ static class ChildrenDefinitionExtensions
 
         if (childType is not null)
         {
-            // If autoMap is enabled, map matching properties from event to child model
-            if (autoMap)
-            {
-                var fromDefinition = childrenDef.From[eventTypeId];
-                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
-            }
-
             // For records, process constructor parameters to pick up attributes
             var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .OrderByDescending(c => c.GetParameters().Length)
@@ -295,6 +288,14 @@ static class ChildrenDefinitionExtensions
                         childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, removedJoinAttr, removedJoinEventType);
                     }
                 }
+            }
+
+            // If autoMap is enabled, map matching properties from event to child model
+            // This is done AFTER processing constructor parameters so we don't overwrite explicit mappings
+            if (autoMap)
+            {
+                var fromDefinition = childrenDef.From[eventTypeId];
+                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
             }
 
             // Process class-level RemovedWith attributes on the child type
