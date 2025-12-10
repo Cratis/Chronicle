@@ -4,9 +4,9 @@
 using System.Dynamic;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Changes.for_Changeset.when_optimizing;
+namespace Cratis.Chronicle.Changes.for_Changeset.when_adding_changes;
 
-public class with_array_set_to_empty_then_adding_child : given.a_changeset
+public class and_properties_changed_to_empty_array_then_child_added : given.a_changeset
 {
     PropertyPath _itemsProperty;
     PropertyDifference _propertyDifference;
@@ -37,11 +37,9 @@ public class with_array_set_to_empty_then_adding_child : given.a_changeset
             PropertyPath.Root,
             "child-1",
             ArrayIndexers.NoIndexers);
-
-        _changeset.Add(_childAdded);
     }
 
-    void Because() => _changeset.Optimize();
+    void Because() => _changeset.Add(_childAdded);
 
     [Fact] void should_remove_properties_changed_for_empty_array() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldBeEmpty();
     [Fact] void should_keep_child_added() => _changeset.Changes.OfType<ChildAdded>().ShouldContainOnly(_childAdded);

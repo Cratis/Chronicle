@@ -4,9 +4,9 @@
 using System.Dynamic;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Changes.for_Changeset.when_optimizing;
+namespace Cratis.Chronicle.Changes.for_Changeset.when_adding_changes;
 
-public class with_multiple_children_added_and_properties_changed_for_different_children : given.a_changeset
+public class and_multiple_children_added_then_properties_changed_for_different_children : given.a_changeset
 {
     PropertyPath _itemsProperty;
     PropertyPath _nameProperty;
@@ -16,6 +16,7 @@ public class with_multiple_children_added_and_properties_changed_for_different_c
     ExpandoObject _child2;
     ArrayIndexers _arrayIndexers1;
     ArrayIndexers _arrayIndexers2;
+    PropertiesChanged<ExpandoObject> _propertiesChanged2;
 
     void Establish()
     {
@@ -82,14 +83,12 @@ public class with_multiple_children_added_and_properties_changed_for_different_c
             "Updated Name 2",
             _arrayIndexers2);
 
-        var propertiesChanged2 = new PropertiesChanged<ExpandoObject>(
+        _propertiesChanged2 = new PropertiesChanged<ExpandoObject>(
             _initialState,
             [propertyDifference2]);
-
-        _changeset.Add(propertiesChanged2);
     }
 
-    void Because() => _changeset.Optimize();
+    void Because() => _changeset.Add(_propertiesChanged2);
 
     [Fact] void should_remove_all_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldBeEmpty();
     [Fact] void should_keep_both_child_added() => _changeset.Changes.OfType<ChildAdded>().Count().ShouldEqual(2);

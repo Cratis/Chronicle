@@ -4,14 +4,13 @@
 using System.Dynamic;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Changes.for_Changeset.when_optimizing;
+namespace Cratis.Chronicle.Changes.for_Changeset.when_adding_changes;
 
-public class with_different_array_set_to_empty_than_child_operation : given.a_changeset
+public class and_properties_changed_to_different_empty_array_than_child_added : given.a_changeset
 {
     PropertyPath _itemsProperty;
     PropertyPath _tagsProperty;
-    PropertyDifference _propertyDifference;
-    PropertiesChanged<ExpandoObject> _originalPropertiesChanged;
+    PropertiesChanged<ExpandoObject> _propertiesChanged;
     ChildAdded _childAdded;
 
     void Establish()
@@ -21,32 +20,30 @@ public class with_different_array_set_to_empty_than_child_operation : given.a_ch
 
         // Create a PropertiesChanged that sets tags to empty array
         var emptyArray = Array.Empty<object>();
-        _propertyDifference = new PropertyDifference(
+        var propertyDifference = new PropertyDifference(
             _tagsProperty,
             emptyArray,
             emptyArray,
             ArrayIndexers.NoIndexers);
 
-        _originalPropertiesChanged = new PropertiesChanged<ExpandoObject>(
+        _propertiesChanged = new PropertiesChanged<ExpandoObject>(
             _initialState,
-            [_propertyDifference]);
+            [propertyDifference]);
 
-        _changeset.Add(_originalPropertiesChanged);
+        _changeset.Add(_propertiesChanged);
 
-        // Create a ChildAdded for items array (different from tags)
+        // Create a ChildAdded for a different array (items)
         _childAdded = new ChildAdded(
             "test-value",
             _itemsProperty,
             PropertyPath.Root,
             "child-1",
             ArrayIndexers.NoIndexers);
-
-        _changeset.Add(_childAdded);
     }
 
-    void Because() => _changeset.Optimize();
+    void Because() => _changeset.Add(_childAdded);
 
-    [Fact] void should_keep_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldContainOnly(_originalPropertiesChanged);
+    [Fact] void should_keep_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldContainOnly(_propertiesChanged);
     [Fact] void should_keep_child_added() => _changeset.Changes.OfType<ChildAdded>().ShouldContainOnly(_childAdded);
     [Fact] void should_have_two_changes() => _changeset.Changes.Count().ShouldEqual(2);
 }

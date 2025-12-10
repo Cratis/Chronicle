@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Chronicle.Changes.for_Changeset.when_optimizing.given;
+namespace Cratis.Chronicle.Changes.for_Changeset.when_adding_changes.given;
 
 public class a_changeset : Specification
 {

@@ -4,9 +4,9 @@
 using System.Dynamic;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Changes.for_Changeset.when_optimizing;
+namespace Cratis.Chronicle.Changes.for_Changeset.when_adding_changes;
 
-public class with_properties_changed_for_child_without_child_added : given.a_changeset
+public class and_properties_changed_for_child_without_child_added : given.a_changeset
 {
     PropertyPath _itemsProperty;
     PropertyPath _nameProperty;
@@ -33,11 +33,9 @@ public class with_properties_changed_for_child_without_child_added : given.a_cha
         _propertiesChanged = new PropertiesChanged<ExpandoObject>(
             _initialState,
             [propertyDifference]);
-
-        _changeset.Add(_propertiesChanged);
     }
 
-    void Because() => _changeset.Optimize();
+    void Because() => _changeset.Add(_propertiesChanged);
 
     [Fact] void should_keep_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldContainOnly(_propertiesChanged);
     [Fact] void should_have_one_change() => _changeset.Changes.Count().ShouldEqual(1);
