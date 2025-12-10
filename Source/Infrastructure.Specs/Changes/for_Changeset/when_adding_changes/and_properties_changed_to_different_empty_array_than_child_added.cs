@@ -15,8 +15,10 @@ public class and_properties_changed_to_different_empty_array_than_child_added : 
 
     void Establish()
     {
-        _itemsProperty = new PropertyPath("items");
-        _tagsProperty = new PropertyPath("tags");
+        // Create the array property paths using AddArrayIndex to match runtime behavior
+        // At runtime, ChildrenPropertyPath is created with AddArrayIndex, resulting in format "[propertyName]"
+        _itemsProperty = PropertyPath.Root.AddArrayIndex("items");
+        _tagsProperty = PropertyPath.Root.AddArrayIndex("tags");
 
         // Create a PropertiesChanged that sets tags to empty array
         var emptyArray = Array.Empty<object>();

@@ -15,7 +15,9 @@ public class and_properties_changed_with_empty_array_and_other_properties_then_c
 
     void Establish()
     {
-        _itemsProperty = new PropertyPath("items");
+        // Create the array property path using AddArrayIndex to match runtime behavior
+        // At runtime, ChildrenPropertyPath is created with AddArrayIndex, resulting in format "[items]"
+        _itemsProperty = PropertyPath.Root.AddArrayIndex("items");
         _nameProperty = new PropertyPath("name");
 
         // Create a PropertiesChanged that sets items to empty array and changes name
