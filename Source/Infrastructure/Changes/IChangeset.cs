@@ -73,11 +73,6 @@ public interface IChangeset<TSource, TTarget>
     IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
 
     /// <summary>
-    /// Optimize the changeset.
-    /// </summary>
-    void Optimize();
-
-    /// <summary>
     /// Adds a child as is to a given children property.
     /// </summary>
     /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>

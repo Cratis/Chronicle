@@ -111,17 +111,6 @@ public static class ProjectionEventContextExtensions
     }
 
     /// <summary>
-    /// Optimize the changeset.
-    /// </summary>
-    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> Optimize(this IObservable<ProjectionEventContext> observable)
-    {
-        observable.Subscribe(_ => _.Changeset.Optimize());
-        return observable;
-    }
-
-    /// <summary>
     /// Project properties from event onto model or child model.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
