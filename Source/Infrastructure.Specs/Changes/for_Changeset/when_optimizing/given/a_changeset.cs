@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Chronicle.Objects;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes.for_Changeset.when_optimizing.given;
 

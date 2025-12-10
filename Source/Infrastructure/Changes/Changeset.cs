@@ -90,6 +90,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void Optimize()
     {
         OptimizeResolveJoinsAgainstChildrenAdded(parent);
+        ConsolidatePropertiesChangedIntoChildAdded();
         ConsolidateConflictingOperations();
     }
 
@@ -301,6 +302,90 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         resolvesToRemove.ForEach(_ => changes.Remove(_));
+    }
+
+    void ConsolidatePropertiesChangedIntoChildAdded()
+    {
+        // Find all ChildAdded changes and their matching PropertiesChanged
+        var childAddedChanges = _changes.OfType<ChildAdded>().ToList();
+        if (childAddedChanges.Count == 0)
+        {
+            return;
+        }
+
+        var changesToRemove = new List<int>();
+
+        for (var i = 0; i < _changes.Count; i++)
+        {
+            var change = _changes[i];
+            if (change is PropertiesChanged<TTarget> propertiesChanged)
+            {
+                // Find matching ChildAdded for each property difference
+                var remainingDifferences = new List<PropertyDifference>();
+
+                foreach (var diff in propertiesChanged.Differences)
+                {
+                    var matchingChildAdded = FindMatchingChildAdded(childAddedChanges, diff);
+
+                    if (matchingChildAdded != null)
+                    {
+                        // Apply the property change to the child
+                        var propertyPath = PropertyPath.CreateFrom([diff.PropertyPath.LastSegment]);
+                        propertyPath.SetValue(matchingChildAdded.Child, diff.Changed!, diff.ArrayIndexers);
+                    }
+                    else
+                    {
+                        // Keep this difference as it doesn't match any ChildAdded
+                        remainingDifferences.Add(diff);
+                    }
+                }
+
+                // If all differences were consolidated, mark this PropertiesChanged for removal
+                if (remainingDifferences.Count == 0)
+                {
+                    changesToRemove.Add(i);
+                }
+
+                // If some differences remain, update the PropertiesChanged
+                else if (remainingDifferences.Count != propertiesChanged.Differences.Count())
+                {
+                    _changes[i] = new PropertiesChanged<TTarget>(propertiesChanged.State, remainingDifferences);
+                }
+            }
+        }
+
+        // Remove PropertiesChanged that were fully consolidated, in reverse order
+        foreach (var index in changesToRemove.OrderDescending())
+        {
+            _changes.RemoveAt(index);
+        }
+    }
+
+    ChildAdded? FindMatchingChildAdded(List<ChildAdded> childAddedChanges, PropertyDifference diff)
+    {
+        // A PropertiesChanged targets a child if:
+        // 1. The property path points to a child within an array
+        // 2. The array indexers match a ChildAdded's key and array property
+        if (diff.ArrayIndexers.IsEmpty)
+        {
+            return null;
+        }
+
+        foreach (var childAdded in childAddedChanges)
+        {
+            // Check if the array indexers match
+            foreach (var indexer in diff.ArrayIndexers.All)
+            {
+                if (indexer.ArrayProperty == childAdded.ChildrenProperty &&
+                    indexer.IdentifierProperty == childAdded.IdentifiedByProperty &&
+                    Equals(indexer.Identifier, childAdded.Key))
+                {
+                    return childAdded;
+                }
+            }
+        }
+
+        return null;
     }
 
     void ConsolidateConflictingOperations()
