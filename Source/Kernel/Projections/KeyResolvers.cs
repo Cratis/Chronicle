@@ -196,7 +196,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                             return KeyResolverResult.Deferred(deferredFuture);
                         }
 
-                        var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+                        var childPropertyPath = projection.ChildrenPropertyPath + parentIdentifiedByProperty;
 
                         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
