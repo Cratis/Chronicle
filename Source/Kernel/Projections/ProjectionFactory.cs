@@ -432,8 +432,7 @@ public class ProjectionFactory(
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
-                    joinPropertyMappers)
-                .Optimize();
+                    joinPropertyMappers);
         }
     }
 

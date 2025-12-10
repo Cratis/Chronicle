@@ -51,6 +51,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void Add(Change change)
     {
         _changes.Add(change);
+        Consolidate();
     }
 
     /// <inheritdoc/>
@@ -62,7 +63,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         {
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
-
         CurrentState = workingState;
     }
 
@@ -82,16 +82,9 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         var childChangeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
         Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
+        Consolidate();
         CurrentState = workingState;
         return childChangeset;
-    }
-
-    /// <inheritdoc/>
-    public void Optimize()
-    {
-        OptimizeResolveJoinsAgainstChildrenAdded(parent);
-        ConsolidatePropertiesChangedIntoChildAdded();
-        ConsolidateConflictingOperations();
     }
 
     /// <inheritdoc/>
@@ -267,7 +260,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         return default!;
     }
 
-    static void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
+    static void ConsolidateJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
     {
         if (parent is null)
         {
@@ -302,6 +295,13 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         resolvesToRemove.ForEach(_ => changes.Remove(_));
+    }
+
+    void Consolidate()
+    {
+        ConsolidateJoinsAgainstChildrenAdded(parent);
+        ConsolidatePropertiesChangedIntoChildAdded();
+        ConsolidateConflictingOperations();
     }
 
     void ConsolidatePropertiesChangedIntoChildAdded()
