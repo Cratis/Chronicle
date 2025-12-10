@@ -459,7 +459,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             // Check if this array path matches any of the arrays with child operations
             foreach (var arrayPath in arraysWithChildOperations)
             {
-                if (diff.PropertyPath.Path.Equals(arrayPath.Path, StringComparison.Ordinal))
+                if (diff.PropertyPath.Path.Equals(arrayPath.LastSegment.Value, StringComparison.Ordinal))
                 {
                     return true;
                 }
