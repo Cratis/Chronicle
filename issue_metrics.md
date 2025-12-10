@@ -3,18 +3,18 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 272 days, 4:48:02 | 119 days, 18:25:24 | 824 days, 4:45:29 |
+| Time to close | 275 days, 5:05:08 | 121 days, 12:21:42 | 827 days, 3:55:50 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 277 |
-| Number of items closed | 582 |
+| Number of items that remain open | 274 |
+| Number of items closed | 585 |
 | Total number of items created | 859 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Add a way to immediately query projections and get a collection of snapshots per CorrelationId | https://github.com/Cratis/Chronicle/issues/2311 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add a way to immediately query projections and get a collection of snapshots per CorrelationId | https://github.com/Cratis/Chronicle/issues/2311 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 5 days, 4:27:14 | None |
 | AppendedEvent in the .NET Client should hold the actual deserialized ready to go event instead of an ExpandoObject | https://github.com/Cratis/Chronicle/issues/2303 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Improve Read Model APIs and consistency between Reducers and Projections | https://github.com/Cratis/Chronicle/issues/2301 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Investigate ReadModels.Register() behavior for reactor-only applications | https://github.com/Cratis/Chronicle/issues/2290 | None | [einari](https://github.com/einari) | None | None | None |
@@ -341,4 +341,4 @@
 | Change to the concept of namespace within an Event Store rather than using the concept of a Tenant | https://github.com/Cratis/Chronicle/issues/1064 | None | [einari](https://github.com/einari) | None | 198 days, 23:01:35 | None |
 | Separate EventContext into client and server representation | https://github.com/Cratis/Chronicle/issues/1063 | None | [einari](https://github.com/einari) | None | 215 days, 22:13:43 | None |
 | Get rid of Serilog | https://github.com/Cratis/Chronicle/issues/1059 | None | [einari](https://github.com/einari) | None | 237 days, 12:42:12 | None |
-| Make projection defi
+| Make proj
