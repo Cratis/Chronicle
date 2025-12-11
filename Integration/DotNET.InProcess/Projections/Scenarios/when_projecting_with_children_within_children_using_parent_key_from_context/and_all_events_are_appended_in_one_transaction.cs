@@ -44,9 +44,9 @@ public class and_all_events_are_appended_in_one_transaction(context context) : G
 
         void Establish()
         {
-            SimulationId = SimulationId.New();
-            ConfigurationId = ConfigurationId.New();
-            HubId = HubId.New();
+            SimulationId = Guid.Parse("0089d57f-9095-4b56-b948-ab170de8e0ee");
+            ConfigurationId = Guid.Parse("754fd741-adae-4fbd-8c47-2d622cc0b274");
+            HubId = Guid.Parse("eff2cf7a-4121-438b-94fd-139775a09f57");
         }
 
         async Task Because()
