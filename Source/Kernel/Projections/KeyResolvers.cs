@@ -151,7 +151,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)]) });
         }
 
-        var parentEventResult = await FindParentEvent(@event, parentKey, parentProjection, parentEventTypeIds, eventSequenceStorage, sink, projection, identifiedByProperty, keyResolver);
+        var parentEventResult = await FindParentEvent(@event, parentKey, parentProjection, parentEventTypeIds, eventSequenceStorage, sink, projection, identifiedByProperty, key);
         if (parentEventResult.KeyResolverResult is not null)
         {
             return parentEventResult.KeyResolverResult;
@@ -232,7 +232,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         Storage.Sinks.ISink sink,
         IProjection projection,
         PropertyPath identifiedByProperty,
-        KeyResolver keyResolver)
+        Key childKey)
     {
         logger.FromParentHierarchyFindParentEventStart(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), parentKey.Value?.ToString() ?? "null");
 
@@ -262,7 +262,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
         logger.FromParentHierarchyFallingBackToSink();
 
-        return await TryFindParentByFallback(parentProjection, sink, projection, identifiedByProperty, parentKey, @event, keyResolver, eventSequenceStorage);
+        return await TryFindParentByFallback(parentProjection, sink, projection, identifiedByProperty, parentKey, @event, childKey, eventSequenceStorage);
     }
 
     async Task<Option<AppendedEvent>> TryResolveParentEventFromSequence(
@@ -362,7 +362,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         PropertyPath identifiedByProperty,
         Key parentKey,
         AppendedEvent @event,
-        KeyResolver keyResolver,
+        Key childKey,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage)
     {
         logger.FromParentHierarchyTryFindByFallbackStart(parentProjection.Path, parentKey.Value?.ToString() ?? "null");
@@ -375,7 +375,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return new ParentEventResult(null, KeyResolverResult.Deferred(deferredFuture));
         }
 
-        var childPropertyPath = projection.ChildrenPropertyPath + parentIdentifiedByProperty;
+        var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
@@ -384,8 +384,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         {
             logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
 
-            var childKeyResolver = await keyResolver(eventSequenceStorage, sink, @event);
-            var childKey = (childKeyResolver as ResolvedKey)!.Key;
             var hierarchyResult = await ResolveParentHierarchyFromSink(
                 parentProjection,
                 rootKey,
