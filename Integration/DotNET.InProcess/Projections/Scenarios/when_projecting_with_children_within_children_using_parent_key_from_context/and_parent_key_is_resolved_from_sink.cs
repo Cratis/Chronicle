@@ -55,7 +55,7 @@ public class and_parent_key_is_resolved_from_sink(context context) : Given<conte
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
             // Hub event on HubId source (different event source) - the Sink resolves the parent hierarchy
-            appendResult = await EventStore.EventLog.Append(HubId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
+            appendResult = await EventStore.EventLog.Append(ConfigurationId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
 
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);

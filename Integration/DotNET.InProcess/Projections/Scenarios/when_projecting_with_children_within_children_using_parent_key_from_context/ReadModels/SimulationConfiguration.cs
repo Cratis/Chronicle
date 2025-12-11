@@ -12,5 +12,11 @@ public class SimulationConfiguration
     public ConfigurationId ConfigurationId { get; set; } = ConfigurationId.NotSet;
 
     public string Name { get; set; } = string.Empty;
+
+    public double Distance { get; set; }
+    public double Time { get; set; }
+    public double Cost { get; set; }
+    public double Waste { get; set; }
+
     public IList<Hub> Hubs { get; set; } = [];
 }
