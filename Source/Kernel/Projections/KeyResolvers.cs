@@ -374,7 +374,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return new ParentEventResult(null, KeyResolverResult.Deferred(deferredFuture));
         }
 
-        var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+        // For root-level parents (ChildrenPropertyPath not set), use the child's path
+        // For nested parents, use the parent's path to query at the correct level
+        var childPropertyPath = parentProjection.ChildrenPropertyPath.IsSet
+            ? parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty
+            : projection.ChildrenPropertyPath + parentIdentifiedByProperty;
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
