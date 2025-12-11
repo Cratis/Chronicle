@@ -47,7 +47,7 @@ public class and_resolves_through_second_event_type(context context) : Given<con
             await projection.WaitTillActive();
 
             // Event 1: ChildNameChanged arrives FIRST (deferred)
-            var appendResult = await EventStore.EventLog.Append(ChildId, new ChildNameChanged(ChildId, "First Update"));
+            var appendResult = await EventStore.EventLog.Append(RootId, new ChildNameChanged(ChildId, "First Update"));
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
@@ -62,12 +62,12 @@ public class and_resolves_through_second_event_type(context context) : Given<con
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             // Event 4: ChildAddedToRoot - resolves and creates child
-            appendResult = await EventStore.EventLog.Append(ChildId, new ChildAddedToRoot(RootId, ChildId, ChildName));
+            appendResult = await EventStore.EventLog.Append(RootId, new ChildAddedToRoot(RootId, ChildId, ChildName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             // Event 5: Another ChildNameChanged - should resolve by finding RootUpdated (or RootCreated)
-            appendResult = await EventStore.EventLog.Append(ChildId, new ChildNameChanged(ChildId, UpdatedChildName));
+            appendResult = await EventStore.EventLog.Append(RootId, new ChildNameChanged(ChildId, UpdatedChildName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 

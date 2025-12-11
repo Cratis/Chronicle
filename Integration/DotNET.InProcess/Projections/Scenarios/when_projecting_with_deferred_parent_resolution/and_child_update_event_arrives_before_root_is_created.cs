@@ -26,7 +26,7 @@ public class and_child_update_event_arrives_before_root_is_created(context conte
         public Root Result;
         public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
 
-        public override IEnumerable<Type> EventTypes => [typeof(RootCreated), typeof(ChildAddedToRoot), typeof(ChildNameChanged)];
+        public override IEnumerable<Type> EventTypes => [typeof(RootCreated), typeof(RootUpdated), typeof(ChildAddedToRoot), typeof(ChildNameChanged)];
         public override IEnumerable<Type> Projections => [typeof(RootProjection)];
 
         protected override void ConfigureServices(IServiceCollection services)
@@ -46,7 +46,7 @@ public class and_child_update_event_arrives_before_root_is_created(context conte
             await projection.WaitTillActive();
 
             // Event 1: ChildNameChanged arrives FIRST (before root even exists) - this gets deferred
-            var appendResult = await EventStore.EventLog.Append(ChildId, new ChildNameChanged(ChildId, UpdatedChildName));
+            var appendResult = await EventStore.EventLog.Append(RootId, new ChildNameChanged(ChildId, UpdatedChildName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
@@ -56,13 +56,13 @@ public class and_child_update_event_arrives_before_root_is_created(context conte
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             // Event 3: Child is added to root - this should resolve
-            appendResult = await EventStore.EventLog.Append(ChildId, new ChildAddedToRoot(RootId, ChildId, ChildName));
+            appendResult = await EventStore.EventLog.Append(RootId, new ChildAddedToRoot(RootId, ChildId, ChildName));
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             // Event 4: Another ChildNameChanged arrives - this should resolve using the sink
             // but currently it looks up the first deferred event and marks this as deferred too
-            appendResult = await EventStore.EventLog.Append(ChildId, new ChildNameChanged(ChildId, "Second Update"));
+            appendResult = await EventStore.EventLog.Append(RootId, new ChildNameChanged(ChildId, "Second Update"));
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
