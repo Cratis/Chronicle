@@ -86,8 +86,6 @@ public class ResolveFutures(
                         continue;
                     }
 
-                    var keyResolver = projection.GetKeyResolverFor(future.Event.Context.EventType);
-
                     logger.ParentExistsInCurrentState(future.Id);
                     logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
 
