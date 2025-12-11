@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
@@ -41,6 +43,9 @@ public class ResolveFutures(
 
         // Attempt to resolve any pending futures now that we've processed a new event
         var futures = await projectionFutures.GetFutures(eventStore, @namespace, projection.Identifier);
+        var debugLog = $"{DateTime.Now:HH:mm:ss.fff} ResolveFutures: Processing event {context.Event.Context.EventType} for key {context.Key.Value}. Found {futures.Count()} pending futures.\n";
+        File.AppendAllText("/tmp/resolve_futures_debug.log", debugLog);
+
         if (!futures.Any())
         {
             return context;
@@ -79,7 +84,43 @@ public class ResolveFutures(
                     logger.FoundChildProjection(childProjection.Path, future.Id);
                     logger.CheckingParentInCurrentState(future.Id);
 
-                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ParentIdentifiedByProperty, parentKey))
+                    // Log the current state structure for debugging  
+                    var arrayPath = (future.ParentPath.IsSet && !future.ParentPath.IsRoot) ? future.ParentPath : future.ChildPath;
+                    var debugMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: ParentPath={future.ParentPath}, ChildPath={future.ChildPath}, arrayPath={arrayPath.Path}, ParentIdentifiedBy={future.ParentIdentifiedByProperty}, ParentKey={parentKey}\n";
+                    File.AppendAllText("/tmp/resolve_futures_debug.log", debugMsg);
+
+                    var currentStateDict = context.Changeset.CurrentState as IDictionary<string, object>;
+                    if (currentStateDict != null)
+                    {
+                        var keysMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: CurrentState keys: {string.Join(", ", currentStateDict.Keys)}\n";
+                        File.AppendAllText("/tmp/resolve_futures_debug.log", keysMsg);
+                        
+                        var collectionValue = arrayPath.GetValue(context.Changeset.CurrentState, ArrayIndexers.NoIndexers);
+                        if (collectionValue != null)
+                        {
+                            if (collectionValue is IEnumerable enumerable)
+                            {
+                                var count = enumerable.Cast<object>().Count();
+                                var collMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: GetValue returned collection with {count} items\n";
+                                File.AppendAllText("/tmp/resolve_futures_debug.log", collMsg);
+                            }
+                            else
+                            {
+                                var typeMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: GetValue returned non-collection: {collectionValue?.GetType().Name ?? "null"}\n";
+                                File.AppendAllText("/tmp/resolve_futures_debug.log", typeMsg);
+                            }
+                        }
+                        else
+                        {
+                            var nullMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: GetValue returned null\n";
+                            File.AppendAllText("/tmp/resolve_futures_debug.log", nullMsg);
+                        }
+                    }
+
+                    // Check if parent exists in the current changeset's state
+                    // For direct children (parentPath is root), we need to look in the child collection
+                    // For nested children, we look in the parent's collection
+                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ChildPath, future.ParentIdentifiedByProperty, parentKey))
                     {
                         // Parent still doesn't exist, skip this future
                         logger.ParentNotInCurrentState(future.Id);
@@ -98,7 +139,9 @@ public class ResolveFutures(
                         childKey = TypeConversion.Convert(childType, childKey);
                     }
 
-                    var key = new Key(parentKey, new ArrayIndexers(
+                    // Build the key for the future event
+                    // Use the current context's root key and add array indexers for navigating to the child
+                    var key = new Key(context.Key.Value, new ArrayIndexers(
                     [
                         new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, parentKey),
                         new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, childKey)
@@ -151,16 +194,57 @@ public class ResolveFutures(
         return null;
     }
 
-    static bool ParentExistsInCurrentState(ExpandoObject? currentState, PropertyPath parentChildrenPath, PropertyPath parentIdentifiedByProperty, object parentKey)
+    static bool ParentExistsInCurrentState(ExpandoObject? currentState, PropertyPath parentChildrenPath, PropertyPath childPath, PropertyPath parentIdentifiedByProperty, object parentKey)
     {
         if (currentState is null)
         {
             return false;
         }
 
-        var idPath = parentChildrenPath + parentIdentifiedByProperty;
-        var arrayIndex = new ArrayIndexer(parentChildrenPath, parentIdentifiedByProperty, parentKey);
+        // For direct children (parentChildrenPath is root/not set), we need to use childPath to locate the parent in the array
+        // For nested children, parentChildrenPath already points to the correct location
+        var arrayPath = (parentChildrenPath.IsSet && !parentChildrenPath.IsRoot) ? parentChildrenPath : childPath;
 
-        return idPath.HasValue(currentState, new([arrayIndex]));
+        // Use PropertyPath.GetValue to navigate to the collection - it handles ExpandoObject navigation properly
+        var collectionValue = arrayPath.GetValue(currentState, ArrayIndexers.NoIndexers);
+        
+        if (collectionValue is null)
+        {
+            File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   Contains check: collectionValue is null\n");
+            return false;
+        }
+
+        // Try to cast to IEnumerable<ExpandoObject>, handling both List<object> and IEnumerable<ExpandoObject>
+        IEnumerable<ExpandoObject>? collection;
+        if (collectionValue is IEnumerable<ExpandoObject> expandoCollection)
+        {
+            collection = expandoCollection;
+        }
+        else if (collectionValue is IEnumerable enumerable)
+        {
+            collection = enumerable.OfType<ExpandoObject>();
+        }
+        else
+        {
+            File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   Contains check: collectionValue is not enumerable\n");
+            return false;
+        }
+
+        // Check if the collection contains an item with the matching identifier
+        var collectionList = collection.ToList();
+        if (collectionList.Any())
+        {
+            var firstItem = collectionList.First() as IDictionary<string, object>;
+            var keys = firstItem != null ? string.Join(", ", firstItem.Keys) : "not a dictionary";
+            File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   Collection has {collectionList.Count} items. First item keys: {keys}\n");
+            if (firstItem != null && firstItem.TryGetValue(parentIdentifiedByProperty.Path, out var idValue))
+            {
+                File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   First item {parentIdentifiedByProperty.Path} = {idValue}\n");
+            }
+        }
+        
+        var result = collectionList.Contains(parentIdentifiedByProperty, parentKey);
+        File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   Contains({parentIdentifiedByProperty.Path}, {parentKey}) = {result}\n");
+        return result;
     }
 }

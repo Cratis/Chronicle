@@ -400,12 +400,20 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         logger.FromParentHierarchySinkDidNotFindRoot(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
+
+        // Determine which identifier to use:
+        // - For root parents: use the child's identifier (how the child is identified in the root's collection)
+        // - For nested parents: use the parent's identifier (how the parent is identified in its parent's collection)
+        var parentIdentifierForFuture = parentProjection.HasParent
+            ? parentProjection.IdentifiedByProperty
+            : projection.IdentifiedByProperty;
+
         var future = CreateDeferredFutureObject(
             projection,
             @event,
             parentProjection.ChildrenPropertyPath,
             identifiedByProperty,
-            GetParentIdentifiedByProperty(parentProjection) ?? PropertyPath.Root,
+            parentIdentifierForFuture,
             parentKey);
 
         return new ParentEventResult(null, KeyResolverResult.Deferred(future));
@@ -509,8 +517,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         // Add this level's indexer after collecting parents (maintains root-to-leaf order)
         if (projection.ChildrenPropertyPath.IsSet)
         {
-            var identifiedBy = GetParentIdentifiedByProperty(projection);
-            if (identifiedBy is not null)
+            var identifiedBy = projection.IdentifiedByProperty;
+            if (identifiedBy.IsSet)
             {
                 logger.CollectParentIndexersAddingIndexer(projection.ChildrenPropertyPath.Path, identifiedBy.Path, childKeyValue);
                 indexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedBy, childKeyValue));
