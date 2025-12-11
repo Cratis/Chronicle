@@ -84,7 +84,7 @@ public class ResolveFutures(
                     logger.FoundChildProjection(childProjection.Path, future.Id);
                     logger.CheckingParentInCurrentState(future.Id);
 
-                    // Log the current state structure for debugging  
+                    // Log the current state structure for debugging
                     var arrayPath = (future.ParentPath.IsSet && !future.ParentPath.IsRoot) ? future.ParentPath : future.ChildPath;
                     var debugMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: ParentPath={future.ParentPath}, ChildPath={future.ChildPath}, arrayPath={arrayPath.Path}, ParentIdentifiedBy={future.ParentIdentifiedByProperty}, ParentKey={parentKey}\n";
                     File.AppendAllText("/tmp/resolve_futures_debug.log", debugMsg);
@@ -94,7 +94,7 @@ public class ResolveFutures(
                     {
                         var keysMsg = $"{DateTime.Now:HH:mm:ss.fff} Future {future.Id}: CurrentState keys: {string.Join(", ", currentStateDict.Keys)}\n";
                         File.AppendAllText("/tmp/resolve_futures_debug.log", keysMsg);
-                        
+
                         var collectionValue = arrayPath.GetValue(context.Changeset.CurrentState, ArrayIndexers.NoIndexers);
                         if (collectionValue != null)
                         {
@@ -207,7 +207,7 @@ public class ResolveFutures(
 
         // Use PropertyPath.GetValue to navigate to the collection - it handles ExpandoObject navigation properly
         var collectionValue = arrayPath.GetValue(currentState, ArrayIndexers.NoIndexers);
-        
+
         if (collectionValue is null)
         {
             File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   Contains check: collectionValue is null\n");
@@ -242,7 +242,7 @@ public class ResolveFutures(
                 File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   First item {parentIdentifiedByProperty.Path} = {idValue}\n");
             }
         }
-        
+
         var result = collectionList.Contains(parentIdentifiedByProperty, parentKey);
         File.AppendAllText("/tmp/resolve_futures_debug.log", $"{DateTime.Now:HH:mm:ss.fff}   Contains({parentIdentifiedByProperty.Path}, {parentKey}) = {result}\n");
         return result;
