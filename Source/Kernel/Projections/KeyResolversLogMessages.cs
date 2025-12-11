@@ -81,4 +81,10 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: completed with {Count} indexers collected")]
     internal static partial void CollectParentIndexersCompleted(this ILogger<KeyResolvers> logger, int count);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found parent event after trying {TriedCount} of {TotalCount} candidate events")]
+    internal static partial void FromParentHierarchyFoundParentEventAfterTrying(this ILogger<KeyResolvers> logger, int triedCount, int totalCount);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: skipping deferred parent event at sequence number {SequenceNumber}")]
+    internal static partial void FromParentHierarchySkippingDeferredParentEvent(this ILogger<KeyResolvers> logger, ulong sequenceNumber);
 }
