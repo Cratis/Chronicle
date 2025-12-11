@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections;
@@ -34,7 +35,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         CreateKeyResolver(nameof(FromEventValueProvider), (_, _, @event) =>
         {
             var key = eventValueProvider(@event);
-            return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)))!;
+            return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
         });
 
     /// <inheritdoc/>
@@ -50,7 +51,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             // but doesn't contain the parent key in its content
             key ??= EventValueProviders.EventSourceId(@event);
 
-            return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)))!;
+            return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
         });
 
     /// <summary>
@@ -116,151 +117,64 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty) =>
         CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, sink, @event) =>
-            {
-                logger.FromParentHierarchyEntry(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), @event.Context.SequenceNumber.Value);
+    {
+        logger.FromParentHierarchyEntry(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), @event.Context.SequenceNumber.Value);
 
-                var parentKeyResult = await parentKeyResolver(eventSequenceStorage, sink, @event);
+        var parentKeyResult = await ResolveParentKey(parentKeyResolver, eventSequenceStorage, sink, @event);
+        if (parentKeyResult is DeferredKey deferredParent)
+        {
+            return deferredParent;
+        }
 
-                // If parent key resolution was deferred, propagate the deferred result
-                if (parentKeyResult is DeferredKey deferredParent)
-                {
-                    return deferredParent;
-                }
+        var parentKey = (parentKeyResult as ResolvedKey)!.Key;
+        logger.FromParentHierarchyStart(projection.Path, projection.HasParent, parentKey.Value);
 
-                var parentKey = (parentKeyResult as ResolvedKey)!.Key;
-                logger.FromParentHierarchyStart(projection.Path, projection.HasParent, parentKey.Value);
+        if (!projection.HasParent)
+        {
+            return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = ArrayIndexers.NoIndexers });
+        }
 
-                if (!projection.HasParent)
-                {
-                    return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = ArrayIndexers.NoIndexers });
-                }
+        var childKeyResult = await ResolveChildKey(keyResolver, eventSequenceStorage, sink, @event, projection.ChildrenPropertyPath, identifiedByProperty);
+        if (childKeyResult is DeferredKey deferredChild)
+        {
+            return deferredChild;
+        }
 
-                var keyResult = await keyResolver(eventSequenceStorage, sink, @event);
+        var key = (childKeyResult as ResolvedKey)!.Key;
 
-                // If child key resolution was deferred, propagate the deferred result
-                if (keyResult is DeferredKey deferredChild)
-                {
-                    return deferredChild;
-                }
+        var parentProjection = projection.Parent!;
+        var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
+        logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
 
-                var key = (keyResult as ResolvedKey)!.Key;
-                logger.FromParentHierarchyChildKey(key.Value, projection.ChildrenPropertyPath, identifiedByProperty);
+        if (parentEventTypeIds.Length == 0)
+        {
+            return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)]) });
+        }
 
-                var parentProjection = projection.Parent!;
-                var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
-                logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
+        var parentEventResult = await FindParentEvent(@event, parentKey, parentProjection, parentEventTypeIds, eventSequenceStorage, sink, projection, identifiedByProperty, key);
+        if (parentEventResult.KeyResolverResult is not null)
+        {
+            return parentEventResult.KeyResolverResult;
+        }
 
-                if (parentEventTypeIds.Length == 0)
-                {
-                    return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)]) });
-                }
+        var parentEvent = parentEventResult.ParentEvent!;
+        logger.FromParentHierarchyFoundParentEvent(parentEvent.Context.EventType.Id.ToString());
 
-                AppendedEvent parentEvent;
-                var eventTypeMatchesParent = parentEventTypeIds.Any(id => id == @event.Context.EventType.Id);
-                if (eventTypeMatchesParent)
-                {
-                    parentEvent = @event;
-                }
-                else
-                {
-                    logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
+        var resolvedParentKeyResult = await ResolveParentKeyFromEvent(parentProjection, parentEvent, eventSequenceStorage, sink);
+        if (resolvedParentKeyResult is DeferredKey deferredParentResolution)
+        {
+            return deferredParentResolution;
+        }
 
-                    // First, try to find the parent event by EventSourceId (traditional approach)
-                    var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
-                    if (!optionalEvent.TryGetValue(out var foundEvent))
-                    {
-                        // If not found by EventSourceId, try to find the root key by querying the Sink
-                        // This supports scenarios where events are appended to a different EventSourceId
-                        // but contain the parent key in their content
-                        logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
+        var resolvedParentKey = (resolvedParentKeyResult as ResolvedKey)!.Key;
+        parentKey = resolvedParentKey;
 
-                        // Use the PARENT projection's ChildrenPropertyPath to find where the parent lives
-                        // For example, for Hub's parent Configuration, this would be [Configurations], not [Configurations].[Hubs]
-                        // Then append the parent's IdentifiedByProperty to query for the specific parent
-                        var parentIdentifiedByProperty = GetParentIdentifiedByProperty(parentProjection);
-                        if (parentIdentifiedByProperty is null)
-                        {
-                            logger.FromParentHierarchyCreatingFuture(projection.Path, key.Value?.ToString() ?? "null");
+        var arrayIndexers = BuildArrayIndexers(resolvedParentKey, projection.ChildrenPropertyPath, identifiedByProperty, key.Value);
 
-                            var deferredFuture = new ProjectionFuture(
-                                ProjectionFutureId.New(),
-                                projection.Identifier,
-                                @event,
-                                parentProjection.ChildrenPropertyPath,
-                                projection.ChildrenPropertyPath,
-                                identifiedByProperty,
-                                PropertyPath.Root,
-                                parentKey,
-                                DateTimeOffset.UtcNow);
+        logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
 
-                            return KeyResolverResult.Deferred(deferredFuture);
-                        }
-
-                        var childPropertyPath = projection.ChildrenPropertyPath + parentIdentifiedByProperty;
-
-                        logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
-
-                        var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, parentKey.Value!);
-                        if (optionalRootKey.TryGetValue(out var rootKey))
-                        {
-                            logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
-
-                            // Recursively resolve up the hierarchy from this point
-                            // This builds the indexers in the correct order (root to leaf)
-                            var hierarchyResult = await ResolveParentHierarchyFromSink(
-                                parentProjection,
-                                rootKey,
-                                sink,
-                                parentKey.Value!,
-                                projection.ChildrenPropertyPath,
-                                identifiedByProperty,
-                                key.Value);
-
-                            return KeyResolverResult.Resolved(hierarchyResult);
-                        }
-
-                        // Couldn't find parent in Sink - create a future for deferred resolution
-                        logger.FromParentHierarchyCreatingFuture(projection.Path, key.Value?.ToString() ?? "null");
-
-                        var future = new ProjectionFuture(
-                            ProjectionFutureId.New(),
-                            projection.Identifier,
-                            @event,
-                            parentProjection.ChildrenPropertyPath,
-                            projection.ChildrenPropertyPath,
-                            identifiedByProperty.Path,
-                            GetParentIdentifiedByProperty(parentProjection) ?? PropertyPath.Root,
-                            parentKey,
-                            DateTimeOffset.UtcNow);
-
-                        return KeyResolverResult.Deferred(future);
-                    }
-                    parentEvent = foundEvent;
-                }
-
-                logger.FromParentHierarchyFoundParentEvent(parentEvent.Context.EventType.Id.ToString());
-
-                var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
-                var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
-                var resolvedParentKeyResult = await keyResolverForEventType(eventSequenceStorage, sink, parentEvent);
-
-                // If parent resolution was deferred, propagate the deferred result
-                if (resolvedParentKeyResult is DeferredKey deferredParentResolution)
-                {
-                    return deferredParentResolution;
-                }
-
-                var resolvedParentKey = (resolvedParentKeyResult as ResolvedKey)!.Key;
-                parentKey = resolvedParentKey;
-
-                // Build array indexers from parent down to current child
-                var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
-                arrayIndexers.Add(new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
-
-                logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
-
-                return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) });
-            });
+        return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) });
+    });
 
     static PropertyPath? GetParentIdentifiedByProperty(IProjection projection)
     {
@@ -272,6 +186,262 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         return null;
+    }
+
+    static List<ArrayIndexer> BuildArrayIndexers(Key resolvedParentKey, PropertyPath childrenPropertyPath, PropertyPath identifiedByProperty, object? keyValue)
+    {
+        var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
+        arrayIndexers.Add(new ArrayIndexer(childrenPropertyPath, identifiedByProperty, keyValue!));
+        return arrayIndexers;
+    }
+
+    async Task<KeyResolverResult> ResolveParentKey(
+        KeyResolver parentKeyResolver,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink,
+        AppendedEvent @event)
+    {
+        return await parentKeyResolver(eventSequenceStorage, sink, @event);
+    }
+
+    async Task<KeyResolverResult> ResolveChildKey(
+        KeyResolver keyResolver,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink,
+        AppendedEvent @event,
+        PropertyPath childrenPropertyPath,
+        PropertyPath identifiedByProperty)
+    {
+        var keyResult = await keyResolver(eventSequenceStorage, sink, @event);
+
+        if (keyResult is not DeferredKey)
+        {
+            var key = (keyResult as ResolvedKey)!.Key;
+            logger.FromParentHierarchyChildKey(key.Value, childrenPropertyPath, identifiedByProperty);
+        }
+
+        return keyResult;
+    }
+
+    async Task<ParentEventResult> FindParentEvent(
+        AppendedEvent @event,
+        Key parentKey,
+        IProjection parentProjection,
+        EventTypeId[] parentEventTypeIds,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink,
+        IProjection projection,
+        PropertyPath identifiedByProperty,
+        Key childKey)
+    {
+        logger.FromParentHierarchyFindParentEventStart(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), parentKey.Value?.ToString() ?? "null");
+
+        var eventTypeMatchesParent = parentEventTypeIds.Any(id => id == @event.Context.EventType.Id);
+        if (eventTypeMatchesParent)
+        {
+            logger.FromParentHierarchyEventIsParentType(@event.Context.EventType.Id.ToString());
+            return new ParentEventResult(@event, null);
+        }
+
+        logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
+
+        // Try to find parent events and attempt to resolve each one
+        // Continue trying if we encounter deferred resolutions
+        var resolvedParentEvent = await TryResolveParentEventFromSequence(
+            parentKey,
+            parentEventTypeIds,
+            parentProjection,
+            eventSequenceStorage,
+            sink);
+
+        if (resolvedParentEvent.TryGetValue(out var parentEvent))
+        {
+            return new ParentEventResult(parentEvent, null);
+        }
+
+        logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
+        logger.FromParentHierarchyFallingBackToSink();
+
+        return await TryFindParentByFallback(parentProjection, sink, projection, identifiedByProperty, parentKey, @event, childKey);
+    }
+
+    async Task<Option<AppendedEvent>> TryResolveParentEventFromSequence(
+        Key parentKey,
+        EventTypeId[] parentEventTypeIds,
+        IProjection parentProjection,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink)
+    {
+        // First, try the most recent event (traditional approach)
+        logger.FromParentHierarchyTryGetLastInstance(parentKey.Value?.ToString() ?? "null", string.Join(", ", parentEventTypeIds.Select(id => id.ToString())));
+        var optionalEvent = await eventSequenceStorage.TryGetLastInstanceOfAny(parentKey.Value?.ToString()!, parentEventTypeIds);
+        if (!optionalEvent.TryGetValue(out var lastEvent))
+        {
+            logger.FromParentHierarchyNoEventFoundByTryGetLast();
+            return Option<AppendedEvent>.None();
+        }
+
+        logger.FromParentHierarchyFoundEventByTryGetLast(lastEvent.Context.EventType.Id.ToString(), lastEvent.Context.SequenceNumber.Value);
+
+        // Check if this event resolves successfully
+        var eventType = parentProjection.EventTypes.FirstOrDefault(et => et.Id == lastEvent.Context.EventType.Id);
+        if (eventType is not null)
+        {
+            logger.FromParentHierarchyResolvingLastEvent(lastEvent.Context.EventType.Id.ToString(), lastEvent.Context.SequenceNumber.Value);
+            var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+            var resolvedKeyResult = await keyResolverForEventType(eventSequenceStorage, sink, lastEvent);
+
+            // If this event resolves successfully (not deferred), use it
+            if (resolvedKeyResult is ResolvedKey resolvedKey)
+            {
+                logger.FromParentHierarchyLastEventResolved(resolvedKey.Key.Value?.ToString() ?? "null");
+                return new Option<AppendedEvent>(lastEvent);
+            }
+
+            logger.FromParentHierarchySkippingDeferredParentEvent(lastEvent.Context.SequenceNumber.Value);
+        }
+        else
+        {
+            logger.FromParentHierarchyLastEventTypeNotFound(lastEvent.Context.EventType.Id.ToString());
+        }
+
+        // The most recent event was deferred or couldn't be resolved
+        // Try to find older events and check if any of them can be resolved
+        var eventSourceId = parentKey.Value?.ToString()!;
+        var headSequenceNumber = await eventSequenceStorage.GetHeadSequenceNumber(
+            parentEventTypeIds.Select(id => new EventType(id, EventTypeGeneration.First)),
+            eventSourceId);
+
+        if (headSequenceNumber == EventSequenceNumber.Unavailable)
+        {
+            return Option<AppendedEvent>.None();
+        }
+
+        // Get all events up to (but not including) the last event we already tried
+        var eventTypes = parentEventTypeIds.Select(id => new EventType(id, EventTypeGeneration.First));
+        var cursor = await eventSequenceStorage.GetRange(headSequenceNumber, lastEvent.Context.SequenceNumber - 1, eventSourceId, eventTypes);
+
+        var candidateEvents = new List<AppendedEvent>();
+        while (await cursor.MoveNext())
+        {
+            candidateEvents.AddRange(cursor.Current);
+        }
+
+        // Try events from most recent to oldest
+        for (var i = candidateEvents.Count - 1; i >= 0; i--)
+        {
+            var candidateEvent = candidateEvents[i];
+            eventType = parentProjection.EventTypes.FirstOrDefault(et => et.Id == candidateEvent.Context.EventType.Id);
+            if (eventType is null)
+            {
+                continue;
+            }
+
+            var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+            var resolvedKeyResult = await keyResolverForEventType(eventSequenceStorage, sink, candidateEvent);
+
+            // If this event resolves successfully (not deferred), use it
+            if (resolvedKeyResult is ResolvedKey)
+            {
+                logger.FromParentHierarchyFoundParentEventAfterTrying(candidateEvents.Count - i, candidateEvents.Count + 1);
+                return new Option<AppendedEvent>(candidateEvent);
+            }
+
+            // If deferred, continue trying other events
+            logger.FromParentHierarchySkippingDeferredParentEvent(candidateEvent.Context.SequenceNumber.Value);
+        }
+
+        // All events were deferred or couldn't be resolved
+        return Option<AppendedEvent>.None();
+    }
+
+    async Task<ParentEventResult> TryFindParentByFallback(
+        IProjection parentProjection,
+        Storage.Sinks.ISink sink,
+        IProjection projection,
+        PropertyPath identifiedByProperty,
+        Key parentKey,
+        AppendedEvent @event,
+        Key childKey)
+    {
+        logger.FromParentHierarchyTryFindByFallbackStart(parentProjection.Path, parentKey.Value?.ToString() ?? "null");
+
+        var parentIdentifiedByProperty = GetParentIdentifiedByProperty(parentProjection);
+        if (parentIdentifiedByProperty is null)
+        {
+            logger.FromParentHierarchyNoParentIdentifiedBy(parentProjection.Path);
+            var deferredFuture = CreateDeferredFutureObject(projection, @event, parentProjection.ChildrenPropertyPath, identifiedByProperty, PropertyPath.Root, parentKey);
+            return new ParentEventResult(null, KeyResolverResult.Deferred(deferredFuture));
+        }
+
+        // For root-level parents (ChildrenPropertyPath not set), use the child's path
+        // For nested parents, use the parent's path to query at the correct level
+        var childPropertyPath = parentProjection.ChildrenPropertyPath.IsSet
+            ? parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty
+            : projection.ChildrenPropertyPath + parentIdentifiedByProperty;
+        logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
+
+        logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
+        var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, parentKey.Value!);
+        if (optionalRootKey.TryGetValue(out var rootKey))
+        {
+            logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
+
+            var hierarchyResult = await ResolveParentHierarchyFromSink(
+                parentProjection,
+                rootKey,
+                sink,
+                parentKey.Value!,
+                projection.ChildrenPropertyPath,
+                identifiedByProperty,
+                childKey.Value);
+
+            return new ParentEventResult(null, KeyResolverResult.Resolved(hierarchyResult));
+        }
+
+        logger.FromParentHierarchySinkDidNotFindRoot(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
+        var future = CreateDeferredFutureObject(
+            projection,
+            @event,
+            parentProjection.ChildrenPropertyPath,
+            identifiedByProperty,
+            GetParentIdentifiedByProperty(parentProjection) ?? PropertyPath.Root,
+            parentKey);
+
+        return new ParentEventResult(null, KeyResolverResult.Deferred(future));
+    }
+
+    ProjectionFuture CreateDeferredFutureObject(
+        IProjection projection,
+        AppendedEvent @event,
+        PropertyPath parentChildrenPropertyPath,
+        PropertyPath identifiedByProperty,
+        PropertyPath parentIdentifiedByProperty,
+        Key parentKey)
+    {
+        logger.FromParentHierarchyCreatingFuture(projection.Path, parentKey.Value?.ToString() ?? "null");
+
+        return new ProjectionFuture(
+            ProjectionFutureId.New(),
+            projection.Identifier,
+            @event,
+            parentChildrenPropertyPath,
+            projection.ChildrenPropertyPath,
+            identifiedByProperty,
+            parentIdentifiedByProperty,
+            parentKey,
+            DateTimeOffset.UtcNow);
+    }
+
+    async Task<KeyResolverResult> ResolveParentKeyFromEvent(
+        IProjection parentProjection,
+        AppendedEvent parentEvent,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink)
+    {
+        var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
+        var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+        return await keyResolverForEventType(eventSequenceStorage, sink, parentEvent);
     }
 
     async Task<Key> ResolveParentHierarchyFromSink(
@@ -363,4 +533,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             throw;
         }
     };
+
+    sealed record ParentEventResult(AppendedEvent? ParentEvent, KeyResolverResult? KeyResolverResult);
 }

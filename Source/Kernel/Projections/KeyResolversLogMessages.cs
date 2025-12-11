@@ -81,4 +81,49 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "CollectParentIndexers: completed with {Count} indexers collected")]
     internal static partial void CollectParentIndexersCompleted(this ILogger<KeyResolvers> logger, int count);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: found parent event after trying {TriedCount} of {TotalCount} candidate events")]
+    internal static partial void FromParentHierarchyFoundParentEventAfterTrying(this ILogger<KeyResolvers> logger, int triedCount, int totalCount);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: skipping deferred parent event at sequence number {SequenceNumber}")]
+    internal static partial void FromParentHierarchySkippingDeferredParentEvent(this ILogger<KeyResolvers> logger, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: FindParentEvent START - eventType='{EventType}', eventSourceId='{EventSourceId}', parentKey='{ParentKey}'")]
+    internal static partial void FromParentHierarchyFindParentEventStart(this ILogger<KeyResolvers> logger, string eventType, string eventSourceId, string parentKey);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: event type '{EventType}' matches parent type, using current event")]
+    internal static partial void FromParentHierarchyEventIsParentType(this ILogger<KeyResolvers> logger, string eventType);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: TryGetLastInstanceOfAny with eventSourceId='{EventSourceId}', eventTypes=[{EventTypes}]")]
+    internal static partial void FromParentHierarchyTryGetLastInstance(this ILogger<KeyResolvers> logger, string eventSourceId, string eventTypes);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: TryGetLastInstanceOfAny returned no event")]
+    internal static partial void FromParentHierarchyNoEventFoundByTryGetLast(this ILogger<KeyResolvers> logger);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: TryGetLastInstanceOfAny found event type='{EventType}', sequence={SequenceNumber}")]
+    internal static partial void FromParentHierarchyFoundEventByTryGetLast(this ILogger<KeyResolvers> logger, string eventType, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: resolving last event type='{EventType}', sequence={SequenceNumber}")]
+    internal static partial void FromParentHierarchyResolvingLastEvent(this ILogger<KeyResolvers> logger, string eventType, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: last event resolved to key='{Key}'")]
+    internal static partial void FromParentHierarchyLastEventResolved(this ILogger<KeyResolvers> logger, string key);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: last event type '{EventType}' not found in parent projection event types")]
+    internal static partial void FromParentHierarchyLastEventTypeNotFound(this ILogger<KeyResolvers> logger, string eventType);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: falling back to Sink lookup")]
+    internal static partial void FromParentHierarchyFallingBackToSink(this ILogger<KeyResolvers> logger);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: TryFindByFallback START - parentProjectionPath='{ParentProjectionPath}', parentKey='{ParentKey}'")]
+    internal static partial void FromParentHierarchyTryFindByFallbackStart(this ILogger<KeyResolvers> logger, string parentProjectionPath, string parentKey);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: parent projection '{ProjectionPath}' has no IdentifiedByProperty, deferring")]
+    internal static partial void FromParentHierarchyNoParentIdentifiedBy(this ILogger<KeyResolvers> logger, string projectionPath);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: querying Sink with childPropertyPath='{ChildPropertyPath}', parentKeyValue='{ParentKeyValue}'")]
+    internal static partial void FromParentHierarchySinkQuery(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKeyValue);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: Sink did NOT find root for childPropertyPath='{ChildPropertyPath}', parentKeyValue='{ParentKeyValue}' - deferring")]
+    internal static partial void FromParentHierarchySinkDidNotFindRoot(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKeyValue);
 }
