@@ -78,7 +78,7 @@ public partial class PropertyPath
     /// <summary>
     /// Gets whether or not the value is set.
     /// </summary>
-    public bool IsSet => Path?.Equals(NotSetValue) == false;
+    public bool IsSet => !string.IsNullOrEmpty(Path) && !Path.Equals(NotSetValue);
 
     static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator();
 
