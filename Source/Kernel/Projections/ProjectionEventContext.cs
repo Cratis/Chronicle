@@ -65,7 +65,16 @@ public record ProjectionEventContext(
     /// Adds a deferred future to the context.
     /// </summary>
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
-    public void AddDeferredFuture(ProjectionFuture future) => _deferredFutures.Add(future);
+    public void AddDeferredFuture(ProjectionFuture future)
+    {
+        // Avoid adding duplicate futures for the same event sequence number
+        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        {
+            return;
+        }
+
+        _deferredFutures.Add(future);
+    }
 
     /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and

@@ -1,22 +1,29 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.Concepts;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.ReadModels;
 using Cratis.Chronicle.Observation;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.and_parent_key_is_resolved_from_sink.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.and_all_events_are_appended_in_one_transaction.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context;
 
 [Collection(ChronicleCollection.Name)]
-public class and_parent_key_is_resolved_from_sink(context context) : Given<context>(context)
+public class and_all_events_are_appended_in_one_transaction(context context) : Given<context>(context)
 {
     const string SimulationName = "Test Simulation";
     const string ConfigurationName = "Test Configuration";
     const string HubName = "Test Hub";
+
+    const double Distance = 100.0;
+    const double Time = 2.5;
+    const double Cost = 50.0;
+    const double Waste = 10.0;
 
     public class context(ChronicleInProcessFixture fixture) : Specification(fixture)
     {
@@ -47,18 +54,18 @@ public class and_parent_key_is_resolved_from_sink(context context) : Given<conte
             var projection = EventStore.Projections.GetHandlerFor<SimulationDashboardProjection>();
             await projection.WaitTillActive();
 
-            // Root and configuration events on SimulationId source
-            var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));
-            LastEventSequenceNumber = appendResult.SequenceNumber;
+            var events = new EventForEventSourceId[]
+            {
+                new(ConfigurationId, new WeightsSetForSimulationConfiguration(Distance, Time, Cost, Waste), Causation.Unknown()),
+                new(ConfigurationId, new HubAddedToSimulationConfiguration(HubId, HubName), Causation.Unknown()),
+                new(SimulationId, new SimulationAdded(SimulationName), Causation.Unknown()),
+                new(SimulationId, new SimulationConfigurationAdded(ConfigurationId, ConfigurationName), Causation.Unknown())
+            };
 
-            appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationConfigurationAdded(ConfigurationId, ConfigurationName));
-            LastEventSequenceNumber = appendResult.SequenceNumber;
+            var appendResult = await EventStore.EventLog.AppendMany(events);
+            LastEventSequenceNumber = appendResult.SequenceNumbers.Last();
 
-            // Hub event on HubId source (different event source) - the Sink resolves the parent hierarchy
-            appendResult = await EventStore.EventLog.Append(ConfigurationId, new HubAddedToSimulationConfiguration(HubId, HubName));
-            LastEventSequenceNumber = appendResult.SequenceNumber;
-
-            await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
+            await projection.WaitTillReachesEventSequenceNumber(LastEventSequenceNumber);
 
             FailedPartitions = await projection.GetFailedPartitions();
 
@@ -91,4 +98,8 @@ public class and_parent_key_is_resolved_from_sink(context context) : Given<conte
     [Fact] void should_have_hub_id_on_nested_child() => Context.Result.Configurations[0].Hubs[0].HubId.ShouldEqual(Context.HubId);
     [Fact] void should_have_hub_name_on_nested_child() => Context.Result.Configurations[0].Hubs[0].Name.ShouldEqual(HubName);
     [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
+    [Fact] void should_set_distance_on_configuration() => Context.Result.Configurations[0].Distance.ShouldEqual(Distance);
+    [Fact] void should_set_time_on_configuration() => Context.Result.Configurations[0].Time.ShouldEqual(Time);
+    [Fact] void should_set_cost_on_configuration() => Context.Result.Configurations[0].Cost.ShouldEqual(Cost);
+    [Fact] void should_set_waste_on_configuration() => Context.Result.Configurations[0].Waste.ShouldEqual(Waste);
 }

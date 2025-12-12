@@ -168,11 +168,12 @@ public void Define(IProjectionBuilderFor<Company> builder) => builder
         // AutoMap inherited from parent
         .From<DepartmentCreated>(_ => _
             .UsingKey(e => e.DepartmentId))
+        // No parent key specified - uses EventSourceId (CompanyId) by default
         .Children(dm => dm.Employees, employees => employees
             .IdentifiedBy(e => e.EmployeeId)
             // AutoMap still applies at this nested level
             .From<EmployeeAssignedToDepartment>(_ => _
-                .UsingParentKey(e => e.DepartmentId)
+                .UsingParentKey(e => e.DepartmentId)  // Extracts from event content
                 .UsingKey(e => e.EmployeeId))));
 ```
 

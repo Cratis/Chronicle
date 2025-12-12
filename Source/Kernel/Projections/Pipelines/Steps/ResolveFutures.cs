@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
@@ -41,6 +43,7 @@ public class ResolveFutures(
 
         // Attempt to resolve any pending futures now that we've processed a new event
         var futures = await projectionFutures.GetFutures(eventStore, @namespace, projection.Identifier);
+
         if (!futures.Any())
         {
             return context;
@@ -79,14 +82,15 @@ public class ResolveFutures(
                     logger.FoundChildProjection(childProjection.Path, future.Id);
                     logger.CheckingParentInCurrentState(future.Id);
 
-                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ParentIdentifiedByProperty, parentKey))
+                    // Check if parent exists in the current changeset's state
+                    // For direct children (parentPath is root), we need to look in the child collection
+                    // For nested children, we look in the parent's collection
+                    if (!ParentExistsInCurrentState(context.Changeset.CurrentState, future.ParentPath, future.ChildPath, future.ParentIdentifiedByProperty, parentKey))
                     {
                         // Parent still doesn't exist, skip this future
                         logger.ParentNotInCurrentState(future.Id);
                         continue;
                     }
-
-                    var keyResolver = projection.GetKeyResolverFor(future.Event.Context.EventType);
 
                     logger.ParentExistsInCurrentState(future.Id);
                     logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
@@ -94,16 +98,32 @@ public class ResolveFutures(
                     var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
                     var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
 
-                    object childKey = future.Event.Context.EventSourceId;
-                    if (childType is not null)
+                    // Extract the child key from the event content using the IdentifiedByProperty path
+                    // This ensures we get the correct identifier (e.g., HubId) rather than using EventSourceId
+                    // which might be the parent's identifier when UsingParentKeyFromContext is used.
+                    // If the property doesn't exist in the event content (returns null), and the IdentifiedByProperty
+                    // is a simple property name (not a nested path), fall back to using EventSourceId.
+                    // This handles cases like WeightsSetForSimulationConfiguration where the ConfigurationId
+                    // is the EventSourceId and not in the event content.
+                    var childKey = future.IdentifiedByProperty.GetValue(future.Event.Content, ArrayIndexers.NoIndexers);
+                    if (childKey is null && !future.IdentifiedByProperty.Path.Contains('.') && !future.IdentifiedByProperty.Path.Contains('['))
+                    {
+                        // Property doesn't exist in event content and it's a simple property name,
+                        // so use EventSourceId (which is how the event was originally sourced)
+                        childKey = future.Event.Context.EventSourceId;
+                    }
+
+                    if (childType is not null && childKey is not null)
                     {
                         childKey = TypeConversion.Convert(childType, childKey);
                     }
 
-                    var key = new Key(parentKey, new ArrayIndexers(
+                    // Build the key for the future event
+                    // Use the current context's root key and add array indexers for navigating to the child
+                    var key = new Key(context.Key.Value, new ArrayIndexers(
                     [
                         new ArrayIndexer(future.ParentPath, future.ParentIdentifiedByProperty, parentKey),
-                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, childKey)
+                        new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, childKey!)
                     ]));
 
                     var futureContext = context with
@@ -153,16 +173,41 @@ public class ResolveFutures(
         return null;
     }
 
-    static bool ParentExistsInCurrentState(ExpandoObject? currentState, PropertyPath parentChildrenPath, PropertyPath parentIdentifiedByProperty, object parentKey)
+    static bool ParentExistsInCurrentState(ExpandoObject? currentState, PropertyPath parentChildrenPath, PropertyPath childPath, PropertyPath parentIdentifiedByProperty, object parentKey)
     {
         if (currentState is null)
         {
             return false;
         }
 
-        var idPath = parentChildrenPath + parentIdentifiedByProperty;
-        var arrayIndex = new ArrayIndexer(parentChildrenPath, parentIdentifiedByProperty, parentKey);
+        // For direct children (parentChildrenPath is root/not set), we need to use childPath to locate the parent in the array
+        // For nested children, parentChildrenPath already points to the correct location
+        var arrayPath = (parentChildrenPath.IsSet && !parentChildrenPath.IsRoot) ? parentChildrenPath : childPath;
 
-        return idPath.HasValue(currentState, new([arrayIndex]));
+        // Use PropertyPath.GetValue to navigate to the collection - it handles ExpandoObject navigation properly
+        var collectionValue = arrayPath.GetValue(currentState, ArrayIndexers.NoIndexers);
+
+        if (collectionValue is null)
+        {
+            return false;
+        }
+
+        // Try to cast to IEnumerable<ExpandoObject>, handling both List<object> and IEnumerable<ExpandoObject>
+        IEnumerable<ExpandoObject>? collection;
+        if (collectionValue is IEnumerable<ExpandoObject> expandoCollection)
+        {
+            collection = expandoCollection;
+        }
+        else if (collectionValue is IEnumerable enumerable)
+        {
+            collection = enumerable.OfType<ExpandoObject>();
+        }
+        else
+        {
+            return false;
+        }
+
+        // Check if the collection contains an item with the matching identifier
+        return collection.ToList().Contains(parentIdentifiedByProperty, parentKey);
     }
 }
