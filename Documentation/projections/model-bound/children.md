@@ -34,6 +34,8 @@ In this example, the `[Key]` attribute on the `LineItem.Id` property is automati
   2. Look for a property named `Id` (case-insensitive)
   3. Fall back to `EventSourceId` if neither is found
 - **parentKey** (optional): Property that identifies the parent. Defaults to `EventSourceId`
+  - Use this when the parent identifier is a property in the event content rather than the EventSourceId
+  - Example: `parentKey: nameof(LineItemAdded.OrderId)` when OrderId is in the event
 - **autoMap** (optional): Whether to automatically map matching properties from the event to the child model. Defaults to `true`
 
 > **Note**: With automatic key discovery, you typically don't need to specify `identifiedBy` explicitly. Just mark your child model's key property with `[Key]` attribute, or name it `Id`, and Chronicle will automatically discover it.
