@@ -122,6 +122,9 @@ public static class BsonValueExtensions
             case TimeOnly actualValue:
                 return new BsonDateTime(BsonUtils.ToMillisecondsSinceEpoch(DateTime.UnixEpoch + actualValue.ToTimeSpan()));
 
+            case TimeSpan actualValue:
+                return new BsonString(actualValue.ToString());
+
             case Guid actualValue:
                 return new BsonBinaryData(actualValue, GuidRepresentation.Standard);
 
@@ -206,6 +209,14 @@ public static class BsonValueExtensions
         {
             var dateTime = bsonTimeOnly.ToUniversalTime();
             return new TimeOnly(dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond);
+        }
+
+        if (targetType == typeof(TimeSpan))
+        {
+            if (value is BsonString bsonString)
+            {
+                return TimeSpan.Parse(bsonString.Value);
+            }
         }
 
         return null;
