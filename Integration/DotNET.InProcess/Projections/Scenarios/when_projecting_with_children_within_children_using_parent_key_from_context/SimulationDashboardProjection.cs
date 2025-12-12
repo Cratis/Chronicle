@@ -21,7 +21,8 @@ public class SimulationDashboardProjection : IProjectionFor<SimulationDashboard>
             .From<SimulationConfigurationAdded>(b => b
                 .UsingParentKeyFromContext(ctx => ctx.EventSourceId)
                 .UsingKey(e => e.ConfigurationId))
-            .From<WeightsSetForSimulationConfiguration>()
+            .From<WeightsSetForSimulationConfiguration>(b => b
+                .UsingParentKeyFromContext(ctx => ctx.EventSourceId))
             .Children(m => m.Hubs, m => m
                 .IdentifiedBy(r => r.HubId)
                 .From<HubAddedToSimulationConfiguration>(e => e

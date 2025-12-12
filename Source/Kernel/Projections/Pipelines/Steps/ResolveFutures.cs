@@ -133,8 +133,22 @@ public class ResolveFutures(
                     var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
                     var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
 
-                    object childKey = future.Event.Context.EventSourceId;
-                    if (childType is not null)
+                    // Extract the child key from the event content using the IdentifiedByProperty path
+                    // This ensures we get the correct identifier (e.g., HubId) rather than using EventSourceId
+                    // which might be the parent's identifier when UsingParentKeyFromContext is used.
+                    // If the property doesn't exist in the event content (returns null), and the IdentifiedByProperty  
+                    // is a simple property name (not a nested path), fall back to using EventSourceId.
+                    // This handles cases like WeightsSetForSimulationConfiguration where the ConfigurationId
+                    // is the EventSourceId and not in the event content.
+                    object? childKey = future.IdentifiedByProperty.GetValue(future.Event.Content, ArrayIndexers.NoIndexers);
+                    if (childKey is null && !future.IdentifiedByProperty.Path.Contains('.') && !future.IdentifiedByProperty.Path.Contains('['))
+                    {
+                        // Property doesn't exist in event content and it's a simple property name,
+                        // so use EventSourceId (which is how the event was originally sourced)
+                        childKey = future.Event.Context.EventSourceId;
+                    }
+
+                    if (childType is not null && childKey is not null)
                     {
                         childKey = TypeConversion.Convert(childType, childKey);
                     }
@@ -159,6 +173,9 @@ public class ResolveFutures(
                     futureContext.Changeset.Incoming = contextEvent;
 
                     // Successfully resolved the future
+                    var resolveMsg = $"{DateTime.Now:HH:mm:ss.fff} RESOLVED FUTURE {future.Id}: Event={future.Event.Context.EventType}, calling ResolveFuture to remove it\n";
+                    File.AppendAllText("/tmp/resolve_futures_debug.log", resolveMsg);
+
                     await projectionFutures.ResolveFuture(eventStore, @namespace, projection.Identifier, future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;

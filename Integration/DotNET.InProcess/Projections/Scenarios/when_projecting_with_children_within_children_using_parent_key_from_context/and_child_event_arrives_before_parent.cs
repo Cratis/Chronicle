@@ -27,7 +27,7 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
         public SimulationDashboard Result;
         public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration)];
+        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration), typeof(WeightsSetForSimulationConfiguration)];
         public override IEnumerable<Type> Projections => [typeof(SimulationDashboardProjection)];
 
         protected override void ConfigureServices(IServiceCollection services)
@@ -37,9 +37,9 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
 
         void Establish()
         {
-            SimulationId = Guid.Parse("fec29e06-1032-4c6d-a012-7c14ccb956e0");
-            ConfigurationId = Guid.Parse("1660ecdd-e13c-42f9-914f-3c8c16becde7");
-            HubId = Guid.Parse("77bb288e-8bcc-4cd9-8178-ed69a8149f48");
+            SimulationId = Guid.Parse("0089d57f-9095-4b56-b948-ab170de8e0ee");
+            ConfigurationId = Guid.Parse("754fd741-adae-4fbd-8c47-2d622cc0b274");
+            HubId = Guid.Parse("eff2cf7a-4121-438b-94fd-139775a09f57");
         }
 
         async Task Because()
