@@ -40,18 +40,20 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         // For other operations, when we get the object from the sink, if the object exists and __initialized is false, we can set the initial state
         // for those properties that does not have a value. We then set the __initialized to true.
         var initialState = await sink.FindOrDefault(context.Key);
+
         var needsInitialState = false;
         if (initialState is null)
         {
             if (context.ChildrenAffected || context.IsJoin)
             {
+                initialState = new ExpandoObject();
+                ((IDictionary<string, object?>)initialState)[WellKnownProperties.ReadModelInstanceInitialized] = false;
                 context.Changeset.SetInitialized(false);
-                initialState = projection.InitialModelState.Clone();
             }
             else
             {
                 needsInitialState = true;
-                initialState = projection.InitialModelState;
+                initialState = projection.InitialModelState.Clone();
                 context.Changeset.SetInitialized(true);
             }
 

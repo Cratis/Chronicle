@@ -106,14 +106,12 @@ public class ProjectionFactory(
 
     static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
-        // If there is no initial state, we create one with empty collections for all arrays.
-        // This is to ensure that we can add to them without having to check for null.
-        // And that any sinks don't fail when trying to access them.
-        // Only add direct properties (not nested ones from child schemas) to avoid polluting the root object
         var initialState = new ExpandoObject();
+        var stateDict = (IDictionary<string, object?>)initialState;
+
         foreach (var collection in readModelSchema.Properties.Values.Where(_ => _.IsArray))
         {
-            ((IDictionary<string, object?>)initialState)[collection.Name] = new List<object>();
+            stateDict[collection.Name] = new List<object>();
         }
 
         return initialState;

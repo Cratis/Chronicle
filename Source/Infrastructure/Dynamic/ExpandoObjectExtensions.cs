@@ -237,14 +237,15 @@ public static class ExpandoObjectExtensions
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
     public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
-        var logEntry = $"[{DateTime.Now:HH:mm:ss.fff}] EnsureCollection called: childrenProperty='{childrenProperty}', arrayIndexers.Count={arrayIndexers.Count()}, arrayIndexers=[{string.Join(", ", arrayIndexers.Select(ai => $"{ai.ArrayProperty}[{ai.Identifier}]"))}]";
-        System.IO.File.AppendAllText("/tmp/chronicle-projection-debug.log", logEntry + Environment.NewLine);
-        
+        var stackTrace = Environment.StackTrace;
+        var isRootCall = stackTrace.Contains("EnsureCollection") && childrenProperty.Path.Contains("Hubs") && !childrenProperty.Path.Contains("Configurations");
+        if (isRootCall)
+        {
+        }
+
         var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
         if (!inner.TryGetValue(childrenProperty.LastSegment.Value, out var value) || value is null)
         {
-            var createLog = $"[{DateTime.Now:HH:mm:ss.fff}] EnsureCollection CREATING collection for '{childrenProperty.LastSegment.Value}'";
-            System.IO.File.AppendAllText("/tmp/chronicle-projection-debug.log", createLog + Environment.NewLine);
             value = new List<TChild>();
             inner[childrenProperty.LastSegment.Value] = value;
         }

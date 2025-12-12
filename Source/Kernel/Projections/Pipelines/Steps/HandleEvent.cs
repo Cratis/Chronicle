@@ -60,7 +60,13 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
 
         if (context.NeedsInitialState && !context.Changeset.HasJoined())
         {
-            context.Changeset.AddPropertiesFrom(projection.InitialModelState);
+            // Only add properties from InitialModelState for root projections
+            // Child projections should not add their InitialModelState to the shared changeset
+            // because those properties belong to the child level, not the root level
+            if (projection.ChildrenPropertyPath.IsRoot)
+            {
+                context.Changeset.AddPropertiesFrom(projection.InitialModelState);
+            }
         }
 
         return context;
