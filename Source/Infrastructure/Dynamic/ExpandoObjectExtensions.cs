@@ -237,12 +237,6 @@ public static class ExpandoObjectExtensions
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
     public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
-        var stackTrace = Environment.StackTrace;
-        var isRootCall = stackTrace.Contains("EnsureCollection") && childrenProperty.Path.Contains("Hubs") && !childrenProperty.Path.Contains("Configurations");
-        if (isRootCall)
-        {
-        }
-
         var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
         if (!inner.TryGetValue(childrenProperty.LastSegment.Value, out var value) || value is null)
         {
