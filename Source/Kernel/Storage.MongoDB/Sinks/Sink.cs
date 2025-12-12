@@ -118,9 +118,7 @@ public class Sink(
     {
         var collection = Collection;
 
-        // Convert PropertyPath to MongoDB-compatible path by removing brackets
-        // Example: "[Configurations].configurationId" -> "configurations.configurationId"
-        var mongoPropertyPath = ConvertToMongoPath(childPropertyPath);
+        var mongoPropertyPath = childPropertyPath.ToMongoDB();
         var bsonValue = childValue.ToBsonValue();
 
         var filter = Builders<BsonDocument>.Filter.Eq(mongoPropertyPath, bsonValue);
@@ -198,9 +196,6 @@ public class Sink(
         var update = Builders<BsonDocument>.Update.PullFilter(childrenProperty, childFilter);
         await collection.UpdateManyAsync(filter, update);
     }
-
-    static string ConvertToMongoPath(PropertyPath propertyPath) =>
-        string.Join('.', propertyPath.Segments.Select(s => s.Value));
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
 }

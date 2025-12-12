@@ -5,7 +5,6 @@ using System.Collections;
 using System.Globalization;
 using Cratis.Arc.MongoDB;
 using Cratis.Reflection;
-using Cratis.Strings;
 using Cratis.Types;
 using MongoDB.Bson;
 using NJsonSchema;
@@ -138,11 +137,7 @@ public static class BsonValueExtensions
         var document = new BsonDocument();
         foreach (var property in inputType.GetProperties())
         {
-            var propertyName = property.Name.ToCamelCase();
-            if (propertyName == "id")
-            {
-                propertyName = "_id";
-            }
+            var propertyName = property.Name.ToMongoDBPropertyName();
             var propertyValue = property.GetValue(input);
             document.Add(propertyName, propertyValue.ToBsonValue()!);
         }
