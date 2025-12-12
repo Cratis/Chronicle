@@ -206,12 +206,9 @@ public static class BsonValueExtensions
             return new TimeOnly(dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond);
         }
 
-        if (targetType == typeof(TimeSpan))
+        if (targetType == typeof(TimeSpan) && value is BsonString bsonTimeStampString)
         {
-            if (value is BsonString bsonString)
-            {
-                return TimeSpan.Parse(bsonString.Value);
-            }
+            return TimeSpan.Parse(bsonTimeStampString.Value);
         }
 
         return null;

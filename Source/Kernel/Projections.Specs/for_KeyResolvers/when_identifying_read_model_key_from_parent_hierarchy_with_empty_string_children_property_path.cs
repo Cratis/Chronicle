@@ -24,8 +24,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_empty_st
     ISink _sink;
     KeyResolvers _keyResolvers;
 
-    static EventType _parentEventType = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
-    static EventType _childEventType = new("02405794-91e7-4e4f-8ad1-f043070ca297", 1);
+    static readonly EventType _parentEventType = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
+    static readonly EventType _childEventType = new("02405794-91e7-4e4f-8ad1-f043070ca297", 1);
     const string RootKey = "root-key-123";
     const string ParentKey = "parent-key-456";
     const string ChildKey = "child-key-789";
