@@ -522,23 +522,16 @@ public class ProjectionFactory(
             return new EventTypeWithKeyResolver(eventType, keyResolver);
         }
 
-        // If no explicit parent key is specified, try to infer it from the parent's IdentifiedByProperty
-        // This allows events to contain a property matching the parent's identifier without explicit UsingParentKey()
-        var isInferredParentKey = false;
+        // Default to EventSourceId for parent key when not explicitly specified
+        // This supports the parent-keyed pattern where the EventSourceId represents the parent's identifier
         var effectiveParentKey = parentKey;
-
-        // Check if parentKey is null OR empty (not specified)
-        if ((effectiveParentKey is null || string.IsNullOrEmpty(effectiveParentKey.Value)) && projection.HasParent && projection.Parent!.IdentifiedByProperty != PropertyPath.NotSet)
+        if (effectiveParentKey is null || string.IsNullOrEmpty(effectiveParentKey.Value))
         {
-            // Use the parent's IdentifiedByProperty as the expression to extract from the event
-            // This assumes the event contains a property with the same name as the parent's identifier
-            // The property path is used directly as it represents an event content expression (no $ prefix)
-            effectiveParentKey = new PropertyExpression(projection.Parent.IdentifiedByProperty.LastSegment.Value);
-            isInferredParentKey = true;
-            logger.GetEventTypeWithKeyResolverInferredParentKey(effectiveParentKey.Value, isInferredParentKey);
+            effectiveParentKey = new PropertyExpression(WellKnownExpressions.EventSourceId);
+            logger.GetEventTypeWithKeyResolverInferredParentKey(effectiveParentKey.Value, true);
         }
 
-        var parentKeyResolver = GetParentKeyResolverFor(projection, effectiveParentKey, actualIdentifiedByProperty, isInferredParentKey);
+        var parentKeyResolver = GetParentKeyResolverFor(projection, effectiveParentKey, actualIdentifiedByProperty);
         keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
 
         return new EventTypeWithKeyResolver(eventType, keyResolver);
@@ -554,21 +547,12 @@ public class ProjectionFactory(
         return keyResolvers.FromEventSourceId;
     }
 
-    KeyResolver GetParentKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty, bool useEventSourceIdFallback)
+    KeyResolver GetParentKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)
     {
-        logger.GetParentKeyResolverFor(key?.Value, useEventSourceIdFallback);
+        logger.GetParentKeyResolverFor(key?.Value, false);
 
         if (key is not null && key.Value.Length != 0 && keyExpressionResolvers.CanResolve(key))
         {
-            // When the parent key is inferred (not explicitly specified), use a resolver that falls back to EventSourceId
-            // if the property doesn't exist in the event content. This supports scenarios where:
-            // - The event is appended to the parent's EventSourceId
-            // - But doesn't contain the parent key in its content
-            if (useEventSourceIdFallback)
-            {
-                return keyExpressionResolvers.ResolveWithFallbackToEventSourceId(projection, key, actualIdentifiedByProperty, keyResolvers);
-            }
-
             return keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }
 
