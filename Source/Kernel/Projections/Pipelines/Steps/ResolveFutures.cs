@@ -136,7 +136,7 @@ public class ResolveFutures(
                     // Extract the child key from the event content using the IdentifiedByProperty path
                     // This ensures we get the correct identifier (e.g., HubId) rather than using EventSourceId
                     // which might be the parent's identifier when UsingParentKeyFromContext is used.
-                    // If the property doesn't exist in the event content (returns null), and the IdentifiedByProperty  
+                    // If the property doesn't exist in the event content (returns null), and the IdentifiedByProperty
                     // is a simple property name (not a nested path), fall back to using EventSourceId.
                     // This handles cases like WeightsSetForSimulationConfiguration where the ConfigurationId
                     // is the EventSourceId and not in the event content.
