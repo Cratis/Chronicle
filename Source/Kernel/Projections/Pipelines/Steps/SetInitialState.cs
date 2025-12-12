@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
@@ -45,7 +46,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             if (context.ChildrenAffected || context.IsJoin)
             {
                 context.Changeset.SetInitialized(false);
-                initialState = new ExpandoObject();
+                initialState = projection.InitialModelState.Clone();
             }
             else
             {
