@@ -268,8 +268,7 @@ public static class ExpandoObjectExtensions
     public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
         items!.Any((IDictionary<string, object> _) =>
         {
-            if (!_.ContainsKey(identityProperty.Path)) return false;
-            var itemValue = _[identityProperty.Path];
+            if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
             var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
             return itemValue.Equals(convertedKey);
         });
@@ -285,8 +284,7 @@ public static class ExpandoObjectExtensions
     {
         var item = items!.SingleOrDefault((IDictionary<string, object> _) =>
         {
-            if (!_.ContainsKey(identityProperty.Path)) return false;
-            var itemValue = _[identityProperty.Path];
+            if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
             var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
             return itemValue.Equals(convertedKey);
         });
