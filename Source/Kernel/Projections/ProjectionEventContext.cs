@@ -68,7 +68,7 @@ public record ProjectionEventContext(
     public void AddDeferredFuture(ProjectionFuture future)
     {
         // Avoid adding duplicate futures for the same event sequence number
-        if (_deferredFutures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
         {
             return;
         }

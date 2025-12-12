@@ -430,8 +430,6 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         logger.FromParentHierarchyCreatingFuture(projection.Path, parentKey.Value?.ToString() ?? "null");
 
         var futureId = ProjectionFutureId.New();
-        var debugMsg = $"{DateTime.Now:HH:mm:ss.fff} CREATING FUTURE {futureId} for Projection={projection.Path}: Event={@event.Context.EventType}, ParentPath={parentChildrenPropertyPath.Path}, ChildPath={projection.ChildrenPropertyPath.Path}, ParentIdentifiedBy={parentIdentifiedByProperty.Path}, ParentKey={parentKey.Value}\n";
-        File.AppendAllText("/tmp/resolve_futures_debug.log", debugMsg);
 
         return new ProjectionFuture(
             futureId,
