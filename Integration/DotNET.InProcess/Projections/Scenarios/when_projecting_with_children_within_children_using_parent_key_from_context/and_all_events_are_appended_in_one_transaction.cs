@@ -57,7 +57,7 @@ public class and_all_events_are_appended_in_one_transaction(context context) : G
             var events = new EventForEventSourceId[]
             {
                 new(ConfigurationId, new WeightsSetForSimulationConfiguration(Distance, Time, Cost, Waste), Causation.Unknown()),
-                new(ConfigurationId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName), Causation.Unknown()),
+                new(ConfigurationId, new HubAddedToSimulationConfiguration(HubId, HubName), Causation.Unknown()),
                 new(SimulationId, new SimulationAdded(SimulationName), Causation.Unknown()),
                 new(SimulationId, new SimulationConfigurationAdded(ConfigurationId, ConfigurationName), Causation.Unknown())
             };

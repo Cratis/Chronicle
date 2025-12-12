@@ -25,6 +25,6 @@ public class SimulationDashboardProjection : IProjectionFor<SimulationDashboard>
             .Children(m => m.Hubs, m => m
                 .IdentifiedBy(r => r.HubId)
                 .From<HubAddedToSimulationConfiguration>(e => e
-                    .UsingParentKey(e => e.ConfigurationId)
+                    .UsingParentKeyFromContext(ctx => ctx.EventSourceId)
                     .UsingKey(e => e.HubId))));
 }

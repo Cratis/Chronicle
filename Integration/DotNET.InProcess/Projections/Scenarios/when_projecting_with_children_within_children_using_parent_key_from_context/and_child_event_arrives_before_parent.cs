@@ -53,7 +53,7 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
 
             // OUT OF ORDER: Append Hub event BEFORE its Configuration parent
             // This should create a future since Configuration doesn't exist yet
-            await EventStore.EventLog.Append(ConfigurationId, new HubAddedToSimulationConfiguration(ConfigurationId, HubId, HubName));
+            await EventStore.EventLog.Append(ConfigurationId, new HubAddedToSimulationConfiguration(HubId, HubName));
 
             // Now append the Configuration parent - this should resolve the Hub future
             appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationConfigurationAdded(ConfigurationId, ConfigurationName));

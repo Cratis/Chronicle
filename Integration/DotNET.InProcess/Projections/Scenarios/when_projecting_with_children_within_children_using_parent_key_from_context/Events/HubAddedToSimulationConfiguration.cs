@@ -7,4 +7,4 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecti
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context.Events;
 
 [EventType]
-public record HubAddedToSimulationConfiguration(ConfigurationId ConfigurationId, HubId HubId, string Name);
+public record HubAddedToSimulationConfiguration(HubId HubId, string Name);
