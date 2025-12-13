@@ -35,6 +35,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 {
     readonly ChronicleUrl _url;
     readonly int _connectTimeout;
+    readonly int? _maxReceiveMessageSize;
+    readonly int? _maxSendMessageSize;
     readonly ITaskFactory _tasks;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
@@ -51,6 +53,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </summary>
     /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
     /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
+    /// <param name="maxReceiveMessageSize">Maximum receive message size in bytes.</param>
+    /// <param name="maxSendMessageSize">Maximum send message size in bytes.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
@@ -60,6 +64,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     public ChronicleConnection(
         ChronicleUrl url,
         int connectTimeout,
+        int? maxReceiveMessageSize,
+        int? maxSendMessageSize,
         IConnectionLifecycle connectionLifecycle,
         ITaskFactory tasks,
         ICorrelationIdAccessor correlationIdAccessor,
@@ -69,6 +75,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
         _url = url;
         _connectTimeout = connectTimeout;
+        _maxReceiveMessageSize = maxReceiveMessageSize;
+        _maxSendMessageSize = maxSendMessageSize;
         Lifecycle = connectionLifecycle;
         _tasks = tasks;
         _correlationIdAccessor = correlationIdAccessor;
@@ -191,6 +199,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             new GrpcChannelOptions
             {
                 HttpHandler = httpHandler,
+                MaxReceiveMessageSize = _maxReceiveMessageSize,
+                MaxSendMessageSize = _maxSendMessageSize,
                 ServiceConfig = new ServiceConfig
                 {
                     MethodConfigs =

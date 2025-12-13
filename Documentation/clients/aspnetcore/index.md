@@ -36,7 +36,9 @@ You can configure Chronicle using your `appsettings.json` file. The configuratio
     "SoftwareCommit": "abc123",
     "ProgramIdentifier": "my-service",
     "AutoDiscoverAndRegister": true,
-    "ConnectTimeout": 5
+    "ConnectTimeout": 5,
+    "MaxReceiveMessageSize": 104857600,
+    "MaxSendMessageSize": 104857600
   }
 }
 ```
@@ -68,6 +70,10 @@ Chronicle__ProgramIdentifier=my-service
 # Connection settings
 Chronicle__ConnectTimeout=10
 Chronicle__AutoDiscoverAndRegister=true
+
+# gRPC message size limits (in bytes, defaults to 100 MB)
+Chronicle__MaxReceiveMessageSize=104857600
+Chronicle__MaxSendMessageSize=104857600
 ```
 
 Environment variables take precedence over `appsettings.json`, making them ideal for environment-specific configuration.
