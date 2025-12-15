@@ -166,6 +166,13 @@ static class FromDefinitionExtensions
             {
                 var modelPropertyPath = new PropertyPath(modelProperty.Name);
                 var modelPropertyName = namingPolicy.GetPropertyName(modelPropertyPath);
+
+                // Skip if the property already has an explicit mapping (including operation mappings)
+                if (fromDefinition.Properties.ContainsKey(modelPropertyName))
+                {
+                    continue;
+                }
+
                 var eventPropertyPath = new PropertyPath(eventProperty.Name);
                 fromDefinition.Properties[modelPropertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
             }

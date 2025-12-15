@@ -19,6 +19,11 @@ public static class EventHandlerMethods
     /// <returns>True if it is, false if not.</returns>
     public static bool IsEventHandlerMethod(this MethodInfo methodInfo, IEnumerable<Type> eventTypes)
     {
+        if (methodInfo.IsSpecialName)
+        {
+            return false;
+        }
+
         var isEventHandlerMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType) ||
                                     methodInfo.ReturnType == typeof(void);
 

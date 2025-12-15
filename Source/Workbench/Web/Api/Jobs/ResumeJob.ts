@@ -84,7 +84,8 @@ export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
     }
 
     static use(initialValues?: IResumeJob): [ResumeJob, SetCommandValues<IResumeJob>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'ResumeJob' does not satisfy the constraint 'Command<IResumeJob, any>'.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<ResumeJob, IResumeJob>(ResumeJob, initialValues);
     }
 }

@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
@@ -21,6 +22,12 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
     {
+        // Don't set initial state if the event was deferred (key is undefined)
+        if (context.IsDeferred)
+        {
+            return context;
+        }
+
         if (context.IsJoin)
         {
             return context;
@@ -33,18 +40,20 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         // For other operations, when we get the object from the sink, if the object exists and __initialized is false, we can set the initial state
         // for those properties that does not have a value. We then set the __initialized to true.
         var initialState = await sink.FindOrDefault(context.Key);
+
         var needsInitialState = false;
         if (initialState is null)
         {
             if (context.ChildrenAffected || context.IsJoin)
             {
-                context.Changeset.SetInitialized(false);
                 initialState = new ExpandoObject();
+                ((IDictionary<string, object?>)initialState)[WellKnownProperties.ReadModelInstanceInitialized] = false;
+                context.Changeset.SetInitialized(false);
             }
             else
             {
                 needsInitialState = true;
-                initialState = projection.InitialModelState;
+                initialState = projection.InitialModelState.Clone();
                 context.Changeset.SetInitialized(true);
             }
 

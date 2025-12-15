@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Cratis.Reflection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -146,7 +145,8 @@ public class ChangesetConverter(
     {
         BsonValue bsonValue;
 
-        if (childAdded.State.GetType().IsAPrimitiveType())
+        var stateType = childAdded.State.GetType();
+        if (stateType.IsPrimitive || stateType == typeof(string) || stateType == typeof(Guid) || stateType == typeof(DateTime) || stateType == typeof(DateTimeOffset) || stateType == typeof(DateOnly) || stateType == typeof(TimeOnly))
         {
             bsonValue = childAdded.State.ToBsonValue();
         }
@@ -170,7 +170,8 @@ public class ChangesetConverter(
     {
         BsonValue bsonValue;
 
-        if (childRemoved.State.GetType().IsAPrimitiveType())
+        var stateType = childRemoved.State.GetType();
+        if (stateType.IsPrimitive || stateType == typeof(string) || stateType == typeof(Guid) || stateType == typeof(DateTime) || stateType == typeof(DateTimeOffset) || stateType == typeof(DateOnly) || stateType == typeof(TimeOnly))
         {
             bsonValue = childRemoved.State.ToBsonValue();
         }

@@ -89,7 +89,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
 
             value ??= property.GetDefaultValue(typeFormats);
-            expandoObjectAsDictionary[name] = value;
+            if (value is not null)
+            {
+                expandoObjectAsDictionary[name] = value;
+            }
         }
 
         return expandoObject;

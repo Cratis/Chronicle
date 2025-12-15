@@ -84,7 +84,8 @@ export class DeleteJob extends Command<IDeleteJob> implements IDeleteJob {
     }
 
     static use(initialValues?: IDeleteJob): [DeleteJob, SetCommandValues<IDeleteJob>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'DeleteJob' does not satisfy the constraint 'Command<IDeleteJob, any>'.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<DeleteJob, IDeleteJob>(DeleteJob, initialValues);
     }
 }

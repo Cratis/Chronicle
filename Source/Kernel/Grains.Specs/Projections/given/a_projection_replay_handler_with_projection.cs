@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.given;
 
@@ -16,7 +17,7 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
     void Establish()
     {
         _projection = Substitute.For<Chronicle.Projections.IProjection>();
-        _model = new(_readModelId, _readModelName, ReadModelOwner.None, null!);
+        _model = new(_readModelId, _readModelName, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } }, []);
         _projection.ReadModel.Returns(_model);
 
         _projections.TryGet(
