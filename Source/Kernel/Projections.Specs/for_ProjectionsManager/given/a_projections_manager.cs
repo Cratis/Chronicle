@@ -75,12 +75,14 @@ public class a_projections_manager : Specification
             "first-read-model",
             "FirstReadModel",
             ReadModelOwner.Client,
-            new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>());
+            new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
+            []);
 
         _secondReadModelDefinition = new ReadModelDefinition(
             "second-read-model",
             "SecondReadModel",
             ReadModelOwner.Client,
-            new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>());
+            new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
+            []);
     }
 }

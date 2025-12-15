@@ -118,6 +118,16 @@ public class ChronicleOptions(
     public int ConnectTimeout { get; set; } = connectTimeout;
 
     /// <summary>
+    /// Gets or sets the maximum receive message size in bytes for gRPC messages. Defaults to 100 MB.
+    /// </summary>
+    public int? MaxReceiveMessageSize { get; set; } = 100 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets or sets the maximum send message size in bytes for gRPC messages. Defaults to 100 MB.
+    /// </summary>
+    public int? MaxSendMessageSize { get; set; } = 100 * 1024 * 1024;
+
+    /// <summary>
     /// Gets the <see cref="ILoggerFactory"/> to use internally in the client.
     /// </summary>
     public ILoggerFactory LoggerFactory { get; set; } = loggerFactory ?? new LoggerFactory();

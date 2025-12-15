@@ -90,7 +90,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             prefix = $"{prefix}-";
         }
 
-        var backupName = $"{prefix}{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.tgz";
+        var backupName = $"{prefix}{DateTimeOffset.Now:yyyyMMdd-HHmmss}.tgz";
         try
         {
             MongoDBContainer.ExecAsync(

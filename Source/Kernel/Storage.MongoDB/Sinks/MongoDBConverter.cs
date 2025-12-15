@@ -48,7 +48,8 @@ public class MongoDBConverter(
             {
                 case PropertyName:
                     {
-                        propertyBuilder.Append(segment.Value);
+                        var propertyName = segment.Value.ToMongoDBPropertyName();
+                        propertyBuilder.Append(propertyName);
                     }
                     break;
 
@@ -58,15 +59,18 @@ public class MongoDBConverter(
                         if (arrayIndexers.HasFor(currentPropertyPath))
                         {
                             var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
-                            propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
+                            var arrayPropertyName = segment.Value.ToMongoDBPropertyName();
+                            propertyBuilder.AppendFormat("{0}.$[{1}]", arrayPropertyName, collectionIdentifier);
                             var filter = new ExpandoObject();
-                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier);
+                            var key = arrayIndexer.IdentifierProperty.Path.ToMongoDBPropertyName();
+                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{key}", arrayIndexer.Identifier);
                             var document = ToBsonValue(filter) as BsonDocument;
                             arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(document));
                         }
                         else
                         {
-                            propertyBuilder.Append(segment.Value);
+                            var arrayPropertyName = segment.Value.ToMongoDBPropertyName();
+                            propertyBuilder.Append(arrayPropertyName);
                         }
                     }
                     break;
@@ -74,7 +78,6 @@ public class MongoDBConverter(
         }
 
         var property = propertyBuilder.ToString();
-        property = GetNameForPropertyInBsonDocument(property);
         return new(property, arrayFilters);
     }
 
@@ -104,7 +107,7 @@ public class MongoDBConverter(
 
             foreach (var kvp in expandoObjectAsDictionary)
             {
-                document[GetNameForPropertyInBsonDocument(kvp.Key)] = ToBsonValue(kvp.Value);
+                document[kvp.Key.ToMongoDBPropertyName()] = ToBsonValue(kvp.Value);
             }
 
             return document;
@@ -175,6 +178,4 @@ public class MongoDBConverter(
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
         return value == BsonNull.Value ? BsonNull.Value : value;
     }
-
-    static string GetNameForPropertyInBsonDocument(string name) => name == "id" ? "_id" : name;
 }

@@ -150,7 +150,8 @@ export class RedactMany extends Command<IRedactMany> implements IRedactMany {
     }
 
     static use(initialValues?: IRedactMany): [RedactMany, SetCommandValues<IRedactMany>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'RedactMany' does not satisfy the constraint 'Command<IRedactMany, any>'.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<RedactMany, IRedactMany>(RedactMany, initialValues);
     }
 }

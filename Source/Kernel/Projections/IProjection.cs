@@ -48,6 +48,11 @@ public interface IProjection
     PropertyPath ChildrenPropertyPath { get; }
 
     /// <summary>
+    /// Gets the <see cref="PropertyPath"/> that identifies items in the children collection. Only applies to child projections.
+    /// </summary>
+    PropertyPath IdentifiedByProperty { get; }
+
+    /// <summary>
     /// Gets whether or not there is a parent.
     /// </summary>
     bool HasParent { get; }

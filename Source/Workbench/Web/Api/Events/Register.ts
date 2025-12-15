@@ -69,7 +69,8 @@ export class Register extends Command<IRegister> implements IRegister {
     }
 
     static use(initialValues?: IRegister): [Register, SetCommandValues<IRegister>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'Register' does not satisfy the constraint 'Command<IRegister, any>'.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Register, IRegister>(Register, initialValues);
     }
 }

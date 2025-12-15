@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -25,6 +26,6 @@ public partial class DecrementExpressionResolver(ITypeFormats typeFormats) : IRe
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Decrement(_typeFormats, targetProperty, targetPropertySchema);
 
-    [GeneratedRegex("\\$decrement\\(\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"\\{WellKnownExpressions.Decrement}\\(\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex IncrementRegEx();
 }
