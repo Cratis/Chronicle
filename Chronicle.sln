@@ -89,10 +89,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Integration\Api\Api.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.InProcess", "Integration\DotNET.InProcess\DotNET.InProcess.csproj", "{E05E6FF2-5847-4D22-826D-9A8E7E0D8706}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationModel", "Source\Clients\ApplicationModel\ApplicationModel.csproj", "{2AD5DB3E-FCB1-4072-B765-16EBBF3129AA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationModel.Specs", "Source\Clients\ApplicationModel.Specs\ApplicationModel.Specs.csproj", "{6C3E6573-EB8B-46CC-9E81-98A04E5C9002}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB", "Integration\MongoDB\MongoDB.csproj", "{1932C40D-70E4-41B9-B707-F19C2A9A2F14}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kernel", "Kernel", "{98856D1C-6A95-76B7-5543-111401E783E3}"
@@ -587,7 +583,6 @@ Global
 		{E05E6FF2-5847-4D22-826D-9A8E7E0D8706}.Release|x64.Build.0 = Release|Any CPU
 		{E05E6FF2-5847-4D22-826D-9A8E7E0D8706}.Release|x86.ActiveCfg = Release|Any CPU
 		{E05E6FF2-5847-4D22-826D-9A8E7E0D8706}.Release|x86.Build.0 = Release|Any CPU
-		{6C3E6573-EB8B-46CC-9E81-98A04E5C9002}.Release|x86.Build.0 = Release|Any CPU
 		{1932C40D-70E4-41B9-B707-F19C2A9A2F14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1932C40D-70E4-41B9-B707-F19C2A9A2F14}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1932C40D-70E4-41B9-B707-F19C2A9A2F14}.Debug|x64.ActiveCfg = Debug|Any CPU
