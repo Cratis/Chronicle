@@ -72,7 +72,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new Tasks.TaskFactory(),
             options.CorrelationIdAccessor,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
-            CancellationToken.None);
+            CancellationToken.None,
+            options.Tls.Disable,
+            options.Tls.CertificatePath,
+            options.Tls.CertificatePassword,
+            options.Tls.CertificateAuthorityPort);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 

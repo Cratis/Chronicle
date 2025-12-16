@@ -139,6 +139,11 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
+    /// Gets or sets the TLS configuration.
+    /// </summary>
+    public Tls Tls { get; set; } = new Tls();
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
