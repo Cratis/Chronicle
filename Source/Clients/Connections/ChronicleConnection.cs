@@ -44,6 +44,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly bool _disableTls;
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
+    readonly int _certificateAuthorityPort;
+    X509Certificate2? _fetchedDevCa;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -64,6 +66,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
+    /// <param name="certificateAuthorityPort">Port used to fetch the development CA when no certificate is provided.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
         ChronicleUrl url,
@@ -75,7 +78,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         CancellationToken cancellationToken,
         bool disableTls = false,
         string? certificatePath = null,
-        string? certificatePassword = null)
+        string? certificatePassword = null,
+        int certificateAuthorityPort = 35001)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
         _url = url;
@@ -88,6 +92,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _disableTls = disableTls;
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
+        _certificateAuthorityPort = certificateAuthorityPort;
 
         _cancellationToken.Register(() =>
         {
@@ -117,6 +122,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
+        _fetchedDevCa?.Dispose();
     }
 
     /// <inheritdoc/>
@@ -191,6 +197,41 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         var certificate = CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword, _disableTls);
 
+        if (!_disableTls && certificate is null)
+        {
+            var wellKnownUrl = $"http://{_url.ServerAddress.Host}:{_certificateAuthorityPort}/.well-known/chronicle/ca";
+            try
+            {
+                _logger.FetchingDevelopmentCa(wellKnownUrl);
+                using var http = new HttpClient();
+                var pem = http.GetStringAsync(wellKnownUrl).GetAwaiter().GetResult();
+                if (!string.IsNullOrWhiteSpace(pem))
+                {
+                    const string header = "-----BEGIN CERTIFICATE-----";
+                    const string footer = "-----END CERTIFICATE-----";
+                    var start = pem.IndexOf(header, StringComparison.Ordinal);
+                    var end = pem.IndexOf(footer, StringComparison.Ordinal);
+                    if (start >= 0 && end > start)
+                    {
+                        var base64 = pem.Substring(start + header.Length, end - (start + header.Length)).Replace("\n", string.Empty).Replace("\r", string.Empty).Trim();
+                        var bytes = Convert.FromBase64String(base64);
+
+                        // Create PEM with line breaks and use CreateFromPem to avoid deprecated constructors
+                        var base64WithBreaks = Convert.ToBase64String(bytes, Base64FormattingOptions.InsertLineBreaks);
+                        var caPem = header + "\n" + base64WithBreaks + "\n" + footer + "\n";
+                        _fetchedDevCa = X509Certificate2.CreateFromPem(caPem);
+                        _logger.FetchedDevelopmentCa(wellKnownUrl);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.FailedFetchingDevelopmentCa(wellKnownUrl, ex);
+
+                // ignore fetch errors; fallback to default validation
+            }
+        }
+
         var httpHandler = new SocketsHttpHandler
         {
             PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
@@ -202,6 +243,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!_disableTls && certificate is not null)
         {
             httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
+            _logger.UsingClientCertificate(!string.IsNullOrEmpty(_certificatePath) ? _certificatePath! : "embedded");
         }
 
         if (!_disableTls)
@@ -218,6 +260,28 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     return cert.GetCertHashString() == certificate.GetCertHashString();
                 }
 
+                if (_fetchedDevCa is not null && cert is not null)
+                {
+                    _logger.UsingFetchedDevelopmentCa();
+                    try
+                    {
+                        var buildChain = new X509Chain();
+                        buildChain.ChainPolicy.ExtraStore.Add(_fetchedDevCa);
+                        buildChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                        buildChain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+                        if (cert is X509Certificate2 serverCert)
+                        {
+                            return buildChain.Build(serverCert);
+                        }
+                        using var tmp = new X509Certificate2(cert);
+                        return buildChain.Build(tmp);
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
+
                 return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
             };
         }
@@ -225,7 +289,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         var scheme = _disableTls ? "http" : "https";
         var address = $"{scheme}://{_url.ServerAddress.Host}:{_url.ServerAddress.Port}";
 
-        return GrpcChannel.ForAddress(
+        var channel = GrpcChannel.ForAddress(
             address,
             new GrpcChannelOptions
             {
@@ -249,6 +313,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     }
                 }
             });
+
+        _logger.ChannelCreated(address);
+        return channel;
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)

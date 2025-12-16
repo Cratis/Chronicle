@@ -73,7 +73,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             CancellationToken.None,
             options.DisableTls,
             options.CertificatePath,
-            options.CertificatePassword);
+            options.CertificatePassword,
+            options.CertificateAuthorityPort);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 

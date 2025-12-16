@@ -144,6 +144,12 @@ public class ChronicleOptions(
     public bool DisableTls { get; set; }
 
     /// <summary>
+    /// Port to use when attempting to fetch a development CA from the server's well-known endpoint.
+    /// Used by clients when no certificate file is configured.
+    /// </summary>
+    public int CertificateAuthorityPort { get; set; } = 35001;
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>

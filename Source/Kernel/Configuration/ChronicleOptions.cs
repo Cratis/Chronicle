@@ -72,6 +72,12 @@ public class ChronicleOptions
     public bool DisableTls { get; init; }
 
     /// <summary>
+    /// Port used by the development well-known certificate provisioning endpoint.
+    /// Only used in development mode when the server generates a dev CA and exposes the public cert.
+    /// </summary>
+    public int WellKnownCertPort { get; init; } = 35001;
+
+    /// <summary>
     /// Adds the Chronicle configuration.
     /// </summary>
     /// <param name="services">Service collection to add to.</param>

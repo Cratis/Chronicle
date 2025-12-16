@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
@@ -39,9 +40,28 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
+// Development certificate values are captured here so we can log about them after the host is built.
+X509Certificate2? developmentServerCertificate = null;
+string? developmentCaPem = null;
+
 builder.WebHost.UseKestrel(options =>
 {
-    var certificate = CertificateLoader.LoadCertificate(chronicleOptions);
+#if DEVELOPMENT
+    // In development mode: generate an in-memory dev CA + server cert and expose CA via well-known endpoint
+    try
+    {
+        var dev = DevCertificateProvider.EnsureDevCertificate("localhost");
+        developmentServerCertificate = dev.ServerCertificate;
+        developmentCaPem = dev.CaPem;
+    }
+    catch
+    {
+        // fallback to existing loader if generation fails
+        developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+    }
+#else
+        developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+#endif
 
     if (chronicleOptions.Features.Api)
     {
@@ -54,9 +74,9 @@ builder.WebHost.UseKestrel(options =>
 
         if (!chronicleOptions.DisableTls)
         {
-            if (certificate is not null)
+            if (developmentServerCertificate is not null)
             {
-                listenOptions.UseHttps(certificate);
+                listenOptions.UseHttps(developmentServerCertificate);
             }
             else
             {
@@ -64,6 +84,11 @@ builder.WebHost.UseKestrel(options =>
             }
         }
     });
+
+#if DEVELOPMENT
+    // Expose a simple HTTP listener for the well-known cert provisioning endpoint
+    options.ListenAnyIP(chronicleOptions.WellKnownCertPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+#endif
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
@@ -105,6 +130,22 @@ builder.Host
    });
 
 var app = builder.Build();
+
+// Log about development certificate generation / exposure when available
+try
+{
+    var logger = app.Services.GetRequiredService<ILogger<Kernel>>();
+
+    if (developmentServerCertificate is not null && !string.IsNullOrEmpty(developmentCaPem))
+    {
+        logger.GeneratedDevelopmentCertificate();
+    }
+}
+catch (Exception ex)
+{
+    // Swallow logging errors to avoid bringing down the host; still write to console for visibility
+    Console.WriteLine($"Failed to log development certificate info: {ex.Message}");
+}
 app.UseRouting();
 app.UseCratisArc();
 
@@ -122,6 +163,36 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 }
 app.MapGrpcServices();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
+
+#if DEVELOPMENT
+app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
+{
+    // Log and return the in-memory development CA if available.
+    if (!string.IsNullOrEmpty(developmentCaPem))
+    {
+        logger.ServingDevelopmentCa(chronicleOptions.WellKnownCertPort);
+        return Results.Text(developmentCaPem, "application/x-pem-file");
+    }
+
+    // As a fallback, attempt to materialize a development cert (DEVELOPMENT only) or return empty.
+    try
+    {
+#if DEVELOPMENT
+        var cert = DevCertificateProvider.EnsureDevCertificate();
+        logger.ServingDevelopmentCa(chronicleOptions.WellKnownCertPort);
+        return Results.Text(cert.CaPem ?? string.Empty, "application/x-pem-file");
+#else
+        logger.NoDevelopmentCa();
+        return Results.Text(string.Empty, "application/x-pem-file");
+#endif
+    }
+    catch (Exception ex)
+    {
+        logger.FailedServingDevelopmentCa(ex);
+        return Results.Text(string.Empty, "application/x-pem-file");
+    }
+});
+#endif
 
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
