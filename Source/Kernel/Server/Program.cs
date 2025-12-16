@@ -72,7 +72,7 @@ builder.WebHost.UseKestrel(options =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
 
-        if (!chronicleOptions.DisableTls)
+        if (!chronicleOptions.Tls.Disable)
         {
             if (developmentServerCertificate is not null)
             {
@@ -87,7 +87,7 @@ builder.WebHost.UseKestrel(options =>
 
 #if DEVELOPMENT
     // Expose a simple HTTP listener for the well-known cert provisioning endpoint
-    options.ListenAnyIP(chronicleOptions.WellKnownCertPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    options.ListenAnyIP(chronicleOptions.Tls.WellKnownCertPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
 #endif
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
@@ -170,7 +170,7 @@ app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
     // Log and return the in-memory development CA if available.
     if (!string.IsNullOrEmpty(developmentCaPem))
     {
-        logger.ServingDevelopmentCa(chronicleOptions.WellKnownCertPort);
+        logger.ServingDevelopmentCa(chronicleOptions.Tls.WellKnownCertPort);
         return Results.Text(developmentCaPem, "application/x-pem-file");
     }
 
@@ -179,7 +179,7 @@ app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
     {
 #if DEVELOPMENT
         var cert = DevCertificateProvider.EnsureDevCertificate();
-        logger.ServingDevelopmentCa(chronicleOptions.WellKnownCertPort);
+        logger.ServingDevelopmentCa(chronicleOptions.Tls.WellKnownCertPort);
         return Results.Text(cert.CaPem ?? string.Empty, "application/x-pem-file");
 #else
         logger.NoDevelopmentCa();
