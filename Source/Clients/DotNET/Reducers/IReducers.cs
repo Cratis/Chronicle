@@ -149,4 +149,12 @@ public interface IReducers
     /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
     /// <returns>The result of the reducer in the form of a <see cref="ReducerInstanceResult{TReadModel}"/>.</returns>
     Task<ReducerInstanceResult<TReadModel>> GetInstanceById<TReadModel>(ReadModelKey key);
+
+    /// <summary>
+    /// Get snapshots of a reducer grouped by CorrelationId by walking through events from the beginning.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model.</typeparam>
+    /// <param name="readModelKey"><see cref="ReadModelKey"/> to get snapshots for.</param>
+    /// <returns>Collection of <see cref="ReducerSnapshot{TReadModel}"/>.</returns>
+    Task<IEnumerable<ReducerSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey);
 }

@@ -264,6 +264,38 @@ public class Reducers : IReducers
     {
         var result = await GetInstanceById(typeof(TReadModel), key);
         return new ReducerInstanceResult<TReadModel>((TReadModel?)result.ReadModel, result.LastHandledEventSequenceNumber);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ReducerSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        var handler = _handlersByModelType[typeof(TReadModel)];
+        var eventSequence = _eventStore.GetEventSequence(handler.EventSequenceId);
+
+        var events = await eventSequence.GetForEventSourceIdAndEventTypes(
+            readModelKey,
+            handler.EventTypes);
+
+        var snapshots = new List<ReducerSnapshot<TReadModel>>();
+        var eventsByCorrelationId = events
+            .GroupBy(_ => _.Context.CorrelationId)
+            .OrderBy(group => group.First().Context.SequenceNumber);
+
+        foreach (var correlationGroup in eventsByCorrelationId)
+        {
+            var groupEvents = correlationGroup.ToList();
+            var result = await handler.OnNext(groupEvents, null, _serviceProvider);
+
+            if (result.IsSuccess && result.ReadModelState is not null)
+            {
+                snapshots.Add(new ReducerSnapshot<TReadModel>(
+                    (TReadModel)result.ReadModelState,
+                    groupEvents,
+                    groupEvents[0].Context.Occurred,
+                    correlationGroup.Key));
+            }
+        }
+
+        return snapshots;
     }
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
