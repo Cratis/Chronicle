@@ -56,7 +56,8 @@ internal sealed class Reducers(
             ReadModelIdentifier.NotSet,
             ReadModelName.NotSet,
             ReadModelOwner.None,
-            new Dictionary<ReadModelGeneration, JsonSchema>());
+            new Dictionary<ReadModelGeneration, JsonSchema>(),
+            []);
 
         messages.Subscribe(message =>
         {

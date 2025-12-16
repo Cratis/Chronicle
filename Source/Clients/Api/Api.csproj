@@ -87,6 +87,7 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+      <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>

@@ -15,7 +15,7 @@ public interface IChangeset<TSource, TTarget>
     /// <summary>
     /// Gets the <typeparamref name="TSource"/> the <see cref="IChangeset{TSource, TTarget}"/> is for.
     /// </summary>
-    TSource Incoming { get; }
+    TSource Incoming { get; set; }
 
     /// <summary>
     /// Gets the initial state of before changes in changeset occurred.
@@ -71,11 +71,6 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>A changeset that is scoped for the join.</returns>
     IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
-
-    /// <summary>
-    /// Optimize the changeset.
-    /// </summary>
-    void Optimize();
 
     /// <summary>
     /// Adds a child as is to a given children property.

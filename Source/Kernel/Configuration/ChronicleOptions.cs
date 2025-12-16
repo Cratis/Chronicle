@@ -57,6 +57,11 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets or inits the TLS configuration.
+    /// </summary>
+    public Tls Tls { get; init; } = new Tls();
+
+    /// <summary>
     /// Adds the Chronicle configuration.
     /// </summary>
     /// <param name="services">Service collection to add to.</param>

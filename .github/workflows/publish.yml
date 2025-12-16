@@ -82,7 +82,36 @@ jobs:
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
+        run: |
+          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+          CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
+
+      - name: Inject certificate if available
+        working-directory: ./Source/Kernel/Server/out/x64
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected for x64 build"
+          else
+            echo "No certificate secret found, using placeholder"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Inject certificate for development x64 if available
+        working-directory: ./Source/Kernel/Server/out/development/x64
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected for development x64 build"
+          else
+            echo "No certificate secret found, using placeholder"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
 
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
@@ -109,7 +138,36 @@ jobs:
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
+        run: |
+          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+          CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
+
+      - name: Inject certificate if available
+        working-directory: ./Source/Kernel/Server/out/arm64
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected for arm64 build"
+          else
+            echo "No certificate secret found, using placeholder"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Inject certificate for development arm64 if available
+        working-directory: ./Source/Kernel/Server/out/development/arm64
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected for development arm64 build"
+          else
+            echo "No certificate secret found, using placeholder"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -151,6 +209,94 @@ jobs:
         run: |
           yarn build
 
+  dotnet-x64-development:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-development-output
+        with:
+          path: ./Source/Kernel/Server/out/development/x64
+          key: ${{ env.DOTNET_X64_CACHE }}-development
+
+      - name: Build development x64 Kernel (DEVELOPMENT symbol)
+        working-directory: ./Source/Kernel/Server
+        run: |
+          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/development/x64
+
+      - name: Inject certificate for development x64 if available
+        working-directory: ./Source/Kernel/Server/out/development/x64
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected for development x64 build"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Upload development outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-development-out
+          path: ./Source/Kernel/Server/out/development
+
+  dotnet-arm64-development:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-24.04-arm
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-arm64-development-output
+        with:
+          path: ./Source/Kernel/Server/out/development/arm64
+          key: ${{ env.DOTNET_ARM64_CACHE }}-development
+
+      - name: Build development arm64 Kernel (DEVELOPMENT symbol)
+        working-directory: ./Source/Kernel/Server
+        run: |
+          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/development/arm64
+
+      - name: Inject certificate for development arm64 if available
+        working-directory: ./Source/Kernel/Server/out/development/arm64
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected for development arm64 build"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Upload development outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-development-out
+          path: ./Source/Kernel/Server/out/development
+
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -176,6 +322,27 @@ jobs:
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
+
+      - name: Inject certificate into server if available
+        working-directory: ./Source/Kernel/Server
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected into server"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Inject certificate into client if available
+        working-directory: ./Source/Clients/Connections
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected into client"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
       - name: Build
         run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }}
       - name: Build repackaged clients

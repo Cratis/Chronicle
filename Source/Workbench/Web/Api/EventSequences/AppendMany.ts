@@ -138,7 +138,8 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     }
 
     static use(initialValues?: IAppendMany): [AppendMany, SetCommandValues<IAppendMany>, ClearCommandValues] {
-        // @ts-expect-error TS2344 Type argument 'AppendMany' does not satisfy the constraint 'Command<IAppendMany, any>'.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<AppendMany, IAppendMany>(AppendMany, initialValues);
     }
 }
