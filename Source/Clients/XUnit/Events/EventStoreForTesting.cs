@@ -40,9 +40,6 @@ public class EventStoreForTesting : IEventStore
     public IChronicleConnection Connection { get; }
 
     /// <inheritdoc/>
-    public Aggregates.IAggregateRootFactory AggregateRootFactory => throw new NotImplementedException();
-
-    /// <inheritdoc/>
     public IEventTypes EventTypes => throw new NotImplementedException();
 
     /// <inheritdoc/>

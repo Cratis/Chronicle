@@ -73,12 +73,12 @@ public partial class PropertyPath
     /// <summary>
     /// Gets whether or not this is the root path.
     /// </summary>
-    public bool IsRoot => Path?.Length == 0;
+    public bool IsRoot => Path == Root;
 
     /// <summary>
     /// Gets whether or not the value is set.
     /// </summary>
-    public bool IsSet => Path?.Equals(NotSetValue) == false;
+    public bool IsSet => !string.IsNullOrEmpty(Path) && !Path.Equals(NotSetValue);
 
     static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator();
 
@@ -243,7 +243,7 @@ public partial class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            return innerInstance!.ContainsKey(LastSegment.Value);
+            return innerInstance.ContainsKey(LastSegment.Value);
         }
 
         var inner = target.EnsurePath(this, arrayIndexers);
@@ -262,7 +262,7 @@ public partial class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            return innerInstance!.TryGetValue(LastSegment.Value, out var value) ? value : null;
+            return innerInstance.TryGetValue(LastSegment.Value, out var value) ? value : null;
         }
 
         var inner = target.EnsurePath(this, arrayIndexers);

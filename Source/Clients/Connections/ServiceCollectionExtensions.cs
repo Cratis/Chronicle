@@ -42,6 +42,8 @@ public static class ServiceCollectionExtensions
             return new ChronicleConnection(
                 url,
                 5,
+                null,
+                null,
                 connectionLifecycle,
                 new Cratis.Tasks.TaskFactory(),
                 correlationIdAccessor,

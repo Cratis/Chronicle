@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Expressions.for_ReadModelPropertyExpressionResolvers.given;
 
@@ -14,6 +15,6 @@ public class read_model_property_expression_resolvers : Specification
     void Establish()
     {
         _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
-        _resolvers = new ReadModelPropertyExpressionResolvers(_eventValueResolvers, new TypeFormats());
+        _resolvers = new ReadModelPropertyExpressionResolvers(_eventValueResolvers, new TypeFormats(), Substitute.For<ILogger<ReadModelPropertyExpressionResolvers>>());
     }
 }

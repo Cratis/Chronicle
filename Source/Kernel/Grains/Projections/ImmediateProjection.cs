@@ -16,6 +16,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
@@ -191,7 +192,15 @@ public class ImmediateProjection(
         {
             var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
             var keyResolver = _projection!.GetKeyResolverFor(@event.Context.EventType);
-            var key = await keyResolver(_eventSequenceStorage!, @event);
+            var keyResult = await keyResolver(_eventSequenceStorage!, NullSink.Instance, @event);
+
+            // Skip deferred keys in immediate projections - they need parent data that's not yet available
+            if (keyResult is DeferredKey)
+            {
+                continue;
+            }
+
+            var key = (keyResult as ResolvedKey)!.Key;
             var context = new ProjectionEventContext(
                 key,
                 @event,

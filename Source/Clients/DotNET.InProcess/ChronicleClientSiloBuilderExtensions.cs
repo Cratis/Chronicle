@@ -8,8 +8,6 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.InProcess;
-using Cratis.Chronicle.Orleans.Transactions;
-using Cratis.Chronicle.Rules;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -94,8 +92,6 @@ public static class ChronicleClientSiloBuilderExtensions
         // Add Chronicle to the silo as the first thing we do, order matters - this is especially important for the different call filters.
         builder.AddChronicleToSilo(configureChronicle);
         builder.AddActivityPropagation();
-        builder.AddIncomingGrainCallFilter<UnitOfWorkIncomingCallFilter>();
-        builder.AddOutgoingGrainCallFilter<UnitOfWorkOutgoingCallFilter>();
         builder.ConfigureServices(services =>
         {
             services.AddTypeDiscovery();
@@ -104,9 +100,7 @@ public static class ChronicleClientSiloBuilderExtensions
 
             services.AddSingleton<IReactorMediator, ReactorMediator>();
             services.AddSingleton<IReducerMediator, ReducerMediator>();
-            services.AddSingleton<IRules, Rules>();
-
-            services.AddSingleton<IClientArtifactsProvider>(sp => new DefaultOrleansClientArtifactsProvider(sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider));
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.NamingPolicy);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
@@ -143,7 +137,6 @@ public static class ChronicleClientSiloBuilderExtensions
 
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Connection);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().UnitOfWorkManager);
-            services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().AggregateRootFactory);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventTypes);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().EventLog);
             services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reactors);

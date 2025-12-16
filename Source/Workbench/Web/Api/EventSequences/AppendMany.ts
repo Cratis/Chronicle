@@ -138,6 +138,8 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     }
 
     static use(initialValues?: IAppendMany): [AppendMany, SetCommandValues<IAppendMany>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<AppendMany, IAppendMany>(AppendMany, initialValues);
     }
 }

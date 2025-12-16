@@ -17,7 +17,7 @@ public static class FromDerivativesConverters
     /// <returns>A Kernel FromDerivatives.</returns>
     public static KernelDefs.FromDerivatives ToKernel(this FromDerivatives source) =>
         new(
-            source.EventTypes,
+            source.EventTypes.Select(_ => _.ToKernel()).ToArray(),
             source.From.ToKernel());
 
     /// <summary>
@@ -28,7 +28,7 @@ public static class FromDerivativesConverters
     public static FromDerivatives ToMongoDB(this KernelDefs.FromDerivatives source) =>
         new()
         {
-            EventTypes = source.EventTypes,
+            EventTypes = source.EventTypes.Select(_ => _.ToMongoDB()).ToArray(),
             From = source.From.ToMongoDB()
         };
 }

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Types;
+using Microsoft.Extensions.Logging;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.EventValues;
@@ -19,7 +20,8 @@ namespace Cratis.Chronicle.Projections.Expressions.EventValues;
 /// Initializes a new instance of the <see cref="ITypeFormats"/> class.
 /// </remarks>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for finding target types.</param>
-public class EventValueProviderExpressionResolvers(ITypeFormats typeFormats) : IEventValueProviderExpressionResolvers
+/// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+public partial class EventValueProviderExpressionResolvers(ITypeFormats typeFormats, ILogger<EventValueProviderExpressionResolvers> logger) : IEventValueProviderExpressionResolvers
 {
     readonly IEventValueProviderExpressionResolver[] _resolvers =
     [
@@ -45,6 +47,7 @@ public class EventValueProviderExpressionResolvers(ITypeFormats typeFormats) : I
     {
         if (resolver == default)
         {
+            logger.UnsupportedEventValueExpression(expression, targetSchemaProperty.Type);
             throw new UnsupportedEventValueExpression(targetSchemaProperty, expression);
         }
     }
