@@ -266,13 +266,23 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     try
                     {
                         var buildChain = new X509Chain();
-                        buildChain.ChainPolicy.ExtraStore.Add(_fetchedDevCa);
+
+                        // Use a custom trust store so the fetched CA is treated as a trusted root
                         buildChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                         buildChain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+#if NET5_0_OR_GREATER
+                        buildChain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                        buildChain.ChainPolicy.CustomTrustStore.Add(_fetchedDevCa);
+#else
+                        // Fallback for older runtimes: add to ExtraStore (may not be sufficient on all platforms)
+                        buildChain.ChainPolicy.ExtraStore.Add(_fetchedDevCa);
+#endif
+
                         if (cert is X509Certificate2 serverCert)
                         {
                             return buildChain.Build(serverCert);
                         }
+
                         using var tmp = new X509Certificate2(cert);
                         return buildChain.Build(tmp);
                     }
