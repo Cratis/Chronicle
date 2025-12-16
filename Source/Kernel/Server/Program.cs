@@ -60,7 +60,7 @@ builder.WebHost.UseKestrel(options =>
         developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
     }
 #else
-        developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+    developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
 #endif
 
     if (chronicleOptions.Features.Api)
