@@ -22,10 +22,12 @@ container.
 
 ```json
 {
-  "CertificatePath": "/path/to/certificate.pfx",
-  "CertificatePassword": "your-password",
-  "DisableTls": false,
-  "WellKnownCertPort": 35001
+    "tls": {
+        "CertificatePath": "/path/to/certificate.pfx",
+        "CertificatePassword": "your-password",
+        "Disable": false,   // Default is false (TLS enabled)
+        "WellKnownCertPort": 35001
+    }
 }
 ```
 
