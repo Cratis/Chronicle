@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 </Project>
