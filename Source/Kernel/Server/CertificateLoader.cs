@@ -20,15 +20,15 @@ public static class CertificateLoader
     /// <returns>The loaded certificate or null if TLS is disabled or no certificate is available.</returns>
     public static X509Certificate2? LoadCertificate(Configuration.ChronicleOptions options)
     {
-        if (options.DisableTls)
+        if (options.Tls.Disable)
         {
             return null;
         }
 
         // Priority 1: ChronicleOptions
-        if (!string.IsNullOrEmpty(options.CertificatePath) && File.Exists(options.CertificatePath))
+        if (!string.IsNullOrEmpty(options.Tls.CertificatePath) && File.Exists(options.Tls.CertificatePath))
         {
-            return LoadCertificateFromPath(options.CertificatePath, options.CertificatePassword);
+            return LoadCertificateFromPath(options.Tls.CertificatePath, options.Tls.CertificatePassword);
         }
 
         // Priority 2: Embedded Certificate
@@ -37,7 +37,7 @@ public static class CertificateLoader
             var content = File.ReadAllText(EmbeddedCertificatePath).Trim();
             if (content != NotACertificate)
             {
-                return LoadCertificateFromPath(EmbeddedCertificatePath, options.CertificatePassword);
+                return LoadCertificateFromPath(EmbeddedCertificatePath, options.Tls.CertificatePassword);
             }
         }
 

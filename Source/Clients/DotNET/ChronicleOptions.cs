@@ -129,25 +129,9 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
-    /// Gets or sets the path to the certificate file for TLS.
+    /// Gets or sets the TLS configuration.
     /// </summary>
-    public string? CertificatePath { get; set; }
-
-    /// <summary>
-    /// Gets or sets the password for the certificate file.
-    /// </summary>
-    public string? CertificatePassword { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether TLS is disabled. Default is false (TLS enabled).
-    /// </summary>
-    public bool DisableTls { get; set; }
-
-    /// <summary>
-    /// Port to use when attempting to fetch a development CA from the server's well-known endpoint.
-    /// Used by clients when no certificate file is configured.
-    /// </summary>
-    public int CertificateAuthorityPort { get; set; } = 35001;
+    public Tls Tls { get; set; } = new Tls();
 
     /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
