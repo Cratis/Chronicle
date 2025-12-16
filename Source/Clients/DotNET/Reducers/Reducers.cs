@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
@@ -181,6 +182,12 @@ public class Reducers : IReducers
     public bool HasReducerFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
+    public bool HasFor<TReadModel>() => HasFor(typeof(TReadModel));
+
+    /// <inheritdoc/>
+    public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReducer>()
         where TReducer : IReducer =>
             GetFailedPartitionsFor(typeof(TReducer));
@@ -220,6 +227,43 @@ public class Reducers : IReducers
             ObserverId = reducerId,
             EventSequenceId = string.Empty
         });
+    }
+
+    /// <inheritdoc/>
+    public async Task<ReducerInstanceResult> GetInstanceById(Type readModelType, ReadModelKey key)
+    {
+        if (!_handlersByModelType.TryGetValue(readModelType, out var handler))
+        {
+            throw new UnknownReducerType(readModelType);
+        }
+
+        var eventSequence = _eventStore.GetEventSequence(handler.EventSequenceId);
+
+        var events = await eventSequence.GetForEventSourceIdAndEventTypes(
+            key,
+            handler.EventTypes);
+
+        object? currentState = null;
+        var lastSequenceNumber = EventSequenceNumber.Unavailable;
+
+        if (events.Any())
+        {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            _identityProvider.SetCurrentIdentity(Identity.System);
+
+            var result = await handler.OnNext(events, currentState, scope.ServiceProvider);
+            currentState = result.ReadModelState;
+            lastSequenceNumber = result.LastSuccessfullyObservedEvent;
+        }
+
+        return new ReducerInstanceResult(currentState, lastSequenceNumber);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ReducerInstanceResult<TReadModel>> GetInstanceById<TReadModel>(ReadModelKey key)
+    {
+        var result = await GetInstanceById(typeof(TReadModel), key);
+        return new ReducerInstanceResult<TReadModel>((TReadModel?)result.ReadModel, result.LastHandledEventSequenceNumber);
     }
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
