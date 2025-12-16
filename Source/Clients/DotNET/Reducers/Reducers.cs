@@ -264,6 +264,7 @@ public class Reducers : IReducers
     {
         var result = await GetInstanceById(typeof(TReadModel), key);
         return new ReducerInstanceResult<TReadModel>((TReadModel?)result.ReadModel, result.LastHandledEventSequenceNumber);
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ReducerSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)

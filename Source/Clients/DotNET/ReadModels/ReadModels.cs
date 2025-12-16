@@ -99,6 +99,34 @@ public class ReadModels(
         }
 
         throw new UnknownReadModel(readModelType);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        if (projections.HasFor(typeof(TReadModel)))
+        {
+            var projectionSnapshots = await projections.GetSnapshotsById<TReadModel>(readModelKey);
+            return projectionSnapshots.Select(snapshot => new ReadModelSnapshot<TReadModel>(
+                snapshot.Instance,
+                snapshot.Events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        if (reducers.HasReducerFor(typeof(TReadModel)))
+        {
+            var reducerSnapshots = await reducers.GetSnapshotsById<TReadModel>(readModelKey);
+            return reducerSnapshots.Select(snapshot => new ReadModelSnapshot<TReadModel>(
+                snapshot.Instance,
+                snapshot.Events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        throw new UnknownReadModel(typeof(TReadModel));
+    }
+
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
     {
         var indexes = new List<IndexDefinition>();

@@ -36,4 +36,12 @@ public interface IReadModels
     /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
     /// <returns>The read model instance.</returns>
     Task<object> GetInstanceById(Type readModelType, ReadModelKey key);
+
+    /// <summary>
+    /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model.</typeparam>
+    /// <param name="readModelKey"><see cref="ReadModelKey"/> to get snapshots for.</param>
+    /// <returns>Collection of <see cref="ReadModelSnapshot{TReadModel}"/>.</returns>
+    Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey);
 }
