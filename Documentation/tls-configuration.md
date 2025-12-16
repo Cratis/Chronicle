@@ -8,49 +8,24 @@ TLS is enabled by default for both the server and client. The system uses a cert
 
 1. **ChronicleOptions** - Certificate path specified in configuration
 2. **Embedded Certificate** - Certificate bundled with the application
-3. **Dev Certificate** - ASP.NET Core development certificate (server only)
+3. **Development Mode Auto-Generated Certificate** - In-memory CA and server certificate (development builds only)
+4. **Dev Certificate** - ASP.NET Core development certificate (server fallback)
 
 ## Server Configuration
 
 ### ChronicleOptions Properties
 
-The server-side `ChronicleOptions` (in `Cratis.Chronicle.Configuration` namespace) supports the following TLS properties:
+You can configure the behavior of the Chronicle Server and TLS through properties in either through the `chronicle.json` file or through environment variables that you mount for the
+container.
 
-```csharp
-public class ChronicleOptions
-{
-    // Path to the certificate file (e.g., .pfx)
-    public string? CertificatePath { get; init; }
-
-    // Password for the certificate file
-    public string? CertificatePassword { get; init; }
-
-    // Disable TLS (default: false, TLS enabled)
-    public bool DisableTls { get; init; }
-}
-```
-
-### Configuration via appsettings.json
-
-```json
-{
-  "Cratis": {
-    "Chronicle": {
-      "CertificatePath": "/path/to/certificate.pfx",
-      "CertificatePassword": "your-password",
-      "DisableTls": false
-    }
-  }
-}
-```
-
-### Configuration via chronicle.json
+### The chronicle.json File
 
 ```json
 {
   "CertificatePath": "/path/to/certificate.pfx",
   "CertificatePassword": "your-password",
-  "DisableTls": false
+  "DisableTls": false,
+  "WellKnownCertPort": 35001
 }
 ```
 
@@ -74,7 +49,8 @@ var options = new ChronicleOptions
     Url = new ChronicleUrl("localhost:35000"),
     CertificatePath = "/path/to/certificate.pfx",
     CertificatePassword = "your-password",
-    DisableTls = false  // Default is false (TLS enabled)
+    DisableTls = false,  // Default is false (TLS enabled)
+    CertificateAuthorityPort = 35001  // Port to fetch development CA from server
 };
 
 var client = new ChronicleClient(options);
@@ -86,19 +62,36 @@ var client = new ChronicleClient(options);
 
 1. **ChronicleOptions.CertificatePath** - If specified and the file exists
 2. **Embedded Certificate** - If `Certs/shared-dev.pfx` exists and is not the placeholder
-3. **Dev Certificate** - ASP.NET Core automatically uses development certificates via `UseHttps()`
+3. **Development Mode Auto-Generated Certificate** - In Debug builds with `DEVELOPMENT` symbol, an ephemeral CA and server certificate are generated at startup
+4. **Dev Certificate** - ASP.NET Core automatically uses development certificates via `UseHttps()`
 
 ### Client
 
 1. **ChronicleOptions.CertificatePath** - If specified and the file exists
 2. **Embedded Certificate** - If `Certs/shared-dev.pfx` exists and is not the placeholder
-3. **No Certificate** - Trusts development certificates and accepts localhost certificate name mismatches
+3. **Development CA Fetch** - When no certificate is configured, the client fetches the development CA from `http://<server>:<CertificateAuthorityPort>/.well-known/chronicle/ca` and uses it for TLS validation
+4. **No Certificate** - Trusts development certificates and accepts localhost certificate name mismatches
 
 ## Embedded Certificates
 
-### For Development
+### For Local Development
 
 By default, both the server and client include a placeholder certificate file at `Certs/shared-dev.pfx` containing the text "NOT-A-CERTIFICATE". This allows the applications to fall back to development certificates.
+
+**In development builds** (Development Docker Image):
+
+- The server automatically generates an ephemeral Certificate Authority (CA) and server certificate at startup
+- The CA certificate is exposed via HTTP at `http://<server>:<WellKnownCertPort>/.well-known/chronicle/ca` (default port: 35001)
+- Clients without a configured certificate automatically fetch and trust this development CA
+- No certificate files need to be created or distributed for local development
+- The generated certificates are kept in-memory only and regenerated on each server restart
+
+This approach provides:
+
+- **Zero-config TLS** for local development
+- **No private keys** stored in the repository or Docker images
+- **Automatic trust** between development server and clients
+- **Secure by default** - TLS is always enabled even in development
 
 ### For Production
 
@@ -141,9 +134,49 @@ var options = new ChronicleOptions
 The client automatically:
 - Accepts valid certificates with no errors
 - Accepts self-signed certificates that match the client certificate
+- **In development mode**: Fetches the development CA from the server and uses it to validate the TLS connection using a custom trust store
 - Accepts localhost certificates with name mismatches (for development)
 
 This makes it easy to use development certificates while still providing security in production with proper certificates.
+
+## Development Mode
+
+### How It Works
+
+When running in Debug configuration (with the `DEVELOPMENT` symbol defined):
+
+1. **Server startup**:
+   - Generates an ephemeral RSA key pair and creates a self-signed Certificate Authority (CA)
+   - Creates a server certificate signed by the CA (subject: `CN=localhost`)
+   - Configures Kestrel to use the generated server certificate for HTTPS
+   - Exposes the CA certificate (PEM format) at `/.well-known/chronicle/ca` on the configured `WellKnownCertPort` (default: 35001)
+   - Logs: `Generated development certificate and CA for local development`
+
+2. **Client connection**:
+   - If no certificate is configured, attempts to fetch the development CA from `http://<server>:<CertificateAuthorityPort>/.well-known/chronicle/ca`
+   - If successful, uses the fetched CA in a custom trust store (via `X509ChainTrustMode.CustomRootTrust`)
+   - Validates the server's TLS certificate against the fetched CA during the TLS handshake
+   - Logs: `Fetching development CA from <url>`, `Fetched development CA from <url>`, `Using fetched development CA for validation`
+
+3. **TLS handshake**:
+   - The client builds an X509 chain using the fetched CA as a trusted root
+   - The server's certificate is validated against this chain
+   - Connection succeeds with full TLS encryption
+
+### Benefits
+
+- **No manual certificate setup** required for local development
+- **No private keys** in source control or Docker images
+- **Automatic trust** between server and client in development
+- **Secure by default** - TLS always enabled
+- **Simple Docker development** - the development image includes the auto-generated certificate logic
+
+### Disabling Development Mode
+
+In production builds (Release configuration), the `DEVELOPMENT` symbol is not defined, so:
+- The server uses the configured certificate path, embedded certificate, or ASP.NET Core dev certificate
+- The client does not attempt to fetch a development CA
+- Standard certificate validation applies
 
 ## GitHub Actions Integration
 
