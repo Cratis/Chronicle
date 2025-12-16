@@ -11,12 +11,12 @@ internal static partial class KernelLogMessages
     [LoggerMessage(2, LogLevel.Warning, "Failed generating development certificate for local development")]
     internal static partial void FailedGeneratingDevelopmentCertificate(this ILogger<Kernel> logger, Exception ex);
 
-    [LoggerMessage(3, LogLevel.Debug, "Serving development CA on port {Port}")]
+    [LoggerMessage(3, LogLevel.Information, "Serving development CA on port {Port}")]
     internal static partial void ServingDevelopmentCa(this ILogger<Kernel> logger, int port);
 
     [LoggerMessage(4, LogLevel.Error, "Failed serving development CA endpoint")]
     internal static partial void FailedServingDevelopmentCa(this ILogger<Kernel> logger, Exception ex);
 
-    [LoggerMessage(5, LogLevel.Debug, "No development CA available to serve")]
+    [LoggerMessage(5, LogLevel.Information, "No development CA available to serve")]
     internal static partial void NoDevelopmentCa(this ILogger<Kernel> logger);
 }
