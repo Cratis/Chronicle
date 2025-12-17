@@ -40,6 +40,7 @@ public class Reducers : IReducers
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
+    readonly IReducerObservers _reducerObservers;
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
 
@@ -56,6 +57,7 @@ public class Reducers : IReducers
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
+    /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Reducers(
         IEventStore eventStore,
@@ -66,6 +68,7 @@ public class Reducers : IReducers
         INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
         IIdentityProvider identityProvider,
+        IReducerObservers reducerObservers,
         ILogger<Reducers> logger)
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -82,6 +85,7 @@ public class Reducers : IReducers
         _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
         _identityProvider = identityProvider;
+        _reducerObservers = reducerObservers;
         _logger = logger;
     }
 
@@ -299,6 +303,12 @@ public class Reducers : IReducers
         return snapshots;
     }
 
+    /// <inheritdoc/>
+    public IObservable<ReducerChangeset<TReadModel>> Watch<TReadModel>()
+    {
+        return _reducerObservers.GetWatcher<TReadModel>().Observable;
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
         var handler = new ReducerHandler(
@@ -310,7 +320,8 @@ public class Reducers : IReducers
                 reducerType,
                 readModelType,
                 _namingPolicy.GetReadModelName(readModelType)),
-            ShouldReducerBeActive(reducerType));
+            ShouldReducerBeActive(reducerType),
+            _reducerObservers);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>

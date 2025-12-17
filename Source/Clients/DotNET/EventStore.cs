@@ -129,6 +129,8 @@ public class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
+        var reducerObservers = new ReducerObservers();
+
         Reducers = new Reducers.Reducers(
             this,
             clientArtifactsProvider,
@@ -138,6 +140,7 @@ public class EventStore : IEventStore
             namingPolicy,
             jsonSerializerOptions,
             identityProvider,
+            reducerObservers,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(

@@ -20,12 +20,14 @@ namespace Cratis.Chronicle.Reducers;
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="invoker">The actual invoker.</param>
 /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
+/// <param name="reducerObservers"><see cref="IReducerObservers"/> for notifying observers of changes.</param>
 public class ReducerHandler(
     IEventStore eventStore,
     ReducerId reducerId,
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
-    bool isActive) : IReducerHandler, IDisposable
+    bool isActive,
+    IReducerObservers reducerObservers) : IReducerHandler, IDisposable
 {
     readonly CancellationTokenSource _cancellationTokenSource = new();
 
@@ -57,7 +59,17 @@ public class ReducerHandler(
     public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider)
     {
         var eventAndContexts = events.Select(@event => new EventAndContext(@event.Content, @event.Context));
-        return await invoker.Invoke(serviceProvider, eventAndContexts, initial);
+        var result = await invoker.Invoke(serviceProvider, eventAndContexts, initial);
+
+        var modelKey = new ReadModelKey(events.First().Context.EventSourceId.Value);
+        var @namespace = eventStore.Namespace;
+        var removed = result.ReadModelState == null;
+
+        var notifyMethod = typeof(IReducerObservers).GetMethod(nameof(IReducerObservers.NotifyChange))!
+            .MakeGenericMethod(ReadModelType);
+        notifyMethod.Invoke(reducerObservers, [@namespace, modelKey, result.ReadModelState, removed]);
+
+        return result;
     }
 
     /// <inheritdoc/>

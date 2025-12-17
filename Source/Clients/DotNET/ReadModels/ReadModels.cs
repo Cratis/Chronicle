@@ -131,16 +131,37 @@ public class ReadModels(
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
-        if (!projections.HasFor(typeof(TReadModel)))
+        var hasProjection = projections.HasFor(typeof(TReadModel));
+        var hasReducer = reducers.HasFor<TReadModel>();
+
+        if (!hasProjection && !hasReducer)
         {
             throw new UnknownReadModel(typeof(TReadModel));
         }
 
-        return projections.Watch<TReadModel>()
-            .Select(changeset => new ReadModelChangeset<TReadModel>(
-                changeset.Namespace,
-                changeset.ModelKey,
-                changeset.ReadModel));
+        var observables = new List<IObservable<ReadModelChangeset<TReadModel>>>();
+
+        if (hasProjection)
+        {
+            observables.Add(projections.Watch<TReadModel>()
+                .Select(changeset => new ReadModelChangeset<TReadModel>(
+                    changeset.Namespace,
+                    changeset.ModelKey,
+                    changeset.ReadModel,
+                    changeset.Removed)));
+        }
+
+        if (hasReducer)
+        {
+            observables.Add(reducers.Watch<TReadModel>()
+                .Select(changeset => new ReadModelChangeset<TReadModel>(
+                    changeset.Namespace,
+                    changeset.ModelKey,
+                    changeset.ReadModel,
+                    changeset.Removed)));
+        }
+
+        return observables.Count == 1 ? observables[0] : observables[0].Merge(observables[1]);
     }
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)

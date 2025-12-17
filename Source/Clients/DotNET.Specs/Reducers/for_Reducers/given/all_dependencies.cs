@@ -27,6 +27,7 @@ public class all_dependencies : Specification
     protected IServices _services;
     protected IObservers _observers;
     protected IIdentityProvider _identityProvider;
+    protected IReducerObservers _reducerObservers;
     protected Dictionary<Type, IReducerHandler> _handlersByType;
     protected Dictionary<Type, IReducerHandler> _handlersByModelType;
     protected Reducers _reducers;
@@ -59,6 +60,7 @@ public class all_dependencies : Specification
         _handlersByModelType = new Dictionary<Type, IReducerHandler>();
 
         _identityProvider = Substitute.For<IIdentityProvider>();
+        _reducerObservers = Substitute.For<IReducerObservers>();
 
         _reducers = new Reducers(
             _eventStore,
@@ -69,6 +71,7 @@ public class all_dependencies : Specification
             _namingPolicy,
             _jsonSerializerOptions,
             _identityProvider,
+            _reducerObservers,
             _logger);
 
         // Use reflection to set the private handler fields
