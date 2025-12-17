@@ -25,7 +25,9 @@ using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Recommendations;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -100,6 +102,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
+        EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
+        ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
 
         _converter = new EventConverter(
             eventStore,
@@ -142,6 +146,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IReplayedModelsStorage ReplayedModels { get; }
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; }
+
+    /// <inheritdoc/>
+    public IProjectionFuturesStorage ProjectionFutures { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

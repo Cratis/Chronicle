@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ObserverInformation } from './ObserverInformation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/observers/all-observers');
 
 class GetObserversSortBy {
     private _id: SortingActionsForQuery<ObserverInformation[]>;
@@ -110,7 +108,6 @@ export interface GetObserversParameters {
 
 export class GetObservers extends QueryFor<ObserverInformation[], GetObserversParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/observers/all-observers';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverInformation[] = [];
     private readonly _sortBy: GetObserversSortBy;
     private static readonly _sortBy: GetObserversSortByWithoutQuery = new GetObserversSortByWithoutQuery();
@@ -126,6 +123,14 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversPa
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): GetObserversSortBy {
         return this._sortBy;

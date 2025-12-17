@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -17,8 +16,8 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
-using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -136,7 +135,6 @@ public class EventStore : IEventStore
             serviceProvider,
             new ReducerValidator(),
             EventTypes,
-            _eventSerializer,
             namingPolicy,
             jsonSerializerOptions,
             identityProvider,
@@ -152,13 +150,6 @@ public class EventStore : IEventStore
             serviceProvider,
             jsonSerializerOptions);
 
-        var rulesProjections = new RulesProjections(
-                    serviceProvider,
-                    clientArtifactsProvider,
-                    EventTypes,
-                    namingPolicy,
-                    jsonSerializerOptions);
-        projections.SetRulesProjections(rulesProjections);
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
@@ -167,18 +158,15 @@ public class EventStore : IEventStore
             namingPolicy,
             projections,
             Reducers,
-            rulesProjections.ReadModels,
             schemaGenerator);
 
-        AggregateRootFactory = new AggregateRootFactory(
-            this,
-            new AggregateRootMutatorFactory(
-                this,
-                new AggregateRootStateProviders(Reducers, Projections, serviceProvider),
-                new AggregateRootEventHandlersFactory(EventTypes),
-                _eventSerializer,
-                correlationIdAccessor),
-            UnitOfWorkManager,
+        Seeding = new EventSeeding(
+            eventStoreName,
+            @namespace,
+            connection,
+            EventTypes,
+            _eventSerializer,
+            clientArtifactsProvider,
             serviceProvider);
 
         if (autoDiscoverAndRegister)
@@ -198,9 +186,6 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IUnitOfWorkManager UnitOfWorkManager { get; }
-
-    /// <inheritdoc/>
-    public IAggregateRootFactory AggregateRootFactory { get; }
 
     /// <inheritdoc/>
     public IEventTypes EventTypes { get; }
@@ -230,6 +215,9 @@ public class EventStore : IEventStore
     public IReadModels ReadModels { get; }
 
     /// <inheritdoc/>
+    public IEventSeeding Seeding { get; }
+
+    /// <inheritdoc/>
     public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
@@ -241,7 +229,8 @@ public class EventStore : IEventStore
             Constraints.Discover(),
             Reactors.Discover(),
             Reducers.Discover(),
-            Projections.Discover());
+            Projections.Discover(),
+            Seeding.Discover());
     }
 
     /// <inheritdoc/>
@@ -258,7 +247,8 @@ public class EventStore : IEventStore
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register());
+            Projections.Register(),
+            Seeding.Register());
     }
 
     /// <inheritdoc/>

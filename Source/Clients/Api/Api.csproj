@@ -56,8 +56,8 @@
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.Swagger" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
@@ -87,7 +87,8 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+      <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 </Project>

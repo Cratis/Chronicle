@@ -112,4 +112,14 @@ public static class WellKnownCollectionNames
     /// The collection that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "read-models";
+
+    /// <summary>
+    /// The collection that holds event seeding data.
+    /// </summary>
+    public const string EventSeeds = "seeds";
+
+    /// <summary>
+    /// The collection that holds projection futures.
+    /// </summary>
+    public const string ProjectionFutures = "projection-futures";
 }

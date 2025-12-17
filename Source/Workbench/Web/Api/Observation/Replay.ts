@@ -5,12 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}');
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface IReplay {
     eventStore?: string;
@@ -28,8 +26,12 @@ export class ReplayValidator extends CommandValidator {
 
 export class Replay extends Command<IReplay> implements IReplay {
     readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/replay/{observerId}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ReplayValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('observerId', String),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -81,6 +83,8 @@ export class Replay extends Command<IReplay> implements IReplay {
     }
 
     static use(initialValues?: IReplay): [Replay, SetCommandValues<IReplay>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Replay, IReplay>(Replay, initialValues);
     }
 }

@@ -20,6 +20,10 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
+        var waitStrategy = Wait.ForUnixContainer()
+            .UntilInternalTcpPortIsAvailable(27017)
+            .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
+
         var builder = new ContainerBuilder();
         builder = ConfigureImage(builder)
 
@@ -32,7 +36,12 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(27017));
+            .WithWaitStrategy(waitStrategy)
+            .WithStartupCallback((container, ct) =>
+            {
+                Console.WriteLine($"Chronicle container {container.Id} started successfully");
+                return Task.CompletedTask;
+            });
 
         return builder.Build();
     }

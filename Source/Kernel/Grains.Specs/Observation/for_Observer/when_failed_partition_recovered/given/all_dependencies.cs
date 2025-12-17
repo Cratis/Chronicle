@@ -12,7 +12,7 @@ public class all_dependencies : an_observer
     protected static EventSequenceNumber _lastHandledEventSequenceNumber;
     protected static EventSequenceNumber _nextEventSequenceNumber;
 
-    protected void Establish()
+    void Establish()
     {
         _partition = "some-partition";
         _lastHandledEventSequenceNumber = 42UL;

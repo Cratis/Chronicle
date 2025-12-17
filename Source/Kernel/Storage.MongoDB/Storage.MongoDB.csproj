@@ -11,12 +11,13 @@
         <PackageReference Include="Polly.Core" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="MongoDB.Driver" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Cratis.Arc" />
+      <PackageReference Include="Cratis.Arc.Core" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />

@@ -19,7 +19,11 @@ public class a_model_bound_projection_builder : Specification
             typeof(DebitAccountOpened),
             typeof(DepositToDebitAccountPerformed),
             typeof(WithdrawalFromDebitAccountPerformed),
-            typeof(ItemAddedToCart)
+            typeof(ItemAddedToCart),
+            typeof(ReadModelRemoved),
+            typeof(ReadModelRemovedJoin),
+            typeof(ChildItemRemoved),
+            typeof(ChildItemRemovedJoin)
         ]);
 
         builder = new ModelBoundProjectionBuilder(naming_policy, event_types);

@@ -52,6 +52,6 @@
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
     </ItemGroup>
 </Project>

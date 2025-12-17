@@ -5,12 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/failed-partitions/{{observerId}}/try-recover-failed-partition/{{partition}}');
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface ITryRecoverFailedPartition {
     eventStore?: string;
@@ -30,8 +28,13 @@ export class TryRecoverFailedPartitionValidator extends CommandValidator {
 
 export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartition> implements ITryRecoverFailedPartition {
     readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/failed-partitions/{observerId}/try-recover-failed-partition/{partition}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new TryRecoverFailedPartitionValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('observerId', String),
+        new PropertyDescriptor('partition', String),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -94,6 +97,8 @@ export class TryRecoverFailedPartition extends Command<ITryRecoverFailedPartitio
     }
 
     static use(initialValues?: ITryRecoverFailedPartition): [TryRecoverFailedPartition, SetCommandValues<ITryRecoverFailedPartition>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<TryRecoverFailedPartition, ITryRecoverFailedPartition>(TryRecoverFailedPartition, initialValues);
     }
 }

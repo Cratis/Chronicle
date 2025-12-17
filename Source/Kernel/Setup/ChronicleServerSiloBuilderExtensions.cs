@@ -96,9 +96,10 @@ public static class ChronicleServerSiloBuilderExtensions
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
-                new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, jsonSerializerOptions),
+                new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, expandoObjectConverter, sp, jsonSerializerOptions),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
+                new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Host.Server(clusterClient));
         });
 

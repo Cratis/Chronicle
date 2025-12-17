@@ -3,9 +3,8 @@
 
 using System.Collections;
 using System.Globalization;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Reflection;
-using Cratis.Strings;
 using Cratis.Types;
 using MongoDB.Bson;
 using NJsonSchema;
@@ -122,6 +121,9 @@ public static class BsonValueExtensions
             case TimeOnly actualValue:
                 return new BsonDateTime(BsonUtils.ToMillisecondsSinceEpoch(DateTime.UnixEpoch + actualValue.ToTimeSpan()));
 
+            case TimeSpan actualValue:
+                return new BsonString(actualValue.ToString());
+
             case Guid actualValue:
                 return new BsonBinaryData(actualValue, GuidRepresentation.Standard);
 
@@ -135,11 +137,7 @@ public static class BsonValueExtensions
         var document = new BsonDocument();
         foreach (var property in inputType.GetProperties())
         {
-            var propertyName = property.Name.ToCamelCase();
-            if (propertyName == "id")
-            {
-                propertyName = "_id";
-            }
+            var propertyName = property.Name.ToMongoDBPropertyName();
             var propertyValue = property.GetValue(input);
             document.Add(propertyName, propertyValue.ToBsonValue()!);
         }
@@ -206,6 +204,11 @@ public static class BsonValueExtensions
         {
             var dateTime = bsonTimeOnly.ToUniversalTime();
             return new TimeOnly(dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond);
+        }
+
+        if (targetType == typeof(TimeSpan) && value is BsonString bsonTimeStampString)
+        {
+            return TimeSpan.Parse(bsonTimeStampString.Value);
         }
 
         return null;

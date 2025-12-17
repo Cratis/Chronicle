@@ -3,21 +3,24 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties;
 
 /// <summary>
-/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
+/// Represents a <see cref="IReadModelPropertyExpressionResolver"/> for subtracting value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="AddExpressionResolver"/> class.
+/// Initializes a new instance of the <see cref="SubtractExpressionResolver"/> class.
 /// </remarks>
 /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving.</param>
-public partial class SubtractExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers) : IReadModelPropertyExpressionResolver
+/// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
+public partial class SubtractExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
     static readonly Regex _regularExpression = SubtractRegEx();
 
@@ -28,9 +31,9 @@ public partial class SubtractExpressionResolver(IEventValueProviderExpressionRes
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
         var match = _regularExpression.Match(expression);
-        return PropertyMappers.SubtractWithEventValueProvider(targetProperty, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
+        return PropertyMappers.SubtractWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
     }
 
-    [GeneratedRegex($"\\$subtract\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SubtractRegEx();
 }

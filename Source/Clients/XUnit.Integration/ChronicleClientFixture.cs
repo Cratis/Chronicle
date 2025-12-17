@@ -121,16 +121,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> ComplianceForPropertiesProviders => GetArtifactTypes(provider => provider.ComplianceForPropertiesProviders);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Rules => GetArtifactTypes(provider => provider.Rules);
-
-    /// <inheritdoc/>
     public virtual IEnumerable<Type> AdditionalEventInformationProviders => GetArtifactTypes(provider => provider.AdditionalEventInformationProviders);
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRoots => GetArtifactTypes(provider => provider.AggregateRoots);
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRootStateTypes => GetArtifactTypes(provider => provider.AggregateRootStateTypes);
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> ConstraintTypes => GetArtifactTypes(provider => provider.ConstraintTypes);
@@ -140,6 +131,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.

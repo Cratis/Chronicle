@@ -72,6 +72,7 @@ internal class ModelBoundProjectionBuilder(
                           attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
             .ToList();
 
+        ProcessClassLevelRemovedWith(modelType, definition);
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
         BuildFromEveryDefinition(definition);
@@ -132,6 +133,19 @@ internal class ModelBoundProjectionBuilder(
         };
     }
 
+    void ProcessClassLevelRemovedWith(Type modelType, ProjectionDefinition definition)
+    {
+        foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+        {
+            definition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
+        }
+
+        foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        {
+            definition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
+        }
+    }
+
     void ProcessProperties(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents, ConstructorInfo? primaryConstructor)
     {
         foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -141,7 +155,7 @@ internal class ModelBoundProjectionBuilder(
                 continue;
             }
 
-            ProcessMember(property, definition, classLevelFromEvents, isRoot: true);
+            ProcessMember(property, definition, classLevelFromEvents, isRoot: true, modelType: modelType);
         }
     }
 
@@ -156,7 +170,7 @@ internal class ModelBoundProjectionBuilder(
 
             foreach (var parameter in primaryConstructor.GetParameters())
             {
-                ProcessParameter(parameter, definition, classLevelFromEvents, allEventTypesReferencedByModel, isRoot: true);
+                ProcessParameter(parameter, definition, classLevelFromEvents, allEventTypesReferencedByModel, isRoot: true, modelType);
             }
         }
 
@@ -169,6 +183,7 @@ internal class ModelBoundProjectionBuilder(
         List<Attribute> classLevelFromEvents,
         HashSet<Type> allEventTypesReferencedByModel,
         bool isRoot,
+        Type? modelType = null,
         ChildrenDefinition? childrenDef = null)
     {
         var memberName = parameter.Name!;
@@ -232,9 +247,14 @@ internal class ModelBoundProjectionBuilder(
             targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
-        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+        // Only process ChildrenFromAttribute when at root level.
+        // For nested children, ProcessNestedChildren handles adding them to the correct parent ChildrenDefinition.
+        if (isRoot)
         {
-            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember);
+            foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
@@ -267,6 +287,7 @@ internal class ModelBoundProjectionBuilder(
         ProjectionDefinition definition,
         List<Attribute> classLevelFromEvents,
         bool isRoot,
+        Type? modelType = null,
         ChildrenDefinition? childrenDef = null)
     {
         var propertyPath = new PropertyPath(property.Name);
@@ -331,10 +352,15 @@ internal class ModelBoundProjectionBuilder(
             targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
-        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+        // Only process ChildrenFromAttribute when at root level.
+        // For nested children, ProcessNestedChildren handles adding them to the correct parent ChildrenDefinition.
+        if (isRoot)
         {
-            var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
-            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember);
+            foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
+                definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)

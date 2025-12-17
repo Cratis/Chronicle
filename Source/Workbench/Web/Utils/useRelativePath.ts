@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useContext } from 'react';
-import { ApplicationModelContext } from '@cratis/applications.react';
+import { ArcContext } from '@cratis/arc.react';
 
 export const useRelativePath = (path: string) => {
-    const applicationModel = useContext(ApplicationModelContext);
-    return `/${applicationModel.basePath}/${path}`.replace(/\/+/g, '/');
+    const arc = useContext(ArcContext);
+    return `/${arc.basePath}/${path}`.replace(/\/+/g, '/');
 };

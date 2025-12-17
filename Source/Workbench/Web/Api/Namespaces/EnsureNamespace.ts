@@ -5,12 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namespaces');
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface IEnsureNamespace {
     eventStore?: string;
@@ -26,8 +24,11 @@ export class EnsureNamespaceValidator extends CommandValidator {
 
 export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsureNamespace {
     readonly route: string = '/api/event-store/{eventStore}/namespaces';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new EnsureNamespaceValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -67,6 +68,8 @@ export class EnsureNamespace extends Command<IEnsureNamespace> implements IEnsur
     }
 
     static use(initialValues?: IEnsureNamespace): [EnsureNamespace, SetCommandValues<IEnsureNamespace>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<EnsureNamespace, IEnsureNamespace>(EnsureNamespace, initialValues);
     }
 }

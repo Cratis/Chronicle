@@ -40,9 +40,6 @@ public class EventStoreForTesting : IEventStore
     public IChronicleConnection Connection { get; }
 
     /// <inheritdoc/>
-    public Aggregates.IAggregateRootFactory AggregateRootFactory => throw new NotImplementedException();
-
-    /// <inheritdoc/>
     public IEventTypes EventTypes => throw new NotImplementedException();
 
     /// <inheritdoc/>
@@ -71,6 +68,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IReadModels ReadModels => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Seeding.IEventSeeding Seeding => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;

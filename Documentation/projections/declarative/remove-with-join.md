@@ -32,8 +32,11 @@ public class UserProjection : IProjectionFor<User>
 In this example:
 
 - When a `UserAddedToGroup` event occurs, a group is added to the user's collection
+- `UsingParentKey(e => e.UserId)` extracts the parent (user) identifier from the event content
 - When a `GroupDeleted` event occurs anywhere in the system, that group is removed from all users
 - The removal is based on the group ID that was used to join the data
+
+> **Note**: If you don't specify `UsingParentKey()`, the framework uses the EventSourceId as the parent identifier by default. Use `UsingParentKey()` when the parent identifier is a property in the event content rather than the EventSourceId.
 
 ## How RemoveWithJoin works
 

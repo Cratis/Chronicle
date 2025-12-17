@@ -13,18 +13,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
-        <PackageReference Include="Cratis.Applications.Orleans.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Swagger" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
+        <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net9.0/. $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
+        <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/. $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 

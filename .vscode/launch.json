@@ -34,7 +34,8 @@
                         "Cratis.*.dll"
                     ]
                 },
-                "searchPaths": [],
+                "searchPaths": [
+                ],
                 "searchMicrosoftSymbolServer": false,
                 "searchNuGetOrgSymbolServer": true
             },
@@ -44,7 +45,7 @@
             },
             "sourceFileMap": {
                 "/home/runner/work/orleans/orleans": "/Volumes/Code/Microsoft/dotnet/orleans",
-                "/home/runner/work/applications/applications": "/Volumes/Code/Cratis/Applications"
+                "/home/runner/work/arc/arc": "/Volumes/Code/Cratis/Arc"
             }
         },
         {
@@ -52,10 +53,10 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Source/Tools/InternalsVerifier/bin/Debug/net9.0/InternalsVerifier.dll",
+            "program": "${workspaceFolder}/Source/Tools/InternalsVerifier/bin/Debug/net10.0/InternalsVerifier.dll",
             "args": [
-                "${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.InProcess.dll",
-                "${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Storage.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Storage.MongoDB.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Compliance.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Grains.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Grains.Interfaces.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Projections.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Diagnostics.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net9.0/Cratis.Chronicle.Concepts.dll",
+                "${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.InProcess.dll",
+                "${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Storage.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Storage.MongoDB.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Compliance.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Grains.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Grains.Interfaces.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Projections.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Diagnostics.dll;${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Debug/net10.0/Cratis.Chronicle.Concepts.dll",
                 "Cratis.Chronicle.Setup.MongoDBChronicleBuilderExtensions"
             ],
             "cwd": "${workspaceFolder}/Source/Tools/InternalsVerifier",
@@ -69,9 +70,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net9.0/AssemblyFixer.dll",
+            "program": "${workspaceFolder}/Source/Tools/AssemblyFixer/bin/Debug/net10.0/AssemblyFixer.dll",
             "args": [
-                "${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Release/net9.0/Cratis.Chronicle.InProcess.dll",
+                "${workspaceFolder}/Source/Clients/DotNET.InProcess/bin/Release/net10.0/Cratis.Chronicle.InProcess.dll",
                 "Cratis.Chronicle.Orleans;Cratis.Chronicle.Grains;Cratis.Chronicle.Grains.Interfaces"
             ],
             "cwd": "${workspaceFolder}/Source/Tools/AssemblyFixer",
@@ -85,10 +86,10 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net9.0/Cratis.Chronicle.ResourceEmbedder.dll",
+            "program": "${workspaceFolder}/Source/Tools/ResourceEmbedder/bin/Debug/net10.0/Cratis.Chronicle.ResourceEmbedder.dll",
             "args": [
-                "${workspaceFolder}/Source/Clients/Api/bin/Release/net9.0/Cratis.Chronicle.Api.dll",
-                "${workspaceFolder}/Source/Clients/Api/bin/Release/net9.0/Cratis.Chronicle.Api.xml"
+                "${workspaceFolder}/Source/Clients/Api/bin/Release/net10.0/Cratis.Chronicle.Api.dll",
+                "${workspaceFolder}/Source/Clients/Api/bin/Release/net10.0/Cratis.Chronicle.Api.xml"
             ],
             "cwd": "${workspaceFolder}/Source/Tools/ResourceEmbedder",
             "stopAtEntry": false,
@@ -101,9 +102,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net9.0/GrpcClients.dll",
+            "program": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net10.0/GrpcClients.dll",
             "args": [
-                "${workspaceFolder}/Source/Clients/DotNET/bin/Release/net9.0/Cratis.Chronicle.Contracts.dll",
+                "${workspaceFolder}/Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll",
                 "Cratis.Chronicle.Contracts.Implementations"
             ],
             "cwd": "${workspaceFolder}/Source/Tools/GrpcClients",
@@ -116,7 +117,7 @@
             "name": ".NET Core Launch (Server)",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net9.0/Cratis.Chronicle.Server.dll",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net10.0/Cratis.Chronicle.Server.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Source/Kernel/Server",
             "stopAtEntry": false,

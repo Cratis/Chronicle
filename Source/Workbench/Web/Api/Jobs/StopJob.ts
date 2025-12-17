@@ -5,13 +5,11 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Guid } from '@cratis/fundamentals';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/stop');
 
 export interface IStopJob {
     eventStore?: string;
@@ -29,8 +27,12 @@ export class StopJobValidator extends CommandValidator {
 
 export class StopJob extends Command<IStopJob> implements IStopJob {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs/{jobId}/stop';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new StopJobValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('jobId', Guid),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -82,6 +84,8 @@ export class StopJob extends Command<IStopJob> implements IStopJob {
     }
 
     static use(initialValues?: IStopJob): [StopJob, SetCommandValues<IStopJob>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<StopJob, IStopJob>(StopJob, initialValues);
     }
 }

@@ -4,7 +4,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Cratis.Applications.Orleans.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Grains.Observation;
@@ -47,7 +46,8 @@ public static class SerializationConfigurationExtensions
             builder.Services
                 .AddCompleteSerializer<AppendedEventSerializer>()
                 .AddCompleteSerializer<OneOfSerializer>()
-                .AddCompleteSerializer<ConcurrencyScopesSerializer>();
+                .AddCompleteSerializer<ConcurrencyScopesSerializer>()
+                .AddCompleteSerializer<ExpandoObjectSerializer>();
         });
         return services;
     }

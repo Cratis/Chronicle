@@ -5,12 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/observers/{{namespace}}/replay/{{observerId}}/{{partition}}');
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface IReplayPartition {
     eventStore?: string;
@@ -30,8 +28,13 @@ export class ReplayPartitionValidator extends CommandValidator {
 
 export class ReplayPartition extends Command<IReplayPartition> implements IReplayPartition {
     readonly route: string = '/api/event-store/{eventStore}/observers/{namespace}/replay/{observerId}/{partition}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ReplayPartitionValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('observerId', String),
+        new PropertyDescriptor('partition', String),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -94,6 +97,8 @@ export class ReplayPartition extends Command<IReplayPartition> implements IRepla
     }
 
     static use(initialValues?: IReplayPartition): [ReplayPartition, SetCommandValues<IReplayPartition>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<ReplayPartition, IReplayPartition>(ReplayPartition, initialValues);
     }
 }

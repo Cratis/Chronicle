@@ -280,12 +280,5 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return name;
     }
 
-    string GetNameForPropertyInBsonDocument(string name)
-    {
-        if (name == "id")
-        {
-            return "_id";
-        }
-        return name;
-    }
+    string GetNameForPropertyInBsonDocument(string name) => name.ToMongoDBPropertyName();
 }

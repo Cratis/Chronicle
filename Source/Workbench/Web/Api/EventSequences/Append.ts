@@ -5,15 +5,13 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Causation } from '../Auditing/Causation';
 import { EventType } from '../Events/EventType';
 import { Identity } from '../Identities/Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}');
 
 export interface IAppend {
     eventStore?: string;
@@ -45,8 +43,19 @@ export class AppendValidator extends CommandValidator {
 
 export class Append extends Command<IAppend> implements IAppend {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('eventSequenceId', String),
+        new PropertyDescriptor('eventSourceId', String),
+        new PropertyDescriptor('eventStreamType', String),
+        new PropertyDescriptor('eventStreamId', String),
+        new PropertyDescriptor('eventType', EventType),
+        new PropertyDescriptor('content', Object),
+        new PropertyDescriptor('causation', Causation),
+        new PropertyDescriptor('causedBy', Identity),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -168,6 +177,8 @@ export class Append extends Command<IAppend> implements IAppend {
     }
 
     static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Append, IAppend>(Append, initialValues);
     }
 }
