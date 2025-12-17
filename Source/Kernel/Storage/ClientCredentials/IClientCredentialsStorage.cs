@@ -26,18 +26,21 @@ public interface IClientCredentialsStorage
     /// Creates a new client.
     /// </summary>
     /// <param name="client">The client to create.</param>
+    /// <returns>Awaitable task.</returns>
     Task Create(ChronicleClient client);
 
     /// <summary>
     /// Updates an existing client.
     /// </summary>
     /// <param name="client">The client to update.</param>
+    /// <returns>Awaitable task.</returns>
     Task Update(ChronicleClient client);
 
     /// <summary>
     /// Deletes a client.
     /// </summary>
     /// <param name="id">The client's unique identifier.</param>
+    /// <returns>Awaitable task.</returns>
     Task Delete(string id);
 
     /// <summary>
