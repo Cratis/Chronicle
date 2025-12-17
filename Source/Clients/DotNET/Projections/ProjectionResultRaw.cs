@@ -3,7 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -11,7 +10,6 @@ namespace Cratis.Chronicle.Projections;
 /// Represents the result of an projection.
 /// </summary>
 /// <param name="ReadModel">The instance of the read model as <see cref="JsonObject"/>.</param>
-/// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-public record ProjectionResultRaw(JsonObject ReadModel, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber);
+public record ProjectionResultRaw(JsonObject ReadModel, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber);
