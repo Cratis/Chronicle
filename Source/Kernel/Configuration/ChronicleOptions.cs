@@ -57,6 +57,11 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the authentication configuration.
+    /// </summary>
+    public Authentication Authentication { get; init; } = new Authentication();
+  
+    /// <summary>
     /// Gets or inits the TLS configuration.
     /// </summary>
     public Tls Tls { get; init; } = new Tls();

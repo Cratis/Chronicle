@@ -1,0 +1,95 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Security.Cryptography;
+using Cratis.Chronicle.Storage.Users;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Microsoft.Extensions.Options;
+
+namespace Cratis.Chronicle.Server.Authentication;
+
+/// <summary>
+/// Represents an implementation of <see cref="IAuthenticationService"/>.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="AuthenticationService"/> class.
+/// </remarks>
+/// <param name="userStorage">The user storage.</param>
+/// <param name="options">Chronicle options.</param>
+public class AuthenticationService(IUserStorage userStorage, IOptions<Configuration.ChronicleOptions> options) : IAuthenticationService
+{
+    readonly Configuration.ChronicleOptions _options = options.Value;
+
+    /// <inheritdoc/>
+    public async Task<ChronicleUser?> AuthenticateUser(string username, string password)
+    {
+        var user = await userStorage.GetByUsername(username);
+        if (user?.IsActive is not true || user.PasswordHash is null)
+        {
+            return null;
+        }
+
+        var isValid = VerifyPassword(password, user.PasswordHash);
+        return isValid ? user : null;
+    }
+
+    /// <inheritdoc/>
+    public async Task EnsureDefaultAdminUser()
+    {
+        var adminUser = await userStorage.GetByUsername(_options.Authentication.DefaultAdminUsername);
+        if (adminUser is not null)
+        {
+            return;
+        }
+
+        var password = _options.Authentication.DefaultAdminPassword ?? "admin";
+        var passwordHash = HashPassword(password);
+        var now = DateTimeOffset.UtcNow;
+
+        var user = new ChronicleUser(
+            Id: Guid.NewGuid().ToString(),
+            Username: _options.Authentication.DefaultAdminUsername,
+            Email: null,
+            PasswordHash: passwordHash,
+            SecurityStamp: Guid.NewGuid().ToString(),
+            IsActive: true,
+            CreatedAt: now,
+            LastModifiedAt: null);
+
+        await userStorage.Create(user);
+    }
+
+    static string HashPassword(string password)
+    {
+        var salt = RandomNumberGenerator.GetBytes(128 / 8);
+        var hashed = KeyDerivation.Pbkdf2(
+            password: password,
+            salt: salt,
+            prf: KeyDerivationPrf.HMACSHA256,
+            iterationCount: 10000,
+            numBytesRequested: 256 / 8);
+
+        return Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hashed);
+    }
+
+    static bool VerifyPassword(string password, string hashedPassword)
+    {
+        var parts = hashedPassword.Split(':');
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        var salt = Convert.FromBase64String(parts[0]);
+        var hash = Convert.FromBase64String(parts[1]);
+
+        var testHash = KeyDerivation.Pbkdf2(
+            password: password,
+            salt: salt,
+            prf: KeyDerivationPrf.HMACSHA256,
+            iterationCount: 10000,
+            numBytesRequested: 256 / 8);
+
+        return hash.SequenceEqual(testHash);
+    }
+}
