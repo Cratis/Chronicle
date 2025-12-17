@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Claims;
-using System.Security.Cryptography;
 using Cratis.Chronicle.Storage.ClientCredentials;
 using Cratis.Chronicle.Storage.Users;
 using Microsoft.AspNetCore;
@@ -19,6 +18,9 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 /// <summary>
 /// Controller for handling OAuth authorization requests.
 /// </summary>
+/// <param name="userManager">The user manager.</param>
+/// <param name="signInManager">The sign-in manager.</param>
+/// <param name="clientCredentialsStorage">The client credentials storage.</param>
 [ApiController]
 [Route("connect")]
 public class AuthorizationController(
@@ -47,36 +49,36 @@ public class AuthorizationController(
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             var client = await clientCredentialsStorage.GetByClientId(clientId);
-            if (client == null || !client.IsActive)
+            if (client?.IsActive != true)
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             // Verify the client secret
             if (!VerifySecret(clientSecret, client.ClientSecret))
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             // Create the claims-based identity for the client
@@ -100,12 +102,12 @@ public class AuthorizationController(
             if (user == null)
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The username/password couple is invalid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             // Validate the username/password
@@ -113,12 +115,12 @@ public class AuthorizationController(
             if (!result.Succeeded)
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The username/password couple is invalid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             // Create the claims-based identity
@@ -143,35 +145,35 @@ public class AuthorizationController(
             if (claimsPrincipal == null)
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is no longer valid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             var user = await userManager.FindByIdAsync(claimsPrincipal.GetClaim(OpenIddictConstants.Claims.Subject) ?? string.Empty);
             if (user == null)
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The refresh token is no longer valid."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             if (!await signInManager.CanSignInAsync(user))
             {
                 return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user is no longer allowed to sign in."
-                    }));
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
             var identity = new ClaimsIdentity(
