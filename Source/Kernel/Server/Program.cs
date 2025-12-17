@@ -154,7 +154,6 @@ if (chronicleOptions.Authentication.Enabled)
     app.UseAuthorization();
 }
 
-app.UseCratisApplicationModel();
 // Log about development certificate generation / exposure when available
 try
 {
