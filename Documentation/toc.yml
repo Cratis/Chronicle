@@ -8,6 +8,8 @@
   href: clients/toc.yml
 - name: Recipes
   href: recipes/toc.yml
+- name: Read Models
+  href: read-models/toc.yml
 - name: Projections
   href: projections/toc.yml
 - name: Hosting
