@@ -111,6 +111,6 @@ public class ProjectionDefinition
     /// <summary>
     /// Gets or sets the categories the projection belongs to.
     /// </summary>
-    [ProtoMember(17)]
+    [ProtoMember(17, IsRequired = true)]
     public IList<string> Categories { get; set; } = [];
 }

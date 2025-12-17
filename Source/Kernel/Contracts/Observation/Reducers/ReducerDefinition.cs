@@ -50,6 +50,6 @@ public class ReducerDefinition
     /// <summary>
     /// Gets or sets the categories the reducer belongs to.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(7, IsRequired = true)]
     public IList<string> Categories { get; set; } = [];
 }

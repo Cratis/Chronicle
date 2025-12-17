@@ -36,6 +36,6 @@ public class ReactorDefinition
     /// <summary>
     /// Gets or sets the categories the reactor belongs to.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(5, IsRequired = true)]
     public IList<string> Categories { get; set; } = [];
 }
