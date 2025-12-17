@@ -22,6 +22,7 @@ internal static class ReducerDefinitionConverters
             reducerDefinition.EventSequenceId,
             reducerDefinition.EventTypes.Select(_ => _.ToChronicle()),
             reducerDefinition.ReadModel,
+            reducerDefinition.IsActive,
             reducerDefinition.Sink.ToChronicle()
         );
 }

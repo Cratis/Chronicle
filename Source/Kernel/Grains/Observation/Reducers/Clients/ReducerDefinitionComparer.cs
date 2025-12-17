@@ -25,7 +25,7 @@ public class ReducerDefinitionComparer(IStorage storage) : IReducerDefinitionCom
 
         var firstEventTypes = first.EventTypes.Select(_ => _.EventType.Id).Order().ToArray();
         var secondEventTypes = second.EventTypes.Select(_ => _.EventType.Id).Order().ToArray();
-        if (firstEventTypes.SequenceEqual(secondEventTypes))
+        if (firstEventTypes.SequenceEqual(secondEventTypes) && first.IsActive == second.IsActive)
         {
             return ReducerDefinitionCompareResult.Same;
         }

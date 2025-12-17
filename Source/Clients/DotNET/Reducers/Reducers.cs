@@ -340,6 +340,7 @@ public class Reducers : IReducers
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
+                IsActive = handler.IsActive,
                 Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
@@ -427,6 +428,12 @@ public class Reducers : IReducers
     {
         var active = reducerType.IsActive();
         if (!active)
+        {
+            return false;
+        }
+
+        var readModelType = reducerType.GetReadModelType();
+        if (readModelType.IsPassive())
         {
             return false;
         }
