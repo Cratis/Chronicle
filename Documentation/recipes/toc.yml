@@ -6,12 +6,8 @@
   href: reacting-events-in-event-log.md
 - name: Event Seeding
   href: event-seeding.md
-- name: Reducers
-  href: reducers.md
 - name: Constraints
   href: constraints.md
-- name: Custom Rules
-  href: rules/custom-rules.md
 - name: Configuration
   href: configuration/toc.yml
 - name: Docker Compose
