@@ -60,7 +60,7 @@ public class ChronicleOptions
     /// Gets the authentication configuration.
     /// </summary>
     public Authentication Authentication { get; init; } = new Authentication();
-  
+
     /// <summary>
     /// Gets or inits the TLS configuration.
     /// </summary>
