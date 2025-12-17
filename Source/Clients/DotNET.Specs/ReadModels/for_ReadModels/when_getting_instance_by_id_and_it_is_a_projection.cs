@@ -24,7 +24,7 @@ public class when_getting_instance_by_id_and_it_is_a_projection : given.all_depe
 
         _projections.HasFor(typeof(MyReadModel)).Returns(true);
         _projections.GetInstanceById(typeof(MyReadModel), _key)
-            .Returns(new ProjectionResult(_expectedModel, [], 1, new Events.EventSequenceNumber(42)));
+            .Returns(new ProjectionResult(_expectedModel, 1, new Events.EventSequenceNumber(42)));
     }
 
     async Task Because() => _result = await _readModels.GetInstanceById(typeof(MyReadModel), _key);
