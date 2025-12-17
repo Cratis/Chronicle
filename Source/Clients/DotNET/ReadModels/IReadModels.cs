@@ -44,4 +44,11 @@ public interface IReadModels
     /// <param name="readModelKey"><see cref="ReadModelKey"/> to get snapshots for.</param>
     /// <returns>Collection of <see cref="ReadModelSnapshot{TReadModel}"/>.</returns>
     Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey);
+
+    /// <summary>
+    /// Observe changes for a specific read model.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
+    /// <returns>An observable of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
+    IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
 }

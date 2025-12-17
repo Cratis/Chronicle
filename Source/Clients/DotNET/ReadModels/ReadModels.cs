@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Reactive.Linq;
 using System.Reflection;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -125,6 +126,21 @@ public class ReadModels(
         }
 
         throw new UnknownReadModel(typeof(TReadModel));
+    }
+
+    /// <inheritdoc/>
+    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
+    {
+        if (!projections.HasFor(typeof(TReadModel)))
+        {
+            throw new UnknownReadModel(typeof(TReadModel));
+        }
+
+        return projections.Watch<TReadModel>()
+            .Select(changeset => new ReadModelChangeset<TReadModel>(
+                changeset.Namespace,
+                changeset.ModelKey,
+                changeset.ReadModel));
     }
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
