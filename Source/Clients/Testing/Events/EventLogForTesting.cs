@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.XUnit.Events;
+namespace Cratis.Chronicle.Testing.Events;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventLog"/> for testing.

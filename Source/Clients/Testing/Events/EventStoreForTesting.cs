@@ -13,7 +13,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Transactions;
 
-namespace Cratis.Chronicle.XUnit.Events;
+namespace Cratis.Chronicle.Testing.Events;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStore"/> for testing.

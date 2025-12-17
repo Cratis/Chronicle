@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 
-namespace Cratis.Chronicle.XUnit.Auditing;
+namespace Cratis.Chronicle.Testing.Auditing;
 
 /// <summary>
 /// Represents a null implementation of <see cref="ICausationManager"/>.

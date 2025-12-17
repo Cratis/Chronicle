@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET", "Source\Clients\Do
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit.Integration", "Source\Clients\XUnit.Integration\XUnit.Integration.csproj", "{CCA5CC3C-4A41-484C-A739-972E27BD87AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit", "Source\Clients\XUnit\XUnit.csproj", "{DB9107A7-F79D-43E1-A307-591031E8B776}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit", "Source\Clients\Testing\Testing.csproj", "{DB9107A7-F79D-43E1-A307-591031E8B776}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.Specs", "Source\Infrastructure.Specs\Infrastructure.Specs.csproj", "{73C9119D-8054-4FF5-B9F6-7FFD336FAC77}"
 EndProject

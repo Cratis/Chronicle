@@ -4,12 +4,12 @@
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.XUnit.Events;
+using Cratis.Chronicle.Testing.Events;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
 
-namespace Cratis.Chronicle.XUnit;
+namespace Cratis.Chronicle.Testing;
 
 /// <summary>
 /// Represents default implementations for Chronicle services.

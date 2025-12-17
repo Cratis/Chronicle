@@ -8,7 +8,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Execution;
 
-namespace Cratis.Chronicle.XUnit.Events;
+namespace Cratis.Chronicle.Testing.Events;
 
 /// <summary>
 /// Represents a null implementation of <see cref="IEventSequence"/> that does nothing.

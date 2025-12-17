@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "AspNetCore\As
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.InProcess", "DotNET.InProcess\DotNET.InProcess.csproj", "{C56E14FE-4DC3-4788-846B-E69D97ED2F4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit", "XUnit\XUnit.csproj", "{1D97E5AE-D223-4288-BD3E-B1494D35B6B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "Testing\Testing.csproj", "{1D97E5AE-D223-4288-BD3E-B1494D35B6B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XUnit.Integration", "XUnit.Integration\XUnit.Integration.csproj", "{3F3F03CE-8B3E-4079-BFB6-0546693F71F9}"
 EndProject

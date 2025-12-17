@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.XUnit;
+namespace Cratis.Chronicle.Testing;
 
 #pragma warning disable SA1402 // File may only contain a single type
 

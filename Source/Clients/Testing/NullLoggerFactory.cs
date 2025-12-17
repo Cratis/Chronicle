@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.XUnit;
+namespace Cratis.Chronicle.Testing;
 
 /// <summary>
 /// Represents an implementation of <see cref="ILoggerFactory"/> that can create <see cref="NullLogger"/> loggers.

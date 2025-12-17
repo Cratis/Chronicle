@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 
-namespace Cratis.Chronicle.XUnit;
+namespace Cratis.Chronicle.Testing;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for testing.

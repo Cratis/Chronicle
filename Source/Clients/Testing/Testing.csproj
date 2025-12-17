@@ -2,8 +2,8 @@
     <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
     <PropertyGroup>
-        <AssemblyName>Cratis.Chronicle.XUnit</AssemblyName>
-        <RootNamespace>Cratis.Chronicle.XUnit</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Testing</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
 
@@ -33,9 +33,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Logging" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
