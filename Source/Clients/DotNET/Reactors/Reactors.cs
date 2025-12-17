@@ -201,6 +201,7 @@ public class Reactors : IReactors
         var handler = new ReactorHandler(
             _eventStore,
             reactorType.GetReactorId(),
+            reactorType,
             reactorType.GetEventSequenceId(),
             new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
             _causationManager,
@@ -227,7 +228,8 @@ public class Reactors : IReactors
             {
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray()
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
+                Categories = handler.ReactorType.GetCategories().ToArray()
             }
         };
 

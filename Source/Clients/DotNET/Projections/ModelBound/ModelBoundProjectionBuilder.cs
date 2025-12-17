@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
@@ -63,7 +64,8 @@ internal class ModelBoundProjectionBuilder(
             {
                 ConfigurationId = Guid.Empty,
                 TypeId = WellKnownSinkTypes.MongoDB
-            }
+            },
+            Categories = modelType.GetCategories().ToArray()
         };
 
         var classLevelFromEvents = modelType.GetCustomAttributes()

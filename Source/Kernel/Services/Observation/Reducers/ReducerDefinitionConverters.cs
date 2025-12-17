@@ -23,6 +23,7 @@ internal static class ReducerDefinitionConverters
             reducerDefinition.EventTypes.Select(_ => _.ToChronicle()),
             reducerDefinition.ReadModel,
             reducerDefinition.IsActive,
-            reducerDefinition.Sink.ToChronicle()
+            reducerDefinition.Sink.ToChronicle(),
+            reducerDefinition.Categories
         );
 }

@@ -6,3 +6,5 @@
   href: passive-reducers.md
 - name: Event Processing
   href: event-processing.md
+- name: Categorizing Reducers
+  href: categorizing-reducers.md

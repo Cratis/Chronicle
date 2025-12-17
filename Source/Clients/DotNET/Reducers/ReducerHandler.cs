@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Reducers;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> the reducers belong to.</param>
 /// <param name="reducerId">The identifier of the reducer.</param>
+/// <param name="reducerType">The type of the reducer.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="invoker">The actual invoker.</param>
 /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Reducers;
 public class ReducerHandler(
     IEventStore eventStore,
     ReducerId reducerId,
+    Type reducerType,
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
     bool isActive,
@@ -33,6 +35,9 @@ public class ReducerHandler(
 
     /// <inheritdoc/>
     public ReducerId Id { get; } = reducerId;
+
+    /// <inheritdoc/>
+    public Type ReducerType { get; } = reducerType;
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; } = eventSequenceId;

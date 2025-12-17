@@ -339,7 +339,7 @@ public class Projections(
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TReadModel>)!;
-            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), namingPolicy, eventTypes, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

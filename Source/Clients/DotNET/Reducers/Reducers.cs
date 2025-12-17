@@ -314,6 +314,7 @@ public class Reducers : IReducers
         var handler = new ReducerHandler(
             _eventStore,
             reducerType.GetReducerId(),
+            reducerType,
             reducerType.GetEventSequenceId(),
             new ReducerInvoker(
                 _eventTypes,
@@ -355,7 +356,8 @@ public class Reducers : IReducers
                 Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
-                }
+                },
+                Categories = handler.ReducerType.GetCategories().ToArray()
             }
         };
 

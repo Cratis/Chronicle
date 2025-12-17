@@ -9,6 +9,7 @@ public class a_reducer_handler : Specification
 {
     protected IEventStore _eventStore;
     protected ReducerId _reducerId;
+    protected Type _reducerType;
     protected EventSequenceId _eventSequenceId;
     protected IReducerInvoker _invoker;
     protected IReducerObservers _reducerObservers;
@@ -21,6 +22,7 @@ public class a_reducer_handler : Specification
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
 
         _reducerId = "reducer-id";
+        _reducerType = typeof(object);
         _eventSequenceId = EventSequenceId.Log;
         _invoker = Substitute.For<IReducerInvoker>();
         _reducerObservers = Substitute.For<IReducerObservers>();
@@ -28,6 +30,7 @@ public class a_reducer_handler : Specification
         _handler = new ReducerHandler(
             _eventStore,
             _reducerId,
+            _reducerType,
             _eventSequenceId,
             _invoker,
             true,

@@ -10,6 +10,7 @@ public class a_reactor_handler : all_dependencies
     void Establish() => handler = new(
         _eventStore,
         _reactorId,
+        typeof(object),
         _eventSequenceId,
         _reactorInvoker,
         _causationManager,

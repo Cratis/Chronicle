@@ -46,4 +46,10 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(6)]
     public SinkDefinition Sink { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the reducer belongs to.
+    /// </summary>
+    [ProtoMember(7)]
+    public IList<string> Categories { get; set; } = [];
 }

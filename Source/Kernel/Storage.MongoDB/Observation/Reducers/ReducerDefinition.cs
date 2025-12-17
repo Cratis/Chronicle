@@ -43,4 +43,9 @@ public class ReducerDefinition
     /// Gets or sets the <see cref="SinkDefinition"/> the reducer uses.
     /// </summary>
     public SinkDefinition Sink { get; set; } = SinkDefinition.None;
+
+    /// <summary>
+    /// Gets or sets the categories the reducer belongs to.
+    /// </summary>
+    public IEnumerable<string> Categories { get; set; } = [];
 }
