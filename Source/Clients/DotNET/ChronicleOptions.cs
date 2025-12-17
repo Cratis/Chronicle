@@ -14,7 +14,7 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents the settings for connecting to Chronicle.
 /// </summary>
-/// <param name="url"><see cref="ChronicleUrl"/> to use.</param>
+/// <param name="url"><see cref="ChronicleConnectionString"/> to use.</param>
 /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
@@ -27,7 +27,7 @@ namespace Cratis.Chronicle;
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
 public class ChronicleOptions(
-    ChronicleUrl url,
+    ChronicleConnectionString url,
     INamingPolicy? namingPolicy = null,
     IIdentityProvider? identityProvider = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
@@ -43,14 +43,14 @@ public class ChronicleOptions(
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
     /// </summary>
-    public ChronicleOptions() : this(ChronicleUrl.Default)
+    public ChronicleOptions() : this(ChronicleConnectionString.Default)
     {
     }
 
     /// <summary>
-    /// Gets the <see cref="ChronicleUrl"/> to use.
+    /// Gets the <see cref="ChronicleConnectionString"/> to use.
     /// </summary>
-    public ChronicleUrl Url { get; set; } = url;
+    public ChronicleConnectionString Url { get; set; } = url;
 
     /// <summary>
     /// Gets or sets the software version.
@@ -148,12 +148,12 @@ public class ChronicleOptions(
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
-    public static ChronicleOptions FromConnectionString(string connectionString) => FromUrl(new ChronicleUrl(connectionString));
+    public static ChronicleOptions FromConnectionString(string connectionString) => FromUrl(new ChronicleConnectionString(connectionString));
 
     /// <summary>
-    /// Create a <see cref="ChronicleOptions"/> from a <see cref="ChronicleUrl"/>.
+    /// Create a <see cref="ChronicleOptions"/> from a <see cref="ChronicleConnectionString"/>.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to create from.</param>
+    /// <param name="url"><see cref="ChronicleConnectionString"/> to create from.</param>
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
-    public static ChronicleOptions FromUrl(ChronicleUrl url) => new(url);
+    public static ChronicleOptions FromUrl(ChronicleConnectionString url) => new(url);
 }

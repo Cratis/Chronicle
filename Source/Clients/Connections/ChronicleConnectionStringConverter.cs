@@ -7,9 +7,9 @@ using System.Globalization;
 namespace Cratis.Chronicle.Connections;
 
 /// <summary>
-/// Represents a <see cref="TypeConverter"/> for <see cref="ChronicleUrl"/>.
+/// Represents a <see cref="TypeConverter"/> for <see cref="ChronicleConnectionString"/>.
 /// </summary>
-public class ChronicleUrlConverter : TypeConverter
+public class ChronicleConnectionStringConverter : TypeConverter
 {
     /// <inheritdoc/>
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
@@ -22,7 +22,7 @@ public class ChronicleUrlConverter : TypeConverter
     {
         if (value is string stringValue)
         {
-            return new ChronicleUrl(stringValue);
+            return new ChronicleConnectionString(stringValue);
         }
 
         return base.ConvertFrom(context, culture, value);
@@ -37,9 +37,9 @@ public class ChronicleUrlConverter : TypeConverter
     /// <inheritdoc/>
     public override object? ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
     {
-        if (value is ChronicleUrl chronicleUrl && destinationType == typeof(string))
+        if (value is ChronicleConnectionString chronicleConnectionString && destinationType == typeof(string))
         {
-            return chronicleUrl.ToString();
+            return chronicleConnectionString.ToString();
         }
 
         return base.ConvertTo(context, culture, value, destinationType);

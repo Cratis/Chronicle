@@ -37,15 +37,15 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// </summary>
     /// <param name="connectionString">Connection string to use.</param>
     public ChronicleClient(string connectionString)
-        : this(new ChronicleUrl(connectionString))
+        : this(new ChronicleConnectionString(connectionString))
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
-    public ChronicleClient(ChronicleUrl url)
+    /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    public ChronicleClient(ChronicleConnectionString url)
         : this(ChronicleOptions.FromUrl(url))
     {
     }

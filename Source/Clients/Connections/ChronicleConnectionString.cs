@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
-using System.Data.Common;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -30,31 +29,31 @@ namespace Cratis.Chronicle.Connections;
 /// const string MultiHostPattern = @"^chronicle:\/\/([a-zA-Z0-9\.-]+(:\d+)?)(,([a-zA-Z0-9\.-]+(:\d+)?))*\/(\?.*)?$";
 /// ]]>
 /// </remarks>
-[TypeConverter(typeof(ChronicleUrlConverter))]
-public class ChronicleUrl
+[TypeConverter(typeof(ChronicleConnectionStringConverter))]
+public class ChronicleConnectionString
 {
     /// <summary>
-    /// The default <see cref="ChronicleUrl"/> pointing to localhost.
+    /// The default <see cref="ChronicleConnectionString"/> pointing to localhost.
     /// </summary>
-    public static readonly ChronicleUrl Default = new("chronicle://localhost:35000");
+    public static readonly ChronicleConnectionString Default = new("chronicle://localhost:35000");
 
     readonly ChronicleConnectionStringBuilder _builder;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleUrl"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleConnectionString"/> class.
     /// </summary>
     /// <param name="connectionString">String representation of the connection string.</param>
-    public ChronicleUrl(string connectionString)
+    public ChronicleConnectionString(string connectionString)
     {
         _builder = new ChronicleConnectionStringBuilder(connectionString);
         ServerAddress = new ChronicleServerAddress(_builder.Host, _builder.Port);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleUrl"/> class.
+    /// Initializes a new instance of the <see cref="ChronicleConnectionString"/> class.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to use.</param>
-    ChronicleUrl(ChronicleConnectionStringBuilder builder)
+    ChronicleConnectionString(ChronicleConnectionStringBuilder builder)
     {
         _builder = builder;
         ServerAddress = new ChronicleServerAddress(_builder.Host, _builder.Port);
@@ -86,81 +85,81 @@ public class ChronicleUrl
     public string? ApiKey => _builder.ApiKey;
 
     /// <summary>
-    /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleUrl"/>.
+    /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
-    public static implicit operator ChronicleUrl(string connectionString) => new(connectionString);
+    public static implicit operator ChronicleConnectionString(string connectionString) => new(connectionString);
 
     /// <summary>
-    /// Creates a new <see cref="ChronicleUrl"/> with the specified username.
+    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified username.
     /// </summary>
     /// <param name="username">The username to set.</param>
-    /// <returns>A new <see cref="ChronicleUrl"/> with the username set.</returns>
-    public ChronicleUrl WithUsername(string username)
+    /// <returns>A new <see cref="ChronicleConnectionString"/> with the username set.</returns>
+    public ChronicleConnectionString WithUsername(string username)
     {
         var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
         {
             Username = username
         };
-        return new ChronicleUrl(newBuilder);
+        return new ChronicleConnectionString(newBuilder);
     }
 
     /// <summary>
-    /// Creates a new <see cref="ChronicleUrl"/> with the specified password.
+    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified password.
     /// </summary>
     /// <param name="password">The password to set.</param>
-    /// <returns>A new <see cref="ChronicleUrl"/> with the password set.</returns>
-    public ChronicleUrl WithPassword(string password)
+    /// <returns>A new <see cref="ChronicleConnectionString"/> with the password set.</returns>
+    public ChronicleConnectionString WithPassword(string password)
     {
         var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
         {
             Password = password
         };
-        return new ChronicleUrl(newBuilder);
+        return new ChronicleConnectionString(newBuilder);
     }
 
     /// <summary>
-    /// Creates a new <see cref="ChronicleUrl"/> with the specified username and password.
+    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified username and password.
     /// </summary>
     /// <param name="username">The username to set.</param>
     /// <param name="password">The password to set.</param>
-    /// <returns>A new <see cref="ChronicleUrl"/> with the username and password set.</returns>
-    public ChronicleUrl WithCredentials(string username, string password)
+    /// <returns>A new <see cref="ChronicleConnectionString"/> with the username and password set.</returns>
+    public ChronicleConnectionString WithCredentials(string username, string password)
     {
         var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
         {
             Username = username,
             Password = password
         };
-        return new ChronicleUrl(newBuilder);
+        return new ChronicleConnectionString(newBuilder);
     }
 
     /// <summary>
-    /// Creates a new <see cref="ChronicleUrl"/> with API key authentication.
+    /// Creates a new <see cref="ChronicleConnectionString"/> with API key authentication.
     /// </summary>
     /// <param name="apiKey">The API key to use.</param>
-    /// <returns>A new <see cref="ChronicleUrl"/> with API key authentication configured.</returns>
-    public ChronicleUrl WithApiKey(string apiKey)
+    /// <returns>A new <see cref="ChronicleConnectionString"/> with API key authentication configured.</returns>
+    public ChronicleConnectionString WithApiKey(string apiKey)
     {
         var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
         {
             AuthenticationMode = AuthenticationMode.ApiKey,
             ApiKey = apiKey
         };
-        return new ChronicleUrl(newBuilder);
+        return new ChronicleConnectionString(newBuilder);
     }
 
     /// <summary>
-    /// Creates a new <see cref="ChronicleUrl"/> with OIDC authentication.
+    /// Creates a new <see cref="ChronicleConnectionString"/> with OIDC authentication.
     /// </summary>
-    /// <returns>A new <see cref="ChronicleUrl"/> with OIDC authentication configured.</returns>
-    public ChronicleUrl WithOidc()
+    /// <returns>A new <see cref="ChronicleConnectionString"/> with OIDC authentication configured.</returns>
+    public ChronicleConnectionString WithOidc()
     {
         var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
         {
             AuthenticationMode = AuthenticationMode.Oidc
         };
-        return new ChronicleUrl(newBuilder);
+        return new ChronicleConnectionString(newBuilder);
     }
 
     /// <inheritdoc/>

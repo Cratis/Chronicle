@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Connections;
 internal static partial class ChronicleConnectionLogMessages
 {
     [LoggerMessage(1, LogLevel.Information, "Connecting to Chronicle ({ConnectionString})")]
-    internal static partial void Connecting(this ILogger<ChronicleConnection> logger, ChronicleUrl connectionString);
+    internal static partial void Connecting(this ILogger<ChronicleConnection> logger, ChronicleConnectionString connectionString);
 
     [LoggerMessage(2, LogLevel.Information, "Connected to Chronicle")]
     internal static partial void Connected(this ILogger<ChronicleConnection> logger);

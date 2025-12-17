@@ -48,7 +48,7 @@ The client-side `ChronicleOptions` (in `Cratis.Chronicle` namespace) supports th
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = new ChronicleUrl("localhost:35000"),
+    Url = new ChronicleConnectionString("localhost:35000"),
     CertificatePath = "/path/to/certificate.pfx",
     CertificatePassword = "your-password",
     DisableTls = false,  // Default is false (TLS enabled)
@@ -126,7 +126,7 @@ To disable TLS (e.g., for local development or testing):
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = new ChronicleUrl("localhost:35000"),
+    Url = new ChronicleConnectionString("localhost:35000"),
     DisableTls = true
 };
 ```

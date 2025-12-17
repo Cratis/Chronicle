@@ -35,7 +35,7 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
 {
-    readonly ChronicleUrl _url;
+    readonly ChronicleConnectionString _url;
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
     readonly int? _maxSendMessageSize;
@@ -58,7 +58,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
+    /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
     /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
     /// <param name="maxReceiveMessageSize">Maximum receive message size in bytes.</param>
     /// <param name="maxSendMessageSize">Maximum send message size in bytes.</param>
@@ -73,7 +73,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="certificateAuthorityPort">Port used to fetch the development CA when no certificate is provided.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
-        ChronicleUrl url,
+        ChronicleConnectionString url,
         int connectTimeout,
         int? maxReceiveMessageSize,
         int? maxSendMessageSize,

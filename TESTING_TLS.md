@@ -45,7 +45,7 @@ using Cratis.Chronicle;
 // Test with TLS enabled (default)
 var options = new ChronicleOptions
 {
-    Url = new ChronicleUrl("localhost:35000")
+    Url = new ChronicleConnectionString("localhost:35000")
 };
 
 var client = new ChronicleClient(options);
@@ -56,7 +56,7 @@ Console.WriteLine("Connected successfully with TLS!");
 // Test with TLS disabled
 var optionsNoTls = new ChronicleOptions
 {
-    Url = new ChronicleUrl("localhost:35000"),
+    Url = new ChronicleConnectionString("localhost:35000"),
     DisableTls = true
 };
 

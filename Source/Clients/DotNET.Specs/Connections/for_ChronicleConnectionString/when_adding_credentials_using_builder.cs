@@ -1,14 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Connections.for_ChronicleUrl;
+using Cratis.Chronicle.Connections;
+
+namespace Cratis.Chronicle.Clients.Connections.for_ChronicleConnectionString;
 
 public class when_adding_credentials_using_builder : Specification
 {
-    ChronicleUrl _originalUrl;
-    ChronicleUrl _newUrl;
+    ChronicleConnectionString _originalUrl;
+    ChronicleConnectionString _newUrl;
 
-    void Establish() => _originalUrl = new ChronicleUrl("chronicle://localhost:35000");
+    void Establish() => _originalUrl = new ChronicleConnectionString("chronicle://localhost:35000");
 
     void Because() => _newUrl = _originalUrl.WithCredentials("admin", "secret");
 
