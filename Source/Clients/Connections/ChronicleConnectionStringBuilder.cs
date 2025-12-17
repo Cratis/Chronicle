@@ -21,8 +21,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string UsernameKey = "Username";
     const string PasswordKey = "Password";
     const string SchemeKey = "Scheme";
-    const string AuthKey = "auth";
-    const string ApiKeyKey = "key";
+    const string ApiKeyKey = "apiKey";
+    const string DisableTlsKey = "disableTls";
     const int DefaultPort = 35000;
 
     /// <summary>
@@ -107,35 +107,32 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
-    /// Gets or sets the authentication mode.
+    /// Gets the authentication mode based on the configured credentials.
     /// </summary>
+    /// <exception cref="AmbiguousAuthenticationMode">Thrown when both client credentials and API key are specified.</exception>
     public AuthenticationMode AuthenticationMode
     {
         get
         {
-            if (!ContainsKey(AuthKey))
+            var hasClientCredentials = !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password);
+            var hasApiKey = !string.IsNullOrEmpty(ApiKey);
+
+            if (hasClientCredentials && hasApiKey)
             {
-                // Infer from username/password if present
-                if (!string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password))
-                {
-                    return AuthenticationMode.InternalUserPassword;
-                }
-                return AuthenticationMode.None;
+                throw new AmbiguousAuthenticationMode();
             }
 
-            var authValue = (string)this[AuthKey];
-            return Enum.TryParse<AuthenticationMode>(authValue, true, out var mode) ? mode : AuthenticationMode.None;
-        }
-        set
-        {
-            if (value == AuthenticationMode.None)
+            if (hasClientCredentials)
             {
-                Remove(AuthKey);
+                return AuthenticationMode.ClientCredentials;
             }
-            else
+
+            if (hasApiKey)
             {
-                this[AuthKey] = value.ToString();
+                return AuthenticationMode.ApiKey;
             }
+
+            return AuthenticationMode.None;
         }
     }
 
@@ -156,6 +153,15 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 this[ApiKeyKey] = value;
             }
         }
+    }
+
+    /// <summary>
+    /// Gets or sets whether TLS is disabled.
+    /// </summary>
+    public bool DisableTls
+    {
+        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
+        set => this[DisableTlsKey] = value;
     }
 
     /// <summary>
@@ -187,14 +193,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         // Add query parameters if needed
         var queryParams = new List<string>();
 
-        if (ContainsKey(AuthKey))
-        {
-            queryParams.Add($"auth={Uri.EscapeDataString((string)this[AuthKey])}");
-        }
-
         if (ContainsKey(ApiKeyKey))
         {
-            queryParams.Add($"key={Uri.EscapeDataString((string)this[ApiKeyKey])}");
+            queryParams.Add($"apiKey={Uri.EscapeDataString((string)this[ApiKeyKey])}");
+        }
+
+        if (DisableTls)
+        {
+            queryParams.Add("disableTls=true");
         }
 
         // Add any other query parameters that aren't our special keys
@@ -207,8 +213,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != UsernameKey &&
                 keyStr != PasswordKey &&
                 keyStr != SchemeKey &&
-                keyStr != AuthKey &&
-                keyStr != ApiKeyKey)
+                keyStr != ApiKeyKey &&
+                keyStr != DisableTlsKey)
             {
                 queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
             }

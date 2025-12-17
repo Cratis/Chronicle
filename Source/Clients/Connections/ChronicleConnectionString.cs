@@ -65,12 +65,12 @@ public class ChronicleConnectionString
     public ChronicleServerAddress ServerAddress { get; } = new("localhost", 35000);
 
     /// <summary>
-    /// Gets the username for authentication, if specified.
+    /// Gets the username for authentication, if specified. This maps to client id using `client_credentials` flow.
     /// </summary>
     public string? Username => _builder.Username;
 
     /// <summary>
-    /// Gets the password for authentication, if specified.
+    /// Gets the password for authentication, if specified. This maps to client secret using `client_credentials` flow.
     /// </summary>
     public string? Password => _builder.Password;
 
@@ -85,41 +85,18 @@ public class ChronicleConnectionString
     public string? ApiKey => _builder.ApiKey;
 
     /// <summary>
+    /// Gets whether TLS is disabled.
+    /// </summary>
+    public bool DisableTls => _builder.DisableTls;
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
     public static implicit operator ChronicleConnectionString(string connectionString) => new(connectionString);
 
     /// <summary>
-    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified username.
-    /// </summary>
-    /// <param name="username">The username to set.</param>
-    /// <returns>A new <see cref="ChronicleConnectionString"/> with the username set.</returns>
-    public ChronicleConnectionString WithUsername(string username)
-    {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
-        {
-            Username = username
-        };
-        return new ChronicleConnectionString(newBuilder);
-    }
-
-    /// <summary>
-    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified password.
-    /// </summary>
-    /// <param name="password">The password to set.</param>
-    /// <returns>A new <see cref="ChronicleConnectionString"/> with the password set.</returns>
-    public ChronicleConnectionString WithPassword(string password)
-    {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
-        {
-            Password = password
-        };
-        return new ChronicleConnectionString(newBuilder);
-    }
-
-    /// <summary>
-    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified username and password.
+    /// Creates a new <see cref="ChronicleConnectionString"/> with the specified username and password (Client Credentials).
     /// </summary>
     /// <param name="username">The username to set.</param>
     /// <param name="password">The password to set.</param>
@@ -143,21 +120,7 @@ public class ChronicleConnectionString
     {
         var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
         {
-            AuthenticationMode = AuthenticationMode.ApiKey,
             ApiKey = apiKey
-        };
-        return new ChronicleConnectionString(newBuilder);
-    }
-
-    /// <summary>
-    /// Creates a new <see cref="ChronicleConnectionString"/> with OIDC authentication.
-    /// </summary>
-    /// <returns>A new <see cref="ChronicleConnectionString"/> with OIDC authentication configured.</returns>
-    public ChronicleConnectionString WithOidc()
-    {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
-        {
-            AuthenticationMode = AuthenticationMode.Oidc
         };
         return new ChronicleConnectionString(newBuilder);
     }

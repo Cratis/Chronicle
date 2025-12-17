@@ -148,12 +148,18 @@ public class ChronicleOptions(
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
-    public static ChronicleOptions FromConnectionString(string connectionString) => FromUrl(new ChronicleConnectionString(connectionString));
+    public static ChronicleOptions FromConnectionString(string connectionString) => FromConnectionString(new ChronicleConnectionString(connectionString));
 
     /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a <see cref="ChronicleConnectionString"/>.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleConnectionString"/> to create from.</param>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to create from.</param>
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
-    public static ChronicleOptions FromUrl(ChronicleConnectionString url) => new(url);
+    public static ChronicleOptions FromConnectionString(ChronicleConnectionString connectionString) => new(connectionString)
+    {
+        Tls = new Tls
+        {
+            Disable = connectionString.DisableTls
+        }
+    };
 }

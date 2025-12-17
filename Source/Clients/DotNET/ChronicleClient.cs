@@ -46,7 +46,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// </summary>
     /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
     public ChronicleClient(ChronicleConnectionString url)
-        : this(ChronicleOptions.FromUrl(url))
+        : this(ChronicleOptions.FromConnectionString(url))
     {
     }
 

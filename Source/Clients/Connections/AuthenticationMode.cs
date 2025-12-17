@@ -14,17 +14,12 @@ public enum AuthenticationMode
     None = 0,
 
     /// <summary>
-    /// Internal user/password authentication.
+    /// Client credentials authentication.
     /// </summary>
-    InternalUserPassword = 1,
+    ClientCredentials = 1,
 
     /// <summary>
     /// API key authentication.
     /// </summary>
     ApiKey = 2,
-
-    /// <summary>
-    /// OpenID Connect (OIDC) authentication.
-    /// </summary>
-    Oidc = 3
 }

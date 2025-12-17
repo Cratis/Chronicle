@@ -11,5 +11,5 @@ public class when_inferring_internal_user_password_auth : Specification
 
     void Establish() => _url = new ChronicleConnectionString("chronicle://admin:secret@localhost:35000");
 
-    [Fact] void should_have_internal_user_password_auth_mode() => _url.AuthenticationMode.ShouldEqual(AuthenticationMode.InternalUserPassword);
+    [Fact] void should_have_client_credentials_auth_mode() => _url.AuthenticationMode.ShouldEqual(AuthenticationMode.ClientCredentials);
 }
