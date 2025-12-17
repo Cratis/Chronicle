@@ -9,7 +9,7 @@ public class when_parsing_url_with_api_key : Specification
 {
     ChronicleConnectionString _url;
 
-    void Establish() => _url = new ChronicleConnectionString("chronicle://localhost:35000?auth=ApiKey&key=myapikey123");
+    void Establish() => _url = new ChronicleConnectionString("chronicle://localhost:35000?apiKey=myapikey123");
 
     [Fact] void should_have_correct_host() => _url.ServerAddress.Host.ShouldEqual("localhost");
     [Fact] void should_have_correct_port() => _url.ServerAddress.Port.ShouldEqual(35000);
