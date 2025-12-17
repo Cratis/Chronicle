@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.ClientCredentials;
+using Cratis.Chronicle.Storage.MongoDB.ClientCredentials;
 using Cratis.Chronicle.Storage.MongoDB.Users;
 using Cratis.Chronicle.Storage.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -24,6 +26,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         services.AddSingleton<IUserStorage, UserStorage>();
+        services.AddSingleton<IClientCredentialsStorage, ClientCredentialsStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
         services.AddSingleton<IUserStore<ChronicleUser>, ChronicleUserStore>();
 
@@ -50,14 +53,15 @@ public static class ServiceCollectionExtensions
                     // Enable the token endpoint
                     options.SetTokenEndpointUris("/connect/token");
 
-                    // Enable the password flow
+                    // Enable the password flow and client credentials flow
                     options.AllowPasswordFlow();
+                    options.AllowClientCredentialsFlow();
                     options.AllowRefreshTokenFlow();
 
-                    // Accept anonymous clients (clients without a client_id)
+                    // Accept anonymous clients for password flow, but require client_id for client_credentials
                     options.AcceptAnonymousClients();
 
-                    // Disable application/authorization management as we use anonymous clients
+                    // Disable application/authorization management as we use custom storage
                     options.DisableScopeValidation();
 
                     // Register the signing and encryption credentials

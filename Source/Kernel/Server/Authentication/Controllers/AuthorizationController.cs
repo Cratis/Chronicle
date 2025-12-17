@@ -2,9 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Claims;
+using System.Security.Cryptography;
+using Cratis.Chronicle.Storage.ClientCredentials;
 using Cratis.Chronicle.Storage.Users;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -20,7 +23,8 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 [Route("connect")]
 public class AuthorizationController(
     UserManager<ChronicleUser> userManager,
-    SignInManager<ChronicleUser> signInManager) : ControllerBase
+    SignInManager<ChronicleUser> signInManager,
+    IClientCredentialsStorage clientCredentialsStorage) : ControllerBase
 {
     /// <summary>
     /// Handles token requests.
@@ -33,6 +37,62 @@ public class AuthorizationController(
     {
         var request = HttpContext.GetOpenIddictServerRequest() ??
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        if (request.IsClientCredentialsGrantType())
+        {
+            // In client_credentials flow, the client_id and client_secret are the credentials
+            var clientId = request.ClientId ?? string.Empty;
+            var clientSecret = request.ClientSecret ?? string.Empty;
+
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            {
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
+                    }));
+            }
+
+            var client = await clientCredentialsStorage.GetByClientId(clientId);
+            if (client == null || !client.IsActive)
+            {
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
+                    }));
+            }
+
+            // Verify the client secret
+            if (!VerifySecret(clientSecret, client.ClientSecret))
+            {
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
+                    }));
+            }
+
+            // Create the claims-based identity for the client
+            var identity = new ClaimsIdentity(
+                authenticationType: TokenValidationParameters.DefaultAuthenticationType,
+                nameType: OpenIddictConstants.Claims.Name,
+                roleType: OpenIddictConstants.Claims.Role);
+
+            identity.AddClaim(OpenIddictConstants.Claims.Subject, client.Id);
+            identity.AddClaim(OpenIddictConstants.Claims.Name, client.ClientId);
+
+            identity.SetScopes(request.GetScopes());
+            identity.SetDestinations(GetDestinations);
+
+            return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
 
         if (request.IsPasswordGrantType())
         {
@@ -127,6 +187,27 @@ public class AuthorizationController(
         }
 
         throw new InvalidOperationException("The specified grant type is not supported.");
+    }
+
+    static bool VerifySecret(string secret, string hashedSecret)
+    {
+        var parts = hashedSecret.Split(':');
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        var salt = Convert.FromBase64String(parts[0]);
+        var hash = Convert.FromBase64String(parts[1]);
+
+        var testHash = KeyDerivation.Pbkdf2(
+            password: secret,
+            salt: salt,
+            prf: KeyDerivationPrf.HMACSHA256,
+            iterationCount: 10000,
+            numBytesRequested: 256 / 8);
+
+        return hash.SequenceEqual(testHash);
     }
 
     static IEnumerable<string> GetDestinations(Claim claim) => claim.Type switch
