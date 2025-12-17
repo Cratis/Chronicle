@@ -5,10 +5,7 @@ namespace Cratis.Chronicle.Reducers.for_Reducers;
 
 public class when_checking_has_for_generic_and_it_exists : given.all_dependencies
 {
-    class MyReadModel
-    {
-    }
-
+    class MyReadModel;
     bool _result;
 
     void Establish()

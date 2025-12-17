@@ -12,4 +12,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="readModelType">The read model type that is unknown.</param>
 public class UnknownReadModel(Type readModelType) : Exception($"Read model type '{readModelType.Name}' is not known by any projections or reducers")
 {
+    /// <summary>
+    /// Gets the read model type that is unknown.
+    /// </summary>
+    public Type ReadModelType { get; } = readModelType;
 }

@@ -6,9 +6,9 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 
-namespace Cratis.Chronicle.Reducers.for_Reducers;
+namespace Cratis.Chronicle.Reducers.for_Reducers.when_getting_snapshots_by_id;
 
-public class when_getting_instance_by_id_for_existing_reducer : given.all_dependencies
+public class with_no_events : given.all_dependencies
 {
     class MyReadModel
     {
@@ -19,8 +19,7 @@ public class when_getting_instance_by_id_for_existing_reducer : given.all_depend
     IReducerHandler _handler;
     IEventSequence _eventSequence;
     ImmutableList<AppendedEvent> _events;
-    ReduceResult _reduceResult;
-    ReducerInstanceResult _result;
+    IEnumerable<ReducerSnapshot<MyReadModel>> _result;
 
     void Establish()
     {
@@ -40,22 +39,11 @@ public class when_getting_instance_by_id_for_existing_reducer : given.all_depend
         _eventSequence.GetForEventSourceIdAndEventTypes(
             Arg.Any<EventSourceId>(),
             Arg.Any<IEnumerable<EventType>>()).Returns(_events);
-
-        _reduceResult = new ReduceResult(
-            new MyReadModel { Name = "Test" },
-            new EventSequenceNumber(42),
-            [],
-            string.Empty);
-
-        _handler.OnNext(
-            Arg.Any<IEnumerable<AppendedEvent>>(),
-            Arg.Any<object?>(),
-            Arg.Any<IServiceProvider>()).Returns(_reduceResult);
     }
 
-    async Task Because() => _result = await _reducers.GetInstanceById(typeof(MyReadModel), _key);
+    async Task Because() => _result = await _reducers.GetSnapshotsById<MyReadModel>(_key);
 
     [Fact] void should_get_event_sequence() => _eventStore.Received(1).GetEventSequence(_handler.EventSequenceId);
     [Fact] void should_get_events_for_event_source() => _eventSequence.Received(1).GetForEventSourceIdAndEventTypes(_key, _handler.EventTypes);
-    [Fact] void should_return_unavailable_sequence_number_when_no_events() => _result.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
+    [Fact] void should_return_empty_collection() => _result.ShouldBeEmpty();
 }

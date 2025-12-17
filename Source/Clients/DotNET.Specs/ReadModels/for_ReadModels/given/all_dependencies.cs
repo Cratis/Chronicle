@@ -46,7 +46,6 @@ public class all_dependencies : Specification
             _namingPolicy,
             _projections,
             _reducers,
-            _additionalReadModels,
             _schemaGenerator);
     }
 }

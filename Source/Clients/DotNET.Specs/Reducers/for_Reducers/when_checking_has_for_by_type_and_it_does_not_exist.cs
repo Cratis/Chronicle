@@ -5,13 +5,13 @@ namespace Cratis.Chronicle.Reducers.for_Reducers;
 
 public class when_checking_has_for_by_type_and_it_does_not_exist : given.all_dependencies
 {
-    class MyReadModel
-    {
-    }
+    class MyReadModel;
 
     bool _result;
 
+#pragma warning disable CA2263 // Prefer generic overload when type is known
     void Because() => _result = _reducers.HasFor(typeof(MyReadModel));
+#pragma warning restore CA2263 // Prefer generic overload when type is known
 
     [Fact] void should_return_false() => _result.ShouldBeFalse();
 }
