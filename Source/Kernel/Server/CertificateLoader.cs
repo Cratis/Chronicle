@@ -49,8 +49,16 @@ public static class CertificateLoader
     {
         if (string.IsNullOrEmpty(password))
         {
+#if NET8_0
+            return new X509Certificate2(path);
+#else
             return X509CertificateLoader.LoadCertificateFromFile(path);
+#endif
         }
+#if NET8_0
+        return new X509Certificate2(path, password);
+#else
         return X509CertificateLoader.LoadPkcs12FromFile(path, password);
+#endif
     }
 }
