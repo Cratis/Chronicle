@@ -160,6 +160,11 @@ if (chronicleOptions.Authentication.Enabled)
 {
     var authService = app.Services.GetRequiredService<IAuthenticationService>();
     await authService.EnsureDefaultAdminUser();
+
+#if DEVELOPMENT
+    // Ensure default client credentials for development
+    await authService.EnsureDefaultClientCredentials();
+#endif
 }
 
 app.UseRouting();
