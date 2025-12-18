@@ -51,4 +51,10 @@ internal static partial class EventSequenceLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Sequence number is {Result} when getting tail sequence number greater or equal than {SequenceNumber} for event types from event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace} for event types {EventTypes}")]
     internal static partial void NextSequenceNumberGreaterOrEqualThan(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSequenceNumber result);
+
+    [LoggerMessage(LogLevel.Error, "Failed appending many events in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
+    internal static partial void ErrorAppendingMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "Duplicate event detected during AppendMany with sequence number {SequenceNumber} in event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+    internal static partial void DuplicateEventInMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
 }
