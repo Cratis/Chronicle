@@ -27,9 +27,9 @@ public class ChronicleOptions
     public int Port { get; init; } = 35000;
 
     /// <summary>
-    /// Gets the port for the REST API.
+    /// Gets the port for the Management API and well-known certificate endpoint.
     /// </summary>
-    public int ApiPort { get; init; } = 8080;
+    public int ManagementPort { get; init; } = 8080;
 
     /// <summary>
     /// Gets the health check endpoint.

@@ -144,6 +144,11 @@ public class ChronicleOptions(
     public Tls Tls { get; set; } = new Tls();
 
     /// <summary>
+    /// Gets or sets the port for the Management API and well-known certificate endpoint.
+    /// </summary>
+    public int ManagementPort { get; set; } = 8080;
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>

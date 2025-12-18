@@ -22,10 +22,4 @@ public class Tls
     /// Gets or sets whether TLS is disabled. Default is false (TLS enabled).
     /// </summary>
     public bool Disable { get; set; }
-
-    /// <summary>
-    /// Port to use when attempting to fetch a development CA from the server's well-known endpoint.
-    /// Used by clients when no certificate file is configured.
-    /// </summary>
-    public int CertificateAuthorityPort { get; set; } = 35001;
 }

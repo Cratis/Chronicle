@@ -46,7 +46,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly bool _disableTls;
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
-    readonly int _certificateAuthorityPort;
+    readonly int _managementPort;
     X509Certificate2? _fetchedDevCa;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
@@ -70,7 +70,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
-    /// <param name="certificateAuthorityPort">Port used to fetch the development CA when no certificate is provided.</param>
+    /// <param name="managementPort">Port used to fetch the development CA and access the management API when no certificate is provided.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
         ChronicleConnectionString url,
@@ -85,7 +85,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         bool disableTls = false,
         string? certificatePath = null,
         string? certificatePassword = null,
-        int certificateAuthorityPort = 35001)
+        int managementPort = 8080)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
         _url = url;
@@ -100,7 +100,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _disableTls = disableTls;
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
-        _certificateAuthorityPort = certificateAuthorityPort;
+        _managementPort = managementPort;
 
         _cancellationToken.Register(() =>
         {
@@ -207,7 +207,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         if (!_disableTls && certificate is null)
         {
-            var wellKnownUrl = $"http://{_url.ServerAddress.Host}:{_certificateAuthorityPort}/.well-known/chronicle/ca";
+            var wellKnownUrl = $"http://{_url.ServerAddress.Host}:{_managementPort}/.well-known/chronicle/ca";
             try
             {
                 _logger.FetchingDevelopmentCa(wellKnownUrl);

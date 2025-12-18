@@ -22,10 +22,4 @@ public class Tls
     /// Gets or inits whether TLS is disabled. Default is false (TLS enabled).
     /// </summary>
     public bool Disable { get; init; }
-
-    /// <summary>
-    /// Port used by the development well-known certificate provisioning endpoint.
-    /// Only used in development mode when the server generates a dev CA and exposes the public cert.
-    /// </summary>
-    public int WellKnownCertPort { get; init; } = 35001;
 }

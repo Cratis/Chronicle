@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Api;
 public class ChronicleApiOptions
 {
     /// <summary>
-    /// Gets the port for the REST API.
+    /// Gets the port for the Management API.
     /// </summary>
-    public int ApiPort { get; init; } = 8080;
+    public int ManagementPort { get; init; } = 8080;
 }

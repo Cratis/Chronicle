@@ -1,5 +1,5 @@
 {
-    "apiPort": 8080,
+    "managementPort": 8080,
     "port": 35000,
     "features": {
         "api": true,

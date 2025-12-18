@@ -25,8 +25,7 @@ container.
     "tls": {
         "CertificatePath": "/path/to/certificate.pfx",
         "CertificatePassword": "your-password",
-        "Disable": false,   // Default is false (TLS enabled)
-        "WellKnownCertPort": 35001
+        "Disable": false   // Default is false (TLS enabled)
     }
 }
 ```
@@ -52,7 +51,7 @@ var options = new ChronicleOptions
     CertificatePath = "/path/to/certificate.pfx",
     CertificatePassword = "your-password",
     DisableTls = false,  // Default is false (TLS enabled)
-    CertificateAuthorityPort = 35001  // Port to fetch development CA from server
+    ManagementPort = 8080  // Port to fetch development CA from server (default: 8080)
 };
 
 var client = new ChronicleClient(options);
@@ -71,7 +70,7 @@ var client = new ChronicleClient(options);
 
 1. **ChronicleOptions.CertificatePath** - If specified and the file exists
 2. **Embedded Certificate** - If `Certs/shared-dev.pfx` exists and is not the placeholder
-3. **Development CA Fetch** - When no certificate is configured, the client fetches the development CA from `http://<server>:<CertificateAuthorityPort>/.well-known/chronicle/ca` and uses it for TLS validation
+3. **Development CA Fetch** - When no certificate is configured, the client fetches the development CA from `http://<server>:<ManagementPort>/.well-known/chronicle/ca` and uses it for TLS validation
 4. **No Certificate** - Trusts development certificates and accepts localhost certificate name mismatches
 
 ## Embedded Certificates
@@ -83,7 +82,7 @@ By default, both the server and client include a placeholder certificate file at
 **In development builds** (Development Docker Image):
 
 - The server automatically generates an ephemeral Certificate Authority (CA) and server certificate at startup
-- The CA certificate is exposed via HTTP at `http://<server>:<WellKnownCertPort>/.well-known/chronicle/ca` (default port: 35001)
+- The CA certificate is exposed via HTTP at `http://<server>:<ManagementPort>/.well-known/chronicle/ca` (default port: 8080)
 - Clients without a configured certificate automatically fetch and trust this development CA
 - No certificate files need to be created or distributed for local development
 - The generated certificates are kept in-memory only and regenerated on each server restart
@@ -151,11 +150,11 @@ When running in Debug configuration (with the `DEVELOPMENT` symbol defined):
    - Generates an ephemeral RSA key pair and creates a self-signed Certificate Authority (CA)
    - Creates a server certificate signed by the CA (subject: `CN=localhost`)
    - Configures Kestrel to use the generated server certificate for HTTPS
-   - Exposes the CA certificate (PEM format) at `/.well-known/chronicle/ca` on the configured `WellKnownCertPort` (default: 35001)
+   - Exposes the CA certificate (PEM format) at `/.well-known/chronicle/ca` on the configured `ManagementPort` (default: 8080)
    - Logs: `Generated development certificate and CA for local development`
 
 2. **Client connection**:
-   - If no certificate is configured, attempts to fetch the development CA from `http://<server>:<CertificateAuthorityPort>/.well-known/chronicle/ca`
+   - If no certificate is configured, attempts to fetch the development CA from `http://<server>:<ManagementPort>/.well-known/chronicle/ca`
    - If successful, uses the fetched CA in a custom trust store (via `X509ChainTrustMode.CustomRootTrust`)
    - Validates the server's TLS certificate against the fetched CA during the TLS handshake
    - Logs: `Fetching development CA from <url>`, `Fetched development CA from <url>`, `Using fetched development CA for validation`
