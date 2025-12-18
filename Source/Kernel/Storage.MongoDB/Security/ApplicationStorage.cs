@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// <param name="database">MongoDB database.</param>
 public class ApplicationStorage(IMongoDatabase database) : IApplicationStorage
 {
-    const string CollectionName = "oauth-applications";
+    const string CollectionName = WellKnownCollectionNames.Applications;
     readonly IMongoCollection<Application> _collection = database.GetCollection<Application>(CollectionName);
 
     /// <inheritdoc/>

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// <param name="database">MongoDB database.</param>
 public class ScopeStorage(IMongoDatabase database) : IScopeStorage
 {
-    const string CollectionName = "oauth-scopes";
+    const string CollectionName = WellKnownCollectionNames.Scopes;
     readonly IMongoCollection<Scope> _collection = database.GetCollection<Scope>(CollectionName);
 
     /// <inheritdoc/>

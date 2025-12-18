@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// <param name="database">The MongoDB database.</param>
 public class ClientCredentialsStorage(IMongoDatabase database) : IClientCredentialsStorage
 {
-    const string CollectionName = "clients";
+    const string CollectionName = WellKnownCollectionNames.Clients;
     readonly IMongoCollection<ChronicleClient> _collection = database.GetCollection<ChronicleClient>(CollectionName);
 
     /// <inheritdoc/>

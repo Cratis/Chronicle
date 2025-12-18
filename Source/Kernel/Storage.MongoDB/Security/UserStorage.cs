@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// <param name="database"><see cref="IDatabase"/> to use for accessing database.</param>
 public class UserStorage(IDatabase database) : IUserStorage
 {
-    const string CollectionName = "users";
+    const string CollectionName = WellKnownCollectionNames.Users;
 
     /// <inheritdoc/>
     public async Task<ChronicleUser?> GetById(string id)

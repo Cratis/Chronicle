@@ -9,7 +9,7 @@ using var loggerFactory = LoggerFactory
     .Create(static builder => builder
         .AddConsole());
 
-var options = ChronicleOptions.FromConnectionString("chronicle://admin:ChangeMeNow!@localhost:35000");
+var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
 options.LoggerFactory = loggerFactory;
 Console.WriteLine("Connecting to Chronicle...");
 using var client = new ChronicleClient(options);

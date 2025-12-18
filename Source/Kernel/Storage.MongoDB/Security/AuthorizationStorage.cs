@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// <param name="database">MongoDB database.</param>
 public class AuthorizationStorage(IMongoDatabase database) : IAuthorizationStorage
 {
-    const string CollectionName = "oauth-authorizations";
+    const string CollectionName = WellKnownCollectionNames.Authorizations;
     readonly IMongoCollection<Authorization> _collection = database.GetCollection<Authorization>(CollectionName);
 
     /// <inheritdoc/>
