@@ -178,6 +178,7 @@ public class EventSequenceStorage(
         {
             session.StartTransaction();
             var collection = _collection;
+            var eventsToInsert = new List<Event>();
             var appendedEvents = new List<AppendedEvent>();
 
             foreach (var eventToAppend in eventsArray)
@@ -202,7 +203,7 @@ public class EventSequenceStorage(
                     },
                     []);
 
-                await collection.InsertOneAsync(session, @event).ConfigureAwait(false);
+                eventsToInsert.Add(@event);
 
                 appendedEvents.Add(new AppendedEvent(
                     new(
@@ -220,6 +221,8 @@ public class EventSequenceStorage(
                         await identityStorage.GetFor(eventToAppend.CausedByChain)),
                     eventToAppend.Content));
             }
+
+            await collection.InsertManyAsync(session, eventsToInsert).ConfigureAwait(false);
 
             await session.CommitTransactionAsync().ConfigureAwait(false);
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
