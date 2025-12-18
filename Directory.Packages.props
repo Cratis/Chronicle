@@ -30,6 +30,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.1.0" />
@@ -70,7 +71,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.260" />
     <!-- Not categorized -->
-    <PackageVersion Include="OpenIddict.AspNetCore" Version="6.0.0" />   
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="6.0.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.6" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
     <PackageVersion Include="docfx.console" Version="2.59.4" />
