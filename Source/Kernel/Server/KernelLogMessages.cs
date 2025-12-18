@@ -16,7 +16,4 @@ internal static partial class KernelLogMessages
 
     [LoggerMessage(4, LogLevel.Error, "Failed serving development CA endpoint")]
     internal static partial void FailedServingDevelopmentCa(this ILogger<Kernel> logger, Exception ex);
-
-    [LoggerMessage(5, LogLevel.Information, "No development CA available to serve")]
-    internal static partial void NoDevelopmentCa(this ILogger<Kernel> logger);
 }

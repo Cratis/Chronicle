@@ -12,6 +12,7 @@ using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -129,6 +130,14 @@ builder.Host
        services.AddChronicleAuthentication(chronicleOptions);
    });
 
+if (chronicleOptions.Authentication.Enabled)
+{
+    builder.Services.AddAuthorizationBuilder()
+        .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build());
+}
+
 var app = builder.Build();
 
 // Initialize default admin user if authentication is enabled
@@ -186,7 +195,7 @@ if (chronicleOptions.Features.OAuthAuthority)
 
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
-app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
+app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
 
 #if DEVELOPMENT
 app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
@@ -201,21 +210,16 @@ app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
     // As a fallback, attempt to materialize a development cert (DEVELOPMENT only) or return empty.
     try
     {
-#if DEVELOPMENT
         var cert = DevCertificateProvider.EnsureDevCertificate();
         logger.ServingDevelopmentCa(chronicleOptions.ManagementPort);
         return Results.Text(cert.CaPem ?? string.Empty, "application/x-pem-file");
-#else
-        logger.NoDevelopmentCa();
-        return Results.Text(string.Empty, "application/x-pem-file");
-#endif
     }
     catch (Exception ex)
     {
         logger.FailedServingDevelopmentCa(ex);
         return Results.Text(string.Empty, "application/x-pem-file");
     }
-});
+}).AllowAnonymous();
 #endif
 
 using var cancellationToken = new CancellationTokenSource();

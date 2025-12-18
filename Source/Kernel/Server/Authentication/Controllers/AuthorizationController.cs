@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.ClientCredentials;
 using Cratis.Chronicle.Storage.Users;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 /// <param name="clientCredentialsStorage">The client credentials storage.</param>
 [ApiController]
 [Route("connect")]
+[AllowAnonymous]
 public class AuthorizationController(
     UserManager<ChronicleUser> userManager,
     SignInManager<ChronicleUser> signInManager,
