@@ -190,6 +190,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 options.Url.ServerAddress,
                 options.Authentication.Username,
                 options.Authentication.Password,
+                options.ManagementPort,
+                options.Tls.Disable,
                 options.LoggerFactory.CreateLogger<OAuthTokenProvider>());
         }
 

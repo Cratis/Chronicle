@@ -19,6 +19,9 @@ internal static partial class OAuthTokenProviderLogMessages
     [LoggerMessage(LogLevel.Information, "Successfully obtained access token, expires in {ExpiresIn} seconds")]
     internal static partial void ObtainedAccessToken(this ILogger<OAuthTokenProvider> logger, int expiresIn);
 
+    [LoggerMessage(LogLevel.Error, "Token request failed with status {StatusCode} ({ReasonPhrase}): {ErrorContent}")]
+    internal static partial void TokenRequestFailed(this ILogger<OAuthTokenProvider> logger, int statusCode, string reasonPhrase, string errorContent);
+
     [LoggerMessage(LogLevel.Error, "Failed to obtain access token from {Endpoint}")]
     internal static partial void FailedToObtainAccessToken(this ILogger<OAuthTokenProvider> logger, string endpoint, Exception ex);
 }

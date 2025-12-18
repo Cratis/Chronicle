@@ -26,14 +26,19 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="serverAddress">The Chronicle server address.</param>
     /// <param name="clientId">The OAuth client ID.</param>
     /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="managementPort">The management port where the token endpoint is hosted.</param>
+    /// <param name="disableTls">Whether to disable TLS for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
     public OAuthTokenProvider(
         ChronicleServerAddress serverAddress,
         string clientId,
         string clientSecret,
+        int managementPort,
+        bool disableTls,
         ILogger<OAuthTokenProvider> logger)
     {
-        _tokenEndpoint = $"http://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+        var scheme = disableTls ? "http" : "https";
+        _tokenEndpoint = $"{scheme}://{serverAddress.Host}:{managementPort}/connect/token";
         _clientId = clientId;
         _clientSecret = clientSecret;
         _logger = logger;
@@ -69,7 +74,13 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             });
 
             var response = await _httpClient.PostAsync(_tokenEndpoint, content, cancellationToken);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.TokenRequestFailed((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+                response.EnsureSuccessStatusCode();
+            }
 
             var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
             using var document = JsonDocument.Parse(responseContent);
