@@ -66,7 +66,22 @@ builder.WebHost.UseKestrel(options =>
 #endif
 
     // Always listen on ManagementPort for API and well-known certificate endpoint
-    options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1;
+
+        if (!chronicleOptions.Tls.Disable)
+        {
+            if (developmentServerCertificate is not null)
+            {
+                listenOptions.UseHttps(developmentServerCertificate);
+            }
+            else
+            {
+                listenOptions.UseHttps();
+            }
+        }
+    });
 
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
