@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +18,8 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     readonly string _clientSecret;
     readonly ILogger<OAuthTokenProvider> _logger;
     readonly SemaphoreSlim _refreshLock = new(1, 1);
-    readonly HttpClient _httpClient = new();
+    readonly HttpClient _httpClient;
+    readonly HttpMessageHandler _httpMessageHandler;
     string? _accessToken;
     DateTimeOffset _tokenExpiry = DateTimeOffset.MinValue;
 
@@ -43,6 +46,31 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         _clientSecret = clientSecret;
         _logger = logger;
 
+        var handler = new SocketsHttpHandler
+        {
+            SslOptions = new SslClientAuthenticationOptions
+            {
+                RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) =>
+                {
+                    if (sslPolicyErrors == SslPolicyErrors.None)
+                    {
+                        return true;
+                    }
+
+                    // Accept self-signed certificates in development
+                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors && chain?.ChainStatus.All(status => status.Status == X509ChainStatusFlags.PartialChain) == true)
+                    {
+                        _logger.AcceptingSelfSignedCertificate(certificate?.Subject ?? "unknown");
+                        return true;
+                    }
+
+                    _logger.CertificateValidationFailed(sslPolicyErrors.ToString());
+                    return false;
+                }
+            }
+        };
+        _httpMessageHandler = handler;
+        _httpClient = new HttpClient(handler);
         _logger.InitializingTokenProvider(_tokenEndpoint);
     }
 
@@ -80,6 +108,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.TokenRequestFailed((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
                 response.EnsureSuccessStatusCode();
+                _httpMessageHandler.Dispose();
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);

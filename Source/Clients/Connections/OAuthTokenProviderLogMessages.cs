@@ -24,4 +24,10 @@ internal static partial class OAuthTokenProviderLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to obtain access token from {Endpoint}")]
     internal static partial void FailedToObtainAccessToken(this ILogger<OAuthTokenProvider> logger, string endpoint, Exception ex);
+
+    [LoggerMessage(LogLevel.Warning, "Accepting self-signed certificate for {CertificateSubject} (development mode)")]
+    internal static partial void AcceptingSelfSignedCertificate(this ILogger<OAuthTokenProvider> logger, string certificateSubject);
+
+    [LoggerMessage(LogLevel.Error, "Certificate validation failed: {SslPolicyErrors}")]
+    internal static partial void CertificateValidationFailed(this ILogger<OAuthTokenProvider> logger, string sslPolicyErrors);
 }
