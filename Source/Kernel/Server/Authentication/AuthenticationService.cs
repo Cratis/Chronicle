@@ -6,7 +6,6 @@ using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
-using StorageChronicleClient = Cratis.Chronicle.Storage.Security.ChronicleClient;
 
 namespace Cratis.Chronicle.Server.Authentication;
 
@@ -17,12 +16,10 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Initializes a new instance of the <see cref="AuthenticationService"/> class.
 /// </remarks>
 /// <param name="userStorage">The user storage.</param>
-/// <param name="clientCredentialsStorage">The client credentials storage.</param>
 /// <param name="applicationStorage">The application storage.</param>
 /// <param name="options">Chronicle options.</param>
 public class AuthenticationService(
     IUserStorage userStorage,
-    IClientCredentialsStorage clientCredentialsStorage,
     IApplicationStorage applicationStorage,
     IOptions<Configuration.ChronicleOptions> options) : IAuthenticationService
 {
@@ -74,27 +71,15 @@ public class AuthenticationService(
         const string defaultClientId = "chronicle-dev-client";
         const string defaultClientSecret = "chronicle-dev-secret";
 
-        var existingClient = await clientCredentialsStorage.GetByClientId(defaultClientId);
-        if (existingClient is not null)
+        var existingApplication = await applicationStorage.GetByClientId(defaultClientId);
+        if (existingApplication is not null)
         {
             return;
         }
 
-        var now = DateTimeOffset.UtcNow;
         var clientSecretHash = HashPassword(defaultClientSecret);
 
-        // Create ChronicleClient for client_credentials flow
-        var client = new StorageChronicleClient(
-            Id: Guid.NewGuid().ToString(),
-            ClientId: defaultClientId,
-            ClientSecret: clientSecretHash,
-            IsActive: true,
-            CreatedAt: now,
-            LastModifiedAt: null);
-
-        await clientCredentialsStorage.Create(client);
-
-        // Create corresponding Application entity for OpenIddict
+        // Create Application entity for OpenIddict (handles all OAuth flows including client_credentials)
         var application = new Application(
             Id: Guid.NewGuid().ToString(),
             ClientId: defaultClientId,
@@ -102,7 +87,8 @@ public class AuthenticationService(
             DisplayName: "Chronicle Development Client",
             Type: OpenIddictConstants.ClientTypes.Confidential,
             ConsentType: OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions: [
+            Permissions:
+            [
                 OpenIddictConstants.Permissions.Endpoints.Token,
                 OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
                 OpenIddictConstants.Permissions.GrantTypes.Password,

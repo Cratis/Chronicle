@@ -6,7 +6,6 @@ using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -20,14 +19,14 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 /// </summary>
 /// <param name="userManager">The user manager.</param>
 /// <param name="signInManager">The sign-in manager.</param>
-/// <param name="clientCredentialsStorage">The client credentials storage.</param>
+/// <param name="applicationManager">The OpenIddict application manager.</param>
 [ApiController]
 [Route("connect")]
 [AllowAnonymous]
 public class AuthorizationController(
     UserManager<ChronicleUser> userManager,
     SignInManager<ChronicleUser> signInManager,
-    IClientCredentialsStorage clientCredentialsStorage) : ControllerBase
+    IOpenIddictApplicationManager applicationManager) : ControllerBase
 {
     /// <summary>
     /// Handles token requests.
@@ -43,44 +42,22 @@ public class AuthorizationController(
 
         if (request.IsClientCredentialsGrantType())
         {
-            // In client_credentials flow, the client_id and client_secret are the credentials
-            var clientId = request.ClientId ?? string.Empty;
-            var clientSecret = request.ClientSecret ?? string.Empty;
-
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            // OpenIddict handles client validation automatically through ApplicationStore
+            // We just need to create the claims identity
+            var application = await applicationManager.FindByClientIdAsync(request.ClientId ?? string.Empty);
+            if (application == null)
             {
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client application was not found."
                     }),
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
-            var client = await clientCredentialsStorage.GetByClientId(clientId);
-            if (client?.IsActive != true)
-            {
-                return Forbid(
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
-                    }),
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
-
-            // Verify the client secret
-            if (!VerifySecret(clientSecret, client.ClientSecret))
-            {
-                return Forbid(
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client credentials are invalid."
-                    }),
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
+            var applicationId = await applicationManager.GetIdAsync(application);
+            var clientId = await applicationManager.GetClientIdAsync(application);
 
             // Create the claims-based identity for the client
             var identity = new ClaimsIdentity(
@@ -88,8 +65,8 @@ public class AuthorizationController(
                 nameType: OpenIddictConstants.Claims.Name,
                 roleType: OpenIddictConstants.Claims.Role);
 
-            identity.AddClaim(OpenIddictConstants.Claims.Subject, client.Id);
-            identity.AddClaim(OpenIddictConstants.Claims.Name, client.ClientId);
+            identity.AddClaim(OpenIddictConstants.Claims.Subject, applicationId ?? string.Empty);
+            identity.AddClaim(OpenIddictConstants.Claims.Name, clientId ?? string.Empty);
 
             identity.SetScopes(request.GetScopes());
             identity.SetDestinations(GetDestinations);
@@ -190,27 +167,6 @@ public class AuthorizationController(
         }
 
         throw new InvalidOperationException("The specified grant type is not supported.");
-    }
-
-    static bool VerifySecret(string secret, string hashedSecret)
-    {
-        var parts = hashedSecret.Split(':');
-        if (parts.Length != 2)
-        {
-            return false;
-        }
-
-        var salt = Convert.FromBase64String(parts[0]);
-        var hash = Convert.FromBase64String(parts[1]);
-
-        var testHash = KeyDerivation.Pbkdf2(
-            password: secret,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8);
-
-        return hash.SequenceEqual(testHash);
     }
 
     static IEnumerable<string> GetDestinations(Claim claim) => claim.Type switch

@@ -24,7 +24,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         services.AddSingleton<IUserStorage, UserStorage>();
-        services.AddSingleton<IClientCredentialsStorage, ClientCredentialsStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
         services.AddSingleton<IUserStore<ChronicleUser>, ChronicleUserStore>();
 
