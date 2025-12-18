@@ -4,6 +4,7 @@
 #pragma warning disable IDE0005 // Using directive is unnecessary
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using OneOf.Types;
 
@@ -23,7 +24,7 @@ internal static class WebhookDefinitionConverters
         new(
             webhookDefinition.Identifier,
             WebhookOwner.Client,
-            webhookDefinition.EventSequenceId,
+            string.IsNullOrEmpty(webhookDefinition.EventSequenceId) ? EventSequenceId.Log : webhookDefinition.EventSequenceId,
             webhookDefinition.EventTypes.Select(_ => _.ToChronicle()),
             webhookDefinition.Target.ToChronicle(),
             webhookDefinition.IsReplayable,
