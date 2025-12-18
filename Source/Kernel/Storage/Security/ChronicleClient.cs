@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Storage.ClientCredentials;
+namespace Cratis.Chronicle.Storage.Security;
 
 /// <summary>
 /// Represents a client credential for OAuth client_credentials flow.

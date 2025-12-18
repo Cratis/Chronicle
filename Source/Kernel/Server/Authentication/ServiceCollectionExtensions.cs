@@ -2,12 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
-using Cratis.Chronicle.Storage.ClientCredentials;
-using Cratis.Chronicle.Storage.MongoDB.ClientCredentials;
 using Cratis.Chronicle.Storage.MongoDB.Security;
-using Cratis.Chronicle.Storage.MongoDB.Users;
 using Cratis.Chronicle.Storage.Security;
-using Cratis.Chronicle.Storage.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Validation.AspNetCore;

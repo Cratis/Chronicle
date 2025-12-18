@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Users;
+using Cratis.Chronicle.Storage.Security;
 using MongoDB.Driver;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Users;
+namespace Cratis.Chronicle.Storage.MongoDB.Security;
 
 /// <summary>
 /// Represents an implementation of <see cref="IUserStorage"/> for MongoDB.
