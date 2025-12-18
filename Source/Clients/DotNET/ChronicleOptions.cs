@@ -144,6 +144,11 @@ public class ChronicleOptions(
     public Tls Tls { get; set; } = new Tls();
 
     /// <summary>
+    /// Gets or sets the authentication configuration.
+    /// </summary>
+    public Authentication Authentication { get; set; } = new Authentication();
+
+    /// <summary>
     /// Gets or sets the port for the Management API and well-known certificate endpoint.
     /// </summary>
     public int ManagementPort { get; set; } = 8080;
@@ -165,6 +170,13 @@ public class ChronicleOptions(
         Tls = new Tls
         {
             Disable = connectionString.DisableTls
+        },
+        Authentication = new Authentication
+        {
+            Mode = connectionString.AuthenticationMode,
+            ApiKey = connectionString.ApiKey ?? string.Empty,
+            Username = connectionString.Username ?? string.Empty,
+            Password = connectionString.Password ?? string.Empty
         }
     };
 }
