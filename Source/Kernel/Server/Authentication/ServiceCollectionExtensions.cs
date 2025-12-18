@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage.ClientCredentials;
 using Cratis.Chronicle.Storage.MongoDB.ClientCredentials;
+using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.MongoDB.Users;
+using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Storage.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +32,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
         services.AddSingleton<IUserStore<ChronicleUser>, ChronicleUserStore>();
 
+        // Add Security storage implementations for OpenIddict
+        services.AddSingleton<IApplicationStorage, ApplicationStorage>();
+        services.AddSingleton<IAuthorizationStorage, AuthorizationStorage>();
+        services.AddSingleton<IScopeStorage, ScopeStorage>();
+        services.AddSingleton<ITokenStorage, TokenStorage>();
+
         // Add ASP.NET Identity
         services.AddIdentity<ChronicleUser, IdentityRole>(options =>
         {
@@ -47,21 +56,30 @@ public static class ServiceCollectionExtensions
         if (chronicleOptions.Features.OAuthAuthority)
         {
             services.AddOpenIddict()
+                .AddCore(options =>
+                {
+                    // Use Chronicle's storage with proper OpenIddict stores
+                    options.AddApplicationStore<ApplicationStore>()
+                        .AddAuthorizationStore<AuthorizationStore>()
+                        .AddScopeStore<ScopeStore>()
+                        .AddTokenStore<TokenStore>()
+                        .SetDefaultApplicationEntity<Application>()
+                        .SetDefaultAuthorizationEntity<Authorization>()
+                        .SetDefaultScopeEntity<Scope>()
+                        .SetDefaultTokenEntity<Token>();
+                })
                 .AddServer(options =>
                 {
                     // Enable the token endpoint
                     options.SetTokenEndpointUris("/connect/token");
 
-                    // Enable the password flow and client credentials flow
+                    // Enable flows
                     options.AllowPasswordFlow();
                     options.AllowClientCredentialsFlow();
                     options.AllowRefreshTokenFlow();
 
                     // Accept anonymous clients for password flow, but require client_id for client_credentials
                     options.AcceptAnonymousClients();
-
-                    // Disable application/authorization management as we use custom storage
-                    options.DisableScopeValidation();
 
                     // Register the signing and encryption credentials
                     options.AddDevelopmentEncryptionCertificate()
