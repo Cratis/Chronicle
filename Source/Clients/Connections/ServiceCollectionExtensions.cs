@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
                 new Cratis.Tasks.TaskFactory(),
                 correlationIdAccessor,
                 sp.GetRequiredService<ILogger<ChronicleConnection>>(),
+                sp.GetRequiredService<ILoggerFactory>(),
                 lifetime.ApplicationStopping);
         });
 

@@ -62,6 +62,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
 
+        var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
             options.Url,
@@ -72,11 +73,13 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new Tasks.TaskFactory(),
             options.CorrelationIdAccessor,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
+            options.LoggerFactory,
             CancellationToken.None,
             options.Tls.Disable,
             options.Tls.CertificatePath,
             options.Tls.CertificatePassword,
-            options.ManagementPort);
+            options.ManagementPort,
+            tokenProvider);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
@@ -177,6 +180,20 @@ public class ChronicleClient : IChronicleClient, IDisposable
         InitializeJsonSerializationOptions();
 
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
+    }
+
+    ITokenProvider CreateTokenProvider(ChronicleOptions options)
+    {
+        if (options.Authentication.Mode == AuthenticationMode.ClientCredentials)
+        {
+            return new OAuthTokenProvider(
+                options.Url.ServerAddress,
+                options.Authentication.Username,
+                options.Authentication.Password,
+                options.LoggerFactory.CreateLogger<OAuthTokenProvider>());
+        }
+
+        return new NoOpTokenProvider();
     }
 
     void InitializeJsonSerializationOptions()

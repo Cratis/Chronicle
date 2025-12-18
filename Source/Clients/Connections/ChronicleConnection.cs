@@ -43,10 +43,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
+    readonly ILoggerFactory _loggerFactory;
     readonly bool _disableTls;
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
     readonly int _managementPort;
+    readonly ITokenProvider _tokenProvider;
     X509Certificate2? _fetchedDevCa;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
@@ -65,12 +67,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
-    /// <param name="logger">Logger for logging.</param>
+    /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
     /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
     /// <param name="managementPort">Port used to fetch the development CA and access the management API when no certificate is provided.</param>
+    /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
         ChronicleConnectionString url,
@@ -81,11 +84,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ITaskFactory tasks,
         ICorrelationIdAccessor correlationIdAccessor,
         ILogger<ChronicleConnection> logger,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken,
         bool disableTls = false,
         string? certificatePath = null,
         string? certificatePassword = null,
-        int managementPort = 8080)
+        int managementPort = 8080,
+        ITokenProvider? tokenProvider = null)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
         _url = url;
@@ -97,10 +102,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
         _logger = logger;
+        _loggerFactory = loggerFactory;
         _disableTls = disableTls;
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _managementPort = managementPort;
+        _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
 
         _cancellationToken.Register(() =>
         {
@@ -131,6 +138,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
         _fetchedDevCa?.Dispose();
+        if (_tokenProvider is IDisposable disposableTokenProvider)
+        {
+            disposableTokenProvider.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -147,7 +158,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         _channel = CreateGrpcChannel();
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
-        var callInvoker = _channel.Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
+        var callInvoker = _channel
+            .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
+            .Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
         _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
