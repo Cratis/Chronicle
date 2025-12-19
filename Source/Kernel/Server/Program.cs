@@ -158,6 +158,9 @@ builder.Host
 if (chronicleOptions.Authentication.Enabled)
 {
     builder.Services.AddAuthorizationBuilder()
+
+        // Require authentication for all endpoints except those with [AllowAnonymous]
+        // This applies zero-trust security across all gRPC services and HTTP endpoints
         .SetFallbackPolicy(new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build());
