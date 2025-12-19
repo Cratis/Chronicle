@@ -73,10 +73,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
-    /// <param name="managementPort">Port used to access the management API when no certificate is provided.</param>
     /// <param name="developmentCertificatePort">Port used to fetch the development CA over HTTP. Default is 35001.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
         ChronicleConnectionString url,
         int connectTimeout,
@@ -91,7 +91,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         bool disableTls = false,
         string? certificatePath = null,
         string? certificatePassword = null,
-        int managementPort = 8080,
         int developmentCertificatePort = 35001,
         ITokenProvider? tokenProvider = null)
     {
@@ -120,6 +119,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             _channel?.Dispose();
         });
     }
+#pragma warning restore CA1068 // CancellationToken parameters must come last
 #pragma warning restore CS8618
 
     /// <inheritdoc/>

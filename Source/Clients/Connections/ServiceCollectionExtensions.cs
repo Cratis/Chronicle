@@ -47,9 +47,9 @@ public static class ServiceCollectionExtensions
                 connectionLifecycle,
                 new Cratis.Tasks.TaskFactory(),
                 correlationIdAccessor,
-                sp.GetRequiredService<ILogger<ChronicleConnection>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
-                lifetime.ApplicationStopping);
+                lifetime.ApplicationStopping,
+                sp.GetRequiredService<ILogger<ChronicleConnection>>());
         });
 
         services.AddSingleton(sp =>

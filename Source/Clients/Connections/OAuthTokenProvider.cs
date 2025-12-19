@@ -140,5 +140,6 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     {
         _httpClient.Dispose();
         _refreshLock.Dispose();
+        _httpMessageHandler.Dispose();
     }
 }
