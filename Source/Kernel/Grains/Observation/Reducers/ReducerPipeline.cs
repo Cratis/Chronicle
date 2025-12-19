@@ -59,20 +59,12 @@ public class ReducerPipeline(
 
         if (changeset.HasChanges)
         {
-            var applyResult = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber);
-            
-            if (applyResult.TryGetException(out var exception))
-            {
-                throw exception;
-            }
+            var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber);
 
-            if (applyResult.TryGetResult(out var failedPartitions))
+            if (failedPartitions.Any())
             {
-                if (failedPartitions.Any())
-                {
-                    var firstFailure = failedPartitions.First();
-                    throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
-                }
+                var firstFailure = failedPartitions.First();
+                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
             }
         }
     }

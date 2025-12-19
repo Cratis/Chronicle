@@ -34,20 +34,12 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
         logger.SavingResult(context.Event.Context.SequenceNumber);
 
         // TODO: Return the number of affected records and pass this along to the changeset storage
-        var applyResult = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
-        
-        if (applyResult.TryGetException(out var exception))
-        {
-            throw exception;
-        }
+        var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
 
-        if (applyResult.TryGetResult(out var failedPartitions))
+        if (failedPartitions.Any())
         {
-            if (failedPartitions.Any())
-            {
-                var firstFailure = failedPartitions.First();
-                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
-            }
+            var firstFailure = failedPartitions.First();
+            throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
         }
 
         await changesetStorage.Save(

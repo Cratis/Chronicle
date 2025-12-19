@@ -51,8 +51,8 @@ public interface ISink
     /// <param name="key">Key of the read model to upsert.</param>
     /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
     /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
-    /// <returns>A <see cref="Result{T}"/> with a collection of <see cref="FailedPartition"/> if any partitions failed.</returns>
-    Task<Result<IEnumerable<FailedPartition>>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
+    /// <returns>A collection of <see cref="FailedPartition"/> if any partitions failed.</returns>
+    Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
 
     /// <summary>
     /// Begin bulk operation mode.
