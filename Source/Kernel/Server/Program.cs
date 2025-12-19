@@ -179,13 +179,6 @@ if (chronicleOptions.Authentication.Enabled)
 
 app.UseRouting();
 
-// Add authentication and authorization middleware if authentication is enabled
-if (chronicleOptions.Authentication.Enabled)
-{
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
-
 // Log about development certificate generation / exposure when available
 try
 {
@@ -201,7 +194,15 @@ catch (Exception ex)
     // Swallow logging errors to avoid bringing down the host; still write to console for visibility
     Console.WriteLine($"Failed to log development certificate info: {ex.Message}");
 }
-app.UseRouting();
+
+// Add authentication and authorization middleware AFTER routing but BEFORE endpoints
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.UseMiddleware<GrpcAuthenticationMiddleware>();
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.UseCratisArc();
 
 if (chronicleOptions.Features.Api)
