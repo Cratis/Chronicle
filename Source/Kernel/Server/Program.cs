@@ -83,6 +83,16 @@ builder.WebHost.UseKestrel(options =>
         }
     });
 
+#if DEVELOPMENT
+    // In development, also listen on TLS.DevelopmentCertificatePort for HTTP-only access to well-known endpoints
+    // This allows clients to fetch the development CA without chicken-and-egg TLS problems
+    options.ListenAnyIP(chronicleOptions.Tls.DevelopmentCertificatePort, listenOptions =>
+    {
+        // No TLS - HTTP only for fetching CA certificate
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+    });
+#endif
+
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
@@ -223,7 +233,7 @@ app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
     // Log and return the in-memory development CA if available.
     if (!string.IsNullOrEmpty(developmentCaPem))
     {
-        logger.ServingDevelopmentCa(chronicleOptions.ManagementPort);
+        logger.ServingDevelopmentCa(chronicleOptions.Tls.DevelopmentCertificatePort);
         return Results.Text(developmentCaPem, "application/x-pem-file");
     }
 
@@ -231,7 +241,7 @@ app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
     try
     {
         var cert = DevCertificateProvider.EnsureDevCertificate();
-        logger.ServingDevelopmentCa(chronicleOptions.ManagementPort);
+        logger.ServingDevelopmentCa(chronicleOptions.Tls.DevelopmentCertificatePort);
         return Results.Text(cert.CaPem ?? string.Empty, "application/x-pem-file");
     }
     catch (Exception ex)

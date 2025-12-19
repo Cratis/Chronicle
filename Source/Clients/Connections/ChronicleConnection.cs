@@ -48,6 +48,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
     readonly int _managementPort;
+    readonly int _developmentCertificatePort;
     readonly ITokenProvider _tokenProvider;
     X509Certificate2? _fetchedDevCa;
     GrpcChannel? _channel;
@@ -72,7 +73,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
-    /// <param name="managementPort">Port used to fetch the development CA and access the management API when no certificate is provided.</param>
+    /// <param name="managementPort">Port used to access the management API when no certificate is provided.</param>
+    /// <param name="developmentCertificatePort">Port used to fetch the development CA over HTTP. Default is 35001.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public ChronicleConnection(
@@ -90,6 +92,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         string? certificatePath = null,
         string? certificatePassword = null,
         int managementPort = 8080,
+        int developmentCertificatePort = 35001,
         ITokenProvider? tokenProvider = null)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
@@ -107,6 +110,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _managementPort = managementPort;
+        _developmentCertificatePort = developmentCertificatePort;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
 
         _cancellationToken.Register(() =>
@@ -220,11 +224,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         if (!_disableTls && certificate is null)
         {
-            var wellKnownUrl = $"http://{_url.ServerAddress.Host}:{_managementPort}/.well-known/chronicle/ca";
+            // In development, fetch CA from HTTP-only port
+            // In production, this would fail and fall back to default validation
+            var wellKnownUrl = $"http://{_url.ServerAddress.Host}:{_developmentCertificatePort}/.well-known/chronicle/ca";
             try
             {
                 _logger.FetchingDevelopmentCa(wellKnownUrl);
-                using var http = new HttpClient();
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                 var pem = http.GetStringAsync(wellKnownUrl).GetAwaiter().GetResult();
                 if (!string.IsNullOrWhiteSpace(pem))
                 {
