@@ -36,6 +36,12 @@ public class ReducerPipeline(
     public Task EndReplay(ReplayContext context) => Sink.EndReplay(context);
 
     /// <inheritdoc/>
+    public Task BeginBulk() => Sink.BeginBulk();
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Sink.EndBulk();
+
+    /// <inheritdoc/>
     public async Task Handle(ReducerContext context, ReducerDelegate reducer)
     {
         var initial = await Sink.FindOrDefault(context.Key);

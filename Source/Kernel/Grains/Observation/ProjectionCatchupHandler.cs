@@ -22,15 +22,15 @@ public class ProjectionCatchupHandler(
 {
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> BeginCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, pipeline => pipeline.Sink.BeginBulk());
+        DoWork(observerDetails, pipeline => pipeline.BeginBulk());
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> ResumeCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, pipeline => pipeline.Sink.BeginBulk());
+        DoWork(observerDetails, pipeline => pipeline.BeginBulk());
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> EndCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, pipeline => pipeline.Sink.EndBulk());
+        DoWork(observerDetails, pipeline => pipeline.EndBulk());
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
