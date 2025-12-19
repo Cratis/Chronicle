@@ -11,6 +11,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
@@ -36,6 +37,13 @@ public class Sink(
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter) : ISink
 {
+    const int MaxBulkOperations = 1000;
+    const int MaxBulkSizeInBytes = 48 * 1024 * 1024; // 48MB
+
+    readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
+    readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
+    int _currentBulkSize;
+    bool _isBulkMode;
     /// <inheritdoc/>
     public SinkTypeName Name => "MongoDB";
 
@@ -58,7 +66,7 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task ApplyChanges(
+    public async Task<Result<IEnumerable<Storage.Sinks.FailedPartition>>> ApplyChanges(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         EventSequenceNumber eventSequenceNumber)
@@ -69,8 +77,16 @@ public class Sink(
 
         if (changeset.HasBeenRemoved())
         {
-            await Collection.DeleteOneAsync(filter);
-            return;
+            if (_isBulkMode)
+            {
+                AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
+                return await FlushBulkIfNeeded();
+            }
+            else
+            {
+                await Collection.DeleteOneAsync(filter);
+                return Array.Empty<Storage.Sinks.FailedPartition>();
+            }
         }
 
         // Run through and remove all children affected by ChildRemovedFromAll
@@ -80,16 +96,53 @@ public class Sink(
         }
 
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
-        if (!converted.hasChanges) return;
+        if (!converted.hasChanges) return Array.Empty<Storage.Sinks.FailedPartition>();
 
-        await Collection.UpdateOneAsync(
-            filter,
-            converted.UpdateDefinition,
-            new UpdateOptions
+        if (_isBulkMode)
+        {
+            var updateModel = new UpdateOneModel<BsonDocument>(filter, converted.UpdateDefinition)
             {
                 IsUpsert = true,
                 ArrayFilters = converted.ArrayFilters
-            });
+            };
+            AddToBulk(updateModel, key, eventSequenceNumber);
+            return await FlushBulkIfNeeded();
+        }
+        else
+        {
+            await Collection.UpdateOneAsync(
+                filter,
+                converted.UpdateDefinition,
+                new UpdateOptions
+                {
+                    IsUpsert = true,
+                    ArrayFilters = converted.ArrayFilters
+                });
+            return Array.Empty<Storage.Sinks.FailedPartition>();
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task BeginBulk()
+    {
+        _isBulkMode = true;
+        _bulkOperations.Clear();
+        _bulkOperationMetadata.Clear();
+        _currentBulkSize = 0;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task EndBulk()
+    {
+        if (_bulkOperations.Count > 0)
+        {
+            await ExecuteBulk();
+        }
+        _isBulkMode = false;
+        _bulkOperations.Clear();
+        _bulkOperationMetadata.Clear();
+        _currentBulkSize = 0;
     }
 
     /// <inheritdoc/>
@@ -99,17 +152,20 @@ public class Sink(
     public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         await collections.BeginReplay(context);
+        await BeginBulk();
     }
 
     /// <inheritdoc/>
     public async Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
         await collections.ResumeReplay(context);
+        await BeginBulk();
     }
 
     /// <inheritdoc/>
     public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
     {
+        await EndBulk();
         await collections.EndReplay(context);
     }
 
@@ -181,6 +237,70 @@ public class Sink(
             }
         });
         return indexNames;
+    }
+
+    void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
+    {
+        var operationIndex = _bulkOperations.Count;
+        _bulkOperations.Add(operation);
+        _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
+
+        var estimatedSize = EstimateOperationSize(operation);
+        _currentBulkSize += estimatedSize;
+    }
+
+    async Task<Result<IEnumerable<Storage.Sinks.FailedPartition>>> FlushBulkIfNeeded()
+    {
+        if (_bulkOperations.Count >= MaxBulkOperations || _currentBulkSize >= MaxBulkSizeInBytes)
+        {
+            return await ExecuteBulk();
+        }
+        return Array.Empty<Storage.Sinks.FailedPartition>();
+    }
+
+    async Task<Result<IEnumerable<Storage.Sinks.FailedPartition>>> ExecuteBulk()
+    {
+        if (_bulkOperations.Count == 0)
+        {
+            return Array.Empty<Storage.Sinks.FailedPartition>();
+        }
+
+        try
+        {
+            var result = await Collection.BulkWriteAsync(_bulkOperations);
+            _bulkOperations.Clear();
+            _bulkOperationMetadata.Clear();
+            _currentBulkSize = 0;
+            return Array.Empty<Storage.Sinks.FailedPartition>();
+        }
+        catch (MongoBulkWriteException ex)
+        {
+            var failedPartitions = new List<Storage.Sinks.FailedPartition>();
+            
+            foreach (var writeError in ex.WriteErrors)
+            {
+                if (_bulkOperationMetadata.TryGetValue(writeError.Index, out var metadata))
+                {
+                    failedPartitions.Add(new Storage.Sinks.FailedPartition(metadata.EventSourceId, metadata.SequenceNumber));
+                }
+            }
+
+            _bulkOperations.Clear();
+            _bulkOperationMetadata.Clear();
+            _currentBulkSize = 0;
+
+            return failedPartitions;
+        }
+    }
+
+    static int EstimateOperationSize(WriteModel<BsonDocument> operation)
+    {
+        return operation switch
+        {
+            UpdateOneModel<BsonDocument> update => update.Update.Render(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry).ToBsonDocument().ToJson().Length,
+            DeleteOneModel<BsonDocument> delete => delete.Filter.Render(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry).ToBsonDocument().ToJson().Length,
+            _ => 1024
+        };
     }
 
     async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
