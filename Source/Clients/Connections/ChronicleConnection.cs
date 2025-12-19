@@ -47,7 +47,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly bool _disableTls;
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
-    readonly int _managementPort;
     readonly int _developmentCertificatePort;
     readonly ITokenProvider _tokenProvider;
     X509Certificate2? _fetchedDevCa;
@@ -70,6 +69,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
     /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
     /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
@@ -85,9 +85,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         IConnectionLifecycle connectionLifecycle,
         ITaskFactory tasks,
         ICorrelationIdAccessor correlationIdAccessor,
-        ILogger<ChronicleConnection> logger,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken,
+        ILogger<ChronicleConnection> logger,
         bool disableTls = false,
         string? certificatePath = null,
         string? certificatePassword = null,
@@ -109,7 +109,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _disableTls = disableTls;
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
-        _managementPort = managementPort;
         _developmentCertificatePort = developmentCertificatePort;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
 
@@ -292,7 +291,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     _logger.UsingFetchedDevelopmentCa();
                     try
                     {
-                        var buildChain = new X509Chain();
+                        using var buildChain = new X509Chain();
 
                         // Use a custom trust store so the fetched CA is treated as a trusted root
                         buildChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
