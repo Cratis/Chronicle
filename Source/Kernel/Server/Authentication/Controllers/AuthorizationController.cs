@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Claims;
+using Cratis.Arc;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -31,19 +32,13 @@ public class AuthorizationController(
     ILogger<AuthorizationController> logger) : ControllerBase
 {
     /// <summary>
-    /// Test endpoint to verify controller is accessible.
-    /// </summary>
-    /// <returns>A test message.</returns>
-    [HttpGet]
-    public string Hello() => "Hello from AuthorizationController";
-
-    /// <summary>
     /// Handles token requests.
     /// </summary>
     /// <returns>The token response.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the OpenID Connect request cannot be retrieved or the grant type is not supported.</exception>
     [HttpPost("token")]
     [Produces("application/json")]
+    [AspNetResult]
     public async Task<IActionResult> Exchange()
     {
         var request = HttpContext.GetOpenIddictServerRequest() ??

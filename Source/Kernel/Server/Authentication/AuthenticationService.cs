@@ -70,8 +70,6 @@ public class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureDefaultClientCredentials()
     {
-        Console.WriteLine("⚠️⚠️⚠️ EnsureDefaultClientCredentials() CALLED ⚠️⚠️⚠️");
-
         const string defaultClientId = "chronicle-dev-client";
         const string defaultClientSecret = "chronicle-dev-secret";
 
@@ -81,12 +79,10 @@ public class AuthenticationService(
         var existingClient = await applicationManager.FindByClientIdAsync(defaultClientId);
         if (existingClient is not null)
         {
-            Console.WriteLine($"⚠️⚠️⚠️ EXISTING APPLICATION FOUND for {defaultClientId} ⚠️⚠️⚠️");
             logger.DefaultClientCredentialsAlreadyExist(defaultClientId);
             return;
         }
 
-        Console.WriteLine($"⚠️⚠️⚠️ CREATING NEW APPLICATION for {defaultClientId} ⚠️⚠️⚠️");
         logger.CreatingDefaultClientCredentials(defaultClientId);
 
         // Create the application using OpenIddict's manager
@@ -107,7 +103,6 @@ public class AuthenticationService(
         };
 
         await applicationManager.CreateAsync(descriptor);
-        Console.WriteLine($"⚠️⚠️⚠️ APPLICATION CREATED SUCCESSFULLY for {defaultClientId} ⚠️⚠️⚠️");
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif

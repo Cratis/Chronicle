@@ -140,19 +140,13 @@ public class TokenStore(ITokenStorage tokenStorage) : IOpenIddictTokenStore<Toke
     public ValueTask<string?> GetTypeAsync(Token token, CancellationToken cancellationToken) => new(token.Type);
 
     /// <inheritdoc/>
-    public ValueTask<Token> InstantiateAsync(CancellationToken cancellationToken) => new(new Token(
-        Id: Guid.NewGuid().ToString(),
-        ApplicationId: null,
-        AuthorizationId: null,
-        Subject: null,
-        Type: null,
-        Status: OpenIddictConstants.Statuses.Valid,
-        Payload: null,
-        ReferenceId: null,
-        CreationDate: DateTimeOffset.UtcNow,
-        ExpirationDate: null,
-        RedemptionDate: null,
-        Properties: []));
+    public ValueTask<Token> InstantiateAsync(CancellationToken cancellationToken) => new(new Token
+    {
+        Id = Guid.NewGuid().ToString(),
+        Status = OpenIddictConstants.Statuses.Valid,
+        CreationDate = DateTimeOffset.UtcNow,
+        Properties = ImmutableDictionary<string, JsonElement>.Empty
+    });
 
     /// <inheritdoc/>
     public async IAsyncEnumerable<Token> ListAsync(int? count, int? offset, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -183,37 +177,81 @@ public class TokenStore(ITokenStorage tokenStorage) : IOpenIddictTokenStore<Toke
     public ValueTask<long> RevokeBySubjectAsync(string subject, CancellationToken cancellationToken = default) => new(0L);
 
     /// <inheritdoc/>
-    public async ValueTask SetApplicationIdAsync(Token token, string? identifier, CancellationToken cancellationToken) => await tokenStorage.Update(token with { ApplicationId = identifier });
+    public ValueTask SetApplicationIdAsync(Token token, string? identifier, CancellationToken cancellationToken)
+    {
+        token.ApplicationId = identifier;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetAuthorizationIdAsync(Token token, string? identifier, CancellationToken cancellationToken) => await tokenStorage.Update(token with { AuthorizationId = identifier });
+    public ValueTask SetAuthorizationIdAsync(Token token, string? identifier, CancellationToken cancellationToken)
+    {
+        token.AuthorizationId = identifier;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetCreationDateAsync(Token token, DateTimeOffset? date, CancellationToken cancellationToken) => await tokenStorage.Update(token with { CreationDate = date });
+    public ValueTask SetCreationDateAsync(Token token, DateTimeOffset? date, CancellationToken cancellationToken)
+    {
+        token.CreationDate = date;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetExpirationDateAsync(Token token, DateTimeOffset? date, CancellationToken cancellationToken) => await tokenStorage.Update(token with { ExpirationDate = date });
+    public ValueTask SetExpirationDateAsync(Token token, DateTimeOffset? date, CancellationToken cancellationToken)
+    {
+        token.ExpirationDate = date;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetPayloadAsync(Token token, string? payload, CancellationToken cancellationToken) => await tokenStorage.Update(token with { Payload = payload });
+    public ValueTask SetPayloadAsync(Token token, string? payload, CancellationToken cancellationToken)
+    {
+        token.Payload = payload;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetPropertiesAsync(Token token, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken) => await tokenStorage.Update(token with { Properties = properties });
+    public ValueTask SetPropertiesAsync(Token token, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken)
+    {
+        token.Properties = properties;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetRedemptionDateAsync(Token token, DateTimeOffset? date, CancellationToken cancellationToken) => await tokenStorage.Update(token with { RedemptionDate = date });
+    public ValueTask SetRedemptionDateAsync(Token token, DateTimeOffset? date, CancellationToken cancellationToken)
+    {
+        token.RedemptionDate = date;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetReferenceIdAsync(Token token, string? identifier, CancellationToken cancellationToken) => await tokenStorage.Update(token with { ReferenceId = identifier });
+    public ValueTask SetReferenceIdAsync(Token token, string? identifier, CancellationToken cancellationToken)
+    {
+        token.ReferenceId = identifier;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetStatusAsync(Token token, string? status, CancellationToken cancellationToken) => await tokenStorage.Update(token with { Status = status });
+    public ValueTask SetStatusAsync(Token token, string? status, CancellationToken cancellationToken)
+    {
+        token.Status = status;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetSubjectAsync(Token token, string? subject, CancellationToken cancellationToken) => await tokenStorage.Update(token with { Subject = subject });
+    public ValueTask SetSubjectAsync(Token token, string? subject, CancellationToken cancellationToken)
+    {
+        token.Subject = subject;
+        return default;
+    }
 
     /// <inheritdoc/>
-    public async ValueTask SetTypeAsync(Token token, string? type, CancellationToken cancellationToken) => await tokenStorage.Update(token with { Type = type });
+    public ValueTask SetTypeAsync(Token token, string? type, CancellationToken cancellationToken)
+    {
+        token.Type = type;
+        return default;
+    }
 
     /// <inheritdoc/>
     public async ValueTask UpdateAsync(Token token, CancellationToken cancellationToken) => await tokenStorage.Update(token);
