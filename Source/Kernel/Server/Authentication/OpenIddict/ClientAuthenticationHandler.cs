@@ -35,21 +35,15 @@ public class ClientAuthenticationHandler(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async ValueTask HandleAsync(ValidateTokenRequestContext context)
     {
-        Console.WriteLine("⚠️⚠️⚠️ ClientAuthenticationHandler.HandleAsync() CALLED ⚠️⚠️⚠️");
-
         if (context.Request.IsClientCredentialsGrantType())
         {
-            Console.WriteLine("⚠️⚠️⚠️ IS CLIENT_CREDENTIALS GRANT ⚠️⚠️⚠️");
-
             var clientId = context.Request.ClientId;
             var clientSecret = context.Request.ClientSecret;
 
             logger.HandlingTokenRequest(clientId);
-            Console.WriteLine($"⚠️⚠️⚠️ ClientId: {clientId}, ClientSecret: {clientSecret?.Substring(0, Math.Min(10, clientSecret?.Length ?? 0))}... ⚠️⚠️⚠️");
 
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
-                Console.WriteLine("⚠️⚠️⚠️ MISSING CREDENTIALS - REJECTING ⚠️⚠️⚠️");
                 logger.MissingClientCredentials();
                 context.Reject(
                     error: OpenIddictConstants.Errors.InvalidClient,
@@ -61,7 +55,6 @@ public class ClientAuthenticationHandler(
             var application = await applicationStorage.GetByClientId(clientId);
             if (application == null)
             {
-                Console.WriteLine($"⚠️⚠️⚠️ APPLICATION NOT FOUND for {clientId} - REJECTING ⚠️⚠️⚠️");
                 logger.ApplicationNotFound(clientId);
                 context.Reject(
                     error: OpenIddictConstants.Errors.InvalidClient,
@@ -71,11 +64,9 @@ public class ClientAuthenticationHandler(
             }
 
             logger.ApplicationFound(clientId);
-            Console.WriteLine($"⚠️⚠️⚠️ APPLICATION FOUND for {clientId}, HashedSecret: {application.ClientSecret?.Substring(0, Math.Min(20, application.ClientSecret?.Length ?? 0))}... ⚠️⚠️⚠️");
 
             if (application.ClientSecret == null || !VerifySecret(clientSecret, application.ClientSecret))
             {
-                Console.WriteLine($"⚠️⚠️⚠️ SECRET VERIFICATION FAILED for {clientId} - REJECTING ⚠️⚠️⚠️");
                 logger.SecretVerificationFailed(clientId);
                 context.Reject(
                     error: OpenIddictConstants.Errors.InvalidClient,
@@ -84,12 +75,11 @@ public class ClientAuthenticationHandler(
                 return;
             }
 
-            Console.WriteLine($"⚠️⚠️⚠️ SECRET VERIFICATION SUCCEEDED for {clientId} ⚠️⚠️⚠️");
             logger.SecretVerificationSucceeded(clientId);
         }
         else
         {
-            Console.WriteLine($"⚠️⚠️⚠️ NOT CLIENT_CREDENTIALS GRANT: {context.Request.GrantType} ⚠️⚠️⚠️");
+            logger.NotClientCredentialsGrant(context.Request.GrantType ?? string.Empty);
         }
     }
 

@@ -22,4 +22,7 @@ internal static partial class ClientAuthenticationHandlerLogging
 
     [LoggerMessage(LogLevel.Information, "ClientAuthenticationHandler: Secret verification succeeded for ClientId: {ClientId}")]
     internal static partial void SecretVerificationSucceeded(this ILogger<ClientAuthenticationHandler> logger, string clientId);
+
+    [LoggerMessage(LogLevel.Information, "ClientAuthenticationHandler: Not a client credentials grant type: {GrantType}")]
+    internal static partial void NotClientCredentialsGrant(this ILogger<ClientAuthenticationHandler> logger, string grantType);
 }
