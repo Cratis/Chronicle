@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITokenStorage, TokenStorage>();
 
         // Add ASP.NET Identity
-        services.AddIdentity<ChronicleUser, IdentityRole>(options =>
+        services.AddIdentityCore<ChronicleUser>(options =>
         {
             // Configure identity options
             options.Password.RequireDigit = false;
@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
             options.User.RequireUniqueEmail = false;
         })
         .AddUserStore<ChronicleUserStore>()
+        .AddSignInManager()
         .AddDefaultTokenProviders();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
@@ -73,8 +74,8 @@ public static class ServiceCollectionExtensions
                     options.AllowClientCredentialsFlow();
                     options.AllowRefreshTokenFlow();
 
-                    // Accept anonymous clients for password flow, but require client_id for client_credentials
-                    options.AcceptAnonymousClients();
+                    // Disable access token encryption for development
+                    options.DisableAccessTokenEncryption();
 
                     // Register the signing and encryption credentials
                     options.AddDevelopmentEncryptionCertificate()

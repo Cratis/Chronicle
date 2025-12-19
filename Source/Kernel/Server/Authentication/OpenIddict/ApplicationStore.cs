@@ -173,18 +173,10 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<Application> InstantiateAsync(CancellationToken cancellationToken)
     {
-        return new(new Application(
-            Guid.NewGuid().ToString(),
-            string.Empty,
-            null,
-            null,
-            OpenIddictConstants.ClientTypes.Confidential,
-            OpenIddictConstants.ConsentTypes.Implicit,
-            [],
-            [],
-            [],
-            [],
-            []));
+        return new(new Application
+        {
+            Id = Guid.NewGuid().ToString()
+        });
     }
 
     /// <inheritdoc/>
@@ -224,78 +216,91 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask SetClientIdAsync(Application application, string? identifier, CancellationToken cancellationToken)
     {
+        application.ClientId = identifier ?? string.Empty;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetClientSecretAsync(Application application, string? secret, CancellationToken cancellationToken)
     {
+        application.ClientSecret = secret;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetClientTypeAsync(Application application, string? type, CancellationToken cancellationToken)
     {
+        application.Type = type;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetConsentTypeAsync(Application application, string? type, CancellationToken cancellationToken)
     {
+        application.ConsentType = type;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetDisplayNameAsync(Application application, string? name, CancellationToken cancellationToken)
     {
+        application.DisplayName = name;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetDisplayNamesAsync(Application application, ImmutableDictionary<CultureInfo, string> names, CancellationToken cancellationToken)
     {
+        // Display names not currently stored separately
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetJsonWebKeySetAsync(Application application, JsonWebKeySet? set, CancellationToken cancellationToken)
     {
+        // JWK Set not currently stored
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetPermissionsAsync(Application application, ImmutableArray<string> permissions, CancellationToken cancellationToken)
     {
+        application.Permissions = permissions;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetPostLogoutRedirectUrisAsync(Application application, ImmutableArray<string> uris, CancellationToken cancellationToken)
     {
+        application.PostLogoutRedirectUris = uris;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetPropertiesAsync(Application application, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken)
     {
+        application.Properties = properties;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetRedirectUrisAsync(Application application, ImmutableArray<string> uris, CancellationToken cancellationToken)
     {
+        application.RedirectUris = uris;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetRequirementsAsync(Application application, ImmutableArray<string> requirements, CancellationToken cancellationToken)
     {
+        application.Requirements = requirements;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetSettingsAsync(Application application, ImmutableDictionary<string, string> settings, CancellationToken cancellationToken)
     {
+        // Settings not currently stored separately
         return default;
     }
 

@@ -16,12 +16,14 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Initializes a new instance of the <see cref="AuthenticationService"/> class.
 /// </remarks>
 /// <param name="userStorage">The user storage.</param>
-/// <param name="applicationStorage">The application storage.</param>
+/// <param name="applicationManager">The OpenIddict application manager.</param>
 /// <param name="options">Chronicle options.</param>
+/// <param name="logger">The logger.</param>
 public class AuthenticationService(
     IUserStorage userStorage,
-    IApplicationStorage applicationStorage,
-    IOptions<Configuration.ChronicleOptions> options) : IAuthenticationService
+    IOpenIddictApplicationManager applicationManager,
+    IOptions<Configuration.ChronicleOptions> options,
+    ILogger<AuthenticationService> logger) : IAuthenticationService
 {
     readonly Configuration.ChronicleOptions _options = options.Value;
 
@@ -68,38 +70,45 @@ public class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureDefaultClientCredentials()
     {
+        Console.WriteLine("⚠️⚠️⚠️ EnsureDefaultClientCredentials() CALLED ⚠️⚠️⚠️");
+
         const string defaultClientId = "chronicle-dev-client";
         const string defaultClientSecret = "chronicle-dev-secret";
 
-        var existingApplication = await applicationStorage.GetByClientId(defaultClientId);
-        if (existingApplication is not null)
+        logger.CheckingForDefaultClientCredentials(defaultClientId);
+
+        // Check if already exists in OpenIddict
+        var existingClient = await applicationManager.FindByClientIdAsync(defaultClientId);
+        if (existingClient is not null)
         {
+            Console.WriteLine($"⚠️⚠️⚠️ EXISTING APPLICATION FOUND for {defaultClientId} ⚠️⚠️⚠️");
+            logger.DefaultClientCredentialsAlreadyExist(defaultClientId);
             return;
         }
 
-        var clientSecretHash = HashPassword(defaultClientSecret);
+        Console.WriteLine($"⚠️⚠️⚠️ CREATING NEW APPLICATION for {defaultClientId} ⚠️⚠️⚠️");
+        logger.CreatingDefaultClientCredentials(defaultClientId);
 
-        // Create Application entity for OpenIddict (handles all OAuth flows including client_credentials)
-        var application = new Application(
-            Id: Guid.NewGuid().ToString(),
-            ClientId: defaultClientId,
-            ClientSecret: clientSecretHash,
-            DisplayName: "Chronicle Development Client",
-            Type: OpenIddictConstants.ClientTypes.Confidential,
-            ConsentType: OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions:
-            [
+        // Create the application using OpenIddict's manager
+        var descriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = defaultClientId,
+            ClientSecret = defaultClientSecret,  // OpenIddict will hash this
+            DisplayName = "Chronicle Development Client",
+            ClientType = OpenIddictConstants.ClientTypes.Confidential,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
                 OpenIddictConstants.Permissions.Endpoints.Token,
                 OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
                 OpenIddictConstants.Permissions.GrantTypes.Password,
                 OpenIddictConstants.Permissions.GrantTypes.RefreshToken
-            ],
-            Requirements: [],
-            RedirectUris: [],
-            PostLogoutRedirectUris: [],
-            Properties: System.Collections.Immutable.ImmutableDictionary<string, System.Text.Json.JsonElement>.Empty);
+            }
+        };
 
-        await applicationStorage.Create(application);
+        await applicationManager.CreateAsync(descriptor);
+        Console.WriteLine($"⚠️⚠️⚠️ APPLICATION CREATED SUCCESSFULLY for {defaultClientId} ⚠️⚠️⚠️");
+        logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif
 

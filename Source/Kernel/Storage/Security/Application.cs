@@ -9,26 +9,60 @@ namespace Cratis.Chronicle.Storage.Security;
 /// <summary>
 /// Represents an OAuth application.
 /// </summary>
-/// <param name="Id">The unique identifier for the application.</param>
-/// <param name="ClientId">The client identifier.</param>
-/// <param name="ClientSecret">The hashed client secret.</param>
-/// <param name="DisplayName">The display name of the application.</param>
-/// <param name="Type">The client type (e.g., confidential, public).</param>
-/// <param name="ConsentType">The consent type (e.g., explicit, implicit).</param>
-/// <param name="Permissions">The permissions granted to the application.</param>
-/// <param name="Requirements">The requirements for the application.</param>
-/// <param name="RedirectUris">The redirect URIs.</param>
-/// <param name="PostLogoutRedirectUris">The post-logout redirect URIs.</param>
-/// <param name="Properties">Additional properties.</param>
-public record Application(
-    string Id,
-    string ClientId,
-    string? ClientSecret,
-    string? DisplayName,
-    string? Type,
-    string? ConsentType,
-    ImmutableArray<string> Permissions,
-    ImmutableArray<string> Requirements,
-    ImmutableArray<string> RedirectUris,
-    ImmutableArray<string> PostLogoutRedirectUris,
-    ImmutableDictionary<string, JsonElement> Properties);
+public record Application
+{
+    /// <summary>
+    /// Gets or sets the unique identifier for the application.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the client identifier.
+    /// </summary>
+    public string ClientId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the hashed client secret.
+    /// </summary>
+    public string? ClientSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the application.
+    /// </summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the client type (e.g., confidential, public).
+    /// </summary>
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets the consent type (e.g., explicit, implicit).
+    /// </summary>
+    public string? ConsentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the permissions granted to the application.
+    /// </summary>
+    public ImmutableArray<string> Permissions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the requirements for the application.
+    /// </summary>
+    public ImmutableArray<string> Requirements { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the redirect URIs.
+    /// </summary>
+    public ImmutableArray<string> RedirectUris { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the post-logout redirect URIs.
+    /// </summary>
+    public ImmutableArray<string> PostLogoutRedirectUris { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets additional properties.
+    /// </summary>
+    public ImmutableDictionary<string, JsonElement> Properties { get; set; } = [];
+}

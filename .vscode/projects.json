@@ -52,5 +52,5 @@
         "name": "SimpleConsole",
         "path": "${workspaceFolder}/TestApps/SimpleConsole",
         "outputPath": "${workspaceFolder}/TestApps/SimpleConsole/bin/Debug/net10.0/SimpleConsole.dll"
-    },
+    }
 ]

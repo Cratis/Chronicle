@@ -11,7 +11,7 @@ public class Authentication
     /// <summary>
     /// Gets whether authentication is enabled.
     /// </summary>
-    public bool Enabled { get; init; }
+    public bool Enabled { get; init; } = true; // Default to enabled
 
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.

@@ -20,14 +20,23 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 /// <param name="userManager">The user manager.</param>
 /// <param name="signInManager">The sign-in manager.</param>
 /// <param name="applicationManager">The OpenIddict application manager.</param>
+/// <param name="logger">The logger.</param>
 [ApiController]
 [Route("connect")]
 [AllowAnonymous]
 public class AuthorizationController(
     UserManager<ChronicleUser> userManager,
     SignInManager<ChronicleUser> signInManager,
-    IOpenIddictApplicationManager applicationManager) : ControllerBase
+    IOpenIddictApplicationManager applicationManager,
+    ILogger<AuthorizationController> logger) : ControllerBase
 {
+    /// <summary>
+    /// Test endpoint to verify controller is accessible.
+    /// </summary>
+    /// <returns>A test message.</returns>
+    [HttpGet]
+    public string Hello() => "Hello from AuthorizationController";
+
     /// <summary>
     /// Handles token requests.
     /// </summary>
@@ -40,13 +49,18 @@ public class AuthorizationController(
         var request = HttpContext.GetOpenIddictServerRequest() ??
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
+        logger.TokenEndpointCalled(request.GrantType);
+
         if (request.IsClientCredentialsGrantType())
         {
+            logger.ProcessingClientCredentialsGrant(request.ClientId ?? string.Empty);
+
             // OpenIddict handles client validation automatically through ApplicationStore
             // We just need to create the claims identity
             var application = await applicationManager.FindByClientIdAsync(request.ClientId ?? string.Empty);
             if (application == null)
             {
+                logger.ApplicationNotFound(request.ClientId ?? string.Empty);
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
@@ -71,11 +85,13 @@ public class AuthorizationController(
             identity.SetScopes(request.GetScopes());
             identity.SetDestinations(GetDestinations);
 
+            logger.ClientCredentialsValidated(clientId ?? string.Empty);
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         if (request.IsPasswordGrantType())
         {
+            logger.ProcessingPasswordGrant(request.Username ?? string.Empty);
             var user = await userManager.FindByNameAsync(request.Username ?? string.Empty);
             if (user == null)
             {
@@ -92,6 +108,7 @@ public class AuthorizationController(
             var result = await signInManager.CheckPasswordSignInAsync(user, request.Password ?? string.Empty, lockoutOnFailure: false);
             if (!result.Succeeded)
             {
+                logger.PasswordSignInFailed(request.Username ?? string.Empty);
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
@@ -113,11 +130,13 @@ public class AuthorizationController(
             identity.SetScopes(request.GetScopes());
             identity.SetDestinations(GetDestinations);
 
+            logger.PasswordValidated(request.Username ?? string.Empty);
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         if (request.IsRefreshTokenGrantType())
         {
+            logger.ProcessingRefreshTokenGrant();
             var claimsPrincipal = (await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)).Principal;
 
             if (claimsPrincipal == null)
@@ -134,6 +153,7 @@ public class AuthorizationController(
             var user = await userManager.FindByIdAsync(claimsPrincipal.GetClaim(OpenIddictConstants.Claims.Subject) ?? string.Empty);
             if (user == null)
             {
+                logger.RefreshTokenUserNotFound();
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
