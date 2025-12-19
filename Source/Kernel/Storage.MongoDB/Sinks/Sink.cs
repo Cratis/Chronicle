@@ -39,7 +39,8 @@ public class Sink(
     const int MaxBulkOperations = 1000;
 
     /// <summary>
-    /// Maximum size in bytes for a bulk write operation (48MB - MongoDB limit).
+    /// Maximum size in bytes for a bulk write operation.
+    /// MongoDB's limit for bulk operations is 48MB, individual documents are limited to 16MB.
     /// </summary>
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
@@ -297,11 +298,16 @@ public class Sink(
     {
         // Rough estimate: most operations are less than 10KB
         // For more accurate sizing, we could serialize the operation, but that's expensive
+        // These values are conservative estimates based on typical document sizes
+        const int EstimatedUpdateSize = 5000;   // Typical update operations with nested documents
+        const int EstimatedDeleteSize = 500;    // Delete operations are much smaller
+        const int DefaultEstimatedSize = 1024;  // Fallback for unknown operation types
+
         return operation switch
         {
-            UpdateOneModel<BsonDocument> => 5000,  // Typical update size
-            DeleteOneModel<BsonDocument> => 500,   // Deletes are smaller
-            _ => 1024
+            UpdateOneModel<BsonDocument> => EstimatedUpdateSize,
+            DeleteOneModel<BsonDocument> => EstimatedDeleteSize,
+            _ => DefaultEstimatedSize
         };
     }
 

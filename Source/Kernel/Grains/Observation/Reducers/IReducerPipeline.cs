@@ -50,7 +50,7 @@ public interface IReducerPipeline
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
-    /// <param name="context">The <ee cref="ReducerContext"/> being reduced.</param>
+    /// <param name="context">The <see cref="ReducerContext"/> being reduced.</param>
     /// <param name="reducer"><see cref="ReducerDelegate"/> delegate.</param>
     /// <returns>Awaitable task.</returns>
     Task Handle(ReducerContext context, ReducerDelegate reducer);
