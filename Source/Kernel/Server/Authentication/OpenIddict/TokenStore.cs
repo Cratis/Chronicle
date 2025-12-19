@@ -145,7 +145,7 @@ public class TokenStore(ITokenStorage tokenStorage) : IOpenIddictTokenStore<Toke
         Id = Guid.NewGuid().ToString(),
         Status = OpenIddictConstants.Statuses.Valid,
         CreationDate = DateTimeOffset.UtcNow,
-        Properties = ImmutableDictionary<string, JsonElement>.Empty
+        Properties = []
     });
 
     /// <inheritdoc/>

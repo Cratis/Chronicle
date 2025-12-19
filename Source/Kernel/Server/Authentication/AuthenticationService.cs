@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Cryptography;
 using Cratis.Chronicle.Storage.Security;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 
@@ -36,7 +34,7 @@ public class AuthenticationService(
             return null;
         }
 
-        var isValid = VerifyPassword(password, user.PasswordHash);
+        var isValid = HashHelper.Verify(password, user.PasswordHash);
         return isValid ? user : null;
     }
 
@@ -50,7 +48,7 @@ public class AuthenticationService(
         }
 
         var password = _options.Authentication.DefaultAdminPassword ?? "admin";
-        var passwordHash = HashPassword(password);
+        var passwordHash = HashHelper.Hash(password);
         var now = DateTimeOffset.UtcNow;
 
         var user = new ChronicleUser(
@@ -106,38 +104,4 @@ public class AuthenticationService(
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif
-
-    static string HashPassword(string password)
-    {
-        var salt = RandomNumberGenerator.GetBytes(128 / 8);
-        var hashed = KeyDerivation.Pbkdf2(
-            password: password,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8);
-
-        return Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hashed);
-    }
-
-    static bool VerifyPassword(string password, string hashedPassword)
-    {
-        var parts = hashedPassword.Split(':');
-        if (parts.Length != 2)
-        {
-            return false;
-        }
-
-        var salt = Convert.FromBase64String(parts[0]);
-        var hash = Convert.FromBase64String(parts[1]);
-
-        var testHash = KeyDerivation.Pbkdf2(
-            password: password,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8);
-
-        return hash.SequenceEqual(testHash);
-    }
 }

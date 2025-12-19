@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Storage.Security;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Server.OpenIddictServerEvents;
@@ -53,7 +53,7 @@ public class ClientAuthenticationHandler(
             }
 
             var application = await applicationStorage.GetByClientId(clientId);
-            if (application == null)
+            if (application is null)
             {
                 logger.ApplicationNotFound(clientId);
                 context.Reject(
@@ -65,7 +65,7 @@ public class ClientAuthenticationHandler(
 
             logger.ApplicationFound(clientId);
 
-            if (application.ClientSecret == null || !VerifySecret(clientSecret, application.ClientSecret))
+            if (application.ClientSecret is null || !HashHelper.Verify(clientSecret, application.ClientSecret))
             {
                 logger.SecretVerificationFailed(clientId);
                 context.Reject(
@@ -83,24 +83,4 @@ public class ClientAuthenticationHandler(
         }
     }
 
-    static bool VerifySecret(string secret, string hashedSecret)
-    {
-        var parts = hashedSecret.Split(':');
-        if (parts.Length != 2)
-        {
-            return false;
-        }
-
-        var salt = Convert.FromBase64String(parts[0]);
-        var hash = Convert.FromBase64String(parts[1]);
-
-        var testHash = KeyDerivation.Pbkdf2(
-            password: secret,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8);
-
-        return hash.SequenceEqual(testHash);
-    }
 }
