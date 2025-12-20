@@ -89,11 +89,35 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
+            ProjectionEventContext? lastPipelineContext = null;
 
             foreach (var @event in events)
             {
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
+                lastPipelineContext = pipelineContext;
+
+                // Check for failed partitions after processing each event
+                if (pipelineContext.HasFailedPartitions)
+                {
+                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+                    foreach (var failedPartition in pipelineContext.FailedPartitions)
+                    {
+                        await observer.PartitionFailed(
+                            failedPartition.Partition,
+                            failedPartition.LastAttempt.SequenceNumber,
+                            failedPartition.LastAttempt.Messages,
+                            failedPartition.LastAttempt.StackTrace);
+                    }
+
+                    // Return failed status with the last attempt information
+                    var lastFailedPartition = pipelineContext.FailedPartitions.Last();
+                    return new(
+                        ObserverSubscriberState.Failed,
+                        lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                        lastFailedPartition.LastAttempt.Messages,
+                        lastFailedPartition.LastAttempt.StackTrace);
+                }
 
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
