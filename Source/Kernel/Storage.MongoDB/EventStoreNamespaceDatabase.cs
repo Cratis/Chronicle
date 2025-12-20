@@ -18,7 +18,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
     readonly IMongoDatabase _database;
-    readonly IMongoClient _client;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
     /// <summary>
@@ -44,12 +43,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
-        _client = clientManager.GetClientFor(settings);
-        _database = _client.GetDatabase(databaseName);
+        Client = clientManager.GetClientFor(settings);
+        _database = Client.GetDatabase(databaseName);
     }
 
     /// <inheritdoc/>
-    public IMongoClient Client => _client;
+    public IMongoClient Client { get; }
 
     /// <inheritdoc/>
     public IMongoCollection<T> GetCollection<T>(string? name = null) => name == null ? _database.GetCollection<T>() : _database.GetCollection<T>(name);
