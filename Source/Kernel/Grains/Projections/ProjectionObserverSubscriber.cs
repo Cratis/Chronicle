@@ -86,6 +86,7 @@ public class ProjectionObserverSubscriber(
         }
 
         AppendedEvent? lastSuccessfullyObservedEvent = default;
+        IObserver? observer = null;
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
@@ -100,8 +101,7 @@ public class ProjectionObserverSubscriber(
                 // Check for failed partitions after processing each event
                 if (pipelineContext.HasFailedPartitions)
                 {
-                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-                    FailedPartition? lastFailedPartition = null;
+                    observer ??= GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
 
                     foreach (var failedPartition in pipelineContext.FailedPartitions)
                     {
@@ -113,15 +113,14 @@ public class ProjectionObserverSubscriber(
                             failedPartition.LastAttempt.SequenceNumber,
                             failedPartition.LastAttempt.Messages,
                             failedPartition.LastAttempt.StackTrace);
-
-                        lastFailedPartition = failedPartition;
                     }
 
-                    // Return failed status with the last attempt information
+                    // Return failed status with the last attempt information from the last failed partition
+                    var lastFailedPartition = pipelineContext.FailedPartitions.Last();
                     return new(
                         ObserverSubscriberState.Failed,
                         lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                        lastFailedPartition!.LastAttempt.Messages,
+                        lastFailedPartition.LastAttempt.Messages,
                         lastFailedPartition.LastAttempt.StackTrace);
                 }
 
