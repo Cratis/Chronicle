@@ -34,10 +34,10 @@ public static class OpenIddictServiceCollectionExtensions
             .AddCore(options =>
             {
                 options
-                    .AddApplicationStore<ApplicationStore>()
-                    .AddAuthorizationStore<AuthorizationStore>()
-                    .AddScopeStore<ScopeStore>()
-                    .AddTokenStore<TokenStore>()
+                    .ReplaceApplicationStore<Application, ApplicationStore>(ServiceLifetime.Singleton)
+                    .ReplaceAuthorizationStore<Authorization, AuthorizationStore>(ServiceLifetime.Singleton)
+                    .ReplaceScopeStore<Scope, ScopeStore>(ServiceLifetime.Singleton)
+                    .ReplaceTokenStore<Token, TokenStore>(ServiceLifetime.Singleton)
                     .SetDefaultApplicationEntity<Application>()
                     .SetDefaultAuthorizationEntity<Authorization>()
                     .SetDefaultScopeEntity<Scope>()
