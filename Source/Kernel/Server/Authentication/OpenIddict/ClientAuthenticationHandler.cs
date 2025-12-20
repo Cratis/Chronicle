@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Storage.Security;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
@@ -24,7 +23,7 @@ public class ClientAuthenticationHandler(
     public static OpenIddictServerHandlerDescriptor Descriptor { get; } =
         OpenIddictServerHandlerDescriptor.CreateBuilder<ValidateTokenRequestContext>()
             .UseSingletonHandler<ClientAuthenticationHandler>()
-            .SetOrder(int.MinValue + 100000)  // Run very early in validation phase
+            .SetOrder(int.MinValue + 100000) // Run very early in validation phase
             .SetType(OpenIddictServerHandlerType.BuiltIn)
             .Build();
 
@@ -82,5 +81,4 @@ public class ClientAuthenticationHandler(
             logger.NotClientCredentialsGrant(context.Request.GrantType ?? string.Empty);
         }
     }
-
 }

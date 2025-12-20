@@ -33,7 +33,8 @@ public static class OpenIddictServiceCollectionExtensions
         services.AddOpenIddict()
             .AddCore(options =>
             {
-                options.AddApplicationStore<ApplicationStore>()
+                options
+                    .AddApplicationStore<ApplicationStore>()
                     .AddAuthorizationStore<AuthorizationStore>()
                     .AddScopeStore<ScopeStore>()
                     .AddTokenStore<TokenStore>()

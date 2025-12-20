@@ -69,5 +69,5 @@ public record Token
     /// <summary>
     /// Gets or sets additional properties.
     /// </summary>
-    public ImmutableDictionary<string, JsonElement> Properties { get; set; } = ImmutableDictionary<string, JsonElement>.Empty;
+    public ImmutableDictionary<string, JsonElement> Properties { get; set; } = [];
 }
