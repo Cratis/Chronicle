@@ -38,8 +38,12 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
 
         if (failedPartitions.Any())
         {
-            var firstFailure = failedPartitions.First();
-            throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
+            foreach (var failedPartition in failedPartitions)
+            {
+                context.AddFailedPartition(failedPartition);
+            }
+
+            return context;
         }
 
         await changesetStorage.Save(
