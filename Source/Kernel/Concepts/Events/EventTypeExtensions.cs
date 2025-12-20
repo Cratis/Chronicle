@@ -22,7 +22,7 @@ public static class EventTypeExtensions
             return false;
         }
 
-        return type.GetCustomAttribute<EventTypeAttribute>() != null;
+        return Attribute.IsDefined(type, typeof(EventTypeAttribute));
     }
 
     /// <summary>
