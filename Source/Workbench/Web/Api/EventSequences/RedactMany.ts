@@ -5,14 +5,12 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/redact-events');
 
 export interface IRedactMany {
     eventStore?: string;
@@ -40,8 +38,17 @@ export class RedactManyValidator extends CommandValidator {
 
 export class RedactMany extends Command<IRedactMany> implements IRedactMany {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/redact-events';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RedactManyValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('eventSequenceId', String),
+        new PropertyDescriptor('eventSourceId', String),
+        new PropertyDescriptor('reason', String),
+        new PropertyDescriptor('eventTypes', String),
+        new PropertyDescriptor('causation', Causation),
+        new PropertyDescriptor('causedBy', Identity),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -143,6 +150,8 @@ export class RedactMany extends Command<IRedactMany> implements IRedactMany {
     }
 
     static use(initialValues?: IRedactMany): [RedactMany, SetCommandValues<IRedactMany>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<RedactMany, IRedactMany>(RedactMany, initialValues);
     }
 }

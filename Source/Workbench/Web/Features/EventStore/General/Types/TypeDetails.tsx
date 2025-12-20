@@ -13,6 +13,7 @@ const formatType = (type: string) => {
         case 'date-time': return 'DateTime';
         case 'date-only': return 'DateOnly';
         case 'time-only': return 'TimeOnly';
+        case 'duration': return 'TimeSpan';
     }
 
     return type;

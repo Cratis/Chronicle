@@ -4,11 +4,9 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/namespaces');
+import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 
 class AllNamespacesSortBy {
 
@@ -26,7 +24,6 @@ export interface AllNamespacesParameters {
 }
 export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/namespaces';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
     private readonly _sortBy: AllNamespacesSortBy;
     private static readonly _sortBy: AllNamespacesSortByWithoutQuery = new AllNamespacesSortByWithoutQuery();
@@ -41,6 +38,12 @@ export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesPar
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllNamespacesSortBy {
         return this._sortBy;

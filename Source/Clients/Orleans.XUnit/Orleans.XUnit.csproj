@@ -46,12 +46,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications" />
+      <PackageReference Include="Cratis.Arc" />
+      <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="xunit">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="OrleansTestKit">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
     </ItemGroup>
 </Project>

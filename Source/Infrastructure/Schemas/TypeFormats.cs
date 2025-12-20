@@ -10,6 +10,7 @@ public class TypeFormats : ITypeFormats
 {
     readonly Dictionary<Type, string> _typesFormatInfo = new()
     {
+        { typeof(short), "int16" },
         { typeof(int), "int32" },
         { typeof(uint), "uint32" },
         { typeof(long), "int64" },
@@ -22,6 +23,7 @@ public class TypeFormats : ITypeFormats
         { typeof(DateTimeOffset), "date-time-offset" },
         { typeof(DateOnly), "date" },
         { typeof(TimeOnly), "time" },
+        { typeof(TimeSpan), "duration" },
         { typeof(Guid), "guid" }
     };
 

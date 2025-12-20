@@ -31,6 +31,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="initialModelState">The initial state to use for new model instances.</param>
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
+    /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies items in the children collection.</param>
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> for the root read model.</param>
     /// <param name="readModelSchema">The target <see cref="JsonSchema"/> for the read model.</param>
     /// <param name="rewindable">Whether the projection is rewindable.</param>
@@ -42,6 +43,7 @@ public class Projection : IProjection, IDisposable
         ExpandoObject initialModelState,
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
+        PropertyPath identifiedByProperty,
         ReadModelDefinition readModel,
         JsonSchema readModelSchema,
         bool rewindable,
@@ -57,6 +59,7 @@ public class Projection : IProjection, IDisposable
         Event = FilterEventTypes(_subject);
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
+        IdentifiedByProperty = identifiedByProperty;
         ChildProjections = childProjections;
     }
 
@@ -77,6 +80,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public PropertyPath ChildrenPropertyPath { get; }
+
+    /// <inheritdoc/>
+    public PropertyPath IdentifiedByProperty { get; }
 
     /// <inheritdoc/>
     public ReadModelDefinition ReadModel { get; }

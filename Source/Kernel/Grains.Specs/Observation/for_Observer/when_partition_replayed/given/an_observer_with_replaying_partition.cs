@@ -13,7 +13,7 @@ public class an_observer_with_replaying_partition : an_observer
     protected static EventSequenceNumber _lastHandledEventSequenceNumber;
     protected static EventSequenceNumber _nextEventSequenceNumber;
 
-    protected void Establish()
+    void Establish()
     {
         _partition = "some-partition";
         _lastHandledEventSequenceNumber = 42UL;

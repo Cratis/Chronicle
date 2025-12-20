@@ -61,6 +61,6 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
-        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Cratis.Arc" />
     </ItemGroup>
 </Project>

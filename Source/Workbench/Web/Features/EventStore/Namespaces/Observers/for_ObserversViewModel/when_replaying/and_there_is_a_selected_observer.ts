@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ObserverInformation } from 'Api/Observation';
-import { DialogResult } from '@cratis/applications.react/dialogs';
+import { DialogResult } from '@cratis/arc.react/dialogs';
 import { given } from 'given';
 import { a_view_model } from './given/a_view_model';
 

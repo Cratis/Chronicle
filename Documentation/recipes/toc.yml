@@ -4,6 +4,8 @@
   href: appending-an-event-to-event-log.md
 - name: Reacting to events in the event log
   href: reacting-events-in-event-log.md
+- name: Event Seeding
+  href: event-seeding.md
 - name: Reducers
   href: reducers.md
 - name: Constraints

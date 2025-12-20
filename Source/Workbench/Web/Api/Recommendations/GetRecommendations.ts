@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Recommendation } from './Recommendation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/recommendations');
 
 class GetRecommendationsSortBy {
     private _id: SortingActionsForQuery<Recommendation[]>;
@@ -74,7 +72,6 @@ export interface GetRecommendationsParameters {
 
 export class GetRecommendations extends QueryFor<Recommendation[], GetRecommendationsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/recommendations';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Recommendation[] = [];
     private readonly _sortBy: GetRecommendationsSortBy;
     private static readonly _sortBy: GetRecommendationsSortByWithoutQuery = new GetRecommendationsSortByWithoutQuery();
@@ -90,6 +87,14 @@ export class GetRecommendations extends QueryFor<Recommendation[], GetRecommenda
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): GetRecommendationsSortBy {
         return this._sortBy;

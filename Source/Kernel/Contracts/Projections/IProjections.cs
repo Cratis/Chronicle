@@ -62,4 +62,13 @@ public interface IProjections
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get snapshots of a projection grouped by CorrelationId.
+    /// </summary>
+    /// <param name="request"><see cref="GetSnapshotsByIdRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns><see cref="GetSnapshotsByIdResponse"/> containing the snapshots.</returns>
+    [Operation]
+    Task<GetSnapshotsByIdResponse> GetSnapshotsById(GetSnapshotsByIdRequest request, CallContext context = default);
 }

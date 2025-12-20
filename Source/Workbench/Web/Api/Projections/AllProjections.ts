@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Projection } from './Projection';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/projections');
 
 class AllProjectionsSortBy {
     private _id: SortingActionsForQuery<Projection[]>;
@@ -55,7 +53,6 @@ export interface AllProjectionsParameters {
 
 export class AllProjections extends QueryFor<Projection[], AllProjectionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/projections';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
     private readonly _sortBy: AllProjectionsSortBy;
     private static readonly _sortBy: AllProjectionsSortByWithoutQuery = new AllProjectionsSortByWithoutQuery();
@@ -70,6 +67,12 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsParamet
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllProjectionsSortBy {
         return this._sortBy;

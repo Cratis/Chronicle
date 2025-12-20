@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Commands;
-using Cratis.Applications.Validation;
+using Cratis.Arc.Commands;
+using Cratis.Arc.Validation;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Applications.Commands;

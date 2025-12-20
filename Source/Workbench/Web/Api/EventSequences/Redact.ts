@@ -5,14 +5,12 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Causation } from '../Auditing/Causation';
 import { Identity } from '../Identities/Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}/redact-event');
 
 export interface IRedact {
     eventStore?: string;
@@ -38,8 +36,16 @@ export class RedactValidator extends CommandValidator {
 
 export class Redact extends Command<IRedact> implements IRedact {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}/redact-event';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RedactValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('eventSequenceId', String),
+        new PropertyDescriptor('sequenceNumber', Number),
+        new PropertyDescriptor('reason', String),
+        new PropertyDescriptor('causation', Causation),
+        new PropertyDescriptor('causedBy', Identity),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -131,6 +137,8 @@ export class Redact extends Command<IRedact> implements IRedact {
     }
 
     static use(initialValues?: IRedact): [Redact, SetCommandValues<IRedact>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Redact, IRedact>(Redact, initialValues);
     }
 }

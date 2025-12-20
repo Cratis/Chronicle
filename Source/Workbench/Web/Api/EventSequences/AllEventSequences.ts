@@ -4,11 +4,9 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/sequences');
+import { QueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 
 class AllEventSequencesSortBy {
 
@@ -27,7 +25,6 @@ export interface AllEventSequencesParameters {
 
 export class AllEventSequences extends QueryFor<string[], AllEventSequencesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/sequences';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: string[] = [];
     private readonly _sortBy: AllEventSequencesSortBy;
     private static readonly _sortBy: AllEventSequencesSortByWithoutQuery = new AllEventSequencesSortByWithoutQuery();
@@ -42,6 +39,12 @@ export class AllEventSequences extends QueryFor<string[], AllEventSequencesParam
             'eventStore',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+    ];
+
+    eventStore!: string;
 
     get sortBy(): AllEventSequencesSortBy {
         return this._sortBy;

@@ -17,9 +17,8 @@
         <ProjectReference Include="../../Source/Kernel/Diagnostics/Diagnostics.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.MongoDB" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Polly.Core" />

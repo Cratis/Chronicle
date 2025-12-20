@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;

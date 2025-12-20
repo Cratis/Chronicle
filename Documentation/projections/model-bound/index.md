@@ -44,11 +44,11 @@ Model-bound projections support all projection engine capabilities:
 - **Property Mapping**: SetFrom, AddFrom, SubtractFrom, SetFromContext
 - **FromEvery**: Set properties from all events
 - **Counters**: Increment, Decrement, Count
-- **Relationships**: Join, Children
+- **Relationships**: Join, Children (with unlimited nesting depth)
 - **Removal**: RemovedWith, RemovedWithJoin
 - **Convention-based**: FromEvent for automatic property matching
 - **Configuration**: FromEventSequence, NotRewindable, Passive
-- **Recursive**: All attributes work on child types and joined types
+- **Fully Recursive**: All attributes work at any nesting level - children, grandchildren, and beyond
 
 See the following pages for detailed information on each feature:
 
@@ -57,6 +57,7 @@ See the following pages for detailed information on each feature:
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count
 - [Children](./children.md) - Managing child collections
+- [Removal](./removal.md) - Removing read models and children with RemovedWith, RemovedWithJoin
 - [Joins](./joins.md) - Joining with other events
 - [Event Sequence Source](./event-sequence-source.md) - Reading from specific event sequences
 - [Not Rewindable](./not-rewindable.md) - Forward-only projections

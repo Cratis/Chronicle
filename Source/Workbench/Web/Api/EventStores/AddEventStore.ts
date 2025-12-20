@@ -5,12 +5,10 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-stores/add');
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 export interface IAddEventStore {
     name?: string;
@@ -24,8 +22,10 @@ export class AddEventStoreValidator extends CommandValidator {
 
 export class AddEventStore extends Command<IAddEventStore> implements IAddEventStore {
     readonly route: string = '/api/event-stores/add';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AddEventStoreValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('name', String),
+    ];
 
     private _name!: string;
 
@@ -54,6 +54,8 @@ export class AddEventStore extends Command<IAddEventStore> implements IAddEventS
     }
 
     static use(initialValues?: IAddEventStore): [AddEventStore, SetCommandValues<IAddEventStore>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<AddEventStore, IAddEventStore>(AddEventStore, initialValues);
     }
 }

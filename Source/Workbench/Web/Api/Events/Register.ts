@@ -5,13 +5,11 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { EventTypeRegistration } from './EventTypeRegistration';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/types');
 
 export interface IRegister {
     eventStore?: string;
@@ -27,8 +25,11 @@ export class RegisterValidator extends CommandValidator {
 
 export class Register extends Command<IRegister> implements IRegister {
     readonly route: string = '/api/event-store/{eventStore}/types';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RegisterValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('types', EventTypeRegistration),
+    ];
 
     private _eventStore!: string;
     private _types!: EventTypeRegistration[];
@@ -68,6 +69,8 @@ export class Register extends Command<IRegister> implements IRegister {
     }
 
     static use(initialValues?: IRegister): [Register, SetCommandValues<IRegister>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<Register, IRegister>(Register, initialValues);
     }
 }

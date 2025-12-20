@@ -12,9 +12,15 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// <param name="Name">Name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
 /// <param name="Schemas">The <see cref="JsonSchema"/> for the model.</param>
+/// <param name="Indexes">The indexes defined for the model.</param>
 [GenerateSerializer]
 [Alias(nameof(ReadModelDefinition))]
-public record ReadModelDefinition(ReadModelIdentifier Identifier, ReadModelName Name, ReadModelOwner Owner, IDictionary<ReadModelGeneration, JsonSchema> Schemas)
+public record ReadModelDefinition(
+    ReadModelIdentifier Identifier,
+    ReadModelName Name,
+    ReadModelOwner Owner,
+    IDictionary<ReadModelGeneration, JsonSchema> Schemas,
+    IReadOnlyCollection<IndexDefinition> Indexes)
 {
     /// <summary>
     /// Gets the latest generation of the read model.

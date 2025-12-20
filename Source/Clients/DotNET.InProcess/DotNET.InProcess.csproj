@@ -94,7 +94,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Applications.MongoDB" />
+      <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
@@ -106,10 +106,10 @@
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="OneOf" />
         <PackageReference Include="protobuf-net.Grpc" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="Polly.Core" />
     </ItemGroup>

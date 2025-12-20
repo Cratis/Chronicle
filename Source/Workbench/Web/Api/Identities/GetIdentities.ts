@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Identity } from './Identity';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/identities');
 
 class GetIdentitiesSortBy {
     private _subject: SortingActionsForQuery<Identity[]>;
@@ -65,7 +63,6 @@ export interface GetIdentitiesParameters {
 
 export class GetIdentities extends QueryFor<Identity[], GetIdentitiesParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/identities';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Identity[] = [];
     private readonly _sortBy: GetIdentitiesSortBy;
     private static readonly _sortBy: GetIdentitiesSortByWithoutQuery = new GetIdentitiesSortByWithoutQuery();
@@ -81,6 +78,14 @@ export class GetIdentities extends QueryFor<Identity[], GetIdentitiesParameters>
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
 
     get sortBy(): GetIdentitiesSortBy {
         return this._sortBy;

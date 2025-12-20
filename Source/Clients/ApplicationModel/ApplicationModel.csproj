@@ -6,14 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Cratis.Arc.Core" />
     </ItemGroup>
 </Project>

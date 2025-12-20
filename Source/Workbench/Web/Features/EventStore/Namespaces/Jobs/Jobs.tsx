@@ -9,7 +9,7 @@ import { AllJobs, AllJobsParameters } from 'Api/Jobs';
 import { Job, JobStatus } from 'Api/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { JobsViewModel } from './JobsViewModel';
 
 const jobStatus = (job: Job) => {

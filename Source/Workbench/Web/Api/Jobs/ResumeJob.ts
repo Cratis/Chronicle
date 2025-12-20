@@ -5,13 +5,11 @@
 /* eslint-disable sort-imports */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
-import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/applications/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/applications.react/commands';
-import { Validator } from '@cratis/applications/validation';
+import { Command, CommandPropertyValidators, CommandValidator } from '@cratis/arc/commands';
+import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import { Validator } from '@cratis/arc/validation';
+import { PropertyDescriptor } from '@cratis/arc/reflection';
 import { Guid } from '@cratis/fundamentals';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/jobs/{{jobId}}/resume');
 
 export interface IResumeJob {
     eventStore?: string;
@@ -29,8 +27,12 @@ export class ResumeJobValidator extends CommandValidator {
 
 export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/jobs/{jobId}/resume';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ResumeJobValidator();
+    readonly propertyDescriptors: PropertyDescriptor[] = [
+        new PropertyDescriptor('eventStore', String),
+        new PropertyDescriptor('namespace', String),
+        new PropertyDescriptor('jobId', Guid),
+    ];
 
     private _eventStore!: string;
     private _namespace!: string;
@@ -82,6 +84,8 @@ export class ResumeJob extends Command<IResumeJob> implements IResumeJob {
     }
 
     static use(initialValues?: IResumeJob): [ResumeJob, SetCommandValues<IResumeJob>, ClearCommandValues] {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         return useCommand<ResumeJob, IResumeJob>(ResumeJob, initialValues);
     }
 }

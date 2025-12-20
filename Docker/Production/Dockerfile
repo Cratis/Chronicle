@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image
 ####################################
-FROM mcr.microsoft.com/dotnet/runtime:9.0.0-bookworm-slim
+FROM mcr.microsoft.com/dotnet/runtime:10.0
 ARG CONFIGURATION=Release
 ARG VERSION
 

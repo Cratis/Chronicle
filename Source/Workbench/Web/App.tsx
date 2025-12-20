@@ -6,10 +6,10 @@ import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
 import { LayoutProvider } from './Layout/Default/context/LayoutContext';
-import { DialogComponents } from '@cratis/applications.react/dialogs';
+import { DialogComponents } from '@cratis/arc.react/dialogs';
 import { BusyIndicatorDialog, ConfirmationDialog } from 'Components/Dialogs';
-import { ApplicationModel } from '@cratis/applications.react';
-import { MVVM } from '@cratis/applications.react.mvvm';
+import { Arc } from '@cratis/arc.react';
+import { MVVM } from '@cratis/arc.react.mvvm';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -19,7 +19,7 @@ function App() {
     const basePath = basePathElement?.content ?? '/';
 
     return (
-        <ApplicationModel development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
+        <Arc development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
@@ -36,7 +36,7 @@ function App() {
                     </DialogComponents>
                 </LayoutProvider>
             </MVVM>
-        </ApplicationModel>
+        </Arc>
     );
 }
 

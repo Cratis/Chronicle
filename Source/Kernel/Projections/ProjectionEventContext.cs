@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -23,6 +24,18 @@ public record ProjectionEventContext(
     ProjectionOperationType OperationType,
     bool NeedsInitialState)
 {
+    readonly List<ProjectionFuture> _deferredFutures = [];
+
+    /// <summary>
+    /// Gets the collection of deferred futures that need to be stored.
+    /// </summary>
+    public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
+
+    /// <summary>
+    /// Gets whether this event has been deferred (has futures that couldn't be resolved).
+    /// </summary>
+    public bool IsDeferred => _deferredFutures.Count > 0;
+
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
     /// </summary>
@@ -47,6 +60,21 @@ public record ProjectionEventContext(
     /// Whether the operation type affects children.
     /// </summary>
     public bool ChildrenAffected => OperationType.HasFlag(ProjectionOperationType.ChildrenAffected);
+
+    /// <summary>
+    /// Adds a deferred future to the context.
+    /// </summary>
+    /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
+    public void AddDeferredFuture(ProjectionFuture future)
+    {
+        // Avoid adding duplicate futures for the same event sequence number
+        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        {
+            return;
+        }
+
+        _deferredFutures.Add(future);
+    }
 
     /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and

@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/applications/queries';
-import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { QueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
+import { useQuery, useQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { AppendedEvent } from '../Events/AppendedEvent';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/sequence/{{eventSequenceId}}?eventSourceId={{eventSourceId}}');
 
 class AppendedEventsSortBy {
     private _context: SortingActionsForQuery<AppendedEvent[]>;
@@ -48,8 +46,7 @@ export interface AppendedEventsParameters {
 }
 
 export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsParameters> {
-    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}?eventSourceId={eventSourceId}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+    readonly route: string = '/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}';
     readonly defaultValue: AppendedEvent[] = [];
     private readonly _sortBy: AppendedEventsSortBy;
     private static readonly _sortBy: AppendedEventsSortByWithoutQuery = new AppendedEventsSortByWithoutQuery();
@@ -66,6 +63,18 @@ export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsPara
             'eventSequenceId',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+        new ParameterDescriptor('eventSequenceId', String),
+        new ParameterDescriptor('eventSourceId', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
+    eventSequenceId!: string;
+    eventSourceId!: string;
 
     get sortBy(): AppendedEventsSortBy {
         return this._sortBy;

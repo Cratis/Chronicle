@@ -18,10 +18,10 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     public const int MongoDBPort = 27018;
 
-#if NET9_0
-    readonly Lock _containerLock = new();
-#else
+#if NET8_0
     readonly object _containerLock = new();
+#else
+    readonly Lock _containerLock = new();
 #endif
 
     MongoDBDatabase? _eventStore;
@@ -90,7 +90,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             prefix = $"{prefix}-";
         }
 
-        var backupName = $"{prefix}{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.tgz";
+        var backupName = $"{prefix}{DateTimeOffset.Now:yyyyMMdd-HHmmss}.tgz";
         try
         {
             MongoDBContainer.ExecAsync(

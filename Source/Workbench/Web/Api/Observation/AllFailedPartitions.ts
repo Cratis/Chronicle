@@ -4,12 +4,10 @@
 
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
-import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/applications/queries';
-import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/applications.react/queries';
+import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
+import { useObservableQuery, useObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
+import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { FailedPartition } from './FailedPartition';
-import Handlebars from 'handlebars';
-
-const routeTemplate = Handlebars.compile('/api/event-store/{{eventStore}}/{{namespace}}/failed-partitions/{{observerId?}}');
 
 class AllFailedPartitionsSortBy {
     private _id: SortingActionsForObservableQuery<FailedPartition[]>;
@@ -65,7 +63,6 @@ export interface AllFailedPartitionsParameters {
 }
 export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsParameters> {
     readonly route: string = '/api/event-store/{eventStore}/{namespace}/failed-partitions/{observerId?}';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: FailedPartition[] = [];
     private readonly _sortBy: AllFailedPartitionsSortBy;
     private static readonly _sortBy: AllFailedPartitionsSortByWithoutQuery = new AllFailedPartitionsSortByWithoutQuery();
@@ -81,6 +78,16 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
             'namespace',
         ];
     }
+
+    readonly parameterDescriptors: ParameterDescriptor[] = [
+        new ParameterDescriptor('eventStore', String),
+        new ParameterDescriptor('namespace', String),
+        new ParameterDescriptor('observerId', String),
+    ];
+
+    eventStore!: string;
+    namespace!: string;
+    observerId!: string;
 
     get sortBy(): AllFailedPartitionsSortBy {
         return this._sortBy;

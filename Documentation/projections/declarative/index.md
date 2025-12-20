@@ -40,9 +40,14 @@ Declarative Projections in Cratis allow you to create read models from events st
 
 ### Keys and identification
 
-- Event source ID is used as the default key for read models
-- Child collections use custom identifiers for individual items
-- Joins use keys to link data from different streams
+- **EventSourceId** is used as the default key for both read models and parent identification in child collections
+- **Child identifiers**: Use `.IdentifiedBy()` to specify how child items are uniquely identified within collections
+- **Parent key resolution**:
+  - By default, the EventSourceId is used to identify the parent when adding children
+  - Use `.UsingParentKey(e => e.Property)` when the parent identifier is in the event content
+  - Use `.UsingParentKeyFromContext(ctx => ctx.EventSourceId)` to explicitly document default behavior
+- **Child key specification**: Use `.UsingKey(e => e.Property)` to extract the child identifier from event content
+- **Joins**: Use keys to link data from different event streams using `.On(m => m.Property)`
 
 ### Performance
 

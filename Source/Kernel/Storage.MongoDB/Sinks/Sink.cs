@@ -7,13 +7,16 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Monads;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
+#pragma warning disable SA1201, SA1204 // Member ordering
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in MongoDB.
@@ -38,8 +41,6 @@ public class Sink(
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
-
-    IMongoCollection<BsonDocument> Collection => collections.GetCollection();
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
@@ -112,17 +113,89 @@ public class Sink(
         await collections.EndReplay(context);
     }
 
+    /// <inheritdoc/>
+    public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
+    {
+        var collection = Collection;
+
+        var mongoPropertyPath = childPropertyPath.ToMongoDB();
+        var bsonValue = childValue.ToBsonValue();
+
+        var filter = Builders<BsonDocument>.Filter.Eq(mongoPropertyPath, bsonValue);
+
+        using var result = await collection.FindAsync(
+            filter,
+            new FindOptions<BsonDocument>
+            {
+                Projection = Builders<BsonDocument>.Projection.Include("_id"),
+                Limit = 1
+            });
+
+        var document = await result.FirstOrDefaultAsync();
+        if (document is not null && document.TryGetValue("_id", out var idValue))
+        {
+            var key = new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers);
+            return new Option<Key>(key);
+        }
+
+        return Option<Key>.None();
+    }
+
+    /// <inheritdoc/>
+    public async Task EnsureIndexes()
+    {
+        if (readModel.Indexes.Count == 0)
+        {
+            return;
+        }
+
+        var collection = Collection;
+        var existingIndexes = await GetExistingIndexNamesAsync(collection);
+
+        foreach (var indexDefinition in readModel.Indexes)
+        {
+            var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
+
+            if (existingIndexes.Contains(indexName))
+            {
+                continue;
+            }
+
+            var indexModel = new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending(indexDefinition.PropertyPath.Path),
+                new CreateIndexOptions { Name = indexName, Background = true });
+
+            await collection.Indexes.CreateOneAsync(indexModel);
+        }
+    }
+
+    async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)
+    {
+        var indexNames = new HashSet<string>();
+        using var cursor = await collection.Indexes.ListAsync();
+        await cursor.ForEachAsync(index =>
+        {
+            if (index.TryGetValue("name", out var nameValue))
+            {
+                indexNames.Add(nameValue.AsString);
+            }
+        });
+        return indexNames;
+    }
+
     async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
     {
         var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
         var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
         var propertyValue = key.Value.ToBsonValue();
 
-        var collection = collections.GetCollection();
+        var collection = Collection;
 
         var filter = Builders<BsonDocument>.Filter.Empty;
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, propertyValue);
         var update = Builders<BsonDocument>.Update.PullFilter(childrenProperty, childFilter);
         await collection.UpdateManyAsync(filter, update);
     }
+
+    IMongoCollection<BsonDocument> Collection => collections.GetCollection();
 }

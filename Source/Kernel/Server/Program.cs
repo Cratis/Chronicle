@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -55,8 +55,8 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .UseCratisApplicationModel()
-   .UseCratisMongoDB(
+   .AddCratisArc()
+   .AddCratisMongoDB(
        configureOptions: mongo =>
        {
            mongo.Server = chronicleOptions.Storage.ConnectionDetails;
@@ -76,19 +76,20 @@ builder.Host
         }))
    .ConfigureServices((context, services) =>
    {
+       services.AddCodeFirstGrpc();
+       services.AddCodeFirstGrpcReflection();
+
        services
           .AddBindingsByConvention()
           .AddChronicleTelemetry(context.Configuration)
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
-
-       services.AddCodeFirstGrpc();
    });
 
 var app = builder.Build();
 app.UseRouting();
-app.UseCratisApplicationModel();
+app.UseCratisArc();
 
 if (chronicleOptions.Features.Api)
 {
@@ -103,6 +104,7 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
     app.MapFallbackToFile("index.html");
 }
 app.MapGrpcServices();
+app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
 using var cancellationToken = new CancellationTokenSource();

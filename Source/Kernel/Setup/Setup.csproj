@@ -10,6 +10,7 @@
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="NJsonSchema"  />
     </ItemGroup>
 
@@ -33,6 +34,9 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
         <ProjectReference Include="../Diagnostics/Diagnostics.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../Projections/Projections.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>

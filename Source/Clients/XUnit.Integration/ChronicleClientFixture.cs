@@ -141,6 +141,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <inheritdoc/>
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
 
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
+
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
     /// </summary>

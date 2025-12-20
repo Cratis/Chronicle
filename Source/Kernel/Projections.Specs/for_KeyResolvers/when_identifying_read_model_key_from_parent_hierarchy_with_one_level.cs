@@ -5,9 +5,12 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_KeyResolvers;
@@ -20,6 +23,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
     IProjection _rootProjection;
     IProjection _childProjection;
     IEventSequenceStorage _storage;
+    ISink _sink;
     KeyResolvers _keyResolvers;
 
     static EventType _rootEventType = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
@@ -64,26 +68,36 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
             }.AsExpandoObject());
 
         _rootProjection = Substitute.For<IProjection>();
+        _rootProjection.Path.Returns(new ProjectionPath("Root"));
         _rootProjection.EventTypes.Returns(
         [
             _rootEventType
         ]);
+        _rootProjection.OwnEventTypes.Returns([_rootEventType]);
+        _rootProjection.IdentifiedByProperty.Returns(PropertyPath.NotSet);
 
         _childProjection = Substitute.For<IProjection>();
+        _childProjection.Path.Returns(new ProjectionPath("Root.Children"));
         _childProjection.HasParent.Returns(true);
         _childProjection.Parent.Returns(_rootProjection);
         _childProjection.ChildrenPropertyPath.Returns((PropertyPath)"children");
+        _childProjection.IdentifiedByProperty.Returns((PropertyPath)"childId");
         _storage = Substitute.For<IEventSequenceStorage>();
+        _sink = Substitute.For<ISink>();
 
-        _storage.TryGetLastInstanceOfAny(ParentKey, [_rootEventType.Id]).Returns(_rootEvent);
-        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __) => Task.FromResult(new Key(ParentKey, ArrayIndexers.NoIndexers)));
+        _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(_rootEventType.Id))).Returns(new Option<AppendedEvent>(_rootEvent));
+        _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, ___) => Task.FromResult(KeyResolverResult.Resolved(new Key(ParentKey, ArrayIndexers.NoIndexers))));
     }
 
-    async Task Because() => _result = await _keyResolvers.FromParentHierarchy(
-        _childProjection,
-        _keyResolvers.FromEventSourceId,
-        _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
-        "childId")(_storage, _event);
+    async Task Because()
+    {
+        var keyResult = await _keyResolvers.FromParentHierarchy(
+            _childProjection,
+            _keyResolvers.FromEventSourceId,
+            _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+            "childId")(_storage, _sink, _event);
+        _result = (keyResult as ResolvedKey)!.Key;
+    }
 
     [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(ParentKey);
 }

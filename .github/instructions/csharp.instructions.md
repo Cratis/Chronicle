@@ -6,7 +6,7 @@ applyTo: "**/*.cs"
 
 ## Technology Stack
 
-- .NET 9 (specified in global.json)
+- .NET 10 (specified in global.json)
 - C# 13
 - ASP.NET Core
 - MongoDB.Driver for C#

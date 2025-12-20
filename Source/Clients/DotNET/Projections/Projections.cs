@@ -277,6 +277,36 @@ public class Projections(
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        var handler = _handlersByModelType[typeof(TReadModel)];
+        var request = new GetSnapshotsByIdRequest
+        {
+            ProjectionId = handler.Id,
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = EventSequenceId.Log,
+            ReadModelKey = readModelKey
+        };
+
+        var response = await _servicesAccessor.Services.Projections.GetSnapshotsById(request);
+        var snapshots = new List<ProjectionSnapshot<TReadModel>>();
+
+        foreach (var snapshot in response.Snapshots)
+        {
+            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
+            var events = snapshot.Events.ToClient(jsonSerializerOptions);
+            snapshots.Add(new ProjectionSnapshot<TReadModel>(
+                readModel,
+                events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        return snapshots;
+    }
+
     /// <summary>
     /// Sets the <see cref="IRulesProjections"/>.
     /// </summary>
