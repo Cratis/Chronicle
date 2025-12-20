@@ -263,16 +263,16 @@ public class Sink(
     {
         if (_bulkOperations.Count == 0)
         {
-            return Array.Empty<FailedPartition>();
+            return [];
         }
 
         try
         {
-            var result = await Collection.BulkWriteAsync(_bulkOperations);
+            await Collection.BulkWriteAsync(_bulkOperations);
             _bulkOperations.Clear();
             _bulkOperationMetadata.Clear();
             _currentBulkSize = 0;
-            return Array.Empty<FailedPartition>();
+            return [];
         }
         catch (MongoBulkWriteException ex)
         {
