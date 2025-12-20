@@ -4,11 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using MongoDB.Bson.Serialization;
 
-<<<<<<<< HEAD:Source/Kernel/Storage.MongoDB/Serialization/EventTypeIdSerializer.cs
-namespace Cratis.Chronicle.Storage.MongoDB.Serialization;
-========
 namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
->>>>>>>> main:Source/Kernel/Storage.MongoDB/Serializers/EventTypeIdSerializer.cs
 
 /// <summary>
 /// Represents a BSON serializer for <see cref="EventTypeId"/>.

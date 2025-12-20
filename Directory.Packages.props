@@ -34,10 +34,10 @@
         <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.1" />
         <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.1.0" />
         <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.1.0" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.11" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.11" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.11" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.11" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.1" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
         <!-- Orleans -->
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.1" />
@@ -74,8 +74,8 @@
         <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
         <PackageVersion Include="Meziantou.Analyzer" Version="2.0.264" />
         <!-- Not categorized -->
-        <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-        <PackageVersion Include="BenchmarkDotNet" Version="0.15.6" />
+        <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+        <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
         <PackageVersion Include="castle.core" Version="5.2.1" />
         <PackageVersion Include="docfx.console" Version="2.59.4" />
         <PackageVersion Include="humanizer" Version="3.0.1" />

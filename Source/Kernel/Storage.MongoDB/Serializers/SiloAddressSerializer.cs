@@ -4,11 +4,7 @@
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
-<<<<<<<< HEAD:Source/Kernel/Storage.MongoDB/Serialization/SiloAddressSerializer.cs
-namespace Cratis.Chronicle.Storage.MongoDB.Serialization;
-========
 namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
->>>>>>>> main:Source/Kernel/Storage.MongoDB/Serializers/SiloAddressSerializer.cs
 
 /// <summary>
 /// Represents a <see cref="IBsonSerializationProvider"/> for <see cref="SiloAddress"/>.
