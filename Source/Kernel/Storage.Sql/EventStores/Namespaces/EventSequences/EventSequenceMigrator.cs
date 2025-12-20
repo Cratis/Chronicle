@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.EntityFrameworkCore;
-using Cratis.Applications.EntityFrameworkCore.Json;
+using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;

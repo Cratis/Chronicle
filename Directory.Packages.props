@@ -17,6 +17,7 @@
         <PackageVersion Include="Cratis.Arc" Version="18.4.3" />
         <PackageVersion Include="Cratis.Arc.Core" Version="18.5.0" />
         <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.5.0" />
+        <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="18.5.0" />
         <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.4.2" />
         <PackageVersion Include="Cratis.Arc.Swagger" Version="18.4.3" />
         <!-- Microsoft -->

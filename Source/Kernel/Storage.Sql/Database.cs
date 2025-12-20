@@ -3,7 +3,7 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
-using Cratis.Applications.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;

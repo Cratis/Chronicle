@@ -16,7 +16,7 @@ Add the Application Model NuGet package to your project:
 dotnet add package Cratis.Chronicle.Applications
 ```
 
-> **Note**: The `Cratis.Chronicle.Applications` has a dependency to `Cratis.Applications`that holds the rest of the application model.
+> **Note**: The `Cratis.Chronicle.Applications` has a dependency to `Cratis.Arc`that holds the rest of the application model.
 > In addition, this builds on top of `Cratis.Chronicle.AspNetCore`, which assumes your project is an ASP.NET Core project.
 
 ## Configuration
