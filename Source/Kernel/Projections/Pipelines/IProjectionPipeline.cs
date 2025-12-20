@@ -33,6 +33,18 @@ public interface IProjectionPipeline
     Task EndReplay(ReplayContext context);
 
     /// <summary>
+    /// Begin bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task BeginBulk();
+
+    /// <summary>
+    /// End bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task EndBulk();
+
+    /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>

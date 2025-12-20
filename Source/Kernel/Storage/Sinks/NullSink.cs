@@ -28,7 +28,14 @@ public class NullSink : ISink
     public SinkTypeName Name => "Null sink";
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
+        Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context) => Task.CompletedTask;
