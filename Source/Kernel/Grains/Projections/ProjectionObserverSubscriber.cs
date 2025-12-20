@@ -101,21 +101,27 @@ public class ProjectionObserverSubscriber(
                 if (pipelineContext.HasFailedPartitions)
                 {
                     var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+                    FailedPartition? lastFailedPartition = null;
+
                     foreach (var failedPartition in pipelineContext.FailedPartitions)
                     {
+                        // Set the ObserverId which is not known in the pipeline
+                        failedPartition.ObserverId = _key.ObserverId;
+
                         await observer.PartitionFailed(
                             failedPartition.Partition,
                             failedPartition.LastAttempt.SequenceNumber,
                             failedPartition.LastAttempt.Messages,
                             failedPartition.LastAttempt.StackTrace);
+
+                        lastFailedPartition = failedPartition;
                     }
 
                     // Return failed status with the last attempt information
-                    var lastFailedPartition = pipelineContext.FailedPartitions.Last();
                     return new(
                         ObserverSubscriberState.Failed,
                         lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                        lastFailedPartition.LastAttempt.Messages,
+                        lastFailedPartition!.LastAttempt.Messages,
                         lastFailedPartition.LastAttempt.StackTrace);
                 }
 
