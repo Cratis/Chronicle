@@ -533,11 +533,7 @@ public class EventSequence(
 
         await appendResult.Match(
             _ => Task.CompletedTask,
-            errorType => errorType switch
-            {
-                DuplicateEventSequenceNumber duplicateError => HandleAppendedDuplicateEventForMany(eventsToAppend, duplicateError.NextAvailableSequenceNumber),
-                _ => Task.FromException(new FailedAppendingEvent())
-            });
+            errorType => HandleAppendedDuplicateEventForMany(eventsToAppend, errorType.NextAvailableSequenceNumber));
     }
 
     async Task HandleAppendedDuplicateEventForMany(IEnumerable<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
