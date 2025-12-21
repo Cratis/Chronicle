@@ -2,11 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Infrastructure.Security;
 using Cratis.Reactive;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -17,48 +25,88 @@ namespace Cratis.Chronicle.Services.Security;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Users"/> class.
 /// </remarks>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="userStorage">The <see cref="IUserStorage"/> for working with users.</param>
-internal sealed class Users(IUserStorage userStorage) : IUsers
+internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage) : IUsers
 {
     /// <inheritdoc/>
     public async Task Add(AddUser command)
     {
-        var passwordHash = HashPassword(command.Password);
+        var passwordHash = HashHelper.Hash(command.Password);
         
-        var user = new ChronicleUser(
+        var @event = new UserAdded(
             command.UserId,
             command.Username,
             command.Email,
-            passwordHash,
-            Guid.NewGuid().ToString(),
-            true,
-            DateTimeOffset.UtcNow,
-            null);
+            passwordHash);
 
-        await userStorage.Create(user);
+        var eventSequence = grainFactory.GetSystemEventSequence();
+        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+
+        await eventSequence.AppendMany(
+            [
+                new EventToAppend(
+                    EventSourceType.Default,
+                    command.UserId,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    typeof(UserAdded).GetEventType(),
+                    jsonObject)
+            ],
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
     }
 
     /// <inheritdoc/>
     public async Task Remove(RemoveUser command)
     {
-        await userStorage.Delete(command.UserId);
+        var @event = new UserRemoved(command.UserId);
+        
+        var eventSequence = grainFactory.GetSystemEventSequence();
+        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+
+        await eventSequence.AppendMany(
+            [
+                new EventToAppend(
+                    EventSourceType.Default,
+                    command.UserId,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    typeof(UserRemoved).GetEventType(),
+                    jsonObject)
+            ],
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
     }
 
     /// <inheritdoc/>
     public async Task ChangePassword(ChangeUserPassword command)
     {
-        var user = await userStorage.GetById(command.UserId);
-        if (user is not null)
-        {
-            var passwordHash = HashPassword(command.Password);
-            var updatedUser = user with
-            {
-                PasswordHash = passwordHash,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                LastModifiedAt = DateTimeOffset.UtcNow
-            };
-            await userStorage.Update(updatedUser);
-        }
+        var passwordHash = HashHelper.Hash(command.Password);
+        
+        var @event = new UserPasswordChanged(command.UserId, passwordHash);
+        
+        var eventSequence = grainFactory.GetSystemEventSequence();
+        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+
+        await eventSequence.AppendMany(
+            [
+                new EventToAppend(
+                    EventSourceType.Default,
+                    command.UserId,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    typeof(UserPasswordChanged).GetEventType(),
+                    jsonObject)
+            ],
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
     }
 
     /// <inheritdoc/>
@@ -74,19 +122,6 @@ internal sealed class Users(IUserStorage userStorage) : IUsers
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
             .Select(users => users.Select(ToContract).ToArray());
-
-    static string HashPassword(string password)
-    {
-        var salt = RandomNumberGenerator.GetBytes(128 / 8);
-        var hashed = KeyDerivation.Pbkdf2(
-            password: password,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8);
-
-        return Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hashed);
-    }
 
     static User ToContract(ChronicleUser user) => new()
     {

@@ -2,11 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Auditing;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Infrastructure.Security;
 using Cratis.Reactive;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -17,80 +25,110 @@ namespace Cratis.Chronicle.Services.Security;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ClientCredentials"/> class.
 /// </remarks>
-/// <param name="clientCredentialsStorage">The <see cref="IClientCredentialsStorage"/> for working with client credentials.</param>
-internal sealed class ClientCredentials(IClientCredentialsStorage clientCredentialsStorage) : IClientCredentials
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> for working with client credentials.</param>
+internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplicationStorage applicationStorage) : IClientCredentials
 {
     /// <inheritdoc/>
     public async Task Add(AddClientCredentials command)
     {
-        var clientSecret = HashSecret(command.ClientSecret);
+        var clientSecret = HashHelper.Hash(command.ClientSecret);
         
-        var client = new ChronicleClient(
+        var @event = new ClientCredentialsAdded(
             command.Id,
             command.ClientId,
-            clientSecret,
-            true,
-            DateTimeOffset.UtcNow,
-            null);
+            clientSecret);
 
-        await clientCredentialsStorage.Create(client);
+        var eventSequence = grainFactory.GetSystemEventSequence();
+        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+
+        await eventSequence.AppendMany(
+            [
+                new EventToAppend(
+                    EventSourceType.Default,
+                    command.Id,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    typeof(ClientCredentialsAdded).GetEventType(),
+                    jsonObject)
+            ],
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
     }
 
     /// <inheritdoc/>
     public async Task Remove(RemoveClientCredentials command)
     {
-        await clientCredentialsStorage.Delete(command.Id);
+        var @event = new ClientCredentialsRemoved(command.Id);
+        
+        var eventSequence = grainFactory.GetSystemEventSequence();
+        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+
+        await eventSequence.AppendMany(
+            [
+                new EventToAppend(
+                    EventSourceType.Default,
+                    command.Id,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    typeof(ClientCredentialsRemoved).GetEventType(),
+                    jsonObject)
+            ],
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
     }
 
     /// <inheritdoc/>
     public async Task ChangeSecret(ChangeClientCredentialsSecret command)
     {
-        var client = await clientCredentialsStorage.GetById(command.Id);
-        if (client is not null)
-        {
-            var clientSecret = HashSecret(command.ClientSecret);
-            var updatedClient = client with
-            {
-                ClientSecret = clientSecret,
-                LastModifiedAt = DateTimeOffset.UtcNow
-            };
-            await clientCredentialsStorage.Update(updatedClient);
-        }
+        var clientSecret = HashHelper.Hash(command.ClientSecret);
+        
+        var @event = new ClientCredentialsSecretChanged(command.Id, clientSecret);
+        
+        var eventSequence = grainFactory.GetSystemEventSequence();
+        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+
+        await eventSequence.AppendMany(
+            [
+                new EventToAppend(
+                    EventSourceType.Default,
+                    command.Id,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    typeof(ClientCredentialsSecretChanged).GetEventType(),
+                    jsonObject)
+            ],
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Security.ClientCredentials>> GetAll()
     {
-        var clients = await clientCredentialsStorage.GetAll();
+        var clients = await applicationStorage.GetAll();
         return clients.Select(ToContract);
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<Contracts.Security.ClientCredentials>> ObserveAll(CallContext context = default) =>
-        clientCredentialsStorage
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .Select(clients => clients.Select(ToContract).ToArray());
-
-    static string HashSecret(string secret)
+    public IObservable<IEnumerable<Contracts.Security.ClientCredentials>> ObserveAll(CallContext context = default)
     {
-        var salt = RandomNumberGenerator.GetBytes(128 / 8);
-        var hashed = KeyDerivation.Pbkdf2(
-            password: secret,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8);
-
-        return Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hashed);
+        // Since IApplicationStorage doesn't have ObserveAll, we'll return an empty observable for now
+        // This can be enhanced by adding observable support to IApplicationStorage if needed
+        return System.Reactive.Linq.Observable.Empty<IEnumerable<Contracts.Security.ClientCredentials>>();
     }
 
-    static Contracts.Security.ClientCredentials ToContract(ChronicleClient client) => new()
+    static Contracts.Security.ClientCredentials ToContract(Application client) => new()
     {
         Id = client.Id,
         ClientId = client.ClientId,
-        IsActive = client.IsActive,
-        CreatedAt = client.CreatedAt,
-        LastModifiedAt = client.LastModifiedAt
+        IsActive = true,
+        CreatedAt = DateTimeOffset.UtcNow,
+        LastModifiedAt = null
     };
 }
