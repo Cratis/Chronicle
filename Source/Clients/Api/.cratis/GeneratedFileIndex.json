@@ -1,5 +1,20 @@
 {
   "entries": {
+    "Security": {
+      "folders": {},
+      "files": [
+        "Add.ts",
+        "Remove.ts",
+        "ChangeSecret.ts",
+        "ChangePassword.ts",
+        "GetClientCredentials.ts",
+        "AllClientCredentials.ts",
+        "GetUsers.ts",
+        "AllUsers.ts",
+        "ClientCredentials.ts",
+        "User.ts"
+      ]
+    },
     "Recommendations": {
       "folders": {},
       "files": [
