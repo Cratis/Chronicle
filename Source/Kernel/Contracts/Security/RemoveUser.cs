@@ -1,0 +1,17 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Contracts.Security;
+
+/// <summary>
+/// Represents the command for removing a user.
+/// </summary>
+[ProtoContract]
+public record RemoveUser
+{
+    /// <summary>
+    /// The unique identifier for the user.
+    /// </summary>
+    [ProtoMember(1)]
+    public string UserId { get; set; } = string.Empty;
+}
