@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+
 namespace Cratis.Chronicle.Storage.Security;
 
 /// <summary>
@@ -8,6 +10,12 @@ namespace Cratis.Chronicle.Storage.Security;
 /// </summary>
 public interface IUserStorage
 {
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="ChronicleUser"/>.
+    /// </summary>
+    /// <returns>An observable of collection of <see cref="ChronicleUser"/>.</returns>
+    ISubject<IEnumerable<ChronicleUser>> ObserveAll();
+
     /// <summary>
     /// Gets a user by their unique identifier.
     /// </summary>

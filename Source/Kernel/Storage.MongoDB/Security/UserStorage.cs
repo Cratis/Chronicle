@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Reactive;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Security;
@@ -16,6 +18,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 public class UserStorage(IDatabase database) : IUserStorage
 {
     const string CollectionName = WellKnownCollectionNames.Users;
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<ChronicleUser>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<ChronicleUser>, IEnumerable<ChronicleUser>>(
+            GetCollection().Observe(),
+            users => users);
 
     /// <inheritdoc/>
     public async Task<ChronicleUser?> GetById(string id)
