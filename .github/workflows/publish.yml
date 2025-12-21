@@ -374,6 +374,7 @@ jobs:
         with:
           path: ${{ env.NUGET_OUTPUT }}
           key: ${{ env.DOTNET_NUGET_CACHE }}
+          fail-on-cache-miss: true
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
