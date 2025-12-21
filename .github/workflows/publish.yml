@@ -7,6 +7,7 @@ env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
+  DOTNET_NUGET_CACHE: "dotnet-nuget-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
@@ -209,6 +210,68 @@ jobs:
         run: |
           yarn build
 
+  dotnet:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release, workbench]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/Web/wwwroot
+          key: ${{ env.WORKBENCH_CACHE }}
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Remove any existing artifacts
+        run: rm -rf ${{ env.NUGET_OUTPUT }}
+
+      - name: Inject certificate into server if available
+        working-directory: ./Source/Kernel/Server
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected into server"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Inject certificate into client if available
+        working-directory: ./Source/Clients/Connections
+        run: |
+          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
+            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
+            echo "Certificate injected into client"
+          fi
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+
+      - name: Build
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }}
+
+      - name: Build repackaged clients
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
+        working-directory: ./Source/Clients
+
+      - name: Create NuGet packages
+        run: dotnet pack -p:IsPackaging=true --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+
+      - uses: actions/cache@v3
+        id: nuget-packages-output
+        with:
+          path: ${{ env.NUGET_OUTPUT }}
+          key: ${{ env.DOTNET_NUGET_CACHE }}
+
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -300,17 +363,17 @@ jobs:
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, workbench]
+    needs: [release, dotnet]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - uses: actions/cache@v3
-        id: workbench-output
+        id: nuget-packages-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
+          path: ${{ env.NUGET_OUTPUT }}
+          key: ${{ env.DOTNET_NUGET_CACHE }}
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -319,38 +382,6 @@ jobs:
             ${{ env.DOTNET8_VERSION }}
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
-
-      - name: Remove any existing artifacts
-        run: rm -rf ${{ env.NUGET_OUTPUT }}
-
-      - name: Inject certificate into server if available
-        working-directory: ./Source/Kernel/Server
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected into server"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Inject certificate into client if available
-        working-directory: ./Source/Clients/Connections
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected into client"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }}
-      - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
-        working-directory: ./Source/Clients
-
-      - name: Create NuGet packages
-        run: dotnet pack -p:IsPackaging=true --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
