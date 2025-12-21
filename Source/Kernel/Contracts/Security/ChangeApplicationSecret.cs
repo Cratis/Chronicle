@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.Security;
 
 /// <summary>
-/// Represents the command for adding client credentials.
+/// Represents the command for changing application secret.
 /// </summary>
 [ProtoContract]
-public record AddClientCredentials
+public record ChangeApplicationSecret
 {
     /// <summary>
     /// The unique identifier for the client.
@@ -16,14 +16,8 @@ public record AddClientCredentials
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// The client identifier.
+    /// The new client secret.
     /// </summary>
     [ProtoMember(2)]
-    public string ClientId { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The client secret.
-    /// </summary>
-    [ProtoMember(3)]
     public string ClientSecret { get; set; } = string.Empty;
 }

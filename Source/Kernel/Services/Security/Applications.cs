@@ -20,21 +20,21 @@ using ProtoBuf.Grpc;
 namespace Cratis.Chronicle.Services.Security;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientCredentials"/>.
+/// Represents an implementation of <see cref="IApplications"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientCredentials"/> class.
+/// Initializes a new instance of the <see cref="Applications"/> class.
 /// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> for working with client credentials.</param>
-internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplicationStorage applicationStorage) : IClientCredentials
+/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> for working with applications.</param>
+internal sealed class Applications(IGrainFactory grainFactory, IApplicationStorage applicationStorage) : IApplications
 {
     /// <inheritdoc/>
-    public async Task Add(AddClientCredentials command)
+    public async Task Add(AddApplication command)
     {
         var clientSecret = HashHelper.Hash(command.ClientSecret);
         
-        var @event = new ClientCredentialsAdded(
+        var @event = new ApplicationAdded(
             command.Id,
             command.ClientId,
             clientSecret);
@@ -49,7 +49,7 @@ internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplication
                     command.Id,
                     EventStreamType.All,
                     EventStreamId.Default,
-                    typeof(ClientCredentialsAdded).GetEventType(),
+                    typeof(ApplicationAdded).GetEventType(),
                     jsonObject)
             ],
             CorrelationId.New(),
@@ -59,9 +59,9 @@ internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplication
     }
 
     /// <inheritdoc/>
-    public async Task Remove(RemoveClientCredentials command)
+    public async Task Remove(RemoveApplication command)
     {
-        var @event = new ClientCredentialsRemoved(command.Id);
+        var @event = new ApplicationRemoved(command.Id);
         
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
@@ -73,7 +73,7 @@ internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplication
                     command.Id,
                     EventStreamType.All,
                     EventStreamId.Default,
-                    typeof(ClientCredentialsRemoved).GetEventType(),
+                    typeof(ApplicationRemoved).GetEventType(),
                     jsonObject)
             ],
             CorrelationId.New(),
@@ -83,11 +83,11 @@ internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplication
     }
 
     /// <inheritdoc/>
-    public async Task ChangeSecret(ChangeClientCredentialsSecret command)
+    public async Task ChangeSecret(ChangeApplicationSecret command)
     {
         var clientSecret = HashHelper.Hash(command.ClientSecret);
         
-        var @event = new ClientCredentialsSecretChanged(command.Id, clientSecret);
+        var @event = new ApplicationSecretChanged(command.Id, clientSecret);
         
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
@@ -99,7 +99,7 @@ internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplication
                     command.Id,
                     EventStreamType.All,
                     EventStreamId.Default,
-                    typeof(ClientCredentialsSecretChanged).GetEventType(),
+                    typeof(ApplicationSecretChanged).GetEventType(),
                     jsonObject)
             ],
             CorrelationId.New(),
@@ -109,21 +109,21 @@ internal sealed class ClientCredentials(IGrainFactory grainFactory, IApplication
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<Contracts.Security.ClientCredentials>> GetAll()
+    public async Task<IEnumerable<Contracts.Security.Application>> GetAll()
     {
         var clients = await applicationStorage.GetAll();
         return clients.Select(ToContract);
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<Contracts.Security.ClientCredentials>> ObserveAll(CallContext context = default)
+    public IObservable<IEnumerable<Contracts.Security.Application>> ObserveAll(CallContext context = default)
     {
         // Since IApplicationStorage doesn't have ObserveAll, we'll return an empty observable for now
         // This can be enhanced by adding observable support to IApplicationStorage if needed
-        return System.Reactive.Linq.Observable.Empty<IEnumerable<Contracts.Security.ClientCredentials>>();
+        return System.Reactive.Linq.Observable.Empty<IEnumerable<Contracts.Security.Application>>();
     }
 
-    static Contracts.Security.ClientCredentials ToContract(Application client) => new()
+    static Contracts.Security.Application ToContract(Storage.Security.Application client) => new()
     {
         Id = client.Id,
         ClientId = client.ClientId,

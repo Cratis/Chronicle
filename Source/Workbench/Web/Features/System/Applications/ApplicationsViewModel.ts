@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { injectable } from 'tsyringe';
-import { ClientCredentials, Add, Remove, ChangeSecret } from 'Api/Security';
+import { Applications, Add, Remove, ChangeSecret } from 'Api/Security';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 
 @injectable()
-export class ClientCredentialsViewModel {
+export class ApplicationsViewModel {
     constructor(
         private readonly _add: Add,
         private readonly _remove: Remove,
@@ -15,9 +15,9 @@ export class ClientCredentialsViewModel {
         private readonly _dialogs: IDialogs) {
     }
 
-    selectedClient: ClientCredentials | undefined;
+    selectedClient: Applications | undefined;
 
-    async addClientCredentials() {
+    async addApplications() {
         const id = crypto.randomUUID();
         
         const clientId = await this._dialogs.showTextInput('Add Client Credentials', 'Enter client ID:');
@@ -32,22 +32,22 @@ export class ClientCredentialsViewModel {
 
         const result = await this._add.execute();
         result.onException((error) => {
-            this._dialogs.showConfirmation('Add Client Credentials', `Failed to add client credentials: ${error}`, DialogButtons.Ok);
+            this._dialogs.showConfirmation('Add Client Credentials', `Failed to add applications: ${error}`, DialogButtons.Ok);
         });
     }
 
-    async removeClientCredentials() {
+    async removeApplications() {
         if (this.selectedClient) {
             const result = await this._dialogs.showConfirmation(
                 'Remove Client Credentials',
-                `Are you sure you want to remove client credentials ${this.selectedClient.clientId}?`,
+                `Are you sure you want to remove applications ${this.selectedClient.clientId}?`,
                 DialogButtons.YesNo);
                 
             if (result === DialogResult.Yes) {
                 this._remove.id = this.selectedClient.id;
                 const commandResult = await this._remove.execute();
                 commandResult.onException((error) => {
-                    this._dialogs.showConfirmation('Remove Client Credentials', `Failed to remove client credentials: ${error}`, DialogButtons.Ok);
+                    this._dialogs.showConfirmation('Remove Client Credentials', `Failed to remove applications: ${error}`, DialogButtons.Ok);
                 });
             }
         }

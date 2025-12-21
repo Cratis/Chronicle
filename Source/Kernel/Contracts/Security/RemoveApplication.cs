@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.Security;
 
 /// <summary>
-/// Represents the command for removing client credentials.
+/// Represents the command for removing an application.
 /// </summary>
 [ProtoContract]
-public record RemoveClientCredentials
+public record RemoveApplication
 {
     /// <summary>
     /// The unique identifier for the client.

@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.Security;
 
 /// <summary>
-/// Represents client credentials in the Chronicle system.
+/// Represents an application in the Chronicle system.
 /// </summary>
 [ProtoContract]
-public record ClientCredentials
+public record Application
 {
     /// <summary>
     /// The unique identifier for the client.

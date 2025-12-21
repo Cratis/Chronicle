@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { withViewModel } from '@cratis/arc.react.mvvm';
-import { ClientCredentialsViewModel } from './ClientCredentialsViewModel';
+import { ApplicationsViewModel } from './ApplicationsViewModel';
 import { Column } from 'primereact/column';
-import { AllClientCredentials, ClientCredentials } from 'Api/Security';
+import { AllApplications, Applications } from 'Api/Security';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 
@@ -13,20 +13,20 @@ const formatDate = (date: string) => {
     return new Date(date).toLocaleString();
 };
 
-export const ClientCredentialsPage = withViewModel(ClientCredentialsViewModel, ({ viewModel }) => {
+export const ApplicationsPage = withViewModel(ApplicationsViewModel, ({ viewModel }) => {
     return (
         <DataPage
             title="Client Credentials"
-            query={AllClientCredentials}
-            emptyMessage="No client credentials found"
+            query={AllApplications}
+            emptyMessage="No applications found"
             dataKey='id'
-            onSelectionChange={(e) => (viewModel.selectedClient = e.value as ClientCredentials)}>
+            onSelectionChange={(e) => (viewModel.selectedClient = e.value as Applications)}>
             <DataPage.MenuItems>
                 <MenuItem
                     id="add"
                     label="Add Client Credentials"
                     icon={faIcons.FaPlus}
-                    command={() => viewModel.addClientCredentials()} />
+                    command={() => viewModel.addApplications()} />
                 <MenuItem
                     id="changeSecret"
                     label="Change Secret"
@@ -38,7 +38,7 @@ export const ClientCredentialsPage = withViewModel(ClientCredentialsViewModel, (
                     label="Remove Client Credentials"
                     icon={faIcons.FaTrash}
                     disableOnUnselected
-                    command={() => viewModel.removeClientCredentials()} />
+                    command={() => viewModel.removeApplications()} />
             </DataPage.MenuItems>
             <DataPage.Columns>
                 <Column field='id' header="ID" sortable />
@@ -47,17 +47,17 @@ export const ClientCredentialsPage = withViewModel(ClientCredentialsViewModel, (
                     field='isActive'
                     header="Active"
                     sortable
-                    body={(client: ClientCredentials) => client.isActive ? 'Yes' : 'No'} />
+                    body={(client: Applications) => client.isActive ? 'Yes' : 'No'} />
                 <Column
                     field='createdAt'
                     header="Created"
                     sortable
-                    body={(client: ClientCredentials) => formatDate(client.createdAt)} />
+                    body={(client: Applications) => formatDate(client.createdAt)} />
                 <Column
                     field='lastModifiedAt'
                     header="Last Modified"
                     sortable
-                    body={(client: ClientCredentials) => formatDate(client.lastModifiedAt || '')} />
+                    body={(client: Applications) => formatDate(client.lastModifiedAt || '')} />
             </DataPage.Columns>
         </DataPage>
     );

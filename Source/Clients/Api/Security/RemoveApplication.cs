@@ -4,6 +4,6 @@
 namespace Cratis.Chronicle.Api.Security;
 
 /// <summary>
-/// Represents the command for removing client credentials.
+/// Represents the command for removing application.
 /// </summary>
-public record RemoveClientCredentials(string Id);
+public record RemoveApplication(string Id);

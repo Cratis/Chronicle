@@ -4,6 +4,6 @@
 namespace Cratis.Chronicle.Api.Security;
 
 /// <summary>
-/// Represents the command for changing client credentials secret.
+/// Represents the command for adding application.
 /// </summary>
-public record ChangeClientCredentialsSecret(string Id, string ClientSecret);
+public record AddApplication(string Id, string ClientId, string ClientSecret);

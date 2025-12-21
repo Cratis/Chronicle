@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.Grains.Security;
 
 /// <summary>
-/// Represents the event for client credentials secret that has been changed.
+/// Represents the event for an application secret that has been changed.
 /// </summary>
-/// <param name="Id">The unique identifier for the client.</param>
+/// <param name="Id">The unique identifier for the application.</param>
 /// <param name="ClientSecret">The new hashed client secret.</param>
 [EventType]
-public record ClientCredentialsSecretChanged(string Id, string ClientSecret);
+public record ApplicationSecretChanged(string Id, string ClientSecret);

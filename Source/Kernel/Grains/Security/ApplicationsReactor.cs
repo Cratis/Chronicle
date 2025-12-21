@@ -10,21 +10,21 @@ namespace Cratis.Chronicle.Grains.Security;
 #pragma warning disable IDE0060 // Remove unused parameter
 
 /// <summary>
-/// Represents a reactor that handles client credentials events.
+/// Represents a reactor that handles application events.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ClientCredentialsReactor"/> class.
+/// Initializes a new instance of the <see cref="ApplicationsReactor"/> class.
 /// </remarks>
-/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> for managing client credentials.</param>
-public class ClientCredentialsReactor(IApplicationStorage applicationStorage) : Reactor
+/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> for managing applications.</param>
+public class ApplicationsReactor(IApplicationStorage applicationStorage) : Reactor
 {
     /// <summary>
-    /// Handles the addition of client credentials.
+    /// Handles the addition of an application.
     /// </summary>
-    /// <param name="event">The event containing the client credentials information.</param>
+    /// <param name="event">The event containing the an application information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
-    public async Task Added(ClientCredentialsAdded @event, EventContext eventContext)
+    public async Task Added(ApplicationAdded @event, EventContext eventContext)
     {
         var application = new Application
         {
@@ -37,23 +37,23 @@ public class ClientCredentialsReactor(IApplicationStorage applicationStorage) : 
     }
 
     /// <summary>
-    /// Handles the removal of client credentials.
+    /// Handles the removal of an application.
     /// </summary>
-    /// <param name="event">The event containing the client credentials information.</param>
+    /// <param name="event">The event containing the an application information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
-    public async Task Removed(ClientCredentialsRemoved @event, EventContext eventContext)
+    public async Task Removed(ApplicationRemoved @event, EventContext eventContext)
     {
         await applicationStorage.Delete(@event.Id);
     }
 
     /// <summary>
-    /// Handles the secret change of client credentials.
+    /// Handles the secret change of an application.
     /// </summary>
-    /// <param name="event">The event containing the client credentials information.</param>
+    /// <param name="event">The event containing the an application information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
-    public async Task SecretChanged(ClientCredentialsSecretChanged @event, EventContext eventContext)
+    public async Task SecretChanged(ApplicationSecretChanged @event, EventContext eventContext)
     {
         var application = await applicationStorage.GetById(@event.Id);
         if (application is not null)

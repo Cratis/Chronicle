@@ -7,11 +7,11 @@
         "Remove.ts",
         "ChangeSecret.ts",
         "ChangePassword.ts",
-        "GetClientCredentials.ts",
-        "AllClientCredentials.ts",
+        "GetApplication.ts",
+        "AllApplication.ts",
         "GetUsers.ts",
         "AllUsers.ts",
-        "ClientCredentials.ts",
+        "Application.ts",
         "User.ts"
       ]
     },
