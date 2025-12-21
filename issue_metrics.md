@@ -3,14 +3,14 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 278 days, 23:54:19 | 123 days, 17:56:37 | 838 days, 21:40:14 |
+| Time to close | 284 days, 1:24:24 | 128 days, 23:54:59 | 827 days, 23:56:12 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 269 |
-| Number of items closed | 590 |
-| Total number of items created | 859 |
+| Number of items that remain open | 256 |
+| Number of items closed | 601 |
+| Total number of items created | 857 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -146,7 +146,6 @@
 | In Observer Jobs figure out what to do when HandeEventsFOrPartition job handles no events | https://github.com/Cratis/Chronicle/issues/1571 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 19 days, 3:14:54 | None |
 | GetNextSequenceNumberGreaterOrEqualThan may cause problems | https://github.com/Cratis/Chronicle/issues/1570 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 17 days, 23:49:29 | None |
 | Reactors will never reconnect if connection is lost and re-established | https://github.com/Cratis/Chronicle/issues/1566 | None | [einari](https://github.com/einari) | None | None | None |
-| Add sequence numbers for the events committed / appended when committing an AggregateRoot | https://github.com/Cratis/Chronicle/issues/1565 | None | [einari](https://github.com/einari) | None | None | None |
 | Extract our internal integration test helpers into the testing library we offer | https://github.com/Cratis/Chronicle/issues/1564 | None | [einari](https://github.com/einari) | None | None | None |
 | Integration tests for Reducers | https://github.com/Cratis/Chronicle/issues/1563 | None | [einari](https://github.com/einari) | None | None | None |
 | Integration tests for Reactors | https://github.com/Cratis/Chronicle/issues/1562 | None | [einari](https://github.com/einari) | None | None | None |
@@ -181,7 +180,7 @@
 | Add details on recommendations | https://github.com/Cratis/Chronicle/issues/1522 | None | [einari](https://github.com/einari) | None | None | None |
 | Some Observer properties in state has wrong values | https://github.com/Cratis/Chronicle/issues/1521 | None | [einari](https://github.com/einari) | 9 days, 7:29:21 | None | None |
 | Configurable auto solving of recommendations | https://github.com/Cratis/Chronicle/issues/1520 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
-| Implement Orleans serializer for IEnumerable<> | https://github.com/Cratis/Chronicle/issues/1516 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Implement Orleans serializer for IEnumerable<> | https://github.com/Cratis/Chronicle/issues/1516 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 402 days, 9:01:47 | None |
 | Add support for clearing all children in a projection | https://github.com/Cratis/Chronicle/issues/1475 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Unit Of Work transactions does not respect event constraints | https://github.com/Cratis/Chronicle/issues/1474 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Support the Outbox -> Inbox forwarding and subscriptions - configured from the client | https://github.com/Cratis/Chronicle/issues/1473 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
@@ -198,7 +197,7 @@
 | Add the concept of stream that goes along with all events | https://github.com/Cratis/Chronicle/issues/1445 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 47 days, 7:19:58 | None |
 | Invalid path for reactors in client (Reactions) | https://github.com/Cratis/Chronicle/issues/1443 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 37 days, 2:01:24 | None |
 | Make it possible for event handling methods to be private | https://github.com/Cratis/Chronicle/issues/1442 | None | [einari](https://github.com/einari) | None | 4 days, 7:05:23 | None |
-| Adjust column sizes in different views | https://github.com/Cratis/Chronicle/issues/1441 | None | [einari](https://github.com/einari) | None | None | None |
+| Adjust column sizes in different views | https://github.com/Cratis/Chronicle/issues/1441 | None | [einari](https://github.com/einari) | None | 451 days, 12:40:00 | None |
 | Disable replay button for disconnected observers | https://github.com/Cratis/Chronicle/issues/1440 | None | [einari](https://github.com/einari) | None | None | None |
 | Show "Are you sure" dialog when ignoring recommendation | https://github.com/Cratis/Chronicle/issues/1439 | None | [einari](https://github.com/einari) | None | None | None |
 | Change to smaller font size and make things a bit more compact | https://github.com/Cratis/Chronicle/issues/1438 | None | [einari](https://github.com/einari) | None | 285 days, 5:29:44 | None |
@@ -213,7 +212,7 @@
 | Fix Compliance hookup for clients | https://github.com/Cratis/Chronicle/issues/1424 | None | [einari](https://github.com/einari) | None | None | None |
 | Upgrade styles for Prime React to be able to upgrade Prime React | https://github.com/Cratis/Chronicle/issues/1423 | None | [einari](https://github.com/einari) | None | 288 days, 8:09:23 | None |
 | Parallelize Observers on partition | https://github.com/Cratis/Chronicle/issues/1420 | None | [woksin](https://github.com/woksin) | None | 297 days, 5:14:04 | None |
-| Improve Cratis.Chronicle.Storage.MongoDB.Sinks.Sink ApplyChanges | https://github.com/Cratis/Chronicle/issues/1419 | None | [woksin](https://github.com/woksin) | None | None | None |
+| Improve Cratis.Chronicle.Storage.MongoDB.Sinks.Sink ApplyChanges | https://github.com/Cratis/Chronicle/issues/1419 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
 | ObserverManager.Notify calls multiple places uses non-task notification delegate | https://github.com/Cratis/Chronicle/issues/1418 | None | [woksin](https://github.com/woksin) | None | None | None |
 | There are lots of magic TimeSpan.From*** in the codebase, many of them should be configurable | https://github.com/Cratis/Chronicle/issues/1417 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Improve projection comparer to support scenarios that are safe to not be considered different | https://github.com/Cratis/Chronicle/issues/1416 | None | [einari](https://github.com/einari) | None | None | None |
@@ -221,11 +220,11 @@
 | Add integration specs for constraints | https://github.com/Cratis/Chronicle/issues/1406 | None | [einari](https://github.com/einari) | None | None | None |
 | Fix Unit of Work | https://github.com/Cratis/Chronicle/issues/1405 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 2:46:54 | 460 days, 0:16:55 | None |
 | StatelessAggregateRootMutator should update NextSequenceNumber in a better way | https://github.com/Cratis/Chronicle/issues/1400 | None | [woksin](https://github.com/woksin) | None | None | None |
-| StatelessAggregateRootMutator when rehydrating for orleans aggregate root the state is not reverted if rehydration fails | https://github.com/Cratis/Chronicle/issues/1398 | None | [woksin](https://github.com/woksin) | None | None | None |
+| StatelessAggregateRootMutator when rehydrating for orleans aggregate root the state is not reverted if rehydration fails | https://github.com/Cratis/Chronicle/issues/1398 | None | [woksin](https://github.com/woksin) | None | 464 days, 15:39:38 | None |
 | Add tracing to UnitOfWork | https://github.com/Cratis/Chronicle/issues/1396 | None | [woksin](https://github.com/woksin) | None | None | None |
 | Add logging messages for client reactors + reducers | https://github.com/Cratis/Chronicle/issues/1395 | None | [einari](https://github.com/einari) | None | None | None |
 | Support specifying key for events for Reactors and Reducers | https://github.com/Cratis/Chronicle/issues/1392 | None | [einari](https://github.com/einari) | None | None | None |
-| AggregateRootCommitResult.Events does not seem to come in order of when events was Applied | https://github.com/Cratis/Chronicle/issues/1864 | None | [woksin](https://github.com/woksin) | None | None | None |
+| AggregateRootCommitResult.Events does not seem to come in order of when events was Applied | https://github.com/Cratis/Chronicle/issues/1864 | None | [woksin](https://github.com/woksin) | None | 466 days, 23:33:54 | None |
 | Look into how we represent a Key and see if we need to improve this | https://github.com/Cratis/Chronicle/issues/1387 | None | [einari](https://github.com/einari) | None | None | None |
 | Switch to KeepAliveAttribute for Grains that needs to always be there | https://github.com/Cratis/Chronicle/issues/1386 | None | [einari](https://github.com/einari) | None | 168 days, 16:13:26 | None |
 | Look into if it makes sense to allow sharing reducers and projections for Aggregates and Read Models | https://github.com/Cratis/Chronicle/issues/1383 | None | [einari](https://github.com/einari) | None | None | None |
@@ -238,7 +237,6 @@
 | Add support for removal in constraint index | https://github.com/Cratis/Chronicle/issues/1360 | None | [einari](https://github.com/einari) | None | 10 days, 7:31:36 | None |
 | Add support for "once only delivery" for projections | https://github.com/Cratis/Chronicle/issues/1357 | None | [einari](https://github.com/einari) | None | 180 days, 17:06:48 | None |
 | Add handled sequence number on the models during projection | https://github.com/Cratis/Chronicle/issues/1356 | None | [einari](https://github.com/einari) | None | 17 days, 3:38:32 | None |
-| Add support for tombstoning events | https://github.com/Cratis/Chronicle/issues/1354 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add support for joining other event sequences in projections | https://github.com/Cratis/Chronicle/issues/1353 | None | [einari](https://github.com/einari) | None | None | None |
 | Add more integration test scenarios for Projections | https://github.com/Cratis/Chronicle/issues/1352 | None | [einari](https://github.com/einari) | None | 33 days, 10:05:22 | None |
 | Add integration specs for AppendedEventsQueues system | https://github.com/Cratis/Chronicle/issues/1351 | None | [einari](https://github.com/einari) | None | None | None |
@@ -276,13 +274,13 @@
 | Move UniqueInstanceValidator to Application Model and make it work as a general FluentValidation property validator and not only for state | https://github.com/Cratis/Chronicle/issues/1300 | None | [einari](https://github.com/einari) | None | 39 days, 21:41:53 | None |
 | Adhere (mostly) to the library guidance from Microsoft | https://github.com/Cratis/Chronicle/issues/1299 | None | [einari](https://github.com/einari) | None | None | None |
 | Move away from the Globals JsonSerializerOptions from Fundamentals | https://github.com/Cratis/Chronicle/issues/1298 | None | [einari](https://github.com/einari) | None | None | None |
-| Move OneOf<> Protobuf implementation to fundamentals (introduce new package) | https://github.com/Cratis/Chronicle/issues/1297 | None | [einari](https://github.com/einari) | None | None | None |
+| Move OneOf<> Protobuf implementation to fundamentals (introduce new package) | https://github.com/Cratis/Chronicle/issues/1297 | None | [einari](https://github.com/einari) | None | 505 days, 14:04:24 | None |
 | Add access to IServiceProvider on RuleAttribute | https://github.com/Cratis/Chronicle/issues/1296 | None | [einari](https://github.com/einari) | None | None | None |
-| Make DefineState on attribute based rules a virtual method on the base `RuleAttribute` - making the API clearer | https://github.com/Cratis/Chronicle/issues/1295 | None | [einari](https://github.com/einari) | None | None | None |
-| Move Rules documentation and correct it from Application Model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | None | [einari](https://github.com/einari) | None | None | None |
+| Make DefineState on attribute based rules a virtual method on the base `RuleAttribute` - making the API clearer | https://github.com/Cratis/Chronicle/issues/1295 | None | [einari](https://github.com/einari) | None | 505 days, 14:54:37 | None |
+| Move Rules documentation and correct it from Application Model to Chronicle | https://github.com/Cratis/Chronicle/issues/1294 | None | [einari](https://github.com/einari) | None | 505 days, 14:57:27 | None |
 | Repack client consumed assemblies to internalize dependencies we don't want to expose externally | https://github.com/Cratis/Chronicle/issues/1293 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 313 days, 8:28:42 | None |
 | Introduce a "transaction scope" for AggregateRoot operations | https://github.com/Cratis/Chronicle/issues/1291 | None | [einari](https://github.com/einari) | None | 18 days, 20:42:50 | None |
-| Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | None | [einari](https://github.com/einari) | None | None | None |
+| Support creating business rules that are for a concept | https://github.com/Cratis/Chronicle/issues/1290 | None | [einari](https://github.com/einari) | None | 506 days, 14:45:38 | None |
 | Add a way to clear state / API call. Only available in Development | https://github.com/Cratis/Chronicle/issues/1287 | None | [einari](https://github.com/einari) | None | None | None |
 | Investigate a simplified "query language" for projections | https://github.com/Cratis/Chronicle/issues/1284 | None | [einari](https://github.com/einari) | None | 460 days, 23:29:09 | None |
 | Ability to configure automatically applying recommendation based on their type | https://github.com/Cratis/Chronicle/issues/1281 | None | [einari](https://github.com/einari) | None | 207 days, 23:48:57 | None |
@@ -339,4 +337,6 @@
 | Support unmanaged observers / reactors | https://github.com/Cratis/Chronicle/issues/1067 | None | [einari](https://github.com/einari) | None | None | None |
 | Identity is not resolved for reducer handlers | https://github.com/Cratis/Chronicle/issues/1066 | None | [einari](https://github.com/einari) | 334 days, 5:05:34 | 401 days, 1:11:14 | None |
 | Change to the concept of namespace within an Event Store rather than using the concept of a Tenant | https://github.com/Cratis/Chronicle/issues/1064 | None | [einari](https://github.com/einari) | None | 198 days, 23:01:35 | None |
-| Separate EventContext into client and server representation | https://github.com/Cratis/Chronicle/issues/1063 | None | [einari](https://github.com/einari) | None | 215 days, 22:13:43 | N
+| Separate EventContext into client and server representation | https://github.com/Cratis/Chronicle/issues/1063 | None | [einari](https://github.com/einari) | None | 215 days, 22:13:43 | None |
+| Get rid of Serilog | https://github.com/Cratis/Chronicle/issues/1059 | None | [einari](https://github.com/einari) | None | 237 days, 12:42:12 | None |
+| Make projection definitions versionable | https://githu
