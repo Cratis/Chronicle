@@ -3,13 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Security.Cryptography;
-using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Auditing;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Security;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Reactive;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
@@ -23,83 +17,45 @@ namespace Cratis.Chronicle.Services.Security;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ClientCredentials"/> class.
 /// </remarks>
-/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="clientCredentialsStorage">The <see cref="IClientCredentialsStorage"/> for working with client credentials.</param>
-/// <param name="causationManager">The <see cref="ICausationManager"/> for managing causation.</param>
-internal sealed class ClientCredentials(IGrainFactory grainFactory, IClientCredentialsStorage clientCredentialsStorage, ICausationManager causationManager) : IClientCredentials
+internal sealed class ClientCredentials(IClientCredentialsStorage clientCredentialsStorage) : IClientCredentials
 {
     /// <inheritdoc/>
     public async Task Add(AddClientCredentials command)
     {
         var clientSecret = HashSecret(command.ClientSecret);
-        var eventSequence = grainFactory.GetEventSequence(EventStoreName.System, EventStoreNamespaceName.Default);
-
-        var @event = new ClientCredentialsAdded(
+        
+        var client = new ChronicleClient(
             command.Id,
             command.ClientId,
-            clientSecret);
+            clientSecret,
+            true,
+            DateTimeOffset.UtcNow,
+            null);
 
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.NotSet,
-                    command.Id,
-                    EventStreamType.NotSet,
-                    EventStreamId.NotSet,
-                    @event.GetType(),
-                    @event)
-            ],
-            causationManager.GetCurrentChain(),
-            [],
-            causationManager.GetCurrentCausedBy(),
-            []);
+        await clientCredentialsStorage.Create(client);
     }
 
     /// <inheritdoc/>
     public async Task Remove(RemoveClientCredentials command)
     {
-        var eventSequence = grainFactory.GetEventSequence(EventStoreName.System, EventStoreNamespaceName.Default);
-
-        var @event = new ClientCredentialsRemoved(command.Id);
-
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.NotSet,
-                    command.Id,
-                    EventStreamType.NotSet,
-                    EventStreamId.NotSet,
-                    @event.GetType(),
-                    @event)
-            ],
-            causationManager.GetCurrentChain(),
-            [],
-            causationManager.GetCurrentCausedBy(),
-            []);
+        await clientCredentialsStorage.Delete(command.Id);
     }
 
     /// <inheritdoc/>
     public async Task ChangeSecret(ChangeClientCredentialsSecret command)
     {
-        var clientSecret = HashSecret(command.ClientSecret);
-        var eventSequence = grainFactory.GetEventSequence(EventStoreName.System, EventStoreNamespaceName.Default);
-
-        var @event = new ClientCredentialsSecretChanged(command.Id, clientSecret);
-
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.NotSet,
-                    command.Id,
-                    EventStreamType.NotSet,
-                    EventStreamId.NotSet,
-                    @event.GetType(),
-                    @event)
-            ],
-            causationManager.GetCurrentChain(),
-            [],
-            causationManager.GetCurrentCausedBy(),
-            []);
+        var client = await clientCredentialsStorage.GetById(command.Id);
+        if (client is not null)
+        {
+            var clientSecret = HashSecret(command.ClientSecret);
+            var updatedClient = client with
+            {
+                ClientSecret = clientSecret,
+                LastModifiedAt = DateTimeOffset.UtcNow
+            };
+            await clientCredentialsStorage.Update(updatedClient);
+        }
     }
 
     /// <inheritdoc/>

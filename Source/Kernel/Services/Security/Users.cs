@@ -3,13 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Security.Cryptography;
-using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Auditing;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Security;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Reactive;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
@@ -23,84 +17,48 @@ namespace Cratis.Chronicle.Services.Security;
 /// <remarks>
 /// Initializes a new instance of the <see cref="Users"/> class.
 /// </remarks>
-/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="userStorage">The <see cref="IUserStorage"/> for working with users.</param>
-/// <param name="causationManager">The <see cref="ICausationManager"/> for managing causation.</param>
-internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage, ICausationManager causationManager) : IUsers
+internal sealed class Users(IUserStorage userStorage) : IUsers
 {
     /// <inheritdoc/>
     public async Task Add(AddUser command)
     {
         var passwordHash = HashPassword(command.Password);
-        var eventSequence = grainFactory.GetEventSequence(EventStoreName.System, EventStoreNamespaceName.Default);
-
-        var @event = new UserAdded(
+        
+        var user = new ChronicleUser(
             command.UserId,
             command.Username,
             command.Email,
-            passwordHash);
+            passwordHash,
+            Guid.NewGuid().ToString(),
+            true,
+            DateTimeOffset.UtcNow,
+            null);
 
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.NotSet,
-                    command.UserId,
-                    EventStreamType.NotSet,
-                    EventStreamId.NotSet,
-                    @event.GetType(),
-                    @event)
-            ],
-            causationManager.GetCurrentChain(),
-            [],
-            causationManager.GetCurrentCausedBy(),
-            []);
+        await userStorage.Create(user);
     }
 
     /// <inheritdoc/>
     public async Task Remove(RemoveUser command)
     {
-        var eventSequence = grainFactory.GetEventSequence(EventStoreName.System, EventStoreNamespaceName.Default);
-
-        var @event = new UserRemoved(command.UserId);
-
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.NotSet,
-                    command.UserId,
-                    EventStreamType.NotSet,
-                    EventStreamId.NotSet,
-                    @event.GetType(),
-                    @event)
-            ],
-            causationManager.GetCurrentChain(),
-            [],
-            causationManager.GetCurrentCausedBy(),
-            []);
+        await userStorage.Delete(command.UserId);
     }
 
     /// <inheritdoc/>
     public async Task ChangePassword(ChangeUserPassword command)
     {
-        var passwordHash = HashPassword(command.Password);
-        var eventSequence = grainFactory.GetEventSequence(EventStoreName.System, EventStoreNamespaceName.Default);
-
-        var @event = new UserPasswordChanged(command.UserId, passwordHash);
-
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.NotSet,
-                    command.UserId,
-                    EventStreamType.NotSet,
-                    EventStreamId.NotSet,
-                    @event.GetType(),
-                    @event)
-            ],
-            causationManager.GetCurrentChain(),
-            [],
-            causationManager.GetCurrentCausedBy(),
-            []);
+        var user = await userStorage.GetById(command.UserId);
+        if (user is not null)
+        {
+            var passwordHash = HashPassword(command.Password);
+            var updatedUser = user with
+            {
+                PasswordHash = passwordHash,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                LastModifiedAt = DateTimeOffset.UtcNow
+            };
+            await userStorage.Update(updatedUser);
+        }
     }
 
     /// <inheritdoc/>
