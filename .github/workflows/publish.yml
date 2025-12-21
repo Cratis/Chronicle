@@ -45,6 +45,7 @@ jobs:
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
 
     steps:
       - name: Checkout code
@@ -397,6 +398,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build Production Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -405,9 +417,7 @@ jobs:
           file: ./Docker/Production/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            cratis/chronicle:${{ needs.release.outputs.version }}
-            cratis/chronicle:latest
+          tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -441,6 +451,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}-workbench"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest-workbench"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build Workbench Image
         uses: docker/build-push-action@v5
         with:
@@ -448,9 +469,7 @@ jobs:
           context: .
           file: ./Docker/Workbench/Dockerfile
           push: true
-          tags: |
-            cratis/chronicle:${{ needs.release.outputs.version }}-workbench
-            cratis/chronicle:latest-workbench
+          tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -496,6 +515,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}-development"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest-development"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build Development Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -504,9 +534,7 @@ jobs:
           file: ./Docker/Development/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            cratis/chronicle:${{ needs.release.outputs.version }}-development
-            cratis/chronicle:latest-development
+          tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
