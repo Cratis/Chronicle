@@ -47,7 +47,7 @@ public class ReadModels(
             Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty)
         });
 
-        await _chronicleServicesAccessor.Services.ReadModels.Register(new RegisterRequest
+        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
         {
             EventStore = eventStore.Name,
             Owner = ReadModelOwner.Client,
@@ -68,7 +68,7 @@ public class ReadModels(
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty)
             }
         };
-        await _chronicleServicesAccessor.Services.ReadModels.Register(new RegisterRequest
+        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
         {
             EventStore = eventStore.Name,
             Owner = ReadModelOwner.Client,

@@ -47,6 +47,9 @@ public class TypeFormats : ITypeFormats
         return _typesFormatInfo.First(_ => _.Value == format).Key;
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyDictionary<Type, string> GetAllFormats() => _typesFormatInfo;
+
     static string StripNullable(string? format)
     {
         if (format?.EndsWith('?') ?? false)
