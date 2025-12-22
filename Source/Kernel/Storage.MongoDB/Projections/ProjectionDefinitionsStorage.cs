@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
@@ -14,9 +13,6 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
-/// </remarks>
 /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/>.</param>
 public class ProjectionDefinitionsStorage(
     IEventStoreDatabase eventStoreDatabase) : IProjectionDefinitionsStorage

@@ -30,15 +30,6 @@ public class EventTypesStorage(
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
-    public async Task Populate()
-    {
-        logger.Populating(eventStore);
-
-        using var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
-        _eventTypes = new ConcurrentBag<EventType>(findResult.ToList());
-    }
-
-    /// <inheritdoc/>
     public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
     {
         logger.Registering(type.Id, type.Generation, eventStore);
@@ -66,9 +57,9 @@ public class EventTypesStorage(
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
-        _eventTypes.Add(eventSchema.ToMongoDB());
-
         var mongoEventSchema = eventSchema.ToMongoDB();
+        _eventTypes.Add(mongoEventSchema);
+
         await GetCollection().ReplaceOneAsync(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,

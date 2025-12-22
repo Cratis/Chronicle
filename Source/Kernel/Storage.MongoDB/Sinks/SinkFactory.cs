@@ -19,7 +19,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public class SinkFactory(
     IDatabase database,
     ITypeFormats typeFormats,
-    IExpandoObjectConverter expandoObjectConverter) : ISinkFactory
+    IExpandoObjectConverter expandoObjectConverter)
+    // : ISinkFactory
 {
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;

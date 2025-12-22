@@ -14,18 +14,20 @@ namespace Cratis.Chronicle.Services;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
-internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage) : IEventStores
+internal sealed class EventStores(
+    IGrainFactory grainFactory,
+    IStorage storage) : IEventStores
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetEventStores()
     {
-        var eventStores = await storage.GetEventStores();
+        var eventStores = await storage.Cluster.GetEventStores();
         return eventStores.Select(_ => _.Value).ToArray();
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<string>> ObserveEventStores(CallContext callContext = default) =>
-        storage
+        storage.Cluster
             .ObserveEventStores()
             .CompletedBy(callContext.CancellationToken)
             .Select(_ => _.Select(e => e.Value));

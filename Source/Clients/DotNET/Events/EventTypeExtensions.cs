@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Events;
 
@@ -16,14 +17,15 @@ public static class EventTypeExtensions
     /// <param name="type">Type to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is an event type, false if not.</returns>
-    public static bool IsEventType(this Type type, IEnumerable<Type> eventTypes)
+    public static bool IsEventType(this Type type, IEnumerable<Type>? eventTypes = null)
     {
+        eventTypes ??= [];
         if (type == typeof(object))
         {
             return false;
         }
 
-        if (type.GetCustomAttribute<EventTypeAttribute>() != null)
+        if (type.HasAttribute<EventTypeAttribute>())
         {
             return true;
         }
@@ -41,7 +43,7 @@ public static class EventTypeExtensions
     {
         eventTypes = eventTypes.Except([type]);
 
-        if (type.GetCustomAttribute<EventTypeAttribute>() != null)
+        if (type.HasAttribute<EventTypeAttribute>())
         {
             yield return type;
         }
@@ -62,7 +64,7 @@ public static class EventTypeExtensions
     /// <exception cref="TypeIsNotAnEventType">Thrown if the type is not an event type.</exception>
     public static void ValidateEventType(this Type type)
     {
-        if (type.GetCustomAttribute<EventTypeAttribute>() == null)
+        if (!type.HasAttribute<EventTypeAttribute>())
         {
             throw new TypeIsNotAnEventType(type);
         }
