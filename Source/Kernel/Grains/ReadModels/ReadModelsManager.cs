@@ -29,5 +29,38 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
     }
 
     /// <inheritdoc/>
+    public async Task RegisterSingle(ReadModelDefinition definition)
+    {
+        var existing = State.ReadModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
+        if (existing is not null)
+        {
+            State.ReadModels.Remove(existing);
+        }
+
+        State.ReadModels.Add(definition);
+        await WriteStateAsync();
+
+        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
+        await readModelGrain.SetDefinition(definition);
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateDefinition(ReadModelDefinition definition)
+    {
+        var existing = State.ReadModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
+        if (existing is null)
+        {
+            throw new ReadModelNotFound(definition.Identifier);
+        }
+
+        State.ReadModels.Remove(existing);
+        State.ReadModels.Add(definition);
+        await WriteStateAsync();
+
+        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
+        await readModelGrain.SetDefinition(definition);
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
 }

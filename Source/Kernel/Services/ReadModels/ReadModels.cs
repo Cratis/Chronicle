@@ -14,10 +14,37 @@ namespace Cratis.Chronicle.Services.ReadModels;
 internal sealed class ReadModels(IGrainFactory grainFactory) : IReadModels
 {
     /// <inheritdoc/>
-    public async Task Register(RegisterRequest request, CallContext context = default)
+    public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner)).ToArray();
         await readModelsManager.Register(readModelDefinitions);
+    }
+
+    /// <inheritdoc/>
+    public async Task RegisterSingle(RegisterSingleRequest request, CallContext context = default)
+    {
+        var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
+        var readModelDefinition = request.ReadModel.ToChronicle(request.Owner);
+        await readModelsManager.RegisterSingle(readModelDefinition);
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
+    {
+        var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
+        var readModelDefinition = request.ReadModel.ToChronicle(ReadModelOwner.None);
+        await readModelsManager.UpdateDefinition(readModelDefinition);
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetDefinitionsResponse> GetDefinitions(GetDefinitionsRequest request, CallContext context = default)
+    {
+        var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
+        var definitions = await readModelsManager.GetDefinitions();
+        return new GetDefinitionsResponse
+        {
+            ReadModels = definitions.Select(_ => _.ToContract()).ToList()
+        };
     }
 }

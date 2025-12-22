@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.ReadModels;
 
 /// <summary>
-/// Represents the request for registering read models.
+/// Represents the request for registering a single read model.
 /// </summary>
 [ProtoContract]
-public class RegisterRequest
+public class RegisterSingleRequest
 {
     /// <summary>
     /// Gets or sets the event store name.
@@ -22,8 +22,8 @@ public class RegisterRequest
     public ReadModelOwner Owner { get; set; } = ReadModelOwner.None;
 
     /// <summary>
-    /// Gets or sets the collection of <see cref="ReadModelDefinition"/> instances to register.
+    /// Gets or sets the <see cref="ReadModelDefinition"/> to register.
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
-    public IList<ReadModelDefinition> ReadModels { get; set; } = [];
+    public ReadModelDefinition ReadModel { get; set; }
 }
