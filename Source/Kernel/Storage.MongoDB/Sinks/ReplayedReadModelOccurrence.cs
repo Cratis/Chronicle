@@ -10,4 +10,4 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </summary>
 /// <param name="Occurred"><see cref="DateTimeOffset"/> for when it occurred.</param>
 /// <param name="RevertModel">Name of the revert read model.</param>
-public record ReplayedModelOccurrence(DateTimeOffset Occurred, ReadModelName RevertModel);
+public record ReplayedReadModelOccurrence(DateTimeOffset Occurred, ReadModelName RevertModel);

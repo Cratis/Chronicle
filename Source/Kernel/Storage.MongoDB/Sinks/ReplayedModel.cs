@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.ReadModels;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 /// <summary>
-/// Represents a replayed model.
+/// Represents a replayed read model.
 /// </summary>
 /// <param name="ReadModel">Read model that was replayed.</param>
 /// <param name="Observer">The <see cref="ObserverId"/> for the observer.</param>
-/// <param name="Occurrences">Collection of <see cref="ReplayedModelOccurrence"/>.</param>
-public record ReplayedModel(ReadModelName ReadModel, ObserverId Observer, IEnumerable<ReplayedModelOccurrence> Occurrences);
+/// <param name="Occurrences">Collection of <see cref="ReplayedReadModelOccurrence"/>.</param>
+public record ReplayedModel(ReadModelName ReadModel, ObserverId Observer, IEnumerable<ReplayedReadModelOccurrence> Occurrences);
