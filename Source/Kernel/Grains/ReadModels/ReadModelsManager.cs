@@ -31,13 +31,15 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
     /// <inheritdoc/>
     public async Task RegisterSingle(ReadModelDefinition definition)
     {
-        var existing = State.ReadModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
+        var readModels = State.ReadModels.ToList();
+        var existing = readModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
         if (existing is not null)
         {
-            State.ReadModels.Remove(existing);
+            readModels.Remove(existing);
         }
 
-        State.ReadModels.Add(definition);
+        readModels.Add(definition);
+        State.ReadModels = readModels;
         await WriteStateAsync();
 
         var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
@@ -47,14 +49,16 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
     /// <inheritdoc/>
     public async Task UpdateDefinition(ReadModelDefinition definition)
     {
-        var existing = State.ReadModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
+        var readModels = State.ReadModels.ToList();
+        var existing = readModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
         if (existing is null)
         {
             throw new ReadModelNotFound(definition.Identifier);
         }
 
-        State.ReadModels.Remove(existing);
-        State.ReadModels.Add(definition);
+        readModels.Remove(existing);
+        readModels.Add(definition);
+        State.ReadModels = readModels;
         await WriteStateAsync();
 
         var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());

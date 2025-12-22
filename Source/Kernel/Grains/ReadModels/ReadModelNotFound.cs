@@ -9,4 +9,4 @@ namespace Cratis.Chronicle.Grains.ReadModels;
 /// The exception that is thrown when a read model is not found.
 /// </summary>
 /// <param name="identifier">The read model identifier that was not found.</param>
-public class ReadModelNotFound(ReadModelId identifier) : Exception($"Read model with identifier '{identifier}' was not found");
+public class ReadModelNotFound(ReadModelIdentifier identifier) : Exception($"Read model with identifier '{identifier}' was not found");
