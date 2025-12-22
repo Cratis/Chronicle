@@ -19,7 +19,7 @@ public interface IReplayedReadModelsStorage
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>Awaitable task.</returns>
     Task Replayed(ObserverId observer, ReplayContext context);
-    
+
     /// <summary>
     /// Get all replayed read model occurrences for a specific read model.
     /// </summary>

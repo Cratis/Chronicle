@@ -10,6 +10,14 @@
         "Recommendation.ts"
       ]
     },
+    "ReadModels": {
+      "folders": {},
+      "files": [
+        "CreateReadModel.ts",
+        "AllReadModels.ts",
+        "ReadModelDefinition.ts"
+      ]
+    },
     "Observation": {
       "folders": {},
       "files": [
@@ -75,6 +83,13 @@
         "EventTypeRegistration.ts",
         "AppendedEvent.ts",
         "EventContext.ts"
+      ]
+    },
+    "TypeFormats": {
+      "folders": {},
+      "files": [
+        "AllTypeFormats.ts",
+        "TypeFormat.ts"
       ]
     },
     "Projections": {

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 

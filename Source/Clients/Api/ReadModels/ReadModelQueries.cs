@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
 namespace Cratis.Chronicle.Api.ReadModels;
 
@@ -11,13 +12,13 @@ namespace Cratis.Chronicle.Api.ReadModels;
 [Route("/api/event-store/{eventStore}/read-models")]
 public class ReadModelQueries : ControllerBase
 {
-    readonly IReadModels _readModels;
+    readonly IReadModelsService _readModels;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelQueries"/> class.
     /// </summary>
-    /// <param name="readModels"><see cref="IReadModels"/> for working with read models.</param>
-    internal ReadModelQueries(IReadModels readModels)
+    /// <param name="readModels"><see cref="IReadModelsService"/> for working with read models.</param>
+    internal ReadModelQueries(IReadModelsService readModels)
     {
         _readModels = readModels;
     }

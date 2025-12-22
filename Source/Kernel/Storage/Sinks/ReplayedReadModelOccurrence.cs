@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
 /// Represents an occurrence of a replayed read model.
