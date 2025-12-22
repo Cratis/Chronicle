@@ -79,6 +79,7 @@
       "folders": {},
       "files": [
         "Register.ts",
+        "CreateEventType.ts",
         "EventType.ts",
         "EventTypeRegistration.ts",
         "AppendedEvent.ts",

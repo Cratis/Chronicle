@@ -18,6 +18,14 @@ public interface IEventTypes
     Task Register(RegisterEventTypesRequest request);
 
     /// <summary>
+    /// Register a single event type.
+    /// </summary>
+    /// <param name="request">The <see cref="RegisterSingleEventTypeRequest"/> payload.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task RegisterSingle(RegisterSingleEventTypeRequest request);
+
+    /// <summary>
     /// Get all the registered event types for an event store.
     /// </summary>
     /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>

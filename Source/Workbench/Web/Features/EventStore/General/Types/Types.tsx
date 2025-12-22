@@ -14,6 +14,9 @@ import { useDialog } from '@cratis/arc.react.mvvm/dialogs';
 import { AddEventType, AddEventTypeRequest, AddEventTypeResponse } from './AddEventType';
 import { DataPage } from 'Components';
 import { TypeDetails } from './TypeDetails';
+import * as faIcons from 'react-icons/fa';
+
+const MenuItem = DataPage.MenuItem;
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -23,7 +26,7 @@ const renderTombstone = () => {
     return 'no';
 };
 
-export const Types = withViewModel(TypesViewModel, () => {
+export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeDialog] = useDialog<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest, AddEventType);
 
@@ -43,9 +46,9 @@ export const Types = withViewModel(TypesViewModel, () => {
                 emptyMessage={strings.eventStore.general.types.empty}
                 detailsComponent={TypeDetails}>
 
-                {/* <DataPage.MenuItems>
-                    <MenuItem id='create' label={strings.eventStore.general.types.actions.create} icon={faIcons.FaPlus} command={() => viewModel.addEventType()} />
-                </DataPage.MenuItems> */}
+                <DataPage.MenuItems>
+                    <MenuItem id='create' label={strings.eventStore.general.types.actions.create} icon={faIcons.FaPlus} command={() => viewModel.addEventType(params.eventStore!)} />
+                </DataPage.MenuItems>
 
                 <DataPage.Columns>
 

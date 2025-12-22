@@ -28,6 +28,13 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
     }
 
     /// <inheritdoc/>
+    public async Task RegisterSingle(RegisterSingleEventTypeRequest request)
+    {
+        var schema = await JsonSchema.FromJsonAsync(request.Type.Schema);
+        await storage.GetEventStore(request.EventStore).EventTypes.Register(request.Type.Type.ToChronicle(), schema);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Events.EventType>> GetAll(GetAllEventTypesRequest request)
     {
         var eventTypes = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
