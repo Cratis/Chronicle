@@ -34,6 +34,7 @@
         "general": {
             "groupLabel": "General",
             "types": "Types",
+            "readModels": "Read Models",
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
@@ -75,6 +76,30 @@
                 "dialogs": {
                     "addNamespace": {
                         "title": "Add namespace",
+                        "name": "Name"
+                    }
+                }
+            },
+            "readModels": {
+                "title": "Read Models",
+                "empty": "No read models found",
+                "actions": {
+                    "create": "Create",
+                    "edit": "Edit",
+                    "addProperty": "Add Property",
+                    "save": "Save"
+                },
+                "columns": {
+                    "name": "Name",
+                    "generation": "Generation"
+                },
+                "schema": {
+                    "propertyName": "Property Name",
+                    "type": "Type"
+                },
+                "dialogs": {
+                    "addReadModel": {
+                        "title": "Add Read Model",
                         "name": "Name"
                     }
                 }
