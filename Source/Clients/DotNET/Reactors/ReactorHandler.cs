@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Reactors;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> the Reactors belong to.</param>
 /// <param name="reactorId">Unique identifier.</param>
+/// <param name="reactorType">The type of the reactor.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the Reactor is for.</param>
 /// <param name="reactorInvoker">The actual invoker.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
@@ -25,6 +26,7 @@ namespace Cratis.Chronicle.Reactors;
 public class ReactorHandler(
     IEventStore eventStore,
     ReactorId reactorId,
+    Type reactorType,
     EventSequenceId eventSequenceId,
     IReactorInvoker reactorInvoker,
     ICausationManager causationManager,
@@ -64,6 +66,9 @@ public class ReactorHandler(
 
     /// <inheritdoc/>
     public ReactorId Id { get; } = reactorId;
+
+    /// <inheritdoc/>
+    public Type ReactorType { get; } = reactorType;
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; } = eventSequenceId;

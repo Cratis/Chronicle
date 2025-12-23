@@ -195,63 +195,94 @@ public class EventSequence(
         Identity causedBy,
         ConcurrencyScopes concurrencyScopes)
     {
-        var tasks = events.Select(async e =>
+        try
         {
-            var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamId, e.EventType, e.Content, correlationId);
-            return (Event: e, Result: result);
-        });
-
-        var getValidAndCompliantEvents = await Task.WhenAll(tasks);
-        var failedEvents = getValidAndCompliantEvents.Where(eventAndResult => !eventAndResult.Result.IsSuccess).ToList();
-
-        if (failedEvents.Count != 0)
-        {
-            return new()
+            var tasks = events.Select(async e =>
             {
-                CorrelationId = correlationId,
-                ConstraintViolations = failedEvents.SelectMany(r => r.Result.AsT1.ConstraintViolations).ToImmutableList(),
-                Errors = failedEvents.SelectMany(r => r.Result.AsT1.Errors).ToImmutableList(),
-            };
-        }
+                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamId, e.EventType, e.Content, correlationId);
+                return (Event: e, Result: result);
+            });
 
-        var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
-        if (concurrencyViolations.Any())
-        {
-            return AppendManyResult.Failed(correlationId, concurrencyViolations);
-        }
+            var getValidAndCompliantEvents = await Task.WhenAll(tasks);
+            var failedEvents = getValidAndCompliantEvents.Where(eventAndResult => !eventAndResult.Result.IsSuccess).ToList();
 
-        var results = new List<AppendResult>();
-        foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
-        {
-            var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
-            var appendResult = await AppendValidAndCompliantEvent(
-                eventToAppend.EventSourceType,
-                eventToAppend.EventSourceId,
-                eventToAppend.eventStreamType,
-                eventToAppend.eventStreamId,
-                eventToAppend.EventType,
-                correlationId,
-                causation,
-                causedBy,
-                compliantEvent,
-                constraintContext);
-            results.Add(appendResult);
-            if (appendResult.IsSuccess)
+            if (failedEvents.Count != 0)
             {
-                continue;
+                return new()
+                {
+                    CorrelationId = correlationId,
+                    ConstraintViolations = failedEvents.SelectMany(r => r.Result.AsT1.ConstraintViolations).ToImmutableList(),
+                    Errors = failedEvents.SelectMany(r => r.Result.AsT1.Errors).ToImmutableList(),
+                };
             }
 
-            logger.FailedDuringAppendingManyEvents();
-            break;
-        }
+            var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
+            if (concurrencyViolations.Any())
+            {
+                return AppendManyResult.Failed(correlationId, concurrencyViolations);
+            }
 
-        return new()
+            var identity = await IdentityStorage.GetFor(causedBy);
+            var eventsToAppend = new List<EventToAppendToStorage>();
+            var constraintContexts = new List<ConstraintValidationContext>();
+
+            foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
+            {
+                var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
+                constraintContexts.Add(constraintContext);
+
+                eventsToAppend.Add(new EventToAppendToStorage(
+                    State.SequenceNumber,
+                    eventToAppend.EventSourceType,
+                    eventToAppend.EventSourceId,
+                    eventToAppend.eventStreamType,
+                    eventToAppend.eventStreamId,
+                    eventToAppend.EventType,
+                    correlationId,
+                    causation,
+                    identity,
+                    DateTimeOffset.UtcNow,
+                    compliantEvent));
+
+                State.SequenceNumber = State.SequenceNumber.Next();
+            }
+
+            Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult = null;
+            do
+            {
+                await HandleFailedAppendManyResult(appendResult, eventsToAppend);
+                appendResult = await EventSequenceStorage.AppendMany(eventsToAppend);
+            }
+            while (!appendResult.IsSuccess);
+
+            var appendedEvents = (IEnumerable<AppendedEvent>)appendResult;
+            var sequenceNumbers = appendedEvents.Select(e => e.Context.SequenceNumber).ToImmutableList();
+
+            foreach (var appendedEvent in appendedEvents)
+            {
+                State.TailSequenceNumberPerEventType[appendedEvent.Context.EventType.Id] = appendedEvent.Context.SequenceNumber;
+                _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
+            }
+
+            await WriteStateAsync();
+            await (_appendedEventsQueues?.Enqueue(appendedEvents.ToList()) ?? Task.CompletedTask);
+
+            foreach (var constraintContext in constraintContexts)
+            {
+                await constraintContext.Update(State.SequenceNumber);
+            }
+
+            return AppendManyResult.Success(correlationId, sequenceNumbers);
+        }
+        catch (Exception ex)
         {
-            CorrelationId = correlationId,
-            SequenceNumbers = results.Select(r => r.SequenceNumber).ToImmutableList(),
-            ConstraintViolations = results.SelectMany(r => r.ConstraintViolations).ToImmutableList(),
-            Errors = results.SelectMany(r => r.Errors).ToImmutableList()
-        };
+            logger.ErrorAppendingMany(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
+            return new AppendManyResult
+            {
+                CorrelationId = correlationId,
+                Errors = [new AppendError(ex.Message)]
+            };
+        }
     }
 
     /// <inheritdoc/>
@@ -487,6 +518,37 @@ public class EventSequence(
             eventSourceId,
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+        State.SequenceNumber = nextAvailableSequenceNumber;
+        await WriteStateAsync();
+    }
+
+    async Task HandleFailedAppendManyResult(
+        Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult,
+        IEnumerable<EventToAppendToStorage> eventsToAppend)
+    {
+        if (appendResult is null)
+        {
+            return;
+        }
+
+        await appendResult.Match(
+            _ => Task.CompletedTask,
+            errorType => HandleAppendedDuplicateEventForMany(eventsToAppend, errorType.NextAvailableSequenceNumber));
+    }
+
+    async Task HandleAppendedDuplicateEventForMany(IEnumerable<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
+    {
+        logger.DuplicateEventInMany(
+            _eventSequenceKey.EventStore,
+            _eventSequenceKey.Namespace,
+            _eventSequenceId,
+            State.SequenceNumber);
+
+        foreach (var eventToAppend in eventsToAppend)
+        {
+            _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventSourceId, eventToAppend.EventType.Id.Value);
+        }
+
         State.SequenceNumber = nextAvailableSequenceNumber;
         await WriteStateAsync();
     }

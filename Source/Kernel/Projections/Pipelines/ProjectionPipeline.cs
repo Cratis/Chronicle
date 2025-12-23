@@ -49,6 +49,12 @@ public class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
+    public Task BeginBulk() => sink.BeginBulk();
+
+    /// <inheritdoc/>
+    public Task EndBulk() => sink.EndBulk();
+
+    /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
         logger.StartingPipeline(@event.Context.SequenceNumber);

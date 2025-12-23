@@ -26,4 +26,10 @@ public class ProjectionChangeset
     /// </summary>
     [ProtoMember(3)]
     public string ReadModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the read model was removed.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool Removed { get; set; }
 }

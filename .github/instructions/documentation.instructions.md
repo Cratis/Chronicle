@@ -44,3 +44,6 @@ applyTo: "Documentation/**/*.md"
 - When linking to a folder in a `toc.yml` file, link to the `toc.yml` file in that folder, not to an `index.md` file.
 - Ensure that documentation is accurate according to the public APIs and features of the project.
 - When writing documentation that involves specifying an event type with the `[EventType]` attribute, never add an explicit name - just keep it as `[EventType]`.
+- Never include code from the repository to explain public APIs - these might change and become outdated.
+- Always write documentation from the perspective of an end user of the public APIs and features of the project.
+- We prefer `record` types for data structures such as events, commands, and read models in code examples within the documentation.

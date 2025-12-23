@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Reactive.Linq;
 using System.Reflection;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -19,14 +20,12 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="projections">Projections to get read models from.</param>
 /// <param name="reducers">Reducers to get read models from.</param>
-/// <param name="additionalReadModels">Additional read models to register.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
 public class ReadModels(
     IEventStore eventStore,
     INamingPolicy namingPolicy,
     IProjections projections,
     IReducers reducers,
-    IEnumerable<IHaveReadModel> additionalReadModels,
     IJsonSchemaGenerator schemaGenerator) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -38,7 +37,6 @@ public class ReadModels(
 
         readModels.AddRange(projections.GetAllHandlers());
         readModels.AddRange(reducers.GetAllHandlers());
-        readModels.AddRange(additionalReadModels);
 
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
@@ -78,6 +76,94 @@ public class ReadModels(
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key)
+    {
+        var readModelType = typeof(TReadModel);
+        var result = await GetInstanceById(readModelType, key);
+        return (TReadModel)result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key)
+    {
+        if (projections.HasFor(readModelType))
+        {
+            var result = await projections.GetInstanceById(readModelType, key);
+            return result.ReadModel;
+        }
+
+        if (reducers.HasFor(readModelType))
+        {
+            var result = await reducers.GetInstanceById(readModelType, key);
+            return result.ReadModel ?? throw new InvalidOperationException($"Reducer returned null for read model type '{readModelType.Name}' with key '{key.Value}'");
+        }
+
+        throw new UnknownReadModel(readModelType);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        if (projections.HasFor(typeof(TReadModel)))
+        {
+            var projectionSnapshots = await projections.GetSnapshotsById<TReadModel>(readModelKey);
+            return projectionSnapshots.Select(snapshot => new ReadModelSnapshot<TReadModel>(
+                snapshot.Instance,
+                snapshot.Events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        if (reducers.HasReducerFor(typeof(TReadModel)))
+        {
+            var reducerSnapshots = await reducers.GetSnapshotsById<TReadModel>(readModelKey);
+            return reducerSnapshots.Select(snapshot => new ReadModelSnapshot<TReadModel>(
+                snapshot.Instance,
+                snapshot.Events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        throw new UnknownReadModel(typeof(TReadModel));
+    }
+
+    /// <inheritdoc/>
+    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
+    {
+        var hasProjection = projections.HasFor(typeof(TReadModel));
+        var hasReducer = reducers.HasFor<TReadModel>();
+
+        if (!hasProjection && !hasReducer)
+        {
+            throw new UnknownReadModel(typeof(TReadModel));
+        }
+
+        var observables = new List<IObservable<ReadModelChangeset<TReadModel>>>();
+
+        if (hasProjection)
+        {
+            observables.Add(projections.Watch<TReadModel>()
+                .Select(changeset => new ReadModelChangeset<TReadModel>(
+                    changeset.Namespace,
+                    changeset.ModelKey,
+                    changeset.ReadModel,
+                    changeset.Removed)));
+        }
+
+        if (hasReducer)
+        {
+            observables.Add(reducers.Watch<TReadModel>()
+                .Select(changeset => new ReadModelChangeset<TReadModel>(
+                    changeset.Namespace,
+                    changeset.ModelKey,
+                    changeset.ReadModel,
+                    changeset.Removed)));
+        }
+
+        return observables.Count == 1 ? observables[0] : observables[0].Merge(observables[1]);
+    }
+
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
     {
         var indexes = new List<IndexDefinition>();
@@ -100,7 +186,7 @@ public class ReadModels(
                 ? namingPolicy.GetPropertyName(property.Name)
                 : $"{prefix}.{namingPolicy.GetPropertyName(property.Name)}";
 
-            if (property.GetCustomAttribute<IndexAttribute>() is not null)
+            if (Attribute.IsDefined(property, typeof(IndexAttribute)))
             {
                 indexes.Add(new IndexDefinition { PropertyPath = propertyPath });
             }

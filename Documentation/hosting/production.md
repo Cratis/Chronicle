@@ -28,7 +28,7 @@ Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | API Server        | REST API for client interactions         |
+| 8080  | Management API    | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | Primary Chronicle gRPC service port      |

@@ -11,7 +11,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Rules;
 using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -42,7 +41,6 @@ public class Projections(
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-    IRulesProjections? _rulesProjections;
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
@@ -81,7 +79,7 @@ public class Projections(
         var handler = _handlersByModelType[readModelType];
         var result = await GetInstanceById(handler.Id, readModelKey);
         var model = result.ReadModel.Deserialize(readModelType, jsonSerializerOptions)!;
-        return new(model, result.AffectedProperties, result.ProjectedEventsCount, result.LastHandledEventSequenceNumber);
+        return new(model, result.ProjectedEventsCount, result.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -258,7 +256,6 @@ public class Projections(
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
-                .. _rulesProjections?.Discover() ?? ImmutableArray<ProjectionDefinition>.Empty,
                 .. _definitionsByType.Values.Select(_ => _).ToList(),
                 .. modelBoundDefinitions.Values
             ]).ToImmutableList();
@@ -307,12 +304,6 @@ public class Projections(
         return snapshots;
     }
 
-    /// <summary>
-    /// Sets the <see cref="IRulesProjections"/>.
-    /// </summary>
-    /// <param name="rulesProjections"><see cref="IRulesProjections"/> instance to set.</param>
-    internal void SetRulesProjections(IRulesProjections rulesProjections) => _rulesProjections = rulesProjections;
-
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
@@ -348,7 +339,7 @@ public class Projections(
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TReadModel>)!;
-            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), namingPolicy, eventTypes, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

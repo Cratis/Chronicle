@@ -51,8 +51,20 @@ public interface ISink
     /// <param name="key">Key of the read model to upsert.</param>
     /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
     /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
+    /// <returns>A collection of <see cref="FailedPartition"/> if any partitions failed.</returns>
+    Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
+
+    /// <summary>
+    /// Begin bulk operation mode.
+    /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
+    Task BeginBulk();
+
+    /// <summary>
+    /// End bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task EndBulk();
 
     /// <summary>
     /// Enter replay state.

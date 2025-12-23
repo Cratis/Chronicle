@@ -20,5 +20,6 @@ internal static class ProjectionChangesetConverters
     internal static ProjectionChangeset<TReadModel> ToClient<TReadModel>(this Contracts.Projections.ProjectionChangeset changeset, JsonSerializerOptions jsonSerializerOptions) => new(
             changeset.Namespace,
             changeset.ReadModelKey,
-            JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, jsonSerializerOptions)!);
+            changeset.Removed ? default : JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, jsonSerializerOptions),
+            changeset.Removed);
 }

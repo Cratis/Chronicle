@@ -32,4 +32,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(4), DefaultValue(true)]
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the categories the reactor belongs to.
+    /// </summary>
+    [ProtoMember(5, IsRequired = true)]
+    public IList<string> Categories { get; set; } = [];
 }

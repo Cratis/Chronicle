@@ -17,7 +17,11 @@ public static class GrpcServiceRegistrations
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
-        services.AddGrpc(options => options.Interceptors.Add<CorrelationIdServerInterceptor>());
+        services.AddGrpc(options =>
+        {
+            options.Interceptors.Add<CorrelationIdServerInterceptor>();
+            options.EnableDetailedErrors = true;
+        });
         services.AddSingleton<Contracts.IEventStores, Services.EventStores>();
         services.AddSingleton<Contracts.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();

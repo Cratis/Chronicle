@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Aggregates;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -17,7 +16,6 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
-using Cratis.Chronicle.Rules;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
@@ -131,16 +129,18 @@ public class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
+        var reducerObservers = new ReducerObservers();
+
         Reducers = new Reducers.Reducers(
             this,
             clientArtifactsProvider,
             serviceProvider,
             new ReducerValidator(),
             EventTypes,
-            _eventSerializer,
             namingPolicy,
             jsonSerializerOptions,
             identityProvider,
+            reducerObservers,
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(
@@ -153,13 +153,6 @@ public class EventStore : IEventStore
             serviceProvider,
             jsonSerializerOptions);
 
-        var rulesProjections = new RulesProjections(
-                    serviceProvider,
-                    clientArtifactsProvider,
-                    EventTypes,
-                    namingPolicy,
-                    jsonSerializerOptions);
-        projections.SetRulesProjections(rulesProjections);
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
@@ -168,7 +161,6 @@ public class EventStore : IEventStore
             namingPolicy,
             projections,
             Reducers,
-            rulesProjections.ReadModels,
             schemaGenerator);
 
         Seeding = new EventSeeding(
@@ -178,17 +170,6 @@ public class EventStore : IEventStore
             EventTypes,
             _eventSerializer,
             clientArtifactsProvider,
-            serviceProvider);
-
-        AggregateRootFactory = new AggregateRootFactory(
-            this,
-            new AggregateRootMutatorFactory(
-                this,
-                new AggregateRootStateProviders(Reducers, Projections, serviceProvider),
-                new AggregateRootEventHandlersFactory(EventTypes),
-                _eventSerializer,
-                correlationIdAccessor),
-            UnitOfWorkManager,
             serviceProvider);
 
         if (autoDiscoverAndRegister)
@@ -208,9 +189,6 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IUnitOfWorkManager UnitOfWorkManager { get; }
-
-    /// <inheritdoc/>
-    public IAggregateRootFactory AggregateRootFactory { get; }
 
     /// <inheritdoc/>
     public IEventTypes EventTypes { get; }

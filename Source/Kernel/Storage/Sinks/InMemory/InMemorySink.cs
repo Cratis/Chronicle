@@ -66,7 +66,7 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;
@@ -75,15 +75,21 @@ public class InMemorySink(
         if (changeset.HasBeenRemoved())
         {
             collection.Remove(keyValue);
-            return Task.CompletedTask;
+            return Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
 
-        return Task.CompletedTask;
+        return Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
     }
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)

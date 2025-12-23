@@ -2,14 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
+using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -39,13 +42,74 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
+// Development certificate values are captured here so we can log about them after the host is built.
+X509Certificate2? developmentServerCertificate = null;
+string? developmentCaPem = null;
+
 builder.WebHost.UseKestrel(options =>
 {
-    if (chronicleOptions.Features.Api)
+#if DEVELOPMENT
+    // In development mode: generate an in-memory dev CA + server cert and expose CA via well-known endpoint
+    try
     {
-        options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+        var dev = DevCertificateProvider.EnsureDevCertificate("localhost");
+        developmentServerCertificate = dev.ServerCertificate;
+        developmentCaPem = dev.CaPem;
     }
-    options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+    catch
+    {
+        // fallback to existing loader if generation fails
+        developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+    }
+#else
+    developmentServerCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+#endif
+
+    // Always listen on ManagementPort for API and well-known certificate endpoint
+    options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1;
+
+        if (!chronicleOptions.Tls.Disable)
+        {
+            if (developmentServerCertificate is not null)
+            {
+                listenOptions.UseHttps(developmentServerCertificate);
+            }
+            else
+            {
+                listenOptions.UseHttps();
+            }
+        }
+    });
+
+#if DEVELOPMENT
+    // In development, also listen on TLS.DevelopmentCertificatePort for HTTP-only access to well-known endpoints
+    // This allows clients to fetch the development CA without chicken-and-egg TLS problems
+    options.ListenAnyIP(chronicleOptions.Tls.DevelopmentCertificatePort, listenOptions =>
+    {
+        // No TLS - HTTP only for fetching CA certificate
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+    });
+#endif
+
+    options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2;
+
+        if (!chronicleOptions.Tls.Disable)
+        {
+            if (developmentServerCertificate is not null)
+            {
+                listenOptions.UseHttps(developmentServerCertificate);
+            }
+            else
+            {
+                listenOptions.UseHttps();
+            }
+        }
+    });
+
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
@@ -84,10 +148,64 @@ builder.Host
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
+
+       services.AddCodeFirstGrpc();
+
+       // Add authentication services
+       services.AddChronicleAuthentication(chronicleOptions);
    });
 
+if (chronicleOptions.Authentication.Enabled)
+{
+    builder.Services.AddAuthorizationBuilder()
+
+        // Require authentication for all endpoints except those with [AllowAnonymous]
+        // This applies zero-trust security across all gRPC services and HTTP endpoints
+        .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build());
+}
+
 var app = builder.Build();
+
+// Initialize default admin user if authentication is enabled
+if (chronicleOptions.Authentication.Enabled)
+{
+    var authService = app.Services.GetRequiredService<IAuthenticationService>();
+    await authService.EnsureDefaultAdminUser();
+
+#if DEVELOPMENT
+    // Ensure default client credentials for development
+    await authService.EnsureDefaultClientCredentials();
+#endif
+}
+
 app.UseRouting();
+
+// Log about development certificate generation / exposure when available
+try
+{
+    var logger = app.Services.GetRequiredService<ILogger<Kernel>>();
+
+    if (developmentServerCertificate is not null && !string.IsNullOrEmpty(developmentCaPem))
+    {
+        logger.GeneratedDevelopmentCertificate();
+    }
+}
+catch (Exception ex)
+{
+    // Swallow logging errors to avoid bringing down the host; still write to console for visibility
+    Console.WriteLine($"Failed to log development certificate info: {ex.Message}");
+}
+
+// Add authentication and authorization middleware AFTER routing but BEFORE endpoints
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.UseMiddleware<GrpcAuthenticationMiddleware>();
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
 app.UseCratisArc();
 
 if (chronicleOptions.Features.Api)
@@ -102,9 +220,41 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 
     app.MapFallbackToFile("index.html");
 }
+
+// Map controllers if OAuth Authority is enabled
+if (chronicleOptions.Features.OAuthAuthority)
+{
+    app.MapControllers();
+}
+
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
-app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
+app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+
+#if DEVELOPMENT
+app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>
+{
+    // Log and return the in-memory development CA if available.
+    if (!string.IsNullOrEmpty(developmentCaPem))
+    {
+        logger.ServingDevelopmentCa(chronicleOptions.Tls.DevelopmentCertificatePort);
+        return Results.Text(developmentCaPem, "application/x-pem-file");
+    }
+
+    // As a fallback, attempt to materialize a development cert (DEVELOPMENT only) or return empty.
+    try
+    {
+        var cert = DevCertificateProvider.EnsureDevCertificate();
+        logger.ServingDevelopmentCa(chronicleOptions.Tls.DevelopmentCertificatePort);
+        return Results.Text(cert.CaPem ?? string.Empty, "application/x-pem-file");
+    }
+    catch (Exception ex)
+    {
+        logger.FailedServingDevelopmentCa(ex);
+        return Results.Text(string.Empty, "application/x-pem-file");
+    }
+}).AllowAnonymous();
+#endif
 
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
