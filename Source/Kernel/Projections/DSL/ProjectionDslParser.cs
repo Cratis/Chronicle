@@ -192,14 +192,20 @@ public class ProjectionDslParser(IEnumerable<Token> tokens)
     void ParseCompositeKey(Dictionary<EventType, FromDefinition> from)
     {
         var keyParts = new List<string>();
+        EventType? eventType = null;
 
         while (true)
         {
             var modelProperty = ExpectIdentifier();
             Expect(TokenType.Colon);
-            _ = ExpectIdentifier();
+            var eventTypeName = ExpectIdentifier();
             Expect(TokenType.Dot);
             var eventProperty = ExpectIdentifier();
+
+            if (eventType is null)
+            {
+                eventType = CreateEventType(eventTypeName);
+            }
 
             keyParts.Add($"{modelProperty}={eventProperty}");
 
@@ -214,11 +220,10 @@ public class ProjectionDslParser(IEnumerable<Token> tokens)
         }
 
         var compositeExpression = $"$composite({string.Join(',', keyParts)})";
-        var eventType = EventType.Unknown;
 
-        if (from.TryGetValue(eventType, out var existing))
+        if (from.TryGetValue(eventType!, out var existing))
         {
-            from[eventType] = existing with { Key = new PropertyExpression(compositeExpression) };
+            from[eventType!] = existing with { Key = new PropertyExpression(compositeExpression) };
         }
         else
         {

@@ -204,7 +204,16 @@ public class Tokenizer(string input)
                 _position++;
                 _column++;
                 var nextChar = _input[_position];
-                sb.Append(nextChar);
+                sb.Append(nextChar switch
+                {
+                    'n' => '\n',
+                    't' => '\t',
+                    'r' => '\r',
+                    '\\' => '\\',
+                    '"' => '"',
+                    '\'' => '\'',
+                    _ => nextChar
+                });
                 _position++;
                 _column++;
             }
@@ -222,12 +231,20 @@ public class Tokenizer(string input)
     Token ReadNumber(int tokenLine, int tokenColumn)
     {
         var sb = new StringBuilder();
+        var hasDecimalPoint = false;
 
         while (_position < _input.Length)
         {
             var currentChar = _input[_position];
-            if (char.IsDigit(currentChar) || currentChar == '.')
+            if (char.IsDigit(currentChar))
             {
+                sb.Append(currentChar);
+                _position++;
+                _column++;
+            }
+            else if (currentChar == '.' && !hasDecimalPoint)
+            {
+                hasDecimalPoint = true;
                 sb.Append(currentChar);
                 _position++;
                 _column++;
