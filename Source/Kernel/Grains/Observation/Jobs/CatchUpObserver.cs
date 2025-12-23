@@ -45,7 +45,7 @@ public class CatchUpObserver(
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
-        
+
         if (!AllStepsCompletedSuccessfully)
         {
             if (State.LastHandledEventSequenceNumber.IsActualValue)
