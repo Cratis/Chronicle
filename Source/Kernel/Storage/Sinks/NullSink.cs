@@ -29,7 +29,7 @@ public class NullSink : ISink
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
-        Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
+        Task.FromResult<IEnumerable<FailedPartition>>([]);
 
     /// <inheritdoc/>
     public Task BeginBulk() => Task.CompletedTask;
