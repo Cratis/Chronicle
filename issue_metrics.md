@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 249 |
+| Number of items that remain open | 250 |
 | Number of items closed | 608 |
-| Total number of items created | 857 |
+| Total number of items created | 858 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Introduce Read Model and Event Type management in Workbench | https://github.com/Cratis/Chronicle/issues/2381 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce user and client credentials management | https://github.com/Cratis/Chronicle/issues/2379 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Bulk update on replay of projections or reducers for sinks | https://github.com/Cratis/Chronicle/issues/2364 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Add a way to immediately query projections and get a collection of snapshots per CorrelationId | https://github.com/Cratis/Chronicle/issues/2311 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 5 days, 4:27:14 | None |
@@ -336,5 +337,4 @@
 | Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | None | [einari](https://github.com/einari) | None | 449 days, 2:17:39 | None |
 | Support unmanaged observers / reactors | https://github.com/Cratis/Chronicle/issues/1067 | None | [einari](https://github.com/einari) | None | None | None |
 | Identity is not resolved for reducer handlers | https://github.com/Cratis/Chronicle/issues/1066 | None | [einari](https://github.com/einari) | 334 days, 5:05:34 | 401 days, 1:11:14 | None |
-| Change to the concept of namespace within an Event Store rather than using the concept of a Tenant | https://github.com/Cratis/Chronicle/issues/1064 | None | [einari](https://github.com/einari) | None | 198 days, 23:01:35 | None |
-| Separate EventContext into client and server representation | https://github.com/Cratis/Chronicle/issues/10
+| Change to the concept of namespace within an Event Store rather than using the concept of 
