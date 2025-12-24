@@ -14,7 +14,6 @@ import { MVVM } from '@cratis/arc.react.mvvm';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-
 function App() {
     const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
     const basePath = basePathElement?.content ?? '/';
@@ -28,7 +27,9 @@ function App() {
                             <AuthProvider>
                                 <Routes>
                                     <Route path={basePath}>
-                                        <Route path='login' element={<Login />} />
+                                        <Route path='login' element={<BlankLayout />}>
+                                            <Route path='' element={<Login />} />
+                                        </Route>
                                         <Route path='' element={<BlankLayout />}>
                                             <Route path='' element={
                                                 <ProtectedRoute>
