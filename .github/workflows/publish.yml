@@ -401,6 +401,7 @@ jobs:
         with:
           path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: dotnet-arm64-output
@@ -457,6 +458,7 @@ jobs:
         with:
           path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
+          fail-on-cache-miss: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -500,12 +502,14 @@ jobs:
         with:
           path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: dotnet-arm64-output
         with:
           path: ./Source/Kernel/Server/out/arm64
           key: ${{ env.DOTNET_ARM64_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: workbench-output
