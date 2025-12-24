@@ -4,8 +4,6 @@
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
@@ -33,7 +31,7 @@ internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage
     public async Task Add(AddUser command)
     {
         var passwordHash = HashHelper.Hash(command.Password);
-        
+
         var @event = new UserAdded(
             command.UserId,
             command.Username,
@@ -63,7 +61,7 @@ internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage
     public async Task Remove(RemoveUser command)
     {
         var @event = new UserRemoved(command.UserId);
-        
+
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 
@@ -87,9 +85,9 @@ internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage
     public async Task ChangePassword(ChangeUserPassword command)
     {
         var passwordHash = HashHelper.Hash(command.Password);
-        
+
         var @event = new UserPasswordChanged(command.UserId, passwordHash);
-        
+
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 

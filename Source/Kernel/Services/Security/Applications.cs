@@ -4,8 +4,6 @@
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
@@ -14,7 +12,6 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Infrastructure.Security;
-using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -33,7 +30,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IApplicationStora
     public async Task Add(AddApplication command)
     {
         var clientSecret = HashHelper.Hash(command.ClientSecret);
-        
+
         var @event = new ApplicationAdded(
             command.Id,
             command.ClientId,
@@ -62,7 +59,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IApplicationStora
     public async Task Remove(RemoveApplication command)
     {
         var @event = new ApplicationRemoved(command.Id);
-        
+
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 
@@ -86,9 +83,9 @@ internal sealed class Applications(IGrainFactory grainFactory, IApplicationStora
     public async Task ChangeSecret(ChangeApplicationSecret command)
     {
         var clientSecret = HashHelper.Hash(command.ClientSecret);
-        
+
         var @event = new ApplicationSecretChanged(command.Id, clientSecret);
-        
+
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 

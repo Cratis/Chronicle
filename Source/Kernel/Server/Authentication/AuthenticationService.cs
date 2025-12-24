@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Infrastructure.Security;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 

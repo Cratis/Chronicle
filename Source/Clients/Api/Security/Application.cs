@@ -8,30 +8,14 @@ namespace Cratis.Chronicle.Api.Security;
 /// <summary>
 /// Represents application in the Chronicle system.
 /// </summary>
-public record Application(string Id, string ClientId, bool IsActive, DateTimeOffset CreatedAt, DateTimeOffset? LastModifiedAt);
-
-/// <summary>
-/// Extension methods for converting between contract and API application types.
-/// </summary>
-public static class ApplicationConverters
-{
-    /// <summary>
-    /// Convert from contract application to API application.
-    /// </summary>
-    /// <param name="client">Contract application.</param>
-    /// <returns>API application.</returns>
-    public static Application ToApi(this Contracts.Security.Application client) => new(
-        client.Id,
-        client.ClientId,
-        client.IsActive,
-        client.CreatedAt,
-        client.LastModifiedAt);
-
-    /// <summary>
-    /// Convert from multiple contract application to API application.
-    /// </summary>
-    /// <param name="clients">Contract application.</param>
-    /// <returns>API application.</returns>
-    public static IEnumerable<Application> ToApi(this IEnumerable<Contracts.Security.Application> clients) =>
-        clients.Select(ToApi);
-}
+/// <param name="Id">The unique identifier of the application.</param>
+/// <param name="ClientId">The unique identifier of the client associated with the application.</param>
+/// <param name="IsActive">Indicates whether the application is active.</param>
+/// <param name="CreatedAt">The date and time when the application was created.</param>
+/// <param name="LastModifiedAt">The date and time when the application was last modified.</param>
+public record Application(
+    string Id,
+    string ClientId,
+    bool IsActive,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastModifiedAt);
