@@ -199,6 +199,30 @@ catch (Exception ex)
     Console.WriteLine($"Failed to log development certificate info: {ex.Message}");
 }
 
+#if DEVELOPMENT
+app.UseDeveloperExceptionPage();
+#endif
+
+// Add request logging for debugging
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"Request: {context.Request.Method} {context.Request.Path}");
+    try
+    {
+        await next();
+        Console.WriteLine($"Response: {context.Response.StatusCode}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Exception in request pipeline: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        throw;
+    }
+});
+
+app.UseCratisArc();
+app.UseRouting();
+
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
 if (chronicleOptions.Authentication.Enabled)
 {
@@ -207,36 +231,49 @@ if (chronicleOptions.Authentication.Enabled)
     app.UseAuthorization();
 }
 
-app.UseCratisArc();
-
 if (chronicleOptions.Features.Api)
 {
-    app.UseCratisChronicleApi();
-}
-
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
-{
-    app.UseDefaultFiles()
-        .UseStaticFiles();
-
-    app.MapFallbackToFile("index.html");
-}
-
-// Map controllers if OAuth Authority is enabled
-if (chronicleOptions.Features.OAuthAuthority)
-{
-    app.MapControllers();
+    // Configure API endpoints but without calling UseRouting again (already called above)
+    app.UseWebSockets();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        var resourceName = typeof(ApiApplicationBuilderExtensions).Namespace + ".SwaggerDark.css";
+        using var stream = typeof(ApiApplicationBuilderExtensions).Assembly.GetManifestResourceStream(resourceName);
+        if (stream is not null)
+        {
+            using var streamReader = new StreamReader(stream);
+            var styles = streamReader.ReadToEnd();
+            options.HeadContent = $"{options.HeadContent}<style>{styles}</style>";
+        }
+    });
 }
 
 // Map Identity API endpoints for SPA authentication
 if (chronicleOptions.Authentication.Enabled)
 {
-    app.MapGroup("/identity").MapIdentityApi<ChronicleUser>();
+    app.MapGroup("/identity")
+        .MapIdentityApi<ChronicleUser>()
+        .AllowAnonymous();
+}
+
+// Map controllers for API and OAuth
+if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
+{
+    app.MapControllers();
 }
 
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+
+// Map workbench static files and fallback AFTER API endpoints to avoid conflicts
+if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.MapFallbackToFile("index.html");
+}
 
 #if DEVELOPMENT
 app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>

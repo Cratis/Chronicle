@@ -42,12 +42,16 @@ public class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureDefaultAdminUser()
     {
+        Console.WriteLine($"Checking for default admin user: {_options.Authentication.DefaultAdminUsername}");
+
         var adminUser = await userStorage.GetByUsername(_options.Authentication.DefaultAdminUsername);
         if (adminUser is not null)
         {
+            Console.WriteLine("Default admin user already exists");
             return;
         }
 
+        Console.WriteLine("Creating default admin user...");
         var password = _options.Authentication.DefaultAdminPassword ?? "admin";
         var passwordHash = HashHelper.Hash(password);
         var now = DateTimeOffset.UtcNow;
@@ -65,6 +69,7 @@ public class AuthenticationService(
         };
 
         await userStorage.Create(user);
+        Console.WriteLine($"Default admin user created with username: {user.Username}");
     }
 
 #if DEVELOPMENT
