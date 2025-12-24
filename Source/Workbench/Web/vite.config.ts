@@ -63,11 +63,21 @@ export default defineConfig({
         open: false,
         proxy: {
             '/api': {
-                target: 'http://localhost:8080',
-                ws: true
+                target: 'https://localhost:8080',
+                ws: true,
+                secure: false,
+                changeOrigin: true
+            },
+            '/identity': {
+                target: 'https://localhost:8080',
+                ws: true,
+                secure: false,
+                changeOrigin: true
             },
             '/swagger': {
-                target: 'http://localhost:8080'
+                target: 'https://localhost:8080',
+                secure: false,
+                changeOrigin: true
             }
         }
     },
