@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Security;
 
@@ -14,4 +16,22 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="IsActive">Indicates whether the user is active.</param>
 /// <param name="CreatedAt">The date and time when the user was created.</param>
 /// <param name="LastModifiedAt">The date and time when the user was last modified.</param>
-public record User(string Id, string Username, string? Email, bool IsActive, DateTimeOffset CreatedAt, DateTimeOffset? LastModifiedAt);
+[ReadModel]
+public record User(
+    string Id,
+    string Username,
+    string? Email,
+    bool IsActive,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastModifiedAt)
+{
+    /// <summary>
+    /// Observes all users.
+    /// </summary>
+    /// <param name="users">The <see cref="IUsers"/> contract.</param>
+    /// <returns>An observable for observing a collection of users.</returns>
+    public static ISubject<IEnumerable<User>> AllUsers(IUsers users) =>
+        users.InvokeAndWrapWithTransformSubject(
+            token => users.ObserveAll(token),
+            users => users.ToApi());
+}

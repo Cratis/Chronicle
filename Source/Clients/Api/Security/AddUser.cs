@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Security;
+
 namespace Cratis.Chronicle.Api.Security;
 
 /// <summary>
@@ -10,8 +12,24 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="Username">The user's username.</param>
 /// <param name="Email">The user's email address.</param>
 /// <param name="Password">The user's password.</param>
+[Command]
 public record AddUser(
     string UserId,
     string Username,
     string? Email,
-    string Password);
+    string Password)
+{
+    /// <summary>
+    /// Handles the command.
+    /// </summary>
+    /// <param name="users">The <see cref="IUsers"/> contract.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task Handle(IUsers users) =>
+        users.Add(new()
+        {
+            UserId = UserId,
+            Username = Username,
+            Email = Email,
+            Password = Password
+        });
+}
