@@ -44,7 +44,7 @@
 | Get rid of EventMetadata and move properties to EventContext | https://github.com/Cratis/Chronicle/issues/1926 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 46 days, 16:47:49 | None |
 | Filtering of properties in Event Sequence table | https://github.com/Cratis/Chronicle/issues/1925 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add OpenTelemetry tracing context to appending of events and also let this flow further into observers | https://github.com/Cratis/Chronicle/issues/1923 | None | [einari](https://github.com/einari) | None | None | None |
-| [Design] - DSL for projections | https://github.com/Cratis/Chronicle/issues/1915 | None | [einari](https://github.com/einari) | None | None | None |
+| [Design] - DSL for projections | https://github.com/Cratis/Chronicle/issues/1915 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Chronicle should not decide casing on read models, event types or other artifacts given to it by the client | https://github.com/Cratis/Chronicle/issues/1914 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 61 days, 1:30:04 | None |
 | Sequence Query editor in Workbench | https://github.com/Cratis/Chronicle/issues/1911 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Multiple sinks for projections and reducers | https://github.com/Cratis/Chronicle/issues/1910 | None | [woksin](https://github.com/woksin) | None | None | None |
@@ -337,4 +337,4 @@
 | Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | None | [einari](https://github.com/einari) | None | 449 days, 2:17:39 | None |
 | Support unmanaged observers / reactors | https://github.com/Cratis/Chronicle/issues/1067 | None | [einari](https://github.com/einari) | None | None | None |
 | Identity is not resolved for reducer handlers | https://github.com/Cratis/Chronicle/issues/1066 | None | [einari](https://github.com/einari) | 334 days, 5:05:34 | 401 days, 1:11:14 | None |
-| Change to the concept of namespace within an Event Store rather than using the concept of 
+| Change to the concep
