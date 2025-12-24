@@ -20,10 +20,10 @@ import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
-import { Namespaces } from './General/Namespaces/Namespaces';
+import { Namespaces } from './System/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
-import { Users } from './General/Users/Users';
+import { Users } from './System/Users/Users';
 import { Applications } from './General/Applications/Applications';
 
 export const EventStore = () => {
@@ -43,13 +43,18 @@ export const EventStore = () => {
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
-                { label: strings.mainMenu.general.users, url: 'users', icon: mdIcons.MdVerifiedUser },
-                { label: strings.mainMenu.general.applications, url: 'applications', icon: mdIcons.MdSecurity },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
                 // { label: strings.mainMenu.general.reactors, url: 'reactors', icon: gameIcons.GiReactor },
                 // { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
+            ]
+        },
+        {
+            label: strings.mainMenu.system.groupLabel,
+            items: [
+                { label: strings.mainMenu.system.users, url: 'users', icon: mdIcons.MdVerifiedUser },
+                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity }
             ]
         }
     ];
