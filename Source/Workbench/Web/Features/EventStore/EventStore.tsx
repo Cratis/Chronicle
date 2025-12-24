@@ -43,8 +43,8 @@ export const EventStore = () => {
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
-                { label: strings.mainMenu.general.users, url: 'users', icon: mdIcons.MdApps },
-                { label: strings.mainMenu.general.applications, url: 'applications', icon: mdIcons.MdApps },
+                { label: strings.mainMenu.general.users, url: 'users', icon: mdIcons.MdVerifiedUser },
+                { label: strings.mainMenu.general.applications, url: 'applications', icon: mdIcons.MdSecurity },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
