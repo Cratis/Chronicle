@@ -26,15 +26,17 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task Added(UserAdded @event, EventContext eventContext)
     {
-        var user = new ChronicleUser(
-            @event.UserId,
-            @event.Username,
-            @event.Email,
-            @event.PasswordHash,
-            Guid.NewGuid().ToString(),
-            true,
-            DateTimeOffset.UtcNow,
-            null);
+        var user = new ChronicleUser
+        {
+            Id = @event.UserId,
+            Username = @event.Username,
+            Email = @event.Email,
+            PasswordHash = @event.PasswordHash,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastModifiedAt = null
+        };
 
         await userStorage.Create(user);
     }
@@ -61,13 +63,10 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
         var user = await userStorage.GetById(@event.UserId);
         if (user is not null)
         {
-            var updatedUser = user with
-            {
-                PasswordHash = @event.PasswordHash,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                LastModifiedAt = DateTimeOffset.UtcNow
-            };
-            await userStorage.Update(updatedUser);
+            user.PasswordHash = @event.PasswordHash;
+            user.SecurityStamp = Guid.NewGuid().ToString();
+            user.LastModifiedAt = DateTimeOffset.UtcNow;
+            await userStorage.Update(user);
         }
     }
 }

@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { BlankLayout } from "./Layout/Blank/BlankLayout";
 import { Home } from "./Features/Home";
 import { EventStore } from "./Features/EventStore/EventStore";
+import { Login, AuthProvider, ProtectedRoute } from "./Features/Security";
 import { LayoutProvider } from './Layout/Default/context/LayoutContext';
 import { DialogComponents } from '@cratis/arc.react/dialogs';
 import { BusyIndicatorDialog, ConfirmationDialog } from 'Components/Dialogs';
@@ -24,14 +25,25 @@ function App() {
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
                         <BrowserRouter>
-                            <Routes>
-                                <Route path={basePath}>
-                                    <Route path='' element={<BlankLayout />}>
-                                        <Route path={''} element={<Home />} />
+                            <AuthProvider>
+                                <Routes>
+                                    <Route path={basePath}>
+                                        <Route path='login' element={<Login />} />
+                                        <Route path='' element={<BlankLayout />}>
+                                            <Route path='' element={
+                                                <ProtectedRoute>
+                                                    <Home />
+                                                </ProtectedRoute>
+                                            } />
+                                        </Route>
+                                        <Route path='event-store/*' element={
+                                            <ProtectedRoute>
+                                                <EventStore />
+                                            </ProtectedRoute>
+                                        } />
                                     </Route>
-                                    <Route path='event-store/*' element={<EventStore />} />
-                                </Route>
-                            </Routes>
+                                </Routes>
+                            </AuthProvider>
                         </BrowserRouter>
                     </DialogComponents>
                 </LayoutProvider>

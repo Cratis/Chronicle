@@ -11,6 +11,7 @@ using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.Security;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -225,6 +226,12 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 if (chronicleOptions.Features.OAuthAuthority)
 {
     app.MapControllers();
+}
+
+// Map Identity API endpoints for SPA authentication
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.MapGroup("/identity").MapIdentityApi<ChronicleUser>();
 }
 
 app.MapGrpcServices();

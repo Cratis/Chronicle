@@ -72,8 +72,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task SetUserNameAsync(ChronicleUser user, string? userName, CancellationToken cancellationToken)
     {
-        // ChronicleUser is a record, so we can't modify it directly
-        // This would need to be handled by creating a new record with the updated username
+        user.Username = userName ?? string.Empty;
         return Task.CompletedTask;
     }
 
@@ -99,14 +98,20 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task SetPasswordHashAsync(ChronicleUser user, string? passwordHash, CancellationToken cancellationToken)
     {
-        // ChronicleUser is a record, handled externally
+        user.PasswordHash = passwordHash;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task<ChronicleUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
-        return await userStorage.GetByEmail(normalizedEmail);
+        // Try to find by email first
+        var user = await userStorage.GetByEmail(normalizedEmail);
+
+        // If not found by email, try username (to support username-based login)
+        user ??= await userStorage.GetByUsername(normalizedEmail);
+
+        return user;
     }
 
     /// <inheritdoc/>
@@ -130,7 +135,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task SetEmailAsync(ChronicleUser user, string? email, CancellationToken cancellationToken)
     {
-        // ChronicleUser is a record, handled externally
+        user.Email = email;
         return Task.CompletedTask;
     }
 
@@ -156,7 +161,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task SetSecurityStampAsync(ChronicleUser user, string stamp, CancellationToken cancellationToken)
     {
-        // ChronicleUser is a record, handled externally
+        user.SecurityStamp = stamp;
         return Task.CompletedTask;
     }
 

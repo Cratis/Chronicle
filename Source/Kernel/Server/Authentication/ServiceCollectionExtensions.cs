@@ -45,7 +45,8 @@ public static class ServiceCollectionExtensions
             })
             .AddUserStore<ChronicleUserStore>()
             .AddSignInManager()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddApiEndpoints();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
         services.AddOpenIddictIfEnabled(chronicleOptions);

@@ -52,15 +52,17 @@ public class AuthenticationService(
         var passwordHash = HashHelper.Hash(password);
         var now = DateTimeOffset.UtcNow;
 
-        var user = new ChronicleUser(
-            Id: Guid.NewGuid().ToString(),
-            Username: _options.Authentication.DefaultAdminUsername,
-            Email: null,
-            PasswordHash: passwordHash,
-            SecurityStamp: Guid.NewGuid().ToString(),
-            IsActive: true,
-            CreatedAt: now,
-            LastModifiedAt: null);
+        var user = new ChronicleUser
+        {
+            Id = Guid.NewGuid().ToString(),
+            Username = _options.Authentication.DefaultAdminUsername,
+            Email = null,
+            PasswordHash = passwordHash,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            IsActive = true,
+            CreatedAt = now,
+            LastModifiedAt = null
+        };
 
         await userStorage.Create(user);
     }
