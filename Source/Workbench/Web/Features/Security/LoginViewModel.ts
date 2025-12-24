@@ -31,8 +31,15 @@ export class LoginViewModel {
                 // Successfully logged in, redirect to home
                 window.location.href = '/';
             } else {
-                const error = await response.json();
-                this.errorMessage = error.detail || 'Invalid username or password';
+                let errorDetail = 'Invalid username or password';
+                try {
+                    const error = await response.json();
+                    errorDetail = error.detail || error.title || errorDetail;
+                } catch {
+                    // If response is not JSON, use status text
+                    errorDetail = response.statusText || `Error ${response.status}`;
+                }
+                this.errorMessage = errorDetail;
             }
         } catch (error) {
             console.error('Login error:', error);

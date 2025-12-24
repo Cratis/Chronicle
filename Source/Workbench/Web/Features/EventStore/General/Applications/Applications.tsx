@@ -4,7 +4,7 @@
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ApplicationsViewModel } from './ApplicationsViewModel';
 import { Column } from 'primereact/column';
-import { AllApplications, Applications } from 'Api/Security';
+import { AllApplications, Application } from 'Api/Security';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 
@@ -13,18 +13,18 @@ const formatDate = (date: string) => {
     return new Date(date).toLocaleString();
 };
 
-export const ApplicationsPage = withViewModel(ApplicationsViewModel, ({ viewModel }) => {
+export const Applications = withViewModel(ApplicationsViewModel, ({ viewModel }) => {
     return (
         <DataPage
-            title="Client Credentials"
+            title="Applications"
             query={AllApplications}
             emptyMessage="No applications found"
             dataKey='id'
-            onSelectionChange={(e) => (viewModel.selectedClient = e.value as Applications)}>
+            onSelectionChange={(e) => (viewModel.selectedClient = e.value as Application)}>
             <DataPage.MenuItems>
                 <MenuItem
                     id="add"
-                    label="Add Client Credentials"
+                    label="Add Application"
                     icon={faIcons.FaPlus}
                     command={() => viewModel.addApplications()} />
                 <MenuItem
@@ -47,17 +47,17 @@ export const ApplicationsPage = withViewModel(ApplicationsViewModel, ({ viewMode
                     field='isActive'
                     header="Active"
                     sortable
-                    body={(client: Applications) => client.isActive ? 'Yes' : 'No'} />
+                    body={(client: Application) => client.isActive ? 'Yes' : 'No'} />
                 <Column
                     field='createdAt'
                     header="Created"
                     sortable
-                    body={(client: Applications) => formatDate(client.createdAt)} />
+                    body={(client: Application) => formatDate(client.createdAt)} />
                 <Column
                     field='lastModifiedAt'
                     header="Last Modified"
                     sortable
-                    body={(client: Applications) => formatDate(client.lastModifiedAt || '')} />
+                    body={(client: Application) => formatDate(client.lastModifiedAt || '')} />
             </DataPage.Columns>
         </DataPage>
     );

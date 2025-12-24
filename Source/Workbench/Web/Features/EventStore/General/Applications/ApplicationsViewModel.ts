@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { injectable } from 'tsyringe';
-import { Applications, Add, Remove, ChangeSecret } from 'Api/Security';
+import { Applications, AddApplication, RemoveApplication, ChangeApplicationSecret } from 'Api/Security';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 
 @injectable()
 export class ApplicationsViewModel {
     constructor(
-        private readonly _add: Add,
-        private readonly _remove: Remove,
-        private readonly _changeSecret: ChangeSecret,
+        private readonly _add: AddApplication,
+        private readonly _remove: RemoveApplication,
+        private readonly _changeSecret: ChangeApplicationSecret,
         private readonly _dialogs: IDialogs) {
     }
 
@@ -19,7 +19,7 @@ export class ApplicationsViewModel {
 
     async addApplications() {
         const id = crypto.randomUUID();
-        
+
         const clientId = await this._dialogs.showTextInput('Add Client Credentials', 'Enter client ID:');
         if (!clientId) return;
 
@@ -42,7 +42,7 @@ export class ApplicationsViewModel {
                 'Remove Client Credentials',
                 `Are you sure you want to remove applications ${this.selectedClient.clientId}?`,
                 DialogButtons.YesNo);
-                
+
             if (result === DialogResult.Yes) {
                 this._remove.id = this.selectedClient.id;
                 const commandResult = await this._remove.execute();

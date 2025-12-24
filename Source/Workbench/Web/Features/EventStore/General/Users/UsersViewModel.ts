@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { injectable } from 'tsyringe';
-import { User, Add, Remove, ChangePassword } from 'Api/Security';
+import { User, AddUser, RemoveUser, ChangePasswordForUser } from 'Api/Security';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 
 @injectable()
 export class UsersViewModel {
     constructor(
-        private readonly _add: Add,
-        private readonly _remove: Remove,
-        private readonly _changePassword: ChangePassword,
+        private readonly _add: AddUser,
+        private readonly _remove: RemoveUser,
+        private readonly _changePassword: ChangePasswordForUser,
         private readonly _dialogs: IDialogs) {
     }
 
@@ -19,12 +19,12 @@ export class UsersViewModel {
 
     async addUser() {
         const userId = crypto.randomUUID();
-        
+
         const username = await this._dialogs.showTextInput('Add User', 'Enter username:');
         if (!username) return;
 
         const email = await this._dialogs.showTextInput('Add User', 'Enter email (optional):');
-        
+
         const password = await this._dialogs.showTextInput('Add User', 'Enter password:');
         if (!password) return;
 
@@ -45,7 +45,7 @@ export class UsersViewModel {
                 'Remove User',
                 `Are you sure you want to remove user ${this.selectedUser.username}?`,
                 DialogButtons.YesNo);
-                
+
             if (result === DialogResult.Yes) {
                 this._remove.userId = this.selectedUser.id;
                 const commandResult = await this._remove.execute();

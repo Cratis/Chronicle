@@ -23,6 +23,8 @@ import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
+import { Users } from './General/Users/Users';
+import { Applications } from './General/Applications/Applications';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -41,6 +43,8 @@ export const EventStore = () => {
             items: [
                 { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
+                { label: strings.mainMenu.general.users, url: 'users', icon: mdIcons.MdApps },
+                { label: strings.mainMenu.general.applications, url: 'applications', icon: mdIcons.MdApps },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
@@ -64,6 +68,8 @@ export const EventStore = () => {
                 <Route path={'reducers'} element={<Reducers />} />
                 <Route path={'reactors'} element={<Reactors />} />
                 <Route path={'sinks'} element={<Sinks />} />
+                <Route path={'users'} element={<Users />} />
+                <Route path={'applications'} element={<Applications />} />
 
                 <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'} />} />
