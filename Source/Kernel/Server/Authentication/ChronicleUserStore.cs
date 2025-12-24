@@ -41,8 +41,6 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public async Task<ChronicleUser?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"FindByNameAsync called with: {normalizedUserName}");
-
         // Identity normalizes usernames to uppercase, but we store them as-is
         // Try exact match first, then case-insensitive
         var user = await userStorage.GetByUsername(normalizedUserName);
@@ -53,7 +51,6 @@ public class ChronicleUserStore(IUserStorage userStorage) :
             user = await userStorage.GetByUsername(normalizedUserName.ToLowerInvariant());
         }
 
-        Console.WriteLine($"FindByNameAsync result: {(user != null ? "Found" : "Not found")}");
         return user;
     }
 
@@ -99,16 +96,13 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task<string?> GetPasswordHashAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"GetPasswordHashAsync for user {user.Username}: Hash length = {user.PasswordHash?.Length ?? 0}");
         return Task.FromResult(user.PasswordHash);
     }
 
     /// <inheritdoc/>
     public Task<bool> HasPasswordAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        var hasPassword = !string.IsNullOrEmpty(user.PasswordHash);
-        Console.WriteLine($"HasPasswordAsync for user {user.Username}: {hasPassword}");
-        return Task.FromResult(hasPassword);
+        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash));
     }
 
     /// <inheritdoc/>
@@ -121,50 +115,23 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public async Task<ChronicleUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
-        try
+        // The normalizedEmail parameter contains the value entered by the user (not actually normalized in our case)
+        // Try to find by email first (in case user entered an email)
+        var user = await userStorage.GetByEmail(normalizedEmail);
+
+        // If not found by email, try username (to support username-based login)
+        // Try both the original value and lowercase version
+        if (user is null)
         {
-            Console.WriteLine($"FindByEmailAsync called with: '{normalizedEmail}'");
-
-            // The normalizedEmail parameter contains the value entered by the user (not actually normalized in our case)
-            // Try to find by email first (in case user entered an email)
-            var user = await userStorage.GetByEmail(normalizedEmail);
-            Console.WriteLine($"Lookup by email: {(user != null ? "Found" : "Not found")}");
-
-            // If not found by email, try username (to support username-based login)
-            // Try both the original value and lowercase version
-            if (user is null)
-            {
-                Console.WriteLine($"Trying username lookup with: '{normalizedEmail}'");
-                user = await userStorage.GetByUsername(normalizedEmail);
-                Console.WriteLine($"Lookup by username: {(user != null ? "Found" : "Not found")}");
-            }
-
-            if (user is null && normalizedEmail != normalizedEmail.ToLowerInvariant())
-            {
-                var lowerUsername = normalizedEmail.ToLowerInvariant();
-                Console.WriteLine($"Trying lowercase username lookup with: '{lowerUsername}'");
-                user = await userStorage.GetByUsername(lowerUsername);
-                Console.WriteLine($"Lookup by lowercase username: {(user != null ? "Found" : "Not found")}");
-            }
-
-            if (user != null)
-            {
-                Console.WriteLine($"User found: ID={user.Id}, Username={user.Username}, HasPassword={!string.IsNullOrEmpty(user.PasswordHash)}");
-            }
-            else
-            {
-                Console.WriteLine("No user found with any lookup method");
-            }
-
-            return user;
+            user = await userStorage.GetByUsername(normalizedEmail);
         }
-        catch (Exception ex)
+
+        if (user is null && normalizedEmail != normalizedEmail.ToLowerInvariant())
         {
-            // Log the exception for debugging
-            Console.WriteLine($"Error in FindByEmailAsync: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            throw;
+            user = await userStorage.GetByUsername(normalizedEmail.ToLowerInvariant());
         }
+
+        return user;
     }
 
     /// <inheritdoc/>

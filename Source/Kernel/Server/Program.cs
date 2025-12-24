@@ -203,23 +203,6 @@ catch (Exception ex)
 app.UseDeveloperExceptionPage();
 #endif
 
-// Add request logging for debugging
-app.Use(async (context, next) =>
-{
-    Console.WriteLine($"Request: {context.Request.Method} {context.Request.Path}");
-    try
-    {
-        await next();
-        Console.WriteLine($"Response: {context.Response.StatusCode}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Exception in request pipeline: {ex.Message}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        throw;
-    }
-});
-
 app.UseCratisArc();
 app.UseRouting();
 
