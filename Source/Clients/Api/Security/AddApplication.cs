@@ -6,4 +6,10 @@ namespace Cratis.Chronicle.Api.Security;
 /// <summary>
 /// Represents the command for adding application.
 /// </summary>
-public record AddApplication(string Id, string ClientId, string ClientSecret);
+/// <param name="Id">The application identifier.</param>
+/// <param name="ClientId">The application's client identifier.</param>
+/// <param name="ClientSecret">The application's client secret.</param>
+public record AddApplication(
+    string Id,
+    string ClientId,
+    string ClientSecret);

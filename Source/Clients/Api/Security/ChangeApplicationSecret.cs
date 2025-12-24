@@ -6,4 +6,8 @@ namespace Cratis.Chronicle.Api.Security;
 /// <summary>
 /// Represents the command for changing application secret.
 /// </summary>
-public record ChangeApplicationSecret(string Id, string ClientSecret);
+/// <param name="Id">The application identifier.</param>
+/// <param name="ClientSecret">The new client secret.</param>
+public record ChangeApplicationSecret(
+    string Id,
+    string ClientSecret);

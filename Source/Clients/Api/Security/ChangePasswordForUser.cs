@@ -6,4 +6,8 @@ namespace Cratis.Chronicle.Api.Security;
 /// <summary>
 /// Represents the command for changing a user's password.
 /// </summary>
-public record ChangePasswordForUser(string UserId, string Password);
+/// <param name="UserId">The user's unique identifier.</param>
+/// <param name="Password">The new password.</param>
+public record ChangePasswordForUser(
+    string UserId,
+    string Password);
