@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
@@ -83,7 +84,7 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<string?> GetApplicationTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Type);
+        return new(application.Type ?? default);
     }
 
     /// <inheritdoc/>
@@ -101,7 +102,7 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<string?> GetClientTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Type);
+        return new(application.Type ?? default);
     }
 
     /// <inheritdoc/>
@@ -125,7 +126,7 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<string?> GetIdAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Id);
+        return new(application.Id.ToString());
     }
 
     /// <inheritdoc/>
@@ -137,31 +138,31 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<ImmutableArray<string>> GetPermissionsAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Permissions);
+        return new(application.Permissions.Select(p => p.Value).ToImmutableArray());
     }
 
     /// <inheritdoc/>
     public ValueTask<ImmutableArray<string>> GetPostLogoutRedirectUrisAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.PostLogoutRedirectUris);
+        return new(application.PostLogoutRedirectUris.Select(u => u.Value).ToImmutableArray());
     }
 
     /// <inheritdoc/>
     public ValueTask<ImmutableDictionary<string, JsonElement>> GetPropertiesAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Properties);
+        return new(application.Properties.ToImmutableDictionary(k => k.Key.Value, v => v.Value));
     }
 
     /// <inheritdoc/>
     public ValueTask<ImmutableArray<string>> GetRedirectUrisAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.RedirectUris);
+        return new(application.RedirectUris.Select(u => u.Value).ToImmutableArray());
     }
 
     /// <inheritdoc/>
     public ValueTask<ImmutableArray<string>> GetRequirementsAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Requirements);
+        return new(application.Requirements.Select(r => r.Value).ToImmutableArray());
     }
 
     /// <inheritdoc/>
@@ -265,35 +266,35 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask SetPermissionsAsync(Application application, ImmutableArray<string> permissions, CancellationToken cancellationToken)
     {
-        application.Permissions = permissions;
+        application.Permissions = permissions.Select(p => (Permission)p).ToImmutableArray();
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetPostLogoutRedirectUrisAsync(Application application, ImmutableArray<string> uris, CancellationToken cancellationToken)
     {
-        application.PostLogoutRedirectUris = uris;
+        application.PostLogoutRedirectUris = uris.Select(u => (RedirectUri)u).ToImmutableArray();
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetPropertiesAsync(Application application, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken)
     {
-        application.Properties = properties;
+        application.Properties = properties.ToImmutableDictionary(k => (PropertyName)k.Key, v => v.Value);
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetRedirectUrisAsync(Application application, ImmutableArray<string> uris, CancellationToken cancellationToken)
     {
-        application.RedirectUris = uris;
+        application.RedirectUris = uris.Select(u => (RedirectUri)u).ToImmutableArray();
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetRequirementsAsync(Application application, ImmutableArray<string> requirements, CancellationToken cancellationToken)
     {
-        application.Requirements = requirements;
+        application.Requirements = requirements.Select(r => (Requirement)r).ToImmutableArray();
         return default;
     }
 

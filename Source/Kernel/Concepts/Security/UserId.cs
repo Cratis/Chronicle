@@ -29,4 +29,11 @@ public record UserId(Guid Value) : ConceptAs<Guid>(Value)
     /// <param name="value">The <see cref="Guid"/> to convert.</param>
     /// <returns>The converted <see cref="UserId"/>.</returns>
     public static implicit operator UserId(Guid value) => new(value);
+
+    /// <summary>
+    /// Implicitly converts from <see cref="string"/> to <see cref="UserId"/>.
+    /// </summary>
+    /// <param name="value">The <see cref="string"/> to convert.</param>
+    /// <returns>The converted <see cref="UserId"/>.</returns>
+    public static implicit operator UserId(string value) => new(Guid.Parse(value));
 }

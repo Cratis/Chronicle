@@ -29,4 +29,11 @@ public record ApplicationId(Guid Value) : ConceptAs<Guid>(Value)
     /// <param name="value">The <see cref="EventSourceId"/> to convert.</param>
     /// <returns>The converted <see cref="ApplicationId"/>.</returns>
     public static implicit operator ApplicationId(EventSourceId value) => new(Guid.Parse(value.Value));
+
+    /// <summary>
+    /// Implicitly converts from <see cref="string"/> to <see cref="ApplicationId"/>.
+    /// </summary>
+    /// <param name="value">The <see cref="string"/> to convert.</param>
+    /// <returns>The converted <see cref="ApplicationId"/>.</returns>
+    public static implicit operator ApplicationId(string value) => new(Guid.Parse(value));
 }

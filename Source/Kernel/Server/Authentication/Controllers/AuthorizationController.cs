@@ -119,7 +119,7 @@ public class AuthorizationController(
                 nameType: OpenIddictConstants.Claims.Name,
                 roleType: OpenIddictConstants.Claims.Role);
 
-            identity.AddClaim(OpenIddictConstants.Claims.Subject, user.Id);
+            identity.AddClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
             identity.AddClaim(OpenIddictConstants.Claims.Name, user.Username);
 
             identity.SetScopes(request.GetScopes());

@@ -25,6 +25,6 @@ public record Authorization(
     Subject? Subject,
     AuthorizationType? Type,
     AuthorizationStatus? Status,
-    ImmutableArray<Scope> Scopes,
+    ImmutableArray<Concepts.Security.Scope> Scopes,
     DateTimeOffset? CreationDate,
     ImmutableDictionary<PropertyName, JsonElement> Properties);

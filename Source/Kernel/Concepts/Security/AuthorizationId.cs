@@ -20,4 +20,11 @@ public record AuthorizationId(Guid Value) : ConceptAs<Guid>(Value)
     /// <param name="value">The <see cref="Guid"/> to convert.</param>
     /// <returns>The converted <see cref="AuthorizationId"/>.</returns>
     public static implicit operator AuthorizationId(Guid value) => new(value);
+
+    /// <summary>
+    /// Implicitly converts from <see cref="string"/> to <see cref="AuthorizationId"/>.
+    /// </summary>
+    /// <param name="value">The <see cref="string"/> to convert.</param>
+    /// <returns>The converted <see cref="AuthorizationId"/>.</returns>
+    public static implicit operator AuthorizationId(string value) => new(Guid.Parse(value));
 }

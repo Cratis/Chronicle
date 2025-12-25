@@ -45,7 +45,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
         // Try exact match first, then case-insensitive
         var user = await userStorage.GetByUsername(normalizedUserName);
 
-        if (user is null && normalizedUserName != normalizedUserName.ToLowerInvariant())
+        if (user is null && !normalizedUserName.Equals(normalizedUserName, StringComparison.InvariantCultureIgnoreCase))
         {
             // Try lowercase version
             user = await userStorage.GetByUsername(normalizedUserName.ToLowerInvariant());
@@ -57,13 +57,13 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task<string?> GetNormalizedUserNameAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult<string?>(user.Username.ToUpperInvariant());
+        return Task.FromResult<string?>(user.Username.Value.ToUpperInvariant());
     }
 
     /// <inheritdoc/>
     public Task<string> GetUserIdAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult(user.Id);
+        return Task.FromResult(user.Id.ToString());
     }
 
     /// <inheritdoc/>
@@ -96,19 +96,19 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task<string?> GetPasswordHashAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult(user.PasswordHash);
+        return Task.FromResult(user.PasswordHash?.Value);
     }
 
     /// <inheritdoc/>
     public Task<bool> HasPasswordAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash));
+        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash?.Value));
     }
 
     /// <inheritdoc/>
     public Task SetPasswordHashAsync(ChronicleUser user, string? passwordHash, CancellationToken cancellationToken)
     {
-        user.PasswordHash = passwordHash;
+        user.PasswordHash = passwordHash ?? string.Empty;
         return Task.CompletedTask;
     }
 
@@ -126,7 +126,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
             user = await userStorage.GetByUsername(normalizedEmail);
         }
 
-        if (user is null && normalizedEmail != normalizedEmail.ToLowerInvariant())
+        if (user is null && !normalizedEmail.Equals(normalizedEmail, StringComparison.InvariantCultureIgnoreCase))
         {
             user = await userStorage.GetByUsername(normalizedEmail.ToLowerInvariant());
         }
@@ -137,7 +137,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task<string?> GetEmailAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult(user.Email);
+        return Task.FromResult(user.Email?.Value);
     }
 
     /// <inheritdoc/>
@@ -149,13 +149,13 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task<string?> GetNormalizedEmailAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult(user.Email?.ToUpperInvariant());
+        return Task.FromResult(user.Email?.Value.ToUpperInvariant());
     }
 
     /// <inheritdoc/>
     public Task SetEmailAsync(ChronicleUser user, string? email, CancellationToken cancellationToken)
     {
-        user.Email = email;
+        user.Email = email ?? string.Empty;
         return Task.CompletedTask;
     }
 
@@ -175,7 +175,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public Task<string?> GetSecurityStampAsync(ChronicleUser user, CancellationToken cancellationToken)
     {
-        return Task.FromResult(user.SecurityStamp);
+        return Task.FromResult(user.SecurityStamp?.Value);
     }
 
     /// <inheritdoc/>
