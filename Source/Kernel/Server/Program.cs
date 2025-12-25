@@ -123,7 +123,6 @@ builder.Host
     .AddCratisArc(options =>
     {
         options.GeneratedApis.RoutePrefix = "api";
-        options.GeneratedApis.IncludeCommandNameInRoute = false;
         options.GeneratedApis.SegmentsToSkipForRoute = 3;
     })
    .AddCratisMongoDB(
