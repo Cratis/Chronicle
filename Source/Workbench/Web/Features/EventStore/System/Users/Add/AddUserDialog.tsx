@@ -6,7 +6,6 @@ import { AddUser } from 'Api/Security';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
-import { Password } from 'primereact/password';
 import { useState } from 'react';
 import strings from 'Strings';
 
@@ -50,6 +49,7 @@ export const AddUserDialog = () => {
             visible={true}
             style={{ width: '450px' }}
             modal
+            resizable={false}
             onHide={() => closeDialog(DialogResult.Cancelled)}>
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">

@@ -42,20 +42,17 @@ internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUse
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.Default,
-                    command.UserId,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    typeof(UserAdded).GetEventType(),
-                    jsonObject)
-            ],
+        await eventSequence.Append(
+            EventSourceType.Default,
+            command.UserId,
+            EventStreamType.All,
+            EventStreamId.Default,
+            typeof(UserAdded).GetEventType(),
+            jsonObject,
             CorrelationId.New(),
             [],
             Identity.System,
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+            ConcurrencyScope.None);
     }
 
     /// <inheritdoc/>
@@ -66,20 +63,17 @@ internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUse
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.Default,
-                    command.UserId,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    typeof(UserRemoved).GetEventType(),
-                    jsonObject)
-            ],
+        await eventSequence.Append(
+            EventSourceType.Default,
+            command.UserId,
+            EventStreamType.All,
+            EventStreamId.Default,
+            typeof(UserRemoved).GetEventType(),
+            jsonObject,
             CorrelationId.New(),
             [],
             Identity.System,
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+            ConcurrencyScope.None);
     }
 
     /// <inheritdoc/>
@@ -92,20 +86,17 @@ internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUse
         var eventSequence = grainFactory.GetSystemEventSequence();
         var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
 
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.Default,
-                    command.UserId,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    typeof(UserPasswordChanged).GetEventType(),
-                    jsonObject)
-            ],
+        await eventSequence.Append(
+            EventSourceType.Default,
+            command.UserId,
+            EventStreamType.All,
+            EventStreamId.Default,
+            typeof(UserPasswordChanged).GetEventType(),
+            jsonObject,
             CorrelationId.New(),
             [],
             Identity.System,
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+            ConcurrencyScope.None);
     }
 
     /// <inheritdoc/>
