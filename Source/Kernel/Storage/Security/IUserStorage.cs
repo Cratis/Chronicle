@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.Security;
 
 namespace Cratis.Chronicle.Storage.Security;
 
@@ -21,21 +22,21 @@ public interface IUserStorage
     /// </summary>
     /// <param name="id">The user ID.</param>
     /// <returns>The user if found, null otherwise.</returns>
-    Task<ChronicleUser?> GetById(string id);
+    Task<ChronicleUser?> GetById(UserId id);
 
     /// <summary>
     /// Gets a user by their username.
     /// </summary>
     /// <param name="username">The username.</param>
     /// <returns>The user if found, null otherwise.</returns>
-    Task<ChronicleUser?> GetByUsername(string username);
+    Task<ChronicleUser?> GetByUsername(Username username);
 
     /// <summary>
     /// Gets a user by their email address.
     /// </summary>
     /// <param name="email">The email address.</param>
     /// <returns>The user if found, null otherwise.</returns>
-    Task<ChronicleUser?> GetByEmail(string email);
+    Task<ChronicleUser?> GetByEmail(UserEmail email);
 
     /// <summary>
     /// Creates a new user.
@@ -56,7 +57,7 @@ public interface IUserStorage
     /// </summary>
     /// <param name="id">The ID of the user to delete.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task Delete(string id);
+    Task Delete(UserId id);
 
     /// <summary>
     /// Gets all users.

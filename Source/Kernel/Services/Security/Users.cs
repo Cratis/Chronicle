@@ -2,11 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
@@ -21,12 +16,11 @@ namespace Cratis.Chronicle.Services.Security;
 /// <summary>
 /// Represents an implementation of <see cref="IUsers"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Users"/> class.
-/// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with users.</param>
-internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUsers
+internal sealed class Users(
+    IGrainFactory grainFactory,
+    IStorage storage) : IUsers
 {
     /// <inheritdoc/>
     public async Task Add(AddUser command)
@@ -34,46 +28,23 @@ internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUse
         var passwordHash = HashHelper.Hash(command.Password);
 
         var @event = new UserAdded(
-            command.UserId,
             command.Username,
             command.Email,
             passwordHash);
 
-        var eventSequence = grainFactory.GetSystemEventSequence();
-        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
-
-        await eventSequence.Append(
-            EventSourceType.Default,
-            command.UserId,
-            EventStreamType.All,
-            EventStreamId.Default,
-            typeof(UserAdded).GetEventType(),
-            jsonObject,
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            ConcurrencyScope.None);
+        var eventSequence = grainFactory.GetEventLog();
+        await eventSequence.Append(command.UserId, @event);
     }
 
     /// <inheritdoc/>
     public async Task Remove(RemoveUser command)
     {
         var @event = new UserRemoved(command.UserId);
-
-        var eventSequence = grainFactory.GetSystemEventSequence();
-        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+        var eventSequence = grainFactory.GetEventLog();
 
         await eventSequence.Append(
-            EventSourceType.Default,
             command.UserId,
-            EventStreamType.All,
-            EventStreamId.Default,
-            typeof(UserRemoved).GetEventType(),
-            jsonObject,
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            ConcurrencyScope.None);
+            @event);
     }
 
     /// <inheritdoc/>
@@ -83,20 +54,11 @@ internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUse
 
         var @event = new UserPasswordChanged(command.UserId, passwordHash);
 
-        var eventSequence = grainFactory.GetSystemEventSequence();
-        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+        var eventSequence = grainFactory.GetEventLog();
 
         await eventSequence.Append(
-            EventSourceType.Default,
             command.UserId,
-            EventStreamType.All,
-            EventStreamId.Default,
-            typeof(UserPasswordChanged).GetEventType(),
-            jsonObject,
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            ConcurrencyScope.None);
+            @event);
     }
 
     /// <inheritdoc/>

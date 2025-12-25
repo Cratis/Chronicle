@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Security;
+using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
+
 namespace Cratis.Chronicle.Storage.Security;
 
 /// <summary>
@@ -14,7 +17,7 @@ public interface IApplicationStorage
     /// <param name="id">The application's unique identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The application if found, null otherwise.</returns>
-    Task<Application?> GetById(string id, CancellationToken cancellationToken = default);
+    Task<Application?> GetById(ApplicationId id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets an application by its client ID.
@@ -22,7 +25,7 @@ public interface IApplicationStorage
     /// <param name="clientId">The client ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The application if found, null otherwise.</returns>
-    Task<Application?> GetByClientId(string clientId, CancellationToken cancellationToken = default);
+    Task<Application?> GetByClientId(ClientId clientId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new application.
@@ -46,7 +49,7 @@ public interface IApplicationStorage
     /// <param name="id">The application's unique identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Awaitable task.</returns>
-    Task Delete(string id, CancellationToken cancellationToken = default);
+    Task Delete(ApplicationId id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all applications.

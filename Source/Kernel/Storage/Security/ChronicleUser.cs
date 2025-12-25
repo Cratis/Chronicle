@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Security;
+
 namespace Cratis.Chronicle.Storage.Security;
 
 /// <summary>
@@ -11,27 +13,27 @@ public class ChronicleUser
     /// <summary>
     /// Gets or sets the unique identifier for the user.
     /// </summary>
-    public string Id { get; set; } = string.Empty;
+    public UserId Id { get; set; } = UserId.NotSet;
 
     /// <summary>
     /// Gets or sets the username.
     /// </summary>
-    public string Username { get; set; } = string.Empty;
+    public Username Username { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the user's email address.
     /// </summary>
-    public string? Email { get; set; }
+    public UserEmail? Email { get; set; }
 
     /// <summary>
     /// Gets or sets the hashed password.
     /// </summary>
-    public string? PasswordHash { get; set; }
+    public UserPassword? PasswordHash { get; set; }
 
     /// <summary>
     /// Gets or sets a random value that should change whenever user credentials change.
     /// </summary>
-    public string? SecurityStamp { get; set; }
+    public SecurityStamp? SecurityStamp { get; set; }
 
     /// <summary>
     /// Gets or sets whether the user account is active.
