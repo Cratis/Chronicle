@@ -51,67 +51,65 @@ export const AddUserDialog = () => {
             style={{ width: '450px' }}
             modal
             onHide={() => closeDialog(DialogResult.Cancelled)}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div className="p-inputgroup">
-                        <span className="p-inputgroup-addon">
-                            <i className="pi pi-user"></i>
-                        </span>
-                        <InputText
-                            placeholder={strings.eventStore.system.users.dialogs.addUser.username}
-                            value={username}
-                            onChange={e => setUsername(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div className="p-inputgroup">
-                        <span className="p-inputgroup-addon">
-                            <i className="pi pi-envelope"></i>
-                        </span>
-                        <InputText
-                            placeholder={strings.eventStore.system.users.dialogs.addUser.email}
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div className="p-inputgroup">
-                        <span className="p-inputgroup-addon">
-                            <i className="pi pi-lock"></i>
-                        </span>
-                        <Password
-                            placeholder={strings.eventStore.system.users.dialogs.addUser.password}
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            feedback={false}
-                            toggleMask={showPassword}
-                            pt={{
-                                input: { className: 'w-full' }
-                            }}
-                        />
-                        <Button
-                            icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="p-button-text"
-                            type="button"
-                            tooltip={showPassword ? strings.eventStore.system.users.dialogs.addUser.hidePassword : strings.eventStore.system.users.dialogs.addUser.showPassword}
-                        />
-                        <Button
-                            icon="pi pi-refresh"
-                            onClick={generatePassword}
-                            className="p-button-text"
-                            type="button"
-                            tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}
-                        />
-                    </div>
+            <div className="card flex flex-column gap-3">
+                <div className="p-inputgroup flex-1">
+                    <span className="p-inputgroup-addon">
+                        <i className="pi pi-user"></i>
+                    </span>
+                    <InputText
+                        placeholder={strings.eventStore.system.users.dialogs.addUser.username}
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                    />
                 </div>
             </div>
 
-            <div className="flex flex-wrap justify-content-center gap-3 mt-4">
+            <div className="card flex flex-column gap-3">
+                <div className="p-inputgroup flex-1">
+                    <span className="p-inputgroup-addon">
+                        <i className="pi pi-envelope"></i>
+                    </span>
+                    <InputText
+                        placeholder={strings.eventStore.system.users.dialogs.addUser.email}
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="card flex flex-column gap-3">
+                <div className="p-inputgroup flex-1">
+                    <span className="p-inputgroup-addon">
+                        <i className="pi pi-lock"></i>
+                    </span>
+                    <Password
+                        placeholder={strings.eventStore.system.users.dialogs.addUser.password}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        feedback={false}
+                        toggleMask={showPassword}
+                        pt={{
+                            input: { className: 'w-full' }
+                        }}
+                    />
+                    <Button
+                        icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-button-text"
+                        type="button"
+                        tooltip={showPassword ? strings.eventStore.system.users.dialogs.addUser.hidePassword : strings.eventStore.system.users.dialogs.addUser.showPassword}
+                    />
+                    <Button
+                        icon="pi pi-refresh"
+                        onClick={generatePassword}
+                        className="p-button-text"
+                        type="button"
+                        tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}
+                    />
+                </div>
+            </div>
+
+            <div className="card flex flex-wrap justify-content-center gap-3 mt-4">
                 <Button
                     label={strings.general.buttons.ok}
                     icon="pi pi-check"
