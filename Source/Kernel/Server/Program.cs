@@ -120,7 +120,12 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .AddCratisArc()
+    .AddCratisArc(options =>
+    {
+        options.GeneratedApis.RoutePrefix = "api";
+        options.GeneratedApis.IncludeCommandNameInRoute = false;
+        options.GeneratedApis.SegmentsToSkipForRoute = 3;
+    })
    .AddCratisMongoDB(
        configureOptions: mongo =>
        {

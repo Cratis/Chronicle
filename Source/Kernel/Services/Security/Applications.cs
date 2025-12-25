@@ -10,7 +10,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
-using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage;
 using Cratis.Infrastructure.Security;
 using ProtoBuf.Grpc;
 
@@ -23,8 +23,8 @@ namespace Cratis.Chronicle.Services.Security;
 /// Initializes a new instance of the <see cref="Applications"/> class.
 /// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> for working with applications.</param>
-internal sealed class Applications(IGrainFactory grainFactory, IApplicationStorage applicationStorage) : IApplications
+/// <param name="storage">The <see cref="IStorage"/> for working with applications.</param>
+internal sealed class Applications(IGrainFactory grainFactory, IStorage storage) : IApplications
 {
     /// <inheritdoc/>
     public async Task Add(AddApplication command)
@@ -106,21 +106,21 @@ internal sealed class Applications(IGrainFactory grainFactory, IApplicationStora
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<Contracts.Security.Application>> GetAll()
+    public async Task<IEnumerable<Application>> GetAll()
     {
-        var clients = await applicationStorage.GetAll();
+        var clients = await storage.System.Applications.GetAll();
         return clients.Select(ToContract);
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<Contracts.Security.Application>> ObserveAll(CallContext context = default)
+    public IObservable<IEnumerable<Application>> ObserveAll(CallContext context = default)
     {
         // Since IApplicationStorage doesn't have ObserveAll, we'll return an empty observable for now
         // This can be enhanced by adding observable support to IApplicationStorage if needed
-        return System.Reactive.Linq.Observable.Empty<IEnumerable<Contracts.Security.Application>>();
+        return Observable.Empty<IEnumerable<Application>>();
     }
 
-    static Contracts.Security.Application ToContract(Storage.Security.Application client) => new()
+    static Application ToContract(Storage.Security.Application client) => new()
     {
         Id = client.Id,
         ClientId = client.ClientId,

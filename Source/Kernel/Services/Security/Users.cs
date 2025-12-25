@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Infrastructure.Security;
 using Cratis.Reactive;
@@ -24,8 +25,8 @@ namespace Cratis.Chronicle.Services.Security;
 /// Initializes a new instance of the <see cref="Users"/> class.
 /// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="userStorage">The <see cref="IUserStorage"/> for working with users.</param>
-internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage) : IUsers
+/// <param name="storage">The <see cref="IStorage"/> for working with users.</param>
+internal sealed class Users(IGrainFactory grainFactory, IStorage storage) : IUsers
 {
     /// <inheritdoc/>
     public async Task Add(AddUser command)
@@ -110,13 +111,13 @@ internal sealed class Users(IGrainFactory grainFactory, IUserStorage userStorage
     /// <inheritdoc/>
     public async Task<IEnumerable<User>> GetAll()
     {
-        var users = await userStorage.GetAll();
+        var users = await storage.System.Users.GetAll();
         return users.Select(ToContract);
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<User>> ObserveAll(CallContext context = default) =>
-        userStorage
+        storage.System.Users
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
             .Select(users => users.Select(ToContract).ToArray());

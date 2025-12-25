@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// MongoDB implementation of <see cref="IApplicationStorage"/>.
 /// </summary>
 /// <param name="database">MongoDB database.</param>
-public class ApplicationStorage(IMongoDatabase database) : IApplicationStorage
+public class ApplicationStorage(IDatabase database) : IApplicationStorage
 {
     const string CollectionName = WellKnownCollectionNames.Applications;
     readonly IMongoCollection<Application> _collection = database.GetCollection<Application>(CollectionName);
