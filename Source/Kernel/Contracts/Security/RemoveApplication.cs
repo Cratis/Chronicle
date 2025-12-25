@@ -12,6 +12,6 @@ public record RemoveApplication
     /// <summary>
     /// The unique identifier for the client.
     /// </summary>
-    [ProtoMember(1)]
-    public string Id { get; set; } = string.Empty;
+    [ProtoMember(1, IsRequired = true)]
+    public Guid Id { get; set; } = Guid.Empty;
 }

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// </summary>
 /// <param name="Id">The application identifier.</param>
 [Command]
-public record RemoveApplication(string Id)
+public record RemoveApplication(Guid Id)
 {
     /// <summary>
     /// Handles the command.

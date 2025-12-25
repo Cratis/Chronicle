@@ -25,13 +25,13 @@ export const Applications = () => {
 
     const handleChangeSecret = () => {
         if (selectedApplication) {
-            showChangeSecret({ applicationId: selectedApplication.id });
+            showChangeSecret();
         }
     };
 
     const handleRemoveApplication = () => {
         if (selectedApplication) {
-            showRemoveApplication({ applicationId: selectedApplication.id, clientId: selectedApplication.clientId });
+            showRemoveApplication();
         }
     };
 
@@ -84,8 +84,13 @@ export const Applications = () => {
                 </DataPage.Columns>
             </DataPage>
             <AddApplicationWrapper />
-            <ChangeSecretWrapper />
-            <RemoveApplicationWrapper />
+
+            { selectedApplication && (
+                <>
+                    <ChangeSecretWrapper applicationId={selectedApplication.id} />
+                    <RemoveApplicationWrapper applicationId={selectedApplication.id} clientId={selectedApplication.clientId} />
+                </>
+            )}
         </>
     );
 };

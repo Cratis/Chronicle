@@ -6,9 +6,10 @@ import { RemoveApplication } from 'Api/Security';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import strings from 'Strings';
+import { Guid } from '@cratis/fundamentals';
 
 export interface RemoveApplicationDialogProps {
-    applicationId: string;
+    applicationId: Guid;
     clientId: string;
 }
 

@@ -8,9 +8,10 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
+import { Guid } from '@cratis/fundamentals';
 
 export interface ChangeSecretDialogProps {
-    applicationId: string;
+    applicationId: Guid;
 }
 
 export const ChangeSecretDialog = ({ applicationId }: ChangeSecretDialogProps) => {

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="ClientSecret">The new client secret.</param>
 [Command]
 public record ChangeApplicationSecret(
-    string Id,
+    Guid Id,
     string ClientSecret)
 {
     /// <summary>
