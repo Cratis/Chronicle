@@ -14,9 +14,9 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="Password">The user's password.</param>
 [Command]
 public record AddUser(
-    string UserId,
+    Guid UserId,
     string Username,
-    string? Email,
+    string Email,
     string Password)
 {
     /// <summary>

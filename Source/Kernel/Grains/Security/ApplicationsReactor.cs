@@ -28,7 +28,6 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
     {
         var application = new Application
         {
-            Id = @event.Id,
             ClientId = @event.ClientId,
             ClientSecret = @event.ClientSecret
         };
@@ -44,7 +43,7 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
     /// <returns>Await Task.</returns>
     public async Task Removed(ApplicationRemoved @event, EventContext eventContext)
     {
-        await applicationStorage.Delete(@event.Id);
+        await applicationStorage.Delete(eventContext.EventSourceId);
     }
 
     /// <summary>
@@ -55,7 +54,7 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
     /// <returns>Await Task.</returns>
     public async Task SecretChanged(ApplicationSecretChanged @event, EventContext eventContext)
     {
-        var application = await applicationStorage.GetById(@event.Id);
+        var application = await applicationStorage.GetById(eventContext.EventSourceId);
         if (application is not null)
         {
             var updatedApplication = application with

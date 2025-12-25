@@ -12,8 +12,8 @@ public record User
     /// <summary>
     /// The unique identifier for the user.
     /// </summary>
-    [ProtoMember(1)]
-    public string Id { get; set; } = string.Empty;
+    [ProtoMember(1, IsRequired = true)]
+    public Guid Id { get; set; } = Guid.Empty;
 
     /// <summary>
     /// The username.

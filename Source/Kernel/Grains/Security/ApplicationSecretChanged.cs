@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Security;
 
 namespace Cratis.Chronicle.Grains.Security;
 
 /// <summary>
 /// Represents the event for an application secret that has been changed.
 /// </summary>
-/// <param name="Id">The unique identifier for the application.</param>
 /// <param name="ClientSecret">The new hashed client secret.</param>
 [EventType]
-public record ApplicationSecretChanged(string Id, string ClientSecret);
+public record ApplicationSecretChanged(ClientSecret ClientSecret);

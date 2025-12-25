@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="LastModifiedAt">The date and time when the user was last modified.</param>
 [ReadModel]
 public record User(
-    string Id,
+    Guid Id,
     string Username,
     string? Email,
     bool IsActive,

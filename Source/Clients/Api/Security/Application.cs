@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="LastModifiedAt">The date and time when the application was last modified.</param>
 [ReadModel]
 public record Application(
-    string Id,
+    Guid Id,
     string ClientId,
     bool IsActive,
     DateTimeOffset CreatedAt,

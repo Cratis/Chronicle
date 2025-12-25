@@ -12,8 +12,8 @@ public record AddUser
     /// <summary>
     /// The unique identifier for the user.
     /// </summary>
-    [ProtoMember(1)]
-    public string UserId { get; set; } = string.Empty;
+    [ProtoMember(1, IsRequired = true)]
+    public Guid UserId { get; set; } = Guid.Empty;
 
     /// <summary>
     /// The username.
@@ -25,7 +25,7 @@ public record AddUser
     /// The user's email address.
     /// </summary>
     [ProtoMember(3)]
-    public string? Email { get; set; }
+    public string Email { get; set; }
 
     /// <summary>
     /// The password.

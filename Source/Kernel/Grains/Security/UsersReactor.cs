@@ -12,9 +12,6 @@ namespace Cratis.Chronicle.Grains.Security;
 /// <summary>
 /// Represents a reactor that handles user events.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="UsersReactor"/> class.
-/// </remarks>
 /// <param name="userStorage">The <see cref="IUserStorage"/> for managing users.</param>
 public class UsersReactor(IUserStorage userStorage) : Reactor
 {
@@ -28,7 +25,7 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     {
         var user = new ChronicleUser
         {
-            Id = @event.UserId,
+            Id = eventContext.EventSourceId,
             Username = @event.Username,
             Email = @event.Email,
             PasswordHash = @event.PasswordHash,
@@ -49,7 +46,7 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task Removed(UserRemoved @event, EventContext eventContext)
     {
-        await userStorage.Delete(@event.UserId);
+        await userStorage.Delete(eventContext.EventSourceId);
     }
 
     /// <summary>
@@ -60,7 +57,7 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task PasswordChanged(UserPasswordChanged @event, EventContext eventContext)
     {
-        var user = await userStorage.GetById(@event.UserId);
+        var user = await userStorage.GetById(eventContext.EventSourceId);
         if (user is not null)
         {
             user.PasswordHash = @event.PasswordHash;

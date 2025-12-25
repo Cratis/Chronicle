@@ -2,11 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
@@ -32,51 +27,25 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
         var clientSecret = HashHelper.Hash(command.ClientSecret);
 
         var @event = new ApplicationAdded(
-            command.Id,
             command.ClientId,
             clientSecret);
 
-        var eventSequence = grainFactory.GetSystemEventSequence();
-        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
-
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.Default,
-                    command.Id,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    typeof(ApplicationAdded).GetEventType(),
-                    jsonObject)
-            ],
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+        var eventSequence = grainFactory.GetEventLog();
+        await eventSequence.Append(
+            command.Id,
+            @event);
     }
 
     /// <inheritdoc/>
     public async Task Remove(RemoveApplication command)
     {
-        var @event = new ApplicationRemoved(command.Id);
+        var @event = new ApplicationRemoved();
 
-        var eventSequence = grainFactory.GetSystemEventSequence();
-        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
+        var eventSequence = grainFactory.GetEventLog();
 
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.Default,
-                    command.Id,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    typeof(ApplicationRemoved).GetEventType(),
-                    jsonObject)
-            ],
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+        await eventSequence.Append(
+            command.Id,
+            @event);
     }
 
     /// <inheritdoc/>
@@ -84,25 +53,12 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     {
         var clientSecret = HashHelper.Hash(command.ClientSecret);
 
-        var @event = new ApplicationSecretChanged(command.Id, clientSecret);
+        var @event = new ApplicationSecretChanged(clientSecret);
 
-        var eventSequence = grainFactory.GetSystemEventSequence();
-        var jsonObject = (JsonObject)JsonSerializer.SerializeToNode(@event)!;
-
-        await eventSequence.AppendMany(
-            [
-                new EventToAppend(
-                    EventSourceType.Default,
-                    command.Id,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    typeof(ApplicationSecretChanged).GetEventType(),
-                    jsonObject)
-            ],
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+        var eventSequence = grainFactory.GetEventLog();
+        await eventSequence.Append(
+            command.Id,
+            @event);
     }
 
     /// <inheritdoc/>

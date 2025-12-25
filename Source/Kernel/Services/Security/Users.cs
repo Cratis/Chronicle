@@ -39,7 +39,7 @@ internal sealed class Users(
     /// <inheritdoc/>
     public async Task Remove(RemoveUser command)
     {
-        var @event = new UserRemoved(command.UserId);
+        var @event = new UserRemoved();
         var eventSequence = grainFactory.GetEventLog();
 
         await eventSequence.Append(
@@ -52,7 +52,7 @@ internal sealed class Users(
     {
         var passwordHash = HashHelper.Hash(command.Password);
 
-        var @event = new UserPasswordChanged(command.UserId, passwordHash);
+        var @event = new UserPasswordChanged(passwordHash);
 
         var eventSequence = grainFactory.GetEventLog();
 
@@ -79,7 +79,7 @@ internal sealed class Users(
     {
         Id = user.Id,
         Username = user.Username,
-        Email = user.Email,
+        Email = user.Email ?? string.Empty,
         IsActive = user.IsActive,
         CreatedAt = user.CreatedAt,
         LastModifiedAt = user.LastModifiedAt

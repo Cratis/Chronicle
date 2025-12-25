@@ -8,6 +8,5 @@ namespace Cratis.Chronicle.Grains.Security;
 /// <summary>
 /// Represents the event for a user that has been removed.
 /// </summary>
-/// <param name="UserId">The unique identifier for the user.</param>
 [EventType]
-public record UserRemoved(string UserId);
+public record UserRemoved();
