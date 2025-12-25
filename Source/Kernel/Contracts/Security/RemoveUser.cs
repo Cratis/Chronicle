@@ -12,6 +12,6 @@ public record RemoveUser
     /// <summary>
     /// The unique identifier for the user.
     /// </summary>
-    [ProtoMember(1)]
-    public string UserId { get; set; } = string.Empty;
+    [ProtoMember(1, IsRequired = true)]
+    public Guid UserId { get; set; } = Guid.Empty;
 }

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="Password">The new password.</param>
 [Command]
 public record ChangePasswordForUser(
-    string UserId,
+    Guid UserId,
     string Password)
 {
     /// <summary>

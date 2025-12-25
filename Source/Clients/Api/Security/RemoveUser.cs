@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// </summary>
 /// <param name="UserId">The unique identifier for the user.</param>
 [Command]
-public record RemoveUser(string UserId)
+public record RemoveUser(Guid UserId)
 {
     /// <summary>
     /// Handles the command.
