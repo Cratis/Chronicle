@@ -82,15 +82,11 @@ export const AddUserDialog = () => {
                     <span className="p-inputgroup-addon">
                         <i className="pi pi-lock"></i>
                     </span>
-                    <Password
+                    <InputText
+                        type={showPassword ? 'text' : 'password'}
                         placeholder={strings.eventStore.system.users.dialogs.addUser.password}
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        feedback={false}
-                        toggleMask={showPassword}
-                        pt={{
-                            input: { className: 'w-full' }
-                        }}
                     />
                     <Button
                         icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
