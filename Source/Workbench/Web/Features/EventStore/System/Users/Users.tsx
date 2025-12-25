@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Column } from 'primereact/column';
-import { AllUsers, User } from 'Api/Security';
+import { AllUsers, User, RemoveUser } from 'Api/Security';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
 import { ChangePasswordDialog, ChangePasswordDialogProps } from './ChangePassword';
-import { RemoveUserDialog, RemoveUserDialogProps } from './Remove';
-import { useDialog } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
 
@@ -21,7 +20,8 @@ export const Users = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [AddUserWrapper, showAddUser] = useDialog(AddUserDialog);
     const [ChangePasswordWrapper, showChangePassword] = useDialog<ChangePasswordDialogProps>(ChangePasswordDialog);
-    const [RemoveUserWrapper, showRemoveUser] = useDialog<RemoveUserDialogProps>(RemoveUserDialog);
+    const [showConfirmation] = useConfirmationDialog();
+    const [removeUser] = RemoveUser.use();
 
     const handleChangePassword = () => {
         if (selectedUser) {
@@ -29,9 +29,17 @@ export const Users = () => {
         }
     };
 
-    const handleRemoveUser = () => {
+    const handleRemoveUser = async () => {
         if (selectedUser) {
-            showRemoveUser({ userId: selectedUser.id, username: selectedUser.username });
+            const result = await showConfirmation(
+                strings.eventStore.system.users.dialogs.removeUser.title,
+                strings.eventStore.system.users.dialogs.removeUser.message.replace('{username}', selectedUser.username)
+            );
+
+            if (result === DialogResult.Yes) {
+                removeUser.userId = selectedUser.id;
+                await removeUser.execute();
+            }
         }
     };
 
@@ -86,7 +94,6 @@ export const Users = () => {
             </DataPage>
             <AddUserWrapper />
             <ChangePasswordWrapper />
-            <RemoveUserWrapper />
         </>
     );
 };

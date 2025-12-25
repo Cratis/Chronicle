@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Column } from 'primereact/column';
-import { AllApplications, Application } from 'Api/Security';
+import { AllApplications, Application, RemoveApplication } from 'Api/Security';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddApplicationDialog } from './Add/AddApplicationDialog';
 import { ChangeSecretDialog  } from './ChangeSecret';
-import { RemoveApplicationDialog } from './Remove';
-import { useDialog } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
 
@@ -21,7 +20,8 @@ export const Applications = () => {
     const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
     const [AddApplicationWrapper, showAddApplication] = useDialog(AddApplicationDialog);
     const [ChangeSecretWrapper, showChangeSecret] = useDialog(ChangeSecretDialog);
-    const [RemoveApplicationWrapper, showRemoveApplication] = useDialog(RemoveApplicationDialog);
+    const [showConfirmation] = useConfirmationDialog();
+    const [removeApplication] = RemoveApplication.use();
 
     const handleChangeSecret = () => {
         if (selectedApplication) {
@@ -29,9 +29,17 @@ export const Applications = () => {
         }
     };
 
-    const handleRemoveApplication = () => {
+    const handleRemoveApplication = async () => {
         if (selectedApplication) {
-            showRemoveApplication();
+            const result = await showConfirmation(
+                strings.eventStore.system.applications.dialogs.removeApplication.title,
+                strings.eventStore.system.applications.dialogs.removeApplication.message.replace('{clientId}', selectedApplication.clientId)
+            );
+
+            if (result === DialogResult.Yes) {
+                removeApplication.id = selectedApplication.id;
+                await removeApplication.execute();
+            }
         }
     };
 
@@ -86,10 +94,7 @@ export const Applications = () => {
             <AddApplicationWrapper />
 
             { selectedApplication && (
-                <>
-                    <ChangeSecretWrapper applicationId={selectedApplication.id} />
-                    <RemoveApplicationWrapper applicationId={selectedApplication.id} clientId={selectedApplication.clientId} />
-                </>
+                <ChangeSecretWrapper applicationId={selectedApplication.id} />
             )}
         </>
     );

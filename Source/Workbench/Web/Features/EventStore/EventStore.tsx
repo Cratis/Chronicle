@@ -20,11 +20,11 @@ import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import strings from 'Strings';
-import { Namespaces } from './System/Namespaces/Namespaces';
+import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
-import { Applications } from './General/Applications/Applications';
+import { Applications } from './System/Applications/Applications';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
