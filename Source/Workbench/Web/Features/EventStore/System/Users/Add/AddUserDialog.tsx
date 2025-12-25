@@ -51,7 +51,7 @@ export const AddUserDialog = () => {
             style={{ width: '450px' }}
             modal
             onHide={() => closeDialog(DialogResult.Cancelled)}>
-            <div className="card flex flex-column gap-3">
+            <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">
                         <i className="pi pi-user"></i>
@@ -64,7 +64,7 @@ export const AddUserDialog = () => {
                 </div>
             </div>
 
-            <div className="card flex flex-column gap-3">
+            <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">
                         <i className="pi pi-envelope"></i>
@@ -77,7 +77,7 @@ export const AddUserDialog = () => {
                 </div>
             </div>
 
-            <div className="card flex flex-column gap-3">
+            <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">
                         <i className="pi pi-lock"></i>
