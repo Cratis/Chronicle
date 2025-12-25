@@ -1,9 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation.Reactors;
 
-namespace Cratis.Chronicle.Reactors;
+namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
 /// <summary>
 /// Attribute used to adorn classes to tell Cratis that the class is an Reactor.
