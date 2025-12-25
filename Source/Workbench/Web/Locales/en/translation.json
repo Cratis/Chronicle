@@ -199,6 +199,32 @@
                     "userName": "UserName"
                 }
             }
+        },
+        "system": {
+            "users": {
+                "dialogs": {
+                    "addUser": {
+                        "title": "Add User",
+                        "username": "Username",
+                        "email": "Email (optional)",
+                        "password": "Password",
+                        "generatePassword": "Generate password",
+                        "showPassword": "Show password",
+                        "hidePassword": "Hide password"
+                    },
+                    "changePassword": {
+                        "title": "Change Password",
+                        "password": "New Password",
+                        "generatePassword": "Generate password",
+                        "showPassword": "Show password",
+                        "hidePassword": "Hide password"
+                    },
+                    "removeUser": {
+                        "title": "Remove User",
+                        "message": "Are you sure you want to remove user '{username}'? This action cannot be undone."
+                    }
+                }
+            }
         }
     }
 }
