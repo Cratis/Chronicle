@@ -84,7 +84,7 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<string?> GetApplicationTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Type ?? default);
+        return new(application.Type?.Value);
     }
 
     /// <inheritdoc/>
@@ -96,25 +96,25 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<string?> GetClientSecretAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.ClientSecret);
+        return new(application.ClientSecret?.Value);
     }
 
     /// <inheritdoc/>
     public ValueTask<string?> GetClientTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Type ?? default);
+        return new(application.Type?.Value);
     }
 
     /// <inheritdoc/>
     public ValueTask<string?> GetConsentTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.ConsentType);
+        return new(application.ConsentType?.Value);
     }
 
     /// <inheritdoc/>
     public ValueTask<string?> GetDisplayNameAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.DisplayName);
+        return new(application.DisplayName?.Value);
     }
 
     /// <inheritdoc/>
@@ -224,28 +224,28 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask SetClientSecretAsync(Application application, string? secret, CancellationToken cancellationToken)
     {
-        application.ClientSecret = secret;
+        application.ClientSecret = secret is not null ? new ClientSecret(secret) : null;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetClientTypeAsync(Application application, string? type, CancellationToken cancellationToken)
     {
-        application.Type = type;
+        application.Type = type is not null ? new ApplicationType(type) : null;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetConsentTypeAsync(Application application, string? type, CancellationToken cancellationToken)
     {
-        application.ConsentType = type;
+        application.ConsentType = type is not null ? new ConsentType(type) : null;
         return default;
     }
 
     /// <inheritdoc/>
     public ValueTask SetDisplayNameAsync(Application application, string? name, CancellationToken cancellationToken)
     {
-        application.DisplayName = name;
+        application.DisplayName = name is not null ? new ApplicationDisplayName(name) : null;
         return default;
     }
 
