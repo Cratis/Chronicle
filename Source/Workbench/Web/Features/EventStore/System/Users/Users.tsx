@@ -10,6 +10,7 @@ import { ChangePasswordDialog, ChangePasswordDialogProps } from './ChangePasswor
 import { RemoveUserDialog, RemoveUserDialogProps } from './Remove';
 import { useDialog } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
+import strings from 'Strings';
 
 const formatDate = (date: Date) => {
     if (!date) return '';
@@ -37,48 +38,48 @@ export const Users = () => {
     return (
         <>
             <DataPage
-                title="Users"
+                title={strings.eventStore.system.users.title}
                 query={AllUsers}
-                emptyMessage="No users found"
+                emptyMessage={strings.eventStore.system.users.empty}
                 dataKey='id'
                 selection={selectedUser}
                 onSelectionChange={(e) => setSelectedUser(e.value as User)}>
                 <DataPage.MenuItems>
                     <MenuItem
                         id="add"
-                        label="Add User"
+                        label={strings.eventStore.system.users.actions.add}
                         icon={faIcons.FaPlus}
                         command={() => showAddUser()} />
                     <MenuItem
                         id="changePassword"
-                        label="Change Password"
+                        label={strings.eventStore.system.users.actions.changePassword}
                         icon={faIcons.FaKey}
                         disableOnUnselected
                         command={handleChangePassword} />
                     <MenuItem
                         id="remove"
-                        label="Remove User"
+                        label={strings.eventStore.system.users.actions.remove}
                         icon={faIcons.FaTrash}
                         disableOnUnselected
                         command={handleRemoveUser} />
                 </DataPage.MenuItems>
                 <DataPage.Columns>
-                    <Column field='id' header="ID" sortable />
-                    <Column field='username' header="Username" sortable />
-                    <Column field='email' header="Email" sortable />
+                    <Column field='id' header={strings.eventStore.system.users.columns.id} sortable />
+                    <Column field='username' header={strings.eventStore.system.users.columns.username} sortable />
+                    <Column field='email' header={strings.eventStore.system.users.columns.email} sortable />
                     <Column
                         field='isActive'
-                        header="Active"
+                        header={strings.eventStore.system.users.columns.active}
                         sortable
-                        body={(user: User) => user.isActive ? 'Yes' : 'No'} />
+                        body={(user: User) => user.isActive ? strings.eventStore.system.users.columns.yes : strings.eventStore.system.users.columns.no} />
                     <Column
                         field='createdAt'
-                        header="Created"
+                        header={strings.eventStore.system.users.columns.created}
                         sortable
                         body={(user: User) => formatDate(user.createdAt)} />
                     <Column
                         field='lastModifiedAt'
-                        header="Last Modified"
+                        header={strings.eventStore.system.users.columns.lastModified}
                         sortable
                         body={(user: User) => formatDate(user.lastModifiedAt || new Date())} />
                 </DataPage.Columns>
