@@ -223,10 +223,12 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
     }
 
     /// <inheritdoc/>
-    public async ValueTask SetApplicationIdAsync(Authorization authorization, string? identifier, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { ApplicationId = identifier });
+    public async ValueTask SetApplicationIdAsync(Authorization authorization, string? identifier, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { ApplicationId = identifier ?? default! });
 
     /// <inheritdoc/>
-    public async ValueTask SetCreationDateAsync(Authorization authorization, DateTimeOffset? date, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { CreationDate = date });
+    public async ValueTask SetCreationDateAsync(Authorization authorization, DateTimeOffset? date, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { CreationDate = date });
 
     /// <inheritdoc/>
     public async ValueTask SetPropertiesAsync(Authorization authorization, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken) =>

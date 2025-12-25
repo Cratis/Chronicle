@@ -121,10 +121,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
 
         // If not found by email, try username (to support username-based login)
         // Try both the original value and lowercase version
-        if (user is null)
-        {
-            user = await userStorage.GetByUsername(normalizedEmail);
-        }
+        user ??= await userStorage.GetByUsername(normalizedEmail);
 
         if (user is null && !normalizedEmail.Equals(normalizedEmail, StringComparison.InvariantCultureIgnoreCase))
         {
