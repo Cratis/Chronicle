@@ -1,19 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { BreadCrumb } from 'primereact/breadcrumb';
-import { Tooltip } from 'primereact/tooltip';
+import { Menubar } from 'primereact/menubar';
 import { AllTypeFormats } from 'Api/TypeFormats';
 import { useQuery } from '@cratis/arc.react/queries';
 import * as faIcons from 'react-icons/fa6';
 
-interface JSONSchemaType {
+export interface JSONSchemaType {
     type?: string;
     format?: string;
     properties?: Record<string, JSONSchemaType>;
@@ -26,6 +25,9 @@ export interface JSONSchemaEditorProps {
     eventTypeName: string;
     isEditMode: boolean;
     onChange: (schema: JSONSchemaType) => void;
+    onSave: () => void;
+    onCancel: () => void;
+    onEdit: () => void;
 }
 
 interface SchemaProperty {
@@ -51,7 +53,7 @@ const JSON_TYPES = [
     { label: 'Object', value: 'object' }
 ];
 
-export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange }: JSONSchemaEditorProps) => {
+export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSave, onCancel, onEdit }: JSONSchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
     const [properties, setProperties] = useState<SchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<{ label: string, value: string }[]>([]);
@@ -265,180 +267,185 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange }
         );
     };
 
-    const typeEditor = (rowData: SchemaProperty) => {
-        if (!isEditMode) {
-            return rowData.type;
-        }
-        return (
-            <Dropdown
-                value={rowData.type}
-                options={JSON_TYPES}
-                onChange={(e) => updateProperty(rowData.name, 'type', e.value)}
-                className="w-full"
-            />
-        );
-    };
-
-    const formatEditor = (rowData: SchemaProperty) => {
-        if (rowData.type !== 'string' && rowData.type !== 'number' && rowData.type !== 'integer') {
-            return null;
-        }
-
-        if (!isEditMode) {
-            return rowData.format || '-';
-        }
-
-        const formatOptions = [
-            { label: 'None', value: 'none' },
-            ...typeFormats
+    const typeAndDetailsEditor = (rowData: SchemaProperty) => {
+        // Build all available types including formats
+        const allTypeOptions = [
+            ...JSON_TYPES,
+            ...typeFormats.map(tf => ({ label: tf.label, value: `format:${tf.value}` }))
         ];
 
-        return (
-            <Dropdown
-                value={rowData.format || 'none'}
-                options={formatOptions}
-                onChange={(e) => updateProperty(rowData.name, 'format', e.value)}
-                className="w-full"
-            />
-        );
-    };
-
-    const arrayItemsEditor = (rowData: SchemaProperty) => {
-        if (rowData.type !== 'array') {
-            return null;
+        // Determine current value
+        let currentValue = rowData.type;
+        if (rowData.format && rowData.type === 'string') {
+            currentValue = `format:${rowData.format}`;
         }
-
-        const itemType = rowData.items?.type || 'string';
 
         if (!isEditMode) {
-            return (
-                <div className="flex align-items-center gap-2">
-                    <span>{itemType}</span>
-                    {itemType === 'object' && (
+            // View mode
+            if (rowData.type === 'array') {
+                const itemType = rowData.items?.type || 'string';
+                return (
+                    <div className="flex align-items-center gap-2">
+                        <span>Array of {itemType}</span>
+                        {itemType === 'object' && (
+                            <Button
+                                icon={<faIcons.FaArrowRight />}
+                                className="p-button-text p-button-sm"
+                                onClick={() => navigateToArrayItems(rowData.name)}
+                                tooltip="Navigate to item definition"
+                                tooltipOptions={{ position: 'top' }}
+                            />
+                        )}
+                    </div>
+                );
+            } else if (rowData.type === 'object') {
+                return (
+                    <div className="flex align-items-center gap-2">
+                        <span>Object</span>
                         <Button
                             icon={<faIcons.FaArrowRight />}
-                            className="p-button-text p-button-sm navigate-items-btn"
-                            onClick={() => navigateToArrayItems(rowData.name)}
-                            tooltip="Navigate to item definition"
+                            className="p-button-text p-button-sm"
+                            onClick={() => navigateToProperty(rowData.name)}
+                            tooltip="Navigate to object properties"
                             tooltipOptions={{ position: 'top' }}
                         />
-                    )}
-                </div>
-            );
+                    </div>
+                );
+            } else if (rowData.format) {
+                const formatLabel = typeFormats.find(tf => tf.value === rowData.format)?.label || rowData.format;
+                return formatLabel;
+            }
+            return rowData.type;
         }
 
+        // Edit mode
         return (
-            <div className="flex align-items-center gap-2">
+            <div className="flex align-items-center gap-2 w-full">
                 <Dropdown
-                    value={itemType}
-                    options={JSON_TYPES}
-                    onChange={(e) => updateArrayItemType(rowData.name, e.value)}
+                    value={currentValue}
+                    options={allTypeOptions}
+                    onChange={(e) => {
+                        const value = e.value;
+                        if (value.startsWith('format:')) {
+                            const format = value.substring(7);
+                            updateProperty(rowData.name, 'type', 'string');
+                            updateProperty(rowData.name, 'format', format);
+                        } else {
+                            updateProperty(rowData.name, 'type', value);
+                            if (value === 'array') {
+                                // Initialize items type
+                                updateArrayItemType(rowData.name, 'string');
+                            }
+                        }
+                    }}
                     className="flex-1"
                 />
-                {itemType === 'object' && (
-                    <Button
-                        icon={<faIcons.FaArrowRight />}
-                        className="p-button-text p-button-sm navigate-items-btn"
-                        onClick={() => navigateToArrayItems(rowData.name)}
-                        tooltip="Navigate to item definition"
-                        tooltipOptions={{ position: 'top' }}
-                    />
+                {rowData.type === 'array' && (
+                    <>
+                        <span className="mx-2">of</span>
+                        <Dropdown
+                            value={rowData.items?.type || 'string'}
+                            options={JSON_TYPES}
+                            onChange={(e) => updateArrayItemType(rowData.name, e.value)}
+                            className="flex-1"
+                        />
+                        {rowData.items?.type === 'object' && (
+                            <Button
+                                icon={<faIcons.FaArrowRight />}
+                                className="p-button-text p-button-sm"
+                                onClick={() => navigateToArrayItems(rowData.name)}
+                                tooltip="Navigate to item definition"
+                                tooltipOptions={{ position: 'top' }}
+                            />
+                        )}
+                    </>
                 )}
-            </div>
-        );
-    };
-
-    const actionsTemplate = (rowData: SchemaProperty) => {
-        return (
-            <div className="flex gap-1">
                 {rowData.type === 'object' && (
                     <Button
                         icon={<faIcons.FaArrowRight />}
-                        className="p-button-text p-button-sm navigate-object-btn"
+                        className="p-button-text p-button-sm"
                         onClick={() => navigateToProperty(rowData.name)}
                         tooltip="Navigate to object properties"
                         tooltipOptions={{ position: 'top' }}
                     />
                 )}
-                {isEditMode && (
-                    <Button
-                        icon={<faIcons.FaTrash />}
-                        className="p-button-text p-button-danger p-button-sm delete-property-btn"
-                        onClick={() => removeProperty(rowData.name)}
-                        tooltip="Delete property"
-                        tooltipOptions={{ position: 'top' }}
-                    />
-                )}
+                <Button
+                    icon={<faIcons.FaTrash />}
+                    className="p-button-text p-button-danger p-button-sm"
+                    onClick={() => removeProperty(rowData.name)}
+                    tooltip="Delete property"
+                    tooltipOptions={{ position: 'top' }}
+                />
             </div>
         );
     };
 
+    const menuItems = useMemo(() => [
+        ...(!isEditMode ? [{
+            label: 'Edit',
+            icon: <faIcons.FaPencil className='mr-2' />,
+            command: onEdit
+        }] : []),
+        ...(isEditMode ? [{
+            label: 'Add Property',
+            icon: <faIcons.FaPlus className='mr-2' />,
+            command: addProperty
+        }, {
+            label: 'Save',
+            icon: <faIcons.FaCheck className='mr-2' />,
+            command: onSave
+        }, {
+            label: 'Cancel',
+            icon: <faIcons.FaXmark className='mr-2' />,
+            command: onCancel
+        }] : [])
+    ], [isEditMode, onEdit, onSave, onCancel, addProperty]);
+
     const breadcrumbItems = getBreadcrumbItems();
-    const breadcrumbModel = breadcrumbItems.slice(1).map((item, index) => ({
-        label: item.name,
-        command: () => navigateToBreadcrumb(index + 1)
-    }));
 
     return (
         <div className="json-schema-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Tooltip target=".navigate-object-btn" />
-            <Tooltip target=".navigate-items-btn" />
-            <Tooltip target=".delete-property-btn" />
-            <Tooltip target=".add-property-btn" />
-
-            <div className="px-4 py-2 border-bottom-1 surface-border">
-                <BreadCrumb
-                    model={breadcrumbModel}
-                    home={{
-                        label: breadcrumbItems[0].name,
-                        command: () => navigateToBreadcrumb(0)
-                    }}
-                />
+            <div className="px-4 py-2">
+                <Menubar aria-label="Actions" model={menuItems} />
             </div>
 
-            {isEditMode && (
+            {currentPath.length > 0 && (
                 <div className="px-4 py-2 border-bottom-1 surface-border">
-                    <Button
-                        label="Add Property"
-                        icon={<faIcons.FaPlus className="mr-2" />}
-                        onClick={addProperty}
-                        size="small"
-                        className="add-property-btn"
-                    />
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)', cursor: 'pointer' }}>
+                        {breadcrumbItems.map((item, index) => (
+                            <span key={index}>
+                                {index > 0 && <span className="mx-2">&gt;</span>}
+                                <span
+                                    onClick={() => navigateToBreadcrumb(index)}
+                                    style={{ cursor: 'pointer', textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none' }}
+                                >
+                                    {item.name}
+                                </span>
+                            </span>
+                        ))}
+                    </div>
                 </div>
             )}
 
             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                 <DataTable
                     value={properties}
-                    showGridlines
                     emptyMessage="No properties defined"
+                    pt={{
+                        root: { style: { border: 'none' } },
+                        tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
+                    }}
                 >
                     <Column
                         field="name"
-                        header="Property Name"
+                        header="Name"
                         body={nameEditor}
-                        style={{ width: '25%' }}
+                        style={{ width: '30%' }}
                     />
                     <Column
-                        field="type"
                         header="Type"
-                        body={typeEditor}
-                        style={{ width: '15%' }}
-                    />
-                    <Column
-                        header="Format"
-                        body={formatEditor}
-                        style={{ width: '20%' }}
-                    />
-                    <Column
-                        header="Array Items"
-                        body={arrayItemsEditor}
-                        style={{ width: '25%' }}
-                    />
-                    <Column
-                        body={actionsTemplate}
-                        style={{ width: '15%' }}
+                        body={typeAndDetailsEditor}
+                        style={{ width: '70%' }}
                     />
                 </DataTable>
             </div>
