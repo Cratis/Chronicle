@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -91,6 +92,9 @@ public static class ServiceCollectionExtensions
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;
         });
+
+        // Add claims transformation to include Chronicle-specific claims
+        services.AddScoped<IClaimsTransformation, ChronicleClaimsTransformation>();
 
         services.AddAuthorizationBuilder()
 
