@@ -9,27 +9,20 @@ import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';
+import { generatePassword } from '../../PasswordHelpers';
 
 export interface ChangeSecretDialogProps {
     applicationId: Guid;
 }
 
 export const ChangeSecretDialog = ({ applicationId }: ChangeSecretDialogProps) => {
-    const [clientSecret, setClientSecret] = useState('');
+    const [clientSecret, setClientSecret] = useState(generatePassword(32));
     const [showSecret, setShowSecret] = useState(false);
     const { closeDialog } = useDialogContext();
     const [changeSecret] = ChangeApplicationSecret.use();
 
-    const generateSecret = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
-        const length = 32;
-        let secret = '';
-        const array = new Uint32Array(length);
-        crypto.getRandomValues(array);
-        for (let i = 0; i < length; i++) {
-            secret += chars[array[i] % chars.length];
-        }
-        setClientSecret(secret);
+    const handleGenerateSecret = () => {
+        setClientSecret(generatePassword(32));
     };
 
     const handleOk = async () => {
@@ -70,7 +63,7 @@ export const ChangeSecretDialog = ({ applicationId }: ChangeSecretDialogProps) =
                     />
                     <Button
                         icon="pi pi-refresh"
-                        onClick={generateSecret}
+                        onClick={handleGenerateSecret}
                         className="p-button-text"
                         type="button"
                         tooltip={strings.eventStore.system.applications.dialogs.changeSecret.generateSecret}

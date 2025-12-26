@@ -9,6 +9,7 @@ import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';
+import { generatePassword } from '../../PasswordHelpers';
 
 export const AddUserDialog = () => {
     const [userId] = useState(Guid.parse(crypto.randomUUID()));
@@ -19,16 +20,8 @@ export const AddUserDialog = () => {
     const { closeDialog } = useDialogContext();
     const [addUser] = AddUser.use();
 
-    const generatePassword = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
-        const length = 16;
-        let password = '';
-        const array = new Uint32Array(length);
-        crypto.getRandomValues(array);
-        for (let i = 0; i < length; i++) {
-            password += chars[array[i] % chars.length];
-        }
-        setPassword(password);
+    const handleGeneratePassword = () => {
+        setPassword(generatePassword());
     };
 
     const handleOk = async () => {
@@ -98,7 +91,7 @@ export const AddUserDialog = () => {
                     />
                     <Button
                         icon="pi pi-refresh"
-                        onClick={generatePassword}
+                        onClick={handleGeneratePassword}
                         className="p-button-text"
                         type="button"
                         tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}

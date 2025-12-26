@@ -5,9 +5,11 @@ import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { ChangePasswordForUser } from 'Api/Security';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
-import { Password } from 'primereact/password';
+import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
+import { generatePassword } from '../../PasswordHelpers';
+import { Guid } from '@cratis/fundamentals';
 
 export interface ChangePasswordDialogProps {
     userId: Guid;
@@ -15,20 +17,12 @@ export interface ChangePasswordDialogProps {
 
 export const ChangePasswordDialog = () => {
     const { request, closeDialog } = useDialogContext<ChangePasswordDialogProps>();
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(generatePassword());
     const [showPassword, setShowPassword] = useState(false);
     const [changePassword] = ChangePasswordForUser.use();
 
-    const generatePassword = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
-        const length = 16;
-        let password = '';
-        const array = new Uint32Array(length);
-        crypto.getRandomValues(array);
-        for (let i = 0; i < length; i++) {
-            password += chars[array[i] % chars.length];
-        }
-        setPassword(password);
+    const handleGeneratePassword = () => {
+        setPassword(generatePassword());
     };
 
     const handleOk = async () => {
@@ -54,15 +48,11 @@ export const ChangePasswordDialog = () => {
                     <span className="p-inputgroup-addon">
                         <i className="pi pi-lock"></i>
                     </span>
-                    <Password
+                    <InputText
+                        type={showPassword ? 'text' : 'password'}
                         placeholder={strings.eventStore.system.users.dialogs.changePassword.password}
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        feedback={false}
-                        toggleMask={showPassword}
-                        pt={{
-                            input: { className: 'w-full' }
-                        }}
                     />
                     <Button
                         icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
@@ -73,7 +63,7 @@ export const ChangePasswordDialog = () => {
                     />
                     <Button
                         icon="pi pi-refresh"
-                        onClick={generatePassword}
+                        onClick={handleGeneratePassword}
                         className="p-button-text"
                         type="button"
                         tooltip={strings.eventStore.system.users.dialogs.changePassword.generatePassword}
