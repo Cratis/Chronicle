@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
@@ -73,12 +73,12 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
 
     useEffect(() => {
         setCurrentSchema(schema);
-        setCurrentPath([]);
+        // Don't reset currentPath here - it causes navigation to pop back to root when adding properties
     }, [schema]);
 
     useEffect(() => {
         loadPropertiesForCurrentPath();
-    }, [currentPath, currentSchema]);
+    }, [currentPath, currentSchema, isEditMode]);
 
     const loadPropertiesForCurrentPath = () => {
         let targetSchema = currentSchema;
@@ -110,7 +110,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
         setProperties(schemaProps);
     };
 
-    const updateSchemaAtPath = (path: string[], updater: (schema: JSONSchemaType) => JSONSchemaType) => {
+    const updateSchemaAtPath = useCallback((path: string[], updater: (schema: JSONSchemaType) => JSONSchemaType) => {
         const newSchema = JSON.parse(JSON.stringify(currentSchema));
 
         if (path.length === 0) {
@@ -145,9 +145,9 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
 
         setCurrentSchema(newSchema);
         onChange(newSchema);
-    };
+    }, [currentSchema, onChange]);
 
-    const addProperty = () => {
+    const addProperty = useCallback(() => {
         updateSchemaAtPath(currentPath, (schema) => {
             const newProps = { ...(schema.properties || {}) };
             let newName = 'newProperty';
@@ -158,17 +158,17 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             newProps[newName] = { type: 'string' };
             return { ...schema, properties: newProps };
         });
-    };
+    }, [currentPath, updateSchemaAtPath]);
 
-    const removeProperty = (propertyName: string) => {
+    const removeProperty = useCallback((propertyName: string) => {
         updateSchemaAtPath(currentPath, (schema) => {
             const newProps = { ...(schema.properties || {}) };
             delete newProps[propertyName];
             return { ...schema, properties: newProps };
         });
-    };
+    }, [currentPath, updateSchemaAtPath]);
 
-    const updateProperty = (oldName: string, field: keyof SchemaProperty, value: unknown) => {
+    const updateProperty = useCallback((oldName: string, field: keyof SchemaProperty, value: unknown) => {
         updateSchemaAtPath(currentPath, (schema) => {
             const newProps = { ...(schema.properties || {}) };
             const prop = { ...(newProps[oldName] || {}) };
@@ -203,9 +203,9 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
 
             return { ...schema, properties: newProps };
         });
-    };
+    }, [currentPath, updateSchemaAtPath]);
 
-    const updateArrayItemType = (propertyName: string, itemType: string) => {
+    const updateArrayItemType = useCallback((propertyName: string, itemType: string) => {
         updateSchemaAtPath(currentPath, (schema) => {
             const newProps = { ...(schema.properties || {}) };
             const prop = { ...(newProps[propertyName] || {}) };
@@ -221,19 +221,24 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             newProps[propertyName] = prop;
             return { ...schema, properties: newProps };
         });
-    };
+    }, [currentPath, updateSchemaAtPath]);
 
-    const navigateToProperty = (propertyName: string) => {
+    const navigateToProperty = useCallback((propertyName: string) => {
         setCurrentPath([...currentPath, propertyName]);
-    };
+    }, [currentPath]);
 
-    const navigateToArrayItems = (propertyName: string) => {
+    const navigateToArrayItems = useCallback((propertyName: string) => {
         setCurrentPath([...currentPath, propertyName, '$items']);
-    };
+    }, [currentPath]);
 
-    const navigateToBreadcrumb = (index: number) => {
+    const navigateUp = useCallback((index: number) => {
         setCurrentPath(currentPath.slice(0, index));
-    };
+    }, [currentPath]);
+
+    const navigateToBreadcrumb = useCallback((index: number) => {
+        const items = getBreadcrumbItems();
+        setCurrentPath(items[index].path);
+    }, [currentPath, eventTypeName]);
 
     const getBreadcrumbItems = () => {
         const items: NavigationItem[] = [{ name: eventTypeName, path: [] }];
@@ -256,8 +261,8 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
         return items;
     };
 
-    const nameEditor = (rowData: SchemaProperty) => {
-        if (!isEditMode) return rowData.name;
+    const nameEditor = useCallback((rowData: SchemaProperty) => {
+        if (!isEditMode) return <span>{rowData.name}</span>;
         return (
             <InputText
                 value={rowData.name}
@@ -265,9 +270,9 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 className="w-full"
             />
         );
-    };
+    }, [isEditMode, updateProperty]);
 
-    const typeAndDetailsEditor = (rowData: SchemaProperty) => {
+    const typeAndDetailsEditor = useCallback((rowData: SchemaProperty) => {
         // Build all available types including formats
         const allTypeOptions = [
             ...JSON_TYPES,
@@ -285,7 +290,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             if (rowData.type === 'array') {
                 const itemType = rowData.items?.type || 'string';
                 return (
-                    <div className="flex align-items-center gap-2">
+                    <div className="flex align-items-center gap-2" style={{ minHeight: '2.5rem' }}>
                         <span>Array of {itemType}</span>
                         {itemType === 'object' && (
                             <Button
@@ -300,7 +305,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 );
             } else if (rowData.type === 'object') {
                 return (
-                    <div className="flex align-items-center gap-2">
+                    <div className="flex align-items-center gap-2" style={{ minHeight: '2.5rem' }}>
                         <span>Object</span>
                         <Button
                             icon={<faIcons.FaArrowRight />}
@@ -313,14 +318,14 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 );
             } else if (rowData.format) {
                 const formatLabel = typeFormats.find(tf => tf.value === rowData.format)?.label || rowData.format;
-                return formatLabel;
+                return <div style={{ minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{formatLabel}</div>;
             }
-            return rowData.type;
+            return <div style={{ minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{rowData.type}</div>;
         }
 
         // Edit mode
         return (
-            <div className="flex align-items-center gap-2 w-full">
+            <div className="flex align-items-center gap-2 w-full" style={{ minHeight: '2.5rem' }}>
                 <Dropdown
                     value={currentValue}
                     options={allTypeOptions}
@@ -342,7 +347,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 />
                 {rowData.type === 'array' && (
                     <>
-                        <span className="mx-2">of</span>
+                        <span style={{ whiteSpace: 'nowrap' }}>of</span>
                         <Dropdown
                             value={rowData.items?.type || 'string'}
                             options={JSON_TYPES}
@@ -378,7 +383,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 />
             </div>
         );
-    };
+    }, [isEditMode, updateProperty, updateArrayItemType, navigateToProperty, navigateToArrayItems, removeProperty, typeFormats]);
 
     const menuItems = useMemo(() => [
         ...(!isEditMode ? [{
@@ -387,10 +392,6 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             command: onEdit
         }] : []),
         ...(isEditMode ? [{
-            label: 'Add Property',
-            icon: <faIcons.FaPlus className='mr-2' />,
-            command: addProperty
-        }, {
             label: 'Save',
             icon: <faIcons.FaCheck className='mr-2' />,
             command: onSave
@@ -398,6 +399,10 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             label: 'Cancel',
             icon: <faIcons.FaXmark className='mr-2' />,
             command: onCancel
+        }, {
+            label: 'Add Property',
+            icon: <faIcons.FaPlus className='mr-2' />,
+            command: addProperty
         }] : [])
     ], [isEditMode, onEdit, onSave, onCancel, addProperty]);
 
@@ -409,27 +414,27 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 <Menubar aria-label="Actions" model={menuItems} />
             </div>
 
-            {currentPath.length > 0 && (
-                <div className="px-4 py-2 border-bottom-1 surface-border">
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)', cursor: 'pointer' }}>
-                        {breadcrumbItems.map((item, index) => (
-                            <span key={index}>
-                                {index > 0 && <span className="mx-2">&gt;</span>}
-                                <span
-                                    onClick={() => navigateToBreadcrumb(index)}
-                                    style={{ cursor: 'pointer', textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none' }}
-                                >
-                                    {item.name}
-                                </span>
+            <div className="px-4 py-2 border-bottom-1 surface-border">
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)', cursor: 'pointer' }}>
+                    {breadcrumbItems.map((item, index) => (
+                        <span key={index}>
+                            {index > 0 && <span className="mx-2">&gt;</span>}
+                            <span
+                                onClick={() => navigateToBreadcrumb(index)}
+                                style={{ cursor: 'pointer', textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none' }}
+                            >
+                                {item.name}
                             </span>
-                        ))}
-                    </div>
+                        </span>
+                    ))}
                 </div>
-            )}
+            </div>
 
             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                 <DataTable
+                    key={`${isEditMode}`}
                     value={properties}
+                    dataKey="name"
                     emptyMessage="No properties defined"
                     pt={{
                         root: { style: { border: 'none' } },

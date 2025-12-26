@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from 'Components';
 import { JSONSchemaEditor, JSONSchemaType } from 'Components';
 import { EventTypeRegistration } from 'Api/Events';
@@ -14,6 +14,12 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
     const [isEditMode, setIsEditMode] = useState(false);
     const [schema, setSchema] = useState<JSONSchemaType>(() => JSON.parse(props.item.schema));
     const [register] = Register.use();
+
+    // Reset schema when event type changes
+    useEffect(() => {
+        setSchema(JSON.parse(props.item.schema));
+        setIsEditMode(false);
+    }, [props.item.type.id, props.item.schema]);
 
     const handleEdit = () => {
         setIsEditMode(true);
