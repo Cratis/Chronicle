@@ -35,7 +35,12 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     /// <inheritdoc/>
     public async Task<ChronicleUser?> FindByIdAsync(string userId, CancellationToken cancellationToken)
     {
-        return await userStorage.GetById(userId);
+        if (!Guid.TryParse(userId, out var userIdAsGuid))
+        {
+            return null;
+        }
+
+        return await userStorage.GetById(userIdAsGuid);
     }
 
     /// <inheritdoc/>
