@@ -8,9 +8,10 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
+import { Guid } from '@cratis/fundamentals';
 
 export const AddUserDialog = () => {
-    const [userId] = useState(crypto.randomUUID());
+    const [userId] = useState(Guid.parse(crypto.randomUUID()));
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -32,7 +33,7 @@ export const AddUserDialog = () => {
 
     const handleOk = async () => {
         if (username && password) {
-            addUser.userId = userId as any;
+            addUser.userId = userId;
             addUser.username = username;
             addUser.email = email || '';
             addUser.password = password;
