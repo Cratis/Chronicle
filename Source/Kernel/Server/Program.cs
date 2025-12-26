@@ -13,7 +13,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.DependencyInjection;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
