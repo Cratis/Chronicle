@@ -30,7 +30,7 @@ public record User(
     /// </summary>
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
     /// <returns>An observable for observing a collection of users.</returns>
-    public static ISubject<IEnumerable<User>> AllUsers(IUsers users) =>
+    internal static ISubject<IEnumerable<User>> AllUsers(IUsers users) =>
         users.InvokeAndWrapWithTransformSubject(
             token => users.ObserveAll(token),
             users => users.ToApi());
