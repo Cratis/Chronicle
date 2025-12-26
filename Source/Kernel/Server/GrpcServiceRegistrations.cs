@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
+using ProtoBuf.Grpc.Server;
 
 namespace Cratis.Chronicle.Server;
 
@@ -17,11 +17,8 @@ public static class GrpcServiceRegistrations
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
-        services.AddGrpc(options =>
-        {
-            options.Interceptors.Add<CorrelationIdServerInterceptor>();
-            options.EnableDetailedErrors = true;
-        });
+        services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
+
         services.AddSingleton<Contracts.IEventStores, Services.EventStores>();
         services.AddSingleton<Contracts.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();

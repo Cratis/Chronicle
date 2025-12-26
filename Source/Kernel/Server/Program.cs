@@ -143,7 +143,6 @@ builder.Host
         }))
    .ConfigureServices((context, services) =>
    {
-       services.AddCodeFirstGrpc();
        services.AddCodeFirstGrpcReflection();
 
        services
@@ -152,8 +151,6 @@ builder.Host
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
-
-       services.AddCodeFirstGrpc();
 
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
@@ -238,6 +235,7 @@ if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
     app.MapControllers();
 }
 
+app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
