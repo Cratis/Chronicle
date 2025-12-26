@@ -46,11 +46,11 @@ public static class ReactorTypeExtensions
     /// </summary>
     /// <param name="type"><see cref="Type"/> to check.</param>
     /// <returns>True if the type is a system reactor, false otherwise.</returns>
-    public static bool IsSystemReactor(this Type type)
+    public static bool IsSystemEventStoreOnly(this Type type)
     {
         TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
         var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
-        return reactorAttribute?.IsSystem ?? true;
+        return reactorAttribute?.IsSystemEventStoreOnly ?? true;
     }
 
     /// <summary>

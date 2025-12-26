@@ -39,7 +39,7 @@ public class Reactors(
     async Task Subscribe<TReactor>(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
         where TReactor : IReactor
     {
-        var system = typeof(TReactor).IsSystemReactor();
+        var system = typeof(TReactor).IsSystemEventStoreOnly();
         if (system && eventStore != EventStoreName.System)
         {
             return;
