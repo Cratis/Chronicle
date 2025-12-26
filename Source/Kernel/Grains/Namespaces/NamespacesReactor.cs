@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Grains.Namespaces;
 /// <summary>
 /// Represents a reactor that handles namespace events.
 /// </summary>
-[Reactor(eventSequence: WellKnownEventSequences.System)]
+[Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: false)]
 public class NamespacesReactor : Reactor
 {
     /// <summary>
