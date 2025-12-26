@@ -6,14 +6,12 @@ import strings from 'Strings';
 import { AllReadModels } from 'Api/ReadModels';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { ReadModelsViewModel } from './ReadModelsViewModel';
-import { withViewModel } from '@cratis/arc.react.mvvm';
-import { useDialog } from '@cratis/arc.react.mvvm/dialogs';
+import { useDialog } from '@cratis/arc.react/dialogs';
 import { AddReadModel, AddReadModelRequest, AddReadModelResponse } from './AddReadModel';
 import { DataPage } from 'Components';
 import { ReadModelDetails } from './ReadModelDetails';
 
-export const ReadModels = withViewModel(ReadModelsViewModel, () => {
+export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddReadModelDialog] = useDialog<AddReadModelRequest, AddReadModelResponse>(AddReadModelRequest, AddReadModel);
 
@@ -38,4 +36,4 @@ export const ReadModels = withViewModel(ReadModelsViewModel, () => {
             <AddReadModelDialog/>
         </>
     );
-});
+};
