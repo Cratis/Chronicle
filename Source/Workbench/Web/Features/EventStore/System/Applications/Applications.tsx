@@ -72,7 +72,6 @@ export const Applications = () => {
                         command={handleRemoveApplication} />
                 </DataPage.MenuItems>
                 <DataPage.Columns>
-                    <Column field='id' header={strings.eventStore.system.applications.columns.id} sortable />
                     <Column field='clientId' header={strings.eventStore.system.applications.columns.clientId} sortable />
                     <Column
                         field='isActive'
