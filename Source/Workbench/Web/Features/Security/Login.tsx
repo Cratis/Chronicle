@@ -8,13 +8,14 @@ import { Password } from 'primereact/password';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import css from './Login.module.css';
+import chronicleLogo from './chronicle.svg';
 
 export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
     return (
         <div className={css.loginContainer}>
             <div className={css.loginCard}>
                 <div className={css.loginHeader}>
-                    <h1 className={css.loginTitle}>Chronicle</h1>
+                    <img src={chronicleLogo} alt="Chronicle" className={css.loginLogo} style={{ filter: 'brightness(0) invert(1)' }} />
                     <p className={css.loginSubtitle}>Sign in to continue</p>
                 </div>
 

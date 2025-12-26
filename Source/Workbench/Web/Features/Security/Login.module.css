@@ -25,6 +25,13 @@
     margin-bottom: 2rem;
 }
 
+.loginLogo {
+    height: 6.5rem;
+    width: auto;
+    margin: 0 auto 0.5rem auto;
+    display: block;
+}
+
 .loginTitle {
     font-size: 2.5rem;
     font-weight: 700;
