@@ -7,7 +7,7 @@ import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddApplicationDialog } from './Add/AddApplicationDialog';
 import { ChangeSecretDialog  } from './ChangeSecret';
-import { useDialog, useConfirmationDialog, DialogResult } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
 
@@ -33,7 +33,8 @@ export const Applications = () => {
         if (selectedApplication) {
             const result = await showConfirmation(
                 strings.eventStore.system.applications.dialogs.removeApplication.title,
-                strings.eventStore.system.applications.dialogs.removeApplication.message.replace('{clientId}', selectedApplication.clientId)
+                strings.eventStore.system.applications.dialogs.removeApplication.message.replace('{clientId}', selectedApplication.clientId),
+                DialogButtons.YesNo
             );
 
             if (result === DialogResult.Yes) {

@@ -7,7 +7,7 @@ import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
 import { ChangePasswordDialog, ChangePasswordDialogProps } from './ChangePassword';
-import { useDialog, useConfirmationDialog, DialogResult } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
 
@@ -33,7 +33,8 @@ export const Users = () => {
         if (selectedUser) {
             const result = await showConfirmation(
                 strings.eventStore.system.users.dialogs.removeUser.title,
-                strings.eventStore.system.users.dialogs.removeUser.message.replace('{username}', selectedUser.username)
+                strings.eventStore.system.users.dialogs.removeUser.message.replace('{username}', selectedUser.username),
+                DialogButtons.YesNo
             );
 
             if (result === DialogResult.Yes) {
