@@ -191,6 +191,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
                 <InputText
                     value={node.data.name}
                     onChange={(e) => handlePropertyNameChange(index, e.target.value)}
+                    style={{ width: '100%' }}
                 />
             );
         }
@@ -201,11 +202,12 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
         const index = node.data.index;
         if (isEditMode) {
             return (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
                     <Dropdown
                         value={node.data.value}
                         options={availableTypes}
                         onChange={(e) => handlePropertyTypeChange(index, e.value)}
+                        style={{ flex: 1 }}
                     />
                     <Button
                         icon="pi pi-trash"
@@ -246,7 +248,14 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
                 <Menubar aria-label="Actions" model={menuItems} />
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-                <TreeTable value={propertyNodes} showGridlines={false}>
+                <style>{`
+                    .type-details .p-treetable .p-treetable-tbody > tr > td {
+                        padding: 0.5rem;
+                    }
+                `}</style>
+                <TreeTable 
+                    value={propertyNodes} 
+                    showGridlines={false}>
                     <Column field='name' header='Property' expander body={nameBodyTemplate} />
                     <Column field='value' header='Type' body={valueBodyTemplate} />
                 </TreeTable>
