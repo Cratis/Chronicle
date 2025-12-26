@@ -24,7 +24,7 @@ public record AddUser(
     /// </summary>
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
     /// <returns>Awaitable task.</returns>
-    public Task Handle(IUsers users) =>
+    internal Task Handle(IUsers users) =>
         users.Add(new()
         {
             UserId = UserId,
