@@ -19,6 +19,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 public class UserStorage(IDatabase database) : IUserStorage
 {
     const string CollectionName = WellKnownCollectionNames.Users;
+    static readonly Collation _collation = new("en", caseLevel: false, strength: CollationStrength.Primary);
+    static readonly FindOptions<ChronicleUser> _findOptions = new() { Collation = _collation };
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<ChronicleUser>> ObserveAll() =>
@@ -38,7 +40,7 @@ public class UserStorage(IDatabase database) : IUserStorage
     public async Task<ChronicleUser?> GetByUsername(Username username)
     {
         var collection = GetCollection();
-        using var cursor = await collection.FindAsync(u => u.Username == username);
+        using var cursor = await collection.FindAsync(u => u.Username == username, _findOptions);
         return await cursor.FirstOrDefaultAsync();
     }
 
@@ -51,7 +53,7 @@ public class UserStorage(IDatabase database) : IUserStorage
         }
 
         var collection = GetCollection();
-        using var cursor = await collection.FindAsync(u => u.Email == email);
+        using var cursor = await collection.FindAsync(u => u.Email == email, _findOptions);
         return await cursor.FirstOrDefaultAsync();
     }
 
