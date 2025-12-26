@@ -8,7 +8,7 @@ import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 // import * as devIcons from 'react-icons/di';
 // import * as gameIcons from 'react-icons/gi';
-import { Types } from "./General/Types/Types";
+import { EventTypes } from "./General/EventTypes/EventTypes";
 import { Observers } from "./Namespaces/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
 import { FailedPartitions } from "./Namespaces/FailedPartitions/FailedPartitions";
@@ -68,7 +68,7 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
-                <Route path={'types'} element={<Types />} />
+                <Route path={'types'} element={<EventTypes />} />
                 <Route path={'read-models'} element={<ReadModels />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />

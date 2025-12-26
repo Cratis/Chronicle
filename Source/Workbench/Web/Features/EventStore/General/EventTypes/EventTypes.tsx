@@ -8,15 +8,11 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
-import { TypesViewModel } from './TypesViewModel';
-import { withViewModel } from '@cratis/arc.react.mvvm';
-import { useDialog } from '@cratis/arc.react.mvvm/dialogs';
-import { AddEventType, AddEventTypeRequest, AddEventTypeResponse } from './AddEventType';
-import { DataPage } from 'Components';
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { AddEventTypeDialog } from './Add/AddEventTypeDialog';
+import { DataPage, MenuItem } from 'Components';
 import { TypeDetails } from './TypeDetails';
-import * as faIcons from 'react-icons/fa';
-
-const MenuItem = DataPage.MenuItem;
+import * as faIcons from 'react-icons/fa6';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -26,9 +22,9 @@ const renderTombstone = () => {
     return 'no';
 };
 
-export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
+export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddEventTypeDialog] = useDialog<AddEventTypeRequest, AddEventTypeResponse>(AddEventTypeRequest, AddEventType);
+    const [AddEventTypeWrapper, showAddEventType] = useDialog(AddEventTypeDialog);
 
     const queryArgs: AllEventTypesParameters = {
         eventStore: params.eventStore!
@@ -47,7 +43,11 @@ export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
                 detailsComponent={TypeDetails}>
 
                 <DataPage.MenuItems>
-                    <MenuItem id='create' label={strings.eventStore.general.types.actions.create} icon={faIcons.FaPlus} command={() => viewModel.addEventType(params.eventStore!)} />
+                    <MenuItem
+                        id='create'
+                        label={strings.eventStore.general.types.actions.create}
+                        icon={faIcons.FaPlus}
+                        command={() => showAddEventType()} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
@@ -64,7 +64,7 @@ export const Types = withViewModel(TypesViewModel, ({ viewModel }) => {
                         body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>
-            <AddEventTypeDialog/>
+            <AddEventTypeWrapper />
         </>
     );
-});
+};
