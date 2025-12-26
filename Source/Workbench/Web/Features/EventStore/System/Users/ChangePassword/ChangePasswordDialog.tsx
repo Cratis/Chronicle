@@ -10,7 +10,7 @@ import { useState } from 'react';
 import strings from 'Strings';
 
 export interface ChangePasswordDialogProps {
-    userId: string;
+    userId: Guid;
 }
 
 export const ChangePasswordDialog = () => {
