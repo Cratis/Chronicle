@@ -89,7 +89,7 @@ public class Sink(
             }
 
             await Collection.DeleteOneAsync(filter);
-            return Array.Empty<FailedPartition>();
+            return [];
         }
 
         // Run through and remove all children affected by ChildRemovedFromAll
@@ -99,7 +99,7 @@ public class Sink(
         }
 
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
-        if (!converted.hasChanges) return Array.Empty<FailedPartition>();
+        if (!converted.hasChanges) return [];
 
         if (_isBulkMode)
         {
@@ -120,7 +120,7 @@ public class Sink(
                 IsUpsert = true,
                 ArrayFilters = converted.ArrayFilters
             });
-        return Array.Empty<FailedPartition>();
+        return [];
     }
 
     /// <inheritdoc/>
@@ -256,7 +256,7 @@ public class Sink(
         {
             return await ExecuteBulk();
         }
-        return Array.Empty<FailedPartition>();
+        return [];
     }
 
     async Task<IEnumerable<FailedPartition>> ExecuteBulk()
