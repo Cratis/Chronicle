@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Security;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
@@ -11,6 +12,12 @@ namespace Cratis.Chronicle.Storage.Security;
 /// </summary>
 public interface IApplicationStorage
 {
+    /// <summary>
+    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="Application"/>.
+    /// </summary>
+    /// <returns>An observable of collection of <see cref="Application"/>.</returns>
+    ISubject<IEnumerable<Application>> ObserveAll();
+
     /// <summary>
     /// Gets an application by its unique identifier.
     /// </summary>

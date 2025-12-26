@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Reactive;
 using MongoDB.Driver;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
@@ -16,6 +18,12 @@ public class ApplicationStorage(IDatabase database) : IApplicationStorage
 {
     const string CollectionName = WellKnownCollectionNames.Applications;
     readonly IMongoCollection<Application> _collection = database.GetCollection<Application>(CollectionName);
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<Application>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<Application>, IEnumerable<Application>>(
+            _collection.Observe(),
+            users => users);
 
     /// <inheritdoc/>
     public async Task<Application?> GetById(ApplicationId id, CancellationToken cancellationToken = default)

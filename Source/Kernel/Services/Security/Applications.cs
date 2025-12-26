@@ -7,6 +7,7 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Infrastructure.Security;
+using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -69,12 +70,11 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<Application>> ObserveAll(CallContext context = default)
-    {
-        // Since IApplicationStorage doesn't have ObserveAll, we'll return an empty observable for now
-        // This can be enhanced by adding observable support to IApplicationStorage if needed
-        return Observable.Empty<IEnumerable<Application>>();
-    }
+    public IObservable<IEnumerable<Application>> ObserveAll(CallContext context = default) =>
+        storage.System.Applications
+            .ObserveAll()
+            .CompletedBy(context.CancellationToken)
+            .Select(apps => apps.Select(ToContract));
 
     static Application ToContract(Storage.Security.Application client) => new()
     {
