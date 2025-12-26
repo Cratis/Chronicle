@@ -40,4 +40,28 @@ public static class ReactorTypeExtensions
         var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
         return reactorAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
     }
+
+    /// <summary>
+    /// Determine whether a Reactor type is a system reactor.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to check.</param>
+    /// <returns>True if the type is a system reactor, false otherwise.</returns>
+    public static bool IsSystemReactor(this Type type)
+    {
+        TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
+        var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
+        return reactorAttribute?.IsSystem ?? true;
+    }
+
+    /// <summary>
+    /// Determine whether a Reactor type is limited to the default namespace only.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to check.</param>
+    /// <returns>True if the type is limited to the default namespace only, false otherwise.</returns>
+    public static bool IsDefaultNamespaceOnly(this Type type)
+    {
+        TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
+        var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
+        return reactorAttribute?.DefaultNamespaceOnly ?? true;
+    }
 }

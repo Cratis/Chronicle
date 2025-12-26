@@ -39,6 +39,18 @@ public class Reactors(
     async Task Subscribe<TReactor>(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
         where TReactor : IReactor
     {
+        var system = typeof(TReactor).IsSystemReactor();
+        if (system && eventStore != EventStoreName.System)
+        {
+            return;
+        }
+
+        var defaultNamespaceOnly = typeof(TReactor).IsDefaultNamespaceOnly();
+        if (defaultNamespaceOnly && namespaceName != EventStoreNamespaceName.Default)
+        {
+            return;
+        }
+
         var reactorId = typeof(TReactor).GetReactorId();
         var reactorType = typeof(TReactor);
         var key = new ObserverKey(

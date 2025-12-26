@@ -11,8 +11,10 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// </summary>
 /// <param name="id">Optional <see cref="Id"/> represented as string, if not used it will default to the fully qualified type name.</param>
 /// <param name="eventSequence">Optional the name of the event sequence to observe. Defaults to the event log.</param>
+/// <param name="system">Optional value indicating whether this reactor is a system reactor. Defaults to true.</param>
+/// <param name="defaultNamespaceOnly">Optional value indicating whether this reactor is limited to the default namespace. Defaults to true.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-public sealed class ReactorAttribute(string id = "", string? eventSequence = default) : Attribute
+public sealed class ReactorAttribute(string id = "", string? eventSequence = default, bool system = true, bool defaultNamespaceOnly = true) : Attribute
 {
     /// <summary>
     /// Gets the unique identifier for an Reactor.
@@ -23,4 +25,20 @@ public sealed class ReactorAttribute(string id = "", string? eventSequence = def
     /// Gets the unique identifier for an event log.
     /// </summary>
     public EventSequenceId EventSequenceId { get; } = eventSequence ?? EventSequenceId.Log;
+
+    /// <summary>
+    /// Gets a value indicating whether this reactor is a system reactor.
+    /// </summary>
+    /// <remarks>
+    /// System reactors lives in the system event store only. This is the default behavior.
+    /// </remarks>
+    public bool IsSystem { get; } = system;
+
+    /// <summary>
+    /// Gets a value indicating whether this reactor is limited to the default namespace.
+    /// </summary>
+    /// <remarks>
+    /// This indicates that the reactor will only be registered in the default namespace of an event store.
+    /// </remarks>
+    public bool DefaultNamespaceOnly { get; } = defaultNamespaceOnly;
 }
