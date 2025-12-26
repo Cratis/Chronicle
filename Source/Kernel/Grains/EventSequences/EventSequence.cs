@@ -39,6 +39,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
+/// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence(
@@ -47,6 +48,7 @@ public class EventSequence(
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
+    IEventSerializer eventSerializer,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     IEventSequenceStorage? _eventSequenceStorage;
@@ -139,6 +141,37 @@ public class EventSequence(
             logger.FailedGettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? [], ex);
             return GetSequenceNumberError.StorageError;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendResult> Append(
+        EventSourceId eventSourceId,
+        object @event,
+        CorrelationId? correlationId = null,
+        IEnumerable<Causation>? causation = null,
+        Identity? causedBy = null,
+        EventSourceType? eventSourceType = null,
+        EventStreamType? eventStreamType = null,
+        EventStreamId? eventStreamId = null)
+    {
+        var content = eventSerializer.Serialize(@event);
+        var eventType = @event.GetType().GetEventType();
+
+        correlationId ??= CorrelationId.New();
+        causation ??= [];
+        causedBy ??= Identity.System;
+
+        return await Append(
+            eventSourceType ?? EventSourceType.Default,
+            eventSourceId,
+            eventStreamType ?? EventStreamType.All,
+            eventStreamId ?? EventStreamId.Default,
+            eventType,
+            content,
+            correlationId,
+            causation,
+            causedBy,
+            ConcurrencyScope.None);
     }
 
     /// <inheritdoc/>
