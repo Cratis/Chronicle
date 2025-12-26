@@ -72,7 +72,6 @@ export const Users = () => {
                         command={handleRemoveUser} />
                 </DataPage.MenuItems>
                 <DataPage.Columns>
-                    <Column field='id' header={strings.eventStore.system.users.columns.id} sortable />
                     <Column field='username' header={strings.eventStore.system.users.columns.username} sortable />
                     <Column field='email' header={strings.eventStore.system.users.columns.email} sortable />
                     <Column
