@@ -159,6 +159,15 @@ public class EventSequence(
 
         correlationId ??= CorrelationId.New();
         causation ??= [];
+
+        if (causedBy is null &&
+            RequestContext.Get(WellKnownKeys.UserIdentity) is string userSubject && !string.IsNullOrEmpty(userSubject) &&
+            RequestContext.Get(WellKnownKeys.UserName) is string userName && !string.IsNullOrEmpty(userName) &&
+            RequestContext.Get(WellKnownKeys.UserPreferredUserName) is string userPreferredUserName && !string.IsNullOrEmpty(userPreferredUserName))
+        {
+            causedBy = new Identity(userSubject, userName, userPreferredUserName);
+        }
+
         causedBy ??= Identity.System;
 
         return await Append(
