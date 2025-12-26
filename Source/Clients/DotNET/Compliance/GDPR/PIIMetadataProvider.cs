@@ -12,12 +12,12 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanProvideComplianceMetadataForProperty
 {
     /// <inheritdoc/>
-    public bool CanProvide(Type type) => type.Implements(typeof(IHoldPII)) || type.GetCustomAttribute<PIIAttribute>() != default;
+    public bool CanProvide(Type type) => type.Implements(typeof(IHoldPII)) || Attribute.IsDefined(type, typeof(PIIAttribute));
 
     /// <inheritdoc/>
     public bool CanProvide(PropertyInfo property) =>
-        property.GetCustomAttribute<PIIAttribute>() != default ||
-        property.DeclaringType?.GetCustomAttribute<PIIAttribute>() != default ||
+        Attribute.IsDefined(property, typeof(PIIAttribute)) ||
+        (property.DeclaringType is not null && Attribute.IsDefined(property.DeclaringType, typeof(PIIAttribute))) ||
         CanProvide(property.PropertyType);
 
     /// <inheritdoc/>

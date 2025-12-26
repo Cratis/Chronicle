@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IProjectionBuilderFor<TReadModel>>, IProjectionBuilderFor<TReadModel>
 {
     readonly ProjectionId _identifier;
+    readonly Type _projectionType;
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
     bool _isActive = true;
@@ -26,17 +28,20 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TReadModel}"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier for the projection.</param>
+    /// <param name="projectionType">The type of the projection.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionBuilderFor(
         ProjectionId identifier,
+        Type projectionType,
         INamingPolicy namingPolicy,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
         : base(namingPolicy, eventTypes, jsonSerializerOptions, false)
     {
         _identifier = identifier;
+        _projectionType = projectionType;
         _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
     }
 
@@ -90,6 +95,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             {
                 ConfigurationId = Guid.Empty,
                 TypeId = WellKnownSinkTypes.MongoDB
-            }
+            },
+            Categories = _projectionType.GetCategories().ToArray()
         };
 }

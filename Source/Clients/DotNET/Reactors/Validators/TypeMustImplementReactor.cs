@@ -6,9 +6,6 @@ namespace Cratis.Chronicle.Reactors.Validators;
 /// <summary>
 /// Exception that gets thrown when a type does not implement <see cref="IReactor"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of <see cref="TypeMustImplementReactor"/>.
-/// </remarks>
 /// <param name="type">Violating type.</param>
 public class TypeMustImplementReactor(Type type) : Exception($"Type '{type.AssemblyQualifiedName}' does not implement `IReactor` interface")
 {

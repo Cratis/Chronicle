@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
-using Cratis.Reflection;
 using Cratis.Strings;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -23,6 +22,7 @@ public class EventTypes : IEventTypes
 {
     readonly JsonSchemaGenerator _jsonSchemaGenerator;
     readonly Dictionary<Type, JsonSchema> _schemaByType = new();
+    readonly Dictionary<EventTypeId, Type> _typeByEventTypeId = new();
     readonly ITypes _types;
     readonly IStorage _storage;
     readonly ILogger<EventTypes> _logger;
@@ -58,10 +58,13 @@ public class EventTypes : IEventTypes
     public JsonSchema GetJsonSchema(Type eventType) => _schemaByType[eventType];
 
     /// <inheritdoc/>
+    public Type GetClrTypeFor(EventTypeId eventTypeId) => _typeByEventTypeId[eventTypeId];
+
+    /// <inheritdoc/>
     public async Task DiscoverAndRegister()
     {
         var eventTypes = _types.All
-            .Where(t => t.HasAttribute<EventTypeAttribute>())
+            .Where(t => t.IsEventType())
             .ToArray();
         var eventStores = await _storage.GetEventStores();
         foreach (var eventStore in eventStores)
@@ -73,6 +76,7 @@ public class EventTypes : IEventTypes
                 var schema = _jsonSchemaGenerator.Generate(eventType);
                 ForceSchemaToBeCamelCase(schema);
                 _schemaByType[eventType] = schema;
+                _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
                 await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema);
             }
         }

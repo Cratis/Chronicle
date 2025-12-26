@@ -20,9 +20,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IStorage"/> for MongoDB.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Storage"/> class.
-/// </remarks>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
@@ -42,6 +39,9 @@ public class Storage(
     ILoggerFactory loggerFactory) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
+
+    /// <inheritdoc/>
+    public ISystemStorage System => new SystemStorage(database);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()

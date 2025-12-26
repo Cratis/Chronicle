@@ -48,7 +48,8 @@ public static class ProjectionDefinitionConverters
                 kv => EventType.Parse(kv.Key).ToKernel(),
                 kv => kv.Value.ToKernel()),
             source.FromEventProperty?.ToKernel(),
-            source.LastUpdated
+            source.LastUpdated,
+            source.Categories
         );
 
     /// <summary>
@@ -84,6 +85,7 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Key.ToMongoDB().ToString(),
                 kv => kv.Value.ToMongoDB()),
             FromEventProperty = source.FromEventProperty?.ToMongoDB(),
-            LastUpdated = source.LastUpdated
+            LastUpdated = source.LastUpdated,
+            Categories = source.Categories ?? []
         };
 }

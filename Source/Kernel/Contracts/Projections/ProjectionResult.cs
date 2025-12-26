@@ -16,20 +16,14 @@ public class ProjectionResult
     public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the affected properties.
-    /// </summary>
-    [ProtoMember(2, IsRequired = true)]
-    public IList<string> AffectedProperties { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the number of projected events.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public int ProjectedEventsCount { get; set; }
 
     /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(3)]
     public ulong LastHandledEventSequenceNumber { get; set; }
 }

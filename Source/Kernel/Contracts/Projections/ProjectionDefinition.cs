@@ -107,4 +107,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(16)]
     public SinkDefinition Sink { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the projection belongs to.
+    /// </summary>
+    [ProtoMember(17, IsRequired = true)]
+    public IList<string> Categories { get; set; } = [];
 }

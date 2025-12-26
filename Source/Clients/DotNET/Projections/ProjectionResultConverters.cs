@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -22,7 +21,6 @@ internal static class ProjectionResultConverters
     internal static ProjectionResult<TReadModel> ToClient<TReadModel>(this Contracts.Projections.ProjectionResult result, JsonSerializerOptions jsonSerializerOptions) =>
         new(
             JsonSerializer.Deserialize<TReadModel>(result.ReadModel, jsonSerializerOptions)!,
-            result.AffectedProperties.Select(_ => (PropertyPath)_),
             result.ProjectedEventsCount,
             result.LastHandledEventSequenceNumber);
 
@@ -36,7 +34,6 @@ internal static class ProjectionResultConverters
     internal static ProjectionResult ToClient(this Contracts.Projections.ProjectionResult result, Type readModelType, JsonSerializerOptions jsonSerializerOptions) =>
         new(
             JsonSerializer.Deserialize(result.ReadModel, readModelType, jsonSerializerOptions)!,
-            result.AffectedProperties.Select(_ => (PropertyPath)_),
             result.ProjectedEventsCount,
             result.LastHandledEventSequenceNumber);
 
@@ -48,7 +45,6 @@ internal static class ProjectionResultConverters
     internal static ProjectionResultRaw ToClient(this Contracts.Projections.ProjectionResult result) =>
         new(
             (JsonObject)JsonNode.Parse(result.ReadModel)!,
-            result.AffectedProperties.Select(_ => (PropertyPath)_),
             result.ProjectedEventsCount,
             result.LastHandledEventSequenceNumber);
 }

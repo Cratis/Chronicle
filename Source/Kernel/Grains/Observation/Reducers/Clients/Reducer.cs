@@ -65,7 +65,7 @@ public class Reducer(
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
         }
 
-        if (!_subscribed)
+        if (!_subscribed && definition.IsActive)
         {
             _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
 
@@ -78,6 +78,11 @@ public class Reducer(
                 connectedClient);
 
             _subscribed = true;
+        }
+        else if (_subscribed && !definition.IsActive)
+        {
+            await _observer!.Unsubscribe();
+            _subscribed = false;
         }
     }
 

@@ -17,17 +17,17 @@ public record EventSequenceId(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing the event sequence for the default log.
     /// </summary>
-    public static readonly EventSequenceId Log = "event-log";
+    public static readonly EventSequenceId Log = WellKnownEventSequences.EventLog;
 
     /// <summary>
     /// The <see cref="EventSequenceId"/> representing the system event sequence.
     /// </summary>
-    public static readonly EventSequenceId System = "system";
+    public static readonly EventSequenceId System = WellKnownEventSequences.System;
 
     /// <summary>
     /// Gets <see cref="EventSequenceId"/> of the default outbox.
     /// </summary>
-    public static readonly EventSequenceId Outbox = "outbox";
+    public static readonly EventSequenceId Outbox = WellKnownEventSequences.Outbox;
 
     /// <summary>
     /// Gets the prefix for inbox event sequences.

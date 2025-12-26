@@ -63,6 +63,28 @@ public interface IEventSequence : IGrainWithStringKey
         EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Appends an event to the event sequence.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event source.</param>
+    /// <param name="event">The event to append.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/> for the event.</param>
+    /// <param name="causedBy">The <see cref="Identity"/> of the entity that caused the event.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to specify the type of the event source. Defaults to <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to specify the type of the event stream. Defaults to <see cref="EventStreamType.All"/>.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to specify the identifier of the event stream. Defaults to <see cref="EventStreamId.Default"/>.</param>
+    /// <returns>An <see cref="AppendResult"/> indicating the result of the append operation.</returns>
+    Task<AppendResult> Append(
+        EventSourceId eventSourceId,
+        object @event,
+        CorrelationId? correlationId = default,
+        IEnumerable<Causation>? causation = default,
+        Identity? causedBy = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default);
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceType">The <see cref="EventSourceType"/> to append for.</param>

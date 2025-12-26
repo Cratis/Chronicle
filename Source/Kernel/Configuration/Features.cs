@@ -23,4 +23,10 @@ public class Features
     /// Whether the Changeset Storage is enabled. Default false.
     /// </summary>
     public bool ChangesetStorage { get; init; }
+
+    /// <summary>
+    /// Whether the OAuth Authority is enabled. Default true.
+    /// </summary>
+    /// <remarks>When enabled, provides an internal OpenIdDict-based OAuth authority for authentication.</remarks>
+    public bool OAuthAuthority { get; init; } = true;
 }
