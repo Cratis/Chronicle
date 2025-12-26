@@ -28,6 +28,7 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
     {
         var application = new Application
         {
+            Id = eventContext.EventSourceId,
             ClientId = @event.ClientId,
             ClientSecret = @event.ClientSecret
         };
