@@ -4,16 +4,25 @@
 import { useState } from 'react';
 import { Menubar } from 'primereact/menubar';
 import { IDetailsComponentProps } from 'Components';
+import { JSONSchemaEditor } from 'Components';
 import { EventTypeRegistration } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import * as faIcons from 'react-icons/fa6';
 
+interface JSONSchemaType {
+    type?: string;
+    format?: string;
+    properties?: Record<string, JSONSchemaType>;
+    items?: JSONSchemaType;
+    required?: string[];
+}
+
 export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isEditMode, setIsEditMode] = useState(false);
-    const [schema, setSchema] = useState<any>(() => JSON.parse(props.item.schema));
+    const [schema, setSchema] = useState<JSONSchemaType>(() => JSON.parse(props.item.schema));
     const [register] = Register.use();
 
     const handleEdit = () => {
@@ -34,6 +43,10 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
 
         await register.execute();
         setIsEditMode(false);
+    };
+
+    const handleSchemaChange = (newSchema: JSONSchemaType) => {
+        setSchema(newSchema);
     };
 
     const menuItems = [
@@ -58,16 +71,13 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
             <div className="px-4 py-2">
                 <Menubar aria-label="Actions" model={menuItems} />
             </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-                <pre style={{
-                    background: 'var(--surface-ground)',
-                    padding: '1rem',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    lineHeight: '1.5'
-                }}>
-                    {JSON.stringify(schema, null, 2)}
-                </pre>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+                <JSONSchemaEditor
+                    schema={schema}
+                    eventTypeName={props.item.type}
+                    isEditMode={isEditMode}
+                    onChange={handleSchemaChange}
+                />
             </div>
         </div>
     );
