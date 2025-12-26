@@ -4,7 +4,7 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 
-namespace Cratis.Chronicle.Server.Authentication;
+namespace Cratis.Infrastructure.Security;
 
 /// <summary>
 /// Provides hashing helpers for secrets.

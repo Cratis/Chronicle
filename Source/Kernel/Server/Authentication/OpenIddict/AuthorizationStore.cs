@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
 using OpenIddict.Abstractions;
 
@@ -96,32 +97,37 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
     public ValueTask<TResult?> GetAsync<TState, TResult>(Func<IQueryable<Authorization>, TState, IQueryable<TResult>> query, TState state, CancellationToken cancellationToken) => throw new NotSupportedException("Queryable operations are not supported.");
 
     /// <inheritdoc/>
-    public ValueTask<string?> GetApplicationIdAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.ApplicationId);
+    public ValueTask<string?> GetApplicationIdAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.ApplicationId?.ToString());
 
     /// <inheritdoc/>
     public ValueTask<DateTimeOffset?> GetCreationDateAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.CreationDate);
 
     /// <inheritdoc/>
-    public ValueTask<string?> GetIdAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Id);
+    public ValueTask<string?> GetIdAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Id?.ToString());
 
     /// <inheritdoc/>
-    public ValueTask<ImmutableDictionary<string, JsonElement>> GetPropertiesAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Properties);
+    public ValueTask<ImmutableDictionary<string, JsonElement>> GetPropertiesAsync(Authorization authorization, CancellationToken cancellationToken) =>
+        new(authorization.Properties.ToImmutableDictionary(kv => kv.Key.Value, kv => kv.Value));
 
     /// <inheritdoc/>
-    public ValueTask<ImmutableArray<string>> GetScopesAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Scopes);
+    public ValueTask<ImmutableArray<string>> GetScopesAsync(Authorization authorization, CancellationToken cancellationToken) =>
+        new(authorization.Scopes.Select(s => s.Value).ToImmutableArray());
 
     /// <inheritdoc/>
-    public ValueTask<string?> GetStatusAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Status);
+    public ValueTask<string?> GetStatusAsync(Authorization authorization, CancellationToken cancellationToken) =>
+        new(authorization.Status?.Value);
 
     /// <inheritdoc/>
-    public ValueTask<string?> GetSubjectAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Subject);
+    public ValueTask<string?> GetSubjectAsync(Authorization authorization, CancellationToken cancellationToken) =>
+        new(authorization.Subject?.Value);
 
     /// <inheritdoc/>
-    public ValueTask<string?> GetTypeAsync(Authorization authorization, CancellationToken cancellationToken) => new(authorization.Type);
+    public ValueTask<string?> GetTypeAsync(Authorization authorization, CancellationToken cancellationToken) =>
+        new(authorization.Type?.Value);
 
     /// <inheritdoc/>
     public ValueTask<Authorization> InstantiateAsync(CancellationToken cancellationToken) => new(new Authorization(
-        Id: Guid.NewGuid().ToString(),
+        Id: Guid.NewGuid(),
         ApplicationId: string.Empty,
         Subject: string.Empty,
         Type: OpenIddictConstants.AuthorizationTypes.Permanent,
@@ -217,26 +223,34 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
     }
 
     /// <inheritdoc/>
-    public async ValueTask SetApplicationIdAsync(Authorization authorization, string? identifier, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { ApplicationId = identifier });
+    public async ValueTask SetApplicationIdAsync(Authorization authorization, string? identifier, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { ApplicationId = identifier ?? default! });
 
     /// <inheritdoc/>
-    public async ValueTask SetCreationDateAsync(Authorization authorization, DateTimeOffset? date, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { CreationDate = date });
+    public async ValueTask SetCreationDateAsync(Authorization authorization, DateTimeOffset? date, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { CreationDate = date });
 
     /// <inheritdoc/>
-    public async ValueTask SetPropertiesAsync(Authorization authorization, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { Properties = properties });
+    public async ValueTask SetPropertiesAsync(Authorization authorization, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { Properties = properties.ToImmutableDictionary(kv => (PropertyName)kv.Key, kv => kv.Value) });
 
     /// <inheritdoc/>
-    public async ValueTask SetScopesAsync(Authorization authorization, ImmutableArray<string> scopes, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { Scopes = scopes });
+    public async ValueTask SetScopesAsync(Authorization authorization, ImmutableArray<string> scopes, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { Scopes = scopes.Select(s => (Concepts.Security.Scope)s).ToImmutableArray() });
 
     /// <inheritdoc/>
-    public async ValueTask SetStatusAsync(Authorization authorization, string? status, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { Status = status });
+    public async ValueTask SetStatusAsync(Authorization authorization, string? status, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { Status = (status ?? default)! });
 
     /// <inheritdoc/>
-    public async ValueTask SetSubjectAsync(Authorization authorization, string? subject, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { Subject = subject });
+    public async ValueTask SetSubjectAsync(Authorization authorization, string? subject, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { Subject = subject ?? default! });
 
     /// <inheritdoc/>
-    public async ValueTask SetTypeAsync(Authorization authorization, string? type, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization with { Type = type });
+    public async ValueTask SetTypeAsync(Authorization authorization, string? type, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization with { Type = type ?? default! });
 
     /// <inheritdoc/>
-    public async ValueTask UpdateAsync(Authorization authorization, CancellationToken cancellationToken) => await authorizationStorage.Update(authorization);
+    public async ValueTask UpdateAsync(Authorization authorization, CancellationToken cancellationToken) =>
+        await authorizationStorage.Update(authorization);
 }

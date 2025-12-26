@@ -11,8 +11,8 @@ using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.Security;
 using Cratis.DependencyInjection;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -119,7 +119,11 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .AddCratisArc()
+    .AddCratisArc(options =>
+    {
+        options.GeneratedApis.RoutePrefix = "api";
+        options.GeneratedApis.SegmentsToSkipForRoute = 3;
+    })
    .AddCratisMongoDB(
        configureOptions: mongo =>
        {
@@ -139,7 +143,6 @@ builder.Host
         }))
    .ConfigureServices((context, services) =>
    {
-       services.AddCodeFirstGrpc();
        services.AddCodeFirstGrpcReflection();
 
        services
@@ -149,22 +152,9 @@ builder.Host
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
 
-       services.AddCodeFirstGrpc();
-
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
    });
-
-if (chronicleOptions.Authentication.Enabled)
-{
-    builder.Services.AddAuthorizationBuilder()
-
-        // Require authentication for all endpoints except those with [AllowAnonymous]
-        // This applies zero-trust security across all gRPC services and HTTP endpoints
-        .SetFallbackPolicy(new AuthorizationPolicyBuilder()
-            .RequireAuthenticatedUser()
-            .Build());
-}
 
 var app = builder.Build();
 
@@ -198,6 +188,13 @@ catch (Exception ex)
     Console.WriteLine($"Failed to log development certificate info: {ex.Message}");
 }
 
+#if DEVELOPMENT
+app.UseDeveloperExceptionPage();
+#endif
+
+app.UseCratisArc();
+app.UseRouting();
+
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
 if (chronicleOptions.Authentication.Enabled)
 {
@@ -206,30 +203,50 @@ if (chronicleOptions.Authentication.Enabled)
     app.UseAuthorization();
 }
 
-app.UseCratisArc();
-
 if (chronicleOptions.Features.Api)
 {
-    app.UseCratisChronicleApi();
+    // Configure API endpoints but without calling UseRouting again (already called above)
+    app.UseWebSockets();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        var resourceName = typeof(ApiApplicationBuilderExtensions).Namespace + ".SwaggerDark.css";
+        using var stream = typeof(ApiApplicationBuilderExtensions).Assembly.GetManifestResourceStream(resourceName);
+        if (stream is not null)
+        {
+            using var streamReader = new StreamReader(stream);
+            var styles = streamReader.ReadToEnd();
+            options.HeadContent = $"{options.HeadContent}<style>{styles}</style>";
+        }
+    });
 }
 
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+// Map Identity API endpoints for SPA authentication - MUST be before MapControllers
+if (chronicleOptions.Authentication.Enabled)
 {
-    app.UseDefaultFiles()
-        .UseStaticFiles();
-
-    app.MapFallbackToFile("index.html");
+    app.MapGroup("/identity")
+        .MapIdentityApi<ChronicleUser>()
+        .AllowAnonymous();
 }
 
-// Map controllers if OAuth Authority is enabled
-if (chronicleOptions.Features.OAuthAuthority)
+// Map controllers for API and OAuth
+if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
 {
     app.MapControllers();
 }
 
+app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+
+// Map workbench static files and fallback AFTER API endpoints to avoid conflicts
+if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.MapFallbackToFile("index.html");
+}
 
 #if DEVELOPMENT
 app.MapGet("/.well-known/chronicle/ca", (ILogger<Kernel> logger) =>

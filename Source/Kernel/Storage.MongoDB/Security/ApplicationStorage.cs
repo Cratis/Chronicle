@@ -1,8 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Reactive;
 using MongoDB.Driver;
+using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Security;
 
@@ -10,20 +14,26 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// MongoDB implementation of <see cref="IApplicationStorage"/>.
 /// </summary>
 /// <param name="database">MongoDB database.</param>
-public class ApplicationStorage(IMongoDatabase database) : IApplicationStorage
+public class ApplicationStorage(IDatabase database) : IApplicationStorage
 {
     const string CollectionName = WellKnownCollectionNames.Applications;
     readonly IMongoCollection<Application> _collection = database.GetCollection<Application>(CollectionName);
 
     /// <inheritdoc/>
-    public async Task<Application?> GetById(string id, CancellationToken cancellationToken = default)
+    public ISubject<IEnumerable<Application>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<Application>, IEnumerable<Application>>(
+            _collection.Observe(),
+            users => users);
+
+    /// <inheritdoc/>
+    public async Task<Application?> GetById(ApplicationId id, CancellationToken cancellationToken = default)
     {
         var cursor = await _collection.FindAsync(_ => _.Id == id, cancellationToken: cancellationToken);
         return await cursor.FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<Application?> GetByClientId(string clientId, CancellationToken cancellationToken = default)
+    public async Task<Application?> GetByClientId(ClientId clientId, CancellationToken cancellationToken = default)
     {
         var cursor = await _collection.FindAsync(_ => _.ClientId == clientId, cancellationToken: cancellationToken);
         return await cursor.FirstOrDefaultAsync(cancellationToken);
@@ -38,7 +48,7 @@ public class ApplicationStorage(IMongoDatabase database) : IApplicationStorage
         _collection.ReplaceOneAsync(_ => _.Id == application.Id, application, cancellationToken: cancellationToken);
 
     /// <inheritdoc/>
-    public Task Delete(string id, CancellationToken cancellationToken = default) =>
+    public Task Delete(ApplicationId id, CancellationToken cancellationToken = default) =>
         _collection.DeleteOneAsync(_ => _.Id == id, cancellationToken);
 
     /// <inheritdoc/>

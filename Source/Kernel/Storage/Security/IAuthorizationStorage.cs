@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Security;
+using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
+
 namespace Cratis.Chronicle.Storage.Security;
 
 /// <summary>
@@ -14,7 +17,7 @@ public interface IAuthorizationStorage
     /// <param name="id">The authorization's unique identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The authorization if found, null otherwise.</returns>
-    Task<Authorization?> GetById(string id, CancellationToken cancellationToken = default);
+    Task<Authorization?> GetById(AuthorizationId id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new authorization.
@@ -38,7 +41,7 @@ public interface IAuthorizationStorage
     /// <param name="id">The authorization's unique identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Awaitable task.</returns>
-    Task Delete(string id, CancellationToken cancellationToken = default);
+    Task Delete(AuthorizationId id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Counts the total number of authorizations.
@@ -62,7 +65,7 @@ public interface IAuthorizationStorage
     /// <param name="applicationId">The application ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching authorizations.</returns>
-    Task<IEnumerable<Authorization>> FindByApplicationId(string applicationId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Authorization>> FindByApplicationId(ApplicationId applicationId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds authorizations by subject.
@@ -70,7 +73,7 @@ public interface IAuthorizationStorage
     /// <param name="subject">The subject.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching authorizations.</returns>
-    Task<IEnumerable<Authorization>> FindBySubject(string subject, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Authorization>> FindBySubject(Subject subject, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds authorizations by application ID and subject.
@@ -79,7 +82,7 @@ public interface IAuthorizationStorage
     /// <param name="subject">The subject.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching authorizations.</returns>
-    Task<IEnumerable<Authorization>> FindByApplicationIdAndSubject(string applicationId, string subject, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Authorization>> FindByApplicationIdAndSubject(ApplicationId applicationId, Subject subject, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds authorizations by application ID, subject, and status.
@@ -89,7 +92,7 @@ public interface IAuthorizationStorage
     /// <param name="status">The status.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching authorizations.</returns>
-    Task<IEnumerable<Authorization>> FindByApplicationIdSubjectAndStatus(string applicationId, string subject, string status, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Authorization>> FindByApplicationIdSubjectAndStatus(ApplicationId applicationId, Subject subject, AuthorizationStatus status, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Prunes authorizations.

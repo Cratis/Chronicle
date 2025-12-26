@@ -21,25 +21,31 @@
         "noFallthroughCasesInSwitch": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "baseUrl": "./",
+        "baseUrl": ".",
         "paths": {
             "Api/*": [
-                "./Api/*"
+                "Api/*"
             ],
             "Shared/*": [
-                "./Shared/*"
+                "Shared/*"
+            ],
+            "Shared": [
+                "Shared/index"
             ],
             "State/*": [
-                "./State/*"
+                "State/*"
             ],
             "Components/*": [
-                "./Components/*"
+                "Components/*"
+            ],
+            "Components": [
+                "Components/index"
             ],
             "Layout/*": [
-                "./Layout/*"
+                "Layout/*"
             ],
             "Features/*": [
-                "./Features/*"
+                "Features/*"
             ],
             "Strings": [
                 "Strings"

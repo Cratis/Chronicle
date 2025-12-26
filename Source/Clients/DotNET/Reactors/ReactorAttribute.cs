@@ -8,9 +8,6 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Attribute used to adorn classes to tell Cratis that the class is an Reactor.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of <see cref="ReactorAttribute"/>.
-/// </remarks>
 /// <param name="id">Optional <see cref="Id"/> represented as string, if not used it will default to the fully qualified type name.</param>
 /// <param name="eventSequence">Optional the name of the event sequence to observe. Defaults to the event log.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

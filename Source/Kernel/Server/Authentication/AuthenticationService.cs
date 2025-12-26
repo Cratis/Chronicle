@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Infrastructure.Security;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 
@@ -51,15 +52,17 @@ public class AuthenticationService(
         var passwordHash = HashHelper.Hash(password);
         var now = DateTimeOffset.UtcNow;
 
-        var user = new ChronicleUser(
-            Id: Guid.NewGuid().ToString(),
-            Username: _options.Authentication.DefaultAdminUsername,
-            Email: null,
-            PasswordHash: passwordHash,
-            SecurityStamp: Guid.NewGuid().ToString(),
-            IsActive: true,
-            CreatedAt: now,
-            LastModifiedAt: null);
+        var user = new ChronicleUser
+        {
+            Id = Guid.NewGuid().ToString(),
+            Username = _options.Authentication.DefaultAdminUsername,
+            Email = null,
+            PasswordHash = passwordHash,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            IsActive = true,
+            CreatedAt = now,
+            LastModifiedAt = null
+        };
 
         await userStorage.Create(user);
     }
