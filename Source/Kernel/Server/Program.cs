@@ -160,17 +160,6 @@ builder.Host
        services.AddChronicleAuthentication(chronicleOptions);
    });
 
-if (chronicleOptions.Authentication.Enabled)
-{
-    builder.Services.AddAuthorizationBuilder()
-
-        // Require authentication for all endpoints except those with [AllowAnonymous]
-        // This applies zero-trust security across all gRPC services and HTTP endpoints
-        .SetFallbackPolicy(new AuthorizationPolicyBuilder()
-            .RequireAuthenticatedUser()
-            .Build());
-}
-
 var app = builder.Build();
 
 // Initialize default admin user if authentication is enabled
@@ -236,7 +225,7 @@ if (chronicleOptions.Features.Api)
     });
 }
 
-// Map Identity API endpoints for SPA authentication
+// Map Identity API endpoints for SPA authentication - MUST be before MapControllers
 if (chronicleOptions.Authentication.Enabled)
 {
     app.MapGroup("/identity")

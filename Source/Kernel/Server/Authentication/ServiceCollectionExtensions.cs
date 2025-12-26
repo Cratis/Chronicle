@@ -86,16 +86,19 @@ public static class ServiceCollectionExtensions
         {
             options.Cookie.Name = "Chronicle.Auth";
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SecurePolicy = chronicleOptions.Tls.Disable ? CookieSecurePolicy.None : CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;
         });
 
         services.AddAuthorizationBuilder()
-                .SetFallbackPolicy(new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build());
+
+            // Require authentication for all endpoints except those with [AllowAnonymous]
+            // This applies zero-trust security across all gRPC services and HTTP endpoints
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build());
 
         return services;
     }
