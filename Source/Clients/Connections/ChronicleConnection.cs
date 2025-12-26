@@ -18,6 +18,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Execution;
 using Cratis.Tasks;
@@ -193,6 +194,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
                 callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
+                callInvoker.CreateGrpcService<IUsers>(clientFactory),
+                callInvoker.CreateGrpcService<IApplications>(clientFactory),
                 callInvoker.CreateGrpcService<IServer>(clientFactory));
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));

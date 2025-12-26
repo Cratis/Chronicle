@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Security;
+using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
 namespace Cratis.Chronicle.Storage.Security;
 
@@ -14,55 +16,55 @@ public record Application
     /// <summary>
     /// Gets or sets the unique identifier for the application.
     /// </summary>
-    public string Id { get; set; } = string.Empty;
+    public ApplicationId Id { get; set; } = ApplicationId.NotSet;
 
     /// <summary>
     /// Gets or sets the client identifier.
     /// </summary>
-    public string ClientId { get; set; } = string.Empty;
+    public ClientId ClientId { get; set; } = new ClientId(string.Empty);
 
     /// <summary>
     /// Gets or sets the hashed client secret.
     /// </summary>
-    public string? ClientSecret { get; set; }
+    public ClientSecret? ClientSecret { get; set; }
 
     /// <summary>
     /// Gets or sets the display name of the application.
     /// </summary>
-    public string? DisplayName { get; set; }
+    public ApplicationDisplayName? DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets the client type (e.g., confidential, public).
     /// </summary>
-    public string? Type { get; set; }
+    public ApplicationType? Type { get; set; }
 
     /// <summary>
     /// Gets or sets the consent type (e.g., explicit, implicit).
     /// </summary>
-    public string? ConsentType { get; set; }
+    public ConsentType? ConsentType { get; set; }
 
     /// <summary>
     /// Gets or sets the permissions granted to the application.
     /// </summary>
-    public ImmutableArray<string> Permissions { get; set; } = [];
+    public ImmutableArray<Permission> Permissions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the requirements for the application.
     /// </summary>
-    public ImmutableArray<string> Requirements { get; set; } = [];
+    public ImmutableArray<Requirement> Requirements { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the redirect URIs.
     /// </summary>
-    public ImmutableArray<string> RedirectUris { get; set; } = [];
+    public ImmutableArray<RedirectUri> RedirectUris { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the post-logout redirect URIs.
     /// </summary>
-    public ImmutableArray<string> PostLogoutRedirectUris { get; set; } = [];
+    public ImmutableArray<RedirectUri> PostLogoutRedirectUris { get; set; } = [];
 
     /// <summary>
     /// Gets or sets additional properties.
     /// </summary>
-    public ImmutableDictionary<string, JsonElement> Properties { get; set; } = [];
+    public ImmutableDictionary<PropertyName, JsonElement> Properties { get; set; } = [];
 }

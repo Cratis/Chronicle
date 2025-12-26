@@ -75,14 +75,14 @@ public class InMemorySink(
         if (changeset.HasBeenRemoved())
         {
             collection.Remove(keyValue);
-            return Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
+            return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
 
-        return Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
+        return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>

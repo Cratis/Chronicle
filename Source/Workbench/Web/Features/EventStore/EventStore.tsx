@@ -24,6 +24,8 @@ import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
+import { Users } from './System/Users/Users';
+import { Applications } from './System/Applications/Applications';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -49,6 +51,13 @@ export const EventStore = () => {
                 // { label: strings.mainMenu.general.reactors, url: 'reactors', icon: gameIcons.GiReactor },
                 // { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
             ]
+        },
+        {
+            label: strings.mainMenu.system.groupLabel,
+            items: [
+                { label: strings.mainMenu.system.users, url: 'users', icon: mdIcons.MdVerifiedUser },
+                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity }
+            ]
         }
     ];
 
@@ -67,6 +76,8 @@ export const EventStore = () => {
                 <Route path={'reducers'} element={<Reducers />} />
                 <Route path={'reactors'} element={<Reactors />} />
                 <Route path={'sinks'} element={<Sinks />} />
+                <Route path={'users'} element={<Users />} />
+                <Route path={'applications'} element={<Applications />} />
 
                 <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'} />} />

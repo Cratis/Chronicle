@@ -2,7 +2,9 @@
     "general": {
         "buttons": {
             "ok": "OK",
-            "cancel": "Cancel"
+            "cancel": "Cancel",
+            "yes": "Yes",
+            "no": "No"
         }
     },
     "layout": {
@@ -41,6 +43,11 @@
             "reducers": "Reducers",
             "reactors": "Reactors",
             "sinks": "Sinks"
+        },
+        "system": {
+            "groupLabel": "System",
+            "users": "Users",
+            "applications": "Applications"
         }
     },
     "eventStore": {
@@ -217,6 +224,88 @@
                     "subject": "Subject",
                     "name": "Name",
                     "userName": "UserName"
+                }
+            }
+        },
+        "system": {
+            "users": {
+                "title": "Users",
+                "empty": "No users found",
+                "actions": {
+                    "add": "Add User",
+                    "changePassword": "Change Password",
+                    "remove": "Remove User"
+                },
+                "columns": {
+                    "id": "ID",
+                    "username": "Username",
+                    "email": "Email",
+                    "active": "Active",
+                    "created": "Created",
+                    "lastModified": "Last Modified",
+                    "yes": "Yes",
+                    "no": "No"
+                },
+                "dialogs": {
+                    "addUser": {
+                        "title": "Add User",
+                        "username": "Username",
+                        "email": "Email (optional)",
+                        "password": "Password",
+                        "generatePassword": "Generate password",
+                        "showPassword": "Show password",
+                        "hidePassword": "Hide password"
+                    },
+                    "changePassword": {
+                        "title": "Change Password",
+                        "password": "New Password",
+                        "generatePassword": "Generate password",
+                        "showPassword": "Show password",
+                        "hidePassword": "Hide password"
+                    },
+                    "removeUser": {
+                        "title": "Remove User",
+                        "message": "Are you sure you want to remove user '{username}'? This action cannot be undone."
+                    }
+                }
+            },
+            "applications": {
+                "title": "Applications",
+                "empty": "No applications found",
+                "actions": {
+                    "add": "Add Application",
+                    "changeSecret": "Change Secret",
+                    "remove": "Remove Application"
+                },
+                "columns": {
+                    "id": "ID",
+                    "clientId": "Client ID",
+                    "active": "Active",
+                    "created": "Created",
+                    "lastModified": "Last Modified",
+                    "yes": "Yes",
+                    "no": "No"
+                },
+                "dialogs": {
+                    "addApplication": {
+                        "title": "Add Application",
+                        "clientId": "Client ID",
+                        "clientSecret": "Client Secret",
+                        "generateSecret": "Generate secret",
+                        "showSecret": "Show secret",
+                        "hideSecret": "Hide secret"
+                    },
+                    "changeSecret": {
+                        "title": "Change Secret",
+                        "clientSecret": "New Client Secret",
+                        "generateSecret": "Generate secret",
+                        "showSecret": "Show secret",
+                        "hideSecret": "Hide secret"
+                    },
+                    "removeApplication": {
+                        "title": "Remove Application",
+                        "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
+                    }
                 }
             }
         }

@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Reactive;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Security;
@@ -16,9 +19,17 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 public class UserStorage(IDatabase database) : IUserStorage
 {
     const string CollectionName = WellKnownCollectionNames.Users;
+    static readonly Collation _collation = new("en", caseLevel: false, strength: CollationStrength.Primary);
+    static readonly FindOptions<ChronicleUser> _findOptions = new() { Collation = _collation };
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> GetById(string id)
+    public ISubject<IEnumerable<ChronicleUser>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<ChronicleUser>, IEnumerable<ChronicleUser>>(
+            GetCollection().Observe(),
+            users => users);
+
+    /// <inheritdoc/>
+    public async Task<ChronicleUser?> GetById(UserId id)
     {
         var collection = GetCollection();
         using var cursor = await collection.FindAsync(u => u.Id == id);
@@ -26,15 +37,15 @@ public class UserStorage(IDatabase database) : IUserStorage
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> GetByUsername(string username)
+    public async Task<ChronicleUser?> GetByUsername(Username username)
     {
         var collection = GetCollection();
-        using var cursor = await collection.FindAsync(u => u.Username == username);
+        using var cursor = await collection.FindAsync(u => u.Username == username, _findOptions);
         return await cursor.FirstOrDefaultAsync();
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> GetByEmail(string email)
+    public async Task<ChronicleUser?> GetByEmail(UserEmail email)
     {
         if (string.IsNullOrEmpty(email))
         {
@@ -42,7 +53,7 @@ public class UserStorage(IDatabase database) : IUserStorage
         }
 
         var collection = GetCollection();
-        using var cursor = await collection.FindAsync(u => u.Email == email);
+        using var cursor = await collection.FindAsync(u => u.Email == email, _findOptions);
         return await cursor.FirstOrDefaultAsync();
     }
 
@@ -64,7 +75,7 @@ public class UserStorage(IDatabase database) : IUserStorage
     }
 
     /// <inheritdoc/>
-    public async Task Delete(string id)
+    public async Task Delete(UserId id)
     {
         var collection = GetCollection();
         await collection.DeleteOneAsync(u => u.Id == id);

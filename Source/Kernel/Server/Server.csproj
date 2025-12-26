@@ -42,6 +42,7 @@
     <ItemGroup>
         <ProjectReference Include="../../Clients/Api/Api.csproj" />
         <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Compliance/Compliance.csproj" />
         <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Projections/Projections.csproj" />

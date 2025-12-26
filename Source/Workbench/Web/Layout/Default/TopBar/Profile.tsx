@@ -8,6 +8,7 @@ import css from './Profile.module.css';
 import { Button } from 'primereact/button';
 import { useDarkMode } from 'usehooks-ts';
 import strings from 'Strings';
+import { useAuth } from '../../../Features/Security/AuthContext';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onClick?: () => void }) => {
@@ -21,7 +22,13 @@ const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onCli
 
 export const Profile = () => {
     const { isDarkMode, toggle: toggleDarkMode } = useDarkMode();
+    const { logout } = useAuth();
     const overlayPanelRef = useRef<OverlayPanel>(null);
+
+    const handleLogout = async () => {
+        overlayPanelRef.current?.hide();
+        await logout();
+    };
 
     return (
         <div className='flex-1'>
@@ -42,6 +49,7 @@ export const Profile = () => {
                         {isDarkMode ?
                             <ProfileItem icon={<icons.FaSun />} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode} /> :
                             <ProfileItem icon={<icons.FaMoon />} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode} />}
+                        <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />
                     </ul>
                 </OverlayPanel>
             </div>

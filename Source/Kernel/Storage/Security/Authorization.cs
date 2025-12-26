@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Security;
+using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
 namespace Cratis.Chronicle.Storage.Security;
 
@@ -18,11 +20,11 @@ namespace Cratis.Chronicle.Storage.Security;
 /// <param name="CreationDate">When the authorization was created.</param>
 /// <param name="Properties">Additional properties.</param>
 public record Authorization(
-    string Id,
-    string? ApplicationId,
-    string? Subject,
-    string? Type,
-    string? Status,
-    ImmutableArray<string> Scopes,
+    AuthorizationId Id,
+    ApplicationId? ApplicationId,
+    Subject? Subject,
+    AuthorizationType? Type,
+    AuthorizationStatus? Status,
+    ImmutableArray<Concepts.Security.Scope> Scopes,
     DateTimeOffset? CreationDate,
-    ImmutableDictionary<string, JsonElement> Properties);
+    ImmutableDictionary<PropertyName, JsonElement> Properties);

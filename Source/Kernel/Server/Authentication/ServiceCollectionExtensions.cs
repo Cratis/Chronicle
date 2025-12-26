@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -32,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
         services.AddSingleton<IUserStore<ChronicleUser>, ChronicleUserStore>();
+        services.AddSingleton<IPasswordHasher<ChronicleUser>, ChroniclePasswordHasher>();
 
         // Add ASP.NET Identity
         services.AddIdentityCore<ChronicleUser>(options =>
@@ -45,17 +47,34 @@ public static class ServiceCollectionExtensions
             })
             .AddUserStore<ChronicleUserStore>()
             .AddSignInManager()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddApiEndpoints();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
         services.AddOpenIddictIfEnabled(chronicleOptions);
 
         var usingExternalAuthority = !string.IsNullOrEmpty(chronicleOptions.Authentication.Authority) && !chronicleOptions.Authentication.UseInternalAuthority;
+        var bearerScheme = usingExternalAuthority ? JwtBearerDefaults.AuthenticationScheme : OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
 
+        // Use a policy scheme that tries cookie first, then bearer token
         var authBuilder = services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme = usingExternalAuthority ? JwtBearerDefaults.AuthenticationScheme : OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = usingExternalAuthority ? JwtBearerDefaults.AuthenticationScheme : OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+            options.DefaultScheme = "MultiScheme";
+            options.DefaultChallengeScheme = bearerScheme;
+        })
+        .AddPolicyScheme("MultiScheme", "Cookie or Bearer", options =>
+        {
+            options.ForwardDefaultSelector = context =>
+            {
+                // If there's a cookie, use cookie authentication
+                if (context.Request.Cookies.ContainsKey("Chronicle.Auth"))
+                {
+                    return IdentityConstants.ApplicationScheme;
+                }
+
+                // Otherwise use bearer token authentication
+                return bearerScheme;
+            };
         });
 
         if (usingExternalAuthority)
@@ -63,10 +82,27 @@ public static class ServiceCollectionExtensions
             authBuilder.AddJwtBearer();
         }
 
+        // Add cookie authentication for Identity API endpoints
+        authBuilder.AddCookie(IdentityConstants.ApplicationScheme, options =>
+        {
+            options.Cookie.Name = "Chronicle.Auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = chronicleOptions.Tls.Disable ? CookieSecurePolicy.None : CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.ExpireTimeSpan = TimeSpan.FromDays(14);
+            options.SlidingExpiration = true;
+        });
+
+        // Add claims transformation to include Chronicle-specific claims
+        services.AddScoped<IClaimsTransformation, ChronicleClaimsTransformation>();
+
         services.AddAuthorizationBuilder()
-                .SetFallbackPolicy(new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build());
+
+            // Require authentication for all endpoints except those with [AllowAnonymous]
+            // This applies zero-trust security across all gRPC services and HTTP endpoints
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build());
 
         return services;
     }
