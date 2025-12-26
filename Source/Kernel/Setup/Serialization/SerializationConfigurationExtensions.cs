@@ -22,6 +22,29 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// </summary>
 public static class SerializationConfigurationExtensions
 {
+    static readonly IEnumerable<JsonConverter> _converters = [
+        new EnumConverterFactory(),
+        new EnumerableConceptAsJsonConverterFactory(),
+        new ConceptAsJsonConverterFactory(),
+        new DateOnlyJsonConverter(),
+        new TimeOnlyJsonConverter(),
+        new TypeJsonConverter(),
+        new UriJsonConverter(),
+        new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+        new KeyJsonConverter(),
+        new PropertyPathJsonConverter(),
+        new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
+        new PropertyExpressionDictionaryConverter(),
+        new FromDefinitionsConverter(),
+        new JoinDefinitionsConverter(),
+        new RemovedWithDefinitionsConverter(),
+        new RemovedWithJoinDefinitionsConverter(),
+        new JobStateConverter(),
+        new JsonSchemaConverter(),
+        new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>(),
+        new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>()
+    ];
+
     /// <summary>
     /// Configure serialization for Orleans.
     /// </summary>
@@ -74,36 +97,22 @@ public static class SerializationConfigurationExtensions
         var options = new JsonSerializerOptions
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            Converters =
-            {
-                new EnumConverterFactory(),
-                new EnumerableConceptAsJsonConverterFactory(),
-                new ConceptAsJsonConverterFactory(),
-                new DateOnlyJsonConverter(),
-                new TimeOnlyJsonConverter(),
-                new TypeJsonConverter(),
-                new UriJsonConverter(),
-                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
-                new KeyJsonConverter(),
-                new PropertyPathJsonConverter(),
-                new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
-                new PropertyExpressionDictionaryConverter(),
-                new FromDefinitionsConverter(),
-                new JoinDefinitionsConverter(),
-                new RemovedWithDefinitionsConverter(),
-                new RemovedWithJoinDefinitionsConverter(),
-                new JobStateConverter(),
-                new JsonSchemaConverter(),
-                new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>(),
-                new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>()
-            }
         };
-        services.AddSingleton(options);
+        ApplyConverters(options);
+
         services.AddConceptSerializer();
         services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
             _ => _ == typeof(JsonObject) || _ == typeof(JsonSchema) || (_.Namespace?.StartsWith("Cratis") ?? false),
             options));
+    }
+
+    static void ApplyConverters(JsonSerializerOptions options)
+    {
+        foreach (var converter in _converters)
+        {
+            options.Converters.Add(converter);
+        }
     }
 }
