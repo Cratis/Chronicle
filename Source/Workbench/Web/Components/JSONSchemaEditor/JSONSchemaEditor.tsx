@@ -268,7 +268,21 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
     };
 
     const nameEditor = useCallback((rowData: SchemaProperty) => {
-        if (!isEditMode) return rowData.name;
+        if (!isEditMode) {
+            const isNavigable = rowData.type === 'object' || (rowData.type === 'array' && rowData.items?.type === 'object');
+            const tooltipText = rowData.type === 'object' 
+                ? 'Navigate to object properties' 
+                : 'Navigate to item definition';
+            
+            return (
+                <span 
+                    data-pr-tooltip={isNavigable ? tooltipText : undefined}
+                    data-pr-position="top"
+                >
+                    {rowData.name}
+                </span>
+            );
+        }
         return (
             <InputText
                 value={rowData.name}
@@ -297,8 +311,8 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 const itemType = rowData.items?.type || 'string';
                 const isNavigable = itemType === 'object';
                 return (
-                    <div 
-                        className="flex align-items-center gap-2 w-full" 
+                    <div
+                        className="flex align-items-center gap-2 w-full"
                         style={{ height: '100%' }}
                         data-pr-tooltip={isNavigable ? 'Navigate to item definition' : undefined}
                         data-pr-position="top"
@@ -316,8 +330,8 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 );
             } else if (rowData.type === 'object') {
                 return (
-                    <div 
-                        className="flex align-items-center gap-2 w-full" 
+                    <div
+                        className="flex align-items-center gap-2 w-full"
                         style={{ height: '100%' }}
                         data-pr-tooltip="Navigate to object properties"
                         data-pr-position="top"
