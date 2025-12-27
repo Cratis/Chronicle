@@ -37,6 +37,8 @@ export const TypeCell = ({
     onNavigateToArrayItems,
     onRemoveProperty
 }: TypeCellProps) => {
+    const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
     const allTypeOptions = [
         ...JSON_TYPES,
         ...typeFormats.map(tf => ({ label: tf.label, value: `format:${tf.value}` }))
@@ -58,7 +60,7 @@ export const TypeCell = ({
                     data-pr-tooltip={isNavigable ? strings.components.schemaEditor.tooltips.navigateToItemDefinition : undefined}
                     data-pr-position="top"
                 >
-                    <span>Array of {itemType}</span>
+                    <span>Array of {capitalize(itemType)}</span>
                     {isNavigable && (
                         <>
                             <div style={{ flex: 1 }} />
@@ -88,7 +90,7 @@ export const TypeCell = ({
             const formatLabel = typeFormats.find(tf => tf.value === rowData.format)?.label || rowData.format;
             return formatLabel;
         }
-        return rowData.type;
+        return capitalize(rowData.type);
     }
 
     return (
