@@ -337,24 +337,20 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                             updateProperty(rowData.name, 'format', format);
                         } else {
                             updateProperty(rowData.name, 'type', value);
-                            if (value === 'array') {
-                                // Initialize items type
-                                updateArrayItemType(rowData.name, 'string');
-                            }
                         }
                     }}
                     className="flex-1"
                 />
-                {rowData.type === 'array' && (
+                {rowData.type === 'array' && rowData.items && (
                     <>
                         <span style={{ whiteSpace: 'nowrap' }}>of</span>
                         <Dropdown
-                            value={rowData.items?.type || 'string'}
+                            value={rowData.items.type || 'string'}
                             options={JSON_TYPES}
                             onChange={(e) => updateArrayItemType(rowData.name, e.value)}
                             className="flex-1"
                         />
-                        {rowData.items?.type === 'object' && (
+                        {rowData.items.type === 'object' && (
                             <Button
                                 icon={<faIcons.FaArrowRight />}
                                 className="p-button-text p-button-sm"
@@ -432,7 +428,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
 
             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                 <DataTable
-                    key={`${isEditMode}`}
+                    key={`${isEditMode}-${properties.length}-${properties.map(p => `${p.name}-${p.type}-${p.items?.type || ''}`).join('-')}`}
                     value={properties}
                     dataKey="name"
                     emptyMessage="No properties defined"
