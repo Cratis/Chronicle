@@ -267,7 +267,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
     };
 
     const nameEditor = useCallback((rowData: SchemaProperty) => {
-        if (!isEditMode) return <div style={{ minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{rowData.name}</div>;
+        if (!isEditMode) return rowData.name;
         return (
             <InputText
                 value={rowData.name}
@@ -295,7 +295,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             if (rowData.type === 'array') {
                 const itemType = rowData.items?.type || 'string';
                 return (
-                    <div className="flex align-items-center gap-2 w-full" style={{ minHeight: '2.5rem' }}>
+                    <div className="flex align-items-center gap-2 w-full" style={{ height: '100%' }}>
                         <span>Array of {itemType}</span>
                         {itemType === 'object' && (
                             <>
@@ -306,6 +306,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                                     onClick={() => navigateToArrayItems(rowData.name)}
                                     tooltip="Navigate to item definition"
                                     tooltipOptions={{ position: 'top' }}
+                                    style={{ height: '2rem' }}
                                 />
                             </>
                         )}
@@ -313,7 +314,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 );
             } else if (rowData.type === 'object') {
                 return (
-                    <div className="flex align-items-center gap-2 w-full" style={{ minHeight: '2.5rem' }}>
+                    <div className="flex align-items-center gap-2 w-full" style={{ height: '100%' }}>
                         <span>Object</span>
                         <div style={{ flex: 1 }} />
                         <Button
@@ -322,14 +323,15 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                             onClick={() => navigateToProperty(rowData.name)}
                             tooltip="Navigate to object properties"
                             tooltipOptions={{ position: 'top' }}
+                            style={{ height: '2rem' }}
                         />
                     </div>
                 );
             } else if (rowData.format) {
                 const formatLabel = typeFormats.find(tf => tf.value === rowData.format)?.label || rowData.format;
-                return <div style={{ minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{formatLabel}</div>;
+                return formatLabel;
             }
-            return <div style={{ minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{rowData.type}</div>;
+            return rowData.type;
         }
 
         // Edit mode
@@ -445,7 +447,8 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                     emptyMessage="No properties defined"
                     pt={{
                         root: { style: { border: 'none' } },
-                        tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
+                        tbody: { style: { borderTop: '1px solid var(--surface-border)' } },
+                        bodyCell: { style: { height: '3rem', padding: '0 0.75rem', verticalAlign: 'middle' } }
                     }}
                 >
                     <Column
