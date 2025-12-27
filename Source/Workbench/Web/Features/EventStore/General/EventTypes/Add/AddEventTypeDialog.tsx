@@ -30,7 +30,7 @@ export const AddEventTypeDialog = () => {
 
     return (
         <Dialog
-            header={strings.eventStore.general.types.dialogs.addEventType.title}
+            header={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
             visible={true}
             style={{ width: '450px' }}
             modal
@@ -42,7 +42,7 @@ export const AddEventTypeDialog = () => {
                         <i className="pi pi-code"></i>
                     </span>
                     <InputText
-                        placeholder={strings.eventStore.general.types.dialogs.addEventType.name}
+                        placeholder={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
                         value={name}
                         onChange={e => setName(e.target.value)}
                     />

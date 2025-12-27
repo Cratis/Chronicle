@@ -26,21 +26,21 @@ const renderTombstone = () => {
 const renderSource = (eventType: EventTypeRegistration) => {
     switch (eventType.source) {
         case EventTypeSource.code:
-            return strings.eventStore.general.types.sources.code;
+            return strings.eventStore.general.eventTypes.sources.code;
         case EventTypeSource.user:
-            return strings.eventStore.general.types.sources.user;
+            return strings.eventStore.general.eventTypes.sources.user;
     }
-    return strings.eventStore.general.types.sources.unknown;
+    return strings.eventStore.general.eventTypes.sources.unknown;
 };
 
 const renderOwner = (eventType: EventTypeRegistration) => {
     switch (eventType.owner) {
         case EventTypeOwner.client:
-            return strings.eventStore.general.types.owners.client;
+            return strings.eventStore.general.eventTypes.owners.client;
         case EventTypeOwner.server:
-            return strings.eventStore.general.types.owners.server;
+            return strings.eventStore.general.eventTypes.owners.server;
     }
-    return strings.eventStore.general.types.owners.unknown;
+    return strings.eventStore.general.eventTypes.owners.unknown;
 }
 
 export const EventTypes = () => {
@@ -54,44 +54,44 @@ export const EventTypes = () => {
     return (
         <>
             <DataPage
-                title={strings.eventStore.general.types.title}
+                title={strings.eventStore.general.eventTypes.title}
                 query={AllEventTypesWithSchemas}
                 queryArguments={queryArgs}
                 dataKey='type.id'
                 defaultFilters={defaultFilters}
                 globalFilterFields={['tombstone']}
-                emptyMessage={strings.eventStore.general.types.empty}
+                emptyMessage={strings.eventStore.general.eventTypes.empty}
                 detailsComponent={TypeDetails}>
 
                 <DataPage.MenuItems>
                     <MenuItem
                         id='create'
-                        label={strings.eventStore.general.types.actions.create}
+                        label={strings.eventStore.general.eventTypes.actions.create}
                         icon={faIcons.FaPlus}
                         command={() => showAddEventType()} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
 
-                    <Column field='type.id' header={strings.eventStore.general.types.columns.name} />
+                    <Column field='type.id' header={strings.eventStore.general.eventTypes.columns.name} />
                     <Column
                         field='owner'
                         style={{ width: '100px' }}
-                        header={strings.eventStore.general.types.columns.owner}
+                        header={strings.eventStore.general.eventTypes.columns.owner}
                         body={renderOwner} />
                     <Column
                         field='source'
                         style={{ width: '100px' }}
-                        header={strings.eventStore.general.types.columns.source}
+                        header={strings.eventStore.general.eventTypes.columns.source}
                         body={renderSource} />
                     <Column
                         field='type.generation'
                         style={{ width: '100px' }}
-                        header={strings.eventStore.general.types.columns.generation} />
+                        header={strings.eventStore.general.eventTypes.columns.generation} />
                     <Column
                         field='tombstone'
                         style={{ width: '100px' }}
-                        header={strings.eventStore.general.types.columns.tombstone}
+                        header={strings.eventStore.general.eventTypes.columns.tombstone}
                         body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>

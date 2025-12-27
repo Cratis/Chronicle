@@ -35,8 +35,8 @@
         "identities": "Identities",
         "general": {
             "groupLabel": "General",
-            "types": "Types",
-            "readModels": "Read Models",
+            "types": "Event Types",
+            "readModels": "Read Model Types",
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
@@ -52,8 +52,8 @@
     },
     "eventStore": {
         "general": {
-            "types": {
-                "title": "Types",
+            "eventTypes": {
+                "title": "Event Types",
                 "empty": "No types found",
                 "cannotEditReason": "Defined by code",
                 "actions": {

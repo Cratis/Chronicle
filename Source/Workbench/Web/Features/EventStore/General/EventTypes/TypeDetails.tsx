@@ -37,7 +37,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
     };
 
     const canEdit = props.item.source !== EventTypeSource.code;
-    const canEditReason = !canEdit ? strings.eventStore.general.types.cannotEditReason : undefined;
+    const canEditReason = !canEdit ? strings.eventStore.general.eventTypes.cannotEditReason : undefined;
 
     return (
         <div className="type-details" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
