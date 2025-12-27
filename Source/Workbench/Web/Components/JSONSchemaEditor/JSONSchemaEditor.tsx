@@ -58,7 +58,12 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
     const [properties, setProperties] = useState<SchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<{ label: string, value: string }[]>([]);
     const [currentSchema, setCurrentSchema] = useState<JSONSchemaType>(schema);
-
+    // Reset to root when exiting edit mode
+    useEffect(() => {
+        if (!isEditMode) {
+            setCurrentPath([]);
+        }
+    }, [isEditMode]);
     const typeFormatsQuery = useQuery(AllTypeFormats);
 
     useEffect(() => {
@@ -262,7 +267,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
     };
 
     const nameEditor = useCallback((rowData: SchemaProperty) => {
-        if (!isEditMode) return <span>{rowData.name}</span>;
+        if (!isEditMode) return <div style={{ minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{rowData.name}</div>;
         return (
             <InputText
                 value={rowData.name}
@@ -290,23 +295,27 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             if (rowData.type === 'array') {
                 const itemType = rowData.items?.type || 'string';
                 return (
-                    <div className="flex align-items-center gap-2" style={{ minHeight: '2.5rem' }}>
+                    <div className="flex align-items-center gap-2 w-full" style={{ minHeight: '2.5rem' }}>
                         <span>Array of {itemType}</span>
                         {itemType === 'object' && (
-                            <Button
-                                icon={<faIcons.FaArrowRight />}
-                                className="p-button-text p-button-sm"
-                                onClick={() => navigateToArrayItems(rowData.name)}
-                                tooltip="Navigate to item definition"
-                                tooltipOptions={{ position: 'top' }}
-                            />
+                            <>
+                                <div style={{ flex: 1 }} />
+                                <Button
+                                    icon={<faIcons.FaArrowRight />}
+                                    className="p-button-text p-button-sm"
+                                    onClick={() => navigateToArrayItems(rowData.name)}
+                                    tooltip="Navigate to item definition"
+                                    tooltipOptions={{ position: 'top' }}
+                                />
+                            </>
                         )}
                     </div>
                 );
             } else if (rowData.type === 'object') {
                 return (
-                    <div className="flex align-items-center gap-2" style={{ minHeight: '2.5rem' }}>
+                    <div className="flex align-items-center gap-2 w-full" style={{ minHeight: '2.5rem' }}>
                         <span>Object</span>
+                        <div style={{ flex: 1 }} />
                         <Button
                             icon={<faIcons.FaArrowRight />}
                             className="p-button-text p-button-sm"
@@ -350,33 +359,35 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                             onChange={(e) => updateArrayItemType(rowData.name, e.value)}
                             className="flex-1"
                         />
-                        {rowData.items.type === 'object' && (
-                            <Button
-                                icon={<faIcons.FaArrowRight />}
-                                className="p-button-text p-button-sm"
-                                onClick={() => navigateToArrayItems(rowData.name)}
-                                tooltip="Navigate to item definition"
-                                tooltipOptions={{ position: 'top' }}
-                            />
-                        )}
                     </>
                 )}
-                {rowData.type === 'object' && (
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {rowData.type === 'array' && rowData.items?.type === 'object' && (
+                        <Button
+                            icon={<faIcons.FaArrowRight />}
+                            className="p-button-text p-button-sm"
+                            onClick={() => navigateToArrayItems(rowData.name)}
+                            tooltip="Navigate to item definition"
+                            tooltipOptions={{ position: 'top' }}
+                        />
+                    )}
+                    {rowData.type === 'object' && (
+                        <Button
+                            icon={<faIcons.FaArrowRight />}
+                            className="p-button-text p-button-sm"
+                            onClick={() => navigateToProperty(rowData.name)}
+                            tooltip="Navigate to object properties"
+                            tooltipOptions={{ position: 'top' }}
+                        />
+                    )}
                     <Button
-                        icon={<faIcons.FaArrowRight />}
-                        className="p-button-text p-button-sm"
-                        onClick={() => navigateToProperty(rowData.name)}
-                        tooltip="Navigate to object properties"
+                        icon={<faIcons.FaTrash />}
+                        className="p-button-text p-button-danger p-button-sm"
+                        onClick={() => removeProperty(rowData.name)}
+                        tooltip="Delete property"
                         tooltipOptions={{ position: 'top' }}
                     />
-                )}
-                <Button
-                    icon={<faIcons.FaTrash />}
-                    className="p-button-text p-button-danger p-button-sm"
-                    onClick={() => removeProperty(rowData.name)}
-                    tooltip="Delete property"
-                    tooltipOptions={{ position: 'top' }}
-                />
+                </div>
             </div>
         );
     }, [isEditMode, updateProperty, updateArrayItemType, navigateToProperty, navigateToArrayItems, removeProperty, typeFormats]);
