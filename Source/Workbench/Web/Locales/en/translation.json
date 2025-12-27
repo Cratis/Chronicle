@@ -55,6 +55,7 @@
             "types": {
                 "title": "Types",
                 "empty": "No types found",
+                "cannotEditReason": "Defined by code",
                 "actions": {
                     "create": "Create"
                 },

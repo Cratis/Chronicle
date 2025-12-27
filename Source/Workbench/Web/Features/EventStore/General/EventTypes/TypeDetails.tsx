@@ -4,10 +4,11 @@
 import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from 'Components';
 import { SchemaEditor, JSONSchemaType } from 'Components';
-import { EventTypeRegistration } from 'Api/Events';
+import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import strings from 'Strings';
 
 export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>) => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -35,11 +36,16 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
         setSchema(newSchema);
     };
 
+    const canEdit = props.item.source !== EventTypeSource.code;
+    const canEditReason = !canEdit ? strings.eventStore.general.types.cannotEditReason : undefined;
+
     return (
         <div className="type-details" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <SchemaEditor
                 schema={schema}
                 eventTypeName={props.item.type.id}
+                canEdit={canEdit}
+                canEditReason={canEditReason}
                 onChange={handleSchemaChange}
                 onSave={handleSave}
             />

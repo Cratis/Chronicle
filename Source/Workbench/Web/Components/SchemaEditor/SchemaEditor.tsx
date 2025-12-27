@@ -18,12 +18,14 @@ import css from './SchemaEditor.module.css';
 export interface SchemaEditorProps {
     schema: JSONSchemaType;
     eventTypeName: string;
+    canEdit?: boolean;
+    canEditReason?: string;
     onChange?: (schema: JSONSchemaType) => void;
     onSave?: () => void;
     onCancel?: () => void;
 }
 
-export const SchemaEditor = ({ schema, eventTypeName, onChange, onSave, onCancel }: SchemaEditorProps) => {
+export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canEditReason, onChange, onSave, onCancel }: SchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
     const [properties, setProperties] = useState<SchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<TypeFormat[]>([]);
@@ -270,7 +272,9 @@ export const SchemaEditor = ({ schema, eventTypeName, onChange, onSave, onCancel
         ...(!isEditMode ? [{
             label: strings.components.schemaEditor.actions.edit,
             icon: <faIcons.FaPencil className='mr-2' />,
-            command: handleEdit
+            command: handleEdit,
+            disabled: !canEdit,
+            tooltip: canEditReason
         }] : []),
         ...(isEditMode ? [{
             label: strings.components.schemaEditor.actions.save,
@@ -285,7 +289,7 @@ export const SchemaEditor = ({ schema, eventTypeName, onChange, onSave, onCancel
             icon: <faIcons.FaPlus className='mr-2' />,
             command: addProperty
         }] : [])
-    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty]);
+    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canEditReason]);
 
     const breadcrumbItems = getBreadcrumbItems();
     const isAtRoot = currentPath.length === 0;
