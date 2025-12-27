@@ -42,8 +42,8 @@ export const EventStore = () => {
         {
             label: strings.mainMenu.general.groupLabel,
             items: [
-                { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
-                { label: strings.mainMenu.general.readModels, url: 'read-models', icon: mdIcons.MdStorage },
+                { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
+                { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdStorage },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
@@ -68,8 +68,8 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
-                <Route path={'types'} element={<EventTypes />} />
-                <Route path={'read-models'} element={<ReadModels />} />
+                <Route path={'event-types'} element={<EventTypes />} />
+                <Route path={'read-model-types'} element={<ReadModels />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />

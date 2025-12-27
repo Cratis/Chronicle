@@ -35,8 +35,8 @@
         "identities": "Identities",
         "general": {
             "groupLabel": "General",
-            "types": "Event Types",
-            "readModels": "Read Model Types",
+            "eventTypes": "Event Types",
+            "readModelTypes": "Read Model Types",
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
@@ -101,7 +101,7 @@
                 }
             },
             "readModels": {
-                "title": "Read Models",
+                "title": "Read Model Types",
                 "empty": "No read models found",
                 "actions": {
                     "create": "Create",
