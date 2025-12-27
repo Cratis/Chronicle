@@ -296,9 +296,13 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             if (rowData.type === 'array') {
                 const itemType = rowData.items?.type || 'string';
                 const isNavigable = itemType === 'object';
-                const tooltipText = isNavigable ? 'Navigate to item definition' : '';
                 return (
-                    <div className="flex align-items-center gap-2 w-full navigable-type-cell" style={{ height: '100%' }} data-pr-tooltip={tooltipText}>
+                    <div 
+                        className="flex align-items-center gap-2 w-full" 
+                        style={{ height: '100%' }}
+                        data-pr-tooltip={isNavigable ? 'Navigate to item definition' : undefined}
+                        data-pr-position="top"
+                    >
                         <span>Array of {itemType}</span>
                         {isNavigable && (
                             <>
@@ -312,7 +316,12 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 );
             } else if (rowData.type === 'object') {
                 return (
-                    <div className="flex align-items-center gap-2 w-full navigable-type-cell" style={{ height: '100%' }} data-pr-tooltip="Navigate to object properties">
+                    <div 
+                        className="flex align-items-center gap-2 w-full" 
+                        style={{ height: '100%' }}
+                        data-pr-tooltip="Navigate to object properties"
+                        data-pr-position="top"
+                    >
                         <span>Object</span>
                         <div style={{ flex: 1 }} />
                         <span style={{ display: 'flex', alignItems: 'center' }}>
@@ -443,7 +452,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             </div>
 
             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-                <Tooltip target=".navigable-type-cell[data-pr-tooltip]" position="top" />
+                <Tooltip target="[data-pr-tooltip]" mouseTrack mouseTrackTop={15} />
                 <DataTable
                     key={`${isEditMode}-${properties.length}-${properties.map(p => `${p.name}-${p.type}-${p.items?.type || ''}`).join('-')}`}
                     value={properties}
