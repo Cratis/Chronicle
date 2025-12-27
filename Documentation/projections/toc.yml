@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
+- name: DSL
+  href: dsl.md
 - name: Immediate Projections
   href: immediate-projections.md
 - name: Eventual Consistency
