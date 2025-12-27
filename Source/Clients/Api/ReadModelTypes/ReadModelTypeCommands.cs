@@ -52,7 +52,7 @@ public class ReadModelTypeCommands : ControllerBase
         await _readModels.RegisterSingle(new()
         {
             EventStore = eventStore,
-            Owner = Contracts.ReadModels.ReadModelOwner.Workbench,
+            Owner = Contracts.ReadModels.ReadModelOwner.Client,
             ReadModel = new()
             {
                 Identifier = identifier,
