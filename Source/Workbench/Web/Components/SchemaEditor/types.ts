@@ -10,6 +10,7 @@ export interface JSONSchemaType {
 }
 
 export interface SchemaProperty {
+    id?: string;
     name: string;
     type: string;
     format?: string;

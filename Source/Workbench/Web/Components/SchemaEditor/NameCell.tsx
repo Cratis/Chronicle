@@ -9,9 +9,10 @@ export interface NameCellProps {
     rowData: SchemaProperty;
     isEditMode: boolean;
     onUpdate: (oldName: string, field: keyof SchemaProperty, value: unknown) => void;
+    validationError?: string;
 }
 
-export const NameCell = ({ rowData, isEditMode, onUpdate }: NameCellProps) => {
+export const NameCell = ({ rowData, isEditMode, onUpdate, validationError }: NameCellProps) => {
     if (!isEditMode) {
         const isNavigable = rowData.type === 'object' || (rowData.type === 'array' && rowData.items?.type === 'object');
         const tooltipText = rowData.type === 'object'
@@ -32,7 +33,9 @@ export const NameCell = ({ rowData, isEditMode, onUpdate }: NameCellProps) => {
         <InputText
             value={rowData.name}
             onChange={(e) => onUpdate(rowData.name, 'name', e.target.value)}
-            className="w-full"
+            className={`w-full ${validationError ? 'p-invalid' : ''}`}
+            data-pr-tooltip={validationError}
+            data-pr-position="top"
         />
     );
 };

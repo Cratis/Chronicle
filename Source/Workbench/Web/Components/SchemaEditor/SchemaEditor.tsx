@@ -32,12 +32,48 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
     const [currentSchema, setCurrentSchema] = useState<JSONSchemaType>(schema);
     const [isEditMode, setIsEditMode] = useState(false);
     const [initialSchema, setInitialSchema] = useState<JSONSchemaType>(schema);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (!isEditMode) {
             setCurrentPath([]);
         }
     }, [isEditMode]);
+
+    const validatePropertyName = useCallback((name: string, propertyId: string, allProperties: SchemaProperty[]): string | undefined => {
+        // Check for empty string
+        if (!name || name.trim() === '') {
+            return 'Property name cannot be empty';
+        }
+
+        // Check for valid identifier (alphanumeric, underscore, must start with letter or underscore)
+        const validIdentifierPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+        if (!validIdentifierPattern.test(name)) {
+            return 'Property name must start with a letter or underscore and contain only letters, numbers, and underscores';
+        }
+
+        // Check for duplicates (excluding current property)
+        const duplicates = allProperties.filter(p => p.name === name && p.id !== propertyId);
+        if (duplicates.length > 0) {
+            return 'Property name must be unique';
+        }
+
+        return undefined;
+    }, []);
+
+    const validateAllProperties = useCallback((props: SchemaProperty[]) => {
+        const errors: Record<string, string> = {};
+
+        props.forEach(prop => {
+            const error = validatePropertyName(prop.name, prop.id!, props);
+            if (error) {
+                errors[prop.id!] = error;
+            }
+        });
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    }, [validatePropertyName]);
 
     const [typeFormatsQuery] = AllTypeFormats.use();
 
@@ -71,8 +107,10 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
 
         const schemaProps: SchemaProperty[] = [];
         if (targetSchema.properties) {
+            let idCounter = 0;
             for (const [name, property] of Object.entries(targetSchema.properties)) {
                 schemaProps.push({
+                    id: `prop-${currentPath.join('-')}-${idCounter++}`,
                     name,
                     type: property.type || 'string',
                     format: property.format,
@@ -84,6 +122,9 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         }
 
         setProperties(schemaProps);
+        if (isEditMode) {
+            validateAllProperties(schemaProps);
+        }
     };
 
     const updateSchemaAtPath = useCallback((path: string[], updater: (schema: JSONSchemaType) => JSONSchemaType) => {
@@ -268,6 +309,8 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         return items;
     };
 
+    const hasValidationErrors = Object.keys(validationErrors).length > 0;
+
     const menuItems = useMemo(() => [
         ...(!isEditMode ? [{
             label: strings.components.schemaEditor.actions.edit,
@@ -289,7 +332,8 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         ...(isEditMode ? [{
             label: strings.components.schemaEditor.actions.save,
             icon: <faIcons.FaCheck className='mr-2' />,
-            command: handleSave
+            command: hasValidationErrors ? undefined : handleSave,
+            disabled: hasValidationErrors
         }, {
             label: strings.components.schemaEditor.actions.cancel,
             icon: <faIcons.FaXmark className='mr-2' />,
@@ -299,7 +343,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
             icon: <faIcons.FaPlus className='mr-2' />,
             command: addProperty
         }] : [])
-    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canNotEditReason]);
+    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canNotEditReason, hasValidationErrors]);
 
     const breadcrumbItems = getBreadcrumbItems();
     const isAtRoot = currentPath.length === 0;
@@ -342,9 +386,9 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                 <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                     <Tooltip key={currentPath.join('/')} target="[data-pr-tooltip]" mouseTrack mouseTrackTop={15} />
                     <DataTable
-                        key={`${isEditMode}-${properties.length}-${properties.map(p => `${p.name}-${p.type}-${p.items?.type || ''}`).join('-')}`}
+                        key={`${isEditMode}-${currentPath.join('/')}`}
                         value={properties}
-                        dataKey="name"
+                        dataKey="id"
                         emptyMessage={strings.components.schemaEditor.emptyMessage}
                         rowClassName={(rowData: SchemaProperty) => {
                             if (!isEditMode && (rowData.type === 'object' || (rowData.type === 'array' && rowData.items?.type === 'object'))) {
@@ -376,6 +420,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                                     rowData={rowData}
                                     isEditMode={isEditMode}
                                     onUpdate={updateProperty}
+                                    validationError={validationErrors[rowData.id!]}
                                 />
                             )}
                             style={{ width: '30%' }}
