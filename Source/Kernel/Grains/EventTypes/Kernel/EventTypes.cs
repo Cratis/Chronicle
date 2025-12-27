@@ -77,7 +77,7 @@ public class EventTypes : IEventTypes
                 ForceSchemaToBeCamelCase(schema);
                 _schemaByType[eventType] = schema;
                 _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
-                await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema);
+                await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema, EventTypeOwner.Server, EventTypeSource.Code);
             }
         }
     }

@@ -72,9 +72,9 @@ public interface IEventStoreNamespaceStorage
     ISinks Sinks { get; }
 
     /// <summary>
-    /// Gets the <see cref="IReplayedModelsStorage"/> for the event store namespace.
+    /// Gets the <see cref="IReplayedReadModelsStorage"/> for the event store namespace.
     /// </summary>
-    IReplayedModelsStorage ReplayedModels { get; }
+    IReplayedReadModelsStorage ReplayedModels { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventSeedingStorage"/> for the event store namespace.

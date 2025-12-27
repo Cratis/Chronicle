@@ -8,7 +8,7 @@ import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 // import * as devIcons from 'react-icons/di';
 // import * as gameIcons from 'react-icons/gi';
-import { Types } from "./General/Types/Types";
+import { EventTypes } from "./General/EventTypes/EventTypes";
 import { Observers } from "./Namespaces/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
 import { FailedPartitions } from "./Namespaces/FailedPartitions/FailedPartitions";
@@ -19,6 +19,7 @@ import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
+import { ReadModels } from './General/ReadModels/ReadModels';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
@@ -41,7 +42,8 @@ export const EventStore = () => {
         {
             label: strings.mainMenu.general.groupLabel,
             items: [
-                { label: strings.mainMenu.general.types, url: 'types', icon: mdIcons.MdDataObject },
+                { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
+                { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdStorage },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
@@ -66,7 +68,8 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
-                <Route path={'types'} element={<Types />} />
+                <Route path={'event-types'} element={<EventTypes />} />
+                <Route path={'read-model-types'} element={<ReadModels />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />

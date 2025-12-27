@@ -101,7 +101,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
-        ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
+        ReplayedModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
         ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
 
@@ -145,7 +145,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     public IReplayContexts ReplayContexts { get; }
 
     /// <inheritdoc/>
-    public IReplayedModelsStorage ReplayedModels { get; }
+    public IReplayedReadModelsStorage ReplayedModels { get; }
 
     /// <inheritdoc/>
     public IEventSeedingStorage EventSeeding { get; }

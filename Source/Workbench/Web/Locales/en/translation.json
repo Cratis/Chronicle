@@ -35,7 +35,8 @@
         "identities": "Identities",
         "general": {
             "groupLabel": "General",
-            "types": "Types",
+            "eventTypes": "Event Types",
+            "readModelTypes": "Read Model Types",
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
@@ -51,14 +52,17 @@
     },
     "eventStore": {
         "general": {
-            "types": {
-                "title": "Types",
+            "eventTypes": {
+                "title": "Event Types",
                 "empty": "No types found",
+                "cannotEditReason": "Defined by code",
                 "actions": {
                     "create": "Create"
                 },
                 "columns": {
                     "name": "Name",
+                    "owner": "Owner",
+                    "source": "Source",
                     "generation": "Generation",
                     "tombstone": "Tombstone"
                 },
@@ -67,6 +71,16 @@
                         "title": "Add event type",
                         "name": "Name"
                     }
+                },
+                "owners": {
+                    "unknown": "Unknown",
+                    "client": "Client",
+                    "server": "Server"
+                },
+                "sources": {
+                    "unknown": "Unknown",
+                    "code": "Code",
+                    "user": "User"
                 }
             },
             "namespaces": {
@@ -82,6 +96,30 @@
                 "dialogs": {
                     "addNamespace": {
                         "title": "Add namespace",
+                        "name": "Name"
+                    }
+                }
+            },
+            "readModels": {
+                "title": "Read Model Types",
+                "empty": "No read models found",
+                "actions": {
+                    "create": "Create",
+                    "edit": "Edit",
+                    "addProperty": "Add Property",
+                    "save": "Save"
+                },
+                "columns": {
+                    "name": "Name",
+                    "generation": "Generation"
+                },
+                "schema": {
+                    "propertyName": "Property Name",
+                    "type": "Type"
+                },
+                "dialogs": {
+                    "addReadModel": {
+                        "title": "Add Read Model",
                         "name": "Name"
                     }
                 }
@@ -283,6 +321,27 @@
                     }
                 }
             }
+        }
+    },
+    "components": {
+        "schemaEditor": {
+            "columns": {
+                "property": "Property",
+                "type": "Type"
+            },
+            "actions": {
+                "edit": "Edit",
+                "save": "Save",
+                "cancel": "Cancel",
+                "addProperty": "Add Property",
+                "navigateBack": "Navigate Back"
+            },
+            "tooltips": {
+                "navigateToObjectProperties": "Navigate to object properties",
+                "navigateToItemDefinition": "Navigate to item definition",
+                "deleteProperty": "Delete property"
+            },
+            "emptyMessage": "No properties defined"
         }
     }
 }
