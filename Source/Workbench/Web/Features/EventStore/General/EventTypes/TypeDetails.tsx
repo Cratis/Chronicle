@@ -34,6 +34,8 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
         register.eventStore = params.eventStore!;
         register.types = [{
             type: props.item.type,
+            owner: props.item.owner,
+            source: props.item.source,
             schema: JSON.stringify(schema, null, 2)
         }];
 
