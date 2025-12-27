@@ -12,7 +12,7 @@ export interface TypeCellProps {
     rowData: SchemaProperty;
     isEditMode: boolean;
     typeFormats: TypeFormat[];
-    onUpdateProperty: (oldName: string, field: keyof SchemaProperty, value: unknown) => void;
+    onUpdateProperty: (oldName: string, field: keyof SchemaProperty, value: unknown, additionalUpdates?: Partial<SchemaProperty>) => void;
     onUpdateArrayItemType: (propertyName: string, itemType: string) => void;
     onNavigateToProperty: (propertyName: string) => void;
     onNavigateToArrayItems: (propertyName: string) => void;
@@ -47,6 +47,38 @@ export const TypeCell = ({
     // Use format if available, otherwise use jsonType (from rowData.type)
     const displayValue = rowData.format || rowData.type;
     const currentValue = rowData.format || rowData.type;
+
+    const handleTypeChange = (value: string, propertyName: string, isArrayItem: boolean = false) => {
+        if (value === 'array' || value === 'object') {
+            if (isArrayItem) {
+                onUpdateArrayItemType(propertyName, value);
+            } else {
+                onUpdateProperty(propertyName, 'type', value, { format: undefined });
+            }
+        } else {
+            // Find the type format that matches this value
+            const typeFormat = typeFormats.find(tf => {
+                const effectiveFormat = (!tf.format || tf.format === '' ? tf.jsonType : tf.format);
+                return effectiveFormat === value;
+            });
+
+            if (typeFormat) {
+                if (isArrayItem) {
+                    // For array items, just set the type directly
+                    onUpdateArrayItemType(propertyName, typeFormat.jsonType);
+                } else {
+                    // Check if this TypeFormat has a real format or just a jsonType
+                    if (typeFormat.format && typeFormat.format !== '') {
+                        // It's a format value (like int16, guid) - update both type and format atomically
+                        onUpdateProperty(propertyName, 'type', typeFormat.jsonType, { format: value });
+                    } else {
+                        // It's a jsonType-only value (format is null/empty) - set type and clear format
+                        onUpdateProperty(propertyName, 'type', typeFormat.jsonType, { format: undefined });
+                    }
+                }
+            }
+        }
+    };
 
     if (!isEditMode) {
         if (rowData.type === 'array') {
@@ -95,24 +127,7 @@ export const TypeCell = ({
             <Dropdown
                 value={currentValue}
                 options={allTypeOptions}
-                onChange={(e) => {
-                    const value = e.value;
-                    if (value === 'array' || value === 'object') {
-                        onUpdateProperty(rowData.name, 'type', value);
-                        onUpdateProperty(rowData.name, 'format', undefined);
-                    } else {
-                        // Check if it's a format value
-                        const typeFormat = typeFormats.find(tf => tf.format === value || tf.jsonType === value);
-                        if (typeFormat) {
-                            onUpdateProperty(rowData.name, 'type', typeFormat.jsonType);
-                            onUpdateProperty(rowData.name, 'format', value);
-                        } else {
-                            // It's a jsonType value (string, number, integer, boolean)
-                            onUpdateProperty(rowData.name, 'type', value);
-                            onUpdateProperty(rowData.name, 'format', undefined);
-                        }
-                    }
-                }}
+                onChange={(e) => handleTypeChange(e.value, rowData.name)}
                 className="flex-1"
             />
             {rowData.type === 'array' && rowData.items && (
@@ -121,7 +136,7 @@ export const TypeCell = ({
                     <Dropdown
                         value={rowData.items.type || 'string'}
                         options={allTypeOptions}
-                        onChange={(e) => onUpdateArrayItemType(rowData.name, e.value)}
+                        onChange={(e) => handleTypeChange(e.value, rowData.name, true)}
                         className="flex-1"
                     />
                 </>

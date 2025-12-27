@@ -141,18 +141,18 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
         });
     }, [currentPath, updateSchemaAtPath]);
 
-    const updateProperty = useCallback((oldName: string, field: keyof SchemaProperty, value: unknown) => {
+    const updateProperty = useCallback((oldName: string, field: keyof SchemaProperty, value: unknown, additionalUpdates?: Partial<SchemaProperty>) => {
         updateSchemaAtPath(currentPath, (schema) => {
             const newProps = { ...(schema.properties || {}) };
             const prop = { ...(newProps[oldName] || {}) };
 
             if (field === 'name') {
-                if (value !== oldName && !newProps[value]) {
-                    newProps[value] = prop;
+                if (value !== oldName && !newProps[value as string]) {
+                    newProps[value as string] = prop;
                     delete newProps[oldName];
                 }
             } else if (field === 'type') {
-                prop.type = value;
+                prop.type = value as string;
                 if (value === 'array') {
                     prop.items = { type: 'string' };
                     delete prop.format;
@@ -164,10 +164,22 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
                     delete prop.items;
                     delete prop.properties;
                 }
+
+                // Apply additional updates (e.g., format) in the same transaction
+                if (additionalUpdates) {
+                    if (additionalUpdates.format !== undefined) {
+                        if (additionalUpdates.format) {
+                            prop.format = additionalUpdates.format as string;
+                        } else {
+                            delete prop.format;
+                        }
+                    }
+                }
+
                 newProps[oldName] = prop;
             } else if (field === 'format') {
                 if (value && value !== 'none') {
-                    prop.format = value;
+                    prop.format = value as string;
                 } else {
                     delete prop.format;
                 }
