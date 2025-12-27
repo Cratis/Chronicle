@@ -309,5 +309,26 @@
                 }
             }
         }
+    },
+    "components": {
+        "schemaEditor": {
+            "columns": {
+                "property": "Property",
+                "type": "Type"
+            },
+            "actions": {
+                "edit": "Edit",
+                "save": "Save",
+                "cancel": "Cancel",
+                "addProperty": "Add Property",
+                "navigateBack": "Navigate Back"
+            },
+            "tooltips": {
+                "navigateToObjectProperties": "Navigate to object properties",
+                "navigateToItemDefinition": "Navigate to item definition",
+                "deleteProperty": "Delete property"
+            },
+            "emptyMessage": "No properties defined"
+        }
     }
 }

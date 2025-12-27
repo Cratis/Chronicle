@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from 'Components';
-import { JSONSchemaEditor, JSONSchemaType } from 'Components';
+import { SchemaEditor, JSONSchemaType } from 'Components';
 import { EventTypeRegistration } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { useParams } from 'react-router-dom';
@@ -47,7 +47,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
 
     return (
         <div className="type-details" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <JSONSchemaEditor
+            <SchemaEditor
                 schema={schema}
                 eventTypeName={props.item.type.id}
                 isEditMode={isEditMode}

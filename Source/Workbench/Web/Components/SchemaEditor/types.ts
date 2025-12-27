@@ -1,0 +1,24 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+export interface JSONSchemaType {
+    type?: string;
+    format?: string;
+    properties?: Record<string, JSONSchemaType>;
+    items?: JSONSchemaType;
+    required?: string[];
+}
+
+export interface SchemaProperty {
+    name: string;
+    type: string;
+    format?: string;
+    items?: JSONSchemaType;
+    properties?: Record<string, JSONSchemaType>;
+    required?: boolean;
+}
+
+export interface NavigationItem {
+    name: string;
+    path: string[];
+}
