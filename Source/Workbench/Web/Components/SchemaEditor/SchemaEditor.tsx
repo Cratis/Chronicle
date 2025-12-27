@@ -19,13 +19,13 @@ export interface SchemaEditorProps {
     schema: JSONSchemaType;
     eventTypeName: string;
     canEdit?: boolean;
-    canEditReason?: string;
+    canNotEditReason?: string;
     onChange?: (schema: JSONSchemaType) => void;
     onSave?: () => void;
     onCancel?: () => void;
 }
 
-export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canEditReason, onChange, onSave, onCancel }: SchemaEditorProps) => {
+export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEditReason, onChange, onSave, onCancel }: SchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
     const [properties, setProperties] = useState<SchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<TypeFormat[]>([]);
@@ -272,9 +272,19 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canEditRea
         ...(!isEditMode ? [{
             label: strings.components.schemaEditor.actions.edit,
             icon: <faIcons.FaPencil className='mr-2' />,
-            command: handleEdit,
-            disabled: !canEdit,
-            tooltip: canEditReason
+            command: canEdit ? handleEdit : undefined,
+            className: !canEdit ? 'edit-disabled-with-reason' : undefined,
+            template: !canEdit && canNotEditReason ? (item: any) => (
+                <div
+                    className="p-menuitem-link p-disabled"
+                    data-pr-tooltip={canNotEditReason}
+                    data-pr-position="bottom"
+                    style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                >
+                    {item.icon}
+                    <span className="p-menuitem-text">{item.label}</span>
+                </div>
+            ) : undefined
         }] : []),
         ...(isEditMode ? [{
             label: strings.components.schemaEditor.actions.save,
@@ -289,7 +299,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canEditRea
             icon: <faIcons.FaPlus className='mr-2' />,
             command: addProperty
         }] : [])
-    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canEditReason]);
+    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canNotEditReason]);
 
     const breadcrumbItems = getBreadcrumbItems();
     const isAtRoot = currentPath.length === 0;
@@ -297,7 +307,10 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canEditRea
     return (
         <div className="schema-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div className="px-4 py-2">
-                    <Menubar aria-label="Actions" model={menuItems} />
+                    <Tooltip target="[data-pr-tooltip]" />
+                    <div className="schema-editor-menubar">
+                        <Menubar aria-label="Actions" model={menuItems} />
+                    </div>
                 </div>
 
                 <div className="px-4 py-2 border-bottom-1 surface-border">

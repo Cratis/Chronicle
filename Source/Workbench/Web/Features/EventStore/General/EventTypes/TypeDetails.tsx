@@ -25,7 +25,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
         register.types = [{
             type: props.item.type,
             owner: props.item.owner,
-            source: props.item.source,
+            source: EventTypeSource.user,
             schema: JSON.stringify(schema, null, 2)
         }];
 
@@ -45,7 +45,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
                 schema={schema}
                 eventTypeName={props.item.type.id}
                 canEdit={canEdit}
-                canEditReason={canEditReason}
+                canNotEditReason={canEditReason}
                 onChange={handleSchemaChange}
                 onSave={handleSave}
             />
