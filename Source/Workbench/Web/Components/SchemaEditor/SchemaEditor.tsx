@@ -309,6 +309,22 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         return items;
     };
 
+    const getCurrentDescription = useCallback(() => {
+        let targetSchema = currentSchema;
+
+        for (const segment of currentPath) {
+            if (targetSchema.type === 'array' && segment === '$items') {
+                targetSchema = targetSchema.items || {};
+            } else if (targetSchema.properties && targetSchema.properties[segment]) {
+                targetSchema = targetSchema.properties[segment];
+            } else {
+                return undefined;
+            }
+        }
+
+        return targetSchema.description;
+    }, [currentSchema, currentPath]);
+
     const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
     const menuItems = useMemo(() => [
@@ -347,6 +363,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
 
     const breadcrumbItems = getBreadcrumbItems();
     const isAtRoot = currentPath.length === 0;
+    const currentDescription = getCurrentDescription();
 
     return (
         <div className="schema-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -381,6 +398,12 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                             ))}
                         </div>
                     </div>
+                    {currentDescription && (
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-color-secondary)', marginTop: '0.5rem', marginLeft: '2.5rem', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <faIcons.FaCircleInfo />
+                            <span>{currentDescription}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>

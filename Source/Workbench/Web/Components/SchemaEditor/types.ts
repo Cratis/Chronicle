@@ -4,6 +4,7 @@
 export interface JSONSchemaType {
     type?: string;
     format?: string;
+    description?: string;
     properties?: Record<string, JSONSchemaType>;
     items?: JSONSchemaType;
     required?: string[];
