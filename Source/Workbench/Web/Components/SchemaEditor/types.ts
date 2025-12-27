@@ -15,6 +15,7 @@ export interface SchemaProperty {
     name: string;
     type: string;
     format?: string;
+    description?: string;
     items?: JSONSchemaType;
     properties?: Record<string, JSONSchemaType>;
     required?: boolean;

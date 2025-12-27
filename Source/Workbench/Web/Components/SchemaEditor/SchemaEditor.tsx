@@ -114,6 +114,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                     name,
                     type: property.type || 'string',
                     format: property.format,
+                    description: property.description,
                     items: property.items,
                     properties: property.properties,
                     required: currentSchema.required?.includes(name) || false
@@ -407,7 +408,8 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-                    <Tooltip key={currentPath.join('/')} target="[data-pr-tooltip]" mouseTrack mouseTrackTop={15} />
+                    <Tooltip key={`nav-${currentPath.join('/')}`} target=".schema-navigation-tooltip" mouseTrack mouseTrackTop={15} />
+                    <Tooltip key={`desc-${currentPath.join('/')}`} target=".schema-description-tooltip" />
                     <DataTable
                         key={`${isEditMode}-${currentPath.join('/')}`}
                         value={properties}

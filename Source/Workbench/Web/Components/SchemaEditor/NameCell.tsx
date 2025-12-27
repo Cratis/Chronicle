@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { InputText } from 'primereact/inputtext';
+import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { SchemaProperty } from './types';
 
@@ -15,17 +16,28 @@ export interface NameCellProps {
 export const NameCell = ({ rowData, isEditMode, onUpdate, validationError }: NameCellProps) => {
     if (!isEditMode) {
         const isNavigable = rowData.type === 'object' || (rowData.type === 'array' && rowData.items?.type === 'object');
-        const tooltipText = rowData.type === 'object'
+        const navigationTooltipText = rowData.type === 'object'
             ? strings.components.schemaEditor.tooltips.navigateToObjectProperties
             : strings.components.schemaEditor.tooltips.navigateToItemDefinition;
 
         return (
-            <span
-                data-pr-tooltip={isNavigable ? tooltipText : undefined}
-                data-pr-position="top"
-            >
-                {rowData.name}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                    className={isNavigable ? 'schema-navigation-tooltip' : undefined}
+                    data-pr-tooltip={isNavigable ? navigationTooltipText : undefined}
+                    data-pr-position="top"
+                >
+                    {rowData.name}
+                </span>
+                {rowData.description && (
+                    <faIcons.FaCircleInfo
+                        className="schema-description-tooltip"
+                        style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}
+                        data-pr-tooltip={rowData.description}
+                        data-pr-position="right"
+                    />
+                )}
+            </div>
         );
     }
 
