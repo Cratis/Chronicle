@@ -167,7 +167,7 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
 
                 // Apply additional updates (e.g., format) in the same transaction
                 if (additionalUpdates) {
-                    if (additionalUpdates.format !== undefined) {
+                    if ('format' in additionalUpdates) {
                         if (additionalUpdates.format) {
                             prop.format = additionalUpdates.format as string;
                         } else {

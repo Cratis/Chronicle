@@ -132,7 +132,7 @@ export const TypeCell = ({
             />
             {rowData.type === 'array' && rowData.items && (
                 <>
-                    <span style={{ whiteSpace: 'nowrap' }}>of</span>
+                    <span style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>of</span>
                     <Dropdown
                         value={rowData.items.type || 'string'}
                         options={allTypeOptions}
