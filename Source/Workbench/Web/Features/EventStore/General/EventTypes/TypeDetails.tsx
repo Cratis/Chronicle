@@ -11,24 +11,13 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [isEditMode, setIsEditMode] = useState(false);
     const [schema, setSchema] = useState<JSONSchemaType>(() => JSON.parse(props.item.schema));
     const [register] = Register.use();
 
     // Reset schema when event type changes
     useEffect(() => {
         setSchema(JSON.parse(props.item.schema));
-        setIsEditMode(false);
     }, [props.item.type.id, props.item.schema]);
-
-    const handleEdit = () => {
-        setIsEditMode(true);
-    };
-
-    const handleCancel = () => {
-        setIsEditMode(false);
-        setSchema(JSON.parse(props.item.schema));
-    };
 
     const handleSave = async () => {
         register.eventStore = params.eventStore!;
@@ -40,7 +29,6 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
         }];
 
         await register.execute();
-        setIsEditMode(false);
     };
 
     const handleSchemaChange = (newSchema: JSONSchemaType) => {
@@ -52,11 +40,8 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
             <SchemaEditor
                 schema={schema}
                 eventTypeName={props.item.type.id}
-                isEditMode={isEditMode}
                 onChange={handleSchemaChange}
                 onSave={handleSave}
-                onCancel={handleCancel}
-                onEdit={handleEdit}
             />
         </div>
     );

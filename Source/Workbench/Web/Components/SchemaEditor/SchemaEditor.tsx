@@ -18,18 +18,18 @@ import css from './SchemaEditor.module.css';
 export interface SchemaEditorProps {
     schema: JSONSchemaType;
     eventTypeName: string;
-    isEditMode: boolean;
-    onChange: (schema: JSONSchemaType) => void;
-    onSave: () => void;
-    onCancel: () => void;
-    onEdit: () => void;
+    onChange?: (schema: JSONSchemaType) => void;
+    onSave?: () => void;
+    onCancel?: () => void;
 }
 
-export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSave, onCancel, onEdit }: SchemaEditorProps) => {
+export const SchemaEditor = ({ schema, eventTypeName, onChange, onSave, onCancel }: SchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
     const [properties, setProperties] = useState<SchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<TypeFormat[]>([]);
     const [currentSchema, setCurrentSchema] = useState<JSONSchemaType>(schema);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [initialSchema, setInitialSchema] = useState<JSONSchemaType>(schema);
 
     useEffect(() => {
         if (!isEditMode) {
@@ -47,6 +47,7 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
 
     useEffect(() => {
         setCurrentSchema(schema);
+        setInitialSchema(JSON.parse(JSON.stringify(schema)));
     }, [schema]);
 
     useEffect(() => {
@@ -89,7 +90,7 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
         if (path.length === 0) {
             const updated = updater(newSchema);
             setCurrentSchema(updated);
-            onChange(updated);
+            onChange?.(updated);
             return;
         }
 
@@ -117,7 +118,7 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
         }
 
         setCurrentSchema(newSchema);
-        onChange(newSchema);
+        onChange?.(newSchema);
     }, [currentSchema, onChange]);
 
     const addProperty = useCallback(() => {
@@ -227,6 +228,23 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
         setCurrentPath(items[index].path);
     }, [currentPath, eventTypeName]);
 
+    const handleSave = useCallback(() => {
+        onSave?.();
+        setIsEditMode(false);
+    }, [onSave]);
+
+    const handleCancel = useCallback(() => {
+        setCurrentSchema(JSON.parse(JSON.stringify(initialSchema)));
+        onChange?.(JSON.parse(JSON.stringify(initialSchema)));
+        setIsEditMode(false);
+        onCancel?.();
+    }, [initialSchema, onChange]);
+
+    const handleEdit = useCallback(() => {
+        setInitialSchema(JSON.parse(JSON.stringify(currentSchema)));
+        setIsEditMode(true);
+    }, [currentSchema]);
+
     const getBreadcrumbItems = () => {
         const items: NavigationItem[] = [{ name: eventTypeName, path: [] }];
 
@@ -252,22 +270,22 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
         ...(!isEditMode ? [{
             label: strings.components.schemaEditor.actions.edit,
             icon: <faIcons.FaPencil className='mr-2' />,
-            command: onEdit
+            command: handleEdit
         }] : []),
         ...(isEditMode ? [{
             label: strings.components.schemaEditor.actions.save,
             icon: <faIcons.FaCheck className='mr-2' />,
-            command: onSave
+            command: handleSave
         }, {
             label: strings.components.schemaEditor.actions.cancel,
             icon: <faIcons.FaXmark className='mr-2' />,
-            command: onCancel
+            command: handleCancel
         }, {
             label: strings.components.schemaEditor.actions.addProperty,
             icon: <faIcons.FaPlus className='mr-2' />,
             command: addProperty
         }] : [])
-    ], [isEditMode, onEdit, onSave, onCancel, addProperty]);
+    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty]);
 
     const breadcrumbItems = getBreadcrumbItems();
     const isAtRoot = currentPath.length === 0;
