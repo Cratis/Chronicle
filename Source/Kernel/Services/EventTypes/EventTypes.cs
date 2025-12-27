@@ -23,7 +23,13 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
-            await storage.GetEventStore(request.EventStore).EventTypes.Register(eventType.Type.ToChronicle(), schema);
+            await storage
+                .GetEventStore(request.EventStore).EventTypes
+                .Register(
+                    eventType.Type.ToChronicle(),
+                    schema,
+                    (Concepts.Events.EventTypeOwner)(int)eventType.Owner,
+                    (Concepts.Events.EventTypeSource)(int)eventType.Source);
         }
     }
 
@@ -31,7 +37,13 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
     public async Task RegisterSingle(RegisterSingleEventTypeRequest request)
     {
         var schema = await JsonSchema.FromJsonAsync(request.Type.Schema);
-        await storage.GetEventStore(request.EventStore).EventTypes.Register(request.Type.Type.ToChronicle(), schema);
+        await storage
+            .GetEventStore(request.EventStore).EventTypes
+            .Register(
+                request.Type.Type.ToChronicle(),
+                schema,
+                (Concepts.Events.EventTypeOwner)(int)request.Type.Owner,
+                (Concepts.Events.EventTypeSource)(int)request.Type.Source);
     }
 
     /// <inheritdoc/>
@@ -48,6 +60,8 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
         return eventTypes.Select(_ => new EventTypeRegistration
         {
             Type = _.Type.ToContract(),
+            Owner = (Contracts.Events.EventTypeOwner)(int)_.Owner,
+            Source = (Contracts.Events.EventTypeSource)(int)_.Source,
             Schema = _.Schema.ToJson()
         });
     }

@@ -13,6 +13,7 @@ import { AddEventTypeDialog } from './Add/AddEventTypeDialog';
 import { DataPage, MenuItem } from 'Components';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
+import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -21,6 +22,26 @@ const defaultFilters: DataTableFilterMeta = {
 const renderTombstone = () => {
     return 'no';
 };
+
+const renderSource = (eventType: EventTypeRegistration) => {
+    switch (eventType.source) {
+        case EventTypeSource.code:
+            return strings.eventStore.general.types.sources.code;
+        case EventTypeSource.user:
+            return strings.eventStore.general.types.sources.user;
+    }
+    return strings.eventStore.general.types.sources.unknown;
+};
+
+const renderOwner = (eventType: EventTypeRegistration) => {
+    switch (eventType.owner) {
+        case EventTypeOwner.client:
+            return strings.eventStore.general.types.owners.client;
+        case EventTypeOwner.server:
+            return strings.eventStore.general.types.owners.server;
+    }
+    return strings.eventStore.general.types.owners.unknown;
+}
 
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -54,7 +75,17 @@ export const EventTypes = () => {
 
                     <Column field='type.id' header={strings.eventStore.general.types.columns.name} />
                     <Column
-                        field='generation'
+                        field='owner'
+                        style={{ width: '100px' }}
+                        header={strings.eventStore.general.types.columns.owner}
+                        body={renderOwner} />
+                    <Column
+                        field='source'
+                        style={{ width: '100px' }}
+                        header={strings.eventStore.general.types.columns.source}
+                        body={renderSource} />
+                    <Column
+                        field='type.generation'
                         style={{ width: '100px' }}
                         header={strings.eventStore.general.types.columns.generation} />
                     <Column

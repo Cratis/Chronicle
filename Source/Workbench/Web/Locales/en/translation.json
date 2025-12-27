@@ -61,6 +61,8 @@
                 },
                 "columns": {
                     "name": "Name",
+                    "owner": "Owner",
+                    "source": "Source",
                     "generation": "Generation",
                     "tombstone": "Tombstone"
                 },
@@ -69,6 +71,16 @@
                         "title": "Add event type",
                         "name": "Name"
                     }
+                },
+                "owners": {
+                    "unknown": "Unknown",
+                    "client": "Client",
+                    "server": "Server"
+                },
+                "sources": {
+                    "unknown": "Unknown",
+                    "code": "Code",
+                    "user": "User"
                 }
             },
             "namespaces": {

@@ -56,14 +56,6 @@ public class EventTypeCommands : Controller
         var schema = new JsonSchema
         {
             Type = JsonObjectType.Object,
-            Properties =
-            {
-                ["id"] = new JsonSchemaProperty
-                {
-                    Type = JsonObjectType.String,
-                    Format = "guid"
-                }
-            }
         };
 
         await _eventTypes.RegisterSingle(new RegisterSingleEventTypeRequest
