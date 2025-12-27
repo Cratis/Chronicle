@@ -8,6 +8,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Menubar } from 'primereact/menubar';
+import { Tooltip } from 'primereact/tooltip';
 import { AllTypeFormats } from 'Api/TypeFormats';
 import { useQuery } from '@cratis/arc.react/queries';
 import * as faIcons from 'react-icons/fa6';
@@ -295,43 +296,28 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             if (rowData.type === 'array') {
                 const itemType = rowData.items?.type || 'string';
                 const isNavigable = itemType === 'object';
+                const tooltipText = isNavigable ? 'Navigate to item definition' : '';
                 return (
-                    <div className="flex align-items-center gap-2 w-full" style={{ height: '100%' }}>
+                    <div className="flex align-items-center gap-2 w-full navigable-type-cell" style={{ height: '100%' }} data-pr-tooltip={tooltipText}>
                         <span>Array of {itemType}</span>
                         {isNavigable && (
                             <>
                                 <div style={{ flex: 1 }} />
-                                <Button
-                                    icon={<faIcons.FaArrowRight />}
-                                    className="p-button-text p-button-sm"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigateToArrayItems(rowData.name);
-                                    }}
-                                    tooltip="Navigate to item definition"
-                                    tooltipOptions={{ position: 'top' }}
-                                    style={{ height: '2rem' }}
-                                />
+                                <span style={{ display: 'flex', alignItems: 'center' }}>
+                                    <faIcons.FaArrowRight style={{ fontSize: '1rem', color: 'var(--primary-color)' }} />
+                                </span>
                             </>
                         )}
                     </div>
                 );
             } else if (rowData.type === 'object') {
                 return (
-                    <div className="flex align-items-center gap-2 w-full" style={{ height: '100%' }}>
+                    <div className="flex align-items-center gap-2 w-full navigable-type-cell" style={{ height: '100%' }} data-pr-tooltip="Navigate to object properties">
                         <span>Object</span>
                         <div style={{ flex: 1 }} />
-                        <Button
-                            icon={<faIcons.FaArrowRight />}
-                            className="p-button-text p-button-sm"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                navigateToProperty(rowData.name);
-                            }}
-                            tooltip="Navigate to object properties"
-                            tooltipOptions={{ position: 'top' }}
-                            style={{ height: '2rem' }}
-                        />
+                        <span style={{ display: 'flex', alignItems: 'center' }}>
+                            <faIcons.FaArrowRight style={{ fontSize: '1rem', color: 'var(--primary-color)' }} />
+                        </span>
                     </div>
                 );
             } else if (rowData.format) {
@@ -457,6 +443,7 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             </div>
 
             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+                <Tooltip target=".navigable-type-cell[data-pr-tooltip]" position="top" />
                 <DataTable
                     key={`${isEditMode}-${properties.length}-${properties.map(p => `${p.name}-${p.type}-${p.items?.type || ''}`).join('-')}`}
                     value={properties}
