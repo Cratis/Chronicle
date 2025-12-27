@@ -21,10 +21,5 @@ public enum ReadModelOwner
     /// <summary>
     /// The read model is owned by the server.
     /// </summary>
-    Server = 2,
-
-    /// <summary>
-    /// The read model is owned by the workbench.
-    /// </summary>
-    Workbench = 3
+    Server = 2
 }
