@@ -19,7 +19,7 @@ import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
-import { ReadModels } from './General/ReadModels/ReadModels';
+import { ReadModels } from './General/ReadModelTypes/ReadModels';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';

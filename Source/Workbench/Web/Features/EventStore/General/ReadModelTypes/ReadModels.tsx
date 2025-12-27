@@ -3,17 +3,18 @@
 
 import { Column } from 'primereact/column';
 import strings from 'Strings';
-import { AllReadModels } from 'Api/ReadModels';
+import { AllReadModels } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useDialog } from '@cratis/arc.react/dialogs';
-import { AddReadModel, AddReadModelRequest, AddReadModelResponse } from './AddReadModel';
-import { DataPage } from 'Components';
+import { AddReadModelDialog } from './Add/AddReadModelDialog';
+import { DataPage, MenuItem } from 'Components';
 import { ReadModelDetails } from './ReadModelDetails';
+import * as faIcons from 'react-icons/fa6';
 
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddReadModelDialog] = useDialog<AddReadModelRequest, AddReadModelResponse>(AddReadModelRequest, AddReadModel);
+    const [AddReadModelWrapper, showAddReadModel] = useDialog(AddReadModelDialog);
 
     return (
         <>
@@ -25,6 +26,14 @@ export const ReadModels = () => {
                 emptyMessage={strings.eventStore.general.readModels.empty}
                 detailsComponent={ReadModelDetails}>
 
+                <DataPage.MenuItems>
+                    <MenuItem
+                        id='create'
+                        label={strings.eventStore.general.readModels.actions.create}
+                        icon={faIcons.FaPlus}
+                        command={() => showAddReadModel()} />
+                </DataPage.MenuItems>
+
                 <DataPage.Columns>
                     <Column field='name' header={strings.eventStore.general.readModels.columns.name} />
                     <Column
@@ -33,7 +42,7 @@ export const ReadModels = () => {
                         header={strings.eventStore.general.readModels.columns.generation} />
                 </DataPage.Columns>
             </DataPage>
-            <AddReadModelDialog/>
+            <AddReadModelWrapper />
         </>
     );
 };

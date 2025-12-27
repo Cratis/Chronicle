@@ -5,21 +5,21 @@ using Cratis.Chronicle.Contracts;
 using NJsonSchema;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
-namespace Cratis.Chronicle.Api.ReadModels;
+namespace Cratis.Chronicle.Api.ReadModelTypes;
 
 /// <summary>
-/// Represents the API for working with read model commands.
+/// Represents the API for working with read model type commands.
 /// </summary>
-[Route("/api/event-store/{eventStore}/read-models")]
-public class ReadModelCommands : ControllerBase
+[Route("/api/event-store/{eventStore}/read-model-types")]
+public class ReadModelTypeCommands : ControllerBase
 {
     readonly IReadModelsService _readModels;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReadModelCommands"/> class.
+    /// Initializes a new instance of the <see cref="ReadModelTypeCommands"/> class.
     /// </summary>
     /// <param name="readModels"><see cref="IReadModelsService"/> for working with read models.</param>
-    internal ReadModelCommands(IReadModelsService readModels)
+    internal ReadModelTypeCommands(IReadModelsService readModels)
     {
         _readModels = readModels;
     }

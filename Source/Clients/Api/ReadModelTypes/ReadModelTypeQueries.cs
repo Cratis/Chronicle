@@ -4,21 +4,21 @@
 using Cratis.Chronicle.Contracts;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
-namespace Cratis.Chronicle.Api.ReadModels;
+namespace Cratis.Chronicle.Api.ReadModelTypes;
 
 /// <summary>
-/// Represents the API for working with read model queries.
+/// Represents the API for working with read model type queries.
 /// </summary>
-[Route("/api/event-store/{eventStore}/read-models")]
-public class ReadModelQueries : ControllerBase
+[Route("/api/event-store/{eventStore}/read-model-types")]
+public class ReadModelTypeQueries : ControllerBase
 {
     readonly IReadModelsService _readModels;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReadModelQueries"/> class.
+    /// Initializes a new instance of the <see cref="ReadModelTypeQueries"/> class.
     /// </summary>
     /// <param name="readModels"><see cref="IReadModelsService"/> for working with read models.</param>
-    internal ReadModelQueries(IReadModelsService readModels)
+    internal ReadModelTypeQueries(IReadModelsService readModels)
     {
         _readModels = readModels;
     }
