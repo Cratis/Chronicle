@@ -39,7 +39,7 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
+    public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
@@ -61,7 +61,7 @@ public class EventTypesStorage(
             }
         }
 
-        var eventSchema = new EventTypeSchema(type, schema);
+        var eventSchema = new EventTypeSchema(type, owner, source, schema);
         if (_eventTypes.Any(_ => _.Id == type.Id))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));

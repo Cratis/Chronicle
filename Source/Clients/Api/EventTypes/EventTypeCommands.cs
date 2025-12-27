@@ -76,6 +76,8 @@ public class EventTypeCommands : Controller
                     Id = command.Name,
                     Generation = 1
                 },
+                Owner = EventTypeOwner.Client,
+                Source = EventTypeSource.User,
                 Schema = schema.ToJson()
             }
         });

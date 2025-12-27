@@ -34,6 +34,6 @@ public class ReplayedReadModelsStorage(IEventStoreNamespaceDatabase database) : 
     {
         var filter = Builders<ReplayedModel>.Filter.Eq(r => r.ReadModel, readModel);
         var result = await _collection.Find(filter).FirstOrDefaultAsync();
-        return result?.Occurrences ?? Enumerable.Empty<ReplayedReadModelOccurrence>();
+        return result?.Occurrences ?? [];
     }
 }

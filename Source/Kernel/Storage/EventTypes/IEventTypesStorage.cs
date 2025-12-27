@@ -23,8 +23,10 @@ public interface IEventTypesStorage
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>
     /// <param name="schema"><see cref="JsonSchema"/> to register.</param>
+    /// <param name="owner">The <see cref="EventTypeOwner">owner</see> of the event type.</param>
+    /// <param name="source">The <see cref="EventTypeSource">source</see> of the event type.</param>
     /// <returns>Async task.</returns>
-    Task Register(EventType type, JsonSchema schema);
+    Task Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code);
 
     /// <summary>
     /// Get the latest <see cref="EventTypeSchema">event schema</see> for all registered <see cref="EventType">event types</see>.

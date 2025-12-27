@@ -34,7 +34,7 @@ internal static class EventTypeRegistrationConverters
     /// <param name="registration">The registration to convert.</param>
     /// <returns>The converted event type.</returns>
     public static EventTypeRegistration ToApi(this Contracts.Events.EventTypeRegistration registration) =>
-        new(registration.Type.ToApi(), registration.Schema);
+        new(registration.Type.ToApi(), registration.Owner, registration.Source, registration.Schema);
 
     /// <summary>
     /// Converts a collection of <see cref="Contracts.Events.EventTypeRegistration"/> to an <see cref="EventTypeRegistration"/>.
