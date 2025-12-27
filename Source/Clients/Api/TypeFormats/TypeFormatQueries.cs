@@ -34,6 +34,5 @@ public class TypeFormatQueries : ControllerBase
             metadata.JsonType,
             metadata.ClrType.Name,
             metadata.Format));
-
     }
 }

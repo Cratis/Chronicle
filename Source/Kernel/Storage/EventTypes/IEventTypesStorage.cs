@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using NJsonSchema;
@@ -33,6 +34,12 @@ public interface IEventTypesStorage
     /// </summary>
     /// <returns>A collection of <see cref="EventTypeSchema">event schemas</see>.</returns>
     Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes();
+
+    /// <summary>
+    /// Observe the latest <see cref="EventTypeSchema">event schema</see> for all registered <see cref="EventType">event types</see>.
+    /// </summary>
+    /// <returns>Subject with all event type schemas.</returns>
+    ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes();
 
     /// <summary>
     /// Get all the <see cref="EventTypeSchema">event schemas</see> for all generations for a specific <see cref="EventType"/>.

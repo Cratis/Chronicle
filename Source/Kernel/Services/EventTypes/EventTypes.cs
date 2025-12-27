@@ -1,10 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Storage;
+using Cratis.Reactive;
 using NJsonSchema;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Events;
 
@@ -64,5 +67,21 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
             Source = (Contracts.Events.EventTypeSource)(int)_.Source,
             Schema = _.Schema.ToJson()
         });
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<EventTypeRegistration>> ObserveAllRegistrations(GetAllEventTypesRequest request, CallContext context = default)
+    {
+        var eventStore = storage.GetEventStore(request.EventStore);
+        return eventStore.EventTypes
+            .ObserveLatestForAllEventTypes()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.Select(_ => new EventTypeRegistration
+            {
+                Type = _.Type.ToContract(),
+                Owner = (Contracts.Events.EventTypeOwner)(int)_.Owner,
+                Source = (Contracts.Events.EventTypeSource)(int)_.Source,
+                Schema = _.Schema.ToJson()
+            }).ToArray());
     }
 }
