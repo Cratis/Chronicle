@@ -29,7 +29,11 @@ public class TypeFormatQueries : ControllerBase
     [HttpGet]
     public IEnumerable<TypeFormat> AllTypeFormats()
     {
-        var formats = _typeFormats.GetAllFormats();
-        return formats.Select(kvp => new TypeFormat(kvp.Key.Name, kvp.Value));
+        var formats = _typeFormats.GetAllFormatsMetadata();
+        return formats.Select(metadata => new TypeFormat(
+            metadata.JsonType,
+            metadata.ClrType.Name,
+            metadata.Format));
+
     }
 }

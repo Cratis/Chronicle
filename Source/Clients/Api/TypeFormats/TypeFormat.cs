@@ -6,6 +6,7 @@ namespace Cratis.Chronicle.Api.TypeFormats;
 /// <summary>
 /// Represents a type format.
 /// </summary>
-/// <param name="TypeName">Name of the CLR type.</param>
+/// <param name="JsonType">The JSON schema type.</param>
+/// <param name="ClrTypeName">Name of the CLR type.</param>
 /// <param name="Format">The format string.</param>
-public record TypeFormat(string TypeName, string Format);
+public record TypeFormat(string JsonType, string ClrTypeName, string Format);

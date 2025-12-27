@@ -41,4 +41,10 @@ public interface ITypeFormats
     /// </summary>
     /// <returns>Dictionary of type to format mappings.</returns>
     IReadOnlyDictionary<Type, string> GetAllFormats();
+
+    /// <summary>
+    /// Get all supported type formats with full metadata.
+    /// </summary>
+    /// <returns>Collection of type format metadata.</returns>
+    IEnumerable<TypeFormatMetadata> GetAllFormatsMetadata();
 }

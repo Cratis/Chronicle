@@ -5,12 +5,13 @@ import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
-import { SchemaProperty, JSONSchemaType } from './types';
+import { TypeFormat } from 'Api/TypeFormats';
+import { SchemaProperty } from './types';
 
 export interface TypeCellProps {
     rowData: SchemaProperty;
     isEditMode: boolean;
-    typeFormats: { label: string; value: string }[];
+    typeFormats: TypeFormat[];
     onUpdateProperty: (oldName: string, field: keyof SchemaProperty, value: unknown) => void;
     onUpdateArrayItemType: (propertyName: string, itemType: string) => void;
     onNavigateToProperty: (propertyName: string) => void;
@@ -18,13 +19,9 @@ export interface TypeCellProps {
     onRemoveProperty: (propertyName: string) => void;
 }
 
-const JSON_TYPES = [
-    { label: 'String', value: 'string' },
-    { label: 'Number', value: 'number' },
-    { label: 'Integer', value: 'integer' },
-    { label: 'Boolean', value: 'boolean' },
-    { label: 'Array', value: 'array' },
-    { label: 'Object', value: 'object' }
+const CONTAINER_TYPES = [
+    { label: 'array', value: 'array' },
+    { label: 'object', value: 'object' }
 ];
 
 export const TypeCell = ({
@@ -37,17 +34,19 @@ export const TypeCell = ({
     onNavigateToArrayItems,
     onRemoveProperty
 }: TypeCellProps) => {
-    const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+    const formatOptions = typeFormats.map(tf => {
+        const format = (!tf.format || tf.format === '' ? tf.jsonType : tf.format);
+        return { label: format, value: format };
+    });
 
     const allTypeOptions = [
-        ...JSON_TYPES,
-        ...typeFormats.map(tf => ({ label: tf.label, value: `format:${tf.value}` }))
+        ...formatOptions,
+        ...CONTAINER_TYPES
     ];
 
-    let currentValue = rowData.type;
-    if (rowData.format && rowData.type === 'string') {
-        currentValue = `format:${rowData.format}`;
-    }
+    // Use format if available, otherwise use jsonType (from rowData.type)
+    const displayValue = rowData.format || rowData.type;
+    const currentValue = rowData.format || rowData.type;
 
     if (!isEditMode) {
         if (rowData.type === 'array') {
@@ -60,7 +59,7 @@ export const TypeCell = ({
                     data-pr-tooltip={isNavigable ? strings.components.schemaEditor.tooltips.navigateToItemDefinition : undefined}
                     data-pr-position="top"
                 >
-                    <span>Array of {capitalize(itemType)}</span>
+                    <span>Array of {itemType}</span>
                     {isNavigable && (
                         <>
                             <div style={{ flex: 1 }} />
@@ -86,11 +85,9 @@ export const TypeCell = ({
                     </span>
                 </div>
             );
-        } else if (rowData.format) {
-            const formatLabel = typeFormats.find(tf => tf.value === rowData.format)?.label || rowData.format;
-            return formatLabel;
         }
-        return capitalize(rowData.type);
+        // Display format if available, otherwise type
+        return displayValue;
     }
 
     return (
@@ -100,12 +97,20 @@ export const TypeCell = ({
                 options={allTypeOptions}
                 onChange={(e) => {
                     const value = e.value;
-                    if (value.startsWith('format:')) {
-                        const format = value.substring(7);
-                        onUpdateProperty(rowData.name, 'type', 'string');
-                        onUpdateProperty(rowData.name, 'format', format);
-                    } else {
+                    if (value === 'array' || value === 'object') {
                         onUpdateProperty(rowData.name, 'type', value);
+                        onUpdateProperty(rowData.name, 'format', undefined);
+                    } else {
+                        // Check if it's a format value
+                        const typeFormat = typeFormats.find(tf => tf.format === value || tf.jsonType === value);
+                        if (typeFormat) {
+                            onUpdateProperty(rowData.name, 'type', typeFormat.jsonType);
+                            onUpdateProperty(rowData.name, 'format', value);
+                        } else {
+                            // It's a jsonType value (string, number, integer, boolean)
+                            onUpdateProperty(rowData.name, 'type', value);
+                            onUpdateProperty(rowData.name, 'format', undefined);
+                        }
                     }
                 }}
                 className="flex-1"
@@ -115,7 +120,7 @@ export const TypeCell = ({
                     <span style={{ whiteSpace: 'nowrap' }}>of</span>
                     <Dropdown
                         value={rowData.items.type || 'string'}
-                        options={JSON_TYPES}
+                        options={allTypeOptions}
                         onChange={(e) => onUpdateArrayItemType(rowData.name, e.value)}
                         className="flex-1"
                     />

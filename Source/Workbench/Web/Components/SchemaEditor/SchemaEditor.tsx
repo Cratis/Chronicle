@@ -8,8 +8,7 @@ import { Column } from 'primereact/column';
 import { Menubar } from 'primereact/menubar';
 import { Tooltip } from 'primereact/tooltip';
 import strings from 'Strings';
-import { AllTypeFormats } from 'Api/TypeFormats';
-import { useQuery } from '@cratis/arc.react/queries';
+import { AllTypeFormats, TypeFormat } from 'Api/TypeFormats';
 import * as faIcons from 'react-icons/fa6';
 import { NameCell } from './NameCell';
 import { TypeCell } from './TypeCell';
@@ -29,7 +28,7 @@ export interface SchemaEditorProps {
 export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSave, onCancel, onEdit }: SchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
     const [properties, setProperties] = useState<SchemaProperty[]>([]);
-    const [typeFormats, setTypeFormats] = useState<{ label: string, value: string }[]>([]);
+    const [typeFormats, setTypeFormats] = useState<TypeFormat[]>([]);
     const [currentSchema, setCurrentSchema] = useState<JSONSchemaType>(schema);
 
     useEffect(() => {
@@ -38,15 +37,11 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
         }
     }, [isEditMode]);
 
-    const typeFormatsQuery = AllTypeFormats.use();
+    const [typeFormatsQuery] = AllTypeFormats.use();
 
     useEffect(() => {
         if (typeFormatsQuery.data) {
-            const formats = typeFormatsQuery.data.map(tf => ({
-                label: tf.typeName,
-                value: tf.format
-            }));
-            setTypeFormats(formats);
+            setTypeFormats(typeFormatsQuery.data);
         }
     }, [typeFormatsQuery.data]);
 
