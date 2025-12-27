@@ -17,6 +17,8 @@ internal static class EventTypeRegistrationConverters
         new()
         {
             Type = registration.Type.ToContract(),
+            Owner = registration.Owner,
+            Source = registration.Source,
             Schema = registration.Schema
         };
 
