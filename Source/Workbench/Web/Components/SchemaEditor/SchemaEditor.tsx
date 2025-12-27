@@ -298,7 +298,7 @@ export const SchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, onSa
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-                    <Tooltip target="[data-pr-tooltip]" mouseTrack mouseTrackTop={15} />
+                    <Tooltip key={currentPath.join('/')} target="[data-pr-tooltip]" mouseTrack mouseTrackTop={15} />
                     <DataTable
                         key={`${isEditMode}-${properties.length}-${properties.map(p => `${p.name}-${p.type}-${p.items?.type || ''}`).join('-')}`}
                         value={properties}
