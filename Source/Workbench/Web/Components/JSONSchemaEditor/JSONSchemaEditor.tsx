@@ -294,16 +294,20 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
             // View mode
             if (rowData.type === 'array') {
                 const itemType = rowData.items?.type || 'string';
+                const isNavigable = itemType === 'object';
                 return (
                     <div className="flex align-items-center gap-2 w-full" style={{ height: '100%' }}>
                         <span>Array of {itemType}</span>
-                        {itemType === 'object' && (
+                        {isNavigable && (
                             <>
                                 <div style={{ flex: 1 }} />
                                 <Button
                                     icon={<faIcons.FaArrowRight />}
                                     className="p-button-text p-button-sm"
-                                    onClick={() => navigateToArrayItems(rowData.name)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigateToArrayItems(rowData.name);
+                                    }}
                                     tooltip="Navigate to item definition"
                                     tooltipOptions={{ position: 'top' }}
                                     style={{ height: '2rem' }}
@@ -320,7 +324,10 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                         <Button
                             icon={<faIcons.FaArrowRight />}
                             className="p-button-text p-button-sm"
-                            onClick={() => navigateToProperty(rowData.name)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigateToProperty(rowData.name);
+                            }}
                             tooltip="Navigate to object properties"
                             tooltipOptions={{ position: 'top' }}
                             style={{ height: '2rem' }}
@@ -418,7 +425,17 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
     const breadcrumbItems = getBreadcrumbItems();
 
     return (
-        <div className="json-schema-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <>
+            <style>{`
+                .navigable-row {
+                    cursor: pointer;
+                    transition: background-color 0.15s;
+                }
+                .navigable-row:hover {
+                    background-color: var(--surface-hover) !important;
+                }
+            `}</style>
+            <div className="json-schema-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className="px-4 py-2">
                 <Menubar aria-label="Actions" model={menuItems} />
             </div>
@@ -445,6 +462,22 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                     value={properties}
                     dataKey="name"
                     emptyMessage="No properties defined"
+                    rowClassName={(rowData: SchemaProperty) => {
+                        if (!isEditMode && (rowData.type === 'object' || (rowData.type === 'array' && rowData.items?.type === 'object'))) {
+                            return 'navigable-row';
+                        }
+                        return '';
+                    }}
+                    onRowClick={(e) => {
+                        if (!isEditMode) {
+                            const rowData = e.data as SchemaProperty;
+                            if (rowData.type === 'object') {
+                                navigateToProperty(rowData.name);
+                            } else if (rowData.type === 'array' && rowData.items?.type === 'object') {
+                                navigateToArrayItems(rowData.name);
+                            }
+                        }
+                    }}
                     pt={{
                         root: { style: { border: 'none' } },
                         tbody: { style: { borderTop: '1px solid var(--surface-border)' } },
@@ -465,5 +498,6 @@ export const JSONSchemaEditor = ({ schema, eventTypeName, isEditMode, onChange, 
                 </DataTable>
             </div>
         </div>
+        </>
     );
 };
