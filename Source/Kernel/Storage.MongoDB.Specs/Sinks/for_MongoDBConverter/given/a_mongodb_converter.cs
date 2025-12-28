@@ -24,11 +24,10 @@ public class a_mongodb_converter : Specification
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _typeFormats = Substitute.For<ITypeFormats>();
         _model = new ReadModelDefinition(
-            typeof(ReadModel).FullName!,
+            typeof(ReadModel).FullName,
             nameof(ReadModel),
             ReadModelOwner.Client,
-            SinkTypeId.None,
-            SinkConfigurationId.None,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(ReadModel)) },

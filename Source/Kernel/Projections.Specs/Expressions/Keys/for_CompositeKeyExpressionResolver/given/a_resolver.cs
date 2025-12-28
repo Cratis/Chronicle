@@ -23,8 +23,7 @@ public class a_resolver : Specification
             "SomethingId",
             "Something",
             ReadModelOwner.Client,
-            SinkTypeId.None,
-            SinkConfigurationId.None,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, new JsonSchema() }

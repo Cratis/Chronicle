@@ -35,8 +35,7 @@ public class a_changeset_converter : Specification
             typeof(TestReadModel).FullName,
             nameof(TestReadModel),
             ReadModelOwner.Client,
-            SinkTypeId.None,
-            SinkConfigurationId.None,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(TestReadModel)) },

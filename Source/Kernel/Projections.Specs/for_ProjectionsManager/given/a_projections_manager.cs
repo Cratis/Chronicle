@@ -46,7 +46,6 @@ public class a_projections_manager : Specification
             new Dictionary<PropertyPath, ChildrenDefinition>(),
             [],
             new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
-            SinkDefinition.None,
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
             null,
@@ -65,7 +64,6 @@ public class a_projections_manager : Specification
             new Dictionary<PropertyPath, ChildrenDefinition>(),
             [],
             new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
-            SinkDefinition.None,
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
             null,
@@ -75,8 +73,7 @@ public class a_projections_manager : Specification
             "first-read-model",
             "FirstReadModel",
             ReadModelOwner.Client,
-            SinkTypeId.None,
-            SinkConfigurationId.None,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
             []);
 
@@ -84,8 +81,7 @@ public class a_projections_manager : Specification
             "second-read-model",
             "SecondReadModel",
             ReadModelOwner.Client,
-            SinkTypeId.None,
-            SinkConfigurationId.None,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
             []);
     }
