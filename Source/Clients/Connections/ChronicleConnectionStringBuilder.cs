@@ -184,11 +184,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
 
         url += Host;
-
-        if (Port != DefaultPort)
-        {
-            url += $":{Port}";
-        }
+        url += $":{Port}";
 
         // Add query parameters if needed
         var queryParams = new List<string>();
