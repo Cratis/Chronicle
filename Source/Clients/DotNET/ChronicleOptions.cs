@@ -146,7 +146,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets or sets the authentication configuration.
     /// </summary>
-    public Authentication Authentication { get; set; } = new Authentication();
+    public Authentication Authentication { get; set; } = new Authentication();
 
     /// <summary>
     /// Gets or sets the port for the Management API and well-known certificate endpoint.
