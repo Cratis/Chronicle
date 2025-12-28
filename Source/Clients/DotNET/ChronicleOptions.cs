@@ -14,7 +14,7 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents the settings for connecting to Chronicle.
 /// </summary>
-/// <param name="url"><see cref="ChronicleConnectionString"/> to use.</param>
+/// <param name="connectionString"><see cref="ChronicleConnectionString"/> to use.</param>
 /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
@@ -27,7 +27,7 @@ namespace Cratis.Chronicle;
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
 public class ChronicleOptions(
-    ChronicleConnectionString url,
+    ChronicleConnectionString connectionString,
     INamingPolicy? namingPolicy = null,
     IIdentityProvider? identityProvider = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
@@ -50,7 +50,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="ChronicleConnectionString"/> to use.
     /// </summary>
-    public ChronicleConnectionString Url { get; set; } = url;
+    public ChronicleConnectionString ConnectionString { get; set; } = connectionString;
 
     /// <summary>
     /// Gets or sets the software version.

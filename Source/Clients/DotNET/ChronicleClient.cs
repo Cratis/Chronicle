@@ -65,7 +65,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
-            options.Url,
+            options.ConnectionString,
             options.ConnectTimeout,
             options.MaxReceiveMessageSize,
             options.MaxSendMessageSize,
@@ -187,7 +187,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         if (options.Authentication.Mode == AuthenticationMode.ClientCredentials)
         {
             return new OAuthTokenProvider(
-                options.Url.ServerAddress,
+                options.ConnectionString.ServerAddress,
                 options.Authentication.Username,
                 options.Authentication.Password,
                 options.ManagementPort,

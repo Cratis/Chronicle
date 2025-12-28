@@ -24,7 +24,7 @@ public class with_different_url : Specification
         configurationRoot.GetSection("Chronicle").Bind(_result);
     }
 
-    [Fact] void should_bind_url_property() => _result.Url.ShouldNotBeNull();
-    [Fact] void should_have_correct_host() => _result.Url.ServerAddress.Host.ShouldEqual("env-server");
-    [Fact] void should_have_correct_port() => _result.Url.ServerAddress.Port.ShouldEqual(9090);
+    [Fact] void should_bind_url_property() => _result.ConnectionString.ShouldNotBeNull();
+    [Fact] void should_have_correct_host() => _result.ConnectionString.ServerAddress.Host.ShouldEqual("env-server");
+    [Fact] void should_have_correct_port() => _result.ConnectionString.ServerAddress.Port.ShouldEqual(9090);
 }

@@ -2,7 +2,7 @@
     "managementPort": 8080,
     "port": 35000,
     "authentication": {
-        "enabled": false,
+        "enabled": true,
         "defaultAdminPassword": "ChangeMeNow!"
     },
     "features": {
