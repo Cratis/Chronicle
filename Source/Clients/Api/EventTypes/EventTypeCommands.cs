@@ -68,8 +68,8 @@ public class EventTypeCommands : Controller
                     Id = command.Name,
                     Generation = 1
                 },
-                Owner = EventTypeOwner.Client,
-                Source = EventTypeSource.User,
+                Owner = (Contracts.Events.EventTypeOwner)(int)EventTypeOwner.Client,
+                Source = (Contracts.Events.EventTypeSource)(int)EventTypeSource.User,
                 Schema = schema.ToJson()
             }
         });
