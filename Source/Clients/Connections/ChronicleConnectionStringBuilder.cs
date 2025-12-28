@@ -165,11 +165,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
-    /// Builds a Chronicle URL string from the current settings.
+    /// Builds a Chronicle connection string from the current settings.
     /// </summary>
-    /// <returns>The Chronicle URL string.</returns>
+    /// <returns>The Chronicle connection string.</returns>
     [SuppressMessage("Design", "CA1055:Uri return values should not be strings", Justification = "Returning a Chronicle URL string format")]
-    public string BuildChronicleUrl()
+    public string Build()
     {
         var url = $"{Scheme}://";
 
@@ -235,7 +235,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         if (connectionString.StartsWith("chronicle://", StringComparison.OrdinalIgnoreCase) ||
             connectionString.StartsWith("chronicle+srv://", StringComparison.OrdinalIgnoreCase))
         {
-            ParseChronicleUrl(connectionString);
+            Parse(connectionString);
         }
         else
         {
@@ -244,7 +244,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
     }
 
-    void ParseChronicleUrl(string url)
+    void Parse(string url)
     {
         var uri = new Uri(url);
 

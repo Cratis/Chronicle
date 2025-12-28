@@ -17,7 +17,7 @@ public class when_building_url_without_credentials : Specification
         };
     }
 
-    void Because() => _url = _builder.BuildChronicleUrl();
+    void Because() => _url = _builder.Build();
 
     [Fact] void should_not_include_credentials_in_url() => _url.ShouldEqual("chronicle://localhost");
 }

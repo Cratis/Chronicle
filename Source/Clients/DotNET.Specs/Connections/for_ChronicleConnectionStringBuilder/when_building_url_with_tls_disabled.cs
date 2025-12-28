@@ -18,7 +18,7 @@ public class when_building_url_with_tls_disabled : Specification
         };
     }
 
-    void Because() => _url = _builder.BuildChronicleUrl();
+    void Because() => _url = _builder.Build();
 
     [Fact] void should_include_disable_tls_in_query_string() => _url.ShouldEqual("chronicle://localhost?disableTls=true");
 }

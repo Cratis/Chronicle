@@ -19,7 +19,7 @@ public class when_building_url_with_multiple_query_parameters : Specification
         };
     }
 
-    void Because() => _url = _builder.BuildChronicleUrl();
+    void Because() => _url = _builder.Build();
 
     [Fact] void should_include_all_query_parameters() => _url.ShouldEqual("chronicle://localhost?apiKey=my-api-key&disableTls=true");
 }

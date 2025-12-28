@@ -19,7 +19,7 @@ public class when_building_url_with_credentials : Specification
         };
     }
 
-    void Because() => _url = _builder.BuildChronicleUrl();
+    void Because() => _url = _builder.Build();
 
     [Fact] void should_include_credentials_in_url() => _url.ShouldEqual("chronicle://admin:secret@localhost");
 }

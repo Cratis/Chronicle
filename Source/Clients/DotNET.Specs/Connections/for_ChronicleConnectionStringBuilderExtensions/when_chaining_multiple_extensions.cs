@@ -10,12 +10,12 @@ public class when_chaining_multiple_extensions : Specification
 
     void Establish() => _builder = new ChronicleConnectionStringBuilder();
 
-    void Because() => _result = _builder
+    void Because() => _result = ChronicleConnectionStringBuilderExtensions.Build(_builder
         .WithHost("example.com")
         .WithPort(8080)
         .WithCredentials("user", "pass")
         .WithTlsDisabled()
-        .Build();
+);
 
     [Fact] void should_build_complete_url() => _result.ShouldEqual("chronicle://user:pass@example.com:8080?disableTls=true");
 }
