@@ -171,12 +171,6 @@ public class ChronicleOptions(
         {
             Disable = connectionString.DisableTls
         },
-        Authentication = new Authentication
-        {
-            Mode = connectionString.AuthenticationMode,
-            ApiKey = connectionString.ApiKey ?? string.Empty,
-            Username = connectionString.Username ?? string.Empty,
-            Password = connectionString.Password ?? string.Empty
-        }
+        Authentication = new Authentication()
     };
 }

@@ -184,12 +184,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     ITokenProvider CreateTokenProvider(ChronicleOptions options)
     {
-        if (options.Authentication.Mode == AuthenticationMode.ClientCredentials)
+        if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
             return new OAuthTokenProvider(
                 options.ConnectionString.ServerAddress,
-                options.Authentication.Username,
-                options.Authentication.Password,
+                options.ConnectionString.Username ?? string.Empty,
+                options.ConnectionString.Password ?? string.Empty,
                 options.ManagementPort,
                 options.Tls.Disable,
                 options.LoggerFactory.CreateLogger<OAuthTokenProvider>());
