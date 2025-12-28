@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <summary>
 /// Extension methods for converting between contract and API user types.
 /// </summary>
-public static class UserConverters
+internal static class UserConverters
 {
     /// <summary>
     /// Convert from contract user to API user.
