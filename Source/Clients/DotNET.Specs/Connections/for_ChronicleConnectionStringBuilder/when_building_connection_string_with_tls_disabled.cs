@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilder;
 
-public class when_building_url_with_credentials : Specification
+public class when_building_connection_string_with_tls_disabled : Specification
 {
     ChronicleConnectionStringBuilder _builder;
     string _url;
@@ -14,12 +14,11 @@ public class when_building_url_with_credentials : Specification
         {
             Host = "localhost",
             Port = 35000,
-            Username = "admin",
-            Password = "secret"
+            DisableTls = true
         };
     }
 
     void Because() => _url = _builder.Build();
 
-    [Fact] void should_include_credentials_in_url() => _url.ShouldEqual("chronicle://admin:secret@localhost");
+    [Fact] void should_include_disable_tls_in_query_string() => _url.ShouldEqual("chronicle://localhost:35000?disableTls=true");
 }

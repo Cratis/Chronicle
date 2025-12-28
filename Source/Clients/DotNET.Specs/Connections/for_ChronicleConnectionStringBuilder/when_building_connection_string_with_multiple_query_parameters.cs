@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilder;
 
-public class when_building_url_without_credentials : Specification
+public class when_building_connection_string_with_multiple_query_parameters : Specification
 {
     ChronicleConnectionStringBuilder _builder;
     string _url;
@@ -13,11 +13,13 @@ public class when_building_url_without_credentials : Specification
         _builder = new ChronicleConnectionStringBuilder
         {
             Host = "localhost",
-            Port = 35000
+            Port = 35000,
+            ApiKey = "my-api-key",
+            DisableTls = true
         };
     }
 
     void Because() => _url = _builder.Build();
 
-    [Fact] void should_not_include_credentials_in_url() => _url.ShouldEqual("chronicle://localhost");
+    [Fact] void should_include_all_query_parameters() => _url.ShouldEqual("chronicle://localhost:35000?apiKey=my-api-key&disableTls=true");
 }
