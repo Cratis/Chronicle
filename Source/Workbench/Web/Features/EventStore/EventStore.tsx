@@ -19,7 +19,8 @@ import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
-import { ReadModels } from './General/ReadModelTypes/ReadModels';
+import { ReadModelTypes } from './General/ReadModelTypes/ReadModelTypes';
+import { ReadModels } from './Namespaces/ReadModels/ReadModels';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
@@ -36,6 +37,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
                 { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
                 { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
+                { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
                 { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
             ]
         },
@@ -43,7 +45,7 @@ export const EventStore = () => {
             label: strings.mainMenu.general.groupLabel,
             items: [
                 { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
-                { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdStorage },
+                { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
@@ -69,7 +71,7 @@ export const EventStore = () => {
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
                 <Route path={'event-types'} element={<EventTypes />} />
-                <Route path={'read-model-types'} element={<ReadModels />} />
+                <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />
@@ -87,6 +89,7 @@ export const EventStore = () => {
                     <Route path={'sequences-future'} element={<SequencesFuture />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
+                    <Route path={'read-models'} element={<ReadModels />} />
                     <Route path={'identities'} element={<Identities />} />
                 </Route>
             </Route>

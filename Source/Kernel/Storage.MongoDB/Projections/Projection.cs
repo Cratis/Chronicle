@@ -15,4 +15,4 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="ReadModel">The read model associated with the projection.</param>
 /// <param name="Sink">The sink definition for the projection.</param>
 /// <param name="Definitions">The definitions per generation of the projection.</param>
-public record Projection(ProjectionId Id, ProjectionOwner Owner, Concepts.ReadModels.ReadModel ReadModel, SinkDefinition Sink, IDictionary<string, ProjectionDefinition> Definitions);
+public record Projection(ProjectionId Id, ProjectionOwner Owner, Concepts.ReadModels.ReadModelType ReadModel, SinkDefinition Sink, IDictionary<string, ProjectionDefinition> Definitions);

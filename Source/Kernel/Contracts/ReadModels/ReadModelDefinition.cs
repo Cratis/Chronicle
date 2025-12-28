@@ -13,7 +13,7 @@ public class ReadModelDefinition
     /// Gets or sets the unique identifier of the model.
     /// </summary>
     [ProtoMember(1)]
-    public string Identifier { get; set; }
+    public ReadModelType Type { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the model.
@@ -22,20 +22,26 @@ public class ReadModelDefinition
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the generation of the model.
+    /// Gets or sets the unique identifier of the sink type the read model is associated with.
     /// </summary>
     [ProtoMember(3)]
-    public ulong Generation { get; set; }
+    public Guid SinkType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique identifier of the sink configuration the read model is associated with.
+    /// </summary>
+    [ProtoMember(4)]
+    public Guid SinkConfiguration { get; set; }
 
     /// <summary>
     /// Gets or sets the JSON schema for the model.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(5)]
     public string Schema { get; set; }
 
     /// <summary>
     /// Gets or sets the indexes defined for the model.
     /// </summary>
-    [ProtoMember(5, IsRequired = true)]
+    [ProtoMember(6, IsRequired = true)]
     public IList<IndexDefinition> Indexes { get; set; } = [];
 }

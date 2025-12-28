@@ -44,4 +44,22 @@ public interface IReadModels
     /// <returns>The <see cref="GetDefinitionsResponse"/> with all definitions.</returns>
     [Operation]
     Task<GetDefinitionsResponse> GetDefinitions(GetDefinitionsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all occurrences for a specific read model.
+    /// </summary>
+    /// <param name="request">The <see cref="GetOccurrencesRequest"/> for the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetOccurrencesResponse"/> with all occurrences.</returns>
+    [Operation]
+    Task<GetOccurrencesResponse> GetOccurrences(GetOccurrencesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get instances of a read model.
+    /// </summary>
+    /// <param name="request">The <see cref="GetInstancesRequest"/> for the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetInstancesResponse"/> with the instances.</returns>
+    [Operation]
+    Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default);
 }

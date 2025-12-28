@@ -38,15 +38,7 @@ public class ReadModelTypeCommands : ControllerBase
         var identifier = Guid.NewGuid().ToString();
         var schema = new JsonSchema
         {
-            Type = JsonObjectType.Object,
-            Properties =
-            {
-                ["id"] = new JsonSchemaProperty
-                {
-                    Type = JsonObjectType.String,
-                    Format = "guid"
-                }
-            }
+            Type = JsonObjectType.Object
         };
 
         await _readModels.RegisterSingle(new()
@@ -55,9 +47,12 @@ public class ReadModelTypeCommands : ControllerBase
             Owner = Contracts.ReadModels.ReadModelOwner.Client,
             ReadModel = new()
             {
-                Identifier = identifier,
+                Type = new()
+                {
+                    Identifier = identifier,
+                    Generation = 1,
+                },
                 Name = command.Name,
-                Generation = 1,
                 Schema = schema.ToJson(),
                 Indexes = []
             }
@@ -79,9 +74,12 @@ public class ReadModelTypeCommands : ControllerBase
             EventStore = eventStore,
             ReadModel = new()
             {
-                Identifier = command.Identifier,
+                Type = new()
+                {
+                    Identifier = command.Identifier,
+                    Generation = command.Generation
+                },
                 Name = command.Name,
-                Generation = command.Generation,
                 Schema = command.Schema,
                 Indexes = command.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i }).ToList()
             }

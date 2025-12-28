@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Sinks;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Concepts.ReadModels;
@@ -11,6 +12,8 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// <param name="Identifier">Unique identifier of the model.</param>
 /// <param name="Name">Name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
+/// <param name="SinkType">The type of sink the read model uses.</param>
+/// <param name="SinkConfiguration">The configuration of the sink the read model uses.</param>
 /// <param name="Schemas">The <see cref="JsonSchema"/> for the model.</param>
 /// <param name="Indexes">The indexes defined for the model.</param>
 [GenerateSerializer]
@@ -19,6 +22,8 @@ public record ReadModelDefinition(
     ReadModelIdentifier Identifier,
     ReadModelName Name,
     ReadModelOwner Owner,
+    SinkTypeId SinkType,
+    SinkConfigurationId SinkConfiguration,
     IDictionary<ReadModelGeneration, JsonSchema> Schemas,
     IReadOnlyCollection<IndexDefinition> Indexes)
 {

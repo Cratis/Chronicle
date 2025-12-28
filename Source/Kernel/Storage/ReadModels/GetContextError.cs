@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.ReadModels;
 
 /// <summary>
 /// Represents a <see cref="ReplayContext"/> for a specific <see cref="ReadModelDefinition"/>.

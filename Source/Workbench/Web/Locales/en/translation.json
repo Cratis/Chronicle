@@ -32,11 +32,13 @@
         "sequences": "Sequences",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
+        "readModels": "Read Models",
         "identities": "Identities",
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
             "readModelTypes": "Read Model Types",
+            "readModels": "Read Models",
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",

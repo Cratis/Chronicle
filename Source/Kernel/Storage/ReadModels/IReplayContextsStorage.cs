@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.ReadModels;
 
 /// <summary>
 /// Defines a storage system for working with <see cref="ReplayContext"/>.

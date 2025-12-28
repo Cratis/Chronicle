@@ -3,7 +3,7 @@
 
 import { Column } from 'primereact/column';
 import strings from 'Strings';
-import { AllReadModels } from 'Api/ReadModelTypes';
+import { AllReadModelDefinitions } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useDialog } from '@cratis/arc.react/dialogs';
@@ -12,7 +12,7 @@ import { DataPage, MenuItem } from 'Components';
 import { ReadModelDetails } from './ReadModelDetails';
 import * as faIcons from 'react-icons/fa6';
 
-export const ReadModels = () => {
+export const ReadModelTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddReadModelWrapper, showAddReadModel] = useDialog(AddReadModelDialog);
 
@@ -20,7 +20,7 @@ export const ReadModels = () => {
         <>
             <DataPage
                 title={strings.eventStore.general.readModels.title}
-                query={AllReadModels}
+                query={AllReadModelDefinitions}
                 queryArguments={{ eventStore: params.eventStore! }}
                 dataKey='identifier'
                 emptyMessage={strings.eventStore.general.readModels.empty}

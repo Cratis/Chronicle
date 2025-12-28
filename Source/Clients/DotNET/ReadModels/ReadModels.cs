@@ -40,9 +40,12 @@ public class ReadModels(
 
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
-            Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
+            Type = new()
+            {
+                Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
+                Generation = ReadModelGeneration.First,
+            },
             Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
-            Generation = ReadModelGeneration.First,
             Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
             Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty)
         });
@@ -62,7 +65,11 @@ public class ReadModels(
         {
             new()
             {
-                Identifier = typeof(TReadModel).GetReadModelIdentifier(),
+                Type = new()
+                {
+                    Identifier = typeof(TReadModel).GetReadModelIdentifier(),
+                    Generation = ReadModelGeneration.First,
+                },
                 Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty)

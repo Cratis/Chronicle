@@ -4,7 +4,7 @@
 using Cratis.Arc.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.ReadModels;
 
 /// <summary>
 /// Represents a class map for <see cref="ReplayContext"/>.

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -11,7 +12,8 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
-internal sealed class ReadModels(IGrainFactory grainFactory) : IReadModels
+/// <param name="sinks">All the sinks.</param>
+internal sealed class ReadModels(IGrainFactory grainFactory, ISinks sinks) : IReadModels
 {
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
@@ -42,9 +44,42 @@ internal sealed class ReadModels(IGrainFactory grainFactory) : IReadModels
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var definitions = await readModelsManager.GetDefinitions();
-        return new GetDefinitionsResponse
+        return new()
         {
             ReadModels = definitions.Select(_ => _.ToContract()).ToList()
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetOccurrencesResponse> GetOccurrences(GetOccurrencesRequest request, CallContext context = default)
+    {
+        var readModelReplayManager = grainFactory.GetReadModelReplayManager(request.EventStore, request.Namespace, request.Type.Identifier);
+        var occurrences = await readModelReplayManager.GetOccurrences();
+        return new()
+        {
+            Occurrences = occurrences.Select(_ => _.ToContract()).ToList()
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
+    {
+        var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
+        var definition = await readModel.GetDefinition();
+        var sink = sinks.GetFor(definition);
+        var skip = request.Page * request.PageSize;
+        var (instances, totalCount) = await sink.GetInstances(
+            string.IsNullOrEmpty(request.Occurrence) ? null! : request.Occurrence,
+            skip,
+            request.PageSize);
+
+        var instancesAsJson = instances.Select(instance => System.Text.Json.JsonSerializer.Serialize(instance));
+        return new()
+        {
+            Instances = instancesAsJson,
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
         };
     }
 }

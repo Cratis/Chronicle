@@ -3,18 +3,22 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.ReadModels;
 
 /// <summary>
 /// Represents the context for a replay.
 /// </summary>
-/// <param name="ReadModelIdentifier">The identifier of the read model being replayed.</param>
+/// <param name="Type">The <see cref="ReadModelType"/> of the read model being replayed.</param>
 /// <param name="ReadModel">The name of the read model being replayed.</param>
-/// <param name="RevertModel">The name of the model representing what one can revert / downgrade to.</param>
+/// <param name="RevertReadModel">The name of the model representing what one can revert / downgrade to.</param>
 /// <param name="Started">The date and time for when the replay was started.</param>
 /// <remarks>
 /// The sink should replay to a temporary target, and then rename to the actual target when done. This would
 /// prevent any changes to the target while replaying and keeping a system operational, at least from a read perspective.
-/// Once replay is done it should keep the "old" target around by renaming it a the <see cref="RevertModel"/>.
+/// Once replay is done it should keep the "old" target around by renaming it a the <see cref="RevertReadModel"/>.
 /// </remarks>
-public record ReplayContext(ReadModelIdentifier ReadModelIdentifier, ReadModelName ReadModel, ReadModelName RevertModel, DateTimeOffset Started);
+public record ReplayContext(
+    ReadModelType Type,
+    ReadModelName ReadModel,
+    ReadModelName RevertReadModel,
+    DateTimeOffset Started);

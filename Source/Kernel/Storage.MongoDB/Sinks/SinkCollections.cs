@@ -24,28 +24,28 @@ public class SinkCollections(
     string ReplayCollectionName => $"replay-{readModel.Name}";
 
     /// <inheritdoc/>
-    public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    public async Task BeginReplay(Chronicle.Storage.ReadModels.ReplayContext context)
     {
         _isReplaying = true;
         await PrepareInitialRun();
     }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    public Task ResumeReplay(Chronicle.Storage.ReadModels.ReplayContext context)
     {
         _isReplaying = true;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    public async Task EndReplay(Chronicle.Storage.ReadModels.ReplayContext context)
     {
         var rewindName = ReplayCollectionName;
 
         var collectionNames = (await database.ListCollectionNamesAsync()).ToList();
         if (collectionNames.Contains(readModel.Name))
         {
-            await database.RenameCollectionAsync(readModel.Name, context.RevertModel);
+            await database.RenameCollectionAsync(readModel.Name, context.RevertReadModel);
         }
 
         if (collectionNames.Contains(rewindName))
@@ -65,4 +65,7 @@ public class SinkCollections(
 
     /// <inheritdoc/>
     public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? database.GetCollection<BsonDocument>(ReplayCollectionName) : database.GetCollection<BsonDocument>(readModel.Name);
+
+    /// <inheritdoc/>
+    public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
 }

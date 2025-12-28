@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Storage.Sinks;
+namespace Cratis.Chronicle.Storage.ReadModels;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReplayContexts"/>.
@@ -16,13 +16,13 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     readonly ConcurrentDictionary<ReadModelIdentifier, ReplayContext> _contexts = new();
 
     /// <inheritdoc/>
-    public async Task<ReplayContext> Establish(ReadModelIdentifier readModelIdentifier, ReadModelName readModelName)
+    public async Task<ReplayContext> Establish(ReadModelType type, ReadModelName readModelName)
     {
         var replayStarted = DateTimeOffset.UtcNow;
         var rewoundCollectionsPrefix = $"{readModelName}-";
         var revertModelName = $"{rewoundCollectionsPrefix}{replayStarted:yyyyMMddHHmmss}";
-        var context = new ReplayContext(readModelIdentifier, readModelName, revertModelName, replayStarted);
-        _contexts[readModelIdentifier] = context;
+        var context = new ReplayContext(type, readModelName, revertModelName, replayStarted);
+        _contexts[type.Identifier] = context;
         await storage.Save(context);
         return context;
     }

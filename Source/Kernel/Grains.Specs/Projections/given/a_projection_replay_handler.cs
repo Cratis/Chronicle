@@ -40,7 +40,7 @@ public class a_projection_replay_handler : Specification
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
         _eventStoreNamespaceStorage.ReplayContexts.Returns(_replayContexts);
         _replayedModels = Substitute.For<IReplayedReadModelsStorage>();
-        _eventStoreNamespaceStorage.ReplayedModels.Returns(_replayedModels);
+        _eventStoreNamespaceStorage.ReplayedReadModels.Returns(_replayedModels);
 
         _projectionPipelineManager = Substitute.For<IProjectionPipelineManager>();
         _projectionPipeline = Substitute.For<IProjectionPipeline>();

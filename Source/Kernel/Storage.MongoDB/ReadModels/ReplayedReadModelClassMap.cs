@@ -4,15 +4,15 @@
 using Cratis.Arc.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+namespace Cratis.Chronicle.Storage.MongoDB.ReadModels;
 
 /// <summary>
-/// Represents the mapping for <see cref="ReplayedModel"/>.
+/// Represents the mapping for <see cref="ReplayedReadModel"/>.
 /// </summary>
-public class ReplayedModelClassMap : IBsonClassMapFor<ReplayedModel>
+public class ReplayedReadModelClassMap : IBsonClassMapFor<ReplayedReadModel>
 {
     /// <inheritdoc/>
-    public void Configure(BsonClassMap<ReplayedModel> classMap)
+    public void Configure(BsonClassMap<ReplayedReadModel> classMap)
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.ReadModel);
