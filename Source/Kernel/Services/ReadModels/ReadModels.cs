@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Grains.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
-/// <param name="sinks">All the sinks.</param>
-internal sealed class ReadModels(IGrainFactory grainFactory, ISinks sinks) : IReadModels
+/// <param name="storage">The storage.</param>
+internal sealed class ReadModels(IGrainFactory grainFactory, IStorage storage) : IReadModels
 {
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
@@ -66,6 +66,7 @@ internal sealed class ReadModels(IGrainFactory grainFactory, ISinks sinks) : IRe
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetDefinition();
+        var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = sinks.GetFor(definition);
         var skip = request.Page * request.PageSize;
         var (instances, totalCount) = await sink.GetInstances(

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Sinks;
+
 namespace Cratis.Chronicle.Contracts.ReadModels;
 
 /// <summary>
@@ -22,16 +24,10 @@ public class ReadModelDefinition
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the unique identifier of the sink type the read model is associated with.
+    /// Gets or sets the projection sink definition.
     /// </summary>
     [ProtoMember(3)]
-    public Guid SinkType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the unique identifier of the sink configuration the read model is associated with.
-    /// </summary>
-    [ProtoMember(4)]
-    public Guid SinkConfiguration { get; set; }
+    public SinkDefinition Sink { get; set; }
 
     /// <summary>
     /// Gets or sets the JSON schema for the model.

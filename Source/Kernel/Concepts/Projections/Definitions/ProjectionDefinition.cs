@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -25,7 +24,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
 /// <param name="FromDerivatives">All the <see cref="Definitions.FromDerivatives"/> for an event type used as a base type in a From statement.</param>
 /// <param name="FromEvery">The full <see cref="FromEveryDefinition"/>.</param>
-/// <param name="Sink">The <see cref="SinkDefinition"/>.</param>
 /// <param name="RemovedWith">All the <see cref="RemovedWithDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="RemovedWithJoin">All the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
@@ -44,7 +42,6 @@ public record ProjectionDefinition(
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     IEnumerable<FromDerivatives> FromDerivatives,
     FromEveryDefinition FromEvery,
-    SinkDefinition Sink,
     IDictionary<EventType, RemovedWithDefinition> RemovedWith,
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,

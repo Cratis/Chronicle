@@ -12,8 +12,7 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// <param name="Identifier">Unique identifier of the model.</param>
 /// <param name="Name">Name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
-/// <param name="SinkType">The type of sink the read model uses.</param>
-/// <param name="SinkConfiguration">The configuration of the sink the read model uses.</param>
+/// <param name="Sink">The <see cref="SinkDefinition"/> defining where to store the read model.</param>
 /// <param name="Schemas">The <see cref="JsonSchema"/> for the model.</param>
 /// <param name="Indexes">The indexes defined for the model.</param>
 [GenerateSerializer]
@@ -22,8 +21,7 @@ public record ReadModelDefinition(
     ReadModelIdentifier Identifier,
     ReadModelName Name,
     ReadModelOwner Owner,
-    SinkTypeId SinkType,
-    SinkConfigurationId SinkConfiguration,
+    SinkDefinition Sink,
     IDictionary<ReadModelGeneration, JsonSchema> Schemas,
     IReadOnlyCollection<IndexDefinition> Indexes)
 {

@@ -13,13 +13,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="Id">The unique identifier of the read model.</param>
 /// <param name="Name">The friendly display name of the read model.</param>
 /// <param name="Owner">The owner of the read model.</param>
-/// <param name="SinkType">The sink type the read model uses.</param>
-/// <param name="SinkConfiguration">The sink configuration the read model uses.</param>
+/// <param name="Sink">The sink definition for the read model.</param>
 /// <param name="Schemas">The schemas per generation of the read model.</param>
 public record ReadModel(
     ReadModelIdentifier Id,
     ReadModelName Name,
     ReadModelOwner Owner,
-    SinkTypeId SinkType,
-    SinkConfigurationId SinkConfiguration,
+    SinkDefinition Sink,
     IDictionary<string, BsonDocument> Schemas);

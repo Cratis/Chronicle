@@ -7,7 +7,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
@@ -91,11 +90,6 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
-            Sink = new()
-            {
-                ConfigurationId = Guid.Empty,
-                TypeId = WellKnownSinkTypes.MongoDB
-            },
             Categories = _projectionType.GetCategories().ToArray()
         };
 }

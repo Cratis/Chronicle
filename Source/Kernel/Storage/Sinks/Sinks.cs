@@ -29,10 +29,10 @@ public class Sinks(
     /// <inheritdoc/>
     public ISink GetFor(ReadModelDefinition readModel)
     {
-        ThrowIfUnknownSink(readModel.SinkType);
-        var key = new SinkKey(readModel.SinkType, readModel.SinkConfiguration, readModel.Name);
+        ThrowIfUnknownSink(readModel.Sink.Type);
+        var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.Name);
         if (_sinks.TryGetValue(key, out var store)) return store;
-        return _sinks[key] = _factories[readModel.SinkType].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
+        return _sinks[key] = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
     }
 
     /// <inheritdoc/>

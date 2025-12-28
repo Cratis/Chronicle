@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -46,6 +47,11 @@ public class ReadModels(
                 Generation = ReadModelGeneration.First,
             },
             Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
+            Sink = new()
+            {
+                ConfigurationId = Guid.Empty,
+                TypeId = WellKnownSinkTypes.MongoDB
+            },
             Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
             Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty)
         });
@@ -71,6 +77,11 @@ public class ReadModels(
                     Generation = ReadModelGeneration.First,
                 },
                 Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                Sink = new()
+                {
+                    ConfigurationId = Guid.Empty,
+                    TypeId = WellKnownSinkTypes.MongoDB
+                },
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty)
             }

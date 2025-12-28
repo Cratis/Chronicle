@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Sinks;
 
 namespace Cratis.Chronicle.Contracts.Projections;
 
@@ -103,14 +102,8 @@ public class ProjectionDefinition
     public SerializableDateTimeOffset? LastUpdated { get; set; }
 
     /// <summary>
-    /// Gets or sets the projection sink definition.
-    /// </summary>
-    [ProtoMember(16)]
-    public SinkDefinition Sink { get; set; }
-
-    /// <summary>
     /// Gets or sets the categories the projection belongs to.
     /// </summary>
-    [ProtoMember(17, IsRequired = true)]
+    [ProtoMember(16, IsRequired = true)]
     public IList<string> Categories { get; set; } = [];
 }
