@@ -10,9 +10,6 @@ namespace Cratis.Chronicle.Server;
 /// </summary>
 public static class CertificateLoader
 {
-    const string NotACertificate = "NOT-A-CERTIFICATE";
-    const string EmbeddedCertificatePath = "Certs/shared-dev.pfx";
-
     /// <summary>
     /// Loads a certificate based on the priority: ChronicleOptions → Embedded Certificate → Dev Certificate.
     /// </summary>
@@ -25,23 +22,11 @@ public static class CertificateLoader
             return null;
         }
 
-        // Priority 1: ChronicleOptions
         if (!string.IsNullOrEmpty(options.Tls.CertificatePath) && File.Exists(options.Tls.CertificatePath))
         {
             return LoadCertificateFromPath(options.Tls.CertificatePath, options.Tls.CertificatePassword);
         }
 
-        // Priority 2: Embedded Certificate
-        if (File.Exists(EmbeddedCertificatePath))
-        {
-            var content = File.ReadAllText(EmbeddedCertificatePath).Trim();
-            if (content != NotACertificate)
-            {
-                return LoadCertificateFromPath(EmbeddedCertificatePath, options.Tls.CertificatePassword);
-            }
-        }
-
-        // Priority 3: Dev Certificate (return null to let ASP.NET Core handle it)
         return null;
     }
 
