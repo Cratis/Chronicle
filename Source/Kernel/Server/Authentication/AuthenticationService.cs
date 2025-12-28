@@ -11,18 +11,17 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// <summary>
 /// Represents an implementation of <see cref="IAuthenticationService"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="AuthenticationService"/> class.
-/// </remarks>
 /// <param name="userStorage">The user storage.</param>
-/// <param name="applicationManager">The OpenIddict application manager.</param>
 /// <param name="options">Chronicle options.</param>
+/// <param name="applicationManager">The OpenIddict application manager.</param>
 /// <param name="logger">The logger.</param>
 public class AuthenticationService(
     IUserStorage userStorage,
-    IOpenIddictApplicationManager applicationManager,
     IOptions<Configuration.ChronicleOptions> options,
+#pragma warning disable CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
+    IOpenIddictApplicationManager applicationManager,
     ILogger<AuthenticationService> logger) : IAuthenticationService
+#pragma warning restore CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
 {
     readonly Configuration.ChronicleOptions _options = options.Value;
 
