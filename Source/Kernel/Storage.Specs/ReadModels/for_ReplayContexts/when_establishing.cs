@@ -3,11 +3,11 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts;
+namespace Cratis.Chronicle.Storage.ReadModels.for_ReplayContexts;
 
 public class when_establishing : Specification
 {
-    ReadModelIdentifier _readModelId = "SomeModelId";
+    ReadModelType _readModelType = new("SomeModelId", ReadModelGeneration.First);
     ReadModelName _readModelName = "SomeModel";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
@@ -19,9 +19,9 @@ public class when_establishing : Specification
         _contexts = new(_storage);
     }
 
-    async Task Because() => _context = await _contexts.Establish(_readModelId, _readModelName);
+    async Task Because() => _context = await _contexts.Establish(_readModelType, _readModelName);
 
     [Fact] void should_return_context() => _context.ShouldNotBeNull();
-    [Fact] void should_have_model_in_context() => _context.ReadModelIdentifier.ShouldEqual(_readModelId);
+    [Fact] void should_have_model_in_context() => _context.Type.ShouldEqual(_readModelType);
     [Fact] void should_save_context() => _storage.Received(1).Save(_context);
 }

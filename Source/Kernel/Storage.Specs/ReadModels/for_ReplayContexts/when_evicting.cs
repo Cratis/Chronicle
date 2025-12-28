@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sinks.for_ReplayContexts;
+namespace Cratis.Chronicle.Storage.ReadModels.for_ReplayContexts;
 
 public class when_evicting : Specification
 {

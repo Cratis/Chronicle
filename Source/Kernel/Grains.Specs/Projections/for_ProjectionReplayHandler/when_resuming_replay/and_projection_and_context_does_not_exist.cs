@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.ReadModels;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.when_resuming_replay;
 
@@ -11,8 +11,8 @@ public class and_projection_and_context_does_not_exist : given.a_projection_repl
 
     void Establish()
     {
-        _replayContext = new ReplayContext(_readModelId, _readModelName, "TheRevertModel", DateTimeOffset.UtcNow);
-        _replayContexts.TryGet(_readModelId).Returns(GetContextError.NotFound);
+        _replayContext = new ReplayContext(_readModelType, _readModelName, "TheRevertModel", DateTimeOffset.UtcNow);
+        _replayContexts.TryGet(_readModelType.Identifier).Returns(GetContextError.NotFound);
     }
 
     Task Because() => _handler.EndReplayFor(_observerDetails);

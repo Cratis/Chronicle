@@ -75,6 +75,8 @@ public class a_projections_manager : Specification
             "first-read-model",
             "FirstReadModel",
             ReadModelOwner.Client,
+            SinkTypeId.None,
+            SinkConfigurationId.None,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
             []);
 
@@ -82,6 +84,8 @@ public class a_projections_manager : Specification
             "second-read-model",
             "SecondReadModel",
             ReadModelOwner.Client,
+            SinkTypeId.None,
+            SinkConfigurationId.None,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
             []);
     }

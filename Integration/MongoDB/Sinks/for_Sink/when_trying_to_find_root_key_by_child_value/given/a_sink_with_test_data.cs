@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Bson;
@@ -78,6 +79,8 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
             "test-read-model",
             "TestReadModel",
             ReadModelOwner.Client,
+            SinkTypeId.None,
+            SinkConfigurationId.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, schema }
@@ -110,9 +113,10 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
     class TestCollections(IMongoDatabase database, string collectionName) : ISinkCollections
     {
         public IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(collectionName);
-        public Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;
-        public Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;
-        public Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;
+        public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
+        public Task BeginReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
+        public Task ResumeReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
+        public Task EndReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
         public Task PrepareInitialRun() => Task.CompletedTask;
     }
 }
