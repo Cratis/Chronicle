@@ -41,7 +41,7 @@ const renderOwner = (eventType: EventTypeRegistration) => {
             return strings.eventStore.general.eventTypes.owners.server;
     }
     return strings.eventStore.general.eventTypes.owners.unknown;
-}
+};
 
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();

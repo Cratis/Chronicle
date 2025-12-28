@@ -61,11 +61,11 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         return undefined;
     }, []);
 
-    const validateAllProperties = useCallback((props: SchemaProperty[]) => {
+    const validateAllProperties = useCallback((properties: SchemaProperty[]) => {
         const errors: Record<string, string> = {};
 
-        props.forEach(prop => {
-            const error = validatePropertyName(prop.name, prop.id!, props);
+        properties.forEach(prop => {
+            const error = validatePropertyName(prop.name, prop.id!, properties);
             if (error) {
                 errors[prop.id!] = error;
             }
