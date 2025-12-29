@@ -240,6 +240,30 @@
                     "name": "Name",
                     "userName": "UserName"
                 }
+            },
+            "readModels": {
+                "title": "Read Models",
+                "empty": "No instances found. Select a read model to view data.",
+                "actions": {
+                    "filter": "Filter",
+                    "query": "Query",
+                    "navigateBack": "Navigate Back"
+                },
+                "labels": {
+                    "readModel": "Read Model",
+                    "occurrence": "Occurrence",
+                    "objectDetails": "Object Details",
+                    "root": "Root",
+                    "default": "Default",
+                    "generation": "Generation",
+                    "array": "Array",
+                    "object": "Object",
+                    "null": "null"
+                },
+                "placeholders": {
+                    "selectReadModel": "Select a Read Model",
+                    "selectOccurrence": "Select an Occurrence"
+                }
             }
         },
         "system": {

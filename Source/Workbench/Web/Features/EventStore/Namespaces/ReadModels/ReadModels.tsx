@@ -17,6 +17,7 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelOccurrence, ReadModelOccurrences, ReadModelInstances } from 'Api/ReadModels';
 import * as faIcons from 'react-icons/fa6';
 import { Menubar } from 'primereact/menubar';
+import strings from 'Strings';
 
 interface NavigationItem {
     name: string;
@@ -100,8 +101,8 @@ export const ReadModels = () => {
     const occurrenceOptions = useMemo(() => {
         return occurrences.data.map(occ => ({
             label: occ.revertModel === 'Default'
-                ? `Default (Generation ${occ.generation})`
-                : `${new Date(occ.occurred).toLocaleString()} (Generation ${occ.generation})`,
+                ? `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`
+                : `${new Date(occ.occurred).toLocaleString()} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`,
             value: occ
         }));
     }, [occurrences]);
@@ -167,7 +168,7 @@ export const ReadModels = () => {
             return (
                 <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
                     <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)', fontStyle: 'italic' }}>null</span>
+                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)', fontStyle: 'italic' }}>{strings.eventStore.namespaces.readModels.labels.null}</span>
                 </div>
             );
         }
@@ -176,7 +177,7 @@ export const ReadModels = () => {
             return (
                 <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
                     <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)' }}>Array[{value.length}]</span>
+                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)' }}>{strings.eventStore.namespaces.readModels.labels.array}[{value.length}]</span>
                     {value.map((item, idx) => (
                         <div key={idx} style={{ marginLeft: '1.5rem', marginTop: '0.25rem' }}>
                             {typeof item === 'object' ? (
@@ -197,7 +198,7 @@ export const ReadModels = () => {
             return (
                 <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
                     <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)' }}>Object</span>
+                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)' }}>{strings.eventStore.namespaces.readModels.labels.object}</span>
                     <div style={{ marginTop: '0.25rem' }}>
                         {Object.keys(value).map(k => renderObjectProperty(value, k, depth + 1))}
                     </div>
@@ -236,7 +237,7 @@ export const ReadModels = () => {
                                 onClick={() => navigateToArray(key)}
                                 style={{ color: 'var(--primary-color)' }}
                             >
-                                <span>Array[{value.length}]</span>
+                                <span>{strings.eventStore.namespaces.readModels.labels.array}[{value.length}]</span>
                                 <faIcons.FaArrowRight style={{ fontSize: '0.875rem' }} />
                             </div>
                         );
@@ -249,7 +250,7 @@ export const ReadModels = () => {
                                 onClick={() => handleObjectClick(value)}
                                 style={{ color: 'var(--primary-color)' }}
                             >
-                                <span>Object</span>
+                                <span>{strings.eventStore.namespaces.readModels.labels.object}</span>
                                 <faIcons.FaArrowRight style={{ fontSize: '0.875rem' }} />
                             </div>
                         );
@@ -262,7 +263,7 @@ export const ReadModels = () => {
     }, [currentData, navigateToArray, handleObjectClick]);
 
     const breadcrumbItems = useMemo(() => {
-        const items: NavigationItem[] = [{ name: 'Root', path: [] }];
+        const items: NavigationItem[] = [{ name: strings.eventStore.namespaces.readModels.labels.root, path: [] }];
         for (let i = 0; i < navigationPath.length; i++) {
             items.push({
                 name: navigationPath[i],
@@ -273,17 +274,17 @@ export const ReadModels = () => {
     }, [navigationPath]);
 
     return (
-        <Page title="Read Models">
+        <Page title={strings.eventStore.namespaces.readModels.title}>
             <div className="px-4 py-2">
                 <Menubar
                     model={[
                         {
-                            label: 'Filter',
+                            label: strings.eventStore.namespaces.readModels.actions.filter,
                             icon: <faIcons.FaFilter className='mr-2' />,
                             command: (e) => filterPanelRef.current?.toggle(e.originalEvent)
                         },
                         {
-                            label: 'Query',
+                            label: strings.eventStore.namespaces.readModels.actions.query,
                             icon: <faIcons.FaArrowsRotate className='mr-2' />,
                             command: executeQuery,
                             disabled: !selectedReadModel || !selectedOccurrence
@@ -293,25 +294,25 @@ export const ReadModels = () => {
                 <OverlayPanel ref={filterPanelRef}>
                     <div className="flex flex-column gap-3">
                         <div>
-                            <label htmlFor="readModel" className="block mb-2 font-semibold">Read Model</label>
+                            <label htmlFor="readModel" className="block mb-2 font-semibold">{strings.eventStore.namespaces.readModels.labels.readModel}</label>
                             <Dropdown
                                 id="readModel"
                                 value={selectedReadModel}
                                 options={allReadModels.data || []}
                                 onChange={(e) => handleReadModelChange(e.value)}
                                 optionLabel="name"
-                                placeholder="Select a Read Model"
+                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
                                 className="w-full"
                             />
                         </div>
                         <div>
-                            <label htmlFor="occurrence" className="block mb-2 font-semibold">Occurrence</label>
+                            <label htmlFor="occurrence" className="block mb-2 font-semibold">{strings.eventStore.namespaces.readModels.labels.occurrence}</label>
                             <Dropdown
                                 id="occurrence"
                                 value={selectedOccurrence}
                                 options={occurrenceOptions}
                                 onChange={(e) => handleOccurrenceChange(e.value)}
-                                placeholder="Select an Occurrence"
+                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
                                 className="w-full"
                                 disabled={!selectedReadModel}
                             />
@@ -327,7 +328,7 @@ export const ReadModels = () => {
                                 icon={<faIcons.FaArrowLeft />}
                                 className="p-button-text p-button-sm"
                                 onClick={() => navigateToBreadcrumb(navigationPath.length - 1)}
-                                tooltip="Navigate Back"
+                                tooltip={strings.eventStore.namespaces.readModels.actions.navigateBack}
                                 tooltipOptions={{ position: 'top' }}
                             />
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
@@ -354,7 +355,7 @@ export const ReadModels = () => {
                     <DataTable
                         value={currentData}
                         loading={instances.isPerforming}
-                        emptyMessage="No instances found. Select a read model to view data."
+                        emptyMessage={strings.eventStore.namespaces.readModels.empty}
                         className="p-datatable-sm"
                     >
                         {...columns}
@@ -378,7 +379,7 @@ export const ReadModels = () => {
                     style={{ width: '450px' }}
                     className="p-sidebar-md"
                 >
-                    <h3 style={{ marginTop: 0 }}>Object Details</h3>
+                    <h3 style={{ marginTop: 0 }}>{strings.eventStore.namespaces.readModels.labels.objectDetails}</h3>
                     {selectedObject && (
                         <div style={{ overflow: 'auto' }}>
                             {Object.keys(selectedObject).map(key => renderObjectProperty(selectedObject, key))}
