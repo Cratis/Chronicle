@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
@@ -25,18 +25,20 @@ export const ReadModels = () => {
     const [occurrences] = ReadModelOccurrences.use({
         eventStore: params.eventStore!,
         namespace: params.namespace!,
-        readModelName: selectedReadModel ? selectedReadModel.name : ''
-    });
-    const [instances, performInstancesQuery] = ReadModelInstances.useWithPaging(pageSize, {
-        eventStore: params.eventStore!,
-        namespace: params.namespace!,
-        readModel: selectedReadModel ? selectedReadModel.identifier : '',
-        occurrence: selectedOccurrence && selectedOccurrence.revertModel !== 'Default' ? selectedOccurrence.revertModel : undefined
+        readModel: selectedReadModel ? selectedReadModel.identifier : undefined!
     });
 
+    const instancesArgs = useMemo(() => ({
+        eventStore: params.eventStore!,
+        namespace: params.namespace!,
+        readModel: selectedReadModel ? selectedReadModel.identifier : undefined!,
+        occurrence: selectedOccurrence && selectedOccurrence.revertModel !== 'Default' ? selectedOccurrence.revertModel : undefined
+    }), [params.eventStore, params.namespace, selectedReadModel, selectedOccurrence]);
+
+    const [instances, performInstancesQuery] = ReadModelInstances.useWithPaging(pageSize, instancesArgs);
     const handleExecuteQuery = () => {
         setPage(0);
-        performInstancesQuery();
+        performInstancesQuery(instancesArgs);
     };
 
     const onPageChange = (event: PaginatorPageChangeEvent) => {
@@ -54,7 +56,7 @@ export const ReadModels = () => {
     }, [occurrences]);
 
     const columns = useMemo(() => {
-        if (instances.data.length === 0) return [];
+        if (instances.data == null || instances.data.length === 0) return [];
 
         const firstInstance = instances.data[0];
         return Object.keys(firstInstance).map(key => (

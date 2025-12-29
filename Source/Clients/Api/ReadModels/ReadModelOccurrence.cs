@@ -20,13 +20,13 @@ public record ReadModelOccurrence(DateTimeOffset Occurred, string RevertModel, u
     /// <param name="readModels"><see cref="IReadModels"/> for working with read models.</param>
     /// <param name="eventStore">The event store to get occurrences for.</param>
     /// <param name="namespace">The namespace of the read model to get occurrences for.</param>
-    /// <param name="readModelName">The name of the read model to get occurrences for.</param>
+    /// <param name="readModel">The name of the read model to get occurrences for.</param>
     /// <returns>Collection of read model occurrences.</returns>
     internal static async Task<IEnumerable<ReadModelOccurrence>> ReadModelOccurrences(
         IReadModels readModels,
         string eventStore,
         string @namespace,
-        string readModelName)
+        string readModel)
     {
         var response = await readModels.GetOccurrences(new()
         {
@@ -34,7 +34,7 @@ public record ReadModelOccurrence(DateTimeOffset Occurred, string RevertModel, u
             Namespace = @namespace,
             Type = new()
             {
-                Identifier = readModelName
+                Identifier = readModel
             }
         });
         return response.Occurrences.Select(o => new ReadModelOccurrence(o.Occurred, o.RevertModel, o.Type.Generation));
