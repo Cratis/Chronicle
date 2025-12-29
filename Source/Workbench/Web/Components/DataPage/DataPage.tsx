@@ -55,8 +55,11 @@ export const MenuItems = ({ children }: MenuItemsProps) => {
     }, [children, context.selectedItem]);
 
     return (
-        <div className="px-4 py-2">
-            <Menubar aria-label="Actions" model={items} />
+        <div className="px-4 py-2" style={{ flexShrink: 0 }}>
+            <Menubar
+                aria-label="Actions"
+                model={items}
+            />
         </div>);
 };
 
@@ -66,7 +69,7 @@ export const Columns = ({ children }: ColumnProps) => {
 
     if (context.query.prototype instanceof QueryFor) {
         return (
-            <div className="p-4">
+            <div className="p-4" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                 <DataTableForQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
                     {children}
                 </DataTableForQuery>
@@ -74,7 +77,7 @@ export const Columns = ({ children }: ColumnProps) => {
 
     } else {
         return (
-            <div className="p-4">
+            <div className="p-4" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                 <DataTableForObservableQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
                     {children}
                 </DataTableForObservableQuery>
@@ -175,7 +178,7 @@ const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDat
         <DataPageContext.Provider value={context}>
             <Page title={props.title}>
                 <Allotment className="h-full" proportionalLayout={false}>
-                    <Allotment.Pane className="flex-grow">
+                    <Allotment.Pane className="flex-grow" style={{ display: 'flex', flexDirection: 'column' }}>
                         {props.children}
                     </Allotment.Pane>
                     {props.detailsComponent && selectedItem &&

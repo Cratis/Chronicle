@@ -62,3 +62,31 @@ h1 {
     border-radius: var(--border-radius);
     color: var(--menu-text-color);
 }
+
+/* Prevent menubar from collapsing to hamburger menu at all breakpoints */
+.p-menubar .p-menubar-button {
+    display: none !important;
+}
+
+.p-menubar .p-menubar-root-list {
+    display: flex !important;
+    flex-direction: row !important;
+    position: static !important;
+    width: auto !important;
+    padding: 0 !important;
+}
+
+.p-menubar {
+    border: 1px solid var(--surface-border) !important;
+}
+
+@media screen and (max-width: 960px) {
+    .p-menubar .p-menubar-root-list {
+        display: flex !important;
+        flex-direction: row !important;
+        position: static !important;
+        width: auto !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
