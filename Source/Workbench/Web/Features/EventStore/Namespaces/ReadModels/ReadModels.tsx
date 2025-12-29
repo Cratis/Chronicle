@@ -397,7 +397,10 @@ export const ReadModels = () => {
                                 overflow: 'hidden'
                             }}>
 
-                            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
+                                {
+                                    // Allow the table to grow horizontally when details pane is open
+                                }
                                 <DataTable
                                     value={currentData}
                                     loading={instances.isPerforming}
@@ -418,7 +421,7 @@ export const ReadModels = () => {
                                             setObjectNavigationPath([]);
                                         }
                                     }}
-                                    style={{ minWidth: '100%' }}
+                                    style={selectedObject ? { minWidth: '100%', width: 'max-content' } : { minWidth: '100%' }}
                                 >
                                     {...columns}
                                 </DataTable>
