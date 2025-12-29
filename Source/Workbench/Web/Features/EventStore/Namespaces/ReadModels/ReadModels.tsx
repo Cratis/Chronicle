@@ -59,8 +59,8 @@ export const ReadModels = () => {
         if (instances.data == null || instances.data.length === 0) return [];
 
         const firstInstance = instances.data[0];
-        return Object.keys(firstInstance).map(key => (
-            <Column key={key} field={key} header={key} sortable />
+        return Object.keys(firstInstance.instance).map(key => (
+            <Column key={key} field={`instance.${key}`} header={key} sortable />
         ));
     }, [instances]);
 
