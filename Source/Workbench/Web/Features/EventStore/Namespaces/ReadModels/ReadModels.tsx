@@ -91,6 +91,51 @@ export const ReadModels = () => {
         }
     }, [occurrences.data, selectedOccurrence]);
 
+    // Debug: log DOM layout info to help diagnose height/scroll issues
+    useEffect(() => {
+        const runDebug = () => {
+            try {
+                const selectors = [
+                    'div.px-6.py-4', // Page root
+                    'main.panel', // Page main
+                    '.allotment', // Allotment root
+                    '.allotment .allotment-pane', // Allotment pane
+                    'div.p-4', // inner container
+                    'div.card', // card
+                    '.p-datatable', // PrimeReact DataTable
+                ];
+
+                console.group('ReadModels layout debug');
+                selectors.forEach(sel => {
+                    const el = document.querySelector(sel) as HTMLElement | null;
+                    if (!el) {
+                        console.log(`${sel}: not found`);
+                        return;
+                    }
+                    const rect = el.getBoundingClientRect();
+                    const cs = window.getComputedStyle(el);
+                    console.log(sel, {
+                        rect: { width: rect.width, height: rect.height, top: rect.top, left: rect.left },
+                        display: cs.display,
+                        position: cs.position,
+                        height: cs.height,
+                        minHeight: cs.minHeight,
+                        maxHeight: cs.maxHeight,
+                        flex: cs.flex,
+                        overflow: cs.overflow,
+                    });
+                });
+                console.groupEnd();
+            } catch (err) {
+                console.error('ReadModels layout debug failed', err);
+            }
+        };
+
+        // Delay slightly to allow layout to settle
+        const t = setTimeout(runDebug, 300);
+        return () => clearTimeout(t);
+    }, []);
+
     useEffect(() => {
         if (selectedReadModel && selectedOccurrence) {
             setPage(0);
@@ -344,9 +389,9 @@ export const ReadModels = () => {
                 </OverlayPanel>
             </div>
 
-            <Allotment className="h-full" proportionalLayout={false}>
-                <Allotment.Pane className="flex-grow">
-                    <div className="p-4">
+            <Allotment className="h-full" proportionalLayout={false} style={{ height: '100%' }}>
+                <Allotment.Pane className="flex-grow" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <div className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         {navigationPath.length > 0 && (
                             <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -377,32 +422,39 @@ export const ReadModels = () => {
                             </div>
                         )}
 
-                        <div className="card">
-                            <DataTable
-                                value={currentData}
-                                loading={instances.isPerforming}
-                                emptyMessage={strings.eventStore.namespaces.readModels.empty}
-                                className="p-datatable-sm"
-                                selectionMode="single"
-                                onRowClick={(e) => {
-                                    const rowData = { ...e.data };
-                                    // Remove internal properties before showing
-                                    delete rowData.__arrayIndex;
-                                    delete rowData.__sourceInstance;
-                                    handleObjectClick(rowData);
-                                }}
-                            >
-                                {...columns}
-                            </DataTable>
+                        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                <DataTable
+                                    value={currentData}
+                                    loading={instances.isPerforming}
+                                    emptyMessage={strings.eventStore.namespaces.readModels.empty}
+                                    className="p-datatable-sm"
+                                    selectionMode="single"
+                                    onRowClick={(e) => {
+                                        const rowData = { ...e.data };
+                                        // Remove internal properties before showing
+                                        delete rowData.__arrayIndex;
+                                        delete rowData.__sourceInstance;
+                                        handleObjectClick(rowData);
+                                    }}
+                                    scrollable
+                                    scrollHeight="flex"
+                                    style={{ minWidth: '100%', height: '100%' }}
+                                >
+                                    {...columns}
+                                </DataTable>
+                            </div>
 
                             {instances.paging.totalItems > 0 && navigationPath.length === 0 && (
-                                <Paginator
-                                    first={page * pageSize}
-                                    rows={pageSize}
-                                    totalRecords={instances.paging.totalItems}
-                                    rowsPerPageOptions={[10, 25, 50, 100]}
-                                    onPageChange={onPageChange}
-                                />
+                                <div style={{ flexShrink: 0 }}>
+                                    <Paginator
+                                        first={page * pageSize}
+                                        rows={pageSize}
+                                        totalRecords={instances.paging.totalItems}
+                                        rowsPerPageOptions={[10, 25, 50, 100]}
+                                        onPageChange={onPageChange}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>
