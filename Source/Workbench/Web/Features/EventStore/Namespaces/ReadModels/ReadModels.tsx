@@ -60,7 +60,18 @@ export const ReadModels = () => {
 
         const firstInstance = instances.data[0];
         return Object.keys(firstInstance.instance).map(key => (
-            <Column key={key} field={`instance.${key}`} header={key} sortable />
+            <Column
+                key={key}
+                field={`instance.${key}`}
+                header={key}
+                sortable
+                body={(rowData) => {
+                    const value = rowData.instance[key];
+                    if (value === null || value === undefined) return '';
+                    if (typeof value === 'object') return JSON.stringify(value);
+                    return String(value);
+                }}
+            />
         ));
     }, [instances]);
 
@@ -109,7 +120,7 @@ export const ReadModels = () => {
                         emptyMessage="No instances found. Select a read model and click Execute Query."
                         className="p-datatable-sm"
                     >
-                        {columns}
+                        {...columns}
                     </DataTable>
 
                     {instances.paging.totalItems > 0 && (
