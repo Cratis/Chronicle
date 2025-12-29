@@ -89,7 +89,7 @@ export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<T
                         const paginatorHeight = result.paging.totalItems > 0 ? 56 : 0;
                         const calculatedHeight = containerHeight - paginatorHeight - 2;
                         const newHeight = Math.max(calculatedHeight, 200);
-                        
+
                         setTableHeight(prevHeight => {
                             if (Math.abs(newHeight - prevHeight) > 5) {
                                 return newHeight;
@@ -112,13 +112,13 @@ export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<T
     }, [result.paging.totalItems]);
 
     return (
-        <div 
+        <div
             ref={containerRef}
-            style={{ 
+            style={{
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                border: '1px solid var(--surface-border)', 
+                border: '1px solid var(--surface-border)',
                 borderRadius: 'var(--border-radius)',
                 overflow: 'hidden'
             }}>

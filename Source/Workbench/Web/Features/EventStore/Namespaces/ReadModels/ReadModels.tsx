@@ -91,51 +91,6 @@ export const ReadModels = () => {
         }
     }, [occurrences.data, selectedOccurrence]);
 
-    // Debug: log DOM layout info to help diagnose height/scroll issues
-    useEffect(() => {
-        const runDebug = () => {
-            try {
-                const selectors = [
-                    'div.px-6.py-4', // Page root
-                    'main.panel', // Page main
-                    '.allotment', // Allotment root
-                    '.allotment .allotment-pane', // Allotment pane
-                    'div.p-4', // inner container
-                    'div.card', // card
-                    '.p-datatable', // PrimeReact DataTable
-                ];
-
-                console.group('ReadModels layout debug');
-                selectors.forEach(sel => {
-                    const el = document.querySelector(sel) as HTMLElement | null;
-                    if (!el) {
-                        console.log(`${sel}: not found`);
-                        return;
-                    }
-                    const rect = el.getBoundingClientRect();
-                    const cs = window.getComputedStyle(el);
-                    console.log(sel, {
-                        rect: { width: rect.width, height: rect.height, top: rect.top, left: rect.left },
-                        display: cs.display,
-                        position: cs.position,
-                        height: cs.height,
-                        minHeight: cs.minHeight,
-                        maxHeight: cs.maxHeight,
-                        flex: cs.flex,
-                        overflow: cs.overflow,
-                    });
-                });
-                console.groupEnd();
-            } catch (err) {
-                console.error('ReadModels layout debug failed', err);
-            }
-        };
-
-        // Delay slightly to allow layout to settle
-        const t = setTimeout(runDebug, 300);
-        return () => clearTimeout(t);
-    }, []);
-
     useEffect(() => {
         if (selectedReadModel && selectedOccurrence) {
             setPage(0);

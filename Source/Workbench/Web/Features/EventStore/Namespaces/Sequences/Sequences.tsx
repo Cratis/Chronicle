@@ -53,50 +53,6 @@ export const Sequences = () => {
         eventStore: params.eventStore!
     });
 
-    useEffect(() => {
-        const runDebug = () => {
-            try {
-                const selectors = [
-                    'div.px-6.py-4',
-                    'main.panel',
-                    '.allotment',
-                    '.allotment .allotment-pane',
-                    'div.p-4',
-                    'div.card',
-                    '.p-datatable'
-                ];
-
-                console.group('Sequences layout debug');
-                selectors.forEach(sel => {
-                    const el = document.querySelector(sel) as HTMLElement | null;
-                    if (!el) {
-                        console.log(`${sel}: not found`);
-                        return;
-                    }
-                    const rect = el.getBoundingClientRect();
-                    const cs = window.getComputedStyle(el);
-                    console.log(sel, {
-                        rect: { width: rect.width, height: rect.height, top: rect.top, left: rect.left },
-                        display: cs.display,
-                        position: cs.position,
-                        height: cs.height,
-                        minHeight: cs.minHeight,
-                        maxHeight: cs.maxHeight,
-                        flex: cs.flex,
-                        overflow: cs.overflow,
-                    });
-                });
-                console.groupEnd();
-            } catch (err) {
-                console.error('Sequences layout debug failed', err);
-            }
-        };
-
-        const t = setTimeout(runDebug, 300);
-        return () => clearTimeout(t);
-    }, []);
-
-
     const handler = new PropertyPathResolverProxyHandler();
     const proxy = new Proxy({}, handler);
     const accessor = (et: AppendedEvent) => et.context.eventType.id;
