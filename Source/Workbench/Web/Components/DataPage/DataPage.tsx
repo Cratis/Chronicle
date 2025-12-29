@@ -66,15 +66,19 @@ export const Columns = ({ children }: ColumnProps) => {
 
     if (context.query.prototype instanceof QueryFor) {
         return (
-            <DataTableForQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
-                {children}
-            </DataTableForQuery>);
+            <div className="p-4">
+                <DataTableForQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
+                    {children}
+                </DataTableForQuery>
+            </div>);
 
     } else {
         return (
-            <DataTableForObservableQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
-                {children}
-            </DataTableForObservableQuery>);
+            <div className="p-4">
+                <DataTableForObservableQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
+                    {children}
+                </DataTableForObservableQuery>
+            </div>);
     }
 };
 
