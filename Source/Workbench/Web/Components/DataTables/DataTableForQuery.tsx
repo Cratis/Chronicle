@@ -6,7 +6,7 @@ import { Paginator } from 'primereact/paginator';
 import { Constructor } from '@cratis/fundamentals';
 import { IQueryFor, Paging } from '@cratis/arc/queries';
 import { useQueryWithPaging } from '@cratis/arc.react/queries';
-import { ReactNode, useState, useRef, useEffect } from 'react';
+import { ReactNode, useState, useRef } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -71,73 +71,6 @@ export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
     const [result, , , setPage] = useQueryWithPaging(props.query, paging, props.queryArguments);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [tableHeight, setTableHeight] = useState<number>(600);
-    const timeoutRef = useRef<NodeJS.Timeout>();
-
-    useEffect(() => {
-        if (!containerRef.current) return;
-
-        const resizeObserver = new ResizeObserver((entries) => {
-            // Debug: log ResizeObserver entries for diagnosing sizing
-            try {
-                for (const entry of entries) {
-                    const cr = entry.contentRect;
-                    console.log('DataTableForQuery ResizeObserver entry', { width: cr.width, height: cr.height });
-                }
-            } catch (err) {
-                console.error('DataTableForQuery ResizeObserver debug failed', err);
-            }
-
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
-
-            timeoutRef.current = setTimeout(() => {
-                for (const entry of entries) {
-                    const containerHeight = entry.contentRect.height;
-                    try {
-                        console.log('DataTableForQuery calculating heights', { containerHeight, paginatorTotal: result.paging.totalItems });
-                    } catch (err) {
-                        console.error('DataTableForQuery calculate debug failed', err);
-                    }
-                    if (containerHeight > 0) {
-                        const paginatorHeight = result.paging.totalItems > 0 ? 56 : 0;
-                        const calculatedHeight = containerHeight - paginatorHeight - 2;
-                        const newHeight = Math.max(calculatedHeight, 200);
-
-                        setTableHeight(prevHeight => {
-                            if (Math.abs(newHeight - prevHeight) > 5) {
-                                return newHeight;
-                            }
-                            return prevHeight;
-                        });
-                    }
-                }
-            }, 10);
-        });
-
-        resizeObserver.observe(containerRef.current);
-
-        // Debug: initial container measurements
-        try {
-            const el = containerRef.current;
-            if (el) {
-                const rect = el.getBoundingClientRect();
-                const cs = window.getComputedStyle(el);
-                console.log('DataTableForQuery initial container', { rect: { width: rect.width, height: rect.height }, display: cs.display, height: cs.height, minHeight: cs.minHeight, overflow: cs.overflow });
-                console.log('DataTableForQuery initial tableHeight state', tableHeight);
-            }
-        } catch (err) {
-            console.error('DataTableForQuery initial debug failed', err);
-        }
-
-        return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
-            resizeObserver.disconnect();
-        };
-    }, [result.paging.totalItems]);
 
     return (
         <div
