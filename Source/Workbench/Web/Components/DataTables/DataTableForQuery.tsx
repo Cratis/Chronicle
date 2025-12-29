@@ -72,29 +72,27 @@ export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments
     const [result, , , setPage] = useQueryWithPaging(props.query, paging, props.queryArguments);
 
     return (
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            <div style={{ flex: '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <DataTable
-                    value={result.data as any}
-                    lazy
-                    rows={paging.pageSize}
-                    totalRecords={result.paging.totalItems}
-                    scrollable
-                    scrollHeight='flex'
-                    selectionMode='single'
-                    selection={props.selection}
-                    onSelectionChange={props.onSelectionChange}
-                    dataKey={props.dataKey}
-                    filters={filters}
-                    filterDisplay='menu'
-                    onFilter={(e) => setFilters(e.filters)}
-                    globalFilterFields={props.globalFilterFields}
-                    emptyMessage={props.emptyMessage} >
-                    {props.children}
-                </DataTable>
-            </div>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid var(--surface-border)', borderRadius: 'var(--border-radius)', minHeight: 0 }}>
+            <DataTable
+                value={result.data as any}
+                lazy
+                rows={paging.pageSize}
+                totalRecords={result.paging.totalItems}
+                scrollable
+                scrollHeight='calc(100vh - 320px)'
+                selectionMode='single'
+                selection={props.selection}
+                onSelectionChange={props.onSelectionChange}
+                dataKey={props.dataKey}
+                filters={filters}
+                filterDisplay='menu'
+                onFilter={(e) => setFilters(e.filters)}
+                globalFilterFields={props.globalFilterFields}
+                emptyMessage={props.emptyMessage} >
+                {props.children}
+            </DataTable>
             {result.paging.totalItems > 0 && (
-                <div style={{ flexShrink: 0 }}>
+                <div style={{ borderTop: '1px solid var(--surface-border)' }}>
                     <Paginator
                         first={result.paging.page * paging.pageSize}
                         rows={paging.pageSize}

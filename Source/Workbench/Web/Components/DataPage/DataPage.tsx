@@ -69,7 +69,7 @@ export const Columns = ({ children }: ColumnProps) => {
 
     if (context.query.prototype instanceof QueryFor) {
         return (
-            <div className="p-4" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '1rem' }}>
                 <DataTableForQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
                     {children}
                 </DataTableForQuery>
@@ -77,7 +77,7 @@ export const Columns = ({ children }: ColumnProps) => {
 
     } else {
         return (
-            <div className="p-4" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '1rem' }}>
                 <DataTableForObservableQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
                     {children}
                 </DataTableForObservableQuery>
