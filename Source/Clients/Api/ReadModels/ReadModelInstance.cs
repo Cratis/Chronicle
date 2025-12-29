@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Arc.Queries;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
@@ -11,7 +12,7 @@ namespace Cratis.Chronicle.Api.ReadModels;
 /// </summary>
 /// <param name="Instance">The instance identifier as JSON.</param>
 [ReadModel]
-public record ReadModelInstance(string Instance)
+public record ReadModelInstance(JsonObject Instance)
 {
     /// <summary>
     /// Gets instances of a read model.
@@ -43,6 +44,6 @@ public record ReadModelInstance(string Instance)
             PageSize = queryContext.Paging.Size
         });
 
-        return response.Instances.Select(i => new ReadModelInstance(i));
+        return response.Instances.Select(i => new ReadModelInstance(JsonNode.Parse(i)!.AsObject()));
     }
 }
