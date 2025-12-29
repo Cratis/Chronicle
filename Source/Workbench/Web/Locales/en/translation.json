@@ -246,7 +246,7 @@
                 "empty": "No instances found. Select a read model to view data.",
                 "actions": {
                     "filter": "Filter",
-                    "query": "Query",
+                    "query": "Perform Query",
                     "navigateBack": "Navigate Back"
                 },
                 "labels": {
