@@ -146,6 +146,15 @@ export const ReadModels = () => {
         return current;
     }, []);
 
+    // Simple deep equality for toggling the object details view
+    const deepEqual = useCallback((a: any, b: any) => {
+        try {
+            return JSON.stringify(a) === JSON.stringify(b);
+        } catch {
+            return false;
+        }
+    }, []);
+
     const currentData = useMemo(() => {
         if (!instances.data || instances.data.length === 0) return [];
 
@@ -240,7 +249,7 @@ export const ReadModels = () => {
                         return (
                             <div
                                 className="flex align-items-center gap-2 cursor-pointer"
-                                onClick={() => navigateToArray(key)}
+                                onClick={(e) => { e.stopPropagation(); navigateToArray(key); }}
                                 style={{ color: 'var(--primary-color)' }}
                             >
                                 <span>{strings.eventStore.namespaces.readModels.labels.array}[{value.length}]</span>
@@ -400,7 +409,14 @@ export const ReadModels = () => {
                                         // Remove internal properties before showing
                                         delete rowData.__arrayIndex;
                                         delete rowData.__sourceInstance;
-                                        handleObjectClick(rowData);
+
+                                        if (selectedObject && deepEqual(selectedObject, rowData)) {
+                                            setSelectedObject(null);
+                                            setObjectNavigationPath([]);
+                                        } else {
+                                            setSelectedObject(rowData);
+                                            setObjectNavigationPath([]);
+                                        }
                                     }}
                                     style={{ minWidth: '100%' }}
                                 >
@@ -426,8 +442,14 @@ export const ReadModels = () => {
                 {selectedObject && (
                     <Allotment.Pane preferredSize="450px">
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <div className="px-4 py-2 border-bottom-1 surface-border">
-                                <h3 style={{ margin: 0 }}>{strings.eventStore.namespaces.readModels.labels.objectDetails}</h3>
+                            <div className="px-4 py-2 border-bottom-1 surface-border" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <h3 style={{ margin: 0, flex: 1 }}>{strings.eventStore.namespaces.readModels.labels.objectDetails}</h3>
+                                <Button
+                                    label="×"
+                                    className="p-button-text p-button-sm"
+                                    onClick={() => setSelectedObject(null)}
+                                    aria-label={strings.components?.close ?? 'Close'}
+                                />
                             </div>
 
                             {objectNavigationPath.length > 0 && (
