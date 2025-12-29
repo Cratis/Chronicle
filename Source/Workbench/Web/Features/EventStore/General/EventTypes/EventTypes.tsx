@@ -51,7 +51,7 @@ export const EventTypes = () => {
         eventStore: params.eventStore!
     };
 
-    
+
 
     return (
         <>

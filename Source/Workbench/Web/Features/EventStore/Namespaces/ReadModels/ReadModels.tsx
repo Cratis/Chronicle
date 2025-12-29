@@ -377,8 +377,18 @@ export const ReadModels = () => {
                             </div>
                         )}
 
-                        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                        <div
+                            className="card"
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                height: '100%',
+                                border: '1px solid var(--surface-border)',
+                                borderRadius: 'var(--border-radius)',
+                                overflow: 'hidden'
+                            }}>
+
+                            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                                 <DataTable
                                     value={currentData}
                                     loading={instances.isPerforming}
@@ -392,16 +402,14 @@ export const ReadModels = () => {
                                         delete rowData.__sourceInstance;
                                         handleObjectClick(rowData);
                                     }}
-                                    scrollable
-                                    scrollHeight="flex"
-                                    style={{ minWidth: '100%', height: '100%' }}
+                                    style={{ minWidth: '100%' }}
                                 >
                                     {...columns}
                                 </DataTable>
                             </div>
 
                             {instances.paging.totalItems > 0 && navigationPath.length === 0 && (
-                                <div style={{ flexShrink: 0 }}>
+                                <div style={{ borderTop: '1px solid var(--surface-border)', flexShrink: 0 }}>
                                     <Paginator
                                         first={page * pageSize}
                                         rows={pageSize}
