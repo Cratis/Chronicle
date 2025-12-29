@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
@@ -9,12 +9,14 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Paginator, PaginatorPageChangeEvent } from 'primereact/paginator';
 import { Sidebar } from 'primereact/sidebar';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import { Allotment } from 'allotment';
-import { Page } from 'Components';
+import { Page, MenuItem } from 'Components';
 import { AllReadModelDefinitions, ReadModelDefinition } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelOccurrence, ReadModelOccurrences, ReadModelInstances } from 'Api/ReadModels';
 import * as faIcons from 'react-icons/fa6';
+import { Menubar } from 'primereact/menubar';
 
 interface NavigationItem {
     name: string;
@@ -24,6 +26,7 @@ interface NavigationItem {
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [allReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
+    const filterPanelRef = useRef<OverlayPanel>(null);
 
     const [selectedReadModel, setSelectedReadModel] = useState<ReadModelDefinition | null>(null);
     const [selectedOccurrence, setSelectedOccurrence] = useState<ReadModelOccurrence | null>(null);
@@ -46,7 +49,7 @@ export const ReadModels = () => {
         occurrence: selectedOccurrence && selectedOccurrence.revertModel !== 'Default' ? selectedOccurrence.revertModel : undefined
     }), [params.eventStore, params.namespace, selectedReadModel, selectedOccurrence]);
 
-    const [instances, performInstancesQuery] = ReadModelInstances.useWithPaging(pageSize, instancesArgs);
+    const [instances, performInstancesQuery, , clearInstances] = ReadModelInstances.useWithPaging(pageSize, instancesArgs);
 
     const executeQuery = useCallback(() => {
         if (selectedReadModel && selectedOccurrence) {
@@ -58,6 +61,28 @@ export const ReadModels = () => {
         }
     }, [selectedReadModel, selectedOccurrence, instancesArgs, performInstancesQuery]);
 
+    const handleReadModelChange = useCallback((readModel: ReadModelDefinition | null) => {
+        setSelectedReadModel(readModel);
+        setSelectedOccurrence(null);
+        clearInstances();
+        setNavigationPath([]);
+        setSelectedObject(null);
+        setShowObjectDetails(false);
+    }, [clearInstances]);
+
+    const handleOccurrenceChange = useCallback((occurrence: ReadModelOccurrence | null) => {
+        setSelectedOccurrence(occurrence);
+        clearInstances();
+        setNavigationPath([]);
+        setSelectedObject(null);
+        setShowObjectDetails(false);
+
+        if (occurrence) {
+            filterPanelRef.current?.hide();
+            setTimeout(() => executeQuery(), 0);
+        }
+    }, [clearInstances, executeQuery]);
+
     useEffect(() => {
         if (occurrences.data.length > 0 && !selectedOccurrence) {
             const defaultOccurrence = occurrences.data.find(occ => occ.revertModel === 'Default');
@@ -66,10 +91,6 @@ export const ReadModels = () => {
             }
         }
     }, [occurrences.data, selectedOccurrence]);
-
-    useEffect(() => {
-        executeQuery();
-    }, [selectedOccurrence]);
 
     const onPageChange = (event: PaginatorPageChangeEvent) => {
         setPage(event.page);
@@ -204,7 +225,7 @@ export const ReadModels = () => {
                 field={key}
                 header={key}
                 sortable
-                body={(rowData: any) => {
+                body={(rowData: Record<string, unknown>) => {
                     const value = rowData[key];
                     if (value === null || value === undefined) return '';
 
@@ -253,35 +274,53 @@ export const ReadModels = () => {
 
     return (
         <Page title="Read Models">
-            <div className="p-4">
-                <div className="flex gap-4 mb-4">
-                    <div className="flex-1">
-                        <label htmlFor="readModel" className="block mb-2">Read Model</label>
-                        <Dropdown
-                            id="readModel"
-                            value={selectedReadModel}
-                            options={allReadModels.data || []}
-                            onChange={(e) => setSelectedReadModel(e.value)}
-                            optionLabel="name"
-                            placeholder="Select a Read Model"
-                            className="w-full"
-                        />
+            <div className="px-4 py-2">
+                <Menubar
+                    model={[
+                        {
+                            label: 'Filter',
+                            icon: <faIcons.FaFilter className='mr-2' />,
+                            command: (e) => filterPanelRef.current?.toggle(e.originalEvent)
+                        },
+                        {
+                            label: 'Query',
+                            icon: <faIcons.FaArrowsRotate className='mr-2' />,
+                            command: executeQuery,
+                            disabled: !selectedReadModel || !selectedOccurrence
+                        }
+                    ]}
+                />
+                <OverlayPanel ref={filterPanelRef}>
+                    <div className="flex flex-column gap-3">
+                        <div>
+                            <label htmlFor="readModel" className="block mb-2 font-semibold">Read Model</label>
+                            <Dropdown
+                                id="readModel"
+                                value={selectedReadModel}
+                                options={allReadModels.data || []}
+                                onChange={(e) => handleReadModelChange(e.value)}
+                                optionLabel="name"
+                                placeholder="Select a Read Model"
+                                className="w-full"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="occurrence" className="block mb-2 font-semibold">Occurrence</label>
+                            <Dropdown
+                                id="occurrence"
+                                value={selectedOccurrence}
+                                options={occurrenceOptions}
+                                onChange={(e) => handleOccurrenceChange(e.value)}
+                                placeholder="Select an Occurrence"
+                                className="w-full"
+                                disabled={!selectedReadModel}
+                            />
+                        </div>
                     </div>
-                    <div className="flex-1">
-                        <label htmlFor="occurrence" className="block mb-2">Occurrence</label>
-                        <Dropdown
-                            id="occurrence"
-                            value={selectedOccurrence}
-                            options={occurrenceOptions}
-                            onChange={(e) => setSelectedOccurrence(e.value)}
-                            placeholder="Select an Occurrence"
-                            className="w-full"
-                            disabled={!selectedReadModel}
-                        />
-                    </div>
-                </div>
+                </OverlayPanel>
+            </div>
 
-                {navigationPath.length > 0 && (
+            <div className="p-4">{navigationPath.length > 0 && (
                     <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Button
