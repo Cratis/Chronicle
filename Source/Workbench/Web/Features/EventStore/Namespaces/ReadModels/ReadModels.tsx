@@ -8,10 +8,9 @@ import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Paginator, PaginatorPageChangeEvent } from 'primereact/paginator';
-import { Sidebar } from 'primereact/sidebar';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Allotment } from 'allotment';
-import { Page, MenuItem } from 'Components';
+import { Page } from 'Components';
 import { AllReadModelDefinitions, ReadModelDefinition } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelOccurrence, ReadModelOccurrences, ReadModelInstances } from 'Api/ReadModels';
@@ -35,7 +34,7 @@ export const ReadModels = () => {
     const [pageSize, setPageSize] = useState(50);
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
     const [selectedObject, setSelectedObject] = useState<any>(null);
-    const [showObjectDetails, setShowObjectDetails] = useState(false);
+    const [objectNavigationPath, setObjectNavigationPath] = useState<string[]>([]);
 
     const [occurrences] = ReadModelOccurrences.use({
         eventStore: params.eventStore!,
@@ -57,7 +56,7 @@ export const ReadModels = () => {
             setPage(0);
             setNavigationPath([]);
             setSelectedObject(null);
-            setShowObjectDetails(false);
+            setObjectNavigationPath([]);
             performInstancesQuery(instancesArgs);
         }
     }, [selectedReadModel, selectedOccurrence, instancesArgs, performInstancesQuery]);
@@ -68,7 +67,7 @@ export const ReadModels = () => {
         clearInstances();
         setNavigationPath([]);
         setSelectedObject(null);
-        setShowObjectDetails(false);
+        setObjectNavigationPath([]);
     }, [clearInstances]);
 
     const handleOccurrenceChange = useCallback((occurrence: ReadModelOccurrence | null) => {
@@ -76,7 +75,7 @@ export const ReadModels = () => {
         clearInstances();
         setNavigationPath([]);
         setSelectedObject(null);
-        setShowObjectDetails(false);
+        setObjectNavigationPath([]);
 
         if (occurrence) {
             filterPanelRef.current?.hide();
@@ -97,7 +96,7 @@ export const ReadModels = () => {
             setPage(0);
             setNavigationPath([]);
             setSelectedObject(null);
-            setShowObjectDetails(false);
+            setObjectNavigationPath([]);
             performInstancesQuery(instancesArgs);
         }
     }, [selectedOccurrence, selectedReadModel]);
@@ -188,62 +187,38 @@ export const ReadModels = () => {
 
     const handleObjectClick = useCallback((value: any) => {
         setSelectedObject(value);
-        setShowObjectDetails(true);
+        setObjectNavigationPath([]);
     }, []);
 
-    const renderObjectProperty = useCallback((obj: any, key: string, depth: number = 0): JSX.Element => {
-        const value = obj[key];
-        const indent = depth * 1.5;
+    const getCurrentObjectForDetails = useCallback(() => {
+        if (!selectedObject) return null;
 
-        if (value === null || value === undefined) {
-            return (
-                <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)', fontStyle: 'italic' }}>{strings.eventStore.namespaces.readModels.labels.null}</span>
-                </div>
-            );
+        let current = selectedObject;
+        for (const key of objectNavigationPath) {
+            if (current && typeof current === 'object' && key in current) {
+                current = current[key];
+            } else {
+                return null;
+            }
         }
+        return current;
+    }, [selectedObject, objectNavigationPath]);
 
-        if (Array.isArray(value)) {
-            return (
-                <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)' }}>{strings.eventStore.namespaces.readModels.labels.array}[{value.length}]</span>
-                    {value.map((item, idx) => (
-                        <div key={idx} style={{ marginLeft: '1.5rem', marginTop: '0.25rem' }}>
-                            {typeof item === 'object' ? (
-                                <div>
-                                    <span style={{ color: 'var(--text-color-secondary)' }}>[{idx}]</span>
-                                    {Object.keys(item).map(k => renderObjectProperty(item, k, depth + 2))}
-                                </div>
-                            ) : (
-                                <span><span style={{ color: 'var(--text-color-secondary)' }}>[{idx}]:</span> {String(item)}</span>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            );
+    const navigateToObjectProperty = useCallback((key: string) => {
+        setObjectNavigationPath([...objectNavigationPath, key]);
+    }, [objectNavigationPath]);
+
+    const navigateBackInObject = useCallback(() => {
+        if (objectNavigationPath.length > 0) {
+            setObjectNavigationPath(objectNavigationPath.slice(0, -1));
         }
+    }, [objectNavigationPath]);
 
-        if (typeof value === 'object') {
-            return (
-                <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-color-secondary)' }}>{strings.eventStore.namespaces.readModels.labels.object}</span>
-                    <div style={{ marginTop: '0.25rem' }}>
-                        {Object.keys(value).map(k => renderObjectProperty(value, k, depth + 1))}
-                    </div>
-                </div>
-            );
-        }
+    const navigateToObjectBreadcrumb = useCallback((index: number) => {
+        setObjectNavigationPath(objectNavigationPath.slice(0, index));
+    }, [objectNavigationPath]);
 
-        return (
-            <div key={key} style={{ marginLeft: `${indent}rem`, marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: 500, color: 'var(--text-color)' }}>{key}:</span>
-                <span style={{ marginLeft: '0.5rem' }}>{String(value)}</span>
-            </div>
-        );
-    }, []);
+
 
     const columns = useMemo(() => {
         if (currentData.length === 0) return [];
@@ -304,6 +279,23 @@ export const ReadModels = () => {
         return items;
     }, [navigationPath]);
 
+    const objectBreadcrumbItems = useMemo(() => {
+        const items: NavigationItem[] = [{ name: strings.eventStore.namespaces.readModels.labels.root, path: [] }];
+        for (let i = 0; i < objectNavigationPath.length; i++) {
+            items.push({
+                name: objectNavigationPath[i],
+                path: objectNavigationPath.slice(0, i + 1)
+            });
+        }
+        return items;
+    }, [objectNavigationPath]);
+
+    const currentDetailsObject = getCurrentObjectForDetails();
+    const detailsProperties = useMemo(() => {
+        if (!currentDetailsObject || typeof currentDetailsObject !== 'object') return [];
+        return Object.keys(currentDetailsObject).filter(k => !k.startsWith('__'));
+    }, [currentDetailsObject]);
+
     return (
         <Page title={strings.eventStore.namespaces.readModels.title}>
             <div className="px-4 py-2">
@@ -352,80 +344,165 @@ export const ReadModels = () => {
                 </OverlayPanel>
             </div>
 
-            <div className="p-4">{navigationPath.length > 0 && (
-                    <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Button
-                                icon={<faIcons.FaArrowLeft />}
-                                className="p-button-text p-button-sm"
-                                onClick={() => navigateToBreadcrumb(navigationPath.length - 1)}
-                                tooltip={strings.eventStore.namespaces.readModels.actions.navigateBack}
-                                tooltipOptions={{ position: 'top' }}
-                            />
-                            <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
-                                {breadcrumbItems.map((item, index) => (
-                                    <span key={index}>
-                                        {index > 0 && <span className="mx-2">&gt;</span>}
-                                        <span
-                                            onClick={() => navigateToBreadcrumb(index)}
-                                            style={{
-                                                cursor: 'pointer',
-                                                textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none'
-                                            }}
-                                        >
-                                            {item.name}
-                                        </span>
-                                    </span>
-                                ))}
+            <Allotment className="h-full" proportionalLayout={false}>
+                <Allotment.Pane className="flex-grow">
+                    <div className="p-4">
+                        {navigationPath.length > 0 && (
+                            <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Button
+                                        icon={<faIcons.FaArrowLeft />}
+                                        className="p-button-text p-button-sm"
+                                        onClick={() => navigateToBreadcrumb(navigationPath.length - 1)}
+                                        tooltip={strings.eventStore.namespaces.readModels.actions.navigateBack}
+                                        tooltipOptions={{ position: 'top' }}
+                                    />
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
+                                        {breadcrumbItems.map((item, index) => (
+                                            <span key={index}>
+                                                {index > 0 && <span className="mx-2">&gt;</span>}
+                                                <span
+                                                    onClick={() => navigateToBreadcrumb(index)}
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none'
+                                                    }}
+                                                >
+                                                    {item.name}
+                                                </span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
+                        )}
+
+                        <div className="card">
+                            <DataTable
+                                value={currentData}
+                                loading={instances.isPerforming}
+                                emptyMessage={strings.eventStore.namespaces.readModels.empty}
+                                className="p-datatable-sm"
+                                selectionMode="single"
+                                onRowClick={(e) => {
+                                    const rowData = { ...e.data };
+                                    // Remove internal properties before showing
+                                    delete rowData.__arrayIndex;
+                                    delete rowData.__sourceInstance;
+                                    handleObjectClick(rowData);
+                                }}
+                            >
+                                {...columns}
+                            </DataTable>
+
+                            {instances.paging.totalItems > 0 && navigationPath.length === 0 && (
+                                <Paginator
+                                    first={page * pageSize}
+                                    rows={pageSize}
+                                    totalRecords={instances.paging.totalItems}
+                                    rowsPerPageOptions={[10, 25, 50, 100]}
+                                    onPageChange={onPageChange}
+                                />
+                            )}
                         </div>
                     </div>
-                )}
+                </Allotment.Pane>
 
-                <div className="card">
-                    <DataTable
-                        value={currentData}
-                        loading={instances.isPerforming}
-                        emptyMessage={strings.eventStore.namespaces.readModels.empty}
-                        className="p-datatable-sm"
-                        selectionMode="single"
-                        onRowClick={(e) => {
-                            const rowData = { ...e.data };
-                            // Remove internal properties before showing
-                            delete rowData.__arrayIndex;
-                            delete rowData.__sourceInstance;
-                            handleObjectClick(rowData);
-                        }}
-                    >
-                        {...columns}
-                    </DataTable>
+                {selectedObject && (
+                    <Allotment.Pane preferredSize="450px">
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            <div className="px-4 py-2 border-bottom-1 surface-border">
+                                <h3 style={{ margin: 0 }}>{strings.eventStore.namespaces.readModels.labels.objectDetails}</h3>
+                            </div>
 
-                    {instances.paging.totalItems > 0 && navigationPath.length === 0 && (
-                        <Paginator
-                            first={page * pageSize}
-                            rows={pageSize}
-                            totalRecords={instances.paging.totalItems}
-                            rowsPerPageOptions={[10, 25, 50, 100]}
-                            onPageChange={onPageChange}
-                        />
-                    )}
-                </div>
+                            {objectNavigationPath.length > 0 && (
+                                <div className="px-4 py-2 border-bottom-1 surface-border">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Button
+                                            icon={<faIcons.FaArrowLeft />}
+                                            className="p-button-text p-button-sm"
+                                            onClick={navigateBackInObject}
+                                            tooltip={strings.eventStore.namespaces.readModels.actions.navigateBack}
+                                            tooltipOptions={{ position: 'top' }}
+                                        />
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
+                                            {objectBreadcrumbItems.map((item, index) => (
+                                                <span key={index}>
+                                                    {index > 0 && <span className="mx-2">&gt;</span>}
+                                                    <span
+                                                        onClick={() => navigateToObjectBreadcrumb(index)}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            textDecoration: index < objectBreadcrumbItems.length - 1 ? 'underline' : 'none'
+                                                        }}
+                                                    >
+                                                        {item.name}
+                                                    </span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
-                <Sidebar
-                    visible={showObjectDetails}
-                    position="right"
-                    onHide={() => setShowObjectDetails(false)}
-                    style={{ width: '450px' }}
-                    className="p-sidebar-md"
-                >
-                    <h3 style={{ marginTop: 0 }}>{strings.eventStore.namespaces.readModels.labels.objectDetails}</h3>
-                    {selectedObject && (
-                        <div style={{ overflow: 'auto' }}>
-                            {Object.keys(selectedObject).map(key => renderObjectProperty(selectedObject, key))}
+                            <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+                                <DataTable
+                                    value={detailsProperties.map(key => ({ key, value: currentDetailsObject[key] }))}
+                                    emptyMessage={strings.eventStore.namespaces.readModels.empty}
+                                    className="p-datatable-sm"
+                                    pt={{
+                                        root: { style: { border: 'none' } },
+                                        tbody: { style: { borderTop: '1px solid var(--surface-border)' } },
+                                        bodyCell: { style: { height: '3rem', padding: '0 0.75rem', verticalAlign: 'middle' } }
+                                    }}
+                                >
+                                    <Column
+                                        field="key"
+                                        header={strings.components.schemaEditor.columns.property}
+                                        style={{ width: '40%', fontWeight: 500 }}
+                                    />
+                                    <Column
+                                        field="value"
+                                        header="Value"
+                                        body={(rowData: { key: string; value: any }) => {
+                                            const value = rowData.value;
+
+                                            if (value === null || value === undefined) {
+                                                return <span style={{ fontStyle: 'italic', color: 'var(--text-color-secondary)' }}>{strings.eventStore.namespaces.readModels.labels.null}</span>;
+                                            }
+
+                                            if (Array.isArray(value)) {
+                                                return (
+                                                    <span style={{ color: 'var(--text-color-secondary)' }}>
+                                                        {strings.eventStore.namespaces.readModels.labels.array}[{value.length}]
+                                                    </span>
+                                                );
+                                            }
+
+                                            if (typeof value === 'object') {
+                                                return (
+                                                    <div
+                                                        className="flex align-items-center gap-2 w-full cursor-pointer"
+                                                        onClick={() => navigateToObjectProperty(rowData.key)}
+                                                        style={{ color: 'var(--primary-color)' }}
+                                                    >
+                                                        <span>{strings.eventStore.namespaces.readModels.labels.object}</span>
+                                                        <div style={{ flex: 1 }} />
+                                                        <faIcons.FaArrowRight style={{ fontSize: '1rem' }} />
+                                                    </div>
+                                                );
+                                            }
+
+                                            return String(value);
+                                        }}
+                                        style={{ width: '60%' }}
+                                    />
+                                </DataTable>
+                            </div>
                         </div>
-                    )}
-                </Sidebar>
-            </div>
+                    </Allotment.Pane>
+                )}
+            </Allotment>
         </Page>
     );
 };
