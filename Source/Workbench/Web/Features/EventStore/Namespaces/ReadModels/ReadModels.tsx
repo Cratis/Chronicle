@@ -80,9 +80,8 @@ export const ReadModels = () => {
 
         if (occurrence) {
             filterPanelRef.current?.hide();
-            setTimeout(() => executeQuery(), 0);
         }
-    }, [clearInstances, executeQuery]);
+    }, [clearInstances]);
 
     useEffect(() => {
         if (occurrences.data.length > 0 && !selectedOccurrence) {
@@ -93,19 +92,51 @@ export const ReadModels = () => {
         }
     }, [occurrences.data, selectedOccurrence]);
 
+    useEffect(() => {
+        if (selectedReadModel && selectedOccurrence) {
+            setPage(0);
+            setNavigationPath([]);
+            setSelectedObject(null);
+            setShowObjectDetails(false);
+            performInstancesQuery(instancesArgs);
+        }
+    }, [selectedOccurrence, selectedReadModel]);
+
     const onPageChange = (event: PaginatorPageChangeEvent) => {
         setPage(event.page);
         setPageSize(event.rows);
     };
 
     const occurrenceOptions = useMemo(() => {
-        return occurrences.data.map(occ => ({
+        let options = occurrences.data.map(occ => ({
             label: occ.revertModel === 'Default'
                 ? `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`
                 : `${new Date(occ.occurred).toLocaleString()} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`,
             value: occ
         }));
-    }, [occurrences]);
+
+        // Ensure Default is always present
+        const hasDefault = options.some(opt => opt.value.revertModel === 'Default');
+        if (!hasDefault && selectedReadModel) {
+            options = [{
+                label: `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} 1)`,
+                value: {
+                    revertModel: 'Default',
+                    generation: 1,
+                    occurred: new Date()
+                } as ReadModelOccurrence
+            }, ...options];
+        } else {
+            // Sort to ensure Default is first
+            options.sort((a, b) => {
+                if (a.value.revertModel === 'Default') return -1;
+                if (b.value.revertModel === 'Default') return 1;
+                return 0;
+            });
+        }
+
+        return options;
+    }, [occurrences, selectedReadModel]);
 
     const getValueAtPath = useCallback((data: any, path: string[]): any => {
         let current = data;
@@ -357,6 +388,14 @@ export const ReadModels = () => {
                         loading={instances.isPerforming}
                         emptyMessage={strings.eventStore.namespaces.readModels.empty}
                         className="p-datatable-sm"
+                        selectionMode="single"
+                        onRowClick={(e) => {
+                            const rowData = { ...e.data };
+                            // Remove internal properties before showing
+                            delete rowData.__arrayIndex;
+                            delete rowData.__sourceInstance;
+                            handleObjectClick(rowData);
+                        }}
                     >
                         {...columns}
                     </DataTable>
