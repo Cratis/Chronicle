@@ -6,9 +6,12 @@ import { AllReadModelDefinitions } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionEditor } from 'Components/ProjectionEditor';
+import { Menubar } from 'primereact/menubar';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
+import strings from 'Strings';
+import * as faIcons from 'react-icons/fa6';
 
 export const Projections = () => {
 
@@ -46,15 +49,31 @@ export const Projections = () => {
 
     return (
         <Page title='Projections'>
-            <div style={{ padding: '20px' }}>
-                <ProjectionEditor
-                    value={dslValue}
-                    onChange={setDslValue}
-                    readModelSchemas={readModelSchemas}
-                    eventSchemas={eventSchemas}
-                    height="500px"
-                    theme="vs-dark"
+
+            <div className="px-4 py-2">
+                <Menubar
+                    model={[
+                        {
+                            label: strings.eventStore.general.projections.actions.new,
+                            icon: <faIcons.FaPlus className='mr-2' />
+                        },
+                        {
+                            label: strings.eventStore.general.projections.actions.save,
+                            icon: <faIcons.FaFloppyDisk className='mr-2' />
+                        }
+                    ]}
                 />
+
+                <div className="py-4">
+                    <ProjectionEditor
+                        value={dslValue}
+                        onChange={setDslValue}
+                        readModelSchemas={readModelSchemas}
+                        eventSchemas={eventSchemas}
+                        height="500px"
+                        theme="vs-dark"
+                    />
+                </div>
 
                 <div style={{ marginTop: '20px' }}>
                     <h3>Features Demonstrated:</h3>

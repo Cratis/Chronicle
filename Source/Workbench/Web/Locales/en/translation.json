@@ -125,6 +125,13 @@
                         "name": "Name"
                     }
                 }
+            },
+            "projections": {
+                "title": "Projections",
+                "actions": {
+                    "new": "New Projection",
+                    "save": "Save Projection"
+                }
             }
         },
         "namespaces": {
