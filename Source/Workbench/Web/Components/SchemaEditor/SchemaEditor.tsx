@@ -14,6 +14,7 @@ import { NameCell } from './NameCell';
 import { TypeCell } from './TypeCell';
 import { JSONSchemaType, SchemaProperty, NavigationItem } from './types';
 import css from './SchemaEditor.module.css';
+import { MenuItem } from 'primereact/menuitem';
 
 export interface SchemaEditorProps {
     schema: JSONSchemaType;
@@ -334,7 +335,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
             icon: <faIcons.FaPencil className='mr-2' />,
             command: canEdit ? handleEdit : undefined,
             className: !canEdit ? 'edit-disabled-with-reason' : undefined,
-            template: !canEdit && canNotEditReason ? (item: any) => (
+            template: !canEdit && canNotEditReason ? (item: MenuItem) => (
                 <div
                     className="p-menuitem-link p-disabled"
                     data-pr-tooltip={canNotEditReason}
