@@ -13,7 +13,7 @@ public class with_different_url : Specification
     {
         var configuration = new Dictionary<string, string?>
         {
-            ["Chronicle:Url"] = "chronicle://env-server:9090"
+            ["Chronicle:ConnectionString"] = "chronicle://env-server:9090"
         };
 
         var configurationRoot = new ConfigurationBuilder()

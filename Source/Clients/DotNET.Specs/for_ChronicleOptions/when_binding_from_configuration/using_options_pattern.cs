@@ -15,7 +15,7 @@ public class using_options_pattern : Specification
     {
         var configuration = new Dictionary<string, string?>
         {
-            ["Chronicle:Url"] = "chronicle://options-server:7070"
+            ["Chronicle:ConnectionString"] = "chronicle://options-server:7070"
         };
 
         var configurationRoot = new ConfigurationBuilder()

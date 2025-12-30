@@ -14,5 +14,5 @@ public class when_converting_to_string_with_authentication : Specification
 
     void Because() => _result = _url.ToString();
 
-    [Fact] void should_include_username_and_password() => _result.ShouldEqual("chronicle://admin:secret@localhost");
+    [Fact] void should_include_username_and_password() => _result.ShouldEqual("chronicle://admin:secret@localhost:35000");
 }

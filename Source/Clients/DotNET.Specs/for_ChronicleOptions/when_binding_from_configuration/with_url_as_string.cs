@@ -13,7 +13,7 @@ public class with_url_as_string : Specification
     {
         var configuration = new Dictionary<string, string?>
         {
-            ["Chronicle:Url"] = "chronicle://my-server:8080"
+            ["Chronicle:ConnectionString"] = "chronicle://my-server:8080"
         };
 
         var configurationRoot = new ConfigurationBuilder()
