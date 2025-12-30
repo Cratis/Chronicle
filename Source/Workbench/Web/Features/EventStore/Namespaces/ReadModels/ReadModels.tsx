@@ -412,7 +412,7 @@ export const ReadModels = () => {
                                     // Allow the table to grow horizontally when details pane is open
                                 }
                                 <DataTable
-                                    value={currentData as any}
+                                    value={currentData.filter(i => i && typeof i === 'object') as any}
                                     loading={instances.isPerforming}
                                     emptyMessage={strings.eventStore.namespaces.readModels.empty}
                                     className="p-datatable-sm"
@@ -497,7 +497,7 @@ export const ReadModels = () => {
 
                             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                                 <DataTable
-                                    value={detailsProperties.map(key => ({ key, value: (currentDetailsObject as any)![key] }))}
+                                    value={detailsProperties.map(key => ({ key, value: (currentDetailsObject && typeof currentDetailsObject === 'object' ? (currentDetailsObject as { [k: string]: Json })[key] : null) }))}
                                     emptyMessage={strings.eventStore.namespaces.readModels.empty}
                                     className="p-datatable-sm"
                                     pt={{
