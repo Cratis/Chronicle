@@ -23,6 +23,9 @@ interface NavigationItem {
     path: string[];
 }
 
+// JSON-compatible recursive type used for read-model instances and arbitrary object values
+type Json = null | string | number | boolean | Json[] | { [key: string]: Json };
+
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [allReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
@@ -33,7 +36,7 @@ export const ReadModels = () => {
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
-    const [selectedObject, setSelectedObject] = useState<any>(null);
+    const [selectedObject, setSelectedObject] = useState<Json | null>(null);
     const [objectNavigationPath, setObjectNavigationPath] = useState<string[]>([]);
 
     const [occurrences] = ReadModelOccurrences.use({
@@ -49,7 +52,7 @@ export const ReadModels = () => {
         occurrence: selectedOccurrence && selectedOccurrence.revertModel !== 'Default' ? selectedOccurrence.revertModel : undefined
     }), [params.eventStore, params.namespace, selectedReadModel, selectedOccurrence]);
 
-    const [instances, performInstancesQuery, , clearInstances] = ReadModelInstances.useWithPaging(pageSize, instancesArgs);
+    const [instances, performInstancesQuery] = ReadModelInstances.useWithPaging(pageSize, instancesArgs);
 
     const executeQuery = useCallback(() => {
         if (selectedReadModel && selectedOccurrence) {
@@ -64,15 +67,13 @@ export const ReadModels = () => {
     const handleReadModelChange = useCallback((readModel: ReadModelDefinition | null) => {
         setSelectedReadModel(readModel);
         setSelectedOccurrence(null);
-        clearInstances();
         setNavigationPath([]);
         setSelectedObject(null);
         setObjectNavigationPath([]);
-    }, [clearInstances]);
+    }, []);
 
     const handleOccurrenceChange = useCallback((occurrence: ReadModelOccurrence | null) => {
         setSelectedOccurrence(occurrence);
-        clearInstances();
         setNavigationPath([]);
         setSelectedObject(null);
         setObjectNavigationPath([]);
@@ -80,7 +81,7 @@ export const ReadModels = () => {
         if (occurrence) {
             filterPanelRef.current?.hide();
         }
-    }, [clearInstances]);
+    }, []);
 
     useEffect(() => {
         if (occurrences.data.length > 0 && !selectedOccurrence) {
@@ -137,17 +138,21 @@ export const ReadModels = () => {
         return options;
     }, [occurrences, selectedReadModel]);
 
-    const getValueAtPath = useCallback((data: any, path: string[]): any => {
-        let current = data;
+    const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
+        let current: Json = data;
         for (const segment of path) {
             if (current === null || current === undefined) return null;
-            current = current[segment];
+            if (typeof current === 'object' && !Array.isArray(current) && current !== null) {
+                current = (current as { [key: string]: Json })[segment];
+            } else {
+                return null;
+            }
         }
         return current;
     }, []);
 
     // Simple deep equality for toggling the object details view
-    const deepEqual = useCallback((a: any, b: any) => {
+    const deepEqual = useCallback((a: Json, b: Json) => {
         try {
             return JSON.stringify(a) === JSON.stringify(b);
         } catch {
@@ -155,25 +160,28 @@ export const ReadModels = () => {
         }
     }, []);
 
-    const currentData = useMemo(() => {
+    const currentData = useMemo<Json[]>(() => {
         if (!instances.data || instances.data.length === 0) return [];
 
         if (navigationPath.length === 0) {
-            return instances.data.map(item => item.instance);
+            return instances.data.map(item => item.instance as Json);
         }
 
         const pathToArray = navigationPath.slice(0, -1);
         const arrayKey = navigationPath[navigationPath.length - 1];
 
-        const arrayData: any[] = [];
+        const arrayData: Json[] = [];
         instances.data.forEach(item => {
-            const parentValue = getValueAtPath(item.instance, pathToArray);
-            if (parentValue && Array.isArray(parentValue[arrayKey])) {
-                arrayData.push(...parentValue[arrayKey].map((val: any, idx: number) => ({
-                    __arrayIndex: idx,
-                    __sourceInstance: item.instance,
-                    ...val
-                })));
+            const parentValue = getValueAtPath(item.instance as Json, pathToArray);
+            if (parentValue) {
+                const maybeArray = (parentValue as { [k: string]: Json })[arrayKey];
+                if (Array.isArray(maybeArray)) {
+                    arrayData.push(...maybeArray.map((val: Json, idx: number) => ({
+                        __arrayIndex: idx,
+                        __sourceInstance: item.instance as Json,
+                        ...(typeof val === 'object' && val !== null ? (val as { [k: string]: Json }) : {})
+                    }) as Json));
+                }
             }
         });
 
@@ -194,18 +202,18 @@ export const ReadModels = () => {
         setPage(0);
     }, [navigationPath]);
 
-    const handleObjectClick = useCallback((value: any) => {
+    const handleObjectClick = useCallback((value: Json) => {
         setSelectedObject(value);
         setObjectNavigationPath([]);
     }, []);
 
-    const getCurrentObjectForDetails = useCallback(() => {
+    const getCurrentObjectForDetails = useCallback((): Json | null => {
         if (!selectedObject) return null;
 
-        let current = selectedObject;
+        let current: Json = selectedObject;
         for (const key of objectNavigationPath) {
-            if (current && typeof current === 'object' && key in current) {
-                current = current[key];
+            if (current && typeof current === 'object' && !Array.isArray(current) && key in current) {
+                current = (current as { [k: string]: Json })[key];
             } else {
                 return null;
             }
@@ -242,7 +250,7 @@ export const ReadModels = () => {
                 header={key}
                 sortable
                 body={(rowData: Record<string, unknown>) => {
-                    const value = rowData[key];
+                    const value = rowData[key] as Json;
                     if (value === null || value === undefined) return '';
 
                     if (Array.isArray(value)) {
@@ -504,8 +512,8 @@ export const ReadModels = () => {
                                     <Column
                                         field="value"
                                         header="Value"
-                                        body={(rowData: { key: string; value: any }) => {
-                                            const value = rowData.value;
+                                        body={(rowData: { key: string; value: Json }) => {
+                                            const value = rowData.value as Json;
 
                                             if (value === null || value === undefined) {
                                                 return <span style={{ fontStyle: 'italic', color: 'var(--text-color-secondary)' }}>{strings.eventStore.namespaces.readModels.labels.null}</span>;
