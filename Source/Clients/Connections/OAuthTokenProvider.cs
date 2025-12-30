@@ -136,6 +136,24 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     }
 
     /// <inheritdoc/>
+    public async Task<string?> Refresh(CancellationToken cancellationToken = default)
+    {
+        await _refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            _logger.RefreshingAccessToken();
+            _accessToken = null;
+            _tokenExpiry = DateTimeOffset.MinValue;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+
+        return await GetAccessToken(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         _httpClient.Dispose();

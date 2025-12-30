@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
 using Cratis.Reflection;
 using Cratis.Types;
@@ -138,6 +139,14 @@ public class InMemorySink(
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var instances = Collection.Values.Skip(skip).Take(take);
+        var totalCount = Collection.Count;
+        return Task.FromResult(new ReadModelInstances(instances, totalCount));
+    }
 
     /// <inheritdoc/>
     public void Dispose()

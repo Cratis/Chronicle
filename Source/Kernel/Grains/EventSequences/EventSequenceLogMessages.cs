@@ -55,6 +55,15 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Error, "Failed appending many events in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void ErrorAppendingMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
 
+    [LoggerMessage(LogLevel.Debug, "Grain.EventSequence.AppendMany calling storage with {Count} events for {EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+    internal static partial void AppendManyCallingStorage(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count);
+
+    [LoggerMessage(LogLevel.Debug, "Grain.EventSequence.AppendMany received {Count} appended events for {EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+    internal static partial void AppendManyReceived(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count);
+
+    [LoggerMessage(LogLevel.Warning, "Grain.EventSequence.AppendMany result was not success for {EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
+    internal static partial void AppendManyResultNotSuccess(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
+
     [LoggerMessage(LogLevel.Debug, "Duplicate event detected during AppendMany with sequence number {SequenceNumber} in event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void DuplicateEventInMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
 }

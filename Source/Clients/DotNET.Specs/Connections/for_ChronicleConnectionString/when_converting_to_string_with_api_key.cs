@@ -14,5 +14,5 @@ public class when_converting_to_string_with_api_key : Specification
 
     void Because() => _result = _url.ToString();
 
-    [Fact] void should_include_auth_and_key_in_query() => _result.ShouldEqual("chronicle://localhost?auth=ApiKey&key=testkey");
+    [Fact] void should_include_auth_and_key_in_query() => _result.ShouldEqual("chronicle://localhost:35000?auth=ApiKey&key=testkey");
 }

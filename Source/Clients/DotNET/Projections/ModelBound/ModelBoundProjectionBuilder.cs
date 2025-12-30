@@ -3,13 +3,11 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -60,11 +58,6 @@ internal class ModelBoundProjectionBuilder(
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            Sink = new SinkDefinition
-            {
-                ConfigurationId = Guid.Empty,
-                TypeId = WellKnownSinkTypes.MongoDB
-            },
             Categories = modelType.GetCategories().ToArray()
         };
 

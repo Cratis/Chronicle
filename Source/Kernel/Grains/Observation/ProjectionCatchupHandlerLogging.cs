@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation;
 
 /// <summary>
-/// Holds log messages for <see cref="ProjectionCatchupHandler"/>.
+/// Logging for <see cref="ProjectionCatchupHandler"/>.
 /// </summary>
 internal static partial class ProjectionCatchupHandlerLogging
 {
-    [LoggerMessage(LogLevel.Error, "Failed to handle catchup for observer '{ObserverId}' of type '{Type}'")]
-    internal static partial void FailedToHandleCatchup(this ILogger<ProjectionCatchupHandler> logger, Exception exception, ObserverId observerId, ObserverType type);
+    [LoggerMessage(LogLevel.Error, "Failed to handle catchup for observer {ObserverId} of type {Type}")]
+    internal static partial void Failed(this ILogger<ProjectionCatchupHandler> logger, Exception ex, ObserverId observerId, ObserverType type);
 }

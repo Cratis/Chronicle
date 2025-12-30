@@ -14,4 +14,11 @@ public interface ITokenProvider
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The access token.</returns>
     Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Refreshes the access token by clearing cached tokens and obtaining a new one.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The new access token.</returns>
+    Task<string?> Refresh(CancellationToken cancellationToken = default);
 }

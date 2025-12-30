@@ -293,21 +293,34 @@ public class EventSequence(
             do
             {
                 await HandleFailedAppendManyResult(appendResult, eventsToAppend);
+                logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
                 appendResult = await EventSequenceStorage.AppendMany(eventsToAppend);
             }
             while (!appendResult.IsSuccess);
 
-            var appendedEvents = (IEnumerable<AppendedEvent>)appendResult;
-            var sequenceNumbers = appendedEvents.Select(e => e.Context.SequenceNumber).ToImmutableList();
+            List<AppendedEvent> appendedEventsList = new();
+            await appendResult.Match(
+                success =>
+                {
+                    appendedEventsList = success.ToList();
+                    return Task.CompletedTask;
+                },
+                _ => Task.CompletedTask);
 
-            foreach (var appendedEvent in appendedEvents)
+            var appendedCount = appendedEventsList?.Count ?? 0;
+            logger.AppendManyReceived(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedCount);
+
+            appendedEventsList ??= [];
+            var sequenceNumbers = appendedEventsList.Select(e => e.Context.SequenceNumber).ToImmutableList();
+
+            foreach (var appendedEvent in appendedEventsList)
             {
                 State.TailSequenceNumberPerEventType[appendedEvent.Context.EventType.Id] = appendedEvent.Context.SequenceNumber;
                 _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
             }
 
             await WriteStateAsync();
-            await (_appendedEventsQueues?.Enqueue(appendedEvents.ToList()) ?? Task.CompletedTask);
+            await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
 
             foreach (var constraintContext in constraintContexts)
             {

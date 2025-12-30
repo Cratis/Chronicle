@@ -7,3 +7,4 @@ export * from './DataPage';
 export * from './DataTables';
 export * from './Dialogs';
 export * from './ItemsList';
+export * from './SchemaEditor';

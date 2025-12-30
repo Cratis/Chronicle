@@ -10,11 +10,56 @@ namespace Cratis.Chronicle.Contracts.ReadModels;
 public interface IReadModels
 {
     /// <summary>
-    /// Register read models.
+    /// Register many read models.
     /// </summary>
-    /// <param name="request">The <see cref="RegisterRequest"/> holding all registrations.</param>
+    /// <param name="request">The <see cref="RegisterManyRequest"/> holding all registrations.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task Register(RegisterRequest request, CallContext context = default);
+    Task RegisterMany(RegisterManyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Register a single read model.
+    /// </summary>
+    /// <param name="request">The <see cref="RegisterSingleRequest"/> holding the registration.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task RegisterSingle(RegisterSingleRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Update a read model definition.
+    /// </summary>
+    /// <param name="request">The <see cref="UpdateDefinitionRequest"/> holding the update.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all read model definitions.
+    /// </summary>
+    /// <param name="request">The <see cref="GetDefinitionsRequest"/> for the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetDefinitionsResponse"/> with all definitions.</returns>
+    [Operation]
+    Task<GetDefinitionsResponse> GetDefinitions(GetDefinitionsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all occurrences for a specific read model.
+    /// </summary>
+    /// <param name="request">The <see cref="GetOccurrencesRequest"/> for the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetOccurrencesResponse"/> with all occurrences.</returns>
+    [Operation]
+    Task<GetOccurrencesResponse> GetOccurrences(GetOccurrencesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get instances of a read model.
+    /// </summary>
+    /// <param name="request">The <see cref="GetInstancesRequest"/> for the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetInstancesResponse"/> with the instances.</returns>
+    [Operation]
+    Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default);
 }

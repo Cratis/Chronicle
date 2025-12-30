@@ -60,9 +60,4 @@
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Services\Services.csproj" />
     </ItemGroup>
-
-    <!-- Embedded certificates -->
-    <ItemGroup>
-        <Content Include="Certs\shared-dev.pfx" CopyToOutputDirectory="PreserveNewest" />
-    </ItemGroup>
 </Project>

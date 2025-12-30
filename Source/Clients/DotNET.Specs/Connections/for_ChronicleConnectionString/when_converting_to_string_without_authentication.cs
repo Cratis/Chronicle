@@ -14,5 +14,5 @@ public class when_converting_to_string_without_authentication : Specification
 
     void Because() => _result = _url.ToString();
 
-    [Fact] void should_not_include_authentication() => _result.ShouldEqual("chronicle://localhost");
+    [Fact] void should_not_include_authentication() => _result.ShouldEqual("chronicle://localhost:35000");
 }

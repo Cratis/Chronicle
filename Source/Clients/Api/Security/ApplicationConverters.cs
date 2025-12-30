@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <summary>
 /// Extension methods for converting between contract and API application types.
 /// </summary>
-public static class ApplicationConverters
+internal static class ApplicationConverters
 {
     /// <summary>
     /// Convert from contract application to API application.

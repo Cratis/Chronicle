@@ -16,8 +16,8 @@ public class when_using_default_port : Specification
         };
     }
 
-    void Because() => _url = _builder.BuildChronicleUrl();
+    void Because() => _url = _builder.Build();
 
     [Fact] void should_get_default_port() => _builder.Port.ShouldEqual(35000);
-    [Fact] void should_not_include_port_in_url() => _url.ShouldEqual("chronicle://localhost");
+    [Fact] void should_not_include_port_in_url() => _url.ShouldEqual("chronicle://localhost:35000");
 }

@@ -66,5 +66,7 @@ public record Application
     /// <summary>
     /// Gets or sets additional properties.
     /// </summary>
-    public ImmutableDictionary<PropertyName, JsonElement> Properties { get; set; } = [];
+#pragma warning disable IDE0301 // Simplify collection initialization - due to net8 and net9 not having a default constructor for this
+    public ImmutableDictionary<PropertyName, JsonElement> Properties { get; set; } = ImmutableDictionary<PropertyName, JsonElement>.Empty;
+#pragma warning restore IDE0301 // Simplify collection initialization
 }

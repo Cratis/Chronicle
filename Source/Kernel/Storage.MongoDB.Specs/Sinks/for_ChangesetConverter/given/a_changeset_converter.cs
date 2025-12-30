@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
@@ -34,6 +35,7 @@ public class a_changeset_converter : Specification
             typeof(TestReadModel).FullName,
             nameof(TestReadModel),
             ReadModelOwner.Client,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(TestReadModel)) },

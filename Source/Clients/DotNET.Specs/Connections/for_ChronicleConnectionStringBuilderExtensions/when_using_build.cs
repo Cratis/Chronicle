@@ -17,7 +17,7 @@ public class when_using_build : Specification
         };
     }
 
-    void Because() => _result = _builder.Build();
+    void Because() => _result = ChronicleConnectionStringBuilderExtensions.Build(_builder);
 
     [Fact] void should_return_built_url() => _result.ShouldEqual("chronicle://example.com:8080");
 }

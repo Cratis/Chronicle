@@ -10,4 +10,7 @@ public class NoOpTokenProvider : ITokenProvider
 {
     /// <inheritdoc/>
     public Task<string?> GetAccessToken(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+
+    /// <inheritdoc/>
+    public Task<string?> Refresh(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
 }

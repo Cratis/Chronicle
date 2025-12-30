@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Api.Events;
+using Cratis.Reactive;
 using IEventTypes = Cratis.Chronicle.Contracts.Events.IEventTypes;
 
 namespace Cratis.Chronicle.Api.EventTypes;
@@ -39,6 +42,14 @@ public class EventTypeQueries : ControllerBase
     /// <param name="eventStore">The event store to get event types for.</param>
     /// <returns>Collection of event types with schemas.</returns>
     [HttpGet("schemas")]
-    public async Task<IEnumerable<EventTypeRegistration>> AllEventTypesWithSchemas([FromRoute] string eventStore) =>
-        (await _eventTypes.GetAllRegistrations(new() { EventStore = eventStore })).ToApi();
+    public ISubject<IEnumerable<EventTypeRegistration>> AllEventTypesWithSchemas([FromRoute] string eventStore)
+    {
+        var observable = _eventTypes
+            .ObserveAllRegistrations(new() { EventStore = eventStore })
+            .Select(_ => _.ToApi());
+
+        var subject = new ReplaySubject<IEnumerable<EventTypeRegistration>>(1);
+        observable.Subscribe(subject);
+        return subject;
+    }
 }

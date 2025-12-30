@@ -19,28 +19,28 @@ public static class ServiceCollectionExtensions
     /// Adds the Chronicle connection to the <see cref="IServiceCollection"/>.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="url">The Chronicle URL to connect to. If not provided, defaults to <see cref="ChronicleConnectionString.Default"/>.</param>
-    /// <param name="urlFactory">A factory function to create the Chronicle URL. If provided, it will be used to determine the URL instead of the default.</param>
+    /// <param name="connectionString">The Chronicle URL to connect to. If not provided, defaults to <see cref="ChronicleConnectionString.Default"/>.</param>
+    /// <param name="connectionStringFactory">A factory function to create the Chronicle URL. If provided, it will be used to determine the URL instead of the default.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
-    /// If the <paramref name="url"/> is not specified, it will use the <paramref name="urlFactory"/> if specified, if not, it defaults to <see cref="ChronicleConnectionString.Default"/>.
+    /// If the <paramref name="connectionString"/> is not specified, it will use the <paramref name="connectionStringFactory"/> if specified, if not, it defaults to <see cref="ChronicleConnectionString.Default"/>.
     /// </remarks>
-    public static IServiceCollection AddCratisChronicleConnection(this IServiceCollection services, ChronicleConnectionString? url = default, Func<IServiceProvider, ChronicleConnectionString>? urlFactory = default)
+    public static IServiceCollection AddCratisChronicleConnection(this IServiceCollection services, ChronicleConnectionString? connectionString = default, Func<IServiceProvider, ChronicleConnectionString>? connectionStringFactory = default)
     {
         services.TryAddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
         services.AddSingleton<IChronicleConnection>(sp =>
         {
-            url ??= urlFactory?.Invoke(sp) ?? ChronicleConnectionString.Default;
+            connectionString ??= connectionStringFactory?.Invoke(sp) ?? ChronicleConnectionString.Default;
 
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
-            logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", url);
+            logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", connectionString);
 #pragma warning restore CA1848 // Use the LoggerMessage delegates
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
             return new ChronicleConnection(
-                url,
+                connectionString,
                 5,
                 null,
                 null,

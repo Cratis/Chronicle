@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -40,14 +41,22 @@ public class ReadModels(
 
         var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
         {
-            Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
+            Type = new()
+            {
+                Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
+                Generation = ReadModelGeneration.First,
+            },
             Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
-            Generation = ReadModelGeneration.First,
+            Sink = new()
+            {
+                ConfigurationId = Guid.Empty,
+                TypeId = WellKnownSinkTypes.MongoDB
+            },
             Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
             Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty)
         });
 
-        await _chronicleServicesAccessor.Services.ReadModels.Register(new RegisterRequest
+        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
         {
             EventStore = eventStore.Name,
             Owner = ReadModelOwner.Client,
@@ -62,13 +71,22 @@ public class ReadModels(
         {
             new()
             {
-                Identifier = typeof(TReadModel).GetReadModelIdentifier(),
+                Type = new()
+                {
+                    Identifier = typeof(TReadModel).GetReadModelIdentifier(),
+                    Generation = ReadModelGeneration.First,
+                },
                 Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                Sink = new()
+                {
+                    ConfigurationId = Guid.Empty,
+                    TypeId = WellKnownSinkTypes.MongoDB
+                },
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty)
             }
         };
-        await _chronicleServicesAccessor.Services.ReadModels.Register(new RegisterRequest
+        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
         {
             EventStore = eventStore.Name,
             Owner = ReadModelOwner.Client,

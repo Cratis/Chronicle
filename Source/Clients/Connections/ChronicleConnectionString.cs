@@ -103,7 +103,7 @@ public class ChronicleConnectionString
     /// <returns>A new <see cref="ChronicleConnectionString"/> with the username and password set.</returns>
     public ChronicleConnectionString WithCredentials(string username, string password)
     {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder.Build())
         {
             Username = username,
             Password = password
@@ -118,7 +118,7 @@ public class ChronicleConnectionString
     /// <returns>A new <see cref="ChronicleConnectionString"/> with API key authentication configured.</returns>
     public ChronicleConnectionString WithApiKey(string apiKey)
     {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.BuildChronicleUrl())
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder.Build())
         {
             ApiKey = apiKey
         };
@@ -126,5 +126,5 @@ public class ChronicleConnectionString
     }
 
     /// <inheritdoc/>
-    public override string ToString() => _builder.BuildChronicleUrl();
+    public override string ToString() => _builder.Build();
 }

@@ -32,10 +32,13 @@
         "sequences": "Sequences",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
+        "readModels": "Read Models",
         "identities": "Identities",
         "general": {
             "groupLabel": "General",
-            "types": "Types",
+            "eventTypes": "Event Types",
+            "readModelTypes": "Read Model Types",
+            "readModels": "Read Models",
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
@@ -51,14 +54,17 @@
     },
     "eventStore": {
         "general": {
-            "types": {
-                "title": "Types",
+            "eventTypes": {
+                "title": "Event Types",
                 "empty": "No types found",
+                "cannotEditReason": "Defined by code",
                 "actions": {
                     "create": "Create"
                 },
                 "columns": {
                     "name": "Name",
+                    "owner": "Owner",
+                    "source": "Source",
                     "generation": "Generation",
                     "tombstone": "Tombstone"
                 },
@@ -67,6 +73,16 @@
                         "title": "Add event type",
                         "name": "Name"
                     }
+                },
+                "owners": {
+                    "unknown": "Unknown",
+                    "client": "Client",
+                    "server": "Server"
+                },
+                "sources": {
+                    "unknown": "Unknown",
+                    "code": "Code",
+                    "user": "User"
                 }
             },
             "namespaces": {
@@ -82,6 +98,30 @@
                 "dialogs": {
                     "addNamespace": {
                         "title": "Add namespace",
+                        "name": "Name"
+                    }
+                }
+            },
+            "readModels": {
+                "title": "Read Model Types",
+                "empty": "No read models found",
+                "actions": {
+                    "create": "Create",
+                    "edit": "Edit",
+                    "addProperty": "Add Property",
+                    "save": "Save"
+                },
+                "columns": {
+                    "name": "Name",
+                    "generation": "Generation"
+                },
+                "schema": {
+                    "propertyName": "Property Name",
+                    "type": "Type"
+                },
+                "dialogs": {
+                    "addReadModel": {
+                        "title": "Add Read Model",
                         "name": "Name"
                     }
                 }
@@ -200,6 +240,30 @@
                     "name": "Name",
                     "userName": "UserName"
                 }
+            },
+            "readModels": {
+                "title": "Read Models",
+                "empty": "No instances found. Select a read model to view data.",
+                "actions": {
+                    "filter": "Filter",
+                    "query": "Perform Query",
+                    "navigateBack": "Navigate Back"
+                },
+                "labels": {
+                    "readModel": "Read Model",
+                    "occurrence": "Occurrence",
+                    "objectDetails": "Object Details",
+                    "root": "Root",
+                    "default": "Default",
+                    "generation": "Generation",
+                    "array": "Array",
+                    "object": "Object",
+                    "null": "null"
+                },
+                "placeholders": {
+                    "selectReadModel": "Select a Read Model",
+                    "selectOccurrence": "Select an Occurrence"
+                }
             }
         },
         "system": {
@@ -283,6 +347,27 @@
                     }
                 }
             }
+        }
+    },
+    "components": {
+        "schemaEditor": {
+            "columns": {
+                "property": "Property",
+                "type": "Type"
+            },
+            "actions": {
+                "edit": "Edit",
+                "save": "Save",
+                "cancel": "Cancel",
+                "addProperty": "Add Property",
+                "navigateBack": "Navigate Back"
+            },
+            "tooltips": {
+                "navigateToObjectProperties": "Navigate to object properties",
+                "navigateToItemDefinition": "Navigate to item definition",
+                "deleteProperty": "Delete property"
+            },
+            "emptyMessage": "No properties defined"
         }
     }
 }

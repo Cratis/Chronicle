@@ -222,9 +222,11 @@ public class EventSequenceStorage(
                     eventToAppend.Content));
             }
 
+            logger.AppendingInserting(eventsToInsert.Count, eventSequenceId);
             await collection.InsertManyAsync(session, eventsToInsert).ConfigureAwait(false);
 
             await session.CommitTransactionAsync().ConfigureAwait(false);
+            logger.AppendingInserted(eventsToInsert.Count, appendedEvents.Count, eventSequenceId);
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)

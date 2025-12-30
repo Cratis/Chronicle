@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using MongoDB.Bson;
@@ -150,21 +151,21 @@ public class Sink(
     public Task PrepareInitialRun() => collections.PrepareInitialRun();
 
     /// <inheritdoc/>
-    public async Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    public async Task BeginReplay(ReplayContext context)
     {
         await collections.BeginReplay(context);
         await BeginBulk();
     }
 
     /// <inheritdoc/>
-    public async Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    public async Task ResumeReplay(ReplayContext context)
     {
         await collections.ResumeReplay(context);
         await BeginBulk();
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context)
+    public async Task EndReplay(ReplayContext context)
     {
         await EndBulk();
         await collections.EndReplay(context);
@@ -224,6 +225,21 @@ public class Sink(
 
             await collection.Indexes.CreateOneAsync(indexModel);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<ReadModelInstances> GetInstances(ReadModelName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
+        var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        var documents = await collection
+            .Find(FilterDefinition<BsonDocument>.Empty)
+            .Skip(skip)
+            .Limit(take)
+            .ToListAsync();
+
+        var instances = documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, readModel.GetSchemaForLatestGeneration()));
+        return new ReadModelInstances(instances, totalCount);
     }
 
     async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)

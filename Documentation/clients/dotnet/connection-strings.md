@@ -56,7 +56,7 @@ The most common way to use connection strings is through configuration:
 builder.Services.AddChronicle();
 ```
 
-The client will automatically read the connection string from the `Chronicle:Url` configuration section.
+The client will automatically read the connection string from the `Cratis:Chronicle:ConnectionString` configuration section.
 
 ### Programmatic Creation
 

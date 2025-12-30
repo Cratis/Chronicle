@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DataTable, DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
+import { Paginator } from 'primereact/paginator';
 import { Constructor } from '@cratis/fundamentals';
 import { IObservableQueryFor, Paging } from '@cratis/arc/queries';
 import { useObservableQueryWithPaging } from '@cratis/arc.react/queries';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useRef, useEffect } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -69,29 +70,88 @@ const paging = new Paging(0, 20);
 export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataTableForObservableQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
     const [result, , setPage] = useObservableQueryWithPaging(props.query, paging, props.queryArguments);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [tableHeight, setTableHeight] = useState<number>(600);
+    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+
+            timeoutRef.current = setTimeout(() => {
+                for (const entry of entries) {
+                    const containerHeight = entry.contentRect.height;
+                    if (containerHeight > 0) {
+                        const paginatorHeight = result.paging.totalItems > 0 ? 56 : 0;
+                        const calculatedHeight = containerHeight - paginatorHeight - 2;
+                        const newHeight = Math.max(calculatedHeight, 200);
+
+                        setTableHeight(prevHeight => {
+                            if (Math.abs(newHeight - prevHeight) > 5) {
+                                return newHeight;
+                            }
+                            return prevHeight;
+                        });
+                    }
+                }
+            }, 10);
+        });
+
+        resizeObserver.observe(containerRef.current);
+
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            resizeObserver.disconnect();
+        };
+    }, [result.paging.totalItems]);
 
     return (
-        <DataTable
-            value={result.data as any}
-            lazy
-            rows={paging.pageSize}
-            totalRecords={result.paging.totalItems}
-            paginator
-            alwaysShowPaginator={false}
-            first={result.paging.page * paging.pageSize}
-            onPage={(e) => setPage(e.page ?? 0)}
-            scrollable
-            scrollHeight={'flex'}
-            selectionMode='single'
-            selection={props.selection}
-            onSelectionChange={props.onSelectionChange}
-            dataKey={props.dataKey}
-            filters={filters}
-            filterDisplay='menu'
-            onFilter={(e) => setFilters(e.filters)}
-            globalFilterFields={props.globalFilterFields}
-            emptyMessage={props.emptyMessage}>
-            {props.children}
-        </DataTable>
+        <div
+            ref={containerRef}
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                border: '1px solid var(--surface-border)',
+                borderRadius: 'var(--border-radius)',
+                overflow: 'hidden'
+            }}>
+            <div style={{ height: `${tableHeight}px`, overflow: 'hidden' }}>
+                <DataTable
+                    value={result.data as any}
+                    lazy
+                    rows={paging.pageSize}
+                    totalRecords={result.paging.totalItems}
+                    scrollable
+                    scrollHeight='100%'
+                    selectionMode='single'
+                    selection={props.selection}
+                    onSelectionChange={props.onSelectionChange}
+                    dataKey={props.dataKey}
+                    filters={filters}
+                    filterDisplay='menu'
+                    onFilter={(e) => setFilters(e.filters)}
+                    globalFilterFields={props.globalFilterFields}
+                    emptyMessage={props.emptyMessage}>
+                    {props.children}
+                </DataTable>
+            </div>
+            {result.paging.totalItems > 0 && (
+                <div style={{ borderTop: '1px solid var(--surface-border)' }}>
+                    <Paginator
+                        first={result.paging.page * paging.pageSize}
+                        rows={paging.pageSize}
+                        totalRecords={result.paging.totalItems}
+                        onPageChange={(e) => setPage(e.page)}
+                    />
+                </div>
+            )}
+        </div>
     );
 };

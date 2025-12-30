@@ -23,8 +23,18 @@ public class AuthenticationClientInterceptor(ITokenProvider tokenProvider, ILogg
     public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(
         TRequest request,
         ClientInterceptorContext<TRequest, TResponse> context,
-        AsyncUnaryCallContinuation<TRequest, TResponse> continuation) =>
-        continuation(request, AddAuthorization(context));
+        AsyncUnaryCallContinuation<TRequest, TResponse> continuation)
+    {
+        var contextWithAuth = AddAuthorization(context);
+        var call = continuation(request, contextWithAuth);
+
+        return new AsyncUnaryCall<TResponse>(
+            HandleResponseAsync(call.ResponseAsync, request, contextWithAuth, continuation),
+            call.ResponseHeadersAsync,
+            call.GetStatus,
+            call.GetTrailers,
+            call.Dispose);
+    }
 
     /// <inheritdoc/>
     public override AsyncClientStreamingCall<TRequest, TResponse> AsyncClientStreamingCall<TRequest, TResponse>(
@@ -51,6 +61,40 @@ public class AuthenticationClientInterceptor(ITokenProvider tokenProvider, ILogg
         ClientInterceptorContext<TRequest, TResponse> context,
         BlockingUnaryCallContinuation<TRequest, TResponse> continuation) =>
         continuation(request, AddAuthorization(context));
+
+    async Task<TResponse> HandleResponseAsync<TRequest, TResponse>(
+        Task<TResponse> responseTask,
+        TRequest request,
+        ClientInterceptorContext<TRequest, TResponse> context,
+        AsyncUnaryCallContinuation<TRequest, TResponse> continuation)
+        where TRequest : class
+        where TResponse : class
+    {
+        try
+        {
+            return await responseTask;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unauthenticated)
+        {
+            logger.AuthenticationFailedRetryingWithTokenRefresh(context.Method.FullName);
+
+            try
+            {
+                await tokenProvider.Refresh();
+
+                var contextWithRefreshedAuth = AddAuthorization(context);
+                var retryCall = continuation(request, contextWithRefreshedAuth);
+
+                logger.RetryingCallAfterTokenRefresh(context.Method.FullName);
+                return await retryCall.ResponseAsync;
+            }
+            catch (Exception retryEx)
+            {
+                logger.RetryAfterTokenRefreshFailed(context.Method.FullName, retryEx);
+                throw;
+            }
+        }
+    }
 
     ClientInterceptorContext<TRequest, TResponse> AddAuthorization<TRequest, TResponse>(ClientInterceptorContext<TRequest, TResponse> context)
         where TRequest : class

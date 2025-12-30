@@ -56,7 +56,7 @@ public class ProjectionCatchupHandler(
         }
         catch (Exception ex)
         {
-            logger.FailedToHandleCatchup(ex, observerDetails.Key.ObserverId, observerDetails.Type);
+            logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleCatchupForObserver.Error.Unknown;
         }
     }

@@ -97,12 +97,12 @@ public static class ChronicleConnectionStringBuilderExtensions
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to build from.</param>
     /// <returns>The built connection string.</returns>
-    public static string Build(this ChronicleConnectionStringBuilder builder) => builder.BuildChronicleUrl();
+    public static string Build(this ChronicleConnectionStringBuilder builder) => builder.Build();
 
     /// <summary>
     /// Converts the builder to a <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to convert.</param>
     /// <returns>A new <see cref="ChronicleConnectionString"/> instance.</returns>
-    public static ChronicleConnectionString ToConnectionString(this ChronicleConnectionStringBuilder builder) => new(builder.BuildChronicleUrl());
+    public static ChronicleConnectionString ToConnectionString(this ChronicleConnectionStringBuilder builder) => new(builder.Build());
 }

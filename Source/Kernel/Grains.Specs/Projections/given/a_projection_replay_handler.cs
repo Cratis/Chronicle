@@ -5,9 +5,10 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.ReadModels;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.given;
@@ -21,9 +22,11 @@ public class a_projection_replay_handler : Specification
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IReplayContexts _replayContexts;
-    protected IReplayedModelsStorage _replayedModels;
+    protected IReplayedReadModelsStorage _replayedModels;
     protected IProjectionPipeline _projectionPipeline;
     protected ObserverDetails _observerDetails;
+    protected IGrainFactory _grainFactory;
+    protected IReadModelReplayManager _readModelReplayManager;
 
     void Establish()
     {
@@ -39,8 +42,11 @@ public class a_projection_replay_handler : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
         _eventStoreNamespaceStorage.ReplayContexts.Returns(_replayContexts);
-        _replayedModels = Substitute.For<IReplayedModelsStorage>();
-        _eventStoreNamespaceStorage.ReplayedModels.Returns(_replayedModels);
+        _replayedModels = Substitute.For<IReplayedReadModelsStorage>();
+        _eventStoreNamespaceStorage.ReplayedReadModels.Returns(_replayedModels);
+        _grainFactory = Substitute.For<IGrainFactory>();
+        _readModelReplayManager = Substitute.For<IReadModelReplayManager>();
+        _grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_readModelReplayManager);
 
         _projectionPipelineManager = Substitute.For<IProjectionPipelineManager>();
         _projectionPipeline = Substitute.For<IProjectionPipeline>();
@@ -49,6 +55,11 @@ public class a_projection_replay_handler : Specification
             _observerDetails.Key.Namespace,
             Arg.Any<Chronicle.Projections.IProjection>()).Returns(_projectionPipeline);
 
-        _handler = new ProjectionReplayHandler(_projections, _storage, _projectionPipelineManager, NullLogger<ProjectionReplayHandler>.Instance);
+        _handler = new ProjectionReplayHandler(
+            _projections,
+            _grainFactory,
+            _storage,
+            _projectionPipelineManager,
+            NullLogger<ProjectionReplayHandler>.Instance);
     }
 }

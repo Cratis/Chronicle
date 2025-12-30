@@ -36,7 +36,7 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
 {
-    readonly ChronicleConnectionString _url;
+    readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
     readonly int? _maxSendMessageSize;
@@ -61,7 +61,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to connect with.</param>
     /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
     /// <param name="maxReceiveMessageSize">Maximum receive message size in bytes.</param>
     /// <param name="maxSendMessageSize">Maximum send message size in bytes.</param>
@@ -79,7 +79,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
-        ChronicleConnectionString url,
+        ChronicleConnectionString connectionString,
         int connectTimeout,
         int? maxReceiveMessageSize,
         int? maxSendMessageSize,
@@ -96,7 +96,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ITokenProvider? tokenProvider = null)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
-        _url = url;
+        _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
         _maxSendMessageSize = maxSendMessageSize;
@@ -156,7 +156,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        _logger.Connecting(_url);
+        _logger.Connecting(_connectionString);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
 
@@ -228,7 +228,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             // In development, fetch CA from HTTP-only port
             // In production, this would fail and fall back to default validation
-            var wellKnownUrl = $"http://{_url.ServerAddress.Host}:{_developmentCertificatePort}/.well-known/chronicle/ca";
+            var wellKnownUrl = $"http://{_connectionString.ServerAddress.Host}:{_developmentCertificatePort}/.well-known/chronicle/ca";
             try
             {
                 _logger.FetchingDevelopmentCa(wellKnownUrl);
@@ -326,7 +326,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         var scheme = _disableTls ? "http" : "https";
-        var address = $"{scheme}://{_url.ServerAddress.Host}:{_url.ServerAddress.Port}";
+        var address = $"{scheme}://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
 
         var channel = GrpcChannel.ForAddress(
             address,
