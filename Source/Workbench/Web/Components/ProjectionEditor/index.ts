@@ -9,6 +9,8 @@ let validator: ProjectionDslValidator;
 let completionProvider: ProjectionDslCompletionProvider;
 let disposables: Monaco.IDisposable[] = [];
 
+export * from './ProjectionEditor';
+
 export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     // Register the language
     monaco.languages.register({ id: languageId });

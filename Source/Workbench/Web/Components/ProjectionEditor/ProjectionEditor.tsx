@@ -4,19 +4,12 @@
 import React, { useEffect, useRef } from 'react';
 import * as monaco from 'monaco-editor';
 import { registerProjectionDslLanguage, setReadModelSchema, languageId, disposeProjectionDslLanguage } from './index';
+import { JsonSchema } from 'Components/JsonSchema';
 
 export interface ProjectionDslEditorProps {
     value: string;
     onChange?: (value: string) => void;
-    readModelSchema?: {
-        properties: Record<
-            string,
-            {
-                type: string;
-                format?: string;
-            }
-        >;
-    };
+    readModelSchema?: JsonSchema,
     height?: string;
     theme?: string;
 }

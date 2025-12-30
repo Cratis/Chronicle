@@ -27,7 +27,6 @@ import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
-import Example from '../../Monaco/ProjectionDsl/Example';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -92,7 +91,7 @@ export const EventStore = () => {
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
                     <Route path={'read-models'} element={<ReadModels />} />
-                    <Route path={'projections'} element={<Example />} />
+                    <Route path={'projections'} element={<Projections />} />
                     <Route path={'identities'} element={<Identities />} />
                 </Route>
             </Route>
