@@ -71,7 +71,6 @@ public class ProjectionDslParser(IEnumerable<Token> tokens)
             children,
             [],
             fromEvery,
-            SinkDefinition.None,
             removedWith,
             removedWithJoin,
             FromEventProperty: null,
