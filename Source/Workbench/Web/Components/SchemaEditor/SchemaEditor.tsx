@@ -12,27 +12,32 @@ import { AllTypeFormats, TypeFormat } from 'Api/TypeFormats';
 import * as faIcons from 'react-icons/fa6';
 import { NameCell } from './NameCell';
 import { TypeCell } from './TypeCell';
-import { JSONSchemaType, SchemaProperty, NavigationItem } from './types';
+import { JsonSchema, JsonSchemaProperty, NavigationItem } from '../JsonSchema';
 import css from './SchemaEditor.module.css';
 import { MenuItem } from 'primereact/menuitem';
 
+export interface NavigationItem {
+    name: string;
+    path: string[];
+}
+
 export interface SchemaEditorProps {
-    schema: JSONSchemaType;
+    schema: JsonSchema;
     eventTypeName: string;
     canEdit?: boolean;
     canNotEditReason?: string;
-    onChange?: (schema: JSONSchemaType) => void;
+    onChange?: (schema: JsonSchema) => void;
     onSave?: () => void;
     onCancel?: () => void;
 }
 
 export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEditReason, onChange, onSave, onCancel }: SchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
-    const [properties, setProperties] = useState<SchemaProperty[]>([]);
+    const [properties, setProperties] = useState<JsonSchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<TypeFormat[]>([]);
-    const [currentSchema, setCurrentSchema] = useState<JSONSchemaType>(schema);
+    const [currentSchema, setCurrentSchema] = useState<JsonSchema>(schema);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [initialSchema, setInitialSchema] = useState<JSONSchemaType>(schema);
+    const [initialSchema, setInitialSchema] = useState<JsonSchema>(schema);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -41,7 +46,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         }
     }, [isEditMode]);
 
-    const validatePropertyName = useCallback((name: string, propertyId: string, allProperties: SchemaProperty[]): string | undefined => {
+    const validatePropertyName = useCallback((name: string, propertyId: string, allProperties: JsonSchemaProperty[]): string | undefined => {
         // Check for empty string
         if (!name || name.trim() === '') {
             return 'Property name cannot be empty';
@@ -62,7 +67,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         return undefined;
     }, []);
 
-    const validateAllProperties = useCallback((properties: SchemaProperty[]) => {
+    const validateAllProperties = useCallback((properties: JsonSchemaProperty[]) => {
         const errors: Record<string, string> = {};
 
         properties.forEach(prop => {
@@ -106,7 +111,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
             }
         }
 
-        const schemaProps: SchemaProperty[] = [];
+        const schemaProps: JsonSchemaProperty[] = [];
         if (targetSchema.properties) {
             let idCounter = 0;
             for (const [name, property] of Object.entries(targetSchema.properties)) {
@@ -129,7 +134,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         }
     };
 
-    const updateSchemaAtPath = useCallback((path: string[], updater: (schema: JSONSchemaType) => JSONSchemaType) => {
+    const updateSchemaAtPath = useCallback((path: string[], updater: (schema: JsonSchema) => JsonSchema) => {
         const newSchema = JSON.parse(JSON.stringify(currentSchema));
 
         if (path.length === 0) {
@@ -187,7 +192,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
         });
     }, [currentPath, updateSchemaAtPath]);
 
-    const updateProperty = useCallback((oldName: string, field: keyof SchemaProperty, value: unknown, additionalUpdates?: Partial<SchemaProperty>) => {
+    const updateProperty = useCallback((oldName: string, field: keyof JsonSchemaProperty, value: unknown, additionalUpdates?: Partial<JsonSchemaProperty>) => {
         updateSchemaAtPath(currentPath, (schema) => {
             const newProps = { ...(schema.properties || {}) };
             const prop = { ...(newProps[oldName] || {}) };
@@ -416,7 +421,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                         value={properties}
                         dataKey="id"
                         emptyMessage={strings.components.schemaEditor.emptyMessage}
-                        rowClassName={(rowData: SchemaProperty) => {
+                        rowClassName={(rowData: JsonSchemaProperty) => {
                             if (!isEditMode && (rowData.type === 'object' || (rowData.type === 'array' && rowData.items?.type === 'object'))) {
                                 return css.navigableRow;
                             }
@@ -424,7 +429,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                         }}
                         onRowClick={(e) => {
                             if (!isEditMode) {
-                                const rowData = e.data as SchemaProperty;
+                                const rowData = e.data as JsonSchemaProperty;
                                 if (rowData.type === 'object') {
                                     navigateToProperty(rowData.name);
                                 } else if (rowData.type === 'array' && rowData.items?.type === 'object') {
@@ -440,7 +445,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                         <Column
                             field="name"
                             header={strings.components.schemaEditor.columns.property}
-                            body={(rowData: SchemaProperty) => (
+                            body={(rowData: JsonSchemaProperty) => (
                                 <NameCell
                                     rowData={rowData}
                                     isEditMode={isEditMode}
@@ -452,7 +457,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                         />
                         <Column
                             header={strings.components.schemaEditor.columns.type}
-                            body={(rowData: SchemaProperty) => (
+                            body={(rowData: JsonSchemaProperty) => (
                                 <TypeCell
                                     rowData={rowData}
                                     isEditMode={isEditMode}

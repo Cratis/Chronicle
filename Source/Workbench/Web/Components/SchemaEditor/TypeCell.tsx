@@ -6,13 +6,13 @@ import { Dropdown } from 'primereact/dropdown';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
 import { TypeFormat } from 'Api/TypeFormats';
-import { SchemaProperty } from './types';
+import { JsonSchemaProperty } from '../JsonSchema';
 
 export interface TypeCellProps {
-    rowData: SchemaProperty;
+    rowData: JsonSchemaProperty;
     isEditMode: boolean;
     typeFormats: TypeFormat[];
-    onUpdateProperty: (oldName: string, field: keyof SchemaProperty, value: unknown, additionalUpdates?: Partial<SchemaProperty>) => void;
+    onUpdateProperty: (oldName: string, field: keyof JsonSchemaProperty, value: unknown, additionalUpdates?: Partial<JsonSchemaProperty>) => void;
     onUpdateArrayItemType: (propertyName: string, itemType: string) => void;
     onNavigateToProperty: (propertyName: string) => void;
     onNavigateToArrayItems: (propertyName: string) => void;

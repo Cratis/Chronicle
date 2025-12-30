@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from 'Components';
-import { SchemaEditor, JSONSchemaType } from 'Components';
+import { SchemaEditor, JsonSchema } from 'Components';
 import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { useParams } from 'react-router-dom';
@@ -12,7 +12,7 @@ import strings from 'Strings';
 
 export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [schema, setSchema] = useState<JSONSchemaType>(() => JSON.parse(props.item.schema));
+    const [schema, setSchema] = useState<JsonSchema>(() => JSON.parse(props.item.schema));
     const [register] = Register.use();
 
     // Reset schema when event type changes
@@ -32,7 +32,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
         await register.execute();
     };
 
-    const handleSchemaChange = (newSchema: JSONSchemaType) => {
+    const handleSchemaChange = (newSchema: JsonSchema) => {
         setSchema(newSchema);
     };
 

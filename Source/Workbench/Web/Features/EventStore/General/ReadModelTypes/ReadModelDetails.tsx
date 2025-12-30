@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from 'Components';
-import { SchemaEditor, JSONSchemaType } from 'Components';
+import { SchemaEditor, JsonSchema } from 'Components';
 import { ReadModelDefinition } from 'Api/ReadModelTypes';
 
 export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefinition>) => {
-    const [schema, setSchema] = useState<JSONSchemaType>(() => JSON.parse(props.item.schema));
+    const [schema, setSchema] = useState<JsonSchema>(() => JSON.parse(props.item.schema));
 
     // Reset schema when read model changes
     useEffect(() => {
@@ -35,7 +35,7 @@ export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefiniti
         // await updateReadModelDefinition.execute();
     };
 
-    const handleSchemaChange = (newSchema: JSONSchemaType) => {
+    const handleSchemaChange = (newSchema: JsonSchema) => {
         setSchema(newSchema);
     };
 
