@@ -1,13 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { AllReadModelDefinitions } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
-import { ProjectionDslEditor } from 'Components/ProjectionEditor';
+import { JsonSchema } from 'Components/JsonSchema';
+import { ProjectionEditor } from 'Components/ProjectionEditor';
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 
 export const Projections = () => {
 
-    const [dslValue, setDslValue] = useState(`Users
+    const [dslValue, setDslValue] = useState('');
+
+    /*`Users
 | key=UserRegistered.userId
 | name=UserRegistered.name
 | email=UserRegistered.email
@@ -20,52 +26,21 @@ export const Projections = () => {
 |    identified by orderId
 |    key=OrderPlaced.orderId
 |    total=OrderPlaced.total
-| ]`);
+| ]`);*/
 
-    // Example read model schema
-    const userSchema = {
-        properties: {
-            userId: {
-                type: 'string',
-                format: 'guid',
-            },
-            name: {
-                type: 'string',
-            },
-            email: {
-                type: 'string',
-            },
-            totalSpent: {
-                type: 'number',
-                format: 'decimal',
-            },
-            orderCount: {
-                type: 'integer',
-                format: 'int32',
-            },
-            lastLogin: {
-                type: 'string',
-                format: 'date-time',
-            },
-            status: {
-                type: 'string',
-            },
-            orders: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                },
-            },
-        },
-    };
+    const params = useParams<EventStoreAndNamespaceParams>();
+
+    const [readModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
+    const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
+
 
     return (
         <Page title='Projections'>
             <div style={{ padding: '20px' }}>
-                <ProjectionDslEditor
+                <ProjectionEditor
                     value={dslValue}
                     onChange={setDslValue}
-                    readModelSchema={userSchema}
+                    readModelSchemas={readModelSchemas}
                     height="500px"
                     theme="vs-dark"
                 />

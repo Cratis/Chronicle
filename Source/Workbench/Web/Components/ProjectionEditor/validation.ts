@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { editor, languages, IRange, Position } from 'monaco-editor';
+import type { JsonSchema } from '../JsonSchema';
 
 export interface ReadModelSchema {
+    name?: string;
     properties: Record<string, PropertySchema>;
 }
 
@@ -47,9 +49,21 @@ const numericFormats = [
 
 export class ProjectionDslValidator {
     private schema: ReadModelSchema | undefined;
+    private readModelSchemas: ReadModelSchema[] = [];
+    private eventSchemas: Record<string, JsonSchema> = {};
 
     setSchema(schema: ReadModelSchema): void {
+        // Backwards compatible single-schema setter
+        this.readModelSchemas = [schema];
         this.schema = schema;
+    }
+
+    setReadModelSchemas(schemas: ReadModelSchema[]): void {
+        this.readModelSchemas = schemas || [];
+    }
+
+    setEventSchemas(schemas: Record<string, JsonSchema>): void {
+        this.eventSchemas = schemas || {};
     }
 
     validate(model: editor.ITextModel): languages.IMarkerData[] {
@@ -71,6 +85,13 @@ export class ProjectionDslValidator {
 
         // Validate read model name (first line)
         const readModelLine = lines[0].trim();
+
+        // Select schema matching the declared read model name if available
+        if (this.readModelSchemas && this.readModelSchemas.length > 0) {
+            const matched = this.readModelSchemas.find((s) => s.name === readModelLine);
+            if (matched) this.schema = matched;
+            else if (this.readModelSchemas.length === 1 && !readModelLine) this.schema = this.readModelSchemas[0];
+        }
         if (readModelLine.includes('|') || readModelLine.includes('=')) {
             markers.push({
                 severity: 8,
@@ -123,7 +144,7 @@ export class ProjectionDslValidator {
                 const targetProperty = match[1];
                 const sourceProperty = match[3];
 
-                const targetSchema = this.schema.properties[targetProperty];
+                const targetSchema = this.schema?.properties[targetProperty];
                 if (targetSchema && !this.isNumericType(targetSchema)) {
                     markers.push({
                         severity: 8,
@@ -144,7 +165,7 @@ export class ProjectionDslValidator {
                 const match = (incrementMatch || decrementMatch)!;
                 const targetProperty = match[1];
 
-                const targetSchema = this.schema.properties[targetProperty];
+                const targetSchema = this.schema?.properties[targetProperty];
                 if (targetSchema && !this.isNumericType(targetSchema)) {
                     markers.push({
                         severity: 8,
@@ -163,7 +184,7 @@ export class ProjectionDslValidator {
                 const targetProperty = assignMatch[1];
                 const sourceProperty = assignMatch[3];
 
-                const targetSchema = this.schema.properties[targetProperty];
+                const targetSchema = this.schema?.properties[targetProperty];
                 // We can't validate source property type without event schema,
                 // but we can suggest valid target properties
             }
@@ -183,9 +204,21 @@ export class ProjectionDslValidator {
 
 export class ProjectionDslCompletionProvider implements languages.CompletionItemProvider {
     private schema: ReadModelSchema | undefined;
+    private readModelSchemas: ReadModelSchema[] = [];
+    private eventSchemas: Record<string, JsonSchema> = {};
 
     setSchema(schema: ReadModelSchema): void {
+        // Backwards compat
+        this.readModelSchemas = [schema];
         this.schema = schema;
+    }
+
+    setReadModelSchemas(schemas: ReadModelSchema[]): void {
+        this.readModelSchemas = schemas || [];
+    }
+
+    setEventSchemas(schemas: Record<string, JsonSchema>): void {
+        this.eventSchemas = schemas || {};
     }
 
     provideCompletionItems(
@@ -201,6 +234,15 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
 
         const lines = textUntilPosition.split('\n');
         const currentLine = lines[lines.length - 1];
+
+        // Selected read model is declared on the first line
+        const declaredReadModel = model.getLineContent(1).trim();
+        let activeSchema: ReadModelSchema | undefined = this.schema;
+        if (this.readModelSchemas && this.readModelSchemas.length > 0) {
+            const matched = this.readModelSchemas.find((s) => s.name === declaredReadModel);
+            if (matched) activeSchema = matched;
+            else if (!declaredReadModel && this.readModelSchemas.length === 1) activeSchema = this.readModelSchemas[0];
+        }
 
         const suggestions: languages.CompletionItem[] = [];
 
@@ -230,10 +272,10 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                 });
             });
 
-            // Suggest read model properties
-            if (this.schema) {
-                Object.keys(this.schema.properties).forEach((propName) => {
-                    const propSchema = this.schema!.properties[propName];
+            // Suggest read model properties from the active schema
+            if (activeSchema) {
+                Object.keys(activeSchema.properties).forEach((propName) => {
+                    const propSchema = activeSchema!.properties[propName];
                     suggestions.push({
                         label: propName,
                         kind: 10, // Property
@@ -285,6 +327,23 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             }
         }
 
+        // Suggest event type names when typing right-hand side before a dot
+        const rhsMatch = currentLine.match(/=\s*(\w*)$/);
+        if (rhsMatch && rhsMatch[1] !== undefined) {
+            const typed = rhsMatch[1];
+            Object.keys(this.eventSchemas).forEach((eventName) => {
+                if (!typed || eventName.startsWith(typed)) {
+                    suggestions.push({
+                        label: eventName,
+                        kind: 7, // Class/Type
+                        insertText: eventName,
+                        documentation: `Event type: ${eventName}`,
+                        range: this.getWordRange(model, position),
+                    });
+                }
+            });
+        }
+
         // Suggest $eventContext
         if (currentLine.includes('=') && !currentLine.includes('$eventContext')) {
             suggestions.push({
@@ -314,6 +373,28 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                     range: this.getWordRange(model, position),
                 });
             });
+        }
+
+        // Suggest event properties when typing EventType.<prop>
+        const eventPropMatch = currentLine.match(/(\w+)\.(\w*)$/);
+        if (eventPropMatch) {
+            const eventName = eventPropMatch[1];
+            const typedProp = eventPropMatch[2] || '';
+            const eventSchema = this.eventSchemas[eventName];
+            if (eventSchema && eventSchema.properties) {
+                Object.keys(eventSchema.properties).forEach((propName) => {
+                    if (!typedProp || propName.startsWith(typedProp)) {
+                        const prop = eventSchema.properties![propName];
+                        suggestions.push({
+                            label: propName,
+                            kind: 10,
+                            insertText: propName,
+                            documentation: `Event property: ${propName} (${prop.type}${prop.format ? `:${prop.format}` : ''})`,
+                            range: this.getWordRange(model, position),
+                        });
+                    }
+                });
+            }
         }
 
         return {

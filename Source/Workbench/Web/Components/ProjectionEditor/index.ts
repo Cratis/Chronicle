@@ -4,6 +4,7 @@
 import type * as Monaco from 'monaco-editor';
 import { configuration, languageId, monarchLanguage } from './language';
 import { ProjectionDslCompletionProvider, ProjectionDslValidator, type ReadModelSchema } from './validation';
+import type { JsonSchema } from '../JsonSchema';
 
 let validator: ProjectionDslValidator;
 let completionProvider: ProjectionDslCompletionProvider;
@@ -52,11 +53,30 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
 }
 
 export function setReadModelSchema(schema: ReadModelSchema): void {
+    // Backwards compatible single-schema setter
     if (validator) {
-        validator.setSchema(schema);
+        validator.setReadModelSchemas([schema]);
     }
     if (completionProvider) {
-        completionProvider.setSchema(schema);
+        completionProvider.setReadModelSchemas([schema]);
+    }
+}
+
+export function setReadModelSchemas(schemas: ReadModelSchema[]): void {
+    if (validator) {
+        validator.setReadModelSchemas(schemas);
+    }
+    if (completionProvider) {
+        completionProvider.setReadModelSchemas(schemas);
+    }
+}
+
+export function setEventSchemas(eventSchemas: Record<string, JsonSchema>): void {
+    if (validator) {
+        validator.setEventSchemas(eventSchemas);
+    }
+    if (completionProvider) {
+        completionProvider.setEventSchemas(eventSchemas);
     }
 }
 

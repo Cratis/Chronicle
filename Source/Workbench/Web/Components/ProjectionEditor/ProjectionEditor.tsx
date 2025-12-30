@@ -3,21 +3,29 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as monaco from 'monaco-editor';
-import { registerProjectionDslLanguage, setReadModelSchema, languageId, disposeProjectionDslLanguage } from './index';
+import {
+    registerProjectionDslLanguage,
+    setReadModelSchemas,
+    setEventSchemas,
+    languageId,
+    disposeProjectionDslLanguage,
+} from './index';
 import { JsonSchema } from 'Components/JsonSchema';
 
-export interface ProjectionDslEditorProps {
+export interface ProjectionEditorProps {
     value: string;
     onChange?: (value: string) => void;
-    readModelSchema?: JsonSchema,
+    readModelSchemas?: JsonSchema[],
+    eventSchemas?: JsonSchema[],
     height?: string;
     theme?: string;
 }
 
-export const ProjectionDslEditor: React.FC<ProjectionDslEditorProps> = ({
+export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     value,
     onChange,
-    readModelSchema,
+    readModelSchemas,
+    eventSchemas,
     height = '400px',
     theme = 'vs-dark',
 }) => {
@@ -60,10 +68,13 @@ export const ProjectionDslEditor: React.FC<ProjectionDslEditorProps> = ({
 
     // Update schema when it changes
     useEffect(() => {
-        if (readModelSchema) {
-            setReadModelSchema(readModelSchema);
+        if (readModelSchemas) {
+            setReadModelSchemas(readModelSchemas as any);
         }
-    }, [readModelSchema]);
+        if (eventSchemas) {
+            setEventSchemas(eventSchemas as any);
+        }
+    }, [readModelSchemas, eventSchemas]);
 
     // Update value when it changes externally
     useEffect(() => {
