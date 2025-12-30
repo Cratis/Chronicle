@@ -45,7 +45,7 @@ const numericFormats = [
 export class ProjectionDslValidator {
     private schema: JsonSchema = {};
     private readModelSchemas: JsonSchema[] = [];
-    private eventSchemas: JsonSchema[] = [];
+    private eventSchemas: Record<string, JsonSchema> = {};
 
     setSchema(schema: JsonSchema): void {
         // Backwards compatible single-schema setter
@@ -59,17 +59,36 @@ export class ProjectionDslValidator {
             this.readModelSchemas = [];
             return;
         }
+        let arr: JsonSchema[];
         if (!Array.isArray(schemas)) {
-            // if a single schema object was passed, wrap it
             const maybe = schemas as unknown as JsonSchema;
-            this.readModelSchemas = maybe ? [maybe] : [];
-            return;
+            arr = maybe ? [maybe] : [];
+        } else {
+            arr = schemas.filter((s) => s != null) as JsonSchema[];
         }
-        this.readModelSchemas = schemas.filter((s) => s != null) as JsonSchema[];
+
+        // Ensure each schema has a name for suggestions: prefer explicit name, then title, then $id last segment, else fallback to indexed name
+        this.readModelSchemas = arr.map((s, i) => ({ ...(s as any) } as JsonSchema));
     }
 
-    setEventSchemas(schemas: JsonSchema[]): void {
-        this.eventSchemas = schemas || [];
+    setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
+        if (!schemas) {
+            this.eventSchemas = {};
+            return;
+        }
+
+        if (Array.isArray(schemas)) {
+            const map: Record<string, JsonSchema> = {};
+            schemas.forEach((s, i) => {
+                if (!s) return;
+                const name = (s as any).title || (s as any).name || (typeof (s as any).$id === 'string' ? (s as any).$id.split('/').pop() : `Event${i + 1}`);
+                map[name] = s;
+            });
+            this.eventSchemas = map;
+            return;
+        }
+
+        this.eventSchemas = schemas || {};
     }
 
     validate(model: editor.ITextModel): languages.IMarkerData[] {
@@ -92,9 +111,21 @@ export class ProjectionDslValidator {
         // Validate read model name (first line)
         const readModelLine = lines[0].trim();
 
+        // Helper to derive a display name for a schema (title, $id last segment, or fallback)
+        const getSchemaName = (s?: JsonSchema, idx?: number) => {
+            if (!s) return undefined;
+            if ((s as any).name) return (s as any).name;
+            if ((s as any).title) return (s as any).title;
+            if (typeof (s as any).$id === 'string') {
+                const parts = (s as any).$id.split('/');
+                return parts[parts.length - 1] || (s as any).$id;
+            }
+            return idx !== undefined ? `ReadModel${idx + 1}` : undefined;
+        };
+
         // Select schema matching the declared read model name if available
         if (this.readModelSchemas && this.readModelSchemas.length > 0) {
-            const matched = this.readModelSchemas.find((s) => s.name === readModelLine);
+            const matched = this.readModelSchemas.find((s, i) => getSchemaName(s, i) === readModelLine);
             if (matched) this.schema = matched;
             else if (this.readModelSchemas.length === 1 && !readModelLine) this.schema = this.readModelSchemas[0];
         }
@@ -209,21 +240,38 @@ export class ProjectionDslValidator {
 }
 
 export class ProjectionDslCompletionProvider implements languages.CompletionItemProvider {
-    private schema: ReadModelSchema | undefined;
-    private readModelSchemas: ReadModelSchema[] = [];
+    private schema: JsonSchema | undefined;
+    private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 
-    setSchema(schema: ReadModelSchema): void {
+    setSchema(schema: JsonSchema): void {
         // Backwards compat
         this.readModelSchemas = [schema];
         this.schema = schema;
     }
 
-    setReadModelSchemas(schemas: ReadModelSchema[]): void {
+    setReadModelSchemas(schemas: JsonSchema[]): void {
         this.readModelSchemas = schemas || [];
     }
 
-    setEventSchemas(schemas: Record<string, JsonSchema>): void {
+    setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
+        if (!schemas) {
+            this.eventSchemas = {};
+            return;
+        }
+
+        // If an array is provided, normalize to a map keyed by derived name (title/name/$id)
+        if (Array.isArray(schemas)) {
+            const map: Record<string, JsonSchema> = {};
+            schemas.forEach((s, i) => {
+                if (!s) return;
+                const name = (s as any).title || (s as any).name || (typeof (s as any).$id === 'string' ? (s as any).$id.split('/').pop() : `Event${i + 1}`);
+                map[name] = s;
+            });
+            this.eventSchemas = map;
+            return;
+        }
+
         this.eventSchemas = schemas || {};
     }
 
@@ -231,6 +279,16 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         model: editor.ITextModel,
         position: Position
     ): languages.ProviderResult<languages.CompletionList> {
+        const getSchemaName = (s?: JsonSchema, idx?: number) => {
+            if (!s) return undefined;
+            if ((s as any).name) return (s as any).name;
+            if ((s as any).title) return (s as any).title;
+            if (typeof (s as any).$id === 'string') {
+                const parts = (s as any).$id.split('/');
+                return parts[parts.length - 1] || (s as any).$id;
+            }
+            return idx !== undefined ? `ReadModel${idx + 1}` : undefined;
+        };
         console.log('[ProjectionDsl] provideCompletionItems called', { line: position.lineNumber, col: position.column });
         const textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
@@ -246,27 +304,28 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
 
         // Selected read model is declared on the first line
         const declaredReadModel = model.getLineContent(1).trim();
-        let activeSchema: ReadModelSchema | undefined = this.schema;
+        let activeSchema: JsonSchema | undefined = this.schema as any;
         if (this.readModelSchemas && this.readModelSchemas.length > 0) {
-            const matched = this.readModelSchemas.find((s) => s.name === declaredReadModel);
-            if (matched) activeSchema = matched;
-            else if (!declaredReadModel && this.readModelSchemas.length === 1) activeSchema = this.readModelSchemas[0];
+            const matched = this.readModelSchemas.find((s, i) => getSchemaName(s, i) === declaredReadModel);
+            if (matched) activeSchema = matched as any;
+            else if (!declaredReadModel && this.readModelSchemas.length === 1) activeSchema = this.readModelSchemas[0] as any;
         }
 
         // If we are editing the first line, suggest available read model names
-        console.log('[ProjectionDsl] readModelSchemas', (this.readModelSchemas || []).map(s => s.name));
+        console.log('[ProjectionDsl] readModelSchemas', (this.readModelSchemas || []).map((s, i) => getSchemaName(s, i)));
         console.log('[ProjectionDsl] eventSchemas', Object.keys(this.eventSchemas || {}));
         if (position.lineNumber === 1 && this.readModelSchemas && this.readModelSchemas.length > 0) {
             const word = model.getWordUntilPosition(position);
             console.log('[ProjectionDsl] first-line declaredReadModel, word', declaredReadModel, word);
-            this.readModelSchemas.forEach((s) => {
-                if (!s.name) return;
-                if (!word.word || s.name.startsWith(word.word)) {
+            this.readModelSchemas.forEach((s, i) => {
+                const display = getSchemaName(s, i);
+                if (!display) return;
+                if (!word.word || display.startsWith(word.word)) {
                     suggestions.push({
-                        label: s.name,
+                        label: display,
                         kind: 7, // Class/Type
-                        insertText: s.name,
-                        documentation: `Read model: ${s.name}`,
+                        insertText: display,
+                        documentation: `Read model: ${display}`,
                         range: {
                             startLineNumber: position.lineNumber,
                             startColumn: word.startColumn,
@@ -281,9 +340,9 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             return { suggestions };
         }
 
-        try {
-            console.debug('[ProjectionDsl] activeSchema', activeSchema && activeSchema.name);
-        } catch (e) {}
+            try {
+                console.debug('[ProjectionDsl] activeSchema', activeSchema && getSchemaName(activeSchema as any));
+            } catch (e) {}
 
         // If at the start of a new line after first line, suggest |
         if (position.lineNumber > 1 && currentLine.trim() === '') {

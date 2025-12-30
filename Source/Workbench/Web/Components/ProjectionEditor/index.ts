@@ -3,7 +3,7 @@
 
 import type * as Monaco from 'monaco-editor';
 import { configuration, languageId, monarchLanguage } from './language';
-import { ProjectionDslCompletionProvider, ProjectionDslValidator, type ReadModelSchema } from './validation';
+import { ProjectionDslCompletionProvider, ProjectionDslValidator } from './validation';
 import type { JsonSchema } from '../JsonSchema';
 
 let validator: ProjectionDslValidator;
@@ -55,7 +55,7 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     });
 }
 
-export function setReadModelSchema(schema: ReadModelSchema): void {
+export function setReadModelSchema(schema: JsonSchema): void {
     // Backwards compatible single-schema setter
     if (validator) {
         validator.setReadModelSchemas([schema]);
@@ -65,7 +65,7 @@ export function setReadModelSchema(schema: ReadModelSchema): void {
     }
 }
 
-export function setReadModelSchemas(schemas: ReadModelSchema[]): void {
+export function setReadModelSchemas(schemas: JsonSchema[]): void {
     try {
         // eslint-disable-next-line no-console
         console.log('[ProjectionDsl] setReadModelSchemas called', { type: typeof schemas, length: (schemas && (schemas as any).length) });
@@ -78,12 +78,28 @@ export function setReadModelSchemas(schemas: ReadModelSchema[]): void {
     }
 }
 
-export function setEventSchemas(eventSchemas: Record<string, JsonSchema>): void {
+export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, JsonSchema>): void {
+    // Normalize either an array of schemas or a keyed record into a record keyed by derived schema name
+    const normalize = (input: JsonSchema[] | Record<string, JsonSchema>) => {
+        if (!input) return {} as Record<string, JsonSchema>;
+        if (Array.isArray(input)) {
+            const out: Record<string, JsonSchema> = {};
+            input.forEach((s, i) => {
+                if (!s) return;
+                const name = (s as any).title || (s as any).name || (typeof (s as any).$id === 'string' ? (s as any).$id.split('/').pop() : `Event${i + 1}`);
+                out[name] = s;
+            });
+            return out;
+        }
+        return input as Record<string, JsonSchema>;
+    };
+
+    const normalized = normalize(eventSchemas);
     if (validator) {
-        validator.setEventSchemas(eventSchemas);
+        validator.setEventSchemas(normalized);
     }
     if (completionProvider) {
-        completionProvider.setEventSchemas(eventSchemas);
+        completionProvider.setEventSchemas(normalized);
     }
 }
 
@@ -100,4 +116,5 @@ function validateModel(monaco: typeof Monaco, model: Monaco.editor.ITextModel): 
 }
 
 export { languageId };
-export type { ReadModelSchema, PropertySchema } from './validation';
+export type { PropertySchema } from './validation';
+export type { JsonSchema } from '../JsonSchema';

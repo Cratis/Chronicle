@@ -2,22 +2,21 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 export interface JsonSchema {
-    name?: string;
+    title?: string;
     type?: string;
     format?: string;
     description?: string;
-    properties?: Record<string, JsonSchema>;
+    properties?: Record<string, JsonSchemaProperty>;
     items?: JsonSchema;
     required?: string[];
 }
 
 export interface JsonSchemaProperty {
     id?: string;
-    name: string;
     type: string;
     format?: string;
     description?: string;
     items?: JsonSchema;
-    properties?: Record<string, JsonSchema>;
+    properties?: Record<string, JsonSchemaProperty>;
     required?: boolean;
 }

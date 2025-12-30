@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { AllReadModelDefinitions } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import { JsonSchema } from 'Components/JsonSchema';
@@ -31,7 +32,17 @@ export const Projections = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
 
     const [readModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
-    const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
+    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const readModelSchemas = readModels.data?.map(readModel => {
+        const s = JSON.parse(readModel.schema) as JsonSchema;
+        if (!((s as any).title) && (readModel as any).name) (s as any).title = (readModel as any).name;
+        return s;
+    });
+    const eventSchemas = eventTypes.data?.map(eventType => {
+        const s = JSON.parse(eventType.schema) as JsonSchema;
+        if (!((s as any).title) && (eventType as any).name) (s as any).title = (eventType as any).name;
+        return s;
+    });
 
     return (
         <Page title='Projections'>
@@ -40,6 +51,7 @@ export const Projections = () => {
                     value={dslValue}
                     onChange={setDslValue}
                     readModelSchemas={readModelSchemas}
+                    eventSchemas={eventSchemas}
                     height="500px"
                     theme="vs-dark"
                 />
