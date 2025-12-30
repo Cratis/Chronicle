@@ -188,6 +188,11 @@ export const ReadModels = () => {
         return arrayData;
     }, [instances.data, navigationPath, getValueAtPath]);
 
+    // Filtered array that guarantees each item is an object suitable for DataTable
+    const objectArray = useMemo(() => {
+        return currentData.filter((i): i is { [k: string]: Json } => i !== null && typeof i === 'object' && !Array.isArray(i));
+    }, [currentData]);
+
     const navigateToArray = useCallback((key: string) => {
         setNavigationPath([...navigationPath, key]);
         setPage(0);
@@ -412,7 +417,7 @@ export const ReadModels = () => {
                                     // Allow the table to grow horizontally when details pane is open
                                 }
                                 <DataTable
-                                    value={currentData.filter(i => i && typeof i === 'object') as any}
+                                    value={objectArray}
                                     loading={instances.isPerforming}
                                     emptyMessage={strings.eventStore.namespaces.readModels.empty}
                                     className="p-datatable-sm"
