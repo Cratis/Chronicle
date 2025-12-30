@@ -192,6 +192,23 @@ export class ProjectionDslValidator {
                         message: `Arithmetic operations can only be used on numeric or TimeSpan properties. Property '${targetProperty}' is of type '${targetSchema.type}'`,
                     });
                 }
+
+                // Validate source is numeric too (e.g., OrderCompleted.amount)
+                if (match[2] && match[3]) {
+                    const eventName = match[2];
+                    const eventSchema = this.eventSchemas[eventName];
+                    const src = eventSchema?.properties?.[sourceProperty];
+                    if (src && !this.isNumericType(src as any)) {
+                        markers.push({
+                            severity: 8,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: statement.length + 1,
+                            message: `Source property '${eventName}.${sourceProperty}' is not numeric (type='${src.type}').`,
+                        });
+                    }
+                }
             }
 
             // Check increment/decrement
@@ -213,17 +230,129 @@ export class ProjectionDslValidator {
                         message: `Increment/decrement can only be used on numeric or TimeSpan properties. Property '${targetProperty}' is of type '${targetSchema.type}'`,
                     });
                 }
+
+                // Support forms: 'prop increment by 1', 'prop increment by Event.prop', or 'prop increment by EventType'
+                const incMatchExtended = statement.match(/^([\w]+)\s+(?:increment|decrement)\s+by\s+(?:(\d+)|(\w+)\.(\w+)|(\w+))$/);
+                if (incMatchExtended) {
+                    const numberLiteral = incMatchExtended[2];
+                    const eventName = incMatchExtended[3];
+                    const eventProp = incMatchExtended[4];
+                    // const identifier = incMatchExtended[5]; // event type occurrence
+
+                    if (eventName && eventProp) {
+                        const eventSchema = this.eventSchemas[eventName];
+                        const src = eventSchema?.properties?.[eventProp];
+                        if (src && !this.isNumericType(src as any)) {
+                            markers.push({
+                                severity: 8,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: statement.length + 1,
+                                message: `Cannot increment/decrement by '${eventName}.${eventProp}' because it is not numeric (type='${src.type}').`,
+                            });
+                        }
+                    }
+                    // numberLiteral is allowed; event type occurrence (identifier) is also allowed
+                }
             }
 
             // Check property assignments for type compatibility
-            const assignMatch = statement.match(/^(\w+)=(\w+)\.(\w+)$/);
+            const assignMatch = statement.match(/^(\w+)=(?:"([^"]*)"|(\d+)|(\w+)\.(\w+)|\$eventContext\.(\w+))$/);
             if (assignMatch) {
                 const targetProperty = assignMatch[1];
-                const sourceProperty = assignMatch[3];
+                const stringLiteral = assignMatch[2];
+                const numberLiteral = assignMatch[3];
+                const eventName = assignMatch[4];
+                const eventProp = assignMatch[5];
+                const eventContextProp = assignMatch[6];
 
                 const targetSchema = this.schema?.properties[targetProperty];
-                // We can't validate source property type without event schema,
-                // but we can suggest valid target properties
+                if (!targetSchema) return;
+
+                // Assignment from string literal
+                if (stringLiteral !== undefined) {
+                    if (targetSchema.type !== 'string') {
+                        markers.push({
+                            severity: 8,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: statement.length + 1,
+                            message: `Cannot assign string literal to property '${targetProperty}' of type '${targetSchema.type}'.`,
+                        });
+                    }
+                    return;
+                }
+
+                // Assignment from number literal
+                if (numberLiteral !== undefined) {
+                    if (!this.isNumericType(targetSchema)) {
+                        markers.push({
+                            severity: 8,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: statement.length + 1,
+                            message: `Cannot assign numeric literal to property '${targetProperty}' of type '${targetSchema.type}'.`,
+                        });
+                    }
+                    return;
+                }
+
+                // Assignment from event property
+                if (eventName && eventProp) {
+                    const evSchema = this.eventSchemas[eventName];
+                    const src = evSchema?.properties?.[eventProp];
+                    if (!src) {
+                        markers.push({
+                            severity: 4, // Warning
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: statement.length + 1,
+                            message: `Unknown event property '${eventName}.${eventProp}'.`,
+                        });
+                        return;
+                    }
+
+                    // Type compatibility: numeric vs numeric, string vs string, otherwise mismatch
+                    const bothNumeric = this.isNumericType(targetSchema) && this.isNumericType(src as any);
+                    if (!bothNumeric && targetSchema.type !== src.type) {
+                        markers.push({
+                            severity: 8,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: statement.length + 1,
+                            message: `Type mismatch: cannot assign '${eventName}.${eventProp}' (type='${src.type}') to '${targetProperty}' (type='${targetSchema.type}').`,
+                        });
+                    }
+                    return;
+                }
+
+                // Assignment from $eventContext
+                if (eventContextProp) {
+                    // basic mapping for $eventContext properties
+                    const ctxTypeMap: Record<string, string> = {
+                        occurred: 'string',
+                        eventSourceId: 'string',
+                        causedBy: 'string',
+                        namespace: 'string',
+                    };
+                    const ctxType = ctxTypeMap[eventContextProp] || 'string';
+                    if (targetSchema.type !== ctxType && !(this.isNumericType(targetSchema) && ctxType === 'number')) {
+                        markers.push({
+                            severity: 8,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: statement.length + 1,
+                            message: `Type mismatch: cannot assign '$eventContext.${eventContextProp}' to '${targetProperty}' (type='${targetSchema.type}').`,
+                        });
+                    }
+                    return;
+                }
             }
         }
     }
