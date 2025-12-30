@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 export interface JsonSchema {
+    name?: string;
     type?: string;
     format?: string;
     description?: string;

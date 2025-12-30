@@ -33,7 +33,6 @@ export const Projections = () => {
     const [readModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
 
-
     return (
         <Page title='Projections'>
             <div style={{ padding: '20px' }}>

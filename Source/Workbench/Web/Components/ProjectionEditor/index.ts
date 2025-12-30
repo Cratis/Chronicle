@@ -26,8 +26,11 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     validator = new ProjectionDslValidator();
     completionProvider = new ProjectionDslCompletionProvider();
 
-    // Register completion provider
-    const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, completionProvider);
+    // Register completion provider with helpful trigger characters
+    const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, {
+        provideCompletionItems: completionProvider.provideCompletionItems.bind(completionProvider),
+        triggerCharacters: ['.', ' ', '=', '['],
+    });
     disposables.push(completionDisposable);
 
     // Register validation on model change
@@ -63,6 +66,10 @@ export function setReadModelSchema(schema: ReadModelSchema): void {
 }
 
 export function setReadModelSchemas(schemas: ReadModelSchema[]): void {
+    try {
+        // eslint-disable-next-line no-console
+        console.log('[ProjectionDsl] setReadModelSchemas called', { type: typeof schemas, length: (schemas && (schemas as any).length) });
+    } catch (e) {}
     if (validator) {
         validator.setReadModelSchemas(schemas);
     }

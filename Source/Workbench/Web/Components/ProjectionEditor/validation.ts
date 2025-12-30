@@ -4,11 +4,6 @@
 import type { editor, languages, IRange, Position } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 
-export interface ReadModelSchema {
-    name?: string;
-    properties: Record<string, PropertySchema>;
-}
-
 export interface PropertySchema {
     type: string;
     format?: string;
@@ -48,22 +43,33 @@ const numericFormats = [
 ];
 
 export class ProjectionDslValidator {
-    private schema: ReadModelSchema | undefined;
-    private readModelSchemas: ReadModelSchema[] = [];
-    private eventSchemas: Record<string, JsonSchema> = {};
+    private schema: JsonSchema = {};
+    private readModelSchemas: JsonSchema[] = [];
+    private eventSchemas: JsonSchema[] = [];
 
-    setSchema(schema: ReadModelSchema): void {
+    setSchema(schema: JsonSchema): void {
         // Backwards compatible single-schema setter
         this.readModelSchemas = [schema];
         this.schema = schema;
     }
 
-    setReadModelSchemas(schemas: ReadModelSchema[]): void {
-        this.readModelSchemas = schemas || [];
+    setReadModelSchemas(schemas: JsonSchema[]): void {
+        // Normalize input: ensure array of objects and filter out undefined slots
+        if (!schemas) {
+            this.readModelSchemas = [];
+            return;
+        }
+        if (!Array.isArray(schemas)) {
+            // if a single schema object was passed, wrap it
+            const maybe = schemas as unknown as JsonSchema;
+            this.readModelSchemas = maybe ? [maybe] : [];
+            return;
+        }
+        this.readModelSchemas = schemas.filter((s) => s != null) as JsonSchema[];
     }
 
-    setEventSchemas(schemas: Record<string, JsonSchema>): void {
-        this.eventSchemas = schemas || {};
+    setEventSchemas(schemas: JsonSchema[]): void {
+        this.eventSchemas = schemas || [];
     }
 
     validate(model: editor.ITextModel): languages.IMarkerData[] {
@@ -225,6 +231,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         model: editor.ITextModel,
         position: Position
     ): languages.ProviderResult<languages.CompletionList> {
+        console.log('[ProjectionDsl] provideCompletionItems called', { line: position.lineNumber, col: position.column });
         const textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
             startColumn: 1,
@@ -235,6 +242,8 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         const lines = textUntilPosition.split('\n');
         const currentLine = lines[lines.length - 1];
 
+        const suggestions: languages.CompletionItem[] = [];
+
         // Selected read model is declared on the first line
         const declaredReadModel = model.getLineContent(1).trim();
         let activeSchema: ReadModelSchema | undefined = this.schema;
@@ -244,7 +253,37 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             else if (!declaredReadModel && this.readModelSchemas.length === 1) activeSchema = this.readModelSchemas[0];
         }
 
-        const suggestions: languages.CompletionItem[] = [];
+        // If we are editing the first line, suggest available read model names
+        console.log('[ProjectionDsl] readModelSchemas', (this.readModelSchemas || []).map(s => s.name));
+        console.log('[ProjectionDsl] eventSchemas', Object.keys(this.eventSchemas || {}));
+        if (position.lineNumber === 1 && this.readModelSchemas && this.readModelSchemas.length > 0) {
+            const word = model.getWordUntilPosition(position);
+            console.log('[ProjectionDsl] first-line declaredReadModel, word', declaredReadModel, word);
+            this.readModelSchemas.forEach((s) => {
+                if (!s.name) return;
+                if (!word.word || s.name.startsWith(word.word)) {
+                    suggestions.push({
+                        label: s.name,
+                        kind: 7, // Class/Type
+                        insertText: s.name,
+                        documentation: `Read model: ${s.name}`,
+                        range: {
+                            startLineNumber: position.lineNumber,
+                            startColumn: word.startColumn,
+                            endLineNumber: position.lineNumber,
+                            endColumn: word.endColumn,
+                        },
+                    });
+                }
+            });
+
+            console.log('[ProjectionDsl] first-line suggestions count', suggestions.length);
+            return { suggestions };
+        }
+
+        try {
+            console.debug('[ProjectionDsl] activeSchema', activeSchema && activeSchema.name);
+        } catch (e) {}
 
         // If at the start of a new line after first line, suggest |
         if (position.lineNumber > 1 && currentLine.trim() === '') {
