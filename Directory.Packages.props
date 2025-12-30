@@ -14,14 +14,15 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.3.1" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.3.1" />
-    <PackageVersion Include="Cratis.Arc" Version="18.6.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="18.6.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.5.0" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.4.2" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="18.6.0" />
+    <PackageVersion Include="Cratis.Arc" Version="18.7.9" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.9" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.7.9" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.7.9" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="18.7.9" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.1" />
@@ -30,9 +31,11 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
     <!-- Orleans -->
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="9.2.1" />
@@ -67,11 +70,11 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.1" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.264" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.266" />
     <!-- Not categorized -->
-    <PackageVersion Include="BenchmarkDotNet" Version="0.15.6" />
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.2.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
-    <PackageVersion Include="docfx.console" Version="2.59.4" />
     <PackageVersion Include="humanizer" Version="3.0.1" />
     <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="2.0.44.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

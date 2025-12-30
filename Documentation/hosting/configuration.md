@@ -8,7 +8,7 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 
 ```json
 {
-    "apiPort": 8080,
+    "managementPort": 8080,
     "port": 35000,
     "healthCheckEndpoint": "/health",
     "features": {
@@ -39,7 +39,7 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 
 | Property           | Type   | Default  | Description                                      |
 |--------------------|--------|----------|--------------------------------------------------|
-| apiPort            | number | 8080     | Port for the REST API server and Workbench      |
+| managementPort     | number | 8080     | Port for the Management API, Workbench, and well-known endpoints |
 | port               | number | 35000    | Main gRPC service port                           |
 | healthCheckEndpoint| string | /health  | Health check endpoint path                       |
 
@@ -86,8 +86,8 @@ All configuration options can be set using environment variables with the prefix
 # gRPC port (default: 35000)
 Cratis__Chronicle__Port=35000
 
-# REST API port (default: 8080)
-Cratis__Chronicle__ApiPort=8080
+# Management API port (default: 8080)
+Cratis__Chronicle__ManagementPort=8080
 ```
 
 ### Health Check Endpoint
@@ -171,7 +171,7 @@ Pass configuration via environment variables using the `-e` flag:
 docker run -d \
   --name chronicle \
   -e Cratis__Chronicle__Port=35000 \
-  -e Cratis__Chronicle__ApiPort=8080 \
+  -e Cratis__Chronicle__ManagementPort=8080 \
   -e Cratis__Chronicle__HealthCheckEndpoint=/health \
   -e Cratis__Chronicle__Storage__Type=MongoDB \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongo:27017 \
@@ -193,7 +193,7 @@ services:
     image: cratis/chronicle:latest
     environment:
       - Cratis__Chronicle__Port=35000
-      - Cratis__Chronicle__ApiPort=8080
+      - Cratis__Chronicle__ManagementPort=8080
       - Cratis__Chronicle__HealthCheckEndpoint=/health
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017
@@ -248,7 +248,7 @@ Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | API Server        | REST API for client interactions         |
+| 8080  | Management API    | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | Primary Chronicle gRPC service port      |

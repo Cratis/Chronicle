@@ -35,7 +35,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 <DataPage.MenuItems>
                     <MenuItem
                         id='create'
-                        label={strings.eventStore.general.types.actions.create} icon={faIcons.FaPlus}
+                        label={strings.eventStore.general.eventTypes.actions.create} icon={faIcons.FaPlus}
                         command={() => viewModel.addNamespace()} />
                 </DataPage.MenuItems>
 

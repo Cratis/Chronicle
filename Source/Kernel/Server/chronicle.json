@@ -1,6 +1,10 @@
 {
-    "apiPort": 8080,
+    "managementPort": 8080,
     "port": 35000,
+    "authentication": {
+        "enabled": true,
+        "defaultAdminPassword": "ChangeMeNow!"
+    },
     "features": {
         "api": true,
         "workbench": true,
@@ -16,5 +20,8 @@
         "backoffDelay": 1,
         "exponentialBackoffDelayFactor": 2,
         "maximumBackoffDelay": 600
+    },
+    "tls": {
+        "disable": false
     }
 }

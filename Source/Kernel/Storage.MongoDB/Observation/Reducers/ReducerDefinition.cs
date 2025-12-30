@@ -35,7 +35,17 @@ public class ReducerDefinition
     public ReadModelIdentifier ReadModel { get; set; } = ReadModelIdentifier.NotSet;
 
     /// <summary>
+    /// Gets or sets whether or not the reducer is an actively observing reducer.
+    /// </summary>
+    public bool IsActive { get; set; }
+
+    /// <summary>
     /// Gets or sets the <see cref="SinkDefinition"/> the reducer uses.
     /// </summary>
     public SinkDefinition Sink { get; set; } = SinkDefinition.None;
+
+    /// <summary>
+    /// Gets or sets the categories the reducer belongs to.
+    /// </summary>
+    public IEnumerable<string> Categories { get; set; } = [];
 }

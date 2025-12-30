@@ -65,6 +65,13 @@ public interface IEventSequenceStorage
         ExpandoObject content);
 
     /// <summary>
+    /// Append multiple events to the event store transactionally.
+    /// </summary>
+    /// <param name="events">Collection of events to append.</param>
+    /// <returns>Result with appended events or duplicate sequence number error.</returns>
+    Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events);
+
+    /// <summary>
     /// Compensate a single event to the event store.
     /// </summary>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>

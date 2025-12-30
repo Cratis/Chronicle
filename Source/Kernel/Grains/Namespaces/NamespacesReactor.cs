@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
 namespace Cratis.Chronicle.Grains.Namespaces;
@@ -11,6 +12,7 @@ namespace Cratis.Chronicle.Grains.Namespaces;
 /// <summary>
 /// Represents a reactor that handles namespace events.
 /// </summary>
+[Reactor(eventSequence: WellKnownEventSequences.System)]
 public class NamespacesReactor : Reactor
 {
     /// <summary>

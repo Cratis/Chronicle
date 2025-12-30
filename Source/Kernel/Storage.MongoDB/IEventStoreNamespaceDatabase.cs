@@ -14,6 +14,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public interface IEventStoreNamespaceDatabase
 {
     /// <summary>
+    /// Gets the <see cref="IMongoClient"/> for this database.
+    /// </summary>
+    IMongoClient Client { get; }
+
+    /// <summary>
     /// Get a collection - optionally by its name. If no name is given, it will go by convention from the type name.
     /// </summary>
     /// <param name="name">Optional name of the collection.</param>

@@ -18,6 +18,14 @@ public interface IEventTypes
     Task Register(RegisterEventTypesRequest request);
 
     /// <summary>
+    /// Register a single event type.
+    /// </summary>
+    /// <param name="request">The <see cref="RegisterSingleEventTypeRequest"/> payload.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task RegisterSingle(RegisterSingleEventTypeRequest request);
+
+    /// <summary>
     /// Get all the registered event types for an event store.
     /// </summary>
     /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>
@@ -32,4 +40,13 @@ public interface IEventTypes
     /// <returns>A collection of <see cref="EventTypeRegistration"/> instances.</returns>
     [Operation]
     Task<IEnumerable<EventTypeRegistration>> GetAllRegistrations(GetAllEventTypesRequest request);
+
+    /// <summary>
+    /// Observe all the registered event types for an event store with full registration information.
+    /// </summary>
+    /// <param name="request">The <see cref="GetAllEventTypesRequest"/> payload.</param>
+    /// <param name="context">The gRPC <see cref="CallContext"/>.</param>
+    /// <returns>An observable of collection of <see cref="EventTypeRegistration"/> instances.</returns>
+    [Operation]
+    IObservable<IEnumerable<EventTypeRegistration>> ObserveAllRegistrations(GetAllEventTypesRequest request, CallContext context = default);
 }

@@ -19,6 +19,11 @@ public interface IReducerHandler : IHaveReadModel
     ReducerId Id { get; }
 
     /// <summary>
+    /// Gets the type of the reducer.
+    /// </summary>
+    Type ReducerType { get; }
+
+    /// <summary>
     /// Gets the event sequence the reducer is reducing from.
     /// </summary>
     EventSequenceId EventSequenceId { get; }

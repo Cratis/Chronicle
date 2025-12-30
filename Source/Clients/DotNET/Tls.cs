@@ -1,0 +1,30 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle;
+
+/// <summary>
+/// Represents the TLS configuration for Chronicle.
+/// </summary>
+public class Tls
+{
+    /// <summary>
+    /// Gets or sets the path to the certificate file for TLS.
+    /// </summary>
+    public string? CertificatePath { get; set; }
+
+    /// <summary>
+    /// Gets or sets the password for the certificate file.
+    /// </summary>
+    public string? CertificatePassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether TLS is disabled. Default is false (TLS enabled).
+    /// </summary>
+    public bool Disable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP port for fetching development certificates. Default is 35001.
+    /// </summary>
+    public int DevelopmentCertificatePort { get; set; } = 35001;
+}
