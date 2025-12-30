@@ -323,7 +323,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                 if (!word.word || display.startsWith(word.word)) {
                     suggestions.push({
                         label: display,
-                        kind: 7, // Class/Type
+                        kind: 6, // Class
                         insertText: display,
                         documentation: `Read model: ${display}`,
                         range: {
@@ -348,7 +348,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         if (position.lineNumber > 1 && currentLine.trim() === '') {
             suggestions.push({
                 label: '|',
-                kind: 27, // Operator
+                kind: 24, // Operator
                 insertText: '| ',
                 documentation: 'Start a new statement',
                 range: this.getWordRange(model, position),
@@ -376,7 +376,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                     const propSchema = activeSchema!.properties[propName];
                     suggestions.push({
                         label: propName,
-                        kind: 10, // Property
+                        kind: 9, // Property
                         insertText: propName,
                         documentation: `Property: ${propName} (${propSchema.type}${
                             propSchema.format ? `:${propSchema.format}` : ''
@@ -396,7 +396,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                         // Suggest = for all properties
                         suggestions.push({
                             label: '=',
-                            kind: 27, // Operator
+                            kind: 24, // Operator
                             insertText: '=',
                             documentation: 'Set property value',
                             range: this.getWordRange(model, position),
@@ -406,7 +406,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                         if (this.isNumericType(propSchema)) {
                             suggestions.push({
                                 label: '+',
-                                kind: 27,
+                                kind: 24,
                                 insertText: '+',
                                 documentation: 'Add to property value',
                                 range: this.getWordRange(model, position),
@@ -414,7 +414,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
 
                             suggestions.push({
                                 label: '-',
-                                kind: 27,
+                                kind: 24,
                                 insertText: '-',
                                 documentation: 'Subtract from property value',
                                 range: this.getWordRange(model, position),
@@ -433,7 +433,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                 if (!typed || eventName.startsWith(typed)) {
                     suggestions.push({
                         label: eventName,
-                        kind: 7, // Class/Type
+                        kind: 6, // Class
                         insertText: eventName,
                         documentation: `Event type: ${eventName}`,
                         range: this.getWordRange(model, position),
@@ -463,13 +463,13 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             ];
 
             contextProperties.forEach((prop) => {
-                suggestions.push({
-                    label: prop.name,
-                    kind: 10, // Property
-                    insertText: prop.name,
-                    documentation: prop.doc,
-                    range: this.getWordRange(model, position),
-                });
+                    suggestions.push({
+                        label: prop.name,
+                        kind: 9, // Property
+                        insertText: prop.name,
+                        documentation: prop.doc,
+                        range: this.getWordRange(model, position),
+                    });
             });
         }
 
@@ -485,7 +485,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                         const prop = eventSchema.properties![propName];
                         suggestions.push({
                             label: propName,
-                            kind: 10,
+                            kind: 9,
                             insertText: propName,
                             documentation: `Event property: ${propName} (${prop.type}${prop.format ? `:${prop.format}` : ''})`,
                             range: this.getWordRange(model, position),
