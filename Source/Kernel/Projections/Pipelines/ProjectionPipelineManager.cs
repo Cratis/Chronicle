@@ -46,7 +46,7 @@ public class ProjectionPipelineManager(
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
-        var sink = namespaceStorage.Sinks.GetFor(projection.Sink.TypeId, projection.Sink.ConfigurationId, projection.ReadModel);
+        var sink = namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var resolveFuturesStep = new ResolveFutures(eventStore, @namespace, projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());
 

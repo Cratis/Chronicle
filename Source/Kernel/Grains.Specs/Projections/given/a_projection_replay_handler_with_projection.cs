@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.given;
@@ -10,15 +11,21 @@ namespace Cratis.Chronicle.Grains.Projections.for_ProjectionReplayHandler.given;
 public class a_projection_replay_handler_with_projection : a_projection_replay_handler
 {
     protected Chronicle.Projections.IProjection _projection;
-    protected ReadModelDefinition _model;
-    protected ReadModelIdentifier _readModelId = "SomeId";
+    protected ReadModelDefinition _readModel;
+    protected ReadModelType _readModelType = new("TheReadModelType", ReadModelGeneration.First);
     protected ReadModelName _readModelName = "TheReadModel";
 
     void Establish()
     {
         _projection = Substitute.For<Chronicle.Projections.IProjection>();
-        _model = new(_readModelId, _readModelName, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } }, []);
-        _projection.ReadModel.Returns(_model);
+        _readModel = new(
+            _readModelType.Identifier,
+            _readModelName,
+            ReadModelOwner.None,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } },
+            []);
+        _projection.ReadModel.Returns(_readModel);
 
         _projections.TryGet(
             _observerDetails.Key.EventStore,

@@ -163,6 +163,91 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
+    {
+        var eventsArray = events.ToArray();
+        if (eventsArray.Length == 0)
+        {
+            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
+        }
+
+        var client = database.Client;
+        using var session = await client.StartSessionAsync().ConfigureAwait(false);
+
+        try
+        {
+            session.StartTransaction();
+            var collection = _collection;
+            var eventsToInsert = new List<Event>();
+            var appendedEvents = new List<AppendedEvent>();
+
+            foreach (var eventToAppend in eventsArray)
+            {
+                var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, eventToAppend.EventType.Generation);
+                var jsonObject = expandoObjectConverter.ToJsonObject(eventToAppend.Content, schema.Schema);
+                var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                var @event = new Event(
+                    eventToAppend.SequenceNumber,
+                    eventToAppend.CorrelationId,
+                    eventToAppend.Causation,
+                    eventToAppend.CausedByChain,
+                    eventToAppend.EventType.Id,
+                    eventToAppend.Occurred,
+                    eventToAppend.EventSourceType,
+                    eventToAppend.EventSourceId,
+                    eventToAppend.EventStreamType,
+                    eventToAppend.EventStreamId,
+                    new Dictionary<string, BsonDocument>
+                    {
+                        { eventToAppend.EventType.Generation.ToString(), document }
+                    },
+                    []);
+
+                eventsToInsert.Add(@event);
+
+                appendedEvents.Add(new AppendedEvent(
+                    new(
+                        eventToAppend.EventType,
+                        eventToAppend.EventSourceType,
+                        eventToAppend.EventSourceId,
+                        eventToAppend.EventStreamType,
+                        eventToAppend.EventStreamId,
+                        eventToAppend.SequenceNumber,
+                        eventToAppend.Occurred,
+                        eventStore,
+                        @namespace,
+                        eventToAppend.CorrelationId,
+                        eventToAppend.Causation,
+                        await identityStorage.GetFor(eventToAppend.CausedByChain)),
+                    eventToAppend.Content));
+            }
+
+            logger.AppendingInserting(eventsToInsert.Count, eventSequenceId);
+            await collection.InsertManyAsync(session, eventsToInsert).ConfigureAwait(false);
+
+            await session.CommitTransactionAsync().ConfigureAwait(false);
+            logger.AppendingInserted(eventsToInsert.Count, appendedEvents.Count, eventSequenceId);
+            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
+        }
+        catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            await session.AbortTransactionAsync().ConfigureAwait(false);
+            var highest = await _collection.Find(FilterDefinition<Event>.Empty)
+                                          .SortByDescendingSequenceNumber()
+                                          .Limit(1)
+                                          .SingleOrDefaultAsync()
+                                          .ConfigureAwait(false);
+            var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
+            return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
+        }
+        catch
+        {
+            await session.AbortTransactionAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
     public Task Compensate(
         EventSequenceNumber sequenceNumber,
         EventType eventType,

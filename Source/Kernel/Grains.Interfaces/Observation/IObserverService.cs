@@ -30,4 +30,25 @@ public interface IObserverService : IGrainService
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>Awaitable task.</returns>
     Task EndReplayFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// Begin catchup for a specific observer.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task BeginCatchupFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// Resume catchup for a specific observer.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ResumeCatchupFor(ObserverDetails observerDetails);
+
+    /// <summary>
+    /// End catchup for a specific observer.
+    /// </summary>
+    /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EndCatchupFor(ObserverDetails observerDetails);
 }

@@ -12,4 +12,19 @@ public static class WellKnownKeys
     /// The key for the correlation id.
     /// </summary>
     public const string CorrelationId = "x-correlation-id";
+
+    /// <summary>
+    /// The key for the user identity (subject claim).
+    /// </summary>
+    public const string UserIdentity = "x-user-identity";
+
+    /// <summary>
+    /// The key for the user identity (subject claim).
+    /// </summary>
+    public const string UserName = "x-user-name";
+
+    /// <summary>
+    /// The key for the user identity (subject claim).
+    /// </summary>
+    public const string UserPreferredUserName = "x-user-preferred-username";
 }

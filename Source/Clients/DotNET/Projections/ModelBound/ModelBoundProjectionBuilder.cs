@@ -3,12 +3,11 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -44,14 +43,13 @@ internal class ModelBoundProjectionBuilder(
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
-        var passiveAttr = modelType.GetCustomAttribute<PassiveAttribute>();
 
         var definition = new ProjectionDefinition
         {
             EventSequenceId = fromEventSequenceAttr?.EventSequenceId ?? EventSequenceId.Log,
             Identifier = projectionId,
             ReadModel = readModelIdentifier,
-            IsActive = passiveAttr is null,
+            IsActive = !modelType.IsPassive(),
             IsRewindable = notRewindableAttr is null,
             InitialModelState = "{}",
             From = new Dictionary<EventType, FromDefinition>(),
@@ -60,11 +58,7 @@ internal class ModelBoundProjectionBuilder(
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            Sink = new SinkDefinition
-            {
-                ConfigurationId = Guid.Empty,
-                TypeId = WellKnownSinkTypes.MongoDB
-            }
+            Categories = modelType.GetCategories().ToArray()
         };
 
         var classLevelFromEvents = modelType.GetCustomAttributes()

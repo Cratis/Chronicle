@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model.with_children_having;
 
