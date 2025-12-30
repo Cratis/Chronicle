@@ -256,7 +256,7 @@ public class Sink(
         {
             return await ExecuteBulk();
         }
-        return Array.Empty<FailedPartition>();
+        return [];
     }
 
     async Task<IEnumerable<FailedPartition>> ExecuteBulk()

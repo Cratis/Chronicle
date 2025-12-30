@@ -82,7 +82,7 @@ public class InMemorySink(
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
 
-        return Task.FromResult<IEnumerable<FailedPartition>>(Array.Empty<FailedPartition>());
+        return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
