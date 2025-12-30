@@ -72,7 +72,7 @@ export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<T
     const [result, , setPage] = useObservableQueryWithPaging(props.query, paging, props.queryArguments);
     const containerRef = useRef<HTMLDivElement>(null);
     const [tableHeight, setTableHeight] = useState<number>(600);
-    const timeoutRef = useRef<NodeJS.Timeout>();
+    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     useEffect(() => {
         if (!containerRef.current) return;

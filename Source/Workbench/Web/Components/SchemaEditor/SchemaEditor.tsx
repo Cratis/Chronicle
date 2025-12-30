@@ -434,8 +434,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                         }}
                         pt={{
                             root: { style: { border: 'none' } },
-                            tbody: { style: { borderTop: '1px solid var(--surface-border)' } },
-                            bodyCell: { style: { height: '3rem', padding: '0 0.75rem', verticalAlign: 'middle' } }
+                            tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
                         }}
                     >
                         <Column

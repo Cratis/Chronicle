@@ -241,7 +241,8 @@ export const ReadModels = () => {
         if (currentData.length === 0) return [];
 
         const firstItem = currentData[0];
-        const keys = Object.keys(firstItem).filter(k => !k.startsWith('__'));
+        if (!firstItem || typeof firstItem !== 'object' || Array.isArray(firstItem)) return [];
+        const keys = Object.keys(firstItem as { [k: string]: Json }).filter(k => !k.startsWith('__'));
 
         return keys.map(key => (
             <Column
@@ -361,9 +362,10 @@ export const ReadModels = () => {
                 </OverlayPanel>
             </div>
 
-            <Allotment className="h-full" proportionalLayout={false} style={{ height: '100%' }}>
-                <Allotment.Pane className="flex-grow" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="h-full" style={{ height: '100%' }}>
+                <Allotment className="h-full" proportionalLayout={false}>
+                    <Allotment.Pane className="flex-grow">
+                        <div className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         {navigationPath.length > 0 && (
                             <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -410,7 +412,7 @@ export const ReadModels = () => {
                                     // Allow the table to grow horizontally when details pane is open
                                 }
                                 <DataTable
-                                    value={currentData}
+                                    value={currentData as any}
                                     loading={instances.isPerforming}
                                     emptyMessage={strings.eventStore.namespaces.readModels.empty}
                                     className="p-datatable-sm"
@@ -459,7 +461,7 @@ export const ReadModels = () => {
                                     label="×"
                                     className="p-button-text p-button-sm"
                                     onClick={() => setSelectedObject(null)}
-                                    aria-label={strings.components?.close ?? 'Close'}
+                                    aria-label={'Close'}
                                 />
                             </div>
 
@@ -495,13 +497,12 @@ export const ReadModels = () => {
 
                             <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                                 <DataTable
-                                    value={detailsProperties.map(key => ({ key, value: currentDetailsObject[key] }))}
+                                    value={detailsProperties.map(key => ({ key, value: (currentDetailsObject as any)![key] }))}
                                     emptyMessage={strings.eventStore.namespaces.readModels.empty}
                                     className="p-datatable-sm"
                                     pt={{
                                         root: { style: { border: 'none' } },
-                                        tbody: { style: { borderTop: '1px solid var(--surface-border)' } },
-                                        bodyCell: { style: { height: '3rem', padding: '0 0.75rem', verticalAlign: 'middle' } }
+                                        tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
                                     }}
                                 >
                                     <Column
@@ -551,6 +552,7 @@ export const ReadModels = () => {
                     </Allotment.Pane>
                 )}
             </Allotment>
+            </div>
         </Page>
     );
 };
