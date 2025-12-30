@@ -41,7 +41,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         builder.AddCratisMongoDB(
             mongo =>
             {
-                mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}";
+                mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}?directConnection=true";
                 mongo.Database = "orleans";
             },
             configureMongoDB);

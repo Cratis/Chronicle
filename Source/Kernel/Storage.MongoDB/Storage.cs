@@ -57,12 +57,15 @@ public class Storage(
         var collection = GetCollection();
         return new TransformingSubject<IEnumerable<EventStore>, IEnumerable<EventStoreName>>(
             collection.Observe(),
-            _ => _.Select(_ => _.Name));
+            _ => _.Select(es => es.Name)
+                  .Where(name => !string.IsNullOrWhiteSpace(name.Value) && name != EventStoreName.NotSet));
     }
 
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
+        ThrowIfEventStoreNameIsInvalid(eventStore);
+
         var pair = _eventStores
             .Select(kvp => new { kvp.Key, kvp.Value })
             .FirstOrDefault(_ => _.Key.Value.Equals(eventStore.Value, StringComparison.InvariantCultureIgnoreCase));
@@ -87,6 +90,19 @@ public class Storage(
             loggerFactory);
 
         return _eventStores[eventStore] = eventStoreStorage;
+    }
+
+    void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
+    {
+        if (string.IsNullOrWhiteSpace(eventStore.Value))
+        {
+            throw new InvalidEventStoreName(eventStore, "EventStoreName cannot be empty or whitespace.");
+        }
+
+        if (eventStore == EventStoreName.NotSet)
+        {
+            throw new InvalidEventStoreName(eventStore, "EventStoreName cannot be '[NotSet]'. It must be properly configured.");
+        }
     }
 
     IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);

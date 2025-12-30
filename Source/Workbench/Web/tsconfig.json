@@ -23,8 +23,17 @@
         "emitDecoratorMetadata": true,
         "baseUrl": ".",
         "paths": {
+            "Api": [
+                "./Api"
+            ],
             "Api/*": [
                 "Api/*"
+            ],
+            "assets": [
+                "./assets"
+            ],
+            "assets/*": [
+                "./assets/*"
             ],
             "Shared/*": [
                 "Shared/*"
@@ -41,6 +50,12 @@
             "Components": [
                 "Components/index"
             ],
+            "Browser": [
+                "./Infrastructure/Browser"
+            ],
+            "Browser/*": [
+                "./Infrastructure/Browser/*"
+            ],
             "Layout/*": [
                 "Layout/*"
             ],
@@ -48,10 +63,13 @@
                 "Features/*"
             ],
             "Strings": [
-                "Strings"
+                "./Strings"
+            ],
+            "Strings/*": [
+                "./Strings/*"
             ],
             "given": [
-                "given"
+                "./given.ts"
             ]
         }
     },
@@ -60,7 +78,6 @@
         "**/*.tsx"
     ],
     "exclude": [
-        "**/for_*/**",
         "vite.config.ts"
     ],
     "references": [
