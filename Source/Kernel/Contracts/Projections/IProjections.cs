@@ -87,4 +87,12 @@ public interface IProjections
     /// <param name="context">gRPC call context.</param>
     /// <returns>A collection of <see cref="ProjectionWithDsl"/>.</returns>
     Task<IEnumerable<ProjectionWithDsl>> GetAllDsls(GetAllDslsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Preview a projection from its DSL representation.
+    /// </summary>
+    /// <param name="request"><see cref="PreviewProjectionRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="ProjectionPreview"/>.</returns>
+    Task<ProjectionPreview> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default);
 }

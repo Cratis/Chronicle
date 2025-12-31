@@ -177,6 +177,11 @@ internal sealed class Projections(
         }).ToArray();
     }
 
+    /// <inheritdoc/>
+    public Task<ProjectionPreview> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default)
+    {
+    }
+
     async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
         string projectionId,
         string eventStoreName,
