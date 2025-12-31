@@ -21,7 +21,7 @@ export const Projections = () => {
 | key=UserRegistered.userId
 | name=UserRegistered.name
 | email=UserRegistered.email
-| totalSpent+OrderCompleted.amount
+| totalSpent+=OrderCompleted.amount
 | orderCount increment by OrderPlaced
 | orderCount decrement by OrderCancelled
 | lastLogin=$eventContext.occurred
@@ -87,7 +87,7 @@ export const Projections = () => {
 
                     <h3>Try These:</h3>
                     <ul>
-                        <li>Type <code>| name+</code> - you'll see an error because name is a string</li>
+                        <li>Type <code>| name+=</code> - you'll see an error because name is a string</li>
                         <li>Type <code>| total</code> and press space - you'll see suggestions</li>
                         <li>Type <code>| $eventContext.</code> - you'll see context property suggestions</li>
                         <li>Type <code>| orderCount increment by</code> - valid for numeric types</li>

@@ -173,8 +173,8 @@ export class ProjectionDslValidator {
 
         // Check for arithmetic operations on non-numeric properties
         if (this.schema) {
-            const addMatch = statement.match(/^(\w+)\+(\w+)\.(\w+)$/);
-            const subtractMatch = statement.match(/^(\w+)-(\w+)\.(\w+)$/);
+            const addMatch = statement.match(/^(\w+)\s*\+=\s*(\w+)\.(\w+)$/);
+            const subtractMatch = statement.match(/^(\w+)\s*-=\s*(\w+)\.(\w+)$/);
 
             if (addMatch || subtractMatch) {
                 const match = (addMatch || subtractMatch)!;
@@ -484,74 +484,149 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             });
         }
 
-        // After |, suggest keywords and property names
+        // After |, provide token-aware suggestions:
+        // - First token (immediately after |): property names only
+        // - Second token (operator): operators filtered by property type
+        // - Third token (RHS): event type names, $eventContext, literals
         if (currentLine.trim().startsWith('|')) {
-            const afterPipe = currentLine.substring(currentLine.indexOf('|') + 1).trim();
+            const pipeIndex = currentLine.indexOf('|');
+            const partUpToCursor = currentLine.substring(0, position.column - 1);
+            const afterPipeUpToCursor = partUpToCursor.substring(pipeIndex + 1);
+            const afterPipeTrimmed = afterPipeUpToCursor.replace(/^\s+/, '');
+            const tokens = afterPipeTrimmed.length === 0 ? [] : afterPipeTrimmed.split(/\s+/).filter(Boolean);
+            const lastCharBeforeCursor = partUpToCursor.length > 0 ? partUpToCursor.charAt(partUpToCursor.length - 1) : ' ';
+            const isAtTokenStart = /\s/.test(lastCharBeforeCursor);
 
-            // Suggest keywords
-            keywords.forEach((keyword) => {
-                suggestions.push({
-                    label: keyword,
-                    kind: 14, // Keyword
-                    insertText: keyword,
-                    documentation: `Keyword: ${keyword}`,
-                    range: this.getWordRange(model, position),
-                });
-            });
-
-            // Suggest read model properties from the active schema
-            if (activeSchema) {
+            // Helper: propose property names
+            const suggestProperties = () => {
+                if (!activeSchema || !activeSchema.properties) return;
                 Object.keys(activeSchema.properties).forEach((propName) => {
                     const propSchema = activeSchema!.properties[propName];
                     suggestions.push({
                         label: propName,
                         kind: 9, // Property
                         insertText: propName,
-                        documentation: `Property: ${propName} (${propSchema.type}${
-                            propSchema.format ? `:${propSchema.format}` : ''
-                        })`,
+                        documentation: `Property: ${propName} (${propSchema.type}${propSchema.format ? `:${propSchema.format}` : ''})`,
                         range: this.getWordRange(model, position),
                     });
                 });
+            };
+
+            // Helper: propose operators for a given property name
+            const suggestOperatorsFor = (propName: string) => {
+                const propSchema = activeSchema?.properties?.[propName];
+                // Always suggest assignment
+                suggestions.push({
+                    label: '=',
+                    kind: 24,
+                    insertText: '=',
+                    documentation: 'Set property value',
+                    range: this.getWordRange(model, position),
+                });
+
+                if (propSchema && this.isNumericType(propSchema as any)) {
+                    suggestions.push({
+                        label: '+=',
+                        kind: 24,
+                        insertText: '+=',
+                        documentation: 'Add to property value',
+                        range: this.getWordRange(model, position),
+                    });
+                    suggestions.push({
+                        label: '-=',
+                        kind: 24,
+                        insertText: '-=',
+                        documentation: 'Subtract from property value',
+                        range: this.getWordRange(model, position),
+                    });
+                    suggestions.push({
+                        label: 'increment',
+                        kind: 14,
+                        insertText: 'increment',
+                        documentation: 'Increment the property',
+                        range: this.getWordRange(model, position),
+                    });
+                    suggestions.push({
+                        label: 'decrement',
+                        kind: 14,
+                        insertText: 'decrement',
+                        documentation: 'Decrement the property',
+                        range: this.getWordRange(model, position),
+                    });
+                }
+            };
+
+            // Decide which token we're completing
+            if (tokens.length === 0 || (tokens.length === 1 && !isAtTokenStart)) {
+                // First token (property name)
+                suggestProperties();
+                return { suggestions };
             }
 
-            // Suggest operators based on context
-            if (afterPipe && !afterPipe.includes('=') && !afterPipe.includes('+') && !afterPipe.includes('-')) {
-                if (this.schema) {
-                    const word = afterPipe.split(/\s+/)[0];
-                    const propSchema = this.schema.properties[word];
+            if ((tokens.length === 1 && isAtTokenStart) || (tokens.length === 2 && !isAtTokenStart)) {
+                // Second token (operator) — determine property name (first token)
+                const firstToken = tokens[0];
+                suggestOperatorsFor(firstToken);
+                return { suggestions };
+            }
 
-                    if (propSchema) {
-                        // Suggest = for all properties
-                        suggestions.push({
-                            label: '=',
-                            kind: 24, // Operator
-                            insertText: '=',
-                            documentation: 'Set property value',
-                            range: this.getWordRange(model, position),
-                        });
-
-                        // Suggest +/- only for numeric properties
-                        if (this.isNumericType(propSchema)) {
+            // Third token or later: RHS suggestions (event types, $eventContext, literals)
+            // If we're completing after an event type and a dot, suggest that event's properties
+            const eventPropMatchCursor = afterPipeTrimmed.match(/(\w+)\.(\w*)$/);
+            if (eventPropMatchCursor) {
+                const evName = eventPropMatchCursor[1];
+                const typedProp = eventPropMatchCursor[2] || '';
+                const evSchema = this.eventSchemas[evName];
+                if (evSchema && evSchema.properties) {
+                    Object.keys(evSchema.properties).forEach((propName) => {
+                        if (!typedProp || propName.startsWith(typedProp)) {
+                            const prop = evSchema.properties![propName];
                             suggestions.push({
-                                label: '+',
-                                kind: 24,
-                                insertText: '+',
-                                documentation: 'Add to property value',
-                                range: this.getWordRange(model, position),
-                            });
-
-                            suggestions.push({
-                                label: '-',
-                                kind: 24,
-                                insertText: '-',
-                                documentation: 'Subtract from property value',
+                                label: propName,
+                                kind: 9, // Property
+                                insertText: propName,
+                                documentation: `Event property: ${propName} (${prop.type}${prop.format ? `:${prop.format}` : ''})`,
                                 range: this.getWordRange(model, position),
                             });
                         }
-                    }
+                    });
+                    return { suggestions };
                 }
             }
+
+            // Suggest event type names
+            const word = model.getWordUntilPosition(position);
+            Object.keys(this.eventSchemas).forEach((eventName) => {
+                if (!word.word || eventName.startsWith(word.word)) {
+                    suggestions.push({
+                        label: eventName,
+                        kind: 6, // Class
+                        insertText: eventName,
+                        documentation: `Event type: ${eventName}`,
+                        range: this.getWordRange(model, position),
+                    });
+                }
+            });
+
+            // Suggest $eventContext
+            suggestions.push({
+                label: '$eventContext',
+                kind: 14,
+                insertText: '$eventContext.',
+                documentation: 'Access event context properties',
+                range: this.getWordRange(model, position),
+            });
+
+            // Also suggest a numeric literal placeholder for increment/decrement
+            suggestions.push({
+                label: '1',
+                kind: 14,
+                insertText: '1',
+                documentation: 'Numeric literal',
+                range: this.getWordRange(model, position),
+            });
+
+            return { suggestions };
         }
 
         // Suggest event type names when typing right-hand side before a dot
