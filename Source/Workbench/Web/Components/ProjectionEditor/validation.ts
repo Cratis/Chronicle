@@ -418,7 +418,6 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             }
             return idx !== undefined ? `ReadModel${idx + 1}` : undefined;
         };
-        console.log('[ProjectionDsl] provideCompletionItems called', { line: position.lineNumber, col: position.column });
         const textUntilPosition = model.getValueInRange({
             startLineNumber: 1,
             startColumn: 1,
@@ -441,11 +440,8 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         }
 
         // If we are editing the first line, suggest available read model names
-        console.log('[ProjectionDsl] readModelSchemas', (this.readModelSchemas || []).map((s, i) => getSchemaName(s, i)));
-        console.log('[ProjectionDsl] eventSchemas', Object.keys(this.eventSchemas || {}));
         if (position.lineNumber === 1 && this.readModelSchemas && this.readModelSchemas.length > 0) {
             const word = model.getWordUntilPosition(position);
-            console.log('[ProjectionDsl] first-line declaredReadModel, word', declaredReadModel, word);
             this.readModelSchemas.forEach((s, i) => {
                 const display = getSchemaName(s, i);
                 if (!display) return;
@@ -465,13 +461,8 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                 }
             });
 
-            console.log('[ProjectionDsl] first-line suggestions count', suggestions.length);
             return { suggestions };
         }
-
-            try {
-                console.debug('[ProjectionDsl] activeSchema', activeSchema && getSchemaName(activeSchema as any));
-            } catch (e) {}
 
         // If at the start of a new line after first line, suggest |
         if (position.lineNumber > 1 && currentLine.trim() === '') {

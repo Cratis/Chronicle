@@ -66,10 +66,6 @@ export function setReadModelSchema(schema: JsonSchema): void {
 }
 
 export function setReadModelSchemas(schemas: JsonSchema[]): void {
-    try {
-        // eslint-disable-next-line no-console
-        console.log('[ProjectionDsl] setReadModelSchemas called', { type: typeof schemas, length: (schemas && (schemas as any).length) });
-    } catch (e) {}
     if (validator) {
         validator.setReadModelSchemas(schemas);
     }
