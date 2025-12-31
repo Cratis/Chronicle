@@ -37,16 +37,16 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// </summary>
     /// <param name="connectionString">Connection string to use.</param>
     public ChronicleClient(string connectionString)
-        : this(new ChronicleUrl(connectionString))
+        : this(new ChronicleConnectionString(connectionString))
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
-    public ChronicleClient(ChronicleUrl url)
-        : this(ChronicleOptions.FromUrl(url))
+    /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    public ChronicleClient(ChronicleConnectionString url)
+        : this(ChronicleOptions.FromConnectionString(url))
     {
     }
 
@@ -62,17 +62,24 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
 
+        var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
         _connection = new ChronicleConnection(
-            options.Url,
+            options.ConnectionString,
             options.ConnectTimeout,
             options.MaxReceiveMessageSize,
             options.MaxSendMessageSize,
             connectionLifecycle,
             new Tasks.TaskFactory(),
             options.CorrelationIdAccessor,
+            options.LoggerFactory,
+            CancellationToken.None,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
-            CancellationToken.None);
+            options.Tls.Disable,
+            options.Tls.CertificatePath,
+            options.Tls.CertificatePassword,
+            options.Tls.DevelopmentCertificatePort,
+            tokenProvider);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
@@ -173,6 +180,22 @@ public class ChronicleClient : IChronicleClient, IDisposable
         InitializeJsonSerializationOptions();
 
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
+    }
+
+    ITokenProvider CreateTokenProvider(ChronicleOptions options)
+    {
+        if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            return new OAuthTokenProvider(
+                options.ConnectionString.ServerAddress,
+                options.ConnectionString.Username ?? string.Empty,
+                options.ConnectionString.Password ?? string.Empty,
+                options.ManagementPort,
+                options.Tls.Disable,
+                options.LoggerFactory.CreateLogger<OAuthTokenProvider>());
+        }
+
+        return new NoOpTokenProvider();
     }
 
     void InitializeJsonSerializationOptions()

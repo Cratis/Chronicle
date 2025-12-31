@@ -7,6 +7,10 @@ import { IObservableQueryConnection } from '@cratis/arc/queries';
 /* eslint-disable @typescript-eslint/no-empty-function */
 
 export class NullObservableQueryConnection<TDataType> implements IObservableQueryConnection<TDataType> {
+    // Provide the latency metrics expected by the interface
+    public lastPingLatency = 0;
+    public averageLatency = 0;
+
     connect() {
 
     }

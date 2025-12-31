@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Text.Json.Nodes;
 
 namespace Cratis.Chronicle.Events;
@@ -27,17 +26,9 @@ public interface IEventSerializer
     Task<object> Deserialize(Type type, JsonObject json);
 
     /// <summary>
-    /// Deserialize a JSON representation of an event to a specific type.
+    /// Get the deserialized content from an <see cref="AppendedEvent"/>.
     /// </summary>
-    /// <param name="type">Type to deserialize to.</param>
-    /// <param name="expandoObject">Object to deserialize.</param>
-    /// <returns>Deserialized instance.</returns>
-    Task<object> Deserialize(Type type, ExpandoObject expandoObject);
-
-    /// <summary>
-    /// Deserialize an <see cref="AppendedEvent"/> to its actual type.
-    /// </summary>
-    /// <param name="event"><see cref="AppendedEvent"/> to deserialize.</param>
-    /// <returns>The deserialized event in the target CLR type.</returns>
+    /// <param name="event"><see cref="AppendedEvent"/> to get content from.</param>
+    /// <returns>The deserialized event content.</returns>
     Task<object> Deserialize(AppendedEvent @event);
 }

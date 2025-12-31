@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Services.Sinks;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -23,9 +24,13 @@ internal static class ReadModelDefinitionConverters
         var latestSchema = definition.GetSchemaForLatestGeneration();
         return new()
         {
-            Identifier = definition.Identifier,
+            Type = new Contracts.ReadModels.ReadModelType
+            {
+                Identifier = definition.Identifier,
+                Generation = latestGeneration.Value
+            },
             Name = definition.Name,
-            Generation = latestGeneration.Value,
+            Sink = definition.Sink.ToContract(),
             Schema = latestSchema.ToJson(),
             Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList()
         };
@@ -45,12 +50,13 @@ internal static class ReadModelDefinitionConverters
             .ToArray();
 
         return new(
-            contract.Identifier,
+            contract.Type.Identifier,
             contract.Name,
             (ReadModelOwner)(int)owner,
+            contract.Sink.ToChronicle(),
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { (ReadModelGeneration)contract.Generation, schema }
+                { (ReadModelGeneration)contract.Type.Generation, schema }
             },
             indexes
         );

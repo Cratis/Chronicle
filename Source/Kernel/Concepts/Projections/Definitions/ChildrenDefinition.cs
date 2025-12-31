@@ -4,7 +4,6 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -42,7 +41,6 @@ public record ChildrenDefinition(
         Children,
         [],
         All,
-        SinkDefinition.None,
         RemovedWith,
         RemovedWithJoin,
         FromEventProperty);

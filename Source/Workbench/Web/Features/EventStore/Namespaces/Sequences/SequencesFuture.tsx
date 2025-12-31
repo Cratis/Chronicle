@@ -11,9 +11,7 @@ import { TabPanel, TabView } from 'primereact/tabview';
 
 export const SequencesFuture = withViewModel(SequencesViewModel, ({ viewModel }) => {
     return (
-        <Page
-            title='Sequences'>
-
+        <Page title='Sequences'>
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="270px">
                     <Bookmark />

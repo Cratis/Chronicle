@@ -9,9 +9,6 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents a <see cref="JsonConverter"/> for <see cref="EventRedacted"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventRedactedConverters"/> class.
-/// </remarks>
 /// <param name="eventTypes"><see creF="IEventTypes"/> for event type resolution.</param>
 internal class EventRedactedConverters(IEventTypes eventTypes) : JsonConverter<EventRedacted>
 {

@@ -28,7 +28,7 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage) 
         storage
             .ObserveEventStores()
             .CompletedBy(callContext.CancellationToken)
-            .Select(_ => _.Select(e => e.Value));
+            .Select(_ => _.Select(e => e.Value).ToArray());
 
     /// <inheritdoc/>
     public async Task Ensure(EnsureEventStore command)

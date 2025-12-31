@@ -223,7 +223,6 @@ public class ProjectionFactory(
         var projection = new Projection(
             projectionDefinition.EventSequenceId,
             projectionId,
-            projectionDefinition.Sink,
             initialState,
             path,
             childrenAccessorProperty,

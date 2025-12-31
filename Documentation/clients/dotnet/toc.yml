@@ -1,3 +1,5 @@
+- name: Connection Strings
+  href: connection-strings.md
 - name: Namespaces
   href: namespaces.md
 - name: Events

@@ -39,14 +39,11 @@ public class WebServer(
 
                 builder.Host
                     .AddCratisArc(
-                        builder =>
+                        options =>
                         {
-                            builder.ConfigureOptions = options =>
-                            {
-                                options.CorrelationId = workbenchOptions.Value.ArcOptions.CorrelationId;
-                                options.Tenancy = workbenchOptions.Value.ArcOptions.Tenancy;
-                                options.IdentityDetailsProvider = workbenchOptions.Value.ArcOptions.IdentityDetailsProvider;
-                            };
+                            options.CorrelationId = workbenchOptions.Value.ArcOptions.CorrelationId;
+                            options.Tenancy = workbenchOptions.Value.ArcOptions.Tenancy;
+                            options.IdentityDetailsProvider = workbenchOptions.Value.ArcOptions.IdentityDetailsProvider;
                         });
 
                 builder.Services.AddCratisChronicleApi();

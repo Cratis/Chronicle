@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Expressions.EventValues;
 using Microsoft.Extensions.Logging.Abstractions;
 using NJsonSchema;
@@ -22,6 +23,7 @@ public class a_resolver : Specification
             "SomethingId",
             "Something",
             ReadModelOwner.Client,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, new JsonSchema() }

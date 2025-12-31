@@ -41,6 +41,8 @@ public static class ChronicleServerSiloBuilderExtensions
     {
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
+        builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
@@ -97,9 +99,11 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
                 new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, expandoObjectConverter, sp, jsonSerializerOptions),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
+                new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
+                new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
                 new Cratis.Chronicle.Services.Host.Server(clusterClient));
         });
 

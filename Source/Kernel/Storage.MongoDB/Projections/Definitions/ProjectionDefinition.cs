@@ -92,4 +92,9 @@ public class ProjectionDefinition
     /// Gets or sets the last time the projection definition was updated.
     /// </summary>
     public DateTimeOffset? LastUpdated { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the projection belongs to.
+    /// </summary>
+    public IEnumerable<string> Categories { get; set; } = [];
 }

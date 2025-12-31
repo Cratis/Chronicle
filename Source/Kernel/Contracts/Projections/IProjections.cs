@@ -71,4 +71,28 @@ public interface IProjections
     /// <returns><see cref="GetSnapshotsByIdResponse"/> containing the snapshots.</returns>
     [Operation]
     Task<GetSnapshotsByIdResponse> GetSnapshotsById(GetSnapshotsByIdRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all projection definitions.
+    /// </summary>
+    /// <param name="request"><see cref="GetAllDefinitionsRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
+    Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all projection DSLs.
+    /// </summary>
+    /// <param name="request"><see cref="GetAllDefinitionsRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="ProjectionWithDsl"/>.</returns>
+    Task<IEnumerable<ProjectionWithDsl>> GetAllDsls(GetAllDslsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Preview a projection from its DSL representation.
+    /// </summary>
+    /// <param name="request"><see cref="PreviewProjectionRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="ProjectionPreview"/>.</returns>
+    Task<ProjectionPreview> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default);
 }

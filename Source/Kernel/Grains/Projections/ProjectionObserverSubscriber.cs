@@ -95,6 +95,20 @@ public class ProjectionObserverSubscriber(
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
 
+                // Check if there are any failed partitions from bulk operations
+                if (pipelineContext.FailedPartitions.Any())
+                {
+                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+                    foreach (var failedPartition in pipelineContext.FailedPartitions)
+                    {
+                        await observer.PartitionFailed(
+                            failedPartition.EventSourceId,
+                            failedPartition.EventSequenceNumber,
+                            [$"Bulk operation failed for partition {failedPartition.EventSourceId}"],
+                            string.Empty);
+                    }
+                }
+
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }

@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
+using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
@@ -156,6 +158,74 @@ internal sealed class Projections(
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default)
+    {
+        var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
+        var definitions = await projectionsManager.GetProjectionDefinitions();
+        return definitions.Select(p => p.ToContract()).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Contracts.Projections.ProjectionWithDsl>> GetAllDsls(GetAllDslsRequest request, CallContext context = default)
+    {
+        var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
+        var dsls = await projectionsManager.GetProjectionDsls();
+        return dsls.Select(p => new Contracts.Projections.ProjectionWithDsl
+        {
+            Identifier = p.Identifier,
+            ReadModel = p.ReadModel,
+            Dsl = p.Dsl
+        }).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionPreview> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default)
+    {
+        var storage = serviceProvider.GetRequiredService<IStorage>();
+        var eventSequenceStorage = storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace)
+            .GetEventSequence(request.EventSequenceId);
+
+        var projectionId = ProjectionId.CreatePreviewId();
+        var projectionKey = new ProjectionKey(projectionId, request.EventStore);
+        var projection = grainFactory.GetGrain<IProjection>(projectionKey);
+
+        var parser = new Chronicle.Projections.DSL.ProjectionDslParserFacade();
+        var definition = parser.Parse(
+            request.Dsl ?? string.Empty,
+            projectionId,
+            Concepts.Projections.ProjectionOwner.Server,
+            new EventSequenceId(request.EventSequenceId));
+        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+        definition = definition with { ReadModel = readModelDefinition.Identifier };
+
+        await projection.SetDefinition(definition);
+
+        var eventTypes = await projection.GetEventTypes();
+
+        // Fetch a limited number of events and group them by correlation id
+        const int defaultLimit = 1000;
+        using var cursor = await eventSequenceStorage.GetEventsWithLimit(EventSequenceNumber.First, defaultLimit, eventTypes: eventTypes);
+        var events = new List<AppendedEvent>();
+
+        while (await cursor.MoveNext())
+        {
+            events.AddRange(cursor.Current);
+        }
+
+        var result = await projection.Process(request.Namespace, events);
+        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+
+        return new ProjectionPreview
+        {
+            ReadModelEntries = readModels,
+            ReadModel = readModelDefinition.ToContract()
+        };
+    }
+
     async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
         string projectionId,
         string eventStoreName,
@@ -199,7 +269,7 @@ internal sealed class Projections(
             var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
             var firstOccurred = orderedEvents[0].Context.Occurred;
 
-            var result = await projection.Process(namespaceName, initialState, orderedEvents);
+            var result = await projection.ProcessForSingleReadModel(namespaceName, initialState, orderedEvents);
             var jsonObject = expandoObjectConverter.ToJsonObject(result, readModelDefinition.GetSchemaForLatestGeneration());
             var readModel = JsonSerializer.Serialize(jsonObject, jsonSerializerOptions);
             initialState = result;
