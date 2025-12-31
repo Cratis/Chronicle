@@ -29,8 +29,8 @@ public record PreviewProjection(string EventStore, string Namespace, string Dsl)
             Dsl = Dsl
         };
 
-        var contractPreview = await projections.PreviewFromDsl(request);
-        var jsonObjects = contractPreview.ReadModelEntries.Select(s => JsonNode.Parse(s)?.AsObject() ?? new JsonObject());
-        return new ProjectionPreview(jsonObjects);
+        var preview = await projections.PreviewFromDsl(request);
+        var jsonObjects = preview.ReadModelEntries.Select(s => JsonNode.Parse(s)?.AsObject() ?? new JsonObject());
+        return new ProjectionPreview(jsonObjects, JsonNode.Parse(preview.ReadModel.Schema)!.AsObject());
     }
 }

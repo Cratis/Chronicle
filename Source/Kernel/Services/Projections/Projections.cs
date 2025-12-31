@@ -13,6 +13,7 @@ using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
+using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
@@ -187,20 +188,22 @@ internal sealed class Projections(
             .GetNamespace(request.Namespace)
             .GetEventSequence(request.EventSequenceId);
 
-        var projectionKey = new ProjectionKey(Guid.NewGuid().ToString(), request.EventStore);
+        var projectionId = ProjectionId.CreatePreviewId();
+        var projectionKey = new ProjectionKey(projectionId, request.EventStore);
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
 
         var parser = new Chronicle.Projections.DSL.ProjectionDslParserFacade();
         var definition = parser.Parse(
             request.Dsl ?? string.Empty,
-            new ProjectionId($"preview-{Guid.NewGuid():N}"),
+            projectionId,
             Concepts.Projections.ProjectionOwner.Server,
             new EventSequenceId(request.EventSequenceId));
+        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+        definition = definition with { ReadModel = readModelDefinition.Identifier };
 
         await projection.SetDefinition(definition);
 
-        // Get the read model definition and event types
-        var readModelDefinition = await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.ReadModel);
         var eventTypes = await projection.GetEventTypes();
 
         // Fetch a limited number of events and group them by correlation id
@@ -218,7 +221,8 @@ internal sealed class Projections(
 
         return new ProjectionPreview
         {
-            ReadModelEntries = readModels
+            ReadModelEntries = readModels,
+            ReadModel = readModelDefinition.ToContract()
         };
     }
 

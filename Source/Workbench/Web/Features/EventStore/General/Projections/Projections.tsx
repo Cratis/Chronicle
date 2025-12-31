@@ -44,7 +44,8 @@ export const Projections = () => {
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
-    const [readModelInstances, setReadModelInstances] = useState<Json>();
+    const [readModelInstances, setReadModelInstances] = useState<unknown>();
+    const [readModelSchema, setReadModelSchema] = useState<JsonSchema | null>(null);
 
     const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
@@ -85,7 +86,8 @@ export const Projections = () => {
                                         previewProjection.namespace = params.namespace!;
                                         previewProjection.dsl = dslValue;
                                         const result = await previewProjection.execute();
-                                        setReadModelInstances(result.response?.readModelEntries ? JSON.parse(`[${result.response.readModelEntries.join(',')}]`) : []);
+                                        setReadModelInstances(result.response?.readModelEntries ?? []);
+                                        setReadModelSchema(result.response?.schema ?? null);
                                     }
                                 }
                             ]}
@@ -104,14 +106,16 @@ export const Projections = () => {
 
                         <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                             <DataTable
-                                value={[]}
+                                value={readModelInstances}
                                 emptyMessage={strings.eventStore.general.projections.empty}
                                 className="p-datatable-sm"
                                 pt={{
                                     root: { style: { border: 'none' } },
                                     tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
                                 }}>
-                                <Column field="name" header="blah" />
+                                {readModelSchema && Object.keys(readModelSchema.properties!).map((_, index) => (
+                                    <Column key={index} field={_} header={_} />
+                                ))}
                             </DataTable>
                         </div>
                     </div>

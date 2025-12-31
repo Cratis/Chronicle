@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.ReadModels;
+
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
@@ -13,5 +15,11 @@ public class ProjectionPreview
     /// The read model entries resulting from the projection preview.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<string> ReadModelEntries { get; set; } = Array.Empty<string>();
+    public IEnumerable<string> ReadModelEntries { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the read model definition.
+    /// </summary>
+    [ProtoMember(2, IsRequired = true)]
+    public ReadModelDefinition ReadModel { get; set; } = new();
 }

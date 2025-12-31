@@ -17,8 +17,17 @@ public class ProjectionDslParserFacade : IProjectionDslParser
     public ProjectionDefinition Parse(string dsl, ProjectionId identifier, ProjectionOwner owner, EventSequenceId eventSequenceId)
     {
         var tokenizer = new Tokenizer(dsl);
-        var tokens = tokenizer.Tokenize();
-        var parser = new ProjectionDslParser(tokens);
-        return parser.Parse(identifier, owner, eventSequenceId);
+        var tokens = tokenizer.Tokenize().ToList();
+
+        try
+        {
+            var parser = new ProjectionDslParser(tokens);
+            return parser.Parse(identifier, owner, eventSequenceId);
+        }
+        catch (Exception ex)
+        {
+            var tokenList = string.Join(" | ", tokens.Select(t => $"{t.Line}:{t.Column}:{t.Type}('{t.Value}')"));
+            throw new Exception($"Failed to parse DSL: {ex.Message}. Tokens: {tokenList}", ex);
+        }
     }
 }

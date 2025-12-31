@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Api.Projections;
 /// Represents a preview of a projection.
 /// </summary>
 /// <param name="ReadModelEntries">The read model entries resulting from the projection preview.</param>
-public record ProjectionPreview(IEnumerable<JsonObject> ReadModelEntries);
+/// <param name="Schema">The schema of the read model.</param>
+public record ProjectionPreview(IEnumerable<JsonObject> ReadModelEntries, JsonObject Schema);

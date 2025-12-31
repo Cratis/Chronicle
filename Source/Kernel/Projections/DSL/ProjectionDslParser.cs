@@ -165,6 +165,28 @@ public class ProjectionDslParser(IEnumerable<Token> tokens)
     void ParseSimpleKey(Dictionary<EventType, FromDefinition> from)
     {
         var eventTypeName = ExpectIdentifier();
+
+        // Support special expressions as keys (e.g. $eventSourceId) where no dot/property follows.
+        if (!string.IsNullOrEmpty(eventTypeName) && eventTypeName.StartsWith("$"))
+        {
+            var specialEventType = CreateEventType(eventTypeName);
+            var specialKeyExpression = new PropertyExpression(eventTypeName);
+
+            if (from.TryGetValue(specialEventType, out var existingDef))
+            {
+                from[specialEventType] = existingDef with { Key = specialKeyExpression };
+            }
+            else
+            {
+                from[specialEventType] = new FromDefinition(
+                    new Dictionary<PropertyPath, string>(),
+                    specialKeyExpression,
+                    ParentKey: null);
+            }
+
+            return;
+        }
+
         Expect(TokenType.Dot);
         var propertyName = ExpectIdentifier();
 
