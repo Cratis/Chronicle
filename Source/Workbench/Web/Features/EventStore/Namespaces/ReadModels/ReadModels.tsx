@@ -321,7 +321,7 @@ export const ReadModels = () => {
 
     return (
         <Page title={strings.eventStore.namespaces.readModels.title}>
-            <div className="px-4 py-2">
+            <div className="px-4 py-4">
                 <Menubar
                     model={[
                         {

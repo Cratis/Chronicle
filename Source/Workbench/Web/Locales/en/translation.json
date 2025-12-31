@@ -128,9 +128,11 @@
             },
             "projections": {
                 "title": "Projections",
+                "empty": "No result.",
                 "actions": {
-                    "new": "New Projection",
-                    "save": "Save Projection"
+                    "new": "New",
+                    "save": "Save",
+                    "preview": "Preview"
                 }
             }
         },

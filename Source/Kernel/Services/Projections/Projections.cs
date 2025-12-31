@@ -156,6 +156,14 @@ internal sealed class Projections(
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default)
+    {
+        var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
+        var definitions = await projectionsManager.GetProjectionDefinitions();
+        return definitions.Select(p => p.ToContract()).ToArray();
+    }
+
     async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
         string projectionId,
         string eventStoreName,

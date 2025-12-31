@@ -12,6 +12,10 @@ import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { Allotment } from 'allotment';
+import { AllProjections } from 'Api/Projections';
 
 export const Projections = () => {
 
@@ -36,64 +40,73 @@ export const Projections = () => {
 
     const [readModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
-    const readModelSchemas = readModels.data?.map(readModel => {
-        const s = JSON.parse(readModel.schema) as JsonSchema;
-        if (!((s as any).title) && (readModel as any).name) (s as any).title = (readModel as any).name;
-        return s;
-    });
-    const eventSchemas = eventTypes.data?.map(eventType => {
-        const s = JSON.parse(eventType.schema) as JsonSchema;
-        if (!((s as any).title) && (eventType as any).name) (s as any).title = (eventType as any).name;
-        return s;
-    });
+    const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
+    const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
+
+    const [projections] = AllProjections.use({ eventStore: params.eventStore! });
 
     return (
         <Page title='Projections'>
+            <Allotment className="h-full" proportionalLayout={false}>
+                <Allotment.Pane preferredSize="270px">
+                    <div className="px-4 py-4">
+                        <DataTable
+                            value={projections.data}>
 
-            <div className="px-4 py-2">
-                <Menubar
-                    model={[
-                        {
-                            label: strings.eventStore.general.projections.actions.new,
-                            icon: <faIcons.FaPlus className='mr-2' />
-                        },
-                        {
-                            label: strings.eventStore.general.projections.actions.save,
-                            icon: <faIcons.FaFloppyDisk className='mr-2' />
-                        }
-                    ]}
-                />
+                            <Column field="identifier" header="Identifier" />
+                        </DataTable>
+                    </div>
+                </Allotment.Pane>
+                <Allotment.Pane className="h-full">
 
-                <div className="py-4">
-                    <ProjectionEditor
-                        value={dslValue}
-                        onChange={setDslValue}
-                        readModelSchemas={readModelSchemas}
-                        eventSchemas={eventSchemas}
-                        height="500px"
-                        theme="vs-dark"
-                    />
-                </div>
+                    <div className="px-4 py-4">
+                        <Menubar
+                            model={[
+                                {
+                                    label: strings.eventStore.general.projections.actions.new,
+                                    icon: <faIcons.FaPlus className='mr-2' />
+                                },
+                                {
+                                    label: strings.eventStore.general.projections.actions.save,
+                                    icon: <faIcons.FaFloppyDisk className='mr-2' />
+                                },
+                                {
+                                    label: strings.eventStore.general.projections.actions.preview,
+                                    icon: <faIcons.FaEye className='mr-2' />
+                                }
+                            ]}
+                        />
 
-                <div style={{ marginTop: '20px' }}>
-                    <h3>Features Demonstrated:</h3>
-                    <ul>
-                        <li>✅ Syntax highlighting for keywords and operators</li>
-                        <li>✅ Type-aware validation (arithmetic only on numeric properties)</li>
-                        <li>✅ IntelliSense for properties, keywords, and event context</li>
-                        <li>✅ Error markers for invalid syntax</li>
-                        <li>✅ Support for nested children definitions</li>
-                    </ul>
+                        <div className="py-4">
+                            <ProjectionEditor
+                                value={dslValue}
+                                onChange={setDslValue}
+                                readModelSchemas={readModelSchemas}
+                                eventSchemas={eventSchemas}
+                                height="500px"
+                                theme="vs-dark"
+                            />
+                        </div>
 
-                    <h3>Try These:</h3>
-                    <ul>
-                        <li>Type <code>| name+=</code> - you'll see an error because name is a string</li>
-                        <li>Type <code>| total</code> and press space - you'll see suggestions</li>
-                        <li>Type <code>| $eventContext.</code> - you'll see context property suggestions</li>
-                        <li>Type <code>| orderCount increment by</code> - valid for numeric types</li>
-                    </ul>
-                </div>
-            </div>
+                        <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+                            <DataTable
+                                value={[]}
+                                emptyMessage={strings.eventStore.general.projections.empty}
+                                className="p-datatable-sm"
+                                pt={{
+                                    root: { style: { border: 'none' } },
+                                    tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
+                                }}>
+                                <Column field="name" header="blah" />
+                            </DataTable>
+
+
+                        </div>
+                    </div>
+                </Allotment.Pane>
+
+            </Allotment>
+
         </Page>
     );
 };
