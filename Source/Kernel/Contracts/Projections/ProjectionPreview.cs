@@ -13,5 +13,5 @@ public class ProjectionPreview
     /// The read model entries resulting from the projection preview.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<string> ReadModelEntries { get; set; } = []
+    public IEnumerable<string> ReadModelEntries { get; set; } = Array.Empty<string>();
 }

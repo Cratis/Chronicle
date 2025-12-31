@@ -23,7 +23,7 @@ public class when_parsing_complete_example : Specification
 
     ProjectionDefinition _result;
 
-    void Because() => _result = ProjectionDsl.Parse(
+    void Because() => _result = Cratis.Chronicle.Projections.DSL.ProjectionDsl.Parse(
         Dsl,
         new ProjectionId("test-projection"),
         ProjectionOwner.Client,

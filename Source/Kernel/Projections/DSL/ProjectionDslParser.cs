@@ -14,9 +14,6 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// <summary>
 /// Parser for the projection DSL that converts tokens into a ProjectionDefinition.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ProjectionDslParser"/> class.
-/// </remarks>
 /// <param name="tokens">The tokens to parse.</param>
 public class ProjectionDslParser(IEnumerable<Token> tokens)
 {

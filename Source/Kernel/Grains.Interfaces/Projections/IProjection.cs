@@ -47,11 +47,19 @@ public interface IProjection : IGrainWithStringKey
     Task<IEnumerable<EventType>> GetEventTypes();
 
     /// <summary>
-    /// Process a set of events through the projection.
+    /// Process a set of events through the projection for a single read-model instance.
     /// </summary>
     /// <param name="eventStoreNamespace">The namespace the events are from.</param>
     /// <param name="initialState">The initial projected state.</param>
     /// <param name="events">The events to process.</param>
     /// <returns>The resulting projected state.</returns>
-    Task<ExpandoObject> Process(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
+    Task<ExpandoObject> ProcessForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
+    /// Process a set of events through the projection and return resulting read-model instances grouped by key.
+    /// </summary>
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="events">The events to process.</param>
+    /// <returns>The resulting projected states for all keys encountered.</returns>
+    Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events);
 }

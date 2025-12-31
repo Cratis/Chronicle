@@ -88,7 +88,7 @@ public class Projection(
     }
 
     /// <inheritdoc/>
-    public async Task<ExpandoObject> Process(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
+    public async Task<ExpandoObject> ProcessForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
@@ -122,6 +122,51 @@ public class Projection(
         }
 
         return state;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
+        var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+
+        var readModelsByKey = new Dictionary<Key, ExpandoObject>();
+
+        foreach (var @event in events)
+        {
+            var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
+            var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
+
+            if (keyResult is DeferredKey)
+            {
+                continue;
+            }
+
+            var key = (keyResult as ResolvedKey)!.Key;
+
+            if (!readModelsByKey.TryGetValue(key, out var state))
+            {
+                state = new ExpandoObject();
+                readModelsByKey[key] = state;
+            }
+
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
+            var context = new ProjectionEventContext(
+                key,
+                @event,
+                changeset,
+                projection.GetOperationTypeFor(@event.Context.EventType),
+                false);
+
+            await HandleEventFor(projection!, context);
+
+            state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
+            readModelsByKey[key] = state;
+        }
+
+        return readModelsByKey.Values.ToList();
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)

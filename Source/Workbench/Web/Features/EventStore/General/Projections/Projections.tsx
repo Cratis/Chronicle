@@ -15,7 +15,8 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDsl } from 'Api/Projections';
+import { AllProjectionsWithDsl, PreviewProjection } from 'Api/Projections';
+import { Json } from 'Features';
 
 export const Projections = () => {
 
@@ -43,8 +44,10 @@ export const Projections = () => {
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
+    const [readModelInstances, setReadModelInstances] = useState<Json>();
 
     const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
+    const [previewProjection] = PreviewProjection.use();
 
     return (
         <Page title='Projections'>
@@ -76,7 +79,14 @@ export const Projections = () => {
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.preview,
-                                    icon: <faIcons.FaEye className='mr-2' />
+                                    icon: <faIcons.FaEye className='mr-2' />,
+                                    command: async () => {
+                                        previewProjection.eventStore = params.eventStore!;
+                                        previewProjection.namespace = params.namespace!;
+                                        previewProjection.dsl = dslValue;
+                                        const result = await previewProjection.execute();
+                                        setReadModelInstances(result.response?.readModelEntries ? JSON.parse(`[${result.response.readModelEntries.join(',')}]`) : []);
+                                    }
                                 }
                             ]}
                         />
@@ -103,8 +113,6 @@ export const Projections = () => {
                                 }}>
                                 <Column field="name" header="blah" />
                             </DataTable>
-
-
                         </div>
                     </div>
                 </Allotment.Pane>

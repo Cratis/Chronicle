@@ -22,8 +22,14 @@ public class PreviewProjectionRequest
     public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the event sequence id the projection targets.
+    /// </summary>
+    [ProtoMember(3), DefaultValue("event-log")]
+    public string EventSequenceId { get; set; } = "event-log";
+
+    /// <summary>
     /// Gets or sets the DSL representation of the projection.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(4)]
     public string Dsl { get; set; } = string.Empty;
 }

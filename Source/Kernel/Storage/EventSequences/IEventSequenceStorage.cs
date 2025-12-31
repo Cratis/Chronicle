@@ -65,7 +65,7 @@ public interface IEventSequenceStorage
         ExpandoObject content);
 
     /// <summary>
-    /// Append multiple events to the event store transactionally.
+    /// Append multiple events to the event store transactional.
     /// </summary>
     /// <param name="events">Collection of events to append.</param>
     /// <returns>Result with appended events or duplicate sequence number error.</returns>
@@ -213,4 +213,24 @@ public interface IEventSequenceStorage
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get events with a limit starting from a specific sequence number.
+    /// </summary>
+    /// <param name="start">The starting <see cref="EventSequenceNumber"/>.</param>
+    /// <param name="limit">The maximum number of events to retrieve.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to filter for.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to filter for.</param>
+    /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns><see cref="IEventCursor"/>.</returns>
+    Task<IEventCursor> GetEventsWithLimit(
+        EventSequenceNumber start,
+        int limit,
+        EventSourceId? eventSourceId = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        CancellationToken cancellationToken = default);
 }

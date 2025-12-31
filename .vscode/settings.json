@@ -74,6 +74,7 @@
         "encryptor",
         "enumerables",
         "Expando",
+        "façade",
         "Finalizers",
         "fluentui",
         "Gridlines",

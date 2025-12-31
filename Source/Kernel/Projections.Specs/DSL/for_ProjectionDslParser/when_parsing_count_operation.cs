@@ -15,7 +15,7 @@ public class when_parsing_count_operation : Specification
 
     ProjectionDefinition _result;
 
-    void Because() => _result = ProjectionDsl.Parse(
+    void Because() => _result = Cratis.Chronicle.Projections.DSL.ProjectionDsl.Parse(
         Dsl,
         new ProjectionId("test-projection"),
         ProjectionOwner.Client,

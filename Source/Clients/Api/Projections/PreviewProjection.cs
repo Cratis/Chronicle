@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.Api.Projections;
@@ -21,7 +22,15 @@ public record PreviewProjection(string EventStore, string Namespace, string Dsl)
     /// <returns>The projection preview.</returns>
     public async Task<ProjectionPreview> Handle(IProjections projections)
     {
+        var request = new PreviewProjectionRequest
+        {
+            EventStore = EventStore,
+            Namespace = Namespace,
+            Dsl = Dsl
+        };
 
-
+        var contractPreview = await projections.PreviewFromDsl(request);
+        var jsonObjects = contractPreview.ReadModelEntries.Select(s => JsonNode.Parse(s)?.AsObject() ?? new JsonObject());
+        return new ProjectionPreview(jsonObjects);
     }
 }

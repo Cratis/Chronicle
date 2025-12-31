@@ -17,14 +17,12 @@ import { ReadModelOccurrence, ReadModelOccurrences, ReadModelInstances } from 'A
 import * as faIcons from 'react-icons/fa6';
 import { Menubar } from 'primereact/menubar';
 import strings from 'Strings';
+import { Json } from 'Features';
 
 interface NavigationItem {
     name: string;
     path: string[];
 }
-
-// JSON-compatible recursive type used for read-model instances and arbitrary object values
-type Json = null | string | number | boolean | Json[] | { [key: string]: Json };
 
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();

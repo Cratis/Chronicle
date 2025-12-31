@@ -13,7 +13,7 @@ public class when_parsing_simple_read_model_name : Specification
     const string Dsl = "Users";
     ProjectionDefinition _result;
 
-    void Because() => _result = ProjectionDsl.Parse(
+    void Because() => _result = Cratis.Chronicle.Projections.DSL.ProjectionDsl.Parse(
         Dsl,
         new ProjectionId("test-projection"),
         ProjectionOwner.Client,
