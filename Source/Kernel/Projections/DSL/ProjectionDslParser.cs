@@ -122,12 +122,12 @@ public class ProjectionDslParser(IEnumerable<Token> tokens)
                     ParsePropertyMappingStatement(propertyName, from, fromEvery);
                 }
             }
-            else if (CurrentToken.Type == TokenType.Plus)
+            else if (CurrentToken.Type == TokenType.Plus || CurrentToken.Type == TokenType.PlusEquals)
             {
                 Advance();
                 ParseAddOperation(propertyName, from);
             }
-            else if (CurrentToken.Type == TokenType.Minus)
+            else if (CurrentToken.Type == TokenType.Minus || CurrentToken.Type == TokenType.MinusEquals)
             {
                 Advance();
                 ParseSubtractOperation(propertyName, from);

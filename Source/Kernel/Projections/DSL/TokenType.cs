@@ -127,4 +127,15 @@ public enum TokenType
     /// Invalid token.
     /// </summary>
     Invalid = 23
+
+    ,
+    /// <summary>
+    /// The plus-and-equals operator (+=).
+    /// </summary>
+    PlusEquals = 24,
+
+    /// <summary>
+    /// The minus-and-equals operator (-=).
+    /// </summary>
+    MinusEquals = 25
 }

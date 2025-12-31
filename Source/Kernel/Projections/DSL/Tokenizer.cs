@@ -90,6 +90,14 @@ public class Tokenizer(string input)
 
         if (currentChar == '+')
         {
+            // support '+=' compound operator
+            if (_position + 1 < _input.Length && _input[_position + 1] == '=')
+            {
+                _position += 2;
+                _column += 2;
+                return new Token(TokenType.PlusEquals, "+=", tokenLine, tokenColumn);
+            }
+
             _position++;
             _column++;
             return new Token(TokenType.Plus, "+", tokenLine, tokenColumn);
@@ -97,6 +105,14 @@ public class Tokenizer(string input)
 
         if (currentChar == '-')
         {
+            // support '-=' compound operator
+            if (_position + 1 < _input.Length && _input[_position + 1] == '=')
+            {
+                _position += 2;
+                _column += 2;
+                return new Token(TokenType.MinusEquals, "-=", tokenLine, tokenColumn);
+            }
+
             _position++;
             _column++;
             return new Token(TokenType.Minus, "-", tokenLine, tokenColumn);

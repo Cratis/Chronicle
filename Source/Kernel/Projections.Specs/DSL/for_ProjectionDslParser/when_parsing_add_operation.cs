@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionDslParser;
 public class when_parsing_add_operation : Specification
 {
     const string Dsl = @"Users
-| totalAmount+OrderCompleted.amount";
+| totalAmount+=OrderCompleted.amount";
 
     ProjectionDefinition _result;
 

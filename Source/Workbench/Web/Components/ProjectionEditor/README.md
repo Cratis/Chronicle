@@ -61,7 +61,7 @@ const editor = monaco.editor.create(document.getElementById('container'), {
     value: `Users
 | name=UserRegistered.name
 | age=UserRegistered.age
-| totalSpent+OrderCompleted.amount`,
+| totalSpent+=OrderCompleted.amount`,
     language: languageId,
     theme: 'vs-dark',
     minimap: { enabled: false },
@@ -74,7 +74,7 @@ const editor = monaco.editor.create(document.getElementById('container'), {
 
 The language service provides syntax highlighting for:
 - Keywords: `key`, `increment`, `decrement`, `count`, `by`, `on`, `join`, `identified`, `removedWith`
-- Operators: `=`, `+`, `-`, `|`, `.`, `:`, `,`
+- Operators: `=`, `+=`, `-=`, `|`, `.`, `:`, `,`
 - Comments: Lines starting with `#`
 - String literals (with escape sequences)
 - Number literals
@@ -94,13 +94,13 @@ Supported numeric types (from TypeFormats):
 
 ### IntelliSense
 
-The completion provider suggests:
+-- The completion provider suggests:
 - **Keywords** when starting a new statement
 - **Read model properties** from the provided schema
-- **Operators** (`=`, `+`, `-`) based on property type
+- **Operators** (`=`, `+=`, `-=`) based on property type
 - **Event context properties** (`$eventContext.occurred`, `$eventContext.eventSourceId`, etc.)
 
-Arithmetic operators (`+`, `-`) are only suggested for numeric and TimeSpan properties.
+Arithmetic operators (`+=`, `-=`) are only suggested for numeric and TimeSpan properties.
 
 ## Type Safety
 
@@ -109,14 +109,14 @@ The language service enforces type safety:
 ✅ **Valid:**
 ```
 Users
-| totalSpent+OrderCompleted.amount      # OK: numeric type
+| totalSpent+=OrderCompleted.amount      # OK: numeric type
 | loginCount increment by UserLoggedIn  # OK: numeric type
 ```
 
 ❌ **Invalid:**
 ```
 Users
-| name+UserRegistered.firstName         # Error: string type
+| name+=UserRegistered.firstName         # Error: string type
 | status increment by UserActivated     # Error: string type
 ```
 
