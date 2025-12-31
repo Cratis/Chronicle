@@ -164,6 +164,19 @@ internal sealed class Projections(
         return definitions.Select(p => p.ToContract()).ToArray();
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Contracts.Projections.ProjectionWithDsl>> GetAllDsls(GetAllDslsRequest request, CallContext context = default)
+    {
+        var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
+        var dsls = await projectionsManager.GetProjectionDsls();
+        return dsls.Select(p => new Contracts.Projections.ProjectionWithDsl
+        {
+            Identifier = p.Identifier,
+            ReadModel = p.ReadModel,
+            Dsl = p.Dsl
+        }).ToArray();
+    }
+
     async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
         string projectionId,
         string eventStoreName,

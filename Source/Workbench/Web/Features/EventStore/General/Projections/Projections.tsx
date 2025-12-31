@@ -15,11 +15,12 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjections } from 'Api/Projections';
+import { AllProjectionsWithDsl } from 'Api/Projections';
 
 export const Projections = () => {
 
     const [dslValue, setDslValue] = useState('');
+    const [selectedProjection, setSelectedProjection] = useState<any | null>(null);
 
     /*`Users
 | key=UserRegistered.userId
@@ -43,7 +44,7 @@ export const Projections = () => {
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
 
-    const [projections] = AllProjections.use({ eventStore: params.eventStore! });
+    const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
 
     return (
         <Page title='Projections'>
@@ -51,9 +52,12 @@ export const Projections = () => {
                 <Allotment.Pane preferredSize="270px">
                     <div className="px-4 py-4">
                         <DataTable
-                            value={projections.data}>
+                            value={projections.data}
+                            selectionMode="single"
+                            selection={selectedProjection}
+                            onSelectionChange={(e) => { setSelectedProjection(e.value); setDslValue(e.value?.dsl ?? ''); }}>
 
-                            <Column field="identifier" header="Identifier" />
+                            <Column field="readModel" header="Read Model" />
                         </DataTable>
                     </div>
                 </Allotment.Pane>

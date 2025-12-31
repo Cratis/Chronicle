@@ -10,6 +10,7 @@ using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.DSL;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
+/// <param name="projectionDslGenerator"><see cref="IProjectionDslGenerator"/> for generating projection DSL strings.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
@@ -28,6 +30,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IProjectionsServiceClient projectionsService,
+    IProjectionDslGenerator projectionDslGenerator,
     ILocalSiloDetails localSiloDetails,
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
@@ -55,6 +58,21 @@ public class ProjectionsManager(
     public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions()
     {
         return Task.FromResult(State.Projections);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionWithDsl>> GetProjectionDsls()
+    {
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        return State.Projections
+            .Select(definition =>
+            {
+                var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
+                return new ProjectionWithDsl(
+                definition.Identifier,
+                readModel.Name,
+                projectionDslGenerator.Generate(definition, readModel));
+            }).ToArray();
     }
 
     /// <inheritdoc/>

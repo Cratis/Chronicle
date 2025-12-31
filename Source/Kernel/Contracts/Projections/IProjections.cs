@@ -79,4 +79,12 @@ public interface IProjections
     /// <param name="context">gRPC call context.</param>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all projection DSLs.
+    /// </summary>
+    /// <param name="request"><see cref="GetAllDefinitionsRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="ProjectionWithDsl"/>.</returns>
+    Task<IEnumerable<ProjectionWithDsl>> GetAllDsls(GetAllDslsRequest request, CallContext context = default);
 }
