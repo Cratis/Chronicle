@@ -374,7 +374,7 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
 
     return (
         <div className="schema-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div className="px-4 py-2">
+                <div className="px-4 py-4">
                     <Tooltip target="[data-pr-tooltip]" />
                     <div className="schema-editor-menubar">
                         <Menubar aria-label="Actions" model={menuItems} />
