@@ -156,14 +156,14 @@ Users
 | key=UserRegistered.userId
 | name=UserRegistered.name
 | orders=[
-|    identified by orderId
+|    orderId identifier
 |    key=OrderPlaced.orderId
 |    total=OrderPlaced.total
 |    status=OrderCompleted.status
 | ]
 ```
 
-The `identified by` clause specifies which property uniquely identifies each child item. Children support all the same operations as top-level projections, including nested children.
+The `identifier` syntax specifies which property uniquely identifies each child item. The new form places the child property name first, followed by the `identifier` keyword. Children support all the same operations as top-level projections, including nested children.
 
 ### Nested Children
 
@@ -172,9 +172,9 @@ Children can have their own children:
 ```
 Users
 | orders=[
-|    identified by orderId
+|    orderId identifier
 |    items=[
-|       identified by itemId
+|       itemId identifier
 |       name=ItemAdded.name
 |       quantity=ItemAdded.quantity
 |    ]
@@ -196,7 +196,7 @@ For children, the `removedWith` statement goes inside the children block:
 ```
 Users
 | orders=[
-|    identified by orderId
+|    orderId identifier
 |    total=OrderPlaced.total
 |    removedWith OrderCancelled
 | ]
@@ -220,7 +220,7 @@ Users
 | status="active" on UserRegistered
 | status="suspended" on UserSuspended
 | orders=[
-|    identified by orderId
+|    orderId identifier
 |    key=OrderPlaced.orderId
 |    total=OrderPlaced.total
 |    placedAt=OrderPlaced.$eventContext.occurred
@@ -259,7 +259,7 @@ Users
 | `key={Event}.{property}` | Simple key | `key=UserRegistered.userId` |
 | `key={prop1}:{Event}.{eventProp1}, {prop2}:{Event}.{eventProp2}` | Composite key | `key=userId:UserRegistered.userId, tenantId:UserRegistered.tenantId` |
 | `{property}=[...]` | Children definition | `orders=[...]` |
-| `identified by {property}` | Identify children uniquely | `identified by orderId` |
+| `{property} identifier` | Identify children uniquely | `orderId identifier` |
 | `removedWith {Event}` | Remove instance when event occurs | `removedWith UserDeleted` |
 
 ## Event Types

@@ -36,7 +36,7 @@ export const monarchLanguage: languages.IMonarchLanguage = {
         'by',
         'on',
         'join',
-        'identified',
+        'identifier',
         'removedWith',
     ],
 

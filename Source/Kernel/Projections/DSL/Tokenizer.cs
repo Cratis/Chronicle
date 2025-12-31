@@ -23,7 +23,7 @@ public class Tokenizer(string input)
         { "by", TokenType.By },
         { "on", TokenType.On },
         { "join", TokenType.Join },
-        { "identified", TokenType.Identified },
+        { "identifier", TokenType.IdentifierKeyword },
         { "removedWith", TokenType.RemovedWith }
     };
 

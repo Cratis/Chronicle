@@ -25,7 +25,7 @@ const keywords = [
     'by',
     'on',
     'join',
-    'identified',
+    'identifier',
     'removedWith',
 ];
 
@@ -158,6 +158,58 @@ export class ProjectionDslValidator {
             }
 
             const statement = line.substring(1).trim();
+
+            // Handle child collection blocks: e.g., "orders=[" followed by inner statements and "]"
+            const childStartMatch = statement.match(/^(\w+)\s*=\s*\[$/);
+            if (childStartMatch) {
+                const parentProp = childStartMatch[1];
+
+                // consume inner block lines until we find a line with ']' as the statement
+                let foundClosing = false;
+                for (let j = i + 1; j < lines.length; j++) {
+                    const innerRaw = lines[j].trim();
+                    if (!innerRaw || innerRaw.startsWith('#')) continue;
+
+                    if (!innerRaw.startsWith('|')) {
+                        markers.push({
+                            severity: 8,
+                            startLineNumber: j + 1,
+                            startColumn: 1,
+                            endLineNumber: j + 1,
+                            endColumn: Math.max(1, innerRaw.length + 1),
+                            message: 'Statements inside a collection must start with |',
+                        });
+                        continue;
+                    }
+
+                    const innerStmt = innerRaw.substring(1).trim();
+                    if (innerStmt === ']') {
+                        foundClosing = true;
+                        i = j; // advance outer loop to the closing line
+                        break;
+                    }
+
+                    // validate child-specific statements (identifier etc.) or fall back to regular validation
+                    if (!this.validateChildStatement(innerStmt, j + 1, markers, parentProp)) {
+                        // if not a child-specific statement, validate as a normal statement
+                        this.validateStatement(innerStmt, j + 1, markers);
+                    }
+                }
+
+                if (!foundClosing) {
+                    markers.push({
+                        severity: 8,
+                        startLineNumber: i + 1,
+                        startColumn: 1,
+                        endLineNumber: i + 1,
+                        endColumn: statement.length + 1,
+                        message: `Missing closing ']' for collection starting at '${parentProp}=['`,
+                    });
+                }
+
+                continue;
+            }
+
             this.validateStatement(statement, i + 1, markers);
         }
 
@@ -355,6 +407,53 @@ export class ProjectionDslValidator {
                 }
             }
         }
+    }
+
+    // Returns true if the statement was recognized and handled as a child-specific directive
+    private validateChildStatement(
+        statement: string,
+        lineNumber: number,
+        markers: languages.IMarkerData[],
+        parentProperty: string
+    ): boolean {
+        if (!statement) return false;
+
+        // Support new syntax: "<propertyName> identifier" (e.g., "orderId identifier")
+        const identifierPropMatch = statement.match(/^(\w+)\s+identifier$/);
+        if (identifierPropMatch) {
+            const idProp = identifierPropMatch[1];
+
+            const parentSchema = this.schema?.properties?.[parentProperty];
+            const itemsSchema = (parentSchema && (parentSchema as any).items) as JsonSchema | undefined;
+
+            if (!parentSchema || !itemsSchema || !(itemsSchema as any).properties) {
+                markers.push({
+                    severity: 8,
+                    startLineNumber: lineNumber,
+                    startColumn: 1,
+                    endLineNumber: lineNumber,
+                    endColumn: statement.length + 1,
+                    message: `Parent property '${parentProperty}' is not an array or missing item schema for child definitions.`,
+                });
+                return true;
+            }
+
+            const itemProps = (itemsSchema as any).properties as Record<string, any>;
+            if (!itemProps[idProp]) {
+                markers.push({
+                    severity: 4, // Warning
+                    startLineNumber: lineNumber,
+                    startColumn: 1,
+                    endLineNumber: lineNumber,
+                    endColumn: statement.length + 1,
+                    message: `Unknown identifier property '${idProp}' for items of '${parentProperty}'.`,
+                });
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private isNumericType(schema: PropertySchema): boolean {

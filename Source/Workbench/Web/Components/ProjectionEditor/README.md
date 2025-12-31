@@ -73,7 +73,7 @@ const editor = monaco.editor.create(document.getElementById('container'), {
 ### Syntax Highlighting
 
 The language service provides syntax highlighting for:
-- Keywords: `key`, `increment`, `decrement`, `count`, `by`, `on`, `join`, `identified`, `removedWith`
+- Keywords: `key`, `increment`, `decrement`, `count`, `by`, `on`, `join`, `identified`, `identifier`, `removedWith`
 - Operators: `=`, `+=`, `-=`, `|`, `.`, `:`, `,`
 - Comments: Lines starting with `#`
 - String literals (with escape sequences)

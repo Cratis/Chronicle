@@ -31,7 +31,7 @@ export const Projections = () => {
 | lastLogin=$eventContext.occurred
 | status="active" on UserRegistered
 | orders=[
-|    identified by orderId
+|    orderId identifier
 |    key=OrderPlaced.orderId
 |    total=OrderPlaced.total
 | ]`);*/

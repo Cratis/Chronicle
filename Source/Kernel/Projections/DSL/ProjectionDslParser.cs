@@ -550,11 +550,13 @@ public class ProjectionDslParser(IEnumerable<Token> tokens)
             {
                 Advance();
 
-                if (CurrentToken.Type == TokenType.Identified)
+                // new syntax: '<prop> identifier'
+                if (CurrentToken.Type == TokenType.Identifier && Peek().Type == TokenType.IdentifierKeyword)
                 {
-                    Advance();
-                    Expect(TokenType.By);
-                    identifiedBy = new PropertyPath(ExpectIdentifier());
+                    var idProp = CurrentToken.Value;
+                    Advance(); // consume identifier token (prop name)
+                    Advance(); // consume 'identifier' keyword
+                    identifiedBy = new PropertyPath(idProp);
                 }
                 else
                 {

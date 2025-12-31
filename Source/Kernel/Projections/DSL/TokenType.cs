@@ -109,9 +109,14 @@ public enum TokenType
     Identified = 19,
 
     /// <summary>
+    /// The keyword 'identifier' (child identifier shorthand).
+    /// </summary>
+    IdentifierKeyword = 20,
+
+    /// <summary>
     /// The keyword 'removedWith'.
     /// </summary>
-    RemovedWith = 20,
+    RemovedWith = 21,
 
     /// <summary>
     /// End of input.
