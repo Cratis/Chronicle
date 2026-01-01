@@ -5,69 +5,114 @@ import type { languages } from 'monaco-editor';
 
 export const languageId = 'projection-dsl';
 
+// Keywords for the Chronicle Rules DSL
+const KEYWORDS = [
+    'projection',
+    'every',
+    'on',
+    'key',
+    'parent',
+    'join',
+    'automap',
+    'children',
+    'add',
+    'remove',
+    'via',
+    'from',
+    'default',
+    'increment',
+    'decrement',
+    'by',
+    'count',
+    'set',
+    'unset',
+] as const;
+
+// Built-in functions and types
+const BUILTINS = [
+    '$eventSourceId',
+    '$causedBy',
+    '$occurred',
+    '$namespace',
+    '$eventContext',
+] as const;
+
+// Operators
+const OPERATORS = ['=', '+=', '-=', '=>', '.'];
+
 export const configuration: languages.LanguageConfiguration = {
     comments: {
         lineComment: '#',
     },
     brackets: [
+        ['{', '}'],
         ['[', ']'],
+        ['(', ')'],
     ],
     autoClosingPairs: [
+        { open: '{', close: '}' },
         { open: '[', close: ']' },
+        { open: '(', close: ')' },
         { open: '"', close: '"' },
         { open: "'", close: "'" },
+        { open: '`', close: '`' },
     ],
     surroundingPairs: [
+        { open: '{', close: '}' },
         { open: '[', close: ']' },
+        { open: '(', close: ')' },
         { open: '"', close: '"' },
         { open: "'", close: "'" },
+        { open: '`', close: '`' },
     ],
+    indentationRules: {
+        increaseIndentPattern: /^.*(:|\bon\b|\bevery\b|\bchildren\b|\bparent\b)\s*$/,
+        decreaseIndentPattern: /^.*\}.*$/,
+    },
+    folding: {
+        offSide: true,
+        markers: {
+            start: /^\s*(projection|every|on|children|parent)/,
+            end: /^\s*$/,
+        },
+    },
 };
 
 export const monarchLanguage: languages.IMonarchLanguage = {
     defaultToken: '',
-    tokenPostfix: '.projection-dsl',
+    tokenPostfix: '.chronicle-rules-dsl',
 
-    keywords: [
-        'key',
-        'increment',
-        'decrement',
-        'count',
-        'by',
-        'on',
-        'join',
-        'identifier',
-        'removedWith',
-    ],
+    keywords: KEYWORDS,
+    builtins: BUILTINS,
+    operators: OPERATORS,
 
-    operators: ['=', '+', '-', '|', '.', ':', ','],
-
-    symbols: /[=><!~?:&|+\-*\/\^%]+/,
-
+    // Symbols
+    symbols: /[=><!~?:&|+\-*/^%]+/,
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
 
     tokenizer: {
         root: [
-            // Comments
-            [/#.*$/, 'comment'],
+            // Whitespace
+            { include: '@whitespace' },
 
-            // Keywords
+            // Template strings with ${...} interpolation
+            [/`/, { token: 'string.template', next: '@templateString' }],
+
+            // Identifiers and keywords
             [
                 /[a-zA-Z_$][\w$]*/,
                 {
                     cases: {
                         '@keywords': 'keyword',
+                        '@builtins': 'variable.predefined',
                         '@default': 'identifier',
                     },
                 },
             ],
 
-            // Whitespace
-            { include: '@whitespace' },
-
             // Delimiters and operators
-            [/[[\]]/, '@brackets'],
-            [/[(),.]/, 'delimiter'],
+            [/[{}()[\]]/, '@brackets'],
+            [/=>/, 'operator.arrow'],
             [
                 /@symbols/,
                 {
@@ -80,29 +125,43 @@ export const monarchLanguage: languages.IMonarchLanguage = {
 
             // Numbers
             [/\d*\.\d+([eE][-+]?\d+)?/, 'number.float'],
+            [/0[xX][0-9a-fA-F]+/, 'number.hex'],
             [/\d+/, 'number'],
 
+            // Delimiter: after number because of .\d floats
+            [/[;,.]/, 'delimiter'],
+
             // Strings
-            [/"([^"\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-            [/'([^'\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-            [/"/, 'string', '@string_double'],
-            [/'/, 'string', '@string_single'],
+            [/"([^"\\]|\\.)*$/, 'string.invalid'],
+            [/"/, { token: 'string.quote', next: '@string' }],
         ],
 
-        whitespace: [[/[ \t\r\n]+/, '']],
+        whitespace: [
+            [/[ \t\r\n]+/, ''],
+            [/#.*$/, 'comment'],
+        ],
 
-        string_double: [
+        // Template string state
+        templateString: [
+            [/\$\{/, { token: 'delimiter.bracket', next: '@templateExpression' }],
+            [/[^\\`$]+/, 'string.template'],
+            [/@escapes/, 'string.template.escape'],
+            [/\\./, 'string.template.escape.invalid'],
+            [/`/, { token: 'string.template', next: '@pop' }],
+        ],
+
+        // Template expression inside ${}
+        templateExpression: [
+            [/\}/, { token: 'delimiter.bracket', next: '@pop' }],
+            { include: '@root' },
+        ],
+
+        // Regular string state
+        string: [
             [/[^\\"]+/, 'string'],
             [/@escapes/, 'string.escape'],
             [/\\./, 'string.escape.invalid'],
-            [/"/, 'string', '@pop'],
-        ],
-
-        string_single: [
-            [/[^\\']+/, 'string'],
-            [/@escapes/, 'string.escape'],
-            [/\\./, 'string.escape.invalid'],
-            [/'/, 'string', '@pop'],
+            [/"/, { token: 'string.quote', next: '@pop' }],
         ],
     },
 };

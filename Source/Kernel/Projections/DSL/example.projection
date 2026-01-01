@@ -1,0 +1,69 @@
+# Example Chronicle Projection DSL
+
+projection OrderSummary
+
+every OrderCreated
+  key orderId = $eventSourceId
+  customerId = OrderCreated.customerId
+  totalAmount = OrderCreated.amount
+  itemCount = 0
+
+on OrderLineAdded
+  key orderId = $eventSourceId
+  totalAmount += OrderLineAdded.lineTotal
+  itemCount increment by 1
+
+on OrderCompleted
+  key orderId = $eventSourceId
+  completedDate = $occurred
+  status = "Completed"
+
+children orderLines from OrderLineAdded
+  add
+    lineId = OrderLineAdded.lineId
+    productName = OrderLineAdded.productName
+    quantity = OrderLineAdded.quantity
+    price = OrderLineAdded.price
+
+children orderLines from OrderLineRemoved
+  remove via OrderLineRemoved.lineId
+
+# Example with parent relationship
+projection OrderLine
+
+every OrderLineAdded
+  key lineId = $eventSourceId
+  productName = OrderLineAdded.productName
+  quantity = OrderLineAdded.quantity
+  price = OrderLineAdded.price
+
+  parent order join orderId from OrderLineAdded.orderId
+
+# Example with automap
+projection CustomerProfile
+
+every CustomerRegistered
+  key customerId = $eventSourceId
+  automap
+
+on CustomerEmailUpdated
+  key customerId = $eventSourceId
+  email = CustomerEmailUpdated.newEmail
+
+# Example with template literals
+projection OrderNotification
+
+every OrderCreated
+  key orderId = $eventSourceId
+  message = `Order ${OrderCreated.orderId} created for customer ${OrderCreated.customerId}`
+
+# Example with count
+projection ProductStats
+
+on ProductViewed
+  key productId = ProductViewed.productId
+  viewCount count
+
+on ProductPurchased
+  key productId = ProductPurchased.productId
+  purchaseCount count

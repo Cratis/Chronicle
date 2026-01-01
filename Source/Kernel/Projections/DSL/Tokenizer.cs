@@ -6,31 +6,54 @@ using System.Text;
 namespace Cratis.Chronicle.Projections.DSL;
 
 /// <summary>
-/// Tokenizer for the projection DSL.
+/// Tokenizer for the indentation-based projection DSL.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Tokenizer"/> class.
-/// </remarks>
-/// <param name="input">The input string to tokenize.</param>
-public class Tokenizer(string input)
+public class Tokenizer
 {
     static readonly Dictionary<string, TokenType> _keywords = new(StringComparer.OrdinalIgnoreCase)
     {
+        { "projection", TokenType.Projection },
+        { "every", TokenType.Every },
+        { "on", TokenType.On },
         { "key", TokenType.Key },
+        { "parent", TokenType.Parent },
+        { "join", TokenType.Join },
+        { "events", TokenType.Events },
+        { "children", TokenType.Children },
+        { "id", TokenType.Id },
+        { "remove", TokenType.Remove },
+        { "via", TokenType.Via },
+        { "automap", TokenType.AutoMap },
+        { "exclude", TokenType.Exclude },
         { "increment", TokenType.Increment },
         { "decrement", TokenType.Decrement },
         { "count", TokenType.Count },
+        { "add", TokenType.Add },
+        { "subtract", TokenType.Subtract },
         { "by", TokenType.By },
-        { "on", TokenType.On },
-        { "join", TokenType.Join },
-        { "identifier", TokenType.IdentifierKeyword },
-        { "removedWith", TokenType.RemovedWith }
+        { "true", TokenType.True },
+        { "false", TokenType.False },
+        { "null", TokenType.Null },
+        { "e", TokenType.EventRef },
+        { "ctx", TokenType.ContextRef }
     };
 
-    readonly string _input = input;
+    readonly string _input;
+    readonly Stack<int> _indentStack = new();
     int _position;
     int _line = 1;
     int _column = 1;
+    bool _atLineStart = true;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Tokenizer"/> class.
+    /// </summary>
+    /// <param name="input">The input string to tokenize.</param>
+    public Tokenizer(string input)
+    {
+        _input = input;
+        _indentStack.Push(0);
+    }
 
     /// <summary>
     /// Tokenizes the input string into a list of tokens.
@@ -43,10 +66,17 @@ public class Tokenizer(string input)
         while (_position < _input.Length)
         {
             var token = NextToken();
-            if (token.Type != TokenType.NewLine)
+            if (token.Type != TokenType.Invalid)
             {
                 tokens.Add(token);
             }
+        }
+
+        // Emit remaining dedents at end of file
+        while (_indentStack.Count > 1)
+        {
+            _indentStack.Pop();
+            tokens.Add(new Token(TokenType.Dedent, string.Empty, _line, _column));
         }
 
         tokens.Add(new Token(TokenType.EndOfInput, string.Empty, _line, _column));
@@ -55,7 +85,17 @@ public class Tokenizer(string input)
 
     Token NextToken()
     {
-        SkipWhitespace();
+        // Handle indentation at line start
+        if (_atLineStart)
+        {
+            return HandleIndentation();
+        }
+
+        // Skip whitespace (not at line start)
+        while (_position < _input.Length && char.IsWhiteSpace(_input[_position]) && _input[_position] != '\n')
+        {
+            Advance();
+        }
 
         if (_position >= _input.Length)
         {
@@ -63,164 +103,172 @@ public class Tokenizer(string input)
         }
 
         var currentChar = _input[_position];
-        var tokenLine = _line;
-        var tokenColumn = _column;
+        var line = _line;
+        var column = _column;
 
+        // Comments
+        if (currentChar == '#')
+        {
+            SkipComment();
+            return NextToken();
+        }
+
+        // Newline
         if (currentChar == '\n')
         {
-            _position++;
-            _line++;
-            _column = 1;
-            return new Token(TokenType.NewLine, "\n", tokenLine, tokenColumn);
+            Advance();
+            _atLineStart = true;
+            return new Token(TokenType.NewLine, "\n", line, column);
         }
 
-        if (currentChar == '|')
+        // Template string
+        if (currentChar == '`')
         {
-            _position++;
-            _column++;
-            return new Token(TokenType.Pipe, "|", tokenLine, tokenColumn);
+            return ScanTemplateString();
         }
 
-        if (currentChar == '=')
-        {
-            _position++;
-            _column++;
-            return new Token(TokenType.Equals, "=", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == '+')
-        {
-            // support '+=' compound operator
-            if (_position + 1 < _input.Length && _input[_position + 1] == '=')
-            {
-                _position += 2;
-                _column += 2;
-                return new Token(TokenType.PlusEquals, "+=", tokenLine, tokenColumn);
-            }
-
-            _position++;
-            _column++;
-            return new Token(TokenType.Plus, "+", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == '-')
-        {
-            // support '-=' compound operator
-            if (_position + 1 < _input.Length && _input[_position + 1] == '=')
-            {
-                _position += 2;
-                _column += 2;
-                return new Token(TokenType.MinusEquals, "-=", tokenLine, tokenColumn);
-            }
-
-            _position++;
-            _column++;
-            return new Token(TokenType.Minus, "-", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == '.')
-        {
-            _position++;
-            _column++;
-            return new Token(TokenType.Dot, ".", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == ':')
-        {
-            _position++;
-            _column++;
-            return new Token(TokenType.Colon, ":", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == ',')
-        {
-            _position++;
-            _column++;
-            return new Token(TokenType.Comma, ",", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == '[')
-        {
-            _position++;
-            _column++;
-            return new Token(TokenType.LeftBracket, "[", tokenLine, tokenColumn);
-        }
-
-        if (currentChar == ']')
-        {
-            _position++;
-            _column++;
-            return new Token(TokenType.RightBracket, "]", tokenLine, tokenColumn);
-        }
-
+        // String literal
         if (currentChar == '"' || currentChar == '\'')
         {
-            return ReadStringLiteral(tokenLine, tokenColumn);
+            return ScanString(currentChar);
         }
 
+        // Number
         if (char.IsDigit(currentChar))
         {
-            return ReadNumber(tokenLine, tokenColumn);
+            return ScanNumber();
         }
 
-        if (char.IsLetter(currentChar) || currentChar == '_' || currentChar == '$')
+        // Operators and punctuation
+        switch (currentChar)
         {
-            return ReadIdentifierOrKeyword(tokenLine, tokenColumn);
+            case '=':
+                Advance();
+                if (_position < _input.Length && _input[_position] == '>')
+                {
+                    Advance();
+                    return new Token(TokenType.Arrow, "=>", line, column);
+                }
+                return new Token(TokenType.Equals, "=", line, column);
+
+            case '.':
+                Advance();
+                return new Token(TokenType.Dot, ".", line, column);
+
+            case ',':
+                Advance();
+                return new Token(TokenType.Comma, ",", line, column);
+
+            case '{':
+                Advance();
+                return new Token(TokenType.LeftBrace, "{", line, column);
+
+            case '}':
+                Advance();
+                return new Token(TokenType.RightBrace, "}", line, column);
+
+            case '$':
+                Advance();
+                return new Token(TokenType.Dollar, "$", line, column);
         }
 
-        _position++;
-        _column++;
-        return new Token(TokenType.Invalid, currentChar.ToString(), tokenLine, tokenColumn);
+        // Identifier or keyword
+        if (char.IsLetter(currentChar) || currentChar == '_')
+        {
+            return ScanIdentifierOrKeyword();
+        }
+
+        // Unknown character
+        Advance();
+        return new Token(TokenType.Invalid, currentChar.ToString(), line, column);
     }
 
-    Token ReadIdentifierOrKeyword(int tokenLine, int tokenColumn)
+    Token HandleIndentation()
     {
+        var indentLevel = 0;
+        var line = _line;
+        var column = _column;
+
+        // Count leading spaces
+        while (_position < _input.Length && _input[_position] == ' ')
+        {
+            indentLevel++;
+            Advance();
+        }
+
+        // Empty line or comment - ignore indentation
+        if (_position >= _input.Length || _input[_position] == '\n' || _input[_position] == '#')
+        {
+            _atLineStart = false;
+            return NextToken();
+        }
+
+        _atLineStart = false;
+        var currentIndent = _indentStack.Peek();
+
+        if (indentLevel > currentIndent)
+        {
+            _indentStack.Push(indentLevel);
+            return new Token(TokenType.Indent, string.Empty, line, column);
+        }
+
+        if (indentLevel < currentIndent)
+        {
+            // Find matching indentation level
+            while (_indentStack.Count > 1 && _indentStack.Peek() > indentLevel)
+            {
+                _indentStack.Pop();
+            }
+
+            if (_indentStack.Peek() != indentLevel)
+            {
+                throw new ProjectionDslSyntaxError($"Indentation error: {indentLevel} spaces does not match any outer indentation level", line, column);
+            }
+
+            return new Token(TokenType.Dedent, string.Empty, line, column);
+        }
+
+        // Same indentation - continue normally
+        return NextToken();
+    }
+
+    Token ScanIdentifierOrKeyword()
+    {
+        var line = _line;
+        var column = _column;
         var sb = new StringBuilder();
 
-        while (_position < _input.Length)
+        while (_position < _input.Length &&
+               (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
         {
-            var currentChar = _input[_position];
-            if (char.IsLetterOrDigit(currentChar) || currentChar == '_' || currentChar == '$')
-            {
-                sb.Append(currentChar);
-                _position++;
-                _column++;
-            }
-            else
-            {
-                break;
-            }
+            sb.Append(_input[_position]);
+            Advance();
         }
 
         var value = sb.ToString();
-        var tokenType = _keywords.TryGetValue(value, out var keyword) ? keyword : TokenType.Identifier;
 
-        return new Token(tokenType, value, tokenLine, tokenColumn);
+        if (_keywords.TryGetValue(value, out var tokenType))
+        {
+            return new Token(tokenType, value, line, column);
+        }
+
+        return new Token(TokenType.Identifier, value, line, column);
     }
 
-    Token ReadStringLiteral(int tokenLine, int tokenColumn)
+    Token ScanString(char quote)
     {
-        var quoteChar = _input[_position];
-        _position++;
-        _column++;
-
+        var line = _line;
+        var column = _column;
         var sb = new StringBuilder();
-        while (_position < _input.Length)
-        {
-            var currentChar = _input[_position];
-            if (currentChar == quoteChar)
-            {
-                _position++;
-                _column++;
-                break;
-            }
+        Advance(); // Skip opening quote
 
-            if (currentChar == '\\' && _position + 1 < _input.Length)
+        while (_position < _input.Length && _input[_position] != quote)
+        {
+            if (_input[_position] == '\\' && _position + 1 < _input.Length)
             {
-                _position++;
-                _column++;
-                var nextChar = _input[_position];
-                sb.Append(nextChar switch
+                Advance();
+                var escapeChar = _input[_position];
+                sb.Append(escapeChar switch
                 {
                     'n' => '\n',
                     't' => '\t',
@@ -228,74 +276,85 @@ public class Tokenizer(string input)
                     '\\' => '\\',
                     '"' => '"',
                     '\'' => '\'',
-                    _ => nextChar
+                    _ => escapeChar
                 });
-                _position++;
-                _column++;
+                Advance();
             }
             else
             {
-                sb.Append(currentChar);
-                _position++;
-                _column++;
+                sb.Append(_input[_position]);
+                Advance();
             }
         }
 
-        return new Token(TokenType.StringLiteral, sb.ToString(), tokenLine, tokenColumn);
+        if (_position >= _input.Length)
+        {
+            throw new ProjectionDslSyntaxError("Unterminated string literal", line, column);
+        }
+
+        Advance(); // Skip closing quote
+        return new Token(TokenType.StringLiteral, sb.ToString(), line, column);
     }
 
-    Token ReadNumber(int tokenLine, int tokenColumn)
+    Token ScanTemplateString()
     {
+        var line = _line;
+        var column = _column;
         var sb = new StringBuilder();
-        var hasDecimalPoint = false;
+        Advance(); // Skip opening backtick
 
-        while (_position < _input.Length)
+        while (_position < _input.Length && _input[_position] != '`')
         {
-            var currentChar = _input[_position];
-            if (char.IsDigit(currentChar))
-            {
-                sb.Append(currentChar);
-                _position++;
-                _column++;
-            }
-            else if (currentChar == '.' && !hasDecimalPoint)
-            {
-                hasDecimalPoint = true;
-                sb.Append(currentChar);
-                _position++;
-                _column++;
-            }
-            else
-            {
-                break;
-            }
+            sb.Append(_input[_position]);
+            Advance();
         }
 
-        return new Token(TokenType.NumberLiteral, sb.ToString(), tokenLine, tokenColumn);
+        if (_position >= _input.Length)
+        {
+            throw new ProjectionDslSyntaxError("Unterminated template string", line, column);
+        }
+
+        Advance(); // Skip closing backtick
+        return new Token(TokenType.TemplateLiteral, sb.ToString(), line, column);
     }
 
-    void SkipWhitespace()
+    Token ScanNumber()
     {
-        while (_position < _input.Length)
+        var line = _line;
+        var column = _column;
+        var sb = new StringBuilder();
+
+        while (_position < _input.Length && (char.IsDigit(_input[_position]) || _input[_position] == '.'))
         {
-            var currentChar = _input[_position];
-            if (currentChar == ' ' || currentChar == '\t' || currentChar == '\r')
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        return new Token(TokenType.NumberLiteral, sb.ToString(), line, column);
+    }
+
+    void SkipComment()
+    {
+        while (_position < _input.Length && _input[_position] != '\n')
+        {
+            Advance();
+        }
+    }
+
+    void Advance()
+    {
+        if (_position < _input.Length)
+        {
+            if (_input[_position] == '\n')
             {
-                _position++;
-                _column++;
-            }
-            else if (currentChar == '#')
-            {
-                while (_position < _input.Length && _input[_position] != '\n')
-                {
-                    _position++;
-                    _column++;
-                }
+                _line++;
+                _column = 1;
             }
             else
             {
-                break;
+                _column++;
             }
+            _position++;
         }
     }
 }

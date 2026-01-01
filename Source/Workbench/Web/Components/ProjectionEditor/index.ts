@@ -29,7 +29,7 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     // Register completion provider with helpful trigger characters
     const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, {
         provideCompletionItems: completionProvider.provideCompletionItems.bind(completionProvider),
-        triggerCharacters: ['.', ' ', '=', '['],
+        triggerCharacters: ['.', ' ', '=', '\n'],
     });
     disposables.push(completionDisposable);
 

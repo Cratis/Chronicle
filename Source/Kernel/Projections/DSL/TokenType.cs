@@ -9,138 +9,263 @@ namespace Cratis.Chronicle.Projections.DSL;
 public enum TokenType
 {
     /// <summary>
-    /// An identifier (e.g., property name, event type name, read model name).
+    /// An identifier (e.g., property name, event type name).
     /// </summary>
-    Identifier = 0,
-
-    /// <summary>
-    /// The pipe operator (|).
-    /// </summary>
-    Pipe = 1,
-
-    /// <summary>
-    /// The equals operator (=).
-    /// </summary>
-    Equals = 2,
-
-    /// <summary>
-    /// The plus operator (+).
-    /// </summary>
-    Plus = 3,
-
-    /// <summary>
-    /// The minus operator (-).
-    /// </summary>
-    Minus = 4,
-
-    /// <summary>
-    /// The dot operator (.).
-    /// </summary>
-    Dot = 5,
-
-    /// <summary>
-    /// The colon operator (:).
-    /// </summary>
-    Colon = 6,
-
-    /// <summary>
-    /// The comma operator (,).
-    /// </summary>
-    Comma = 7,
-
-    /// <summary>
-    /// The left bracket ([).
-    /// </summary>
-    LeftBracket = 8,
-
-    /// <summary>
-    /// The right bracket (]).
-    /// </summary>
-    RightBracket = 9,
-
-    /// <summary>
-    /// A string literal enclosed in quotes.
-    /// </summary>
-    StringLiteral = 10,
+    Identifier,
 
     /// <summary>
     /// A number literal.
     /// </summary>
-    NumberLiteral = 11,
+    NumberLiteral,
 
     /// <summary>
-    /// The keyword 'key'.
+    /// A string literal enclosed in quotes.
     /// </summary>
-    Key = 12,
+    StringLiteral,
 
     /// <summary>
-    /// The keyword 'increment'.
+    /// A template string with interpolations (`text ${expr}`).
     /// </summary>
-    Increment = 13,
+    TemplateLiteral,
 
     /// <summary>
-    /// The keyword 'decrement'.
+    /// The keyword 'projection'.
     /// </summary>
-    Decrement = 14,
+    Projection,
 
     /// <summary>
-    /// The keyword 'count'.
+    /// The keyword 'every'.
     /// </summary>
-    Count = 15,
-
-    /// <summary>
-    /// The keyword 'by'.
-    /// </summary>
-    By = 16,
+    Every,
 
     /// <summary>
     /// The keyword 'on'.
     /// </summary>
-    On = 17,
+    On,
+
+    /// <summary>
+    /// The keyword 'key'.
+    /// </summary>
+    Key,
+
+    /// <summary>
+    /// The keyword 'parent'.
+    /// </summary>
+    Parent,
 
     /// <summary>
     /// The keyword 'join'.
     /// </summary>
-    Join = 18,
+    Join,
 
     /// <summary>
-    /// The keyword 'identified'.
+    /// The keyword 'events'.
     /// </summary>
-    Identified = 19,
+    Events,
 
     /// <summary>
-    /// The keyword 'identifier' (child identifier shorthand).
+    /// The keyword 'children'.
     /// </summary>
-    IdentifierKeyword = 20,
+    Children,
 
     /// <summary>
-    /// The keyword 'removedWith'.
+    /// The keyword 'id'.
     /// </summary>
-    RemovedWith = 21,
+    Id,
 
     /// <summary>
-    /// End of input.
+    /// The keyword 'remove'.
     /// </summary>
-    EndOfInput = 21,
+    Remove,
+
+    /// <summary>
+    /// The keyword 'via'.
+    /// </summary>
+    Via,
+
+    /// <summary>
+    /// The keyword 'automap'.
+    /// </summary>
+    AutoMap,
+
+    /// <summary>
+    /// The keyword 'exclude'.
+    /// </summary>
+    Exclude,
+
+    /// <summary>
+    /// The keyword 'increment'.
+    /// </summary>
+    Increment,
+
+    /// <summary>
+    /// The keyword 'decrement'.
+    /// </summary>
+    Decrement,
+
+    /// <summary>
+    /// The keyword 'count'.
+    /// </summary>
+    Count,
+
+    /// <summary>
+    /// The keyword 'add'.
+    /// </summary>
+    Add,
+
+    /// <summary>
+    /// The keyword 'subtract'.
+    /// </summary>
+    Subtract,
+
+    /// <summary>
+    /// The keyword 'by'.
+    /// </summary>
+    By,
+
+    /// <summary>
+    /// The keyword 'true'.
+    /// </summary>
+    True,
+
+    /// <summary>
+    /// The keyword 'false'.
+    /// </summary>
+    False,
+
+    /// <summary>
+    /// The keyword 'null'.
+    /// </summary>
+    Null,
+
+    /// <summary>
+    /// The keyword 'e' (event reference).
+    /// </summary>
+    EventRef,
+
+    /// <summary>
+    /// The keyword 'ctx' (context reference).
+    /// </summary>
+    ContextRef,
+
+    /// <summary>
+    /// The equals operator (=).
+    /// </summary>
+    Equals,
+
+    /// <summary>
+    /// The arrow operator (=>).
+    /// </summary>
+    Arrow,
+
+    /// <summary>
+    /// The dot operator (.).
+    /// </summary>
+    Dot,
+
+    /// <summary>
+    /// The comma operator (,).
+    /// </summary>
+    Comma,
+
+    /// <summary>
+    /// The left brace ({).
+    /// </summary>
+    LeftBrace,
+
+    /// <summary>
+    /// The right brace (}).
+    /// </summary>
+    RightBrace,
+
+    /// <summary>
+    /// The dollar sign ($).
+    /// </summary>
+    Dollar,
+
+    /// <summary>
+    /// Indentation increase.
+    /// </summary>
+    Indent,
+
+    /// <summary>
+    /// Indentation decrease.
+    /// </summary>
+    Dedent,
 
     /// <summary>
     /// New line character.
     /// </summary>
-    NewLine = 22,
+    NewLine,
+
+    /// <summary>
+    /// End of input.
+    /// </summary>
+    EndOfInput,
 
     /// <summary>
     /// Invalid token.
     /// </summary>
-    Invalid = 23
+    Invalid,
 
-    ,
+    // Legacy token types (for backward compatibility with old DSL parser)
     /// <summary>
-    /// The plus-and-equals operator (+=).
+    /// The pipe operator (|) - Legacy.
     /// </summary>
-    PlusEquals = 24,
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    Pipe,
 
     /// <summary>
-    /// The minus-and-equals operator (-=).
+    /// The colon operator (:) - Legacy.
     /// </summary>
-    MinusEquals = 25
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    Colon,
+
+    /// <summary>
+    /// The left bracket ([) - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    LeftBracket,
+
+    /// <summary>
+    /// The right bracket (]) - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    RightBracket,
+
+    /// <summary>
+    /// The plus operator (+) - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    Plus,
+
+    /// <summary>
+    /// The minus operator (-) - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    Minus,
+
+    /// <summary>
+    /// The plus-and-equals operator (+=) - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    PlusEquals,
+
+    /// <summary>
+    /// The minus-and-equals operator (-=) - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    MinusEquals,
+
+    /// <summary>
+    /// The keyword 'removedWith' - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    RemovedWith,
+
+    /// <summary>
+    /// The keyword 'identifier' - Legacy.
+    /// </summary>
+    [Obsolete("Legacy token type for old pipe-based DSL")]
+    IdentifierKeyword
 }
