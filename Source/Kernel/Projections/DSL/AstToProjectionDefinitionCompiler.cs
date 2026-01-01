@@ -15,10 +15,6 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// <summary>
 /// Compiles an AST Document from the RulesProjectionDslParser into a ProjectionDefinition.
 /// </summary>
-/// <remarks>
-/// This is a work in progress. Currently implements basic event handling and property mappings.
-/// TODO: Implement children operations, parent relationships, joins, and advanced features.
-/// </remarks>
 public class AstToProjectionDefinitionCompiler
 {
     /// <summary>
@@ -89,8 +85,15 @@ public class AstToProjectionDefinitionCompiler
             case OnEventBlock onEvent:
                 ProcessOnEventBlock(onEvent, from);
                 break;
+            case EveryBlock every:
+                fromEvery = ProcessEveryBlock(every);
+                break;
+            case KeyDirective:
+            case CompositeKeyDirective:
+                // Keys are handled within OnEventBlocks
+                break;
             case AutoMapDirective:
-                // TODO: Implement automap
+                // AutoMap is handled within OnEventBlocks
                 break;
             case ChildrenBlock childrenBlock:
                 ProcessChildrenBlock(childrenBlock, children, removedWith);
@@ -108,41 +111,14 @@ public class AstToProjectionDefinitionCompiler
         var eventType = EventType.Parse(onEvent.EventType.Name);
         var properties = new Dictionary<PropertyPath, string>();
         var keyExpression = onEvent.Key != null ? ConvertExpression(onEvent.Key) : PropertyExpression.NotSet;
+        var parentKeyExpression = onEvent.ParentKey != null ? ConvertExpression(onEvent.ParentKey) : null;
 
         foreach (var operation in onEvent.Mappings)
         {
-            switch (operation)
-            {
-                case AssignmentOperation assignment:
-                    var propertyPath = new PropertyPath(assignment.PropertyName);
-                    properties[propertyPath] = ConvertExpressionToString(assignment.Value);
-                    break;
-                case AddOperation add:
-                    var addPath = new PropertyPath(add.PropertyName);
-                    properties[addPath] = $"+= {ConvertExpressionToString(add.Value)}";
-                    break;
-                case SubtractOperation subtract:
-                    var subtractPath = new PropertyPath(subtract.PropertyName);
-                    properties[subtractPath] = $"-= {ConvertExpressionToString(subtract.Value)}";
-                    break;
-                case IncrementOperation increment:
-                    var incrementPath = new PropertyPath(increment.PropertyName);
-                    properties[incrementPath] = "increment";
-                    break;
-                case DecrementOperation decrement:
-                    var decrementPath = new PropertyPath(decrement.PropertyName);
-                    properties[decrementPath] = "decrement";
-                    break;
-                case CountOperation count:
-                    var countPath = new PropertyPath(count.PropertyName);
-                    properties[countPath] = "count";
-                    break;
-                default:
-                    throw new NotSupportedException($"Operation type {operation.GetType().Name} is not yet supported");
-            }
+            ProcessMappingOperation(operation, properties);
         }
 
-        from[eventType] = new FromDefinition(properties, keyExpression, ParentKey: null);
+        from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression);
     }
 
     void ProcessChildrenBlock(
@@ -150,14 +126,192 @@ public class AstToProjectionDefinitionCompiler
         Dictionary<PropertyPath, ChildrenDefinition> children,
         Dictionary<EventType, RemovedWithDefinition> removedWith)
     {
-        // TODO: Implement children block processing
-        // This requires understanding the children definitions structure
+        var collectionPath = new PropertyPath(childrenBlock.CollectionName);
+        var identifiedBy = ConvertExpression(childrenBlock.IdentifierExpression);
+
+        var childFrom = new Dictionary<EventType, FromDefinition>();
+        var childJoin = new Dictionary<EventType, JoinDefinition>();
+        var nestedChildren = new Dictionary<PropertyPath, ChildrenDefinition>();
+        var childRemovedWith = new Dictionary<EventType, RemovedWithDefinition>();
+        var childRemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>();
+        var childEvery = new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false);
+
+        foreach (var childBlock in childrenBlock.ChildBlocks)
+        {
+            ProcessChildBlock(childBlock, childFrom, childJoin, nestedChildren, childRemovedWith, childRemovedWithJoin, ref childEvery);
+        }
+
+        children[collectionPath] = new ChildrenDefinition(
+            new PropertyPath(identifiedBy.Value),
+            childFrom,
+            childJoin,
+            nestedChildren,
+            childEvery,
+            childRemovedWith,
+            childRemovedWithJoin);
+    }
+
+    void ProcessChildBlock(
+        ChildBlock childBlock,
+        Dictionary<EventType, FromDefinition> from,
+        Dictionary<EventType, JoinDefinition> join,
+        Dictionary<PropertyPath, ChildrenDefinition> children,
+        Dictionary<EventType, RemovedWithDefinition> removedWith,
+        Dictionary<EventType, RemovedWithJoinDefinition> removedWithJoin,
+        ref FromEveryDefinition fromEvery)
+    {
+        switch (childBlock)
+        {
+            case ChildOnEventBlock onEvent:
+                ProcessChildOnEventBlock(onEvent, from);
+                break;
+            case ChildJoinBlock joinBlock:
+                ProcessChildJoinBlock(joinBlock, join);
+                break;
+            case NestedChildrenBlock nestedChildren:
+                ProcessNestedChildrenBlock(nestedChildren, children, removedWith);
+                break;
+            case RemoveBlock remove:
+                ProcessRemoveBlock(remove, removedWith);
+                break;
+            case RemoveViaJoinBlock removeJoin:
+                ProcessRemoveViaJoinBlock(removeJoin, removedWithJoin);
+                break;
+            default:
+                throw new NotSupportedException($"Child block type {childBlock.GetType().Name} is not yet supported");
+        }
+    }
+
+    void ProcessChildOnEventBlock(ChildOnEventBlock onEvent, Dictionary<EventType, FromDefinition> from)
+    {
+        var eventType = EventType.Parse(onEvent.EventType.Name);
+        var properties = new Dictionary<PropertyPath, string>();
+        var keyExpression = onEvent.Key != null ? ConvertExpression(onEvent.Key) : PropertyExpression.NotSet;
+        var parentKeyExpression = onEvent.ParentKey != null ? ConvertExpression(onEvent.ParentKey) : null;
+
+        foreach (var operation in onEvent.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression);
+    }
+
+    void ProcessChildJoinBlock(ChildJoinBlock joinBlock, Dictionary<EventType, JoinDefinition> join)
+    {
+        var properties = new Dictionary<PropertyPath, string>();
+
+        foreach (var operation in joinBlock.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        // For joins, we need to handle each event type
+        foreach (var eventType in joinBlock.EventTypes)
+        {
+            var et = EventType.Parse(eventType.Name);
+            join[et] = new JoinDefinition(
+                new PropertyPath(joinBlock.OnProperty),
+                properties,
+                PropertyExpression.NotSet);
+        }
+    }
+
+    void ProcessNestedChildrenBlock(
+        NestedChildrenBlock nestedChildren,
+        Dictionary<PropertyPath, ChildrenDefinition> children,
+        Dictionary<EventType, RemovedWithDefinition> removedWith)
+    {
+        // Convert to ChildrenBlock and process
+        var childrenBlock = new ChildrenBlock(
+            nestedChildren.CollectionName,
+            nestedChildren.IdentifierExpression,
+            nestedChildren.AutoMap,
+            nestedChildren.ChildBlocks);
+
+        ProcessChildrenBlock(childrenBlock, children, removedWith);
+    }
+
+    void ProcessRemoveBlock(RemoveBlock remove, Dictionary<EventType, RemovedWithDefinition> removedWith)
+    {
+        var eventType = EventType.Parse(remove.EventType.Name);
+        var key = remove.Key != null ? ConvertExpression(remove.Key) : PropertyExpression.NotSet;
+        var parentKey = remove.ParentKey != null ? ConvertExpression(remove.ParentKey) : null;
+
+        removedWith[eventType] = new RemovedWithDefinition(key, parentKey);
+    }
+
+    void ProcessRemoveViaJoinBlock(RemoveViaJoinBlock removeJoin, Dictionary<EventType, RemovedWithJoinDefinition> removedWithJoin)
+    {
+        var eventType = EventType.Parse(removeJoin.EventType.Name);
+        var key = removeJoin.Key != null ? ConvertExpression(removeJoin.Key) : PropertyExpression.NotSet;
+
+        removedWithJoin[eventType] = new RemovedWithJoinDefinition(key);
     }
 
     void ProcessJoinBlock(JoinBlock joinBlock, Dictionary<EventType, JoinDefinition> join)
     {
-        // TODO: Implement join block processing
-        // This requires understanding the join definitions structure
+        var properties = new Dictionary<PropertyPath, string>();
+
+        foreach (var operation in joinBlock.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        // For joins, we need to handle each event type
+        foreach (var eventType in joinBlock.EventTypes)
+        {
+            var et = EventType.Parse(eventType.Name);
+            join[et] = new JoinDefinition(
+                new PropertyPath(joinBlock.OnProperty),
+                properties,
+                PropertyExpression.NotSet);
+        }
+    }
+
+    FromEveryDefinition ProcessEveryBlock(EveryBlock every)
+    {
+        var properties = new Dictionary<PropertyPath, string>();
+
+        foreach (var operation in every.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        return new FromEveryDefinition(properties, !every.ExcludeChildren);
+    }
+
+    void ProcessMappingOperation(MappingOperation operation, Dictionary<PropertyPath, string> properties)
+    {
+        switch (operation)
+        {
+            case AssignmentOperation assignment:
+                var propertyPath = new PropertyPath(assignment.PropertyName);
+                properties[propertyPath] = ConvertExpressionToString(assignment.Value);
+                break;
+            case AddOperation add:
+                var addPath = new PropertyPath(add.PropertyName);
+                properties[addPath] = $"+= {ConvertExpressionToString(add.Value)}";
+                break;
+            case SubtractOperation subtract:
+                var subtractPath = new PropertyPath(subtract.PropertyName);
+                properties[subtractPath] = $"-= {ConvertExpressionToString(subtract.Value)}";
+                break;
+            case IncrementOperation increment:
+                var incrementPath = new PropertyPath(increment.PropertyName);
+                properties[incrementPath] = "increment";
+                break;
+            case DecrementOperation decrement:
+                var decrementPath = new PropertyPath(decrement.PropertyName);
+                properties[decrementPath] = "decrement";
+                break;
+            case CountOperation count:
+                var countPath = new PropertyPath(count.PropertyName);
+                properties[countPath] = "count";
+                break;
+            default:
+                throw new NotSupportedException($"Operation type {operation.GetType().Name} is not yet supported");
+        }
     }
 
     PropertyExpression ConvertExpression(AST.Expression astExpression)

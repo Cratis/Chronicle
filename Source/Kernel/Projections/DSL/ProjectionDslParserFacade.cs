@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// Simple façade that wires the <see cref="Tokenizer"/>, <see cref="RulesProjectionDslParser"/>, and <see cref="AstToProjectionDefinitionCompiler"/>
 /// to provide a single entry point for parsing a DSL string into a <see cref="ProjectionDefinition"/>.
 /// </summary>
-public class ProjectionDslParserFacade : IProjectionDslParser
+public class ProjectionDslParserFacade
 {
     /// <inheritdoc/>
     public ProjectionDefinition Parse(string dsl, ProjectionId identifier, ProjectionOwner owner, EventSequenceId eventSequenceId)
