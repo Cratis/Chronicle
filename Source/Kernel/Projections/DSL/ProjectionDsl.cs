@@ -28,7 +28,9 @@ public static class ProjectionDsl
     {
         var tokenizer = new Tokenizer(dsl);
         var tokens = tokenizer.Tokenize();
-        var parser = new ProjectionDslParser(tokens);
-        return parser.Parse(identifier, owner, eventSequenceId);
+        var parser = new RulesProjectionDslParser(tokens);
+        var document = parser.Parse();
+        var compiler = new AstToProjectionDefinitionCompiler();
+        return compiler.Compile(document, identifier, owner, eventSequenceId);
     }
 }

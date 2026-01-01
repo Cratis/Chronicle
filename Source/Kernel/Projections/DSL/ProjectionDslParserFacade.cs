@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 namespace Cratis.Chronicle.Projections.DSL;
 
 /// <summary>
-/// Simple façade that wires the existing <see cref="Tokenizer"/> and <see cref="ProjectionDslParser"/>
+/// Simple façade that wires the <see cref="Tokenizer"/>, <see cref="RulesProjectionDslParser"/>, and <see cref="AstToProjectionDefinitionCompiler"/>
 /// to provide a single entry point for parsing a DSL string into a <see cref="ProjectionDefinition"/>.
 /// </summary>
 public class ProjectionDslParserFacade : IProjectionDslParser
@@ -21,8 +21,10 @@ public class ProjectionDslParserFacade : IProjectionDslParser
 
         try
         {
-            var parser = new ProjectionDslParser(tokens);
-            return parser.Parse(identifier, owner, eventSequenceId);
+            var parser = new RulesProjectionDslParser(tokens);
+            var document = parser.Parse();
+            var compiler = new AstToProjectionDefinitionCompiler();
+            return compiler.Compile(document, identifier, owner, eventSequenceId);
         }
         catch (Exception ex)
         {

@@ -10,6 +10,10 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// <summary>
 /// Generates a projection DSL string from a <see cref="ProjectionDefinition"/>.
 /// </summary>
+/// <remarks>
+/// This is the legacy pipe-based DSL generator. A new generator for the rules-based DSL is pending implementation.
+/// </remarks>
+[Obsolete("This generator creates legacy pipe-based DSL. A new generator for the rules-based DSL will be implemented.")]
 public class ProjectionDslGenerator : IProjectionDslGenerator
 {
     /// <inheritdoc/>
