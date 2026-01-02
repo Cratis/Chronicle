@@ -206,6 +206,11 @@ public class Parser(IEnumerable<Token> tokens)
                 {
                     mappings.Add(mapping);
                 }
+                else
+                {
+                    // Advance to prevent infinite loop on parsing errors
+                    Advance();
+                }
             }
         }
 
@@ -249,7 +254,12 @@ public class Parser(IEnumerable<Token> tokens)
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.Parent))
+            if (Check(TokenType.AutoMap))
+            {
+                Advance();
+                autoMap = true;
+            }
+            else if (Check(TokenType.Parent))
             {
                 Advance();
                 parentKey = ParseExpression();
@@ -272,6 +282,11 @@ public class Parser(IEnumerable<Token> tokens)
                 if (mapping is not null)
                 {
                     mappings.Add(mapping);
+                }
+                else
+                {
+                    // Advance to prevent infinite loop on parsing errors
+                    Advance();
                 }
             }
         }
@@ -326,6 +341,11 @@ public class Parser(IEnumerable<Token> tokens)
                 if (mapping is not null)
                 {
                     mappings.Add(mapping);
+                }
+                else
+                {
+                    // Advance to prevent infinite loop on parsing errors
+                    Advance();
                 }
             }
         }
@@ -438,12 +458,22 @@ public class Parser(IEnumerable<Token> tokens)
                     key = kd.Expression;
                 }
             }
+            else if (Check(TokenType.AutoMap))
+            {
+                // AutoMap is not yet supported in child event blocks, skip it
+                Advance();
+            }
             else
             {
                 var mapping = ParseMappingOperation();
                 if (mapping is not null)
                 {
                     mappings.Add(mapping);
+                }
+                else
+                {
+                    // Advance to prevent infinite loop on parsing errors
+                    Advance();
                 }
             }
         }
@@ -498,6 +528,11 @@ public class Parser(IEnumerable<Token> tokens)
                 if (mapping is not null)
                 {
                     mappings.Add(mapping);
+                }
+                else
+                {
+                    // Advance to prevent infinite loop on parsing errors
+                    Advance();
                 }
             }
         }
