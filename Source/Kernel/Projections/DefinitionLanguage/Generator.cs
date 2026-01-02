@@ -25,8 +25,12 @@ public class Generator : IGenerator
         // Projection declaration - use read model name since the original projection name is not stored in ProjectionDefinition
         sb.AppendLine($"projection {readModelName}Projection => {readModelName}");
 
-        // FromEvery block
-        if (definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Enabled || !definition.FromEvery.IncludeChildren)
+        // FromEvery block - only output if it has content, needs to exclude children when children exist,
+        // or if the projection has no other blocks (to ensure valid DSL with at least some content)
+        var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Enabled;
+        var needsExcludeChildren = !definition.FromEvery.IncludeChildren && definition.Children.Count > 0;
+        var hasNoOtherBlocks = definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0;
+        if (hasEveryContent || needsExcludeChildren || hasNoOtherBlocks)
         {
             GenerateEveryBlock(sb, definition.FromEvery, 1);
         }
