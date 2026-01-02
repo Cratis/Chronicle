@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class arithmetic_operations : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection Account => AccountReadModel
           from MoneyDeposited
             key accountId
@@ -21,7 +21,7 @@ public class arithmetic_operations : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "AccountReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "AccountReadModel");
 
     [Fact] void should_have_two_from_definitions() => _result.From.Count.ShouldEqual(2);
     [Fact] void should_have_money_deposited_event() => _result.From.ContainsKey((EventType)"MoneyDeposited").ShouldBeTrue();

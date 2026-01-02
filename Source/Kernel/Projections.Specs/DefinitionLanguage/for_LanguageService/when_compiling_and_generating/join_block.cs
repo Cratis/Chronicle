@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class join_block : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection UserGroups => UserGroupReadModel
           join Group on GroupId
             events GroupCreated, GroupRenamed
@@ -18,7 +18,7 @@ public class join_block : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "OrderReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "OrderReadModel");
 
     [Fact] void should_have_two_join_events() => _result.Join.Count.ShouldEqual(2);
     [Fact] void should_have_group_created_join() => _result.Join.ContainsKey((EventType)"GroupCreated").ShouldBeTrue();

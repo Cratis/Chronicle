@@ -5,15 +5,15 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class missing_closing_brace_in_expression : given.a_language_service_expecting_errors
 {
-    const string definition = """
+    const string Definition = """
         projection Account => AccountReadModel
           from AccountCreated
             key accountId
             set name to e.name.value
         """;
 
-    void Because() => Compile(definition);
+    void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_syntax_error() => _errors.Errors.ShouldContain(e => e.Message.Contains("expect") || e.Message.Contains("brace") || e.Message.Contains("}"));
+    [Fact] void should_report_syntax_error() => _errors.Errors.ShouldContain(e => e.Message.Contains("expect") || e.Message.Contains("brace") || e.Message.Contains('}'));
 }

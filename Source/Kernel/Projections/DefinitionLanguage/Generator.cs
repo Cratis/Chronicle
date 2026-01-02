@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class Generator : IGenerator
 {
     const string Tab = "    ";
+    static readonly string[] CompositeSeparator = [", "];
 
     /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
@@ -83,11 +84,11 @@ public class Generator : IGenerator
         if (from.Key.IsSet())
         {
             var keyValue = from.Key.Value;
-            if (keyValue.StartsWith("$composite(") && keyValue.EndsWith(")"))
+            if (keyValue.StartsWith("$composite(") && keyValue.EndsWith(')'))
             {
                 // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
                 var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
-                var parts = innerContent.Split(new[] { ", " }, StringSplitOptions.None);
+                var parts = innerContent.Split(CompositeSeparator, StringSplitOptions.None);
 
                 sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
                 foreach (var part in parts)
@@ -272,7 +273,7 @@ public class Generator : IGenerator
     string ConvertExpressionForOutput(string expression)
     {
         // Convert $eventContext(property) to $eventContext.property
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(")"))
+        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
         {
             var property = expression[14..^1];
             return $"$eventContext.{property}";
@@ -295,7 +296,7 @@ public class Generator : IGenerator
         }
 
         // String literals already have quotes from Compiler - return as-is
-        if (expression.StartsWith("\"") && expression.EndsWith("\""))
+        if (expression.StartsWith('\"') && expression.EndsWith('\"'))
         {
             return expression;
         }
@@ -307,7 +308,7 @@ public class Generator : IGenerator
         }
 
         // Event context, template expressions, etc.
-        if (expression.Contains("$") || expression.Contains("`"))
+        if (expression.Contains('$') || expression.Contains('`'))
         {
             return expression;
         }

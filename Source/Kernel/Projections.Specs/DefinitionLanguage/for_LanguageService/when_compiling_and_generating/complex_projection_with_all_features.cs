@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class complex_projection_with_all_features : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection UserGroup => UserGroupReadModel
           automap
 
@@ -56,7 +56,7 @@ public class complex_projection_with_all_features : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "UserGroupReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserGroupReadModel");
 
     [Fact] void should_have_multiple_from_events() => _result.From.Count.ShouldBeGreaterThan(2);
     [Fact] void should_have_group_created_event() => _result.From.ContainsKey((EventType)"GroupCreated").ShouldBeTrue();

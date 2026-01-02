@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class from_event_with_automap : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection User => UserReadModel
           from UserCreated
             key userId
@@ -17,7 +17,7 @@ public class from_event_with_automap : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserReadModel");
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
     [Fact] void should_have_automap_enabled() => _result.From[(EventType)"UserCreated"].AutoMap.ShouldEqual(AutoMap.Enabled);

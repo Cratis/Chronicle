@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class event_context_expressions : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection Activity => ActivityReadModel
           from ActivityLogged
             key $eventSourceId
@@ -21,7 +21,7 @@ public class event_context_expressions : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserReadModel");
 
     [Fact] void should_have_from_activity_logged() => _result.From.ContainsKey((EventType)"ActivityLogged").ShouldBeTrue();
     [Fact] void should_have_event_source_id_key() => _result.From[(EventType)"ActivityLogged"].Key.Value.ShouldEqual("$eventSourceId");

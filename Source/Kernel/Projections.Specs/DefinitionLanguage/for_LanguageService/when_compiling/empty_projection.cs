@@ -5,11 +5,11 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class empty_projection : given.a_language_service_expecting_errors
 {
-    const string definition = """
+    const string Definition = """
         projection Account => AccountReadModel
         """;
 
-    void Because() => Compile(definition);
+    void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
     [Fact] void should_report_empty_projection() => _errors.Errors.ShouldContain(e => e.Message.Contains("from") || e.Message.Contains("directive") || e.Message.Contains("empty"));

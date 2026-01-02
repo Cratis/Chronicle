@@ -7,14 +7,14 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_with_automap : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection User => UserReadModel
           automap
         """;
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserReadModel");
 
     [Fact] void should_be_valid_definition() => _result.ShouldNotBeNull();
 }

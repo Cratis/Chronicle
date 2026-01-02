@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class children_with_join : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection User => UserReadModel
           children Groups id groupId
             from UserAddedToGroup
@@ -25,7 +25,7 @@ public class children_with_join : given.a_language_service
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(definition, "UserGroupReadModel");
+        _result = CompileGenerateAndRecompile(Definition, "UserGroupReadModel");
         _childrenDef = _result.Children[new PropertyPath("Groups")];
     }
 

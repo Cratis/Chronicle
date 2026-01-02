@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class multiple_event_types : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection User => UserReadModel
           from UserCreated
             key userId
@@ -27,7 +27,7 @@ public class multiple_event_types : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserReadModel");
 
     [Fact] void should_have_three_event_types() => _result.From.Count.ShouldEqual(3);
     [Fact] void should_have_user_created_event() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();

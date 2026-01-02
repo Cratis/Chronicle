@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class remove_via_join_block : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection User => UserReadModel
           children Groups id groupId
             from UserAddedToGroup
@@ -26,7 +26,7 @@ public class remove_via_join_block : given.a_language_service
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(definition, "OrderReadModel");
+        _result = CompileGenerateAndRecompile(Definition, "OrderReadModel");
         _childrenDef = _result.Children[new PropertyPath("Groups")];
         _removedWithJoinDef = _childrenDef.RemovedWithJoin[(EventType)"GroupDeleted"];
     }

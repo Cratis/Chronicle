@@ -5,13 +5,13 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class missing_read_model_name : given.a_language_service_expecting_errors
 {
-    const string definition = """
+    const string Definition = """
         projection Account =>
           from AccountCreated
             key accountId
         """;
 
-    void Because() => Compile(definition);
+    void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
     [Fact] void should_report_missing_name() => _errors.Errors.ShouldContain(e => e.Message.Contains("identifier") || e.Message.Contains("name") || e.Message.Contains("expect"));

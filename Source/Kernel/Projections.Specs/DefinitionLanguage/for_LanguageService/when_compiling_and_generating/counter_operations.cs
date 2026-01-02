@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class counter_operations : given.a_language_service
 {
-    const string definition = """
+    const string Definition = """
         projection Test => Model
           from UserLoggedIn
             key userId
@@ -20,7 +20,7 @@ public class counter_operations : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(definition, "Model");
+    void Because() => _result = CompileGenerateAndRecompile(Definition, "Model");
 
     [Fact] void should_have_from_user_logged_in() => _result.From.ContainsKey((EventType)"UserLoggedIn").ShouldBeTrue();
     [Fact] void should_have_three_properties() => _result.From[(EventType)"UserLoggedIn"].Properties.Count.ShouldEqual(3);

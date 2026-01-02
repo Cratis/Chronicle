@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class invalid_event_context_expression : given.a_language_service_expecting_errors
 {
-    const string definition = """
+    const string Definition = """
         projection Account => AccountReadModel
           from AccountCreated
             key accountId
             set name to $invalidContext.name
         """;
 
-    void Because() => Compile(definition);
+    void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
     [Fact] void should_report_invalid_context() => _errors.Errors.ShouldContain(e => e.Message.Contains("eventContext") || e.Message.Contains("invalid") || e.Message.Contains("context"));
