@@ -722,12 +722,12 @@ public class Parser(IEnumerable<Token> tokens)
             var nameToken = Expect(TokenType.Identifier);
             if (nameToken is null) return null;
             var name = nameToken.Value;
-            
+
             if (name.Equals("eventSourceId", StringComparison.OrdinalIgnoreCase))
             {
                 return new EventSourceIdExpression();
             }
-            
+
             if (name.Equals("eventContext", StringComparison.OrdinalIgnoreCase))
             {
                 if (Expect(TokenType.Dot) is null) return null;
@@ -735,7 +735,7 @@ public class Parser(IEnumerable<Token> tokens)
                 if (propertyToken is null) return null;
                 return new EventContextExpression(propertyToken.Value);
             }
-            
+
             _errors.Add(new SyntaxError($"Unknown expression '${name}'", Current.Line, Current.Column));
             return null;
         }
