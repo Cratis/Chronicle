@@ -82,7 +82,7 @@ public class AstToProjectionDefinitionCompiler
     {
         switch (directive)
         {
-            case OnEventBlock onEvent:
+            case FromEventBlock onEvent:
                 ProcessOnEventBlock(onEvent, from);
                 break;
             case EveryBlock every:
@@ -106,7 +106,7 @@ public class AstToProjectionDefinitionCompiler
         }
     }
 
-    void ProcessOnEventBlock(OnEventBlock onEvent, Dictionary<EventType, FromDefinition> from)
+    void ProcessOnEventBlock(FromEventBlock onEvent, Dictionary<EventType, FromDefinition> from)
     {
         var eventType = EventType.Parse(onEvent.EventType.Name);
         var properties = new Dictionary<PropertyPath, string>();
@@ -118,7 +118,10 @@ public class AstToProjectionDefinitionCompiler
             ProcessMappingOperation(operation, properties);
         }
 
-        from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression);
+        from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression)
+        {
+            AutoMap = onEvent.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+        };
     }
 
     void ProcessChildrenBlock(
@@ -148,7 +151,10 @@ public class AstToProjectionDefinitionCompiler
             nestedChildren,
             childEvery,
             childRemovedWith,
-            childRemovedWithJoin);
+            childRemovedWithJoin)
+        {
+            AutoMap = childrenBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+        };
     }
 
     void ProcessChildBlock(
@@ -265,7 +271,10 @@ public class AstToProjectionDefinitionCompiler
             join[et] = new JoinDefinition(
                 new PropertyPath(joinBlock.OnProperty),
                 properties,
-                PropertyExpression.NotSet);
+                PropertyExpression.NotSet)
+            {
+                AutoMap = joinBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+            };
         }
     }
 
@@ -278,7 +287,10 @@ public class AstToProjectionDefinitionCompiler
             ProcessMappingOperation(operation, properties);
         }
 
-        return new FromEveryDefinition(properties, !every.ExcludeChildren);
+        return new FromEveryDefinition(properties, !every.ExcludeChildren)
+        {
+            AutoMap = every.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+        };
     }
 
     void ProcessMappingOperation(MappingOperation operation, Dictionary<PropertyPath, string> properties)
@@ -314,7 +326,7 @@ public class AstToProjectionDefinitionCompiler
         }
     }
 
-    PropertyExpression ConvertExpression(AST.Expression astExpression)
+    PropertyExpression ConvertExpression(Expression astExpression)
     {
         return astExpression switch
         {
@@ -327,7 +339,7 @@ public class AstToProjectionDefinitionCompiler
         };
     }
 
-    string ConvertExpressionToString(AST.Expression astExpression)
+    string ConvertExpressionToString(Expression astExpression)
     {
         return astExpression switch
         {
@@ -351,9 +363,10 @@ public class AstToProjectionDefinitionCompiler
                     sb.Append(text.Text);
                     break;
                 case TemplateExpressionPart expr:
-                    sb.Append("${");
-                    sb.Append(ConvertExpressionToString(expr.Expression));
-                    sb.Append('}');
+                    sb
+                        .Append("${")
+                        .Append(ConvertExpressionToString(expr.Expression))
+                        .Append('}');
                     break;
             }
         }

@@ -14,7 +14,7 @@ public class Tokenizer
     {
         { "projection", TokenType.Projection },
         { "every", TokenType.Every },
-        { "on", TokenType.On },
+        { "from", TokenType.From },
         { "key", TokenType.Key },
         { "parent", TokenType.Parent },
         { "join", TokenType.Join },
@@ -23,7 +23,7 @@ public class Tokenizer
         { "id", TokenType.Id },
         { "remove", TokenType.Remove },
         { "via", TokenType.Via },
-        { "automap", TokenType.AutoMap },
+        { "automap", TokenType.Automap },
         { "exclude", TokenType.Exclude },
         { "increment", TokenType.Increment },
         { "decrement", TokenType.Decrement },

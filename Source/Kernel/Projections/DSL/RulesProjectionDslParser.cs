@@ -75,7 +75,7 @@ public class RulesProjectionDslParser
     ProjectionNode ParseProjection()
     {
         Expect(TokenType.Projection);
-        var name = Expect(TokenType.Identifier).Value;
+        var projectionName = ParseTypeRef();
         Expect(TokenType.Arrow);
         var readModelType = ParseTypeRef();
 
@@ -92,12 +92,12 @@ public class RulesProjectionDslParser
             Advance();
         }
 
-        return new ProjectionNode(name, readModelType, directives);
+        return new ProjectionNode(projectionName.Name, readModelType, directives);
     }
 
     ProjectionDirective ParseProjectionDirective()
     {
-        if (Check(TokenType.AutoMap))
+        if (Check(TokenType.Automap))
         {
             Advance();
             return new AutoMapDirective();
@@ -113,7 +113,7 @@ public class RulesProjectionDslParser
             return ParseEveryBlock();
         }
 
-        if (Check(TokenType.On))
+        if (Check(TokenType.From))
         {
             return ParseOnEventBlock();
         }
@@ -167,6 +167,7 @@ public class RulesProjectionDslParser
 
         var mappings = new List<MappingOperation>();
         var excludeChildren = false;
+        var autoMap = false;
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
@@ -176,6 +177,11 @@ public class RulesProjectionDslParser
                 Expect(TokenType.Children);
                 excludeChildren = true;
             }
+            else if (Check(TokenType.Automap))
+            {
+                Advance();
+                autoMap = true;
+            }
             else
             {
                 mappings.Add(ParseMappingOperation());
@@ -183,12 +189,12 @@ public class RulesProjectionDslParser
         }
 
         Expect(TokenType.Dedent);
-        return new EveryBlock(mappings, excludeChildren);
+        return new EveryBlock(mappings, excludeChildren, autoMap);
     }
 
-    OnEventBlock ParseOnEventBlock()
+    FromEventBlock ParseOnEventBlock()
     {
-        Advance(); // Skip 'on'
+        Advance(); // Skip 'from'
         var eventType = ParseTypeRef();
 
         var autoMap = false;
@@ -197,7 +203,7 @@ public class RulesProjectionDslParser
         // Check for inline options
         while (!Check(TokenType.Indent) && !IsAtEnd)
         {
-            if (Check(TokenType.AutoMap))
+            if (Check(TokenType.Automap))
             {
                 Advance();
                 autoMap = true;
@@ -245,14 +251,14 @@ public class RulesProjectionDslParser
         }
 
         Expect(TokenType.Dedent);
-        return new OnEventBlock(eventType, autoMap, key, compositeKey, parentKey, mappings);
+        return new FromEventBlock(eventType, autoMap, key, compositeKey, parentKey, mappings);
     }
 
     JoinBlock ParseJoinBlock()
     {
         Advance(); // Skip 'join'
         var joinName = Expect(TokenType.Identifier).Value;
-        Expect(TokenType.On);
+        Expect(TokenType.From);
         var onProperty = Expect(TokenType.Identifier).Value;
 
         Expect(TokenType.Indent);
@@ -270,7 +276,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.AutoMap))
+            if (Check(TokenType.Automap))
             {
                 Advance();
                 autoMap = true;
@@ -299,7 +305,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.AutoMap))
+            if (Check(TokenType.Automap))
             {
                 Advance();
                 autoMap = true;
@@ -316,7 +322,7 @@ public class RulesProjectionDslParser
 
     ChildBlock ParseChildBlock()
     {
-        if (Check(TokenType.On))
+        if (Check(TokenType.From))
         {
             return ParseChildOnEventBlock();
         }
@@ -392,7 +398,7 @@ public class RulesProjectionDslParser
     {
         Advance(); // Skip 'join'
         var joinName = Expect(TokenType.Identifier).Value;
-        Expect(TokenType.On);
+        Expect(TokenType.From);
         var onProperty = Expect(TokenType.Identifier).Value;
 
         Expect(TokenType.Indent);
@@ -410,7 +416,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.AutoMap))
+            if (Check(TokenType.Automap))
             {
                 Advance();
                 autoMap = true;
@@ -439,7 +445,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.AutoMap))
+            if (Check(TokenType.Automap))
             {
                 Advance();
                 autoMap = true;
@@ -463,7 +469,7 @@ public class RulesProjectionDslParser
         {
             Advance();
             Expect(TokenType.Join);
-            Expect(TokenType.On);
+            Expect(TokenType.From);
             var eventType = ParseTypeRef();
 
             Expression? key = null;
@@ -476,7 +482,7 @@ public class RulesProjectionDslParser
             return new RemoveViaJoinBlock(eventType, key);
         }
 
-        Expect(TokenType.On);
+        Expect(TokenType.From);
         var removeEventType = ParseTypeRef();
 
         Expression? removeKey = null;

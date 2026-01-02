@@ -60,6 +60,12 @@ public class RulesProjectionDslGenerator
     {
         sb.AppendLine($"{Indent(indent)}every");
 
+        // AutoMap directive
+        if (every.AutoMap == AutoMap.Enabled)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}automap");
+        }
+
         foreach (var kv in every.Properties)
         {
             GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
@@ -73,13 +79,13 @@ public class RulesProjectionDslGenerator
 
     void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
     {
-        sb.Append($"{Indent(indent)}on event {eventTypeName}");
+        sb.Append($"{Indent(indent)}from {eventTypeName}");
 
         // Inline key if it's simple
         if (from.Key.IsSet())
         {
-            sb.AppendLine();
-            sb.AppendLine($"{Indent(indent + 1)}key = {from.Key.Value}");
+            sb.AppendLine()
+                .AppendLine($"{Indent(indent + 1)}key {from.Key.Value}");
         }
         else
         {
@@ -89,7 +95,13 @@ public class RulesProjectionDslGenerator
         // Parent key if present
         if (from.ParentKey?.IsSet() == true)
         {
-            sb.AppendLine($"{Indent(indent + 1)}parent key = {from.ParentKey.Value}");
+            sb.AppendLine($"{Indent(indent + 1)}parent key {from.ParentKey.Value}");
+        }
+
+        // AutoMap directive
+        if (from.AutoMap == AutoMap.Enabled)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}automap");
         }
 
         // Property mappings
@@ -101,12 +113,18 @@ public class RulesProjectionDslGenerator
 
     void GenerateJoinBlock(StringBuilder sb, string eventTypeName, JoinDefinition join, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}join on {join.On.Path}");
-        sb.AppendLine($"{Indent(indent + 1)}from event {eventTypeName}");
+        sb.AppendLine($"{Indent(indent)}join on {join.On.Path}")
+            .AppendLine($"{Indent(indent + 1)}from event {eventTypeName}");
 
         if (join.Key.IsSet())
         {
             sb.AppendLine($"{Indent(indent + 2)}key = {join.Key.Value}");
+        }
+
+        // AutoMap directive
+        if (join.AutoMap == AutoMap.Enabled)
+        {
+            sb.AppendLine($"{Indent(indent + 2)}automap");
         }
 
         foreach (var kv in join.Properties)
@@ -117,8 +135,14 @@ public class RulesProjectionDslGenerator
 
     void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}children {collectionName.Path}");
-        sb.AppendLine($"{Indent(indent + 1)}identified by {children.IdentifiedBy.Path}");
+        sb.AppendLine($"{Indent(indent)}children {collectionName.Path}")
+            .AppendLine($"{Indent(indent + 1)}identified by {children.IdentifiedBy.Path}");
+
+        // AutoMap directive
+        if (children.AutoMap == AutoMap.Enabled)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}automap");
+        }
 
         // FromEvery for children
         if (children.All.Properties.Count > 0)

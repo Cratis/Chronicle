@@ -39,9 +39,14 @@ public enum TokenType
     Every,
 
     /// <summary>
-    /// The keyword 'on'.
+    /// The keyword 'from'.
     /// </summary>
-    On,
+    From,
+
+    /// <summary>
+    /// The keyword 'automap'.
+    /// </summary>
+    Automap,
 
     /// <summary>
     /// The keyword 'key'.
@@ -82,11 +87,6 @@ public enum TokenType
     /// The keyword 'via'.
     /// </summary>
     Via,
-
-    /// <summary>
-    /// The keyword 'automap'.
-    /// </summary>
-    AutoMap,
 
     /// <summary>
     /// The keyword 'exclude'.
