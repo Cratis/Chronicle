@@ -7,10 +7,10 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Projections.DSL.AST;
+using Cratis.Chronicle.Projections.LanguageDefinition.AST;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DSL;
+namespace Cratis.Chronicle.Projections.LanguageDefinition;
 
 /// <summary>
 /// Compiles an AST Document representing the projection into a ProjectionDefinition.

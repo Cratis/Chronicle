@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections.DSL;
+namespace Cratis.Chronicle.Projections.LanguageDefinition;
 
 /// <summary>
 /// Represents the different types of tokens in the projection DSL.

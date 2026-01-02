@@ -10,7 +10,7 @@ using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.DSL;
+using Cratis.Chronicle.Projections.LanguageDefinition;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;

@@ -192,7 +192,7 @@ internal sealed class Projections(
         var projectionKey = new ProjectionKey(projectionId, request.EventStore);
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
 
-        var parser = new Chronicle.Projections.DSL.ProjectionDslParserFacade();
+        var parser = new Chronicle.Projections.LanguageDefinition.ProjectionDslParserFacade();
         var definition = parser.Parse(
             request.Dsl ?? string.Empty,
             projectionId,

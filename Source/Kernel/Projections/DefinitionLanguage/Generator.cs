@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DSL;
+namespace Cratis.Chronicle.Projections.LanguageDefinition;
 
 /// <summary>
 /// Generates a projection DSL string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.

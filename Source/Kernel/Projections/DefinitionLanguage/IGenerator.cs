@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Projections.DSL;
+namespace Cratis.Chronicle.Projections.LanguageDefinition;
 
 /// <summary>
 /// Defines functionality for generating projection language definition strings from ProjectionDefinition objects.
