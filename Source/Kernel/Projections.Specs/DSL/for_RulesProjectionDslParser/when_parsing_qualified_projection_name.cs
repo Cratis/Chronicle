@@ -16,7 +16,7 @@ public class when_parsing_qualified_projection_name : Specification
     {
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
-        var parser = new RulesProjectionDslParser(tokens);
+        var parser = new Parser(tokens);
         _result = parser.Parse();
     }
 

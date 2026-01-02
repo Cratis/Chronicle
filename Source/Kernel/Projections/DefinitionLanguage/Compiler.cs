@@ -13,9 +13,9 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.DSL;
 
 /// <summary>
-/// Compiles an AST Document from the RulesProjectionDslParser into a ProjectionDefinition.
+/// Compiles an AST Document representing the projection into a ProjectionDefinition.
 /// </summary>
-public class AstToProjectionDefinitionCompiler
+public class Compiler
 {
     /// <summary>
     /// Compiles an AST Document into a ProjectionDefinition.
@@ -31,10 +31,7 @@ public class AstToProjectionDefinitionCompiler
         ProjectionOwner owner,
         EventSequenceId eventSequenceId)
     {
-        if (document.Projections.Count == 0)
-        {
-            throw new InvalidOperationException("Document must contain at least one projection");
-        }
+        document.Validate();
 
         // For now, compile the first projection
         var projection = document.Projections[0];
@@ -331,7 +328,7 @@ public class AstToProjectionDefinitionCompiler
         return astExpression switch
         {
             EventDataExpression eventData => new PropertyExpression(eventData.Path),
-            EventContextExpression eventContext => new PropertyExpression($"$eventContext.{eventContext.Property}"),
+            EventContextExpression eventContext => new PropertyExpression($"$eventContext({eventContext.Property})"),
             EventSourceIdExpression => new PropertyExpression("$eventSourceId"),
             LiteralExpression literal => new PropertyExpression(literal.Value?.ToString() ?? string.Empty),
             TemplateExpression template => new PropertyExpression(ConvertTemplateToString(template)),
@@ -344,7 +341,7 @@ public class AstToProjectionDefinitionCompiler
         return astExpression switch
         {
             EventDataExpression eventData => eventData.Path,
-            EventContextExpression eventContext => $"$eventContext.{eventContext.Property}",
+            EventContextExpression eventContext => $"$eventContext({eventContext.Property})",
             EventSourceIdExpression => "$eventSourceId",
             LiteralExpression literal => literal.Value?.ToString() ?? string.Empty,
             TemplateExpression template => ConvertTemplateToString(template),

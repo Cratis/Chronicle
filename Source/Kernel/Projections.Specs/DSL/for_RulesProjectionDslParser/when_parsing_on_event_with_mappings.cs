@@ -16,7 +16,7 @@ public class when_parsing_on_event_with_mappings : Specification
     {
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
-        var parser = new RulesProjectionDslParser(tokens);
+        var parser = new Parser(tokens);
         var result = parser.Parse();
         _onEvent = (FromEventBlock)result.Projections[0].Directives[0];
     }

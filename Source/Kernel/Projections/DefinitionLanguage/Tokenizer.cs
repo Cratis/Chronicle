@@ -23,7 +23,7 @@ public class Tokenizer
         { "id", TokenType.Id },
         { "remove", TokenType.Remove },
         { "via", TokenType.Via },
-        { "automap", TokenType.Automap },
+        { "automap", TokenType.AutoMap },
         { "exclude", TokenType.Exclude },
         { "increment", TokenType.Increment },
         { "decrement", TokenType.Decrement },
@@ -222,7 +222,7 @@ public class Tokenizer
 
             if (_indentStack.Peek() != indentLevel)
             {
-                throw new ProjectionDslSyntaxError($"Indentation error: {indentLevel} spaces does not match any outer indentation level", line, column);
+                throw new SyntaxError($"Indentation error: {indentLevel} spaces does not match any outer indentation level", line, column);
             }
 
             return new Token(TokenType.Dedent, string.Empty, line, column);
@@ -289,7 +289,7 @@ public class Tokenizer
 
         if (_position >= _input.Length)
         {
-            throw new ProjectionDslSyntaxError("Unterminated string literal", line, column);
+            throw new SyntaxError("Unterminated string literal", line, column);
         }
 
         Advance(); // Skip closing quote
@@ -311,7 +311,7 @@ public class Tokenizer
 
         if (_position >= _input.Length)
         {
-            throw new ProjectionDslSyntaxError("Unterminated template string", line, column);
+            throw new SyntaxError("Unterminated template string", line, column);
         }
 
         Advance(); // Skip closing backtick

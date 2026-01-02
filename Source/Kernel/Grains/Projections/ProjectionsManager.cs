@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
-/// <param name="projectionDslGenerator"><see cref="RulesProjectionDslGenerator"/> for generating projection DSL strings.</param>
+/// <param name="projectionDslGenerator"><see cref="Generator"/> for generating projection DSL strings.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IProjectionsServiceClient projectionsService,
-    RulesProjectionDslGenerator projectionDslGenerator,
+    Generator projectionDslGenerator,
     ILocalSiloDetails localSiloDetails,
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {

@@ -4,23 +4,18 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Projections.DSL;
 
 /// <summary>
-/// Provides functionality to parse projection DSL into ProjectionDefinition objects.
+/// Represents an implementation of the <see cref="ILanguageService"/>.
 /// </summary>
-public static class ProjectionDsl
+/// <param name="generator">The generator used to generate projection language definition strings.</param>
+public class LanguageService(IGenerator generator) : ILanguageService
 {
-    /// <summary>
-    /// Parses a projection DSL string into a ProjectionDefinition.
-    /// </summary>
-    /// <param name="dsl">The DSL string to parse.</param>
-    /// <param name="identifier">The projection identifier.</param>
-    /// <param name="owner">The projection owner.</param>
-    /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <returns>A ProjectionDefinition.</returns>
-    public static ProjectionDefinition Parse(
+    /// <inheritdoc/>
+    public ProjectionDefinition Compile(
         string dsl,
         ProjectionId identifier,
         ProjectionOwner owner,
@@ -28,9 +23,13 @@ public static class ProjectionDsl
     {
         var tokenizer = new Tokenizer(dsl);
         var tokens = tokenizer.Tokenize();
-        var parser = new RulesProjectionDslParser(tokens);
+        var parser = new Parser(tokens);
         var document = parser.Parse();
-        var compiler = new AstToProjectionDefinitionCompiler();
+        var compiler = new Compiler();
         return compiler.Compile(document, identifier, owner, eventSequenceId);
     }
+
+    /// <inheritdoc/>
+    public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
+        generator.Generate(definition, readModelDefinition)
 }

@@ -8,12 +8,12 @@ every OrderCreated
   totalAmount = OrderCreated.amount
   itemCount = 0
 
-on OrderLineAdded
+from OrderLineAdded
   key orderId = $eventSourceId
   totalAmount += OrderLineAdded.lineTotal
   itemCount increment by 1
 
-on OrderCompleted
+from OrderCompleted
   key orderId = $eventSourceId
   completedDate = $occurred
   status = "Completed"
@@ -46,7 +46,7 @@ every CustomerRegistered
   key customerId = $eventSourceId
   automap
 
-on CustomerEmailUpdated
+from CustomerEmailUpdated
   key customerId = $eventSourceId
   email = CustomerEmailUpdated.newEmail
 
@@ -60,10 +60,10 @@ every OrderCreated
 # Example with count
 projection ProductStats
 
-on ProductViewed
+from ProductViewed
   key productId = ProductViewed.productId
   viewCount count
 
-on ProductPurchased
+from ProductPurchased
   key productId = ProductPurchased.productId
   purchaseCount count

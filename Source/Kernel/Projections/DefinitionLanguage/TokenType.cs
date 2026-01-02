@@ -11,261 +11,200 @@ public enum TokenType
     /// <summary>
     /// An identifier (e.g., property name, event type name).
     /// </summary>
-    Identifier,
+    Identifier = 0,
 
     /// <summary>
     /// A number literal.
     /// </summary>
-    NumberLiteral,
+    NumberLiteral = 1,
 
     /// <summary>
     /// A string literal enclosed in quotes.
     /// </summary>
-    StringLiteral,
+    StringLiteral = 2,
 
     /// <summary>
     /// A template string with interpolations (`text ${expr}`).
     /// </summary>
-    TemplateLiteral,
+    TemplateLiteral = 3,
 
     /// <summary>
     /// The keyword 'projection'.
     /// </summary>
-    Projection,
+    Projection = 4,
 
     /// <summary>
     /// The keyword 'every'.
     /// </summary>
-    Every,
+    Every = 5,
 
     /// <summary>
     /// The keyword 'from'.
     /// </summary>
-    From,
+    From = 6,
 
     /// <summary>
     /// The keyword 'automap'.
     /// </summary>
-    Automap,
+    AutoMap = 7,
 
     /// <summary>
     /// The keyword 'key'.
     /// </summary>
-    Key,
+    Key = 8,
 
     /// <summary>
     /// The keyword 'parent'.
     /// </summary>
-    Parent,
+    Parent = 9,
 
     /// <summary>
     /// The keyword 'join'.
     /// </summary>
-    Join,
+    Join = 10,
 
     /// <summary>
     /// The keyword 'events'.
     /// </summary>
-    Events,
+    Events = 11,
 
     /// <summary>
     /// The keyword 'children'.
     /// </summary>
-    Children,
+    Children = 12,
 
     /// <summary>
     /// The keyword 'id'.
     /// </summary>
-    Id,
+    Id = 13,
 
     /// <summary>
     /// The keyword 'remove'.
     /// </summary>
-    Remove,
+    Remove = 14,
 
     /// <summary>
     /// The keyword 'via'.
     /// </summary>
-    Via,
+    Via = 15,
 
     /// <summary>
     /// The keyword 'exclude'.
     /// </summary>
-    Exclude,
+    Exclude = 16,
 
     /// <summary>
     /// The keyword 'increment'.
     /// </summary>
-    Increment,
+    Increment = 17,
 
     /// <summary>
     /// The keyword 'decrement'.
     /// </summary>
-    Decrement,
+    Decrement = 18,
 
     /// <summary>
     /// The keyword 'count'.
     /// </summary>
-    Count,
+    Count = 19,
 
     /// <summary>
     /// The keyword 'add'.
     /// </summary>
-    Add,
+    Add = 20,
 
     /// <summary>
     /// The keyword 'subtract'.
     /// </summary>
-    Subtract,
+    Subtract = 21,
 
     /// <summary>
     /// The keyword 'by'.
     /// </summary>
-    By,
+    By = 22,
 
     /// <summary>
     /// The keyword 'true'.
     /// </summary>
-    True,
+    True = 23,
 
     /// <summary>
     /// The keyword 'false'.
     /// </summary>
-    False,
+    False = 24,
 
     /// <summary>
     /// The keyword 'null'.
     /// </summary>
-    Null,
+    Null = 25,
 
     /// <summary>
     /// The keyword 'e' (event reference).
     /// </summary>
-    EventRef,
+    EventRef = 26,
 
     /// <summary>
     /// The keyword 'ctx' (context reference).
     /// </summary>
-    ContextRef,
+    ContextRef = 27,
 
     /// <summary>
     /// The equals operator (=).
     /// </summary>
-    Equals,
+    Equals = 28,
 
     /// <summary>
     /// The arrow operator (=>).
     /// </summary>
-    Arrow,
+    Arrow = 29,
 
     /// <summary>
     /// The dot operator (.).
     /// </summary>
-    Dot,
+    Dot = 30,
 
     /// <summary>
     /// The comma operator (,).
     /// </summary>
-    Comma,
+    Comma = 31,
 
     /// <summary>
     /// The left brace ({).
     /// </summary>
-    LeftBrace,
+    LeftBrace = 32,
 
     /// <summary>
     /// The right brace (}).
     /// </summary>
-    RightBrace,
+    RightBrace = 33,
 
     /// <summary>
     /// The dollar sign ($).
     /// </summary>
-    Dollar,
+    Dollar = 34,
 
     /// <summary>
     /// Indentation increase.
     /// </summary>
-    Indent,
+    Indent = 35,
 
     /// <summary>
     /// Indentation decrease.
     /// </summary>
-    Dedent,
+    Dedent = 36,
 
     /// <summary>
     /// New line character.
     /// </summary>
-    NewLine,
+    NewLine = 37,
 
     /// <summary>
     /// End of input.
     /// </summary>
-    EndOfInput,
+    EndOfInput = 38,
 
     /// <summary>
     /// Invalid token.
     /// </summary>
-    Invalid,
-
-    // Legacy token types (for backward compatibility with old DSL parser)
-    /// <summary>
-    /// The pipe operator (|) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    Pipe,
-
-    /// <summary>
-    /// The colon operator (:) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    Colon,
-
-    /// <summary>
-    /// The left bracket ([) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    LeftBracket,
-
-    /// <summary>
-    /// The right bracket (]) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    RightBracket,
-
-    /// <summary>
-    /// The plus operator (+) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    Plus,
-
-    /// <summary>
-    /// The minus operator (-) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    Minus,
-
-    /// <summary>
-    /// The plus-and-equals operator (+=) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    PlusEquals,
-
-    /// <summary>
-    /// The minus-and-equals operator (-=) - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    MinusEquals,
-
-    /// <summary>
-    /// The keyword 'removedWith' - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    RemovedWith,
-
-    /// <summary>
-    /// The keyword 'identifier' - Legacy.
-    /// </summary>
-    [Obsolete("Legacy token type for old pipe-based DSL")]
-    IdentifierKeyword
+    Invalid = 39
 }

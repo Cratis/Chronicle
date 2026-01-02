@@ -11,16 +11,11 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// <summary>
 /// Generates a projection DSL string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
 /// </summary>
-public class RulesProjectionDslGenerator
+public class Generator : IGenerator
 {
     const string Tab = "    ";
 
-    /// <summary>
-    /// Generate DSL for the supplied projection definition.
-    /// </summary>
-    /// <param name="definition">Projection definition to generate DSL for.</param>
-    /// <param name="readModelDefinition">The read model definition the projection targets.</param>
-    /// <returns>Generated DSL string.</returns>
+    /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var sb = new StringBuilder();
@@ -55,6 +50,8 @@ public class RulesProjectionDslGenerator
 
         return sb.ToString();
     }
+
+    static string Indent(int level) => string.Concat(Enumerable.Repeat(Tab, level));
 
     void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent)
     {
@@ -237,6 +234,4 @@ public class RulesProjectionDslGenerator
             sb.AppendLine($"{Indent(indent)}{property.Path} = {expression}");
         }
     }
-
-    static string Indent(int level) => string.Concat(Enumerable.Repeat(Tab, level));
 }

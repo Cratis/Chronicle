@@ -4,7 +4,6 @@
 namespace Cratis.Chronicle.Projections.DSL.AST;
 
 /// <summary>
-/// Represents the root of a projection DSL document.
+/// Exception that gets thrown when the AST Document does not contain any projections.
 /// </summary>
-/// <param name="Projections">Collection of projections defined in the document.</param>
-public record Document(IReadOnlyList<ProjectionNode> Projections) : AstNode;
+public class DocumentMustHaveAtLeastOneProjection() : Exception("Document must contain at least one projection");

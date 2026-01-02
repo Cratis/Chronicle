@@ -19,9 +19,9 @@ public class when_compiling_simple_projection : Specification
     {
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
-        var parser = new RulesProjectionDslParser(tokens);
+        var parser = new Parser(tokens);
         var document = parser.Parse();
-        var compiler = new AstToProjectionDefinitionCompiler();
+        var compiler = new Compiler();
         _result = compiler.Compile(document, new ProjectionId("test"), ProjectionOwner.Client, EventSequenceId.Log);
     }
 

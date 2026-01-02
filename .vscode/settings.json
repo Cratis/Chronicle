@@ -53,6 +53,7 @@
         "appsettings",
         "ASPNETCORE",
         "Autofac",
+        "automap",
         "Brotli",
         "Bson",
         "Buildx",

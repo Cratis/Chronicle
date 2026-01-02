@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// <param name="message">The error message.</param>
 /// <param name="line">The line number where the error occurred.</param>
 /// <param name="column">The column number where the error occurred.</param>
-public class ProjectionDslSyntaxError(string message, int line, int column) : Exception($"{message} at line {line}, column {column}")
+public class SyntaxError(string message, int line, int column) : Exception($"{message} at line {line}, column {column}")
 {
     /// <summary>
     /// Gets the line number where the error occurred.

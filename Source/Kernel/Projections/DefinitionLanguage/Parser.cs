@@ -8,53 +8,14 @@ namespace Cratis.Chronicle.Projections.DSL;
 /// <summary>
 /// Parser for the indentation-based projection DSL that converts tokens into an AST.
 /// </summary>
-public class RulesProjectionDslParser
+/// <param name="tokens">The tokens to parse.</param>
+public class Parser(IEnumerable<Token> tokens)
 {
-    readonly List<Token> _tokens;
+    readonly List<Token> _tokens = tokens.Where(t => t.Type != TokenType.NewLine).ToList();
     int _position;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RulesProjectionDslParser"/> class.
-    /// </summary>
-    /// <param name="tokens">The tokens to parse.</param>
-    public RulesProjectionDslParser(IEnumerable<Token> tokens)
-    {
-        _tokens = tokens.Where(t => t.Type != TokenType.NewLine).ToList();
-        _position = 0;
-    }
-
     Token Current => _position < _tokens.Count ? _tokens[_position] : new Token(TokenType.EndOfInput, string.Empty, 0, 0);
-    Token Peek(int offset = 1) => _position + offset < _tokens.Count ? _tokens[_position + offset] : new Token(TokenType.EndOfInput, string.Empty, 0, 0);
     bool IsAtEnd => Current.Type == TokenType.EndOfInput;
-
-    void Advance() => _position++;
-
-    bool Check(TokenType type) => Current.Type == type;
-
-    bool Match(params TokenType[] types)
-    {
-        foreach (var type in types)
-        {
-            if (Check(type))
-            {
-                Advance();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    Token Expect(TokenType type, string message = "")
-    {
-        if (!Check(type))
-        {
-            var msg = string.IsNullOrEmpty(message) ? $"Expected {type}" : message;
-            throw new ProjectionDslSyntaxError(msg, Current.Line, Current.Column);
-        }
-        var token = Current;
-        Advance();
-        return token;
-    }
 
     /// <summary>
     /// Parses the DSL into a Document AST.
@@ -70,6 +31,24 @@ public class RulesProjectionDslParser
         }
 
         return new Document(projections);
+    }
+
+    Token Peek(int offset = 1) => _position + offset < _tokens.Count ? _tokens[_position + offset] : new Token(TokenType.EndOfInput, string.Empty, 0, 0);
+
+    void Advance() => _position++;
+
+    bool Check(TokenType type) => Current.Type == type;
+
+    Token Expect(TokenType type, string message = "")
+    {
+        if (!Check(type))
+        {
+            var msg = string.IsNullOrEmpty(message) ? $"Expected {type}" : message;
+            throw new SyntaxError(msg, Current.Line, Current.Column);
+        }
+        var token = Current;
+        Advance();
+        return token;
     }
 
     ProjectionNode ParseProjection()
@@ -97,7 +76,7 @@ public class RulesProjectionDslParser
 
     ProjectionDirective ParseProjectionDirective()
     {
-        if (Check(TokenType.Automap))
+        if (Check(TokenType.AutoMap))
         {
             Advance();
             return new AutoMapDirective();
@@ -128,7 +107,7 @@ public class RulesProjectionDslParser
             return ParseChildrenBlock();
         }
 
-        throw new ProjectionDslSyntaxError($"Unexpected token '{Current.Value}' in projection body", Current.Line, Current.Column);
+        throw new SyntaxError($"Unexpected token '{Current.Value}' in projection body", Current.Line, Current.Column);
     }
 
     ProjectionDirective ParseKeyOrCompositeKeyDirective()
@@ -177,7 +156,7 @@ public class RulesProjectionDslParser
                 Expect(TokenType.Children);
                 excludeChildren = true;
             }
-            else if (Check(TokenType.Automap))
+            else if (Check(TokenType.AutoMap))
             {
                 Advance();
                 autoMap = true;
@@ -203,7 +182,7 @@ public class RulesProjectionDslParser
         // Check for inline options
         while (!Check(TokenType.Indent) && !IsAtEnd)
         {
-            if (Check(TokenType.Automap))
+            if (Check(TokenType.AutoMap))
             {
                 Advance();
                 autoMap = true;
@@ -276,7 +255,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.Automap))
+            if (Check(TokenType.AutoMap))
             {
                 Advance();
                 autoMap = true;
@@ -305,7 +284,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.Automap))
+            if (Check(TokenType.AutoMap))
             {
                 Advance();
                 autoMap = true;
@@ -342,7 +321,7 @@ public class RulesProjectionDslParser
             return ParseRemoveBlock();
         }
 
-        throw new ProjectionDslSyntaxError($"Unexpected token '{Current.Value}' in children block", Current.Line, Current.Column);
+        throw new SyntaxError($"Unexpected token '{Current.Value}' in children block", Current.Line, Current.Column);
     }
 
     ChildOnEventBlock ParseChildOnEventBlock()
@@ -416,7 +395,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.Automap))
+            if (Check(TokenType.AutoMap))
             {
                 Advance();
                 autoMap = true;
@@ -445,7 +424,7 @@ public class RulesProjectionDslParser
 
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            if (Check(TokenType.Automap))
+            if (Check(TokenType.AutoMap))
             {
                 Advance();
                 autoMap = true;
@@ -504,7 +483,7 @@ public class RulesProjectionDslParser
             }
             else
             {
-                throw new ProjectionDslSyntaxError($"Unexpected token '{Current.Value}' in remove block", Current.Line, Current.Column);
+                throw new SyntaxError($"Unexpected token '{Current.Value}' in remove block", Current.Line, Current.Column);
             }
         }
 
@@ -562,7 +541,7 @@ public class RulesProjectionDslParser
             return new AssignmentOperation(propName, value);
         }
 
-        throw new ProjectionDslSyntaxError($"Expected mapping operation", Current.Line, Current.Column);
+        throw new SyntaxError($"Expected mapping operation", Current.Line, Current.Column);
     }
 
     Expression ParseExpression()
@@ -602,7 +581,7 @@ public class RulesProjectionDslParser
             {
                 return new EventSourceIdExpression();
             }
-            throw new ProjectionDslSyntaxError($"Unknown shorthand '${name}'", Current.Line, Current.Column);
+            throw new SyntaxError($"Unknown shorthand '${name}'", Current.Line, Current.Column);
         }
 
         // Literals
@@ -638,10 +617,10 @@ public class RulesProjectionDslParser
             return new LiteralExpression(value);
         }
 
-        throw new ProjectionDslSyntaxError($"Expected expression", Current.Line, Current.Column);
+        throw new SyntaxError($"Expected expression", Current.Line, Current.Column);
     }
 
-    Expression ParseTemplate(string template)
+    TemplateExpression ParseTemplate(string template)
     {
         var parts = new List<TemplatePart>();
         var i = 0;
@@ -669,7 +648,7 @@ public class RulesProjectionDslParser
             var closeIndex = template.IndexOf('}', dollarIndex + 2);
             if (closeIndex == -1)
             {
-                throw new ProjectionDslSyntaxError("Unterminated template expression", Current.Line, Current.Column);
+                throw new SyntaxError("Unterminated template expression", Current.Line, Current.Column);
             }
 
             // Parse the expression inside ${}
@@ -698,7 +677,7 @@ public class RulesProjectionDslParser
             return new EventContextExpression(exprText.Substring(4));
         }
 
-        throw new ProjectionDslSyntaxError($"Invalid template expression '{exprText}'", Current.Line, Current.Column);
+        throw new SyntaxError($"Invalid template expression '{exprText}'", Current.Line, Current.Column);
     }
 
     string ParsePropertyPath()
@@ -711,7 +690,7 @@ public class RulesProjectionDslParser
             parts.Add(Expect(TokenType.Identifier).Value);
         }
 
-        return string.Join(".", parts);
+        return string.Join('.', parts);
     }
 
     TypeRef ParseTypeRef()
@@ -724,6 +703,6 @@ public class RulesProjectionDslParser
             parts.Add(Expect(TokenType.Identifier).Value);
         }
 
-        return new TypeRef(string.Join(".", parts));
+        return new TypeRef(string.Join('.', parts));
     }
 }
