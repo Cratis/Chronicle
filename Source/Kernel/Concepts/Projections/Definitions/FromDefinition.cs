@@ -11,4 +11,11 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Properties">Properties and expressions for each property.</param>
 /// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
 /// <param name="ParentKey">Optional parent key expression, typically used in child relationships for identifying parent read model.</param>
-public record FromDefinition(IDictionary<PropertyPath, string> Properties, PropertyExpression Key, PropertyExpression? ParentKey);
+public record FromDefinition(IDictionary<PropertyPath, string> Properties, PropertyExpression Key, PropertyExpression? ParentKey)
+{
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public AutoMap AutoMap { get; set; } = AutoMap.Inherit;
+}
+
