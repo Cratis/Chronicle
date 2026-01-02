@@ -88,7 +88,7 @@ public class Generator : IGenerator
                 // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
                 var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
                 var parts = innerContent.Split(new[] { ", " }, StringSplitOptions.None);
-                
+
                 sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
                 foreach (var part in parts)
                 {
@@ -131,7 +131,7 @@ public class Generator : IGenerator
     {
         // Note: joinName is the EventType key (which holds the join name for root-level joins)
         sb.AppendLine($"{Indent(indent)}join {joinName} on {join.On.Path}");
-        
+
         // For now, we can't perfectly reconstruct which event types were in the join,
         // so we'll need to look at other metadata or make assumptions
         // For simplicity, assume single event type matching the join name for now
