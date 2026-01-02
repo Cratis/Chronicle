@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
 public class when_compiling_composite_key : given.a_language_service
 {
@@ -27,7 +27,7 @@ public class when_compiling_composite_key : given.a_language_service
     void Because() => _result = Compile(definition);
 
     [Fact] void should_have_from_order_created() => _result.From.ContainsKey((EventType)"OrderCreated").ShouldBeTrue();
-    [Fact] void should_have_composite_key() => _result.From[(EventType)"OrderCreated"].Key.GetType().Name.ShouldContain("Composite");
+    [Fact] void should_have_composite_key() => _result.From[(EventType)"OrderCreated"].Key.Value.ShouldContain("$composite");
     [Fact] void should_have_total_property() => _result.From[(EventType)"OrderCreated"].Properties.ContainsKey(new PropertyPath("Total")).ShouldBeTrue();
     [Fact] void should_map_total_to_event_total() => _result.From[(EventType)"OrderCreated"].Properties[new PropertyPath("Total")].ShouldEqual("total");
 }

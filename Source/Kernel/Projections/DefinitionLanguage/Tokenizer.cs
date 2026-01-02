@@ -40,6 +40,7 @@ public class Tokenizer
 
     readonly string _input;
     readonly Stack<int> _indentStack = new();
+    readonly Queue<Token> _pendingDedents = new();
     int _position;
     int _line = 1;
     int _column = 1;
@@ -85,6 +86,12 @@ public class Tokenizer
 
     Token NextToken()
     {
+        // Return pending dedents first
+        if (_pendingDedents.Count > 0)
+        {
+            return _pendingDedents.Dequeue();
+        }
+
         // Handle indentation at line start
         if (_atLineStart)
         {
@@ -214,15 +221,23 @@ public class Tokenizer
 
         if (indentLevel < currentIndent)
         {
-            // Find matching indentation level
+            // Emit one dedent token for each indentation level we're closing
+            var dedentsNeeded = 0;
             while (_indentStack.Count > 1 && _indentStack.Peek() > indentLevel)
             {
                 _indentStack.Pop();
+                dedentsNeeded++;
             }
 
             if (_indentStack.Peek() != indentLevel)
             {
                 throw new InvalidOperationException($"Indentation error: {indentLevel} spaces does not match any outer indentation level at line {line}, column {column}");
+            }
+
+            // Queue all but the first dedent
+            for (int i = 1; i < dedentsNeeded; i++)
+            {
+                _pendingDedents.Enqueue(new Token(TokenType.Dedent, string.Empty, line, column));
             }
 
             return new Token(TokenType.Dedent, string.Empty, line, column);

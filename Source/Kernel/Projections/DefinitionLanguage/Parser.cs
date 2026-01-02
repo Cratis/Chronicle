@@ -58,7 +58,7 @@ public class Parser(IEnumerable<Token> tokens)
         if (!Check(type))
         {
             var msg = string.IsNullOrEmpty(message) ? $"Expected {type}" : message;
-            _errors.Add(new SyntaxError(msg, Current.Line, Current.Column));
+            _errors.Add(msg, Current.Line, Current.Column);
             return null;
         }
         var token = Current;
@@ -70,7 +70,7 @@ public class Parser(IEnumerable<Token> tokens)
     {
         if (!Check(TokenType.Projection))
         {
-            _errors.Add(new SyntaxError("Expected 'projection'", Current.Line, Current.Column));
+            _errors.Add("Expected 'projection'", Current.Line, Current.Column);
             return null;
         }
         Advance();
@@ -136,7 +136,7 @@ public class Parser(IEnumerable<Token> tokens)
             return ParseChildrenBlock();
         }
 
-        _errors.Add(new SyntaxError($"Unexpected token '{Current.Value}' in projection body", Current.Line, Current.Column));
+        _errors.Add($"Unexpected token '{Current.Value}' in projection body", Current.Line, Current.Column);
         return null;
     }
 
@@ -144,7 +144,8 @@ public class Parser(IEnumerable<Token> tokens)
     {
         Advance(); // Skip 'key'
 
-        if (Peek().Type == TokenType.LeftBrace)
+        // Check if next token is an identifier followed by left brace (composite key with type name)
+        if (Check(TokenType.Identifier) && Peek().Type == TokenType.LeftBrace)
         {
             var typeName = ParseTypeRef();
             if (typeName is null) return null;
@@ -308,6 +309,8 @@ public class Parser(IEnumerable<Token> tokens)
         if (onPropertyToken is null) return null;
         var onProperty = onPropertyToken.Value;
 
+        // After "on property", expect newline then indent
+        if (Check(TokenType.NewLine)) Advance();
         if (Expect(TokenType.Indent) is null) return null;
         if (Expect(TokenType.Events) is null) return null;
 
@@ -414,13 +417,13 @@ public class Parser(IEnumerable<Token> tokens)
             return ParseRemoveBlock();
         }
 
-        _errors.Add(new SyntaxError($"Unexpected token '{Current.Value}' in children block", Current.Line, Current.Column));
+        _errors.Add($"Unexpected token '{Current.Value}' in children block", Current.Line, Current.Column);
         return null;
     }
 
     ChildOnEventBlock? ParseChildOnEventBlock()
     {
-        Advance(); // Skip 'on'
+        Advance(); // Skip 'from'
         var eventType = ParseTypeRef();
         if (eventType is null) return null;
 
@@ -431,6 +434,15 @@ public class Parser(IEnumerable<Token> tokens)
         {
             Advance();
             key = ParseExpression();
+        }
+
+        // Skip newline if present
+        if (Check(TokenType.NewLine)) Advance();
+
+        // If no indent, this block has no body (everything was inline)
+        if (!Check(TokenType.Indent))
+        {
+            return new ChildOnEventBlock(eventType, key, null, null, []);
         }
 
         if (Expect(TokenType.Indent) is null) return null;
@@ -627,7 +639,7 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                _errors.Add(new SyntaxError($"Unexpected token '{Current.Value}' in remove block", Current.Line, Current.Column));
+                _errors.Add($"Unexpected token '{Current.Value}' in remove block", Current.Line, Current.Column);
                 Advance(); // Skip invalid token to continue parsing
             }
         }
@@ -701,7 +713,7 @@ public class Parser(IEnumerable<Token> tokens)
             return new AssignmentOperation(propNameToken.Value, value);
         }
 
-        _errors.Add(new SyntaxError("Expected mapping operation", Current.Line, Current.Column));
+        _errors.Add("Expected mapping operation", Current.Line, Current.Column);
         return null;
     }
 
@@ -736,7 +748,7 @@ public class Parser(IEnumerable<Token> tokens)
                 return new EventContextExpression(propertyToken.Value);
             }
 
-            _errors.Add(new SyntaxError($"Unknown expression '${name}'", Current.Line, Current.Column));
+            _errors.Add($"Unknown expression '${name}'", Current.Line, Current.Column);
             return null;
         }
 
@@ -780,7 +792,7 @@ public class Parser(IEnumerable<Token> tokens)
             return path is not null ? new EventDataExpression(path) : null;
         }
 
-        _errors.Add(new SyntaxError("Expected expression", Current.Line, Current.Column));
+        _errors.Add("Expected expression", Current.Line, Current.Column);
         return null;
     }
 
@@ -812,7 +824,7 @@ public class Parser(IEnumerable<Token> tokens)
             var closeIndex = template.IndexOf('}', dollarIndex + 2);
             if (closeIndex == -1)
             {
-                _errors.Add(new SyntaxError("Unterminated template expression", Current.Line, Current.Column));
+                _errors.Add("Unterminated template expression", Current.Line, Current.Column);
                 return null;
             }
 

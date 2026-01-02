@@ -41,7 +41,7 @@ public class LanguageService(IGenerator generator) : ILanguageService
         {
             // Handle tokenizer errors
             var errors = new ParsingErrors([]);
-            errors.Add(new SyntaxError(ex.Message, 0, 0));
+            errors.Add(ex.Message, 0, 0);
             return errors;
         }
     }

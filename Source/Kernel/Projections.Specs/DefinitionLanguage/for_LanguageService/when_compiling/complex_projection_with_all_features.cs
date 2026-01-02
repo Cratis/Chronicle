@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
 public class when_compiling_complex_projection_with_all_features : given.a_language_service
 {
@@ -62,7 +62,14 @@ public class when_compiling_complex_projection_with_all_features : given.a_langu
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
         var parseResult = parser.Parse();
-        _result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
+        _result = parseResult.Match(
+            doc => doc,
+            errors =>
+            {
+                var errorMsg = $"Parsing failed: {string.Join(Environment.NewLine, errors.Errors.Select(e => $"  Line {e.Line}, Col {e.Column}: {e.Message}"))}";
+                Console.WriteLine(errorMsg);
+                throw new InvalidOperationException(errorMsg);
+            });
         _projection = _result.Projections[0];
     }
 

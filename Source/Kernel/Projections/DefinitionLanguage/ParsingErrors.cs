@@ -9,12 +9,12 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// <param name="errors">The collection of syntax errors.</param>
 public class ParsingErrors(IEnumerable<SyntaxError> errors)
 {
-    readonly List<SyntaxError> _errors = [.. errors];
-
     /// <summary>
     /// Gets an empty <see cref="ParsingErrors"/> instance.
     /// </summary>
     public static readonly ParsingErrors Empty = new([]);
+
+    readonly List<SyntaxError> _errors = [.. errors];
 
     /// <summary>
     /// Gets a value indicating whether there are any errors.
@@ -29,12 +29,8 @@ public class ParsingErrors(IEnumerable<SyntaxError> errors)
     /// <summary>
     /// Adds an error to the collection.
     /// </summary>
-    /// <param name="error">The error to add.</param>
-    public void Add(SyntaxError error) => _errors.Add(error);
-
-    /// <summary>
-    /// Adds multiple errors to the collection.
-    /// </summary>
-    /// <param name="errors">The errors to add.</param>
-    public void AddRange(IEnumerable<SyntaxError> errors) => _errors.AddRange(errors);
+    /// <param name="message">The error message.</param>
+    /// <param name="line">The line number where the error occurred.</param>
+    /// <param name="column">The column number where the error occurred.</param>
+    public void Add(string message, int line, int column) => _errors.Add(new SyntaxError(message, line, column));
 }

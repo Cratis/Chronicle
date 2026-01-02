@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
@@ -107,7 +108,23 @@ public class Compiler
     {
         var eventType = EventType.Parse(onEvent.EventType.Name);
         var properties = new Dictionary<PropertyPath, string>();
-        var keyExpression = onEvent.Key != null ? ConvertExpression(onEvent.Key) : PropertyExpression.NotSet;
+
+        PropertyExpression keyExpression;
+        if (onEvent.CompositeKey != null)
+        {
+            // Build composite key expression: $composite(prop1=expr1, prop2=expr2, ...)
+            var parts = string.Join(", ", onEvent.CompositeKey.Parts.Select(p => $"{p.PropertyName}={ConvertExpression(p.Expression).Value}"));
+            keyExpression = new PropertyExpression($"{WellKnownExpressions.Composite}({parts})");
+        }
+        else if (onEvent.Key != null)
+        {
+            keyExpression = ConvertExpression(onEvent.Key);
+        }
+        else
+        {
+            keyExpression = PropertyExpression.NotSet;
+        }
+
         var parentKeyExpression = onEvent.ParentKey != null ? ConvertExpression(onEvent.ParentKey) : null;
 
         foreach (var operation in onEvent.Mappings)

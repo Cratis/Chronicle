@@ -81,8 +81,7 @@ public class Generator : IGenerator
         // Inline key if it's simple
         if (from.Key.IsSet())
         {
-            sb.AppendLine()
-                .AppendLine($"{Indent(indent + 1)}key {from.Key.Value}");
+            sb.AppendLine($" key {from.Key.Value}");
         }
         else
         {
@@ -110,23 +109,26 @@ public class Generator : IGenerator
 
     void GenerateJoinBlock(StringBuilder sb, string eventTypeName, JoinDefinition join, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}join on {join.On.Path}")
-            .AppendLine($"{Indent(indent + 1)}from event {eventTypeName}");
+        // Note: The join name (e.g., "Group") is not stored in JoinDefinition, so we use the event type name
+        // This means we can't perfectly reconstruct the original DSL if multiple events were in one join block
+        sb.AppendLine($"{Indent(indent)}join {eventTypeName} on {join.On.Path}");
+        sb.AppendLine($"{Indent(indent + 1)}events {eventTypeName}");
 
+        // Inline key if present (though join typically doesn't have a key)
         if (join.Key.IsSet())
         {
-            sb.AppendLine($"{Indent(indent + 2)}key = {join.Key.Value}");
+            sb.AppendLine($"{Indent(indent + 1)}key {join.Key.Value}");
         }
 
         // AutoMap directive
         if (join.AutoMap == AutoMap.Enabled)
         {
-            sb.AppendLine($"{Indent(indent + 2)}automap");
+            sb.AppendLine($"{Indent(indent + 1)}automap");
         }
 
         foreach (var kv in join.Properties)
         {
-            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 2);
+            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
         }
     }
 
@@ -180,26 +182,35 @@ public class Generator : IGenerator
 
     void GenerateRemovedWithBlock(StringBuilder sb, string eventTypeName, RemovedWithDefinition removedWith, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}remove on {eventTypeName}");
+        sb.Append($"{Indent(indent)}remove with {eventTypeName}");
 
+        // Inline key if present
         if (removedWith.Key.IsSet())
         {
-            sb.AppendLine($"{Indent(indent + 1)}key = {removedWith.Key.Value}");
+            sb.AppendLine($" key {removedWith.Key.Value}");
+        }
+        else
+        {
+            sb.AppendLine();
         }
 
         if (removedWith.ParentKey?.IsSet() == true)
         {
-            sb.AppendLine($"{Indent(indent + 1)}parent key = {removedWith.ParentKey.Value}");
+            sb.AppendLine($"{Indent(indent + 1)}parent key {removedWith.ParentKey.Value}");
         }
     }
 
     void GenerateRemovedWithJoinBlock(StringBuilder sb, string eventTypeName, RemovedWithJoinDefinition removedWithJoin, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}remove via join on {eventTypeName}");
+        sb.Append($"{Indent(indent)}remove via join on {eventTypeName}");
 
         if (removedWithJoin.Key.IsSet())
         {
-            sb.AppendLine($"{Indent(indent + 1)}key = {removedWithJoin.Key.Value}");
+            sb.AppendLine($" key {removedWithJoin.Key.Value}");
+        }
+        else
+        {
+            sb.AppendLine();
         }
     }
 

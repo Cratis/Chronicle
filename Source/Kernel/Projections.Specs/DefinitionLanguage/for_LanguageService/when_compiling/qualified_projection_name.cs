@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
 public class when_compiling_qualified_projection_name : given.a_language_service
 {
