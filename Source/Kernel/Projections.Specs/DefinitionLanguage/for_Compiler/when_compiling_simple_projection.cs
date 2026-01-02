@@ -4,10 +4,9 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.for_AstToProjectionDefinitionCompiler;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Compiler;
 
 public class when_compiling_simple_projection : Specification
 {

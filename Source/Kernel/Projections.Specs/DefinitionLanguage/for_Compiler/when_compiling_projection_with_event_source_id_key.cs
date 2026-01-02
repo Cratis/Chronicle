@@ -4,9 +4,8 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Projections.DefinitionLanguage;
 
-namespace Cratis.Chronicle.Projections.for_AstToProjectionDefinitionCompiler;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Compiler;
 
 public class when_compiling_projection_with_event_source_id_key : Specification
 {

@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.for_RulesProjectionDslParser;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
 
 public class when_parsing_on_event_with_mappings : Specification
 {
