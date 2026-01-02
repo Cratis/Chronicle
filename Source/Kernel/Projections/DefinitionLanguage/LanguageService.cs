@@ -16,12 +16,12 @@ public class LanguageService(IGenerator generator) : ILanguageService
 {
     /// <inheritdoc/>
     public ProjectionDefinition Compile(
-        string dsl,
+        string definition,
         ProjectionId identifier,
         ProjectionOwner owner,
         EventSequenceId eventSequenceId)
     {
-        var tokenizer = new Tokenizer(dsl);
+        var tokenizer = new Tokenizer(definition);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
         var document = parser.Parse();

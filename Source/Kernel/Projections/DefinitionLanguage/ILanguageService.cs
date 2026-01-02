@@ -16,12 +16,12 @@ public interface ILanguageService
     /// <summary>
     /// Parses a language definition string into a ProjectionDefinition.
     /// </summary>
-    /// <param name="dsl">The DSL string to parse.</param>
+    /// <param name="definition">The definition string to parse.</param>
     /// <param name="identifier">The projection identifier.</param>
     /// <param name="owner">The projection owner.</param>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
     /// <returns>A ProjectionDefinition.</returns>
-    ProjectionDefinition Compile(string dsl, ProjectionId identifier, ProjectionOwner owner, EventSequenceId eventSequenceId);
+    ProjectionDefinition Compile(string definition, ProjectionId identifier, ProjectionOwner owner, EventSequenceId eventSequenceId);
 
     /// <summary>
     /// Generates a language definition string from a ProjectionDefinition.
