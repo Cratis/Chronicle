@@ -83,7 +83,7 @@ public class MappingOperationParser
             return new AssignmentOperation(propNameToken.Value, value);
         }
 
-        context.Errors.Add("Expected mapping operation", context.Current.Line, context.Current.Column);
+        context.ReportError("Expected mapping operation");
         return null;
     }
 }

@@ -72,11 +72,14 @@ public class Parser(IEnumerable<Token> tokens) : IParsingContext
         if (!Check(type))
         {
             var msg = string.IsNullOrEmpty(message) ? $"Expected {type}" : message;
-            _errors.Add(msg, Current.Line, Current.Column);
+            ReportError(msg);
             return null;
         }
         var token = Current;
         Advance();
         return token;
     }
+
+    /// <inheritdoc/>
+    public void ReportError(string message) => _errors.Add(message, Current.Line, Current.Column);
 }

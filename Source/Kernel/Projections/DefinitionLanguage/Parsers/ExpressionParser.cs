@@ -47,7 +47,7 @@ public class ExpressionParser
                 return new EventContextExpression(propertyToken.Value);
             }
 
-            context.Errors.Add($"Unknown expression '${name}'", context.Current.Line, context.Current.Column);
+            context.ReportError($"Unknown expression '${name}'");
             return null;
         }
 
@@ -91,7 +91,7 @@ public class ExpressionParser
             return path is not null ? new EventDataExpression(path) : null;
         }
 
-        context.Errors.Add("Expected expression", context.Current.Line, context.Current.Column);
+        context.ReportError("Expected expression");
         return null;
     }
 
@@ -123,7 +123,7 @@ public class ExpressionParser
             var closeIndex = template.IndexOf('}', dollarIndex + 2);
             if (closeIndex == -1)
             {
-                context.Errors.Add("Unterminated template expression", context.Current.Line, context.Current.Column);
+                context.ReportError("Unterminated template expression");
                 return null;
             }
 

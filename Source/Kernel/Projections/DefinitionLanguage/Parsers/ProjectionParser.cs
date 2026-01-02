@@ -18,7 +18,7 @@ internal class ProjectionParser
     {
         if (!context.Check(TokenType.Projection))
         {
-            context.Errors.Add("Expected 'projection'", context.Current.Line, context.Current.Column);
+            context.ReportError("Expected 'projection'");
             return null;
         }
         context.Advance();

@@ -51,4 +51,10 @@ public interface IParsingContext
     /// <param name="message">Optional custom error message.</param>
     /// <returns>The token if found, or null if not found (error will be recorded).</returns>
     Token? Expect(TokenType type, string message = "");
+
+    /// <summary>
+    /// Reports an error at the current token position.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    void ReportError(string message);
 }

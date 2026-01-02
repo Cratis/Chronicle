@@ -71,7 +71,7 @@ internal class RemoveBlockVisitor
             }
             else
             {
-                context.Errors.Add($"Unexpected token '{context.Current.Value}' in remove block", context.Current.Line, context.Current.Column);
+                context.ReportError($"Unexpected token '{context.Current.Value}' in remove block");
                 context.Advance(); // Skip invalid token to continue parsing
             }
         }

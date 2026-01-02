@@ -83,7 +83,7 @@ public class ChildrenBlockVisitor : IDirectiveVisitor
             return visitor.Visit(context);
         }
 
-        context.Errors.Add($"Unexpected token '{context.Current.Value}' in children block", context.Current.Line, context.Current.Column);
+        context.ReportError($"Unexpected token '{context.Current.Value}' in children block");
         return null;
     }
 }

@@ -32,7 +32,7 @@ internal class ProjectionDirectiveParser
             }
         }
 
-        context.Errors.Add($"Unexpected token '{context.Current.Value}' in projection body", context.Current.Line, context.Current.Column);
+        context.ReportError($"Unexpected token '{context.Current.Value}' in projection body");
         return null;
     }
 }
