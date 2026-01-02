@@ -25,7 +25,7 @@ public class Generator : IGenerator
         sb.AppendLine($"projection {readModelName}Projection => {readModelName}");
 
         // FromEvery block
-        if (definition.FromEvery.Properties.Count > 0)
+        if (definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Enabled || !definition.FromEvery.IncludeChildren)
         {
             GenerateEveryBlock(sb, definition.FromEvery, 1);
         }
@@ -48,7 +48,8 @@ public class Generator : IGenerator
             GenerateChildrenBlock(sb, kv.Key, kv.Value, 1);
         }
 
-        return sb.ToString();
+        var result = sb.ToString();
+        return result.EndsWith('\n') ? result : result + '\n';
     }
 
     static string Indent(int level) => string.Concat(Enumerable.Repeat(Tab, level));
@@ -76,22 +77,41 @@ public class Generator : IGenerator
 
     void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
     {
-        sb.Append($"{Indent(indent)}from {eventTypeName}");
+        sb.AppendLine($"{Indent(indent)}from {eventTypeName}");
 
-        // Inline key if it's simple
+        // Key directive (simple or composite)
         if (from.Key.IsSet())
         {
-            sb.AppendLine($" key {from.Key.Value}");
-        }
-        else
-        {
-            sb.AppendLine();
+            var keyValue = from.Key.Value;
+            if (keyValue.StartsWith("$composite(") && keyValue.EndsWith(")"))
+            {
+                // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
+                var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
+                var parts = innerContent.Split(new[] { ", " }, StringSplitOptions.None);
+                
+                sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
+                foreach (var part in parts)
+                {
+                    var equalsIndex = part.IndexOf('=');
+                    if (equalsIndex > 0)
+                    {
+                        var propertyName = part.Substring(0, equalsIndex);
+                        var expression = part.Substring(equalsIndex + 1);
+                        sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
+                    }
+                }
+                sb.AppendLine($"{Indent(indent + 1)}}}");
+            }
+            else
+            {
+                sb.AppendLine($"{Indent(indent + 1)}key {keyValue}");
+            }
         }
 
         // Parent key if present
         if (from.ParentKey?.IsSet() == true)
         {
-            sb.AppendLine($"{Indent(indent + 1)}parent key {from.ParentKey.Value}");
+            sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
 
         // AutoMap directive
@@ -107,12 +127,16 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateJoinBlock(StringBuilder sb, string eventTypeName, JoinDefinition join, int indent)
+    void GenerateJoinBlock(StringBuilder sb, string joinName, JoinDefinition join, int indent)
     {
-        // Note: The join name (e.g., "Group") is not stored in JoinDefinition, so we use the event type name
-        // This means we can't perfectly reconstruct the original DSL if multiple events were in one join block
-        sb.AppendLine($"{Indent(indent)}join {eventTypeName} on {join.On.Path}");
-        sb.AppendLine($"{Indent(indent + 1)}events {eventTypeName}");
+        // Note: joinName is the EventType key (which holds the join name for root-level joins)
+        sb.AppendLine($"{Indent(indent)}join {joinName} on {join.On.Path}");
+        
+        // For now, we can't perfectly reconstruct which event types were in the join,
+        // so we'll need to look at other metadata or make assumptions
+        // For simplicity, assume single event type matching the join name for now
+        // TODO: Store event types explicitly in JoinDefinition if needed
+        sb.AppendLine($"{Indent(indent + 1)}events {joinName}");
 
         // Inline key if present (though join typically doesn't have a key)
         if (join.Key.IsSet())
@@ -134,8 +158,7 @@ public class Generator : IGenerator
 
     void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}children {collectionName.Path}")
-            .AppendLine($"{Indent(indent + 1)}identified by {children.IdentifiedBy.Path}");
+        sb.AppendLine($"{Indent(indent)}children {collectionName.Path} id {children.IdentifiedBy.Path}");
 
         // AutoMap directive
         if (children.AutoMap == AutoMap.Enabled)
@@ -196,7 +219,7 @@ public class Generator : IGenerator
 
         if (removedWith.ParentKey?.IsSet() == true)
         {
-            sb.AppendLine($"{Indent(indent + 1)}parent key {removedWith.ParentKey.Value}");
+            sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(removedWith.ParentKey.Value)}");
         }
     }
 
@@ -255,21 +278,41 @@ public class Generator : IGenerator
             return $"$eventContext.{property}";
         }
 
-        // Check if it's a simple property reference (no operators, no literals)
-        // If it doesn't contain special characters and isn't a literal, prefix with e.
-        if (!expression.Contains("$") &&
-            !expression.Contains("`") &&
-            !expression.StartsWith("\"") &&
-            !expression.StartsWith("'") &&
-            !expression.Equals("true", StringComparison.OrdinalIgnoreCase) &&
-            !expression.Equals("false", StringComparison.OrdinalIgnoreCase) &&
-            !expression.Equals("null", StringComparison.OrdinalIgnoreCase) &&
-            !double.TryParse(expression, out _) &&
-            !expression.Contains("."))
+        // Convert C# boolean ToString() to DSL format
+        if (expression.Equals("True", StringComparison.Ordinal))
         {
-            return $"e.{expression}";
+            return "true";
+        }
+        if (expression.Equals("False", StringComparison.Ordinal))
+        {
+            return "false";
         }
 
+        // Convert empty string (C# null representation) to DSL null
+        if (string.IsNullOrEmpty(expression))
+        {
+            return "null";
+        }
+
+        // String literals already have quotes from Compiler - return as-is
+        if (expression.StartsWith("\"") && expression.EndsWith("\""))
+        {
+            return expression;
+        }
+
+        // Numeric literals
+        if (double.TryParse(expression, out _))
+        {
+            return expression;
+        }
+
+        // Event context, template expressions, etc.
+        if (expression.Contains("$") || expression.Contains("`"))
+        {
+            return expression;
+        }
+
+        // Everything else (property paths, simple names) - return as-is
         return expression;
     }
 }

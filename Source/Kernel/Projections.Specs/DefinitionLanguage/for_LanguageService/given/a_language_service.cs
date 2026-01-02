@@ -41,7 +41,7 @@ public class a_language_service : Specification
             EventSequenceId.Log);
         return recompileResult.Match(
             projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Re-compilation of generated DSL failed: {string.Join(", ", errors.Errors)}"));
+            errors => throw new InvalidOperationException($"Re-compilation of generated DSL failed: {string.Join(", ", errors.Errors)}\n\nGenerated DSL was:\n{generated}"));
     }
 
     ReadModelDefinition CreateReadModelDefinition(string name)

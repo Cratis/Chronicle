@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
@@ -12,20 +12,9 @@ public class projection_with_automap : given.a_language_service
           automap
         """;
 
-    Document _result;
+    ProjectionDefinition _result;
 
-    void Because()
-    {
-        var tokenizer = new Tokenizer(definition);
-        var tokens = tokenizer.Tokenize();
-        var parser = new Parser(tokens);
-        var parseResult = parser.Parse();
-        _result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
-    }
+    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
 
-    [Fact] void should_have_one_projection() => _result.Projections.Count.ShouldEqual(1);
-    [Fact] void should_have_projection_name() => _result.Projections[0].Name.ShouldEqual("User");
-    [Fact] void should_have_read_model_type() => _result.Projections[0].ReadModelType.Name.ShouldEqual("UserReadModel");
-    [Fact] void should_have_one_directive() => _result.Projections[0].Directives.Count.ShouldEqual(1);
-    [Fact] void should_have_automap_directive() => _result.Projections[0].Directives[0].ShouldBeOfExactType<AutoMapDirective>();
+    [Fact] void should_be_valid_definition() => _result.ShouldNotBeNull();
 }

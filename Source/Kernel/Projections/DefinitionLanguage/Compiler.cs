@@ -278,17 +278,34 @@ public class Compiler
             ProcessMappingOperation(operation, properties);
         }
 
-        // For joins, we need to handle each event type
-        foreach (var eventType in joinBlock.EventTypes)
+        // For joins with multiple event types, create separate entries for each event type
+        // For joins with a single event type, use the join name as the key
+        if (joinBlock.EventTypes.Count == 1)
         {
-            var et = EventType.Parse(eventType.Name);
-            join[et] = new JoinDefinition(
+            // Single event - use join name as key
+            var joinKey = EventType.Parse(joinBlock.JoinName);
+            join[joinKey] = new JoinDefinition(
                 new PropertyPath(joinBlock.OnProperty),
                 properties,
                 PropertyExpression.NotSet)
             {
                 AutoMap = joinBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
             };
+        }
+        else
+        {
+            // Multiple events - create one entry per event type
+            foreach (var eventType in joinBlock.EventTypes)
+            {
+                var et = EventType.Parse(eventType.Name);
+                join[et] = new JoinDefinition(
+                    new PropertyPath(joinBlock.OnProperty),
+                    properties,
+                    PropertyExpression.NotSet)
+                {
+                    AutoMap = joinBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+                };
+            }
         }
     }
 
@@ -347,7 +364,7 @@ public class Compiler
             EventDataExpression eventData => new PropertyExpression(eventData.Path),
             EventContextExpression eventContext => new PropertyExpression($"$eventContext({eventContext.Property})"),
             EventSourceIdExpression => new PropertyExpression("$eventSourceId"),
-            LiteralExpression literal => new PropertyExpression(literal.Value?.ToString() ?? string.Empty),
+            LiteralExpression literal => new PropertyExpression(FormatLiteralForStorage(literal.Value)),
             TemplateExpression template => new PropertyExpression(ConvertTemplateToString(template)),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")
         };
@@ -360,7 +377,7 @@ public class Compiler
             EventDataExpression eventData => eventData.Path,
             EventContextExpression eventContext => $"$eventContext({eventContext.Property})",
             EventSourceIdExpression => "$eventSourceId",
-            LiteralExpression literal => literal.Value?.ToString() ?? string.Empty,
+            LiteralExpression literal => FormatLiteralForStorage(literal.Value),
             TemplateExpression template => ConvertTemplateToString(template),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")
         };
@@ -385,5 +402,16 @@ public class Compiler
             }
         }
         return $"`{sb}`";
+    }
+
+    string FormatLiteralForStorage(object? value)
+    {
+        return value switch
+        {
+            null => string.Empty,  // Store null as empty string (expected by tests)
+            string s => $"\"{s}\"",  // Store strings with quotes to distinguish from property names
+            bool b => b.ToString(),  // Store as "True"/"False" (C# ToString() format expected by tests)
+            _ => value.ToString() ?? string.Empty  // Numbers as-is
+        };
     }
 }

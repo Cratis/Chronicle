@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
@@ -10,33 +11,26 @@ public class multiple_event_types : given.a_language_service
     const string definition = """
         projection User => UserReadModel
           from UserCreated
-            key e.userId
-            Name = e.name
-            Email = e.email
-            CreatedAt = ctx.occurred
+            key userId
+            Name = name
+            Email = email
+            CreatedAt = $eventContext.occurred
           from UserUpdated
-            key e.userId
-            Name = e.name
-            Email = e.email
-            UpdatedAt = ctx.occurred
+            key userId
+            Name = name
+            Email = email
+            UpdatedAt = $eventContext.occurred
           from UserActivated
-            key e.userId
+            key userId
             IsActive = true
         """;
 
-    Document _result;
+    ProjectionDefinition _result;
 
-    void Because()
-    {
-        var tokenizer = new Tokenizer(definition);
-        var tokens = tokenizer.Tokenize();
-        var parser = new Parser(tokens);
-        var parseResult = parser.Parse();
-        _result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
-    }
+    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
 
-    [Fact] void should_have_three_event_blocks() => _result.Projections[0].Directives.Count.ShouldEqual(3);
-    [Fact] void should_have_user_created_event() => ((FromEventBlock)_result.Projections[0].Directives[0]).EventType.Name.ShouldEqual("UserCreated");
-    [Fact] void should_have_user_updated_event() => ((FromEventBlock)_result.Projections[0].Directives[1]).EventType.Name.ShouldEqual("UserUpdated");
-    [Fact] void should_have_user_activated_event() => ((FromEventBlock)_result.Projections[0].Directives[2]).EventType.Name.ShouldEqual("UserActivated");
+    [Fact] void should_have_three_event_types() => _result.From.Count.ShouldEqual(3);
+    [Fact] void should_have_user_created_event() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
+    [Fact] void should_have_user_updated_event() => _result.From.ContainsKey((EventType)"UserUpdated").ShouldBeTrue();
+    [Fact] void should_have_user_activated_event() => _result.From.ContainsKey((EventType)"UserActivated").ShouldBeTrue();
 }

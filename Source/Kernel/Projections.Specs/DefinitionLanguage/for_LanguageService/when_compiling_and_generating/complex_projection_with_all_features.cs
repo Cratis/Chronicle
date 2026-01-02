@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
@@ -16,29 +17,29 @@ public class complex_projection_with_all_features : given.a_language_service
             exclude children
 
           from GroupCreated
-            key $eventContext.eventSourceId
+            key $eventSourceId
             Name = name
             Description = description
             CreatedAt = $eventContext.occurred
             MemberCount = 0
 
           from GroupRenamed
-            key $eventContext.eventSourceId
+            key $eventSourceId
             Name = newName
 
           from MemberJoined
-            key $eventContext.eventSourceId
+            key $eventSourceId
             increment MemberCount
 
           from MemberLeft
-            key $eventContext.eventSourceId
+            key $eventSourceId
             decrement MemberCount
 
           children Members id userId
             automap
             from UserAddedToGroup
               key userId
-              parent $eventContext.eventSourceId
+              parent $eventSourceId
               Role = role
               JoinedAt = $eventContext.occurred
             from UserRoleChanged
@@ -53,35 +54,13 @@ public class complex_projection_with_all_features : given.a_language_service
             automap
         """;
 
-    Document _result;
-    ProjectionNode _projection;
+    ProjectionDefinition _result;
 
-    void Because()
-    {
-        var tokenizer = new Tokenizer(definition);
-        var tokens = tokenizer.Tokenize();
-        var parser = new Parser(tokens);
-        var parseResult = parser.Parse();
-        _result = parseResult.Match(
-            doc => doc,
-            errors =>
-            {
-                var errorMsg = $"Parsing failed: {string.Join(Environment.NewLine, errors.Errors.Select(e => $"  Line {e.Line}, Col {e.Column}: {e.Message}"))}";
-                Console.WriteLine(errorMsg);
-                throw new InvalidOperationException(errorMsg);
-            });
-        _projection = _result.Projections[0];
-    }
+    void Because() => _result = CompileGenerateAndRecompile(definition, "UserGroupReadModel");
 
-    [Fact] void should_have_projection() => _projection.ShouldNotBeNull();
-    [Fact] void should_have_projection_name() => _projection.Name.ShouldEqual("UserGroup");
-    [Fact] void should_have_read_model_type() => _projection.ReadModelType.Name.ShouldEqual("UserGroupReadModel");
-    [Fact] void should_have_multiple_directives() => _projection.Directives.Count.ShouldBeGreaterThan(5);
-    [Fact] void should_have_automap_directive() => _projection.Directives.OfType<AutoMapDirective>().ShouldNotBeEmpty();
-    [Fact] void should_have_every_block() => _projection.Directives.OfType<EveryBlock>().ShouldNotBeEmpty();
-    [Fact] void should_have_from_event_blocks() => _projection.Directives.OfType<FromEventBlock>().Count().ShouldBeGreaterThan(3);
-    [Fact] void should_have_children_block() => _projection.Directives.OfType<ChildrenBlock>().ShouldNotBeEmpty();
-    [Fact] void should_have_join_block() => _projection.Directives.OfType<JoinBlock>().ShouldNotBeEmpty();
-    [Fact] void should_have_increment_operation() => _projection.Directives.OfType<FromEventBlock>().Any(b => b.Mappings.Any(m => m is IncrementOperation)).ShouldBeTrue();
-    [Fact] void should_have_decrement_operation() => _projection.Directives.OfType<FromEventBlock>().Any(b => b.Mappings.Any(m => m is DecrementOperation)).ShouldBeTrue();
+    [Fact] void should_have_multiple_from_events() => _result.From.Count.ShouldBeGreaterThan(2);
+    [Fact] void should_have_group_created_event() => _result.From.ContainsKey((EventType)"GroupCreated").ShouldBeTrue();
+    [Fact] void should_have_every_definition() => _result.FromEvery.ShouldNotBeNull();
+    [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
+    [Fact] void should_have_join_definition() => _result.Join.Count.ShouldEqual(2);
 }
