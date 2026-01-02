@@ -5,14 +5,15 @@ using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
 
-public class when_parsing_on_event_with_mappings : Specification
+public class when_parsing_event_data_expressions : Specification
 {
     const string definition = """
-        projection Test => Model
-          from EventType
+        projection User => UserReadModel
+          from UserCreated
             key e.userId
-            name = e.fullName
-            email = e.emailAddress
+            Name = e.name
+            Email = e.contactInfo.email
+            City = e.address.city
         """;
 
     FromEventBlock _onEvent;
@@ -27,8 +28,8 @@ public class when_parsing_on_event_with_mappings : Specification
         _onEvent = (FromEventBlock)result.Projections[0].Directives[0];
     }
 
-    [Fact] void should_have_event_type() => _onEvent.EventType.Name.ShouldEqual("EventType");
-    [Fact] void should_have_key() => _onEvent.Key.ShouldNotBeNull();
-    [Fact] void should_have_two_mappings() => _onEvent.Mappings.Count.ShouldEqual(2);
-    [Fact] void should_have_assignment_operations() => _onEvent.Mappings.All(m => m is AssignmentOperation).ShouldBeTrue();
+    [Fact] void should_have_three_mappings() => _onEvent.Mappings.Count.ShouldEqual(3);
+    [Fact] void should_have_simple_path() => ((EventDataExpression)((AssignmentOperation)_onEvent.Mappings[0]).Value).Path.ShouldEqual("name");
+    [Fact] void should_have_nested_path_for_email() => ((EventDataExpression)((AssignmentOperation)_onEvent.Mappings[1]).Value).Path.ShouldEqual("contactInfo.email");
+    [Fact] void should_have_nested_path_for_city() => ((EventDataExpression)((AssignmentOperation)_onEvent.Mappings[2]).Value).Path.ShouldEqual("address.city");
 }

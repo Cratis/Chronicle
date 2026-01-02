@@ -10,13 +10,19 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Compiler;
 
 public class when_compiling_simple_projection : Specification
 {
-    const string Dsl = "projection MyProjection => Users\n  from UserRegistered\n    key e.userId\n    name = e.name\n    email = e.email";
+    const string definition = """
+        projection MyProjection => Users
+          from UserRegistered
+            key e.userId
+            name = e.name
+            email = e.email
+        """;
 
     ProjectionDefinition _result;
 
     void Because()
     {
-        var tokenizer = new Tokenizer(Dsl);
+        var tokenizer = new Tokenizer(definition);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
         var parseResult = parser.Parse();

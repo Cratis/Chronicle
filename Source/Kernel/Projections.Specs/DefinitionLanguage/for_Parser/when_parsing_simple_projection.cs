@@ -7,13 +7,18 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
 
 public class when_parsing_simple_projection : Specification
 {
-    const string Dsl = "projection MyProjection => Users\n  from UserRegistered\n    key $eventSourceId\n    name = e.name";
+    const string definition = """
+        projection MyProjection => Users
+          from UserRegistered
+            key $eventSourceId
+            name = e.name
+        """;
 
     Document _result;
 
     void Because()
     {
-        var tokenizer = new Tokenizer(Dsl);
+        var tokenizer = new Tokenizer(definition);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
         var parseResult = parser.Parse();

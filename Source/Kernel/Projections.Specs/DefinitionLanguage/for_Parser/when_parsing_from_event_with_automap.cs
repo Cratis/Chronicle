@@ -5,14 +5,13 @@ using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
 
-public class when_parsing_on_event_with_mappings : Specification
+public class when_parsing_from_event_with_automap : Specification
 {
     const string definition = """
-        projection Test => Model
-          from EventType
+        projection User => UserReadModel
+          from UserCreated
             key e.userId
-            name = e.fullName
-            email = e.emailAddress
+            automap
         """;
 
     FromEventBlock _onEvent;
@@ -27,8 +26,7 @@ public class when_parsing_on_event_with_mappings : Specification
         _onEvent = (FromEventBlock)result.Projections[0].Directives[0];
     }
 
-    [Fact] void should_have_event_type() => _onEvent.EventType.Name.ShouldEqual("EventType");
+    [Fact] void should_have_automap_enabled() => _onEvent.AutoMap.ShouldBeTrue();
+    [Fact] void should_have_event_type() => _onEvent.EventType.Name.ShouldEqual("UserCreated");
     [Fact] void should_have_key() => _onEvent.Key.ShouldNotBeNull();
-    [Fact] void should_have_two_mappings() => _onEvent.Mappings.Count.ShouldEqual(2);
-    [Fact] void should_have_assignment_operations() => _onEvent.Mappings.All(m => m is AssignmentOperation).ShouldBeTrue();
 }

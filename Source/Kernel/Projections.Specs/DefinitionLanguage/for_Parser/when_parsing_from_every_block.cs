@@ -5,17 +5,17 @@ using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
 
-public class when_parsing_on_event_with_mappings : Specification
+public class when_parsing_from_every_block : Specification
 {
     const string definition = """
         projection Test => Model
-          from EventType
-            key e.userId
-            name = e.fullName
-            email = e.emailAddress
+          every
+            LastUpdated = ctx.occurred
+            EventSourceId = ctx.eventSourceId
+            exclude children
         """;
 
-    FromEventBlock _onEvent;
+    EveryBlock _everyBlock;
 
     void Because()
     {
@@ -24,11 +24,10 @@ public class when_parsing_on_event_with_mappings : Specification
         var parser = new Parser(tokens);
         var parseResult = parser.Parse();
         var result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
-        _onEvent = (FromEventBlock)result.Projections[0].Directives[0];
+        _everyBlock = (EveryBlock)result.Projections[0].Directives[0];
     }
 
-    [Fact] void should_have_event_type() => _onEvent.EventType.Name.ShouldEqual("EventType");
-    [Fact] void should_have_key() => _onEvent.Key.ShouldNotBeNull();
-    [Fact] void should_have_two_mappings() => _onEvent.Mappings.Count.ShouldEqual(2);
-    [Fact] void should_have_assignment_operations() => _onEvent.Mappings.All(m => m is AssignmentOperation).ShouldBeTrue();
+    [Fact] void should_have_two_mappings() => _everyBlock.Mappings.Count.ShouldEqual(2);
+    [Fact] void should_exclude_children() => _everyBlock.ExcludeChildren.ShouldBeTrue();
+    [Fact] void should_have_assignment_operations() => _everyBlock.Mappings.All(m => m is AssignmentOperation).ShouldBeTrue();
 }

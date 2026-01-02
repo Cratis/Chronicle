@@ -9,13 +9,18 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Compiler;
 
 public class when_compiling_projection_with_event_source_id_key : Specification
 {
-    const string Dsl = "projection Test => Model\n  from EventType\n    key $eventSourceId\n    name = e.name";
+    const string definition = """
+        projection Test => Model
+          from EventType
+            key $eventSourceId
+            name = e.name
+        """;
 
     ProjectionDefinition _result;
 
     void Because()
     {
-        var tokenizer = new Tokenizer(Dsl);
+        var tokenizer = new Tokenizer(definition);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
         var parseResult = parser.Parse();

@@ -4,3 +4,4 @@ export * from './PreviewProjection';
 export * from './Projection';
 export * from './ProjectionPreview';
 export * from './ProjectionWithDsl';
+export * from './ProjectionDefinitionSyntaxError';
