@@ -65,6 +65,13 @@ internal class ChildOnEventBlockVisitor
             }
             else if (context.Check(TokenType.Key))
             {
+                if (key is not null || compositeKey is not null)
+                {
+                    context.ReportError("Duplicate key directive. A key has already been defined for this event block.");
+                    context.Advance();
+                    continue;
+                }
+
                 var keyDirective = _keyDirectives.Parse(context);
                 if (keyDirective is CompositeKeyDirective ck)
                 {

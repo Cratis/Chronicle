@@ -257,9 +257,9 @@ public class Generator : IGenerator
 
         // Check if it's a simple property reference (no operators, no literals)
         // If it doesn't contain special characters and isn't a literal, prefix with e.
-        if (!expression.Contains("$") && 
-            !expression.Contains("`") && 
-            !expression.StartsWith("\"") && 
+        if (!expression.Contains("$") &&
+            !expression.Contains("`") &&
+            !expression.StartsWith("\"") &&
             !expression.StartsWith("'") &&
             !expression.Equals("true", StringComparison.OrdinalIgnoreCase) &&
             !expression.Equals("false", StringComparison.OrdinalIgnoreCase) &&
