@@ -19,7 +19,7 @@ public class from_every_block : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
 
     [Fact] void should_have_from_every() => _result.FromEvery.ShouldNotBeNull();
     [Fact] void should_have_two_properties() => _result.FromEvery.Properties.Count.ShouldEqual(2);

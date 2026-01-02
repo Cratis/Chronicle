@@ -20,18 +20,6 @@ public class a_language_service : Specification
         _projectionId = new ProjectionId(Guid.NewGuid().ToString());
     }
 
-    protected ProjectionDefinition Compile(string definition)
-    {
-        var result = _languageService.Compile(
-            definition,
-            _projectionId,
-            ProjectionOwner.Client,
-            EventSequenceId.Log);
-        return result.Match(
-            projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
-    }
-
     protected ProjectionDefinition CompileGenerateAndRecompile(string definition, string readModelName)
     {
         var result = _languageService.Compile(

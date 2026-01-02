@@ -23,7 +23,7 @@ public class literal_expressions : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
     [Fact] void should_have_six_properties() => _result.From[(EventType)"UserCreated"].Properties.Count.ShouldEqual(6);

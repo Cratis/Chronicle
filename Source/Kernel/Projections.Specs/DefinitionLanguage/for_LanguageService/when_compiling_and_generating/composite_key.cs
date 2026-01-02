@@ -21,7 +21,7 @@ public class composite_key : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "OrderReadModel");
 
     [Fact] void should_have_from_order_created() => _result.From.ContainsKey((EventType)"OrderCreated").ShouldBeTrue();
     [Fact] void should_have_composite_key() => _result.From[(EventType)"OrderCreated"].Key.Value.ShouldContain("$composite");

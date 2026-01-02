@@ -18,7 +18,7 @@ public class template_expression : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "UserReadModel");
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
     [Fact] void should_have_full_name_property() => _result.From[(EventType)"UserCreated"].Properties.ContainsKey(new PropertyPath("FullName")).ShouldBeTrue();

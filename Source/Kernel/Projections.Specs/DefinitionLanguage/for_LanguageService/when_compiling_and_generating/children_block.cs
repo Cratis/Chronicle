@@ -28,7 +28,7 @@ public class children_block : given.a_language_service
 
     void Because()
     {
-        _result = Compile(definition);
+        _result = CompileGenerateAndRecompile(definition, "UserGroupReadModel");
         _childrenDef = _result.Children[new PropertyPath("Members")];
     }
 

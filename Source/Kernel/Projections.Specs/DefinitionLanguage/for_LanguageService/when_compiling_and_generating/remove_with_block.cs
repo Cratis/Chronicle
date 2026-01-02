@@ -25,7 +25,7 @@ public class remove_with_block : given.a_language_service
 
     void Because()
     {
-        _result = Compile(definition);
+        _result = CompileGenerateAndRecompile(definition, "UserGroupReadModel");
         _childrenDef = _result.Children[new PropertyPath("Members")];
         _removedWithDef = _childrenDef.RemovedWith[(EventType)"UserRemovedFromGroup"];
     }

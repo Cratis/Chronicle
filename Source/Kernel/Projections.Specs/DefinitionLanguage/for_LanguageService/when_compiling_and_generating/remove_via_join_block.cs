@@ -26,7 +26,7 @@ public class remove_via_join_block : given.a_language_service
 
     void Because()
     {
-        _result = Compile(definition);
+        _result = CompileGenerateAndRecompile(definition, "OrderReadModel");
         _childrenDef = _result.Children[new PropertyPath("Groups")];
         _removedWithJoinDef = _childrenDef.RemovedWithJoin[(EventType)"GroupDeleted"];
     }

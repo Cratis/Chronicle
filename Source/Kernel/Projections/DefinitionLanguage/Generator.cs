@@ -220,12 +220,12 @@ public class Generator : IGenerator
         if (expression.StartsWith("+="))
         {
             var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}{property.Path} add {value}");
+            sb.AppendLine($"{Indent(indent)}add {property.Path} by {ConvertExpressionForOutput(value)}");
         }
         else if (expression.StartsWith("-="))
         {
             var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}{property.Path} subtract {value}");
+            sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(value)}");
         }
         else if (expression == "increment")
         {
@@ -242,7 +242,34 @@ public class Generator : IGenerator
         else
         {
             // Simple assignment
-            sb.AppendLine($"{Indent(indent)}{property.Path} = {expression}");
+            sb.AppendLine($"{Indent(indent)}{property.Path} = {ConvertExpressionForOutput(expression)}");
         }
+    }
+
+    string ConvertExpressionForOutput(string expression)
+    {
+        // Convert $eventContext(property) to $eventContext.property
+        if (expression.StartsWith("$eventContext(") && expression.EndsWith(")"))
+        {
+            var property = expression[14..^1];
+            return $"$eventContext.{property}";
+        }
+
+        // Check if it's a simple property reference (no operators, no literals)
+        // If it doesn't contain special characters and isn't a literal, prefix with e.
+        if (!expression.Contains("$") && 
+            !expression.Contains("`") && 
+            !expression.StartsWith("\"") && 
+            !expression.StartsWith("'") &&
+            !expression.Equals("true", StringComparison.OrdinalIgnoreCase) &&
+            !expression.Equals("false", StringComparison.OrdinalIgnoreCase) &&
+            !expression.Equals("null", StringComparison.OrdinalIgnoreCase) &&
+            !double.TryParse(expression, out _) &&
+            !expression.Contains("."))
+        {
+            return $"e.{expression}";
+        }
+
+        return expression;
     }
 }
