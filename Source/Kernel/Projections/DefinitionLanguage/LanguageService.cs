@@ -31,5 +31,5 @@ public class LanguageService(IGenerator generator) : ILanguageService
 
     /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
-        generator.Generate(definition, readModelDefinition)
+        generator.Generate(definition, readModelDefinition);
 }

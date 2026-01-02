@@ -541,7 +541,7 @@ public class Parser(IEnumerable<Token> tokens)
             return new AssignmentOperation(propName, value);
         }
 
-        throw new SyntaxError($"Expected mapping operation", Current.Line, Current.Column);
+        throw new SyntaxError("Expected mapping operation", Current.Line, Current.Column);
     }
 
     Expression ParseExpression()
@@ -617,7 +617,7 @@ public class Parser(IEnumerable<Token> tokens)
             return new LiteralExpression(value);
         }
 
-        throw new SyntaxError($"Expected expression", Current.Line, Current.Column);
+        throw new SyntaxError("Expected expression", Current.Line, Current.Column);
     }
 
     TemplateExpression ParseTemplate(string template)

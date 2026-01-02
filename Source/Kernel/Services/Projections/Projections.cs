@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains;
 using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
@@ -27,12 +28,14 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="clusterClient"><see cref="IClusterClient"/> for interacting with the cluster.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
+/// <param name="languageService"><see cref="ILanguageService"/> for handling projection definition language.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class Projections(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
+    ILanguageService languageService,
     IServiceProvider serviceProvider,
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
@@ -192,8 +195,7 @@ internal sealed class Projections(
         var projectionKey = new ProjectionKey(projectionId, request.EventStore);
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
 
-        var parser = new Chronicle.Projections.DefinitionLanguage.ProjectionDslParserFacade();
-        var definition = parser.Parse(
+        var definition = languageService.Compile(
             request.Dsl ?? string.Empty,
             projectionId,
             Concepts.Projections.ProjectionOwner.Server,
