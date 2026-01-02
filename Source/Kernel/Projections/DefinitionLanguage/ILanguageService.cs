@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 
-namespace Cratis.Chronicle.Projections.LanguageDefinition;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
 /// Defines a language service for parsing and generating projection DSL.

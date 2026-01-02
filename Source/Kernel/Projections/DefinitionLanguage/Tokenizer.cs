@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace Cratis.Chronicle.Projections.LanguageDefinition;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
 /// Tokenizer for the indentation-based projection DSL.

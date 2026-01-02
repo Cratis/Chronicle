@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Projections.LanguageDefinition;
+using Cratis.Chronicle.Projections.DefinitionLanguage;
 
 namespace Cratis.Chronicle.Projections.for_AstToProjectionDefinitionCompiler;
 

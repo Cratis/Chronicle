@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections.LanguageDefinition;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
 /// Exception that gets thrown when there is a syntax error in the projection DSL.

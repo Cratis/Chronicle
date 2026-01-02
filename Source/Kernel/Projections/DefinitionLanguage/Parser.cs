@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.LanguageDefinition.AST;
+using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.LanguageDefinition;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
 /// Parser for the indentation-based projection DSL that converts tokens into an AST.
