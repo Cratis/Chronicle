@@ -45,8 +45,7 @@ public class when_compiling_complex_projection_with_all_features : given.a_langu
               key userId
               parent groupId
               Role = role
-            remove on UserRemovedFromGroup
-              key userId
+            remove with UserRemovedFromGroup key userId
               parent groupId
 
           join GroupSettings on SettingsId
