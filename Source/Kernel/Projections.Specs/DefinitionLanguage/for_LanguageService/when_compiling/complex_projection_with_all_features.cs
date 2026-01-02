@@ -5,7 +5,7 @@ using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_complex_projection_with_all_features : given.a_language_service
+public class complex_projection_with_all_features : given.a_language_service
 {
     const string definition = """
         projection UserGroup => UserGroupReadModel

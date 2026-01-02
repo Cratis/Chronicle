@@ -7,7 +7,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_remove_with_block : given.a_language_service
+public class remove_with_block : given.a_language_service
 {
     const string definition = """
         projection Group => GroupReadModel

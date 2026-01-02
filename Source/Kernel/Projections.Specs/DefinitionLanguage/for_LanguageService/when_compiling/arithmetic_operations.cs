@@ -10,7 +10,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_arithmetic_operations : given.a_language_service
+public class arithmetic_operations : given.a_language_service
 {
     const string definition = """
         projection Account => AccountReadModel

@@ -5,7 +5,7 @@ using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_projection_with_automap : given.a_language_service
+public class projection_with_automap : given.a_language_service
 {
     const string definition = """
         projection User => UserReadModel

@@ -7,7 +7,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_from_event_with_mappings : given.a_language_service
+public class from_event_with_mappings : given.a_language_service
 {
     const string definition = """
         projection Test => Model

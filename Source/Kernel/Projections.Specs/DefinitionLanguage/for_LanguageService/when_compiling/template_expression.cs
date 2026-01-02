@@ -10,7 +10,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_template_expression : given.a_language_service
+public class template_expression : given.a_language_service
 {
     const string definition = """
         projection User => UserReadModel

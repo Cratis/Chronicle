@@ -7,7 +7,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class when_compiling_simple_projection : given.a_language_service
+public class simple_projection : given.a_language_service
 {
     const string definition = """
         projection MyProjection => Users
