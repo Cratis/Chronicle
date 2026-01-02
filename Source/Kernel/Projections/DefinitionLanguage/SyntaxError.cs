@@ -4,20 +4,16 @@
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Exception that gets thrown when there is a syntax error in the projection DSL.
+/// Represents a syntax error in the projection DSL.
 /// </summary>
-/// <param name="message">The error message.</param>
-/// <param name="line">The line number where the error occurred.</param>
-/// <param name="column">The column number where the error occurred.</param>
-public class SyntaxError(string message, int line, int column) : Exception($"{message} at line {line}, column {column}")
+/// <param name="Message">The error message.</param>
+/// <param name="Line">The line number where the error occurred.</param>
+/// <param name="Column">The column number where the error occurred.</param>
+public record SyntaxError(string Message, int Line, int Column)
 {
     /// <summary>
-    /// Gets the line number where the error occurred.
+    /// Returns a string representation of the syntax error.
     /// </summary>
-    public int Line { get; } = line;
-
-    /// <summary>
-    /// Gets the column number where the error occurred.
-    /// </summary>
-    public int Column { get; } = column;
+    /// <returns>A formatted error message.</returns>
+    public override string ToString() => $"{Message} at line {Line}, column {Column}";
 }

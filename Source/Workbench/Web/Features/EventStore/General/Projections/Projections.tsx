@@ -16,7 +16,6 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDsl, PreviewProjection } from 'Api/Projections';
-import { Json } from 'Features';
 
 export const Projections = () => {
 
@@ -46,6 +45,7 @@ export const Projections = () => {
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
     const [readModelInstances, setReadModelInstances] = useState<unknown>();
     const [readModelSchema, setReadModelSchema] = useState<JsonSchema | null>(null);
+    const [syntaxErrors, setSyntaxErrors] = useState<any[]>([]);
 
     const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
@@ -86,8 +86,11 @@ export const Projections = () => {
                                         previewProjection.namespace = params.namespace!;
                                         previewProjection.dsl = dslValue;
                                         const result = await previewProjection.execute();
+
+                                        console.log(result.response);
                                         setReadModelInstances(result.response?.readModelEntries ?? []);
                                         setReadModelSchema(result.response?.schema ?? null);
+                                        setSyntaxErrors(result.response?.syntaxErrors ?? []);
                                     }
                                 }
                             ]}
@@ -99,6 +102,7 @@ export const Projections = () => {
                                 onChange={setDslValue}
                                 readModelSchemas={readModelSchemas}
                                 eventSchemas={eventSchemas}
+                                errors={syntaxErrors}
                                 height="500px"
                                 theme="vs-dark"
                             />
@@ -113,7 +117,7 @@ export const Projections = () => {
                                     root: { style: { border: 'none' } },
                                     tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
                                 }}>
-                                {readModelSchema && Object.keys(readModelSchema.properties!).map((_, index) => (
+                                {readModelSchema?.properties && Object.keys(readModelSchema.properties).map((_, index) => (
                                     <Column key={index} field={_} header={_} />
                                 ))}
                             </DataTable>

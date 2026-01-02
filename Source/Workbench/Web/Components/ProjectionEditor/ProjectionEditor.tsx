@@ -11,12 +11,14 @@ import {
     disposeProjectionDslLanguage,
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
+import { ProjectionDefinitionSyntaxError } from 'Api/Projections';
 
 export interface ProjectionEditorProps {
     value: string;
     onChange?: (value: string) => void;
     readModelSchemas?: JsonSchema[],
     eventSchemas?: JsonSchema[],
+    errors?: ProjectionDefinitionSyntaxError[];
     height?: string;
     theme?: string;
 }
@@ -26,6 +28,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     onChange,
     readModelSchemas,
     eventSchemas,
+    errors,
     height = '400px',
     theme = 'vs-dark',
 }) => {
@@ -82,6 +85,35 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             editorRef.current.setValue(value);
         }
     }, [value]);
+
+    // Update markers when errors change
+    useEffect(() => {
+        if (!editorRef.current) return;
+
+        const model = editorRef.current.getModel();
+        if (!model) return;
+
+        if (errors && errors.length > 0) {
+            console.log('Setting markers for errors:', errors);
+            const markers: monaco.editor.IMarkerData[] = errors.map(error => {
+                const line = model.getLineContent(error.line);
+                const endColumn = Math.max(error.column + 1, line.length);
+                return {
+                    severity: monaco.MarkerSeverity.Error,
+                    startLineNumber: error.line,
+                    startColumn: error.column,
+                    endLineNumber: error.line,
+                    endColumn: endColumn,
+                    message: error.message,
+                };
+            });
+            console.log('Markers:', markers);
+            monaco.editor.setModelMarkers(model, 'projection-dsl', markers);
+        } else {
+            console.log('Clearing markers');
+            monaco.editor.setModelMarkers(model, 'projection-dsl', []);
+        }
+    }, [errors]);
 
     return <div ref={containerRef} style={{ height, width: '100%' }} />;
 };

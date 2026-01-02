@@ -16,7 +16,8 @@ public class when_parsing_qualified_projection_name : Specification
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
-        _result = parser.Parse();
+        var parseResult = parser.Parse();
+        _result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
     }
 
     [Fact] void should_have_qualified_projection_name() => _result.Projections[0].Name.ShouldEqual("Core.Simulations.Simulation");

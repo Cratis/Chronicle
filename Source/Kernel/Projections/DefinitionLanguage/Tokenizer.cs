@@ -222,7 +222,7 @@ public class Tokenizer
 
             if (_indentStack.Peek() != indentLevel)
             {
-                throw new SyntaxError($"Indentation error: {indentLevel} spaces does not match any outer indentation level", line, column);
+                throw new InvalidOperationException($"Indentation error: {indentLevel} spaces does not match any outer indentation level at line {line}, column {column}");
             }
 
             return new Token(TokenType.Dedent, string.Empty, line, column);
@@ -289,7 +289,7 @@ public class Tokenizer
 
         if (_position >= _input.Length)
         {
-            throw new SyntaxError("Unterminated string literal", line, column);
+            throw new InvalidOperationException($"Unterminated string literal at line {line}, column {column}");
         }
 
         Advance(); // Skip closing quote
@@ -311,7 +311,7 @@ public class Tokenizer
 
         if (_position >= _input.Length)
         {
-            throw new SyntaxError("Unterminated template string", line, column);
+            throw new InvalidOperationException($"Unterminated template string at line {line}, column {column}");
         }
 
         Advance(); // Skip closing backtick

@@ -16,7 +16,8 @@ public class when_parsing_simple_projection : Specification
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
-        _result = parser.Parse();
+        var parseResult = parser.Parse();
+        _result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
     }
 
     [Fact] void should_have_one_projection() => _result.Projections.Count.ShouldEqual(1);

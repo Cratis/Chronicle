@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
@@ -15,18 +16,34 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class LanguageService(IGenerator generator) : ILanguageService
 {
     /// <inheritdoc/>
-    public ProjectionDefinition Compile(
+    public Result<ProjectionDefinition, ParsingErrors> Compile(
         string definition,
         ProjectionId identifier,
         ProjectionOwner owner,
         EventSequenceId eventSequenceId)
     {
-        var tokenizer = new Tokenizer(definition);
-        var tokens = tokenizer.Tokenize();
-        var parser = new Parser(tokens);
-        var document = parser.Parse();
-        var compiler = new Compiler();
-        return compiler.Compile(document, identifier, owner, eventSequenceId);
+        try
+        {
+            var tokenizer = new Tokenizer(definition);
+            var tokens = tokenizer.Tokenize();
+            var parser = new Parser(tokens);
+            var parseResult = parser.Parse();
+
+            return parseResult.Match<Result<ProjectionDefinition, ParsingErrors>>(
+                document =>
+                {
+                    var compiler = new Compiler();
+                    return compiler.Compile(document, identifier, owner, eventSequenceId);
+                },
+                errors => errors);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Handle tokenizer errors
+            var errors = new ParsingErrors([]);
+            errors.Add(new SyntaxError(ex.Message, 0, 0));
+            return errors;
+        }
     }
 
     /// <inheritdoc/>

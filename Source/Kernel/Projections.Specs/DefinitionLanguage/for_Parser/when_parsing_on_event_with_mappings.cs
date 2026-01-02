@@ -16,7 +16,8 @@ public class when_parsing_on_event_with_mappings : Specification
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
-        var result = parser.Parse();
+        var parseResult = parser.Parse();
+        var result = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
         _onEvent = (FromEventBlock)result.Projections[0].Directives[0];
     }
 

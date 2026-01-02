@@ -29,8 +29,21 @@ public record PreviewProjection(string EventStore, string Namespace, string Dsl)
             Dsl = Dsl
         };
 
-        var preview = await projections.PreviewFromDsl(request);
-        var jsonObjects = preview.ReadModelEntries.Select(s => JsonNode.Parse(s)?.AsObject() ?? new JsonObject());
-        return new ProjectionPreview(jsonObjects, JsonNode.Parse(preview.ReadModel.Schema)!.AsObject());
+        var result = await projections.PreviewFromDsl(request);
+
+        return result.Value switch
+        {
+            Contracts.Projections.ProjectionPreview preview => new ProjectionPreview(
+                preview.ReadModelEntries.Select(s => JsonNode.Parse(s)?.AsObject() ?? new JsonObject()),
+                JsonNode.Parse(preview.ReadModel.Schema)!.AsObject(),
+                []),
+
+            ProjectionDefinitionParsingErrors errors => new ProjectionPreview(
+                [],
+                new JsonObject(),
+                errors.Errors.Select(e => new ProjectionDefinitionSyntaxError(e.Message, e.Line, e.Column))),
+
+            _ => throw new InvalidOperationException("Unexpected result type from PreviewFromDsl")
+        };
     }
 }

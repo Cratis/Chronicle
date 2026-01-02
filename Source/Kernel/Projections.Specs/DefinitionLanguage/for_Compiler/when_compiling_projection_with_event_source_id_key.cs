@@ -18,7 +18,8 @@ public class when_compiling_projection_with_event_source_id_key : Specification
         var tokenizer = new Tokenizer(Dsl);
         var tokens = tokenizer.Tokenize();
         var parser = new Parser(tokens);
-        var document = parser.Parse();
+        var parseResult = parser.Parse();
+        var document = parseResult.Match(doc => doc, errors => throw new InvalidOperationException($"Parsing failed: {string.Join(", ", errors.Errors)}"));
         var compiler = new Compiler();
         _result = compiler.Compile(document, new ProjectionId("test"), ProjectionOwner.Client, EventSequenceId.Log);
     }

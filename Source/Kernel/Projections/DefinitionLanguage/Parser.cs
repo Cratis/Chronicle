@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class Parser(IEnumerable<Token> tokens)
 {
     readonly List<Token> _tokens = tokens.Where(t => t.Type != TokenType.NewLine).ToList();
+    readonly ParsingErrors _errors = new([]);
     int _position;
 
     Token Current => _position < _tokens.Count ? _tokens[_position] : new Token(TokenType.EndOfInput, string.Empty, 0, 0);
@@ -20,17 +22,29 @@ public class Parser(IEnumerable<Token> tokens)
     /// <summary>
     /// Parses the DSL into a Document AST.
     /// </summary>
-    /// <returns>The parsed document.</returns>
-    public Document Parse()
+    /// <returns>The parsed document or parsing errors.</returns>
+    public Result<Document, ParsingErrors> Parse()
     {
         var projections = new List<ProjectionNode>();
 
         while (!IsAtEnd)
         {
-            projections.Add(ParseProjection());
+            var projection = ParseProjection();
+            if (projection is not null)
+            {
+                projections.Add(projection);
+            }
+
+            // If we encountered errors and couldn't parse, try to recover by advancing
+            if (_errors.HasErrors && !IsAtEnd && projection is null)
+            {
+                Advance();
+            }
         }
 
-        return new Document(projections);
+        return _errors.HasErrors
+            ? _errors
+            : new Document(projections);
     }
 
     Token Peek(int offset = 1) => _position + offset < _tokens.Count ? _tokens[_position + offset] : new Token(TokenType.EndOfInput, string.Empty, 0, 0);
@@ -39,31 +53,46 @@ public class Parser(IEnumerable<Token> tokens)
 
     bool Check(TokenType type) => Current.Type == type;
 
-    Token Expect(TokenType type, string message = "")
+    Token? Expect(TokenType type, string message = "")
     {
         if (!Check(type))
         {
             var msg = string.IsNullOrEmpty(message) ? $"Expected {type}" : message;
-            throw new SyntaxError(msg, Current.Line, Current.Column);
+            _errors.Add(new SyntaxError(msg, Current.Line, Current.Column));
+            return null;
         }
         var token = Current;
         Advance();
         return token;
     }
 
-    ProjectionNode ParseProjection()
+    ProjectionNode? ParseProjection()
     {
-        Expect(TokenType.Projection);
-        var projectionName = ParseTypeRef();
-        Expect(TokenType.Arrow);
-        var readModelType = ParseTypeRef();
+        if (!Check(TokenType.Projection))
+        {
+            _errors.Add(new SyntaxError("Expected 'projection'", Current.Line, Current.Column));
+            return null;
+        }
+        Advance();
 
-        Expect(TokenType.Indent);
+        var projectionName = ParseTypeRef();
+        if (projectionName is null) return null;
+
+        if (Expect(TokenType.Arrow) is null) return null;
+
+        var readModelType = ParseTypeRef();
+        if (readModelType is null) return null;
+
+        if (Expect(TokenType.Indent) is null) return null;
 
         var directives = new List<ProjectionDirective>();
         while (!Check(TokenType.Dedent) && !IsAtEnd)
         {
-            directives.Add(ParseProjectionDirective());
+            var directive = ParseProjectionDirective();
+            if (directive is not null)
+            {
+                directives.Add(directive);
+            }
         }
 
         if (Check(TokenType.Dedent))
@@ -74,7 +103,7 @@ public class Parser(IEnumerable<Token> tokens)
         return new ProjectionNode(projectionName.Name, readModelType, directives);
     }
 
-    ProjectionDirective ParseProjectionDirective()
+    ProjectionDirective? ParseProjectionDirective()
     {
         if (Check(TokenType.AutoMap))
         {
@@ -107,26 +136,35 @@ public class Parser(IEnumerable<Token> tokens)
             return ParseChildrenBlock();
         }
 
-        throw new SyntaxError($"Unexpected token '{Current.Value}' in projection body", Current.Line, Current.Column);
+        _errors.Add(new SyntaxError($"Unexpected token '{Current.Value}' in projection body", Current.Line, Current.Column));
+        return null;
     }
 
-    ProjectionDirective ParseKeyOrCompositeKeyDirective()
+    ProjectionDirective? ParseKeyOrCompositeKeyDirective()
     {
         Advance(); // Skip 'key'
 
         if (Peek().Type == TokenType.LeftBrace)
         {
             var typeName = ParseTypeRef();
-            Expect(TokenType.LeftBrace);
-            Expect(TokenType.Indent);
+            if (typeName is null) return null;
+
+            if (Expect(TokenType.LeftBrace) is null) return null;
+            if (Expect(TokenType.Indent) is null) return null;
 
             var parts = new List<KeyPart>();
             while (!Check(TokenType.Dedent) && !IsAtEnd)
             {
-                var propName = Expect(TokenType.Identifier).Value;
-                Expect(TokenType.Equals);
+                var propNameToken = Expect(TokenType.Identifier);
+                if (propNameToken is null) continue;
+
+                if (Expect(TokenType.Equals) is null) continue;
+
                 var expr = ParseExpression();
-                parts.Add(new KeyPart(propName, expr));
+                if (expr is not null)
+                {
+                    parts.Add(new KeyPart(propNameToken.Value, expr));
+                }
             }
 
             Expect(TokenType.Dedent);
@@ -136,13 +174,13 @@ public class Parser(IEnumerable<Token> tokens)
         }
 
         var keyExpr = ParseExpression();
-        return new KeyDirective(keyExpr);
+        return keyExpr is not null ? new KeyDirective(keyExpr) : null;
     }
 
-    EveryBlock ParseEveryBlock()
+    EveryBlock? ParseEveryBlock()
     {
         Advance(); // Skip 'every'
-        Expect(TokenType.Indent);
+        if (Expect(TokenType.Indent) is null) return null;
 
         var mappings = new List<MappingOperation>();
         var excludeChildren = false;
@@ -163,7 +201,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                mappings.Add(ParseMappingOperation());
+                var mapping = ParseMappingOperation();
+                if (mapping is not null)
+                {
+                    mappings.Add(mapping);
+                }
             }
         }
 
@@ -171,10 +213,11 @@ public class Parser(IEnumerable<Token> tokens)
         return new EveryBlock(mappings, excludeChildren, autoMap);
     }
 
-    FromEventBlock ParseOnEventBlock()
+    FromEventBlock? ParseOnEventBlock()
     {
         Advance(); // Skip 'from'
         var eventType = ParseTypeRef();
+        if (eventType is null) return null;
 
         var autoMap = false;
         Expression? key = null;
@@ -198,7 +241,7 @@ public class Parser(IEnumerable<Token> tokens)
             }
         }
 
-        Expect(TokenType.Indent);
+        if (Expect(TokenType.Indent) is null) return null;
 
         var mappings = new List<MappingOperation>();
         Expression? parentKey = null;
@@ -225,7 +268,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                mappings.Add(ParseMappingOperation());
+                var mapping = ParseMappingOperation();
+                if (mapping is not null)
+                {
+                    mappings.Add(mapping);
+                }
             }
         }
 
@@ -233,21 +280,34 @@ public class Parser(IEnumerable<Token> tokens)
         return new FromEventBlock(eventType, autoMap, key, compositeKey, parentKey, mappings);
     }
 
-    JoinBlock ParseJoinBlock()
+    JoinBlock? ParseJoinBlock()
     {
         Advance(); // Skip 'join'
-        var joinName = Expect(TokenType.Identifier).Value;
-        Expect(TokenType.From);
-        var onProperty = Expect(TokenType.Identifier).Value;
+        var joinNameToken = Expect(TokenType.Identifier);
+        if (joinNameToken is null) return null;
+        var joinName = joinNameToken.Value;
 
-        Expect(TokenType.Indent);
-        Expect(TokenType.Events);
+        if (Expect(TokenType.From) is null) return null;
 
-        var eventTypes = new List<TypeRef> { ParseTypeRef() };
+        var onPropertyToken = Expect(TokenType.Identifier);
+        if (onPropertyToken is null) return null;
+        var onProperty = onPropertyToken.Value;
+
+        if (Expect(TokenType.Indent) is null) return null;
+        if (Expect(TokenType.Events) is null) return null;
+
+        var firstEventType = ParseTypeRef();
+        if (firstEventType is null) return null;
+
+        var eventTypes = new List<TypeRef> { firstEventType };
         while (Check(TokenType.Comma))
         {
             Advance();
-            eventTypes.Add(ParseTypeRef());
+            var eventType = ParseTypeRef();
+            if (eventType is not null)
+            {
+                eventTypes.Add(eventType);
+            }
         }
 
         var autoMap = false;
@@ -262,7 +322,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                mappings.Add(ParseMappingOperation());
+                var mapping = ParseMappingOperation();
+                if (mapping is not null)
+                {
+                    mappings.Add(mapping);
+                }
             }
         }
 
@@ -270,14 +334,19 @@ public class Parser(IEnumerable<Token> tokens)
         return new JoinBlock(joinName, onProperty, eventTypes, autoMap, mappings);
     }
 
-    ChildrenBlock ParseChildrenBlock()
+    ChildrenBlock? ParseChildrenBlock()
     {
         Advance(); // Skip 'children'
-        var collectionName = Expect(TokenType.Identifier).Value;
-        Expect(TokenType.Id);
-        var identifierExpr = ParseExpression();
+        var collectionNameToken = Expect(TokenType.Identifier);
+        if (collectionNameToken is null) return null;
+        var collectionName = collectionNameToken.Value;
 
-        Expect(TokenType.Indent);
+        if (Expect(TokenType.Id) is null) return null;
+
+        var identifierExpr = ParseExpression();
+        if (identifierExpr is null) return null;
+
+        if (Expect(TokenType.Indent) is null) return null;
 
         var autoMap = false;
         var childBlocks = new List<ChildBlock>();
@@ -291,7 +360,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                childBlocks.Add(ParseChildBlock());
+                var childBlock = ParseChildBlock();
+                if (childBlock is not null)
+                {
+                    childBlocks.Add(childBlock);
+                }
             }
         }
 
@@ -299,7 +372,7 @@ public class Parser(IEnumerable<Token> tokens)
         return new ChildrenBlock(collectionName, identifierExpr, autoMap, childBlocks);
     }
 
-    ChildBlock ParseChildBlock()
+    ChildBlock? ParseChildBlock()
     {
         if (Check(TokenType.From))
         {
@@ -321,13 +394,15 @@ public class Parser(IEnumerable<Token> tokens)
             return ParseRemoveBlock();
         }
 
-        throw new SyntaxError($"Unexpected token '{Current.Value}' in children block", Current.Line, Current.Column);
+        _errors.Add(new SyntaxError($"Unexpected token '{Current.Value}' in children block", Current.Line, Current.Column));
+        return null;
     }
 
-    ChildOnEventBlock ParseChildOnEventBlock()
+    ChildOnEventBlock? ParseChildOnEventBlock()
     {
         Advance(); // Skip 'on'
         var eventType = ParseTypeRef();
+        if (eventType is null) return null;
 
         Expression? key = null;
 
@@ -338,7 +413,7 @@ public class Parser(IEnumerable<Token> tokens)
             key = ParseExpression();
         }
 
-        Expect(TokenType.Indent);
+        if (Expect(TokenType.Indent) is null) return null;
 
         var mappings = new List<MappingOperation>();
         Expression? parentKey = null;
@@ -365,7 +440,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                mappings.Add(ParseMappingOperation());
+                var mapping = ParseMappingOperation();
+                if (mapping is not null)
+                {
+                    mappings.Add(mapping);
+                }
             }
         }
 
@@ -373,21 +452,34 @@ public class Parser(IEnumerable<Token> tokens)
         return new ChildOnEventBlock(eventType, key, compositeKey, parentKey, mappings);
     }
 
-    ChildJoinBlock ParseChildJoinBlock()
+    ChildJoinBlock? ParseChildJoinBlock()
     {
         Advance(); // Skip 'join'
-        var joinName = Expect(TokenType.Identifier).Value;
-        Expect(TokenType.From);
-        var onProperty = Expect(TokenType.Identifier).Value;
+        var joinNameToken = Expect(TokenType.Identifier);
+        if (joinNameToken is null) return null;
+        var joinName = joinNameToken.Value;
 
-        Expect(TokenType.Indent);
-        Expect(TokenType.Events);
+        if (Expect(TokenType.From) is null) return null;
 
-        var eventTypes = new List<TypeRef> { ParseTypeRef() };
+        var onPropertyToken = Expect(TokenType.Identifier);
+        if (onPropertyToken is null) return null;
+        var onProperty = onPropertyToken.Value;
+
+        if (Expect(TokenType.Indent) is null) return null;
+        if (Expect(TokenType.Events) is null) return null;
+
+        var firstEventType = ParseTypeRef();
+        if (firstEventType is null) return null;
+
+        var eventTypes = new List<TypeRef> { firstEventType };
         while (Check(TokenType.Comma))
         {
             Advance();
-            eventTypes.Add(ParseTypeRef());
+            var eventType = ParseTypeRef();
+            if (eventType is not null)
+            {
+                eventTypes.Add(eventType);
+            }
         }
 
         var autoMap = false;
@@ -402,7 +494,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                mappings.Add(ParseMappingOperation());
+                var mapping = ParseMappingOperation();
+                if (mapping is not null)
+                {
+                    mappings.Add(mapping);
+                }
             }
         }
 
@@ -410,14 +506,19 @@ public class Parser(IEnumerable<Token> tokens)
         return new ChildJoinBlock(joinName, onProperty, eventTypes, autoMap, mappings);
     }
 
-    NestedChildrenBlock ParseNestedChildrenBlock()
+    NestedChildrenBlock? ParseNestedChildrenBlock()
     {
         Advance(); // Skip 'children'
-        var collectionName = Expect(TokenType.Identifier).Value;
-        Expect(TokenType.Id);
-        var identifierExpr = ParseExpression();
+        var collectionNameToken = Expect(TokenType.Identifier);
+        if (collectionNameToken is null) return null;
+        var collectionName = collectionNameToken.Value;
 
-        Expect(TokenType.Indent);
+        if (Expect(TokenType.Id) is null) return null;
+
+        var identifierExpr = ParseExpression();
+        if (identifierExpr is null) return null;
+
+        if (Expect(TokenType.Indent) is null) return null;
 
         var autoMap = false;
         var childBlocks = new List<ChildBlock>();
@@ -431,7 +532,11 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                childBlocks.Add(ParseChildBlock());
+                var childBlock = ParseChildBlock();
+                if (childBlock is not null)
+                {
+                    childBlocks.Add(childBlock);
+                }
             }
         }
 
@@ -439,7 +544,7 @@ public class Parser(IEnumerable<Token> tokens)
         return new NestedChildrenBlock(collectionName, identifierExpr, autoMap, childBlocks);
     }
 
-    ChildBlock ParseRemoveBlock()
+    ChildBlock? ParseRemoveBlock()
     {
         Advance(); // Skip 'remove'
 
@@ -447,9 +552,11 @@ public class Parser(IEnumerable<Token> tokens)
         if (Check(TokenType.Via))
         {
             Advance();
-            Expect(TokenType.Join);
-            Expect(TokenType.From);
+            if (Expect(TokenType.Join) is null) return null;
+            if (Expect(TokenType.From) is null) return null;
+
             var eventType = ParseTypeRef();
+            if (eventType is null) return null;
 
             Expression? key = null;
             if (Check(TokenType.Key))
@@ -461,8 +568,10 @@ public class Parser(IEnumerable<Token> tokens)
             return new RemoveViaJoinBlock(eventType, key);
         }
 
-        Expect(TokenType.From);
+        if (Expect(TokenType.From) is null) return null;
+
         var removeEventType = ParseTypeRef();
+        if (removeEventType is null) return null;
 
         Expression? removeKey = null;
         if (Check(TokenType.Key))
@@ -471,7 +580,7 @@ public class Parser(IEnumerable<Token> tokens)
             removeKey = ParseExpression();
         }
 
-        Expect(TokenType.Indent);
+        if (Expect(TokenType.Indent) is null) return null;
 
         Expression? parentKey = null;
         while (!Check(TokenType.Dedent) && !IsAtEnd)
@@ -483,7 +592,8 @@ public class Parser(IEnumerable<Token> tokens)
             }
             else
             {
-                throw new SyntaxError($"Unexpected token '{Current.Value}' in remove block", Current.Line, Current.Column);
+                _errors.Add(new SyntaxError($"Unexpected token '{Current.Value}' in remove block", Current.Line, Current.Column));
+                Advance(); // Skip invalid token to continue parsing
             }
         }
 
@@ -491,60 +601,76 @@ public class Parser(IEnumerable<Token> tokens)
         return new RemoveBlock(removeEventType, removeKey, parentKey);
     }
 
-    MappingOperation ParseMappingOperation()
+    MappingOperation? ParseMappingOperation()
     {
         if (Check(TokenType.Increment))
         {
             Advance();
-            var prop = Expect(TokenType.Identifier).Value;
-            return new IncrementOperation(prop);
+            var propToken = Expect(TokenType.Identifier);
+            if (propToken is null) return null;
+            return new IncrementOperation(propToken.Value);
         }
 
         if (Check(TokenType.Decrement))
         {
             Advance();
-            var prop = Expect(TokenType.Identifier).Value;
-            return new DecrementOperation(prop);
+            var propToken = Expect(TokenType.Identifier);
+            if (propToken is null) return null;
+            return new DecrementOperation(propToken.Value);
         }
 
         if (Check(TokenType.Count))
         {
             Advance();
-            var prop = Expect(TokenType.Identifier).Value;
-            return new CountOperation(prop);
+            var propToken = Expect(TokenType.Identifier);
+            if (propToken is null) return null;
+            return new CountOperation(propToken.Value);
         }
 
         if (Check(TokenType.Add))
         {
             Advance();
-            var prop = Expect(TokenType.Identifier).Value;
-            Expect(TokenType.By);
+            var propToken = Expect(TokenType.Identifier);
+            if (propToken is null) return null;
+
+            if (Expect(TokenType.By) is null) return null;
+
             var value = ParseExpression();
-            return new AddOperation(prop, value);
+            if (value is null) return null;
+            return new AddOperation(propToken.Value, value);
         }
 
         if (Check(TokenType.Subtract))
         {
             Advance();
-            var prop = Expect(TokenType.Identifier).Value;
-            Expect(TokenType.By);
+            var propToken = Expect(TokenType.Identifier);
+            if (propToken is null) return null;
+
+            if (Expect(TokenType.By) is null) return null;
+
             var value = ParseExpression();
-            return new SubtractOperation(prop, value);
+            if (value is null) return null;
+            return new SubtractOperation(propToken.Value, value);
         }
 
         // Assignment
         if (Check(TokenType.Identifier))
         {
-            var propName = Expect(TokenType.Identifier).Value;
-            Expect(TokenType.Equals);
+            var propNameToken = Expect(TokenType.Identifier);
+            if (propNameToken is null) return null;
+
+            if (Expect(TokenType.Equals) is null) return null;
+
             var value = ParseExpression();
-            return new AssignmentOperation(propName, value);
+            if (value is null) return null;
+            return new AssignmentOperation(propNameToken.Value, value);
         }
 
-        throw new SyntaxError("Expected mapping operation", Current.Line, Current.Column);
+        _errors.Add(new SyntaxError("Expected mapping operation", Current.Line, Current.Column));
+        return null;
     }
 
-    Expression ParseExpression()
+    Expression? ParseExpression()
     {
         // Template literal
         if (Check(TokenType.TemplateLiteral))
@@ -558,30 +684,34 @@ public class Parser(IEnumerable<Token> tokens)
         if (Check(TokenType.EventRef))
         {
             Advance();
-            Expect(TokenType.Dot);
+            if (Expect(TokenType.Dot) is null) return null;
             var path = ParsePropertyPath();
-            return new EventDataExpression(path);
+            return path is not null ? new EventDataExpression(path) : null;
         }
 
         // Context reference (ctx.property)
         if (Check(TokenType.ContextRef))
         {
             Advance();
-            Expect(TokenType.Dot);
-            var property = Expect(TokenType.Identifier).Value;
-            return new EventContextExpression(property);
+            if (Expect(TokenType.Dot) is null) return null;
+            var propertyToken = Expect(TokenType.Identifier);
+            if (propertyToken is null) return null;
+            return new EventContextExpression(propertyToken.Value);
         }
 
         // $eventSourceId shorthand
         if (Check(TokenType.Dollar))
         {
             Advance();
-            var name = Expect(TokenType.Identifier).Value;
+            var nameToken = Expect(TokenType.Identifier);
+            if (nameToken is null) return null;
+            var name = nameToken.Value;
             if (name.Equals("eventSourceId", StringComparison.OrdinalIgnoreCase))
             {
                 return new EventSourceIdExpression();
             }
-            throw new SyntaxError($"Unknown shorthand '${name}'", Current.Line, Current.Column);
+            _errors.Add(new SyntaxError($"Unknown shorthand '${name}'", Current.Line, Current.Column));
+            return null;
         }
 
         // Literals
@@ -617,10 +747,11 @@ public class Parser(IEnumerable<Token> tokens)
             return new LiteralExpression(value);
         }
 
-        throw new SyntaxError("Expected expression", Current.Line, Current.Column);
+        _errors.Add(new SyntaxError("Expected expression", Current.Line, Current.Column));
+        return null;
     }
 
-    TemplateExpression ParseTemplate(string template)
+    TemplateExpression? ParseTemplate(string template)
     {
         var parts = new List<TemplatePart>();
         var i = 0;
@@ -648,12 +779,14 @@ public class Parser(IEnumerable<Token> tokens)
             var closeIndex = template.IndexOf('}', dollarIndex + 2);
             if (closeIndex == -1)
             {
-                throw new SyntaxError("Unterminated template expression", Current.Line, Current.Column);
+                _errors.Add(new SyntaxError("Unterminated template expression", Current.Line, Current.Column));
+                return null;
             }
 
             // Parse the expression inside ${}
             var exprText = template.Substring(dollarIndex + 2, closeIndex - dollarIndex - 2);
             var expr = ParseTemplateExpression(exprText);
+            if (expr is null) return null;
             parts.Add(new TemplateExpressionPart(expr));
 
             i = closeIndex + 1;
@@ -662,7 +795,7 @@ public class Parser(IEnumerable<Token> tokens)
         return new TemplateExpression(parts);
     }
 
-    Expression ParseTemplateExpression(string exprText)
+    Expression? ParseTemplateExpression(string exprText)
     {
         // Simple parser for expressions within template
         exprText = exprText.Trim();
@@ -677,30 +810,41 @@ public class Parser(IEnumerable<Token> tokens)
             return new EventContextExpression(exprText.Substring(4));
         }
 
-        throw new SyntaxError($"Invalid template expression '{exprText}'", Current.Line, Current.Column);
+        _errors.Add(new SyntaxError($"Invalid template expression '{exprText}'", Current.Line, Current.Column));
+        return null;
     }
 
-    string ParsePropertyPath()
+    string? ParsePropertyPath()
     {
-        var parts = new List<string> { Expect(TokenType.Identifier).Value };
+        var identifierToken = Expect(TokenType.Identifier);
+        if (identifierToken is null) return null;
+
+        var parts = new List<string> { identifierToken.Value };
 
         while (Check(TokenType.Dot))
         {
             Advance();
-            parts.Add(Expect(TokenType.Identifier).Value);
+            var nextToken = Expect(TokenType.Identifier);
+            if (nextToken is null) return null;
+            parts.Add(nextToken.Value);
         }
 
         return string.Join('.', parts);
     }
 
-    TypeRef ParseTypeRef()
+    TypeRef? ParseTypeRef()
     {
-        var parts = new List<string> { Expect(TokenType.Identifier).Value };
+        var identifierToken = Expect(TokenType.Identifier);
+        if (identifierToken is null) return null;
+
+        var parts = new List<string> { identifierToken.Value };
 
         while (Check(TokenType.Dot))
         {
             Advance();
-            parts.Add(Expect(TokenType.Identifier).Value);
+            var nextToken = Expect(TokenType.Identifier);
+            if (nextToken is null) return null;
+            parts.Add(nextToken.Value);
         }
 
         return new TypeRef(string.Join('.', parts));

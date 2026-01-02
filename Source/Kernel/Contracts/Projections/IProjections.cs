@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDefinitionParsingErrors;
+using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
+
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
@@ -93,6 +96,6 @@ public interface IProjections
     /// </summary>
     /// <param name="request"><see cref="PreviewProjectionRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>The <see cref="ProjectionPreview"/>.</returns>
-    Task<ProjectionPreview> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default);
+    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="ContractProjectionPreview"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
+    Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default);
 }

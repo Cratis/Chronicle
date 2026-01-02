@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
@@ -20,8 +21,8 @@ public interface ILanguageService
     /// <param name="identifier">The projection identifier.</param>
     /// <param name="owner">The projection owner.</param>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <returns>A ProjectionDefinition.</returns>
-    ProjectionDefinition Compile(string definition, ProjectionId identifier, ProjectionOwner owner, EventSequenceId eventSequenceId);
+    /// <returns>A ProjectionDefinition or parsing errors.</returns>
+    Result<ProjectionDefinition, ParsingErrors> Compile(string definition, ProjectionId identifier, ProjectionOwner owner, EventSequenceId eventSequenceId);
 
     /// <summary>
     /// Generates a language definition string from a ProjectionDefinition.

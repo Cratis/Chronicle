@@ -10,4 +10,8 @@ namespace Cratis.Chronicle.Api.Projections;
 /// </summary>
 /// <param name="ReadModelEntries">The read model entries resulting from the projection preview.</param>
 /// <param name="Schema">The schema of the read model.</param>
-public record ProjectionPreview(IEnumerable<JsonObject> ReadModelEntries, JsonObject Schema);
+/// <param name="SyntaxErrors">The syntax errors encountered during the projection preview.</param>
+public record ProjectionPreview(
+    IEnumerable<JsonObject> ReadModelEntries,
+    JsonObject Schema,
+    IEnumerable<ProjectionDefinitionSyntaxError> SyntaxErrors);
