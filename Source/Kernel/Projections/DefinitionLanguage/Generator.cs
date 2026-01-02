@@ -21,8 +21,8 @@ public class Generator : IGenerator
         var sb = new StringBuilder();
         var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title;
 
-        // Projection declaration
-        sb.AppendLine($"projection {definition.Identifier.Value} => {readModelName}");
+        // Projection declaration - use read model name since the original projection name is not stored in ProjectionDefinition
+        sb.AppendLine($"projection {readModelName}Projection => {readModelName}");
 
         // FromEvery block
         if (definition.FromEvery.Properties.Count > 0)
@@ -229,15 +229,15 @@ public class Generator : IGenerator
         }
         else if (expression == "increment")
         {
-            sb.AppendLine($"{Indent(indent)}{property.Path} increment");
+            sb.AppendLine($"{Indent(indent)}increment {property.Path}");
         }
         else if (expression == "decrement")
         {
-            sb.AppendLine($"{Indent(indent)}{property.Path} decrement");
+            sb.AppendLine($"{Indent(indent)}decrement {property.Path}");
         }
         else if (expression == "count")
         {
-            sb.AppendLine($"{Indent(indent)}{property.Path} count");
+            sb.AppendLine($"{Indent(indent)}count {property.Path}");
         }
         else
         {

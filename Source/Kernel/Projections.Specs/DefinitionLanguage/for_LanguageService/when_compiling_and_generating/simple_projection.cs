@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
 public class simple_projection : given.a_language_service
 {
@@ -18,7 +18,7 @@ public class simple_projection : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "Users");
 
     [Fact] void should_have_one_from_definition() => _result.From.Count.ShouldEqual(1);
     [Fact] void should_have_from_user_registered() => _result.From.ContainsKey("UserRegistered").ShouldBeTrue();

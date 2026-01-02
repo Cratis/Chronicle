@@ -3,16 +3,14 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class children_remove_and_join : given.a_language_service
+public class children_and_join : given.a_language_service
 {
     const string definition = """
         projection UserGroup => UserGroupReadModel
           children Members id userId
             from UserAdded key userId
-            remove with UserRemoved key userId
-              parent groupId
 
           join GroupSettings on SettingsId
             events SettingsCreated

@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
 public class counter_operations : given.a_language_service
 {
@@ -20,7 +20,7 @@ public class counter_operations : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "Model");
 
     [Fact] void should_have_from_user_logged_in() => _result.From.ContainsKey((EventType)"UserLoggedIn").ShouldBeTrue();
     [Fact] void should_have_three_properties() => _result.From[(EventType)"UserLoggedIn"].Properties.Count.ShouldEqual(3);

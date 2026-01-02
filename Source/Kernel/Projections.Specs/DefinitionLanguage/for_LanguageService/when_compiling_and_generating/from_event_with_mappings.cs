@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
 public class from_event_with_mappings : given.a_language_service
 {
@@ -19,7 +19,7 @@ public class from_event_with_mappings : given.a_language_service
 
     ProjectionDefinition _result;
 
-    void Because() => _result = Compile(definition);
+    void Because() => _result = CompileGenerateAndRecompile(definition, "Model");
 
     [Fact] void should_have_from_event_type() => _result.From.ContainsKey((EventType)"EventType").ShouldBeTrue();
     [Fact] void should_have_key() => _result.From[(EventType)"EventType"].Key.ShouldNotBeNull();

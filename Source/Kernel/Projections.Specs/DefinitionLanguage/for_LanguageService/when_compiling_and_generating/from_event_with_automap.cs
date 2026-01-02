@@ -5,15 +5,15 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class template_expression : given.a_language_service
+public class from_event_with_automap : given.a_language_service
 {
     const string definition = """
         projection User => UserReadModel
           from UserCreated
             key userId
-            FullName = `${firstName} ${lastName}`
+            automap
         """;
 
     ProjectionDefinition _result;
@@ -21,6 +21,7 @@ public class template_expression : given.a_language_service
     void Because() => _result = Compile(definition);
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
-    [Fact] void should_have_full_name_property() => _result.From[(EventType)"UserCreated"].Properties.ContainsKey(new PropertyPath("FullName")).ShouldBeTrue();
-    [Fact] void should_have_template_expression() => _result.From[(EventType)"UserCreated"].Properties[new PropertyPath("FullName")].ShouldContain("firstName");
+    [Fact] void should_have_automap_enabled() => _result.From[(EventType)"UserCreated"].AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_have_key() => _result.From[(EventType)"UserCreated"].Key.ShouldNotBeNull();
+    [Fact] void should_have_key_value() => _result.From[(EventType)"UserCreated"].Key.Value.ShouldEqual("userId");
 }
