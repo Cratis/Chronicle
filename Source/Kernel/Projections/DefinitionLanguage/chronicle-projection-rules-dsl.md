@@ -36,7 +36,7 @@ The DSL compiles into the existing Chronicle declarative projection builder mode
 > “When event **X** happens, apply these effects.”
 
 - `projection` defines the read model
-- `on Event` defines a rule
+- `from Event` defines a rule
 - Assignments and operations are **effects**
 - `children` and `join` create scoped mutation contexts
 - Defaults remove noise; overrides are explicit
@@ -58,8 +58,8 @@ projection User => UserReadModel
 
 ```dsl
 every
-  LastUpdated = ctx.occurred
-  EventSourceId = ctx.eventSourceId
+  LastUpdated = $eventContext.occurred
+  EventSourceId = $eventContext.eventSourceId
   exclude children
 ```
 
@@ -68,15 +68,15 @@ every
 ### Event Rules
 
 ```dsl
-on UserCreated
-  Name = e.name
-  Email = e.email
+from UserCreated
+  Name = name
+  Email = email
   IsActive = true
 ```
 
 ```dsl
-on UserLoggedIn
-  LastLogin = ctx.occurred
+from UserLoggedIn
+  LastLogin = $eventContext.occurred
   count LoginCount
 ```
 
@@ -85,8 +85,8 @@ on UserLoggedIn
 ### Keys
 
 ```dsl
-on UserAssignedToGroup key e.userId
-  GroupId = ctx.eventSourceId
+from UserAssignedToGroup key userId
+  GroupId = $eventContext.eventSourceId
 ```
 
 ---
@@ -94,12 +94,12 @@ on UserAssignedToGroup key e.userId
 ### Composite Keys
 
 ```dsl
-on OrderCreated
+from OrderCreated
   key OrderKey {
-    CustomerId = e.customerId
-    OrderNumber = e.orderNumber
+    CustomerId = customerId
+    OrderNumber = orderNumber
   }
-  Total = e.total
+  Total = total
 ```
 
 ---
@@ -111,8 +111,8 @@ increment LoginCount
 decrement RetryCount
 count EventCount
 
-add Balance by e.amount
-subtract Balance by e.amount
+add Balance by amount
+subtract Balance by amount
 ```
 
 ---
@@ -130,19 +130,19 @@ join Group on GroupId
 ### Children
 
 ```dsl
-children Members id e.userId
+children Members id userId
   automap
 
-  on UserAddedToGroup key e.userId
-    parent ctx.eventSourceId
-    Role = e.role
+  from UserAddedToGroup key userId
+    parent $eventContext.eventSourceId
+    Role = role
 
-  on UserRoleChanged key e.userId
-    parent e.groupId
-    Role = e.role
+  from UserRoleChanged key userId
+    parent groupId
+    Role = role
 
-  remove on UserRemovedFromGroup key e.userId
-    parent e.groupId
+  remove with UserRemovedFromGroup key userId
+    parent groupId
 ```
 
 ---
@@ -150,9 +150,9 @@ children Members id e.userId
 ### Removed With Join
 
 ```dsl
-children Groups id e.groupId
-  on UserAddedToGroup
-    parent e.userId
+children Groups id groupId
+  from UserAddedToGroup
+    parent userId
 
   join Group on GroupId
     events GroupCreated, GroupRenamed
@@ -193,15 +193,28 @@ and support **all current projection capabilities** without loss of expressivene
 
 ## Expressions
 
-Supported expressions:
+### DSL Syntax
 
-- `e.<path>` — event payload
-- `ctx.<name>` — event context (`occurred`, `sequenceNumber`, `correlationId`, `eventSourceId`)
-- `$eventSourceId` — alias for `ctx.eventSourceId`
+Supported expressions in the DSL:
+
+- `<path>` — event payload property access (e.g., `name`, `contactInfo.email`)
+- `$eventContext.<property>` — event context property access (`$eventContext.occurred`, `$eventContext.sequenceNumber`, `$eventContext.correlationId`, `$eventContext.eventSourceId`)
+- `$eventSourceId` — shorthand for event source ID
 - Literals: numbers, strings, booleans, `null`
-- String templates: `` `${e.firstName} ${e.lastName}` ``
+- String templates: `` `${firstName} ${lastName}` ``
 
 No arbitrary function calls unless explicitly added later.
+
+### Compiled Format
+
+**Important**: The DSL syntax is transformed when compiled into Chronicle projection definitions:
+
+- `<path>` → `<path>` — Event data paths remain unchanged (e.g., `name` stays `name`)
+- `$eventContext.<property>` → `$eventContext(<property>)` — Dot notation becomes function-style (e.g., `$eventContext.occurred` becomes `$eventContext(occurred)`)
+- `$eventSourceId` → `$eventSourceId` — Remains unchanged
+- Literals and templates retain their structure
+
+This transformation ensures the compiled projection definitions use Chronicle's internal expression format while keeping the DSL clean and consistent.
 
 ---
 
@@ -274,7 +287,7 @@ ProjDirective   = "automap", NL
                 | CompositeKeyDecl ;
 
 Block           = EveryBlock
-                | OnEventBlock
+                | FromEventBlock
                 | JoinBlock
                 | ChildrenBlock ;
 
@@ -284,15 +297,15 @@ EveryBlock      = "every", NL,
                     [ "exclude", "children", NL ],
                   DEDENT ;
 
-OnEventBlock    = "on", TypeRef,
-                  { OnEventOpt },
+FromEventBlock  = "from", TypeRef,
+                  { FromEventOpt },
                   NL,
                   INDENT,
                     [ ParentDecl ],
                     { MappingLine | KeyDecl | CompositeKeyDecl },
                   DEDENT ;
 
-OnEventOpt      = "automap"
+FromEventOpt    = "automap"
                 | KeyInline ;
 
 JoinBlock       = "join", Ident, "on", Ident, NL,
@@ -308,7 +321,7 @@ ChildrenBlock   = "children", Ident, "id", Expr, NL,
                     { ChildBlock },
                   DEDENT ;
 
-ChildBlock      = OnEventBlock
+ChildBlock      = FromEventBlock
                 | JoinBlock
                 | RemoveWithBlock
                 | RemoveWithJoinBlock
@@ -353,11 +366,13 @@ SubLine         = "subtract", Ident, "by", Expr, NL ;
 
 Expr            = Template
                 | Literal
-                | Ref
+                | DollarExpr
                 | Path ;
 
-Ref             = "e" | "ctx" | "$eventSourceId" ;
-Path            = Ref, ".", Ident, { ".", Ident } ;
+DollarExpr      = "$eventSourceId"
+                | "$eventContext", ".", Ident ;
+
+Path            = Ident, { ".", Ident } ;
 
 TypeRef         = Ident, { ".", Ident } ;
 Ident           = Letter, { Letter | Digit | "_" } ;
@@ -383,7 +398,7 @@ Ident           = Letter, { Letter | Digit | "_" } ;
 
 ### Event Rules
 
-- `on Event`
+- `from Event`
   - `builder.From<Event>(...)`
 - `automap`
   - `.AutoMap()` on event builder
@@ -421,7 +436,7 @@ Ident           = Letter, { Letter | Digit | "_" } ;
 
 ### Removal
 
-- `remove on Event`
+- `remove with Event`
   - `.RemovedWith<Event>(...)`
 - `remove via join on Event`
   - `.RemovedWithJoin<Event>(...)`

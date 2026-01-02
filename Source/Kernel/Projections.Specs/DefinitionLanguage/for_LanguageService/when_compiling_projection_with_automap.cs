@@ -3,15 +3,13 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
 
-public class when_parsing_simple_projection : Specification
+public class when_compiling_projection_with_automap : given.a_language_service
 {
     const string definition = """
-        projection MyProjection => Users
-          from UserRegistered
-            key $eventSourceId
-            name = e.name
+        projection User => UserReadModel
+          automap
         """;
 
     Document _result;
@@ -26,8 +24,8 @@ public class when_parsing_simple_projection : Specification
     }
 
     [Fact] void should_have_one_projection() => _result.Projections.Count.ShouldEqual(1);
-    [Fact] void should_have_projection_name() => _result.Projections[0].Name.ShouldEqual("MyProjection");
-    [Fact] void should_have_read_model_type() => _result.Projections[0].ReadModelType.Name.ShouldEqual("Users");
+    [Fact] void should_have_projection_name() => _result.Projections[0].Name.ShouldEqual("User");
+    [Fact] void should_have_read_model_type() => _result.Projections[0].ReadModelType.Name.ShouldEqual("UserReadModel");
     [Fact] void should_have_one_directive() => _result.Projections[0].Directives.Count.ShouldEqual(1);
-    [Fact] void should_have_on_event_block() => _result.Projections[0].Directives[0].ShouldBeOfExactType<FromEventBlock>();
+    [Fact] void should_have_automap_directive() => _result.Projections[0].Directives[0].ShouldBeOfExactType<AutoMapDirective>();
 }

@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
 
-public class when_parsing_multiple_event_types : Specification
+public class when_compiling_multiple_event_types : given.a_language_service
 {
     const string definition = """
         projection User => UserReadModel

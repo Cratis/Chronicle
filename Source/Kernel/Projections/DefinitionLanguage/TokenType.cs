@@ -59,152 +59,162 @@ public enum TokenType
     Parent = 9,
 
     /// <summary>
+    /// The keyword 'on'.
+    /// </summary>
+    On = 10,
+
+    /// <summary>
+    /// The keyword 'with'.
+    /// </summary>
+    With = 11,
+
+    /// <summary>
     /// The keyword 'join'.
     /// </summary>
-    Join = 10,
+    Join = 12,
 
     /// <summary>
     /// The keyword 'events'.
     /// </summary>
-    Events = 11,
+    Events = 13,
 
     /// <summary>
     /// The keyword 'children'.
     /// </summary>
-    Children = 12,
+    Children = 14,
 
     /// <summary>
     /// The keyword 'id'.
     /// </summary>
-    Id = 13,
+    Id = 15,
 
     /// <summary>
     /// The keyword 'remove'.
     /// </summary>
-    Remove = 14,
+    Remove = 16,
 
     /// <summary>
     /// The keyword 'via'.
     /// </summary>
-    Via = 15,
+    Via = 17,
 
     /// <summary>
     /// The keyword 'exclude'.
     /// </summary>
-    Exclude = 16,
+    Exclude = 18,
 
     /// <summary>
     /// The keyword 'increment'.
     /// </summary>
-    Increment = 17,
+    Increment = 19,
 
     /// <summary>
     /// The keyword 'decrement'.
     /// </summary>
-    Decrement = 18,
+    Decrement = 20,
 
     /// <summary>
     /// The keyword 'count'.
     /// </summary>
-    Count = 19,
+    Count = 21,
 
     /// <summary>
     /// The keyword 'add'.
     /// </summary>
-    Add = 20,
+    Add = 22,
 
     /// <summary>
     /// The keyword 'subtract'.
     /// </summary>
-    Subtract = 21,
+    Subtract = 23,
 
     /// <summary>
     /// The keyword 'by'.
     /// </summary>
-    By = 22,
+    By = 24,
 
     /// <summary>
     /// The keyword 'true'.
     /// </summary>
-    True = 23,
+    True = 25,
 
     /// <summary>
     /// The keyword 'false'.
     /// </summary>
-    False = 24,
+    False = 26,
 
     /// <summary>
     /// The keyword 'null'.
     /// </summary>
-    Null = 25,
+    Null = 27,
 
     /// <summary>
     /// The keyword 'e' (event reference).
     /// </summary>
-    EventRef = 26,
+    EventRef = 28,
 
     /// <summary>
     /// The keyword 'ctx' (context reference).
     /// </summary>
-    ContextRef = 27,
+    ContextRef = 29,
 
     /// <summary>
     /// The equals operator (=).
     /// </summary>
-    Equals = 28,
+    Equals = 30,
 
     /// <summary>
     /// The arrow operator (=>).
     /// </summary>
-    Arrow = 29,
+    Arrow = 31,
 
     /// <summary>
     /// The dot operator (.).
     /// </summary>
-    Dot = 30,
+    Dot = 32,
 
     /// <summary>
     /// The comma operator (,).
     /// </summary>
-    Comma = 31,
+    Comma = 33,
 
     /// <summary>
     /// The left brace ({).
     /// </summary>
-    LeftBrace = 32,
+    LeftBrace = 34,
 
     /// <summary>
     /// The right brace (}).
     /// </summary>
-    RightBrace = 33,
+    RightBrace = 35,
 
     /// <summary>
     /// The dollar sign ($).
     /// </summary>
-    Dollar = 34,
+    Dollar = 36,
 
     /// <summary>
     /// Indentation increase.
     /// </summary>
-    Indent = 35,
+    Indent = 37,
 
     /// <summary>
     /// Indentation decrease.
     /// </summary>
-    Dedent = 36,
+    Dedent = 38,
 
     /// <summary>
     /// New line character.
     /// </summary>
-    NewLine = 37,
+    NewLine = 39,
 
     /// <summary>
     /// End of input.
     /// </summary>
-    EndOfInput = 38,
+    EndOfInput = 40,
 
     /// <summary>
     /// Invalid token.
     /// </summary>
-    Invalid = 39
+    Invalid = 41
 }

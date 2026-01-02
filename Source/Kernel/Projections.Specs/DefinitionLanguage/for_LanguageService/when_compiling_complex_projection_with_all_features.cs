@@ -3,51 +3,51 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
 
-public class when_parsing_complex_projection_with_all_features : Specification
+public class when_compiling_complex_projection_with_all_features : given.a_language_service
 {
     const string definition = """
         projection UserGroup => UserGroupReadModel
           automap
 
           every
-            LastUpdated = ctx.occurred
+            LastUpdated = $eventContext.occurred
             exclude children
 
           from GroupCreated
-            key ctx.eventSourceId
-            Name = e.name
-            Description = e.description
-            CreatedAt = ctx.occurred
+            key $eventContext.eventSourceId
+            Name = name
+            Description = description
+            CreatedAt = $eventContext.occurred
             MemberCount = 0
 
           from GroupRenamed
-            key ctx.eventSourceId
-            Name = e.newName
+            key $eventContext.eventSourceId
+            Name = newName
 
           from MemberJoined
-            key ctx.eventSourceId
+            key $eventContext.eventSourceId
             increment MemberCount
 
           from MemberLeft
-            key ctx.eventSourceId
+            key $eventContext.eventSourceId
             decrement MemberCount
 
-          children Members id e.userId
+          children Members id userId
             automap
             from UserAddedToGroup
-              key e.userId
-              parent ctx.eventSourceId
-              Role = e.role
-              JoinedAt = ctx.occurred
+              key userId
+              parent $eventContext.eventSourceId
+              Role = role
+              JoinedAt = $eventContext.occurred
             from UserRoleChanged
-              key e.userId
-              parent e.groupId
-              Role = e.role
+              key userId
+              parent groupId
+              Role = role
             remove on UserRemovedFromGroup
-              key e.userId
-              parent e.groupId
+              key userId
+              parent groupId
 
           join GroupSettings on SettingsId
             events SettingsCreated, SettingsUpdated

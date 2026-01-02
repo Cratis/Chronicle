@@ -17,6 +17,8 @@ public class Tokenizer
         { "from", TokenType.From },
         { "key", TokenType.Key },
         { "parent", TokenType.Parent },
+        { "on", TokenType.On },
+        { "with", TokenType.With },
         { "join", TokenType.Join },
         { "events", TokenType.Events },
         { "children", TokenType.Children },
@@ -33,9 +35,7 @@ public class Tokenizer
         { "by", TokenType.By },
         { "true", TokenType.True },
         { "false", TokenType.False },
-        { "null", TokenType.Null },
-        { "e", TokenType.EventRef },
-        { "ctx", TokenType.ContextRef }
+        { "null", TokenType.Null }
     };
 
     readonly string _input;

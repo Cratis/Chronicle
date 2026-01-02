@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_Parser;
+namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService;
 
-public class when_parsing_qualified_projection_name : Specification
+public class when_compiling_qualified_projection_name : given.a_language_service
 {
     const string definition = """
         projection Core.Simulations.Simulation => Simulation

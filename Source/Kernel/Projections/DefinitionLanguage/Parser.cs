@@ -302,7 +302,7 @@ public class Parser(IEnumerable<Token> tokens)
         if (joinNameToken is null) return null;
         var joinName = joinNameToken.Value;
 
-        if (Expect(TokenType.From) is null) return null;
+        if (Expect(TokenType.On) is null) return null;
 
         var onPropertyToken = Expect(TokenType.Identifier);
         if (onPropertyToken is null) return null;
@@ -489,7 +489,7 @@ public class Parser(IEnumerable<Token> tokens)
         if (joinNameToken is null) return null;
         var joinName = joinNameToken.Value;
 
-        if (Expect(TokenType.From) is null) return null;
+        if (Expect(TokenType.On) is null) return null;
 
         var onPropertyToken = Expect(TokenType.Identifier);
         if (onPropertyToken is null) return null;
@@ -588,7 +588,7 @@ public class Parser(IEnumerable<Token> tokens)
         {
             Advance();
             if (Expect(TokenType.Join) is null) return null;
-            if (Expect(TokenType.From) is null) return null;
+            if (Expect(TokenType.On) is null) return null;
 
             var eventType = ParseTypeRef();
             if (eventType is null) return null;
@@ -603,7 +603,7 @@ public class Parser(IEnumerable<Token> tokens)
             return new RemoveViaJoinBlock(eventType, key);
         }
 
-        if (Expect(TokenType.From) is null) return null;
+        if (Expect(TokenType.With) is null) return null;
 
         var removeEventType = ParseTypeRef();
         if (removeEventType is null) return null;
@@ -715,37 +715,28 @@ public class Parser(IEnumerable<Token> tokens)
             return ParseTemplate(template);
         }
 
-        // Event reference (e.property)
-        if (Check(TokenType.EventRef))
-        {
-            Advance();
-            if (Expect(TokenType.Dot) is null) return null;
-            var path = ParsePropertyPath();
-            return path is not null ? new EventDataExpression(path) : null;
-        }
-
-        // Context reference (ctx.property)
-        if (Check(TokenType.ContextRef))
-        {
-            Advance();
-            if (Expect(TokenType.Dot) is null) return null;
-            var propertyToken = Expect(TokenType.Identifier);
-            if (propertyToken is null) return null;
-            return new EventContextExpression(propertyToken.Value);
-        }
-
-        // $eventSourceId shorthand
+        // $eventSourceId or $eventContext.property
         if (Check(TokenType.Dollar))
         {
             Advance();
             var nameToken = Expect(TokenType.Identifier);
             if (nameToken is null) return null;
             var name = nameToken.Value;
+            
             if (name.Equals("eventSourceId", StringComparison.OrdinalIgnoreCase))
             {
                 return new EventSourceIdExpression();
             }
-            _errors.Add(new SyntaxError($"Unknown shorthand '${name}'", Current.Line, Current.Column));
+            
+            if (name.Equals("eventContext", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Expect(TokenType.Dot) is null) return null;
+                var propertyToken = Expect(TokenType.Identifier);
+                if (propertyToken is null) return null;
+                return new EventContextExpression(propertyToken.Value);
+            }
+            
+            _errors.Add(new SyntaxError($"Unknown expression '${name}'", Current.Line, Current.Column));
             return null;
         }
 
@@ -780,6 +771,13 @@ public class Parser(IEnumerable<Token> tokens)
             var value = Current.Value;
             Advance();
             return new LiteralExpression(value);
+        }
+
+        // Plain identifier or property path (event data)
+        if (Check(TokenType.Identifier))
+        {
+            var path = ParsePropertyPath();
+            return path is not null ? new EventDataExpression(path) : null;
         }
 
         _errors.Add(new SyntaxError("Expected expression", Current.Line, Current.Column));
@@ -835,18 +833,18 @@ public class Parser(IEnumerable<Token> tokens)
         // Simple parser for expressions within template
         exprText = exprText.Trim();
 
-        if (exprText.StartsWith("e."))
+        if (exprText.StartsWith("$eventContext."))
         {
-            return new EventDataExpression(exprText.Substring(2));
+            return new EventContextExpression(exprText.Substring(14));
         }
 
-        if (exprText.StartsWith("ctx."))
+        if (exprText == "$eventSourceId")
         {
-            return new EventContextExpression(exprText.Substring(4));
+            return new EventSourceIdExpression();
         }
 
-        _errors.Add(new SyntaxError($"Invalid template expression '{exprText}'", Current.Line, Current.Column));
-        return null;
+        // Treat plain identifiers as event data property paths
+        return new EventDataExpression(exprText);
     }
 
     string? ParsePropertyPath()
