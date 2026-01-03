@@ -21,9 +21,9 @@ public class multiple_events_compact_syntax_no_recompile : a_language_service
     {
         var result = _languageService.Compile(
             Definition,
-            _projectionId,
             Concepts.Projections.ProjectionOwner.Client,
-            Concepts.EventSequences.EventSequenceId.Log);
+            [],
+            []);
         _result = result.Match(
             projectionDef => projectionDef,
             errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));

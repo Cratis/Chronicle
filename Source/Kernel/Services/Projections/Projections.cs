@@ -116,7 +116,7 @@ internal sealed class Projections(
         {
             subscription = await stream.SubscribeAsync((changeset, _) =>
             {
-                observer.OnNext(new Contracts.Projections.ProjectionChangeset
+                observer.OnNext(new Contracts.Projections.ProjectionChangeset+
                 {
                     Namespace = changeset.Namespace,
                     ReadModelKey = changeset.ReadModelKey,

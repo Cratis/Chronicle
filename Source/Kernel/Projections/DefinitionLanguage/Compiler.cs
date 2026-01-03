@@ -5,11 +5,13 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 using Cratis.Chronicle.Properties;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
@@ -19,23 +21,58 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class Compiler
 {
     /// <summary>
+    /// Gets the read model identifier from an AST Document.
+    /// </summary>
+    /// <param name="document">The AST document to extract from.</param>
+    /// <returns>The read model identifier.</returns>
+    public ReadModelIdentifier GetReadModelIdentifier(Document document)
+    {
+        document.Validate();
+        var projection = document.Projections[0];
+        return new ReadModelIdentifier(projection.ReadModelType.Name);
+    }
+
+    /// <summary>
     /// Compiles an AST Document into a ProjectionDefinition.
     /// </summary>
     /// <param name="document">The AST document to compile.</param>
-    /// <param name="identifier">The projection identifier.</param>
     /// <param name="owner">The projection owner.</param>
-    /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <returns>A ProjectionDefinition.</returns>
-    public ProjectionDefinition Compile(
+    /// <param name="readModelDefinitions">Available read model definitions for validation.</param>
+    /// <param name="eventTypeSchemas">Available event type schemas for validation.</param>
+    /// <returns>A ProjectionDefinition or compiler errors.</returns>
+    public Result<ProjectionDefinition, CompilerErrors> Compile(
         Document document,
-        ProjectionId identifier,
         ProjectionOwner owner,
-        EventSequenceId eventSequenceId)
+        IEnumerable<ReadModelDefinition> readModelDefinitions,
+        IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         document.Validate();
 
         // For now, compile the first projection
         var projection = document.Projections[0];
+        var errors = new CompilerErrors();
+
+        // Validate the projection if schemas are provided
+        if (readModelDefinitions.Any() || eventTypeSchemas.Any())
+        {
+            var validator = new ProjectionValidator(readModelDefinitions, eventTypeSchemas);
+            validator.Validate(projection, errors);
+
+            if (errors.HasErrors)
+            {
+                return errors;
+            }
+        }
+
+        var identifier = new ProjectionId(projection.Name);
+
+        // Extract event sequence ID from sequence directive, or default to Log
+        var eventSequenceId = EventSequenceId.Log;
+        var sequenceDirective = projection.Directives.OfType<SequenceDirective>().FirstOrDefault();
+        if (sequenceDirective is not null)
+        {
+            eventSequenceId = new EventSequenceId(sequenceDirective.SequenceId);
+        }
 
         var from = new Dictionary<EventType, FromDefinition>();
         var join = new Dictionary<EventType, JoinDefinition>();
@@ -92,6 +129,9 @@ public class Compiler
                 break;
             case EveryBlock every:
                 fromEvery = ProcessEveryBlock(every);
+                break;
+            case SequenceDirective:
+                // Sequence is handled before processing directives
                 break;
             case KeyDirective:
             case CompositeKeyDirective:

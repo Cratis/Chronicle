@@ -9,10 +9,11 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 /// <summary>
 /// Parses projection directives using visitor pattern.
 /// </summary>
-internal class ProjectionDirectiveParser
+public class ProjectionDirectiveParser
 {
     readonly IDirectiveVisitor[] _visitors =
     [
+        new SequenceDirectiveVisitor(),
         new KeyDirectiveVisitor(),
         new AutoMapDirectiveVisitor(),
         new EveryBlockVisitor(),
@@ -21,6 +22,11 @@ internal class ProjectionDirectiveParser
         new ChildrenBlockVisitor()
     ];
 
+    /// <summary>
+    /// Parses a projection directive from the given context.
+    /// </summary>
+    /// <param name="context">The parsing context.</param>
+    /// <returns>The parsed projection directive, or null if parsing failed.</returns>
     public ProjectionDirective? Parse(IParsingContext context)
     {
         foreach (var visitor in _visitors)

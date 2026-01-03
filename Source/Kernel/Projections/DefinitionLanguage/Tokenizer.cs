@@ -13,6 +13,7 @@ public class Tokenizer
     static readonly Dictionary<string, TokenType> _keywords = new(StringComparer.OrdinalIgnoreCase)
     {
         { "projection", TokenType.Projection },
+        { "sequence", TokenType.Sequence },
         { "every", TokenType.Every },
         { "from", TokenType.From },
         { "key", TokenType.Key },

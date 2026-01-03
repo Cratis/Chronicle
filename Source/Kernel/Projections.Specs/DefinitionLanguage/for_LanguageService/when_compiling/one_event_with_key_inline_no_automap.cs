@@ -20,9 +20,9 @@ public class one_event_with_key_inline_no_automap : a_language_service
     {
         var result = _languageService.Compile(
             Definition,
-            _projectionId,
             Concepts.Projections.ProjectionOwner.Client,
-            Concepts.EventSequences.EventSequenceId.Log);
+            [],
+            []);
         _result = result.Match(
             projectionDef => projectionDef,
             errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));

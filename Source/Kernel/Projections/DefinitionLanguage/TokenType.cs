@@ -119,102 +119,107 @@ public enum TokenType
     Count = 21,
 
     /// <summary>
+    /// The keyword 'sequence'.
+    /// </summary>
+    Sequence = 22,
+
+    /// <summary>
     /// The keyword 'add'.
     /// </summary>
-    Add = 22,
+    Add = 23,
 
     /// <summary>
     /// The keyword 'subtract'.
     /// </summary>
-    Subtract = 23,
+    Subtract = 24,
 
     /// <summary>
     /// The keyword 'by'.
     /// </summary>
-    By = 24,
+    By = 25,
 
     /// <summary>
     /// The keyword 'true'.
     /// </summary>
-    True = 25,
+    True = 26,
 
     /// <summary>
     /// The keyword 'false'.
     /// </summary>
-    False = 26,
+    False = 27,
 
     /// <summary>
     /// The keyword 'null'.
     /// </summary>
-    Null = 27,
+    Null = 28,
 
     /// <summary>
     /// The keyword 'e' (event reference).
     /// </summary>
-    EventRef = 28,
+    EventRef = 29,
 
     /// <summary>
     /// The keyword 'ctx' (context reference).
     /// </summary>
-    ContextRef = 29,
+    ContextRef = 30,
 
     /// <summary>
     /// The equals operator (=).
     /// </summary>
-    Equals = 30,
+    Equals = 31,
 
     /// <summary>
     /// The arrow operator (=>).
     /// </summary>
-    Arrow = 31,
+    Arrow = 32,
 
     /// <summary>
     /// The dot operator (.).
     /// </summary>
-    Dot = 32,
+    Dot = 33,
 
     /// <summary>
     /// The comma operator (,).
     /// </summary>
-    Comma = 33,
+    Comma = 34,
 
     /// <summary>
     /// The left brace ({).
     /// </summary>
-    LeftBrace = 34,
+    LeftBrace = 35,
 
     /// <summary>
     /// The right brace (}).
     /// </summary>
-    RightBrace = 35,
+    RightBrace = 36,
 
     /// <summary>
     /// The dollar sign ($).
     /// </summary>
-    Dollar = 36,
+    Dollar = 37,
 
     /// <summary>
     /// Indentation increase.
     /// </summary>
-    Indent = 37,
+    Indent = 38,
 
     /// <summary>
     /// Indentation decrease.
     /// </summary>
-    Dedent = 38,
+    Dedent = 39,
 
     /// <summary>
     /// New line character.
     /// </summary>
-    NewLine = 39,
+    NewLine = 40,
 
     /// <summary>
     /// End of input.
     /// </summary>
-    EndOfInput = 40,
+    EndOfInput = 41,
 
     /// <summary>
     /// Invalid token.
     /// </summary>
-    Invalid = 41
+    Invalid = 42
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
@@ -24,6 +25,12 @@ public class Generator : IGenerator
 
         // Projection declaration - use read model name since the original projection name is not stored in ProjectionDefinition
         sb.AppendLine($"projection {readModelName}Projection => {readModelName}");
+
+        // Sequence directive - only output if it's not the default (Log)
+        if (definition.EventSequenceId != EventSequenceId.Log)
+        {
+            sb.AppendLine($"{Indent(1)}sequence {definition.EventSequenceId.Value}");
+        }
 
         // FromEvery block - only output if it has content, needs to exclude children when children exist,
         // or if the projection has no other blocks (to ensure valid DSL with at least some content)

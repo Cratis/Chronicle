@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -16,11 +16,11 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class LanguageService(IGenerator generator) : ILanguageService
 {
     /// <inheritdoc/>
-    public Result<ProjectionDefinition, ParsingErrors> Compile(
+    public Result<ProjectionDefinition, CompilerErrors> Compile(
         string definition,
-        ProjectionId identifier,
         ProjectionOwner owner,
-        EventSequenceId eventSequenceId)
+        IEnumerable<ReadModelDefinition> readModelDefinitions,
+        IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         try
         {
@@ -29,18 +29,18 @@ public class LanguageService(IGenerator generator) : ILanguageService
             var parser = new Parser(tokens);
             var parseResult = parser.Parse();
 
-            return parseResult.Match<Result<ProjectionDefinition, ParsingErrors>>(
+            return parseResult.Match(
                 document =>
                 {
                     var compiler = new Compiler();
-                    return compiler.Compile(document, identifier, owner, eventSequenceId);
+                    return compiler.Compile(document, owner, readModelDefinitions, eventTypeSchemas);
                 },
-                errors => errors);
+                parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
         }
         catch (InvalidOperationException ex)
         {
             // Handle tokenizer errors
-            var errors = new ParsingErrors([]);
+            var errors = new CompilerErrors();
             errors.Add(ex.Message, 0, 0);
             return errors;
         }
@@ -49,4 +49,40 @@ public class LanguageService(IGenerator generator) : ILanguageService
     /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
         generator.Generate(definition, readModelDefinition);
+
+    /// <inheritdoc/>
+    public Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(string definition)
+    {
+        try
+        {
+            var tokenizer = new Tokenizer(definition);
+            var tokens = tokenizer.Tokenize();
+            var parser = new Parser(tokens);
+            var parseResult = parser.Parse();
+
+            return parseResult.Match(
+                document =>
+                {
+                    try
+                    {
+                        var compiler = new Compiler();
+                        var identifier = compiler.GetReadModelIdentifier(document);
+                        return Result<ReadModelIdentifier, CompilerErrors>.Success(identifier);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        var errors = new CompilerErrors();
+                        errors.Add(ex.Message, 0, 0);
+                        return errors;
+                    }
+                },
+                parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errors = new CompilerErrors();
+            errors.Add(ex.Message, 0, 0);
+            return errors;
+        }
+    }
 }

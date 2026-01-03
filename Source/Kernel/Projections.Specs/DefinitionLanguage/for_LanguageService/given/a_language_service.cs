@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -22,23 +21,23 @@ public class a_language_service : Specification
 
     protected ProjectionDefinition CompileGenerateAndRecompile(string definition, string readModelName)
     {
+        var readModelDefinition = CreateReadModelDefinition(readModelName);
         var result = _languageService.Compile(
             definition,
-            _projectionId,
             ProjectionOwner.Client,
-            EventSequenceId.Log);
+            [readModelDefinition],
+            []);
         var compiled = result.Match(
             projectionDef => projectionDef,
             errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
 
-        var readModelDefinition = CreateReadModelDefinition(readModelName);
         var generated = _languageService.Generate(compiled, readModelDefinition);
 
         var recompileResult = _languageService.Compile(
             generated,
-            _projectionId,
             ProjectionOwner.Client,
-            EventSequenceId.Log);
+            [readModelDefinition],
+            []);
         return recompileResult.Match(
             projectionDef => projectionDef,
             errors => throw new InvalidOperationException($"Re-compilation of generated DSL failed: {string.Join(", ", errors.Errors)}\n\nGenerated DSL was:\n{generated}"));
