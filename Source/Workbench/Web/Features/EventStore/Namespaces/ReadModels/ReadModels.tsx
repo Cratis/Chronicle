@@ -10,16 +10,10 @@ import { Allotment } from 'allotment';
 import { Page } from 'Components';
 import { AllReadModelDefinitions, ReadModelDefinition } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { ReadModelOccurrence, ReadModelOccurrences, ReadModelInstances as ReadModelInstancesApi } from 'Api/ReadModels';
+import { ReadModelOccurrences, ReadModelInstances as ReadModelInstancesApi } from 'Api/ReadModels';
 import * as faIcons from 'react-icons/fa6';
 import { Menubar } from 'primereact/menubar';
 import strings from 'Strings';
-import { Json } from 'Features';
-
-interface NavigationItem {
-    name: string;
-    path: string[];
-}
 
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -27,7 +21,7 @@ export const ReadModels = () => {
     const filterPanelRef = useRef<OverlayPanel>(null);
 
     const [selectedReadModel, setSelectedReadModel] = useState<ReadModelDefinition | null>(null);
-    const [selectedOccurrence, setSelectedOccurrence] = useState<ReadModelOccurrence | null>(null);
+    const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
 
@@ -41,7 +35,7 @@ export const ReadModels = () => {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         readModel: selectedReadModel ? selectedReadModel.identifier : undefined!,
-        occurrence: selectedOccurrence && selectedOccurrence.revertModel !== 'Default' ? selectedOccurrence.revertModel : undefined
+        occurrence: selectedOccurrence && selectedOccurrence !== 'Default' ? selectedOccurrence : undefined
     }), [params.eventStore, params.namespace, selectedReadModel, selectedOccurrence]);
 
     const [instances, performInstancesQuery] = ReadModelInstancesApi.useWithPaging(pageSize, instancesArgs);
@@ -58,7 +52,7 @@ export const ReadModels = () => {
         setSelectedOccurrence(null);
     }, []);
 
-    const handleOccurrenceChange = useCallback((occurrence: ReadModelOccurrence | null) => {
+    const handleOccurrenceChange = useCallback((occurrence: string | null) => {
         setSelectedOccurrence(occurrence);
 
         if (occurrence) {
@@ -71,37 +65,33 @@ export const ReadModels = () => {
             label: occ.revertModel === 'Default'
                 ? `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`
                 : `${new Date(occ.occurred).toLocaleString()} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`,
-            value: occ
+            value: occ.revertModel
         }));
 
         // Ensure Default is always present
-        const hasDefault = options.some(opt => opt.value.revertModel === 'Default');
+        const hasDefault = options.some(opt => opt.value === 'Default');
         if (!hasDefault && selectedReadModel) {
             options = [{
                 label: `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} 1)`,
-                value: {
-                    revertModel: 'Default',
-                    generation: 1,
-                    occurred: new Date()
-                } as ReadModelOccurrence
+                value: 'Default'
             }, ...options];
-        } else {
-            // Sort to ensure Default is first
-            options.sort((a, b) => {
-                if (a.value.revertModel === 'Default') return -1;
-                if (b.value.revertModel === 'Default') return 1;
-                return 0;
-            });
         }
+
+        // Sort to ensure Default is first
+        options.sort((a, b) => {
+            if (a.value === 'Default') return -1;
+            if (b.value === 'Default') return 1;
+            return 0;
+        });
 
         return options;
     }, [occurrences.data, selectedReadModel]);
 
     useEffect(() => {
         if (occurrenceOptions.length > 0 && !selectedOccurrence) {
-            const defaultOccurrence = occurrenceOptions.find(occ => occ.value.revertModel === 'Default')?.value;
+            const defaultOccurrence = occurrenceOptions.find(occ => occ.value === 'Default')?.value;
             if (defaultOccurrence) {
-                setSelectedOccurrence(defaultOccurrence);
+                setSelectedOccurrence(defaultOccurrence as string);
             }
         }
     }, [occurrenceOptions, selectedOccurrence, selectedReadModel]);
@@ -112,8 +102,6 @@ export const ReadModels = () => {
             performInstancesQuery(instancesArgs);
         }
     }, [selectedOccurrence, selectedReadModel]);
-
-
 
     return (
         <Page title={strings.eventStore.namespaces.readModels.title}>
