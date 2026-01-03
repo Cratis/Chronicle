@@ -83,6 +83,13 @@ public class Compiler
             case FromEventBlock onEvent:
                 ProcessOnEventBlock(onEvent, from);
                 break;
+            case MultiFromEventBlock multiFromEvent:
+                // Expand multiple from blocks into individual blocks
+                foreach (var block in multiFromEvent.Blocks)
+                {
+                    ProcessOnEventBlock(block, from);
+                }
+                break;
             case EveryBlock every:
                 fromEvery = ProcessEveryBlock(every);
                 break;

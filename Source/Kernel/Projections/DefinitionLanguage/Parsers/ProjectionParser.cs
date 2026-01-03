@@ -41,6 +41,11 @@ internal class ProjectionParser
             {
                 directives.Add(directive);
             }
+            else
+            {
+                // No directive matched, advance to avoid infinite loop
+                context.Advance();
+            }
         }
 
         if (context.Check(TokenType.Dedent))

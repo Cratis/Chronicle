@@ -15,6 +15,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
     readonly ExpressionParser _expressions = new();
     readonly MappingOperationParser _mappingOperations = new();
     readonly KeyDirectiveParser _keyDirectives = new();
+
     /// <inheritdoc/>
     public ProjectionDirective? Visit(IParsingContext context)
     {
@@ -25,13 +26,46 @@ public class FromEventBlockVisitor : IDirectiveVisitor
 
         context.Advance(); // Skip 'from'
 
-        var eventType = _typeRefs.Parse(context);
-        if (eventType is null) return null;
+        // Parse multiple comma-separated events on same line
+        var eventSpecs = new List<(TypeRef EventType, Expression? Key)>();
 
+        while (true)
+        {
+            if (context.IsAtEnd) break;
+
+            var eventType = _typeRefs.Parse(context);
+            if (eventType is null) return null;
+
+            Expression? key = null;
+
+            // Check for inline key for this specific event
+            if (context.Check(TokenType.Key))
+            {
+                context.Advance();
+                key = _expressions.Parse(context);
+                if (key is null) return null;
+            }
+
+            eventSpecs.Add((eventType, key));
+
+            // Check if there's a comma for another event
+            if (context.Check(TokenType.Comma))
+            {
+                context.Advance(); // Skip comma
+                // Continue loop to parse next event
+            }
+            else
+            {
+                // No more events, exit loop
+                break;
+            }
+        }
+
+        // Skip newline if present after all events
+        if (context.Check(TokenType.NewLine)) context.Advance();
+
+        // Check for shared inline options that apply to all events
         var autoMap = false;
-        Expression? key = null;
-
-        // Check for inline options
         while (!context.Check(TokenType.Indent) && !context.IsAtEnd)
         {
             if (context.Check(TokenType.AutoMap))
@@ -39,21 +73,45 @@ public class FromEventBlockVisitor : IDirectiveVisitor
                 context.Advance();
                 autoMap = true;
             }
-            else if (context.Check(TokenType.Key))
-            {
-                context.Advance();
-                key = _expressions.Parse(context);
-            }
             else
             {
                 break;
             }
         }
 
-        if (context.Expect(TokenType.Indent) is null) return null;
-
+        // Only process mappings if there's an indent (i.e., there's a body)
         var mappings = new List<MappingOperation>();
         Expression? parentKey = null;
+        Expression? blockLevelKey = null;
+
+        if (!context.Check(TokenType.Indent))
+        {
+            // No body for from blocks - consume newline and create blocks with inline options only
+            if (context.Check(TokenType.NewLine)) context.Advance();
+
+            if (eventSpecs.Count == 1)
+            {
+                var singleEvent = eventSpecs[0];
+                return new FromEventBlock(
+                    singleEvent.EventType,
+                    autoMap,
+                    singleEvent.Key,
+                    null,
+                    null,
+                    []);
+            }
+
+            return new MultiFromEventBlock(
+                eventSpecs.Select(e => new FromEventBlock(
+                    e.EventType,
+                    autoMap,
+                    e.Key,
+                    null,
+                    null,
+                    [])).ToList());
+        }
+
+        if (context.Expect(TokenType.Indent) is null) return null;
         CompositeKeyDirective? compositeKey = null;
 
         while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
@@ -70,7 +128,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
             }
             else if (context.Check(TokenType.Key))
             {
-                if (key is not null || compositeKey is not null)
+                if (blockLevelKey is not null || compositeKey is not null)
                 {
                     context.ReportError("Duplicate key directive. A key has already been defined for this event block.");
                     context.Advance();
@@ -84,7 +142,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
                 }
                 else if (keyDirective is KeyDirective kd)
                 {
-                    key = kd.Expression;
+                    blockLevelKey = kd.Expression;
                 }
             }
             else
@@ -102,6 +160,25 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new FromEventBlock(eventType, autoMap, key, compositeKey, parentKey, mappings);
+
+        // Create a FromEventBlock for each event spec
+        // Since we can only return one, we need a MultiFromEventBlock wrapper
+        if (eventSpecs.Count == 1)
+        {
+            var (eventType, inlineKey) = eventSpecs[0];
+            var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
+            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings);
+        }
+
+        // Multiple events - create a MultiFromEventBlock
+        var blocks = eventSpecs.Select(spec =>
+        {
+            var (eventType, inlineKey) = spec;
+            // Use inline key if provided, otherwise fall back to block-level key/compositeKey
+            var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
+            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings);
+        }).ToList();
+
+        return new MultiFromEventBlock(blocks);
     }
 }

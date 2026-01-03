@@ -89,6 +89,38 @@ from UserAssignedToGroup key userId
   GroupId = $eventContext.eventSourceId
 ```
 
+### Multiple Events (Compact Syntax)
+
+You can define multiple events on the same line separated by commas when they share the same mappings and configuration:
+
+```dsl
+projection TransportRoute => TransportRouteReadModel
+  automap
+  from HubRouteAddedToSimulationConfiguration key id, WarehouseRouteAddedToSimulationConfiguration key id
+```
+
+Each event can have its own inline key specification:
+
+```dsl
+from EventA key idA, EventB key idB, EventC
+  automap
+  Property = value
+```
+
+This is equivalent to writing:
+
+```dsl
+from EventA key idA
+  automap
+  Property = value
+from EventB key idB
+  automap
+  Property = value
+from EventC
+  automap
+  Property = value
+```
+
 ---
 
 ### Composite Keys
@@ -297,7 +329,7 @@ EveryBlock      = "every", NL,
                     [ "exclude", "children", NL ],
                   DEDENT ;
 
-FromEventBlock  = "from", TypeRef,
+FromEventBlock  = "from", EventSpec, { ",", EventSpec },
                   { FromEventOpt },
                   NL,
                   INDENT,
@@ -305,8 +337,11 @@ FromEventBlock  = "from", TypeRef,
                     { MappingLine | KeyDecl | CompositeKeyDecl },
                   DEDENT ;
 
-FromEventOpt    = "automap"
-                | KeyInline ;
+EventSpec       = TypeRef, [ "key", Expr ] ;
+
+FromEventOpt    = "automap" ;
+
+KeyInline       = "key", Expr ;
 
 JoinBlock       = "join", Ident, "on", Ident, NL,
                   INDENT,

@@ -82,35 +82,42 @@ public class Generator : IGenerator
 
     void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}from {eventTypeName}");
+        // Determine if we should use inline key syntax or block key syntax
+        // Use inline syntax for simple keys when there are no other inline options (like automap)
+        // Use block syntax for composite keys or when other content exists
+        var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith("$composite(") && from.Key.Value.EndsWith(')');
+        var useInlineKey = from.Key.IsSet() && !hasCompositeKey;
 
-        // Key directive (simple or composite)
-        if (from.Key.IsSet())
+        // Build from statement with optional inline key
+        if (useInlineKey)
+        {
+            sb.AppendLine($"{Indent(indent)}from {eventTypeName} key {from.Key.Value}");
+        }
+        else
+        {
+            sb.AppendLine($"{Indent(indent)}from {eventTypeName}");
+        }
+
+        // Composite key directive (always in block)
+        if (hasCompositeKey)
         {
             var keyValue = from.Key.Value;
-            if (keyValue.StartsWith("$composite(") && keyValue.EndsWith(')'))
-            {
-                // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
-                var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
-                var parts = innerContent.Split(CompositeSeparator, StringSplitOptions.None);
+            // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
+            var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
+            var parts = innerContent.Split(CompositeSeparator, StringSplitOptions.None);
 
-                sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
-                foreach (var part in parts)
-                {
-                    var equalsIndex = part.IndexOf('=');
-                    if (equalsIndex > 0)
-                    {
-                        var propertyName = part.Substring(0, equalsIndex);
-                        var expression = part.Substring(equalsIndex + 1);
-                        sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
-                    }
-                }
-                sb.AppendLine($"{Indent(indent + 1)}}}");
-            }
-            else
+            sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
+            foreach (var part in parts)
             {
-                sb.AppendLine($"{Indent(indent + 1)}key {keyValue}");
+                var equalsIndex = part.IndexOf('=');
+                if (equalsIndex > 0)
+                {
+                    var propertyName = part.Substring(0, equalsIndex);
+                    var expression = part.Substring(equalsIndex + 1);
+                    sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
+                }
             }
+            sb.AppendLine($"{Indent(indent + 1)}}}");
         }
 
         // Parent key if present
