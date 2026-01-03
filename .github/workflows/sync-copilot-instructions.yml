@@ -22,10 +22,17 @@ jobs:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Validate source repository input
+        run: |
+          if ! echo "${{ inputs.source_repository }}" | grep -qE '^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$'; then
+            echo "Error: Invalid repository format. Expected 'owner/repo'"
+            exit 1
+          fi
+      
       - name: Clone source repository
         run: |
           mkdir -p /tmp/source-repo
-          git clone https://github.com/${{ inputs.source_repository }}.git /tmp/source-repo
+          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ inputs.source_repository }}.git /tmp/source-repo
       
       - name: Extract and copy CoPilot instructions
         run: |
@@ -56,11 +63,16 @@ jobs:
       
       - name: Commit and push changes
         run: |
-          git add .github/copilot-instructions.md .github/instructions .github/agents 2>/dev/null || true
-          
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          # Check if there are any changes to commit
+          if [ -f ".github/copilot-instructions.md" ] || [ -d ".github/instructions" ] || [ -d ".github/agents" ]; then
+            git add -A .github/
+            
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "CoPilot Instructions synchronization from ${{ inputs.source_repository }}"
+              git push origin main
+            fi
           else
-            git commit -m "CoPilot Instructions synchronization from ${{ inputs.source_repository }}"
-            git push origin main
+            echo "No CoPilot instructions found to synchronize"
           fi
