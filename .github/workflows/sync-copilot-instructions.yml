@@ -24,7 +24,7 @@ jobs:
       
       - name: Validate source repository input
         run: |
-          if ! echo "${{ inputs.source_repository }}" | grep -qE '^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$'; then
+          if ! echo "${{ inputs.source_repository }}" | grep -qE '^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$'; then
             echo "Error: Invalid repository format. Expected 'owner/repo'"
             exit 1
           fi
@@ -33,8 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p /tmp/source-repo
-          git clone https://x-access-token:${GH_TOKEN}@github.com/${{ inputs.source_repository }}.git /tmp/source-repo
+          gh repo clone ${{ inputs.source_repository }} /tmp/source-repo
       
       - name: Extract and copy Copilot instructions
         run: |
