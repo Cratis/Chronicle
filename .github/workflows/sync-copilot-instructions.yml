@@ -1,0 +1,66 @@
+name: Sync CoPilot Instructions
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repository:
+        description: 'Source repository (owner/repo format)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync-instructions:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Clone source repository
+        run: |
+          mkdir -p /tmp/source-repo
+          git clone https://github.com/${{ inputs.source_repository }}.git /tmp/source-repo
+      
+      - name: Extract and copy CoPilot instructions
+        run: |
+          # Copy root CoPilot instructions file if it exists
+          if [ -f "/tmp/source-repo/.github/copilot-instructions.md" ]; then
+            cp /tmp/source-repo/.github/copilot-instructions.md .github/copilot-instructions.md
+            echo "Copied copilot-instructions.md"
+          fi
+          
+          # Copy instructions folder if it exists
+          if [ -d "/tmp/source-repo/.github/instructions" ]; then
+            rm -rf .github/instructions
+            cp -r /tmp/source-repo/.github/instructions .github/instructions
+            echo "Copied instructions folder"
+          fi
+          
+          # Copy agents folder if it exists
+          if [ -d "/tmp/source-repo/.github/agents" ]; then
+            rm -rf .github/agents
+            cp -r /tmp/source-repo/.github/agents .github/agents
+            echo "Copied agents folder"
+          fi
+      
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Commit and push changes
+        run: |
+          git add .github/copilot-instructions.md .github/instructions .github/agents 2>/dev/null || true
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "CoPilot Instructions synchronization from ${{ inputs.source_repository }}"
+            git push origin main
+          fi
