@@ -1,4 +1,4 @@
-name: Sync CoPilot Instructions
+name: Sync Copilot Instructions
 
 on:
   workflow_dispatch:
@@ -30,26 +30,28 @@ jobs:
           fi
       
       - name: Clone source repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p /tmp/source-repo
-          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ inputs.source_repository }}.git /tmp/source-repo
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${{ inputs.source_repository }}.git /tmp/source-repo
       
-      - name: Extract and copy CoPilot instructions
+      - name: Extract and copy Copilot instructions
         run: |
-          # Copy root CoPilot instructions file if it exists
+          # Copy root Copilot instructions file if it exists
           if [ -f "/tmp/source-repo/.github/copilot-instructions.md" ]; then
             cp /tmp/source-repo/.github/copilot-instructions.md .github/copilot-instructions.md
             echo "Copied copilot-instructions.md"
           fi
           
-          # Copy instructions folder if it exists
+          # Copy instructions folder if it exists in source
           if [ -d "/tmp/source-repo/.github/instructions" ]; then
             rm -rf .github/instructions
             cp -r /tmp/source-repo/.github/instructions .github/instructions
             echo "Copied instructions folder"
           fi
           
-          # Copy agents folder if it exists
+          # Copy agents folder if it exists in source
           if [ -d "/tmp/source-repo/.github/agents" ]; then
             rm -rf .github/agents
             cp -r /tmp/source-repo/.github/agents .github/agents
@@ -70,9 +72,9 @@ jobs:
             if git diff --staged --quiet; then
               echo "No changes to commit"
             else
-              git commit -m "CoPilot Instructions synchronization from ${{ inputs.source_repository }}"
+              git commit -m "Copilot Instructions synchronization from ${{ inputs.source_repository }}"
               git push origin main
             fi
           else
-            echo "No CoPilot instructions found to synchronize"
+            echo "No Copilot instructions found to synchronize"
           fi
