@@ -13,27 +13,17 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// <summary>
 /// Validates projection definitions against read models and event type schemas.
 /// </summary>
-public class ProjectionValidator
+/// <remarks>
+/// Initializes a new instance of the <see cref="ProjectionValidator"/> class.
+/// </remarks>
+/// <param name="readModelDefinitions">Available read model definitions.</param>
+/// <param name="eventTypeSchemas">Available event type schemas.</param>
+public class ProjectionValidator(
+    IEnumerable<ReadModelDefinition> readModelDefinitions,
+    IEnumerable<EventTypeSchema> eventTypeSchemas)
 {
-    readonly IEnumerable<ReadModelDefinition> _readModelDefinitions;
-    readonly IEnumerable<EventTypeSchema> _eventTypeSchemas;
-    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup;
-    readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionValidator"/> class.
-    /// </summary>
-    /// <param name="readModelDefinitions">Available read model definitions.</param>
-    /// <param name="eventTypeSchemas">Available event type schemas.</param>
-    public ProjectionValidator(
-        IEnumerable<ReadModelDefinition> readModelDefinitions,
-        IEnumerable<EventTypeSchema> eventTypeSchemas)
-    {
-        _readModelDefinitions = readModelDefinitions;
-        _eventTypeSchemas = eventTypeSchemas;
-        _readModelLookup = readModelDefinitions.ToDictionary(_ => _.Identifier);
-        _eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
-    }
+    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.ToDictionary(_ => _.Identifier);
+    readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
 
     /// <summary>
     /// Validates a projection against the available read models and event type schemas.
@@ -207,12 +197,41 @@ public class ProjectionValidator
     {
         var targetPath = assignment.PropertyName;
 
-        if (!targetSchema.Properties.ContainsKey(targetPath))
+        if (!targetSchema.Properties.TryGetValue(targetPath, out var targetProperty))
         {
             errors.Add($"Read model property '{targetPath}' not found", 0, 0);
+            return;
         }
 
-        // Additional validation of the value expression could be done here
-        // For now we just verify the target property exists
+        // Validate the source expression and type compatibility
+        if (assignment.Value is EventDataExpression eventDataExpression)
+        {
+            var sourcePath = eventDataExpression.Path;
+
+            if (!eventSchema.Properties.TryGetValue(sourcePath, out var sourceProperty))
+            {
+                errors.Add($"Event property '{sourcePath}' not found", 0, 0);
+                return;
+            }
+
+            // Validate that types are compatible
+            if (!AreTypesCompatible(targetProperty.Type, sourceProperty.Type))
+            {
+                errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", 0, 0);
+            }
+        }
+    }
+
+    bool AreTypesCompatible(JsonObjectType targetType, JsonObjectType sourceType)
+    {
+        // Exact match
+        if (targetType == sourceType)
+        {
+            return true;
+        }
+
+        // Allow numeric conversions
+        var numericTypes = new[] { JsonObjectType.Integer, JsonObjectType.Number };
+        return numericTypes.Contains(targetType) && numericTypes.Contains(sourceType);
     }
 }

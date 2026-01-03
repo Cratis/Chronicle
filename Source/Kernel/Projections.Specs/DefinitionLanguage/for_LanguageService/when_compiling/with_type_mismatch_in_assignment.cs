@@ -2,48 +2,46 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class without_sequence_directive : for_LanguageService.given.a_language_service
+public class with_type_mismatch_in_assignment : for_LanguageService.given.a_language_service
 {
     const string Definition = """
-        projection SimulationProjection => Simulation
-            from SimulationAdded
+        projection TestProjection => TestModel
+            from TestEvent
                 key $eventSourceId
-                name = name
+                name = value
         """;
 
-    ProjectionDefinition _definition;
     ReadModelDefinition _readModelDefinition;
     EventTypeSchema _eventTypeSchema;
+    CompilerErrors _errors;
 
     void Establish()
     {
-        var schema = new JsonSchema { Title = "Simulation" };
-        schema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
+        var readModelSchema = new JsonSchema { Title = "TestModel" };
+        readModelSchema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
         _readModelDefinition = new ReadModelDefinition(
-            new ReadModelIdentifier("Simulation"),
-            new ReadModelName("Simulation"),
+            new ReadModelIdentifier("TestModel"),
+            new ReadModelName("TestModel"),
             ReadModelOwner.Client,
             new Concepts.Sinks.SinkDefinition(
                 new Concepts.Sinks.SinkConfigurationId(Guid.NewGuid()),
                 Concepts.Sinks.WellKnownSinkTypes.MongoDB),
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                [ReadModelGeneration.First] = schema
+                [ReadModelGeneration.First] = readModelSchema
             },
             []);
 
-        var eventSchema = new JsonSchema { Title = "SimulationAdded" };
-        eventSchema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
+        var eventSchema = new JsonSchema { Title = "TestEvent" };
+        eventSchema.Properties.Add("value", new JsonSchemaProperty { Type = JsonObjectType.Integer });
         _eventTypeSchema = new EventTypeSchema(
-            (EventType)"SimulationAdded",
+            (EventType)"TestEvent",
             EventTypeOwner.Client,
             EventTypeSource.Code,
             eventSchema);
@@ -56,10 +54,12 @@ public class without_sequence_directive : for_LanguageService.given.a_language_s
             Concepts.Projections.ProjectionOwner.Client,
             [_readModelDefinition],
             [_eventTypeSchema]);
-        _definition = result.Match(
-            projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
+
+        _errors = result.Match(
+            _ => CompilerErrors.Empty,
+            errors => errors);
     }
 
-    [Fact] void should_default_to_log_sequence() => _definition.EventSequenceId.ShouldEqual(EventSequenceId.Log);
+    [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
+    [Fact] void should_report_type_mismatch() => _errors.Errors.Any(_ => _.Message.Contains("Type mismatch")).ShouldBeTrue();
 }
