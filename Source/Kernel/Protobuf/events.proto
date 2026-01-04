@@ -1,0 +1,31 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Events;
+import "google/protobuf/empty.proto";
+
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
+message EventTypeRegistration {
+   EventType Type = 1;
+   string Schema = 2;
+}
+message GetAllEventTypesRequest {
+   string EventStore = 1;
+}
+message IEnumerable_EventType {
+   repeated EventType items = 1;
+}
+message IEnumerable_EventTypeRegistration {
+   repeated EventTypeRegistration items = 1;
+}
+message RegisterEventTypesRequest {
+   string EventStore = 1;
+   repeated EventTypeRegistration Types = 2;
+}
+service EventTypes {
+   rpc GetAll (GetAllEventTypesRequest) returns (IEnumerable_EventType);
+   rpc GetAllRegistrations (GetAllEventTypesRequest) returns (IEnumerable_EventTypeRegistration);
+   rpc Register (RegisterEventTypesRequest) returns (.google.protobuf.Empty);
+}

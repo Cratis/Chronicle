@@ -1,0 +1,51 @@
+{
+    "name": "@cratis/chronicle.contracts",
+    "version": "0.0.0",
+    "description": "TypeScript gRPC contracts for Chronicle",
+    "author": "Cratis",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/cratis/chronicle.git"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "dist",
+        "generated",
+        "**/*.ts"
+    ],
+    "type": "module",
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "types": "dist/esm/index.d.ts",
+    "exports": {
+        "./package.json": "./package.json",
+        ".": {
+            "types": "./dist/esm/index.d.ts",
+            "require": "./dist/cjs/index.js",
+            "import": "./dist/esm/index.js"
+        }
+    },
+    "scripts": {
+        "clean": "rm -rf dist generated",
+        "generate": "grpc_tools_node_protoc --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts --ts_out=grpc_js:generated --js_out=import_style=commonjs,binary:generated --grpc_out=grpc_js:generated -I ../../Kernel/Protobuf ../../Kernel/Protobuf/*.proto",
+        "build": "tsc -b && rollup -c ./rollup.config.mjs",
+        "prepare": "yarn clean && yarn generate && yarn build"
+    },
+    "dependencies": {
+        "@grpc/grpc-js": "^1.12.4",
+        "@grpc/proto-loader": "^0.7.15"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.5",
+        "grpc-tools": "^1.12.4",
+        "grpc_tools_node_protoc_ts": "^5.3.3",
+        "rollup": "^4.30.1",
+        "rollup-plugin-commonjs": "^10.1.0",
+        "rollup-plugin-peer-deps-external": "^2.2.4",
+        "rollup-plugin-typescript2": "^0.36.0",
+        "typescript": "^5.7.2"
+    }
+}
