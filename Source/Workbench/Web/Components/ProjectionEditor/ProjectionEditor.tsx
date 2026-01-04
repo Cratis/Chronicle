@@ -49,6 +49,26 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const [generateDeclarativeCode] = GenerateDeclarativeCode.use();
     const [generateModelBoundCode] = GenerateModelBoundCode.use();
 
+    const fetchCode = async () => {
+        if (eventStore && namespace && value) {
+            generateDeclarativeCode.eventStore = eventStore;
+            generateDeclarativeCode.namespace = namespace;
+            generateDeclarativeCode.dsl = value;
+            const declarativeResult = await generateDeclarativeCode.execute();
+
+            generateModelBoundCode.eventStore = eventStore;
+            generateModelBoundCode.namespace = namespace;
+            generateModelBoundCode.dsl = value;
+            const modelBoundResult = await generateModelBoundCode.execute();
+
+            const declCode = declarativeResult.response?.code || declarativeResult.code || '// Unable to generate code';
+            const modelCode = modelBoundResult.response?.code || modelBoundResult.code || '// Unable to generate code';
+
+            setDeclarativeCode(declCode);
+            setModelBoundCode(modelCode);
+        }
+    };
+
     useEffect(() => {
         if (editorRef.current) {
             // Wait for CSS transition to complete (300ms) then trigger layout
@@ -59,21 +79,8 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     }, [isHelpPanelOpen, isCodePanelOpen]);
 
     useEffect(() => {
-        if (isCodePanelOpen && eventStore && namespace && value) {
-            (async () => {
-                generateDeclarativeCode.eventStore = eventStore;
-                generateDeclarativeCode.namespace = namespace;
-                generateDeclarativeCode.dsl = value;
-                const declarativeResult = await generateDeclarativeCode.execute();
-
-                generateModelBoundCode.eventStore = eventStore;
-                generateModelBoundCode.namespace = namespace;
-                generateModelBoundCode.dsl = value;
-                const modelBoundResult = await generateModelBoundCode.execute();
-
-                setDeclarativeCode(declarativeResult.response?.code || '// Unable to generate code');
-                setModelBoundCode(modelBoundResult.response?.code || '// Unable to generate code');
-            })();
+        if (isCodePanelOpen) {
+            fetchCode();
         }
     }, [isCodePanelOpen, eventStore, namespace, value]);
 
@@ -265,7 +272,11 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     />
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <ProjectionCodePanel declarativeCode={declarativeCode} modelBoundCode={modelBoundCode} />
+                    <ProjectionCodePanel
+                        declarativeCode={declarativeCode}
+                        modelBoundCode={modelBoundCode}
+                        onRefresh={fetchCode}
+                    />
                 </div>
             </div>
         </div>
