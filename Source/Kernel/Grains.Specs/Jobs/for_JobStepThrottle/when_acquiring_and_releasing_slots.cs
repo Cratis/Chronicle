@@ -9,20 +9,20 @@ namespace Cratis.Chronicle.Grains.Jobs.for_JobStepThrottle;
 
 public class when_acquiring_and_releasing_slots : Specification
 {
-    JobStepThrottle throttle;
-    ChronicleOptions options;
-    List<Task> tasks;
-    int completedTasks;
+    JobStepThrottle _throttle;
+    ChronicleOptions _options;
+    List<Task> _tasks;
+    int _completedTasks;
 
     void Establish()
     {
-        options = new ChronicleOptions
+        _options = new ChronicleOptions
         {
             Jobs = new Configuration.Jobs { MaxParallelSteps = 2 }
         };
-        throttle = new JobStepThrottle(Options.Create(options), NullLogger<JobStepThrottle>.Instance);
-        tasks = [];
-        completedTasks = 0;
+        _throttle = new JobStepThrottle(Options.Create(_options), NullLogger<JobStepThrottle>.Instance);
+        _tasks = [];
+        _completedTasks = 0;
     }
 
     async Task Because()
@@ -32,24 +32,24 @@ public class when_acquiring_and_releasing_slots : Specification
         {
             var task = Task.Run(async () =>
             {
-                await throttle.AcquireAsync();
+                await _throttle.AcquireAsync();
                 try
                 {
-                    Interlocked.Increment(ref completedTasks);
+                    Interlocked.Increment(ref _completedTasks);
                     await Task.Delay(50); // Simulate work
                 }
                 finally
                 {
-                    throttle.Release();
+                    _throttle.Release();
                 }
             });
-            tasks.Add(task);
+            _tasks.Add(task);
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(_tasks);
     }
 
-    [Fact] void should_complete_all_tasks() => completedTasks.ShouldEqual(4);
+    [Fact] void should_complete_all_tasks() => _completedTasks.ShouldEqual(4);
 
-    void Cleanup() => throttle.Dispose();
+    void Cleanup() => _throttle.Dispose();
 }

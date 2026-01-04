@@ -5,15 +5,15 @@ namespace Cratis.Chronicle.Grains.Jobs.for_JobStepThrottle;
 
 public class when_configured_with_specific_value : Specification
 {
-    Configuration.Jobs jobsConfig;
-    int effectiveMaxParallelSteps;
+    Configuration.Jobs _jobsConfig;
+    int _effectiveMaxParallelSteps;
 
     void Establish()
     {
-        jobsConfig = new Configuration.Jobs { MaxParallelSteps = 5 };
+        _jobsConfig = new Configuration.Jobs { MaxParallelSteps = 5 };
     }
 
-    void Because() => effectiveMaxParallelSteps = jobsConfig.GetEffectiveMaxParallelSteps();
+    void Because() => _effectiveMaxParallelSteps = _jobsConfig.GetEffectiveMaxParallelSteps();
 
-    [Fact] void should_use_configured_value() => effectiveMaxParallelSteps.ShouldEqual(5);
+    [Fact] void should_use_configured_value() => _effectiveMaxParallelSteps.ShouldEqual(5);
 }
