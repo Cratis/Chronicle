@@ -123,11 +123,11 @@ public class Projection(
             state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
         }
 
-        // Inject Id property into the read model before returning
+        // Inject id property into the read model before returning
         if (lastKey is not null)
         {
             var stateDict = (IDictionary<string, object?>)state;
-            stateDict["Id"] = lastKey.Value.ToString();
+            stateDict["id"] = lastKey.Value.ToString();
         }
 
         return state;
@@ -175,15 +175,15 @@ public class Projection(
             readModelsByKey[key] = state;
         }
 
-        // Inject Id property into each read model before returning
+        // Inject id property into each read model before returning
         var results = new List<ExpandoObject>();
         foreach (var kvp in readModelsByKey)
         {
             var readModel = kvp.Value;
             var readModelDict = (IDictionary<string, object?>)readModel;
 
-            // Set the Id property with the key value
-            readModelDict["Id"] = kvp.Key.Value.ToString();
+            // Set the id property with the key value
+            readModelDict["id"] = kvp.Key.Value.ToString();
 
             results.Add(readModel);
         }
