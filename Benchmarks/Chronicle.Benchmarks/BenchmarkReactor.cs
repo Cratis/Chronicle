@@ -8,11 +8,13 @@ namespace Chronicle.Benchmarks;
 
 public class BenchmarkReactor : IReactor
 {
-    public int EventsProcessed;
+    int _eventsProcessed;
+
+    public int EventsProcessed => _eventsProcessed;
 
     public Task OnBenchmarkEvent(BenchmarkEvent evt, EventContext context)
     {
-        Interlocked.Increment(ref EventsProcessed);
+        Interlocked.Increment(ref _eventsProcessed);
         return Task.CompletedTask;
     }
 }
