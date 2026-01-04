@@ -13,7 +13,6 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
-using Tag = Cratis.Chronicle.Concepts.Events.Tag;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -107,7 +106,7 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
-        IEnumerable<Tag> tags,
+        IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
         ExpandoObject content)
     {
