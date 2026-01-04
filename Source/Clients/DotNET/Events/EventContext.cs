@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Events;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
 /// <param name="Causation">A collection of <see cref="Causation"/> for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
+/// <param name="Tags">A collection of tags associated with the event.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 public record EventContext(
     EventType EventType,
@@ -35,6 +36,7 @@ public record EventContext(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     Identity CausedBy,
+    IEnumerable<string> Tags,
     EventObservationState ObservationState = EventObservationState.Initial)
 {
     /// <summary>
@@ -90,7 +92,8 @@ public record EventContext(
             @namespace,
             correlationId,
             [],
-            Identity.NotSet);
+            Identity.NotSet,
+            []);
     }
 
     /// <summary>
@@ -129,5 +132,6 @@ public record EventContext(
             CorrelationId,
             Causation,
             CausedBy,
+            Tags,
             desiredState);
 }
