@@ -19,7 +19,7 @@ jobs:
       - name: Get all Cratis repositories
         id: get-repos
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_DOCUMENTATION }}
         run: |
           # Get all repositories in the Cratis organization
           repos=$(gh repo list Cratis --limit 1000 --json name --jq '.[].name')
@@ -45,8 +45,11 @@ jobs:
             fi
             
             echo "Triggering sync for Cratis/$repo..."
-            gh workflow run "sync-copilot-instructions.yml" \
+            if gh workflow run "sync-copilot-instructions.yml" \
               --repo "Cratis/$repo" \
-              --field source_repository="Cratis/Chronicle" \
-              2>&1 | grep -v "could not create workflow dispatch event" || echo "  Workflow may not exist in $repo, skipping..."
+              --field source_repository="Cratis/Chronicle" 2>&1; then
+              echo "  ✓ Successfully triggered workflow for $repo"
+            else
+              echo "  ⚠ Could not trigger workflow for $repo (workflow may not exist)"
+            fi
           done
