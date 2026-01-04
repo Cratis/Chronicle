@@ -76,13 +76,19 @@ public class EventSeeding(
         else
         {
             // For namespace-specific grains, append events to the sequence
+            // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
+            if (_eventSequence is null)
+            {
+                throw new InvalidOperationException("Event sequence should be initialized for namespace-specific grains");
+            }
+
             var eventsToAppend = GetEventsToSeed(entriesList);
             if (eventsToAppend.Count > 0)
             {
                 logger.AppendingSeededEvents(eventsToAppend.Count);
                 var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
 
-                await _eventSequence!.AppendMany(
+                await _eventSequence.AppendMany(
                     eventsToAppend,
                     CorrelationId.New(),
                     causation,

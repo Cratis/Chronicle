@@ -4,12 +4,10 @@
 import { DataPage } from 'Components/DataPage/DataPage';
 import { GetGlobalSeedData } from 'Api/Seeding/GetGlobalSeedData';
 import { Column } from 'primereact/column';
-import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 export const SeedData = () => {
     const { eventStore } = useParams();
-    const [selectedNamespace, setSelectedNamespace] = useState<string>('');
 
     return (
         <DataPage
