@@ -65,6 +65,7 @@
         "datetime",
         "decompilation",
         "decryptor",
+        "dedents",
         "deref",
         "discoverability",
         "downcaster",
