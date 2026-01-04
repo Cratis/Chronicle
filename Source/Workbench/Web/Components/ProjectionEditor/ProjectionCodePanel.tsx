@@ -22,6 +22,13 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
         { label: 'Model-Bound', value: 'modelBound' }
     ];
 
+    const handleCopyToClipboard = async () => {
+        const code = codeType === 'declarative' ? declarativeCode : modelBoundCode;
+        if (code) {
+            await navigator.clipboard.writeText(code);
+        }
+    };
+
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -66,6 +73,13 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
                     onClick={onRefresh}
                     disabled={!onRefresh}
                     tooltip="Refresh Code"
+                    tooltipOptions={{ position: 'left' }}
+                    className="p-button-rounded p-button-text"
+                />
+                <Button
+                    icon="pi pi-copy"
+                    onClick={handleCopyToClipboard}
+                    tooltip="Copy to Clipboard"
                     tooltipOptions={{ position: 'left' }}
                     className="p-button-rounded p-button-text"
                 />

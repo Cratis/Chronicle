@@ -6,11 +6,13 @@ import { configuration, languageId, monarchLanguage } from './language';
 import { ProjectionDslCompletionProvider } from './completionProvider';
 import { ProjectionDslValidator } from './validator';
 import { ProjectionDslHoverProvider } from './hoverProvider';
+import { ProjectionDslCodeActionProvider } from './codeActionProvider';
 import type { JsonSchema } from '../JsonSchema';
 
 let validator: ProjectionDslValidator;
 let completionProvider: ProjectionDslCompletionProvider;
 let hoverProvider: ProjectionDslHoverProvider;
+let codeActionProvider: ProjectionDslCodeActionProvider;
 let disposables: Monaco.IDisposable[] = [];
 
 export * from './ProjectionEditor';
@@ -29,6 +31,7 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     validator = new ProjectionDslValidator();
     completionProvider = new ProjectionDslCompletionProvider();
     hoverProvider = new ProjectionDslHoverProvider();
+    codeActionProvider = new ProjectionDslCodeActionProvider();
 
     // Register completion provider with helpful trigger characters
     const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, {
@@ -42,6 +45,20 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
         provideHover: hoverProvider.provideHover.bind(hoverProvider),
     });
     disposables.push(hoverDisposable);
+
+    // Register code action provider
+    const codeActionDisposable = monaco.languages.registerCodeActionProvider(languageId, {
+        provideCodeActions: codeActionProvider.provideCodeActions.bind(codeActionProvider),
+    });
+    disposables.push(codeActionDisposable);
+
+    // Register command for creating read models
+    const commandDisposable = monaco.editor.registerCommand('projection-dsl.createReadModel', (_accessor, readModelName: string) => {
+        if (codeActionProvider) {
+            (codeActionProvider as any).onCreateReadModel?.(readModelName);
+        }
+    });
+    disposables.push(commandDisposable);
 
     // Register validation on model change
     const modelChangeDisposable = monaco.editor.onDidCreateModel((model) => {
@@ -79,11 +96,14 @@ export function setReadModelSchemas(schemas: JsonSchema[]): void {
     if (validator) {
         validator.setReadModelSchemas(schemas);
     }
-    if (completionProvider) {
-        completionProvider.setReadModelSchemas(schemas);
+    if (codeActionProvider) {
+        codeActionProvider.setReadModelSchemas(schemas);
     }
-    if (hoverProvider) {
-        hoverProvider.setReadModelSchemas(schemas);
+}
+
+export function setCreateReadModelCallback(callback: (readModelName: string) => void): void {
+    if (codeActionProvider) {
+        codeActionProvider.setCreateReadModelCallback(callback);
     }
 }
 

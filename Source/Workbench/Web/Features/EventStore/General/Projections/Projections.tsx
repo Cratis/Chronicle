@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { AllReadModelDefinitions } from 'Api/ReadModelTypes';
+import { AllReadModelDefinitions, CreateReadModel } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import { JsonSchema } from 'Components/JsonSchema';
-import { ProjectionEditor } from 'Components/ProjectionEditor';
+import { ProjectionEditor, setCreateReadModelCallback } from 'Components/ProjectionEditor';
+import { ReadModelCreation } from 'Components/ReadModelCreation';
 import { Menubar } from 'primereact/menubar';
-import { useState } from 'react';
+import { Dialog } from 'primereact/dialog';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
@@ -16,14 +18,17 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError } from 'Api/Projections';
+import type { ReadModelSchema } from 'Api/ReadModels';
 
 export const Projections = () => {
 
     const [dslValue, setDslValue] = useState('');
     const [selectedProjection, setSelectedProjection] = useState<unknown>(null);
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
+    const [newReadModelName, setNewReadModelName] = useState('');
 
-    const [readModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
+    const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
@@ -33,6 +38,33 @@ export const Projections = () => {
 
     const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
+    const [createReadModel] = CreateReadModel.use();
+
+    useEffect(() => {
+        setCreateReadModelCallback((readModelName: string) => {
+            setNewReadModelName(readModelName);
+            setIsCreateReadModelDialogOpen(true);
+        });
+    }, []);
+
+    const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
+        if (params.eventStore) {
+            createReadModel.eventStore = params.eventStore;
+            createReadModel.name = name;
+            createReadModel.schema = JSON.stringify(schema);
+            const result = await createReadModel.execute();
+            if (result.isSuccess) {
+                setIsCreateReadModelDialogOpen(false);
+                setNewReadModelName('');
+                refreshReadModels();
+            }
+        }
+    };
+
+    const handleCancelReadModel = () => {
+        setIsCreateReadModelDialogOpen(false);
+        setNewReadModelName('');
+    };
 
     return (
         <Page title='Projections'>
@@ -113,6 +145,20 @@ export const Projections = () => {
                     </div>
                 </Allotment.Pane>
             </Allotment>
+
+            <Dialog
+                header={'Create Read Model: ' + newReadModelName}
+                visible={isCreateReadModelDialogOpen}
+                style={{ width: '800px', height: '80vh' }}
+                modal
+                resizable={true}
+                onHide={handleCancelReadModel}>
+                <ReadModelCreation
+                    initialName={newReadModelName}
+                    onSave={handleSaveReadModel}
+                    onCancel={handleCancelReadModel}
+                />
+            </Dialog>
         </Page>
     );
 };

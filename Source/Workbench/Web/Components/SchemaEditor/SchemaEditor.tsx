@@ -23,20 +23,23 @@ export interface NavigationItem {
 
 export interface SchemaEditorProps {
     schema: JsonSchema;
-    eventTypeName: string;
+    eventTypeName?: string;
     canEdit?: boolean;
     canNotEditReason?: string;
     onChange?: (schema: JsonSchema) => void;
     onSave?: () => void;
     onCancel?: () => void;
+    editMode?: boolean;
+    saveDisabled?: boolean;
+    cancelDisabled?: boolean;
 }
 
-export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEditReason, onChange, onSave, onCancel }: SchemaEditorProps) => {
+export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNotEditReason, onChange, onSave, onCancel, editMode, saveDisabled = false, cancelDisabled = false }: SchemaEditorProps) => {
     const [currentPath, setCurrentPath] = useState<string[]>([]);
     const [properties, setProperties] = useState<JsonSchemaProperty[]>([]);
     const [typeFormats, setTypeFormats] = useState<TypeFormat[]>([]);
     const [currentSchema, setCurrentSchema] = useState<JsonSchema>(schema);
-    const [isEditMode, setIsEditMode] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(editMode ?? false);
     const [initialSchema, setInitialSchema] = useState<JsonSchema>(schema);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -352,21 +355,25 @@ export const SchemaEditor = ({ schema, eventTypeName, canEdit = true, canNotEdit
                 </div>
             ) : undefined
         }] : []),
-        ...(isEditMode ? [{
-            label: strings.components.schemaEditor.actions.save,
-            icon: <faIcons.FaCheck className='mr-2' />,
-            command: hasValidationErrors ? undefined : handleSave,
-            disabled: hasValidationErrors
-        }, {
-            label: strings.components.schemaEditor.actions.cancel,
-            icon: <faIcons.FaXmark className='mr-2' />,
-            command: handleCancel
-        }, {
-            label: strings.components.schemaEditor.actions.addProperty,
-            icon: <faIcons.FaPlus className='mr-2' />,
-            command: addProperty
-        }] : [])
-    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canNotEditReason, hasValidationErrors]);
+        ...(isEditMode ? [
+            ...(!saveDisabled ? [{
+                label: strings.components.schemaEditor.actions.save,
+                icon: <faIcons.FaCheck className='mr-2' />,
+                command: hasValidationErrors ? undefined : handleSave,
+                disabled: hasValidationErrors
+            }] : []),
+            ...(!cancelDisabled ? [{
+                label: strings.components.schemaEditor.actions.cancel,
+                icon: <faIcons.FaXmark className='mr-2' />,
+                command: handleCancel
+            }] : []),
+            {
+                label: strings.components.schemaEditor.actions.addProperty,
+                icon: <faIcons.FaPlus className='mr-2' />,
+                command: addProperty
+            }
+        ] : [])
+    ], [isEditMode, handleSave, handleCancel, handleEdit, addProperty, canEdit, canNotEditReason, hasValidationErrors, saveDisabled, cancelDisabled]);
 
     const breadcrumbItems = getBreadcrumbItems();
     const isAtRoot = currentPath.length === 0;
