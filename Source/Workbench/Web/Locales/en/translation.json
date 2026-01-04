@@ -173,6 +173,9 @@
             "sequences": {
                 "title": "Sequences",
                 "empty": "No events found",
+                "actions": {
+                    "addEvents": "Add Events"
+                },
                 "columns": {
                     "sequenceNumber": "Sequence number",
                     "eventSourceId": "Event Source Id",
@@ -184,6 +187,18 @@
                         "eventType": "Event type",
                         "eventSourceId": "Event source",
                         "occurred": "Occurred"
+                    }
+                },
+                "dialogs": {
+                    "addEvents": {
+                        "title": "Add Events",
+                        "defaultEventType": "Default Event Type:",
+                        "selectEventType": "Select event type",
+                        "addRow": "Add Row",
+                        "eventType": "Event Type",
+                        "content": "Content (JSON)",
+                        "contentPlaceholder": "Enter JSON content",
+                        "noEvents": "No events to add. Click 'Add Row' to start."
                     }
                 }
             },
