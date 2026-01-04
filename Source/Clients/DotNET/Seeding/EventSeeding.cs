@@ -48,7 +48,7 @@ public class EventSeeding(
         {
             var eventType_clrType = @event.GetType();
             var staticTags = eventType_clrType.GetTags().Select(t => (Tag)t);
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, false, _namespace));
         }
         return this;
     }
@@ -60,9 +60,21 @@ public class EventSeeding(
         {
             var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
             var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, false, _namespace));
         }
         return this;
+    }
+
+    /// <inheritdoc/>
+    public IEventSeedingScopeBuilder ForAllNamespaces()
+    {
+        return new EventSeedingScopeBuilder(this, true, EventStoreNamespaceName.NotSet);
+    }
+
+    /// <inheritdoc/>
+    public IEventSeedingScopeBuilder ForNamespace(EventStoreNamespaceName @namespace)
+    {
+        return new EventSeedingScopeBuilder(this, false, @namespace);
     }
 
     /// <inheritdoc/>
@@ -95,7 +107,9 @@ public class EventSeeding(
                 entry.EventSourceId.Value,
                 entry.EventTypeId.Value,
                 JsonSerializer.Serialize(content),
-                tags));
+                tags,
+                entry.IsGlobal,
+                entry.TargetNamespace.Value));
         }
 
         await servicesAccessor.Services.Seeding.Seed(
@@ -108,13 +122,46 @@ public class EventSeeding(
                     EventSourceId = e.EventSourceId,
                     EventTypeId = e.EventTypeId,
                     Content = e.Content,
-                    Tags = e.Tags
+                    Tags = e.Tags,
+                    IsGlobal = e.IsGlobal,
+                    TargetNamespace = e.TargetNamespace
                 })
             });
 
         _entries.Clear();
     }
 
-    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags);
-    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content, IList<string> Tags);
+    void AddScopedEntry(EventSourceId eventSourceId, EventTypeId eventTypeId, object @event, IEnumerable<Tag> tags, bool isGlobal, EventStoreNamespaceName targetNamespace)
+    {
+        _entries.Add(new SeedingEntry(eventSourceId, eventTypeId, @event, tags, isGlobal, targetNamespace));
+    }
+
+    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags, bool IsGlobal, EventStoreNamespaceName TargetNamespace);
+    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content, IList<string> Tags, bool IsGlobal, string TargetNamespace);
+
+    class EventSeedingScopeBuilder(EventSeeding parent, bool isGlobal, EventStoreNamespaceName targetNamespace) : IEventSeedingScopeBuilder
+    {
+        public IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
+            where TEvent : class
+        {
+            var eventType = parent._eventTypes.GetEventTypeFor(typeof(TEvent));
+            foreach (var @event in events)
+            {
+                var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
+                parent.AddScopedEntry(eventSourceId, eventType.Id, @event, staticTags, isGlobal, targetNamespace);
+            }
+            return this;
+        }
+
+        public IEventSeedingScopeBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events)
+        {
+            foreach (var @event in events)
+            {
+                var eventType = parent._eventTypes.GetEventTypeFor(@event.GetType());
+                var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
+                parent.AddScopedEntry(eventSourceId, eventType.Id, @event, staticTags, isGlobal, targetNamespace);
+            }
+            return this;
+        }
+    }
 }
