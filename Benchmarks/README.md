@@ -35,6 +35,19 @@ Measures the performance of bulk appending events to the event log.
 Parameters:
 - EventCount: 10, 100, 1000 events per batch
 
+### Future Benchmarks
+
+The following observer benchmarks are planned but require additional infrastructure:
+
+- **ReducerBenchmark**: Measure events processed per second by reducers
+- **ReactorBenchmark**: Measure events processed per second by reactors  
+- **ProjectionBenchmark**: Measure events processed per second by projections
+
+These will be implemented once we have:
+1. A way to deploy observers to the Chronicle server
+2. Mechanisms to measure observer processing throughput
+3. Integration with the in-process Chronicle client for easier testing
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
