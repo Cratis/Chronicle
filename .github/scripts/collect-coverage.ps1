@@ -34,40 +34,44 @@ if (Test-Path $OutputPath) {
     }
 }
 
-# Find all coverage files
-$coverageFiles = Get-ChildItem -Path $CoverageReportPath -Filter "Summary.json" -Recurse -ErrorAction SilentlyContinue
+# Find the main Summary.json file (reportgenerator creates one at the root)
+$summaryFile = Join-Path $CoverageReportPath "Summary.json"
 
-if ($coverageFiles.Count -eq 0) {
-    Write-Host "Warning: No coverage files found in $CoverageReportPath"
+if (-not (Test-Path $summaryFile)) {
+    Write-Host "Warning: No Summary.json found in $CoverageReportPath"
     # Still update the timestamp
     $data.lastUpdate = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $jsonOutput = ConvertTo-Json $data -Depth 10 -Compress
     $output = "window.COVERAGE_DATA = $jsonOutput;"
     Set-Content -Path $OutputPath -Value $output
-    Write-Host "Updated timestamp in coverage data (no coverage reports found)"
+    Write-Host "Updated timestamp in coverage data (no coverage report found)"
     exit 0
 }
 
-Write-Host "Found $($coverageFiles.Count) coverage report(s)"
+Write-Host "Processing coverage report: $summaryFile"
 
-$currentDate = Get-Date -Format "yyyy-MM-dd"
-$currentWeek = Get-Date -UFormat "%Y-W%V"
-
-foreach ($file in $coverageFiles) {
-    Write-Host "Processing: $($file.FullName)"
+try {
+    $coverage = Get-Content $summaryFile | ConvertFrom-Json
     
-    try {
-        $coverage = Get-Content $file.FullName | ConvertFrom-Json
+    $currentDate = Get-Date -Format "yyyy-MM-dd"
+    $currentWeek = Get-Date -UFormat "%Y-W%V"
+    
+    # Process each assembly in the coverage report
+    foreach ($assembly in $coverage.coverage.assemblies) {
+        $projectName = $assembly.name
         
-        # Extract project name from path
-        $projectPath = $file.Directory.Parent.Name
-        $projectName = $projectPath
+        # Skip test assemblies and third-party libraries
+        if ($projectName -match "\.Specs$" -or 
+            $projectName -match "^xunit" -or 
+            $projectName -match "^NSubstitute" -or
+            $projectName -match "^testhost" -or
+            $projectName -match "^coverlet") {
+            Write-Host "  Skipping: $projectName"
+            continue
+        }
         
         # Get coverage percentage
-        $lineCoverage = 0
-        if ($coverage.summary -and $coverage.summary.linecoverage) {
-            $lineCoverage = [math]::Round([double]$coverage.summary.linecoverage, 2)
-        }
+        $lineCoverage = [math]::Round([double]$assembly.coverage, 2)
         
         Write-Host "  Project: $projectName, Coverage: $lineCoverage%"
         
@@ -86,18 +90,24 @@ foreach ($file in $coverageFiles) {
                 week = $currentWeek
                 lineCoverage = $lineCoverage
                 version = $Version
-                commit = $CommitSha.Substring(0, [Math]::Min(7, $CommitSha.Length))
+                commit = if ($CommitSha.Length -gt 0) { $CommitSha.Substring(0, [Math]::Min(7, $CommitSha.Length)) } else { "" }
             }
             
             $data.entries[$projectName] += $entry
-            Write-Host "  Added new entry for week $currentWeek"
+            Write-Host "    Added new entry for week $currentWeek"
         } else {
-            Write-Host "  Entry already exists for week $currentWeek, skipping"
+            Write-Host "    Entry already exists for week $currentWeek, updating..."
+            # Update existing entry with latest values
+            $existingEntry.lineCoverage = $lineCoverage
+            $existingEntry.version = $Version
+            $existingEntry.commit = if ($CommitSha.Length -gt 0) { $CommitSha.Substring(0, [Math]::Min(7, $CommitSha.Length)) } else { "" }
         }
-        
-    } catch {
-        Write-Host "Error processing $($file.FullName): $_"
     }
+    
+} catch {
+    Write-Host "Error processing coverage report: $_"
+    Write-Host $_.ScriptStackTrace
+    exit 1
 }
 
 # Update timestamp
@@ -118,3 +128,4 @@ Set-Content -Path $OutputPath -Value $output
 
 Write-Host "Coverage data updated successfully"
 Write-Host "Output written to: $OutputPath"
+Write-Host "Total projects tracked: $($data.entries.Keys.Count)"

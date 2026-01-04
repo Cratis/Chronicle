@@ -3,3 +3,4 @@ window.COVERAGE_DATA = {
     repoUrl: "https://github.com/Cratis/Chronicle",
     entries: {}
 };
+
