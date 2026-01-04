@@ -19,7 +19,7 @@ export const ProjectionHelpPanel: React.FC = () => {
                 <pre style={{ backgroundColor: '#2d2d30', padding: '12px', borderRadius: '4px', fontSize: '13px', margin: 0 }}>
 {`projection MyReadModel
     from MyEvent
-        set property = $.eventProperty`}
+        set property = eventProperty`}
                 </pre>
             </div>
 
@@ -50,7 +50,6 @@ export const ProjectionHelpPanel: React.FC = () => {
                     Expressions
                 </h3>
                 <div style={{ fontSize: '13px' }}>
-                    <div style={{ marginBottom: '5px' }}><strong>$.</strong> - Access event properties</div>
                     <div style={{ marginBottom: '5px' }}><strong>$parent.</strong> - Access parent read model properties</div>
                     <div style={{ marginBottom: '5px' }}><strong>$child.</strong> - Access child properties</div>
                     <div style={{ marginBottom: '5px' }}><strong>$eventContext.</strong> - Access event metadata (correlationId, causationId, occurred)</div>
@@ -65,15 +64,15 @@ export const ProjectionHelpPanel: React.FC = () => {
                 </h3>
                 <pre style={{ backgroundColor: '#2d2d30', padding: '12px', borderRadius: '4px', fontSize: '13px', margin: 0 }}>
 {`// Simple key
-key $.userId
+key userId
 
 // Composite key
 key
-    userId = $.userId
-    tenantId = $.tenantId
+    userId = userId
+    tenantId = tenantId
 
 // Parent key
-parent key $.parentId`}
+parent key parentId`}
                 </pre>
             </div>
 
@@ -91,15 +90,15 @@ from MyEvent
     count eventCount
 
 // Join to another model
-join OtherModel with $.otherId
+join OtherModel with otherId
     set otherName = $child.name
 
 // Child collection
 children Items
     from ItemAdded
         add item
-            id = $.itemId
-            name = $.itemName`}
+            id = itemId
+            name = itemName`}
                 </pre>
             </div>
 

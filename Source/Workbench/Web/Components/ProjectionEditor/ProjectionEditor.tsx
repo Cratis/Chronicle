@@ -13,7 +13,6 @@ import {
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionDefinitionSyntaxError } from 'Api/Projections';
 import { Button } from 'primereact/button';
-import { Sidebar } from 'primereact/sidebar';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import Strings from 'Strings';
 
@@ -38,8 +37,16 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
 }) => {
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const sidebarContainerRef = useRef<HTMLDivElement>(null);
     const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
+
+    useEffect(() => {
+        if (editorRef.current) {
+            // Wait for CSS transition to complete (300ms) then trigger layout
+            setTimeout(() => {
+                editorRef.current?.layout();
+            }, 350);
+        }
+    }, [isHelpPanelOpen]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -53,7 +60,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             language: languageId,
             theme,
             minimap: { enabled: false },
-            automaticLayout: true,
+            automaticLayout: false,
             scrollBeyondLastLine: false,
             fontSize: 14,
             lineNumbers: 'on',
@@ -119,45 +126,63 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     }, [errors]);
 
     return (
-        <div ref={sidebarContainerRef} style={{ position: 'relative', height, width: '100%', overflow: 'hidden' }}>
-            <Button
-                icon="pi pi-question-circle"
-                tooltip={Strings.components.projectionEditor.tooltips.help}
-                tooltipOptions={{ position: 'left' }}
-                onClick={() => setIsHelpPanelOpen(!isHelpPanelOpen)}
-                className="p-button-rounded p-button-text p-button-lg"
-                style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    zIndex: 1000,
-                }}
-                pt={{
-                    icon: { style: { fontSize: '1.5rem' } },
-                    root: { style: { width: '3rem', height: '3rem' } }
-                }}
-            />
-            <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+        <div style={{ position: 'relative', height, width: '100%', display: 'flex', overflow: 'hidden' }}>
+            <div style={{ flex: 1, position: 'relative', height: '100%', minWidth: 0, overflow: 'hidden' }}>
+                <Button
+                    icon="pi pi-question-circle"
+                    tooltip={Strings.components.projectionEditor.tooltips.help}
+                    tooltipOptions={{ position: 'left' }}
+                    onClick={() => setIsHelpPanelOpen(!isHelpPanelOpen)}
+                    className="p-button-rounded p-button-text p-button-lg"
+                    style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        zIndex: 1000,
+                    }}
+                    pt={{
+                        icon: { style: { fontSize: '1.5rem' } },
+                        root: { style: { width: '3rem', height: '3rem' } }
+                    }}
+                />
+                <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+            </div>
 
-            <Sidebar
-                visible={isHelpPanelOpen}
-                onHide={() => setIsHelpPanelOpen(false)}
-                position="right"
-                style={{ width: '500px' }}
-                pt={{
-                    root: { style: { position: 'absolute', height: '100%', top: 0 } },
-                    content: { style: { padding: 0, height: '100%', backgroundColor: '#1e1e1e' } },
-                    header: { style: { backgroundColor: '#252526', borderBottom: '1px solid #3e3e42', color: '#ffffff' } },
-                    closeButton: { style: { color: '#cccccc' } }
+            <div
+                style={{
+                    width: isHelpPanelOpen ? '500px' : '0',
+                    height: '100%',
+                    overflow: 'hidden',
+                    transition: 'width 0.3s ease-in-out',
+                    borderLeft: isHelpPanelOpen ? '1px solid #3e3e42' : 'none',
+                    display: isHelpPanelOpen ? 'flex' : 'none',
+                    flexDirection: 'column',
+                    backgroundColor: '#1e1e1e',
                 }}
-                appendTo={sidebarContainerRef.current || undefined}
-                modal={false}
-                dismissable={true}
-                showCloseIcon={true}
-                header="Projection DSL Reference"
             >
-                <ProjectionHelpPanel />
-            </Sidebar>
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem',
+                        borderBottom: '1px solid #3e3e42',
+                        backgroundColor: '#252526',
+                        minHeight: '60px',
+                    }}
+                >
+                    <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem' }}>Projection DSL Reference</h3>
+                    <Button
+                        icon="pi pi-times"
+                        onClick={() => setIsHelpPanelOpen(false)}
+                        className="p-button-rounded p-button-text"
+                        style={{ color: '#cccccc' }}
+                    />
+                </div>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                    <ProjectionHelpPanel />
+                </div>
+            </div>
         </div>
     );
 };
