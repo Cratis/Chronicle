@@ -9,11 +9,16 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 /// <summary>
 /// Parses key directives (simple and composite).
 /// </summary>
-internal class KeyDirectiveParser
+internal sealed class KeyDirectiveParser
 {
     readonly TypeRefParser _typeRefs = new();
     readonly ExpressionParser _expressions = new();
 
+    /// <summary>
+    /// Parses a key directive from the given context.
+    /// </summary>
+    /// <param name="context">The parsing context.</param>
+    /// <returns>The parsed projection directive, or null if parsing failed.</returns>
     public ProjectionDirective? Parse(IParsingContext context)
     {
         context.Advance(); // Skip 'key'

@@ -85,7 +85,7 @@ public class ExpressionParser
         }
 
         // Plain identifier or property path (event data)
-        if (context.Check(TokenType.Identifier))
+        if (context.Check(TokenType.Identifier) || context.Check(TokenType.Id))
         {
             var path = ParsePropertyPath(context);
             return path is not null ? new EventDataExpression(path) : null;
@@ -160,7 +160,17 @@ public class ExpressionParser
 
     string? ParsePropertyPath(IParsingContext context)
     {
-        var identifierToken = context.Expect(TokenType.Identifier);
+        // Accept both Identifier and Id tokens (since 'id' is a keyword but can also be a property name)
+        Token? identifierToken = null;
+        if (context.Check(TokenType.Identifier))
+        {
+            identifierToken = context.Expect(TokenType.Identifier);
+        }
+        else if (context.Check(TokenType.Id))
+        {
+            identifierToken = context.Expect(TokenType.Id);
+        }
+
         if (identifierToken is null) return null;
 
         var parts = new List<string> { identifierToken.Value };
@@ -168,7 +178,16 @@ public class ExpressionParser
         while (context.Check(TokenType.Dot))
         {
             context.Advance();
-            var nextToken = context.Expect(TokenType.Identifier);
+            Token? nextToken = null;
+            if (context.Check(TokenType.Identifier))
+            {
+                nextToken = context.Expect(TokenType.Identifier);
+            }
+            else if (context.Check(TokenType.Id))
+            {
+                nextToken = context.Expect(TokenType.Id);
+            }
+
             if (nextToken is null) return null;
             parts.Add(nextToken.Value);
         }

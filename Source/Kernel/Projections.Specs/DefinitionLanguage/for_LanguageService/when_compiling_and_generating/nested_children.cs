@@ -7,21 +7,23 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class nested_children : given.a_language_service
+public class nested_children : given.a_language_service_with_schemas<given.CompanyReadModel>
 {
     const string Definition = """
         projection Company => CompanyReadModel
-          children Departments id departmentId
+          children departments id departmentId
             from DepartmentCreated
               key departmentId
               parent $eventContext.eventSourceId
-              Name = name
-            children Employees id employeeId
+              name = name
+            children employees id employeeId
               from EmployeeHired
                 key employeeId
                 parent departmentId
-                Name = name
+                name = name
         """;
+
+    protected override IEnumerable<Type> EventTypes => [typeof(given.DepartmentCreated), typeof(given.EmployeeHired)];
 
     ProjectionDefinition _result;
     ChildrenDefinition _departmentsDef;
@@ -29,9 +31,9 @@ public class nested_children : given.a_language_service
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition, "OrganizationReadModel");
-        _departmentsDef = _result.Children[new PropertyPath("Departments")];
-        _employeesDef = _departmentsDef.Children[new PropertyPath("Employees")];
+        _result = CompileGenerateAndRecompile(Definition);
+        _departmentsDef = _result.Children[new PropertyPath("departments")];
+        _employeesDef = _departmentsDef.Children[new PropertyPath("employees")];
     }
 
     [Fact] void should_have_departments_children() => _departmentsDef.ShouldNotBeNull();

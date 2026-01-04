@@ -63,18 +63,8 @@ public class LanguageService(IGenerator generator) : ILanguageService
             return parseResult.Match(
                 document =>
                 {
-                    try
-                    {
-                        var compiler = new Compiler();
-                        var identifier = compiler.GetReadModelIdentifier(document);
-                        return Result<ReadModelIdentifier, CompilerErrors>.Success(identifier);
-                    }
-                    catch (InvalidOperationException ex)
-                    {
-                        var errors = new CompilerErrors();
-                        errors.Add(ex.Message, 0, 0);
-                        return errors;
-                    }
+                    var compiler = new Compiler();
+                    return compiler.GetReadModelIdentifier(document);
                 },
                 parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
         }

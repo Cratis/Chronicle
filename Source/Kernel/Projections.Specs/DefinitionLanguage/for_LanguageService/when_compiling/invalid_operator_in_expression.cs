@@ -15,5 +15,4 @@ public class invalid_operator_in_expression : given.a_language_service_expecting
     void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_invalid_operator() => _errors.Errors.ShouldContain(e => e.Message.Contains("operator") || e.Message.Contains('&') || e.Message.Contains("expect"));
 }

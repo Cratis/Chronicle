@@ -7,11 +7,11 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class remove_with_block : given.a_language_service
+public class remove_with_block : given.a_language_service_with_schemas<given.GroupReadModel>
 {
     const string Definition = """
         projection Group => GroupReadModel
-          children Members id userId
+          children members id userId
             from UserAddedToGroup
               key userId
               parent groupId
@@ -19,14 +19,16 @@ public class remove_with_block : given.a_language_service
               parent groupId
         """;
 
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAddedToGroup), typeof(given.UserRemovedFromGroup)];
+
     ProjectionDefinition _result;
     ChildrenDefinition _childrenDef;
     RemovedWithDefinition _removedWithDef;
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition, "UserGroupReadModel");
-        _childrenDef = _result.Children[new PropertyPath("Members")];
+        _result = CompileGenerateAndRecompile(Definition);
+        _childrenDef = _result.Children[new PropertyPath("members")];
         _removedWithDef = _childrenDef.RemovedWith[(EventType)"UserRemovedFromGroup"];
     }
 

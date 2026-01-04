@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 /// <summary>
 /// Visitor for parsing sequence directives.
 /// </summary>
-internal class SequenceDirectiveVisitor : IDirectiveVisitor
+internal sealed class SequenceDirectiveVisitor : IDirectiveVisitor
 {
     /// <inheritdoc/>
     public ProjectionDirective? Visit(IParsingContext context)

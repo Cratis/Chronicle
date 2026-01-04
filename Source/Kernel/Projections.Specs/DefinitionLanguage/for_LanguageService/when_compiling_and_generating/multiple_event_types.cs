@@ -6,28 +6,30 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class multiple_event_types : given.a_language_service
+public class multiple_event_types : given.a_language_service_with_schemas<given.UserReadModel>
 {
     const string Definition = """
         projection User => UserReadModel
           from UserCreated
             key userId
-            Name = name
-            Email = email
-            CreatedAt = $eventContext.occurred
+            name = name
+            email = email
+            createdAt = $eventContext.occurred
           from UserUpdated
             key userId
-            Name = name
-            Email = email
-            UpdatedAt = $eventContext.occurred
+            name = name
+            email = email
+            updatedAt = $eventContext.occurred
           from UserActivated
             key userId
-            IsActive = true
+            isActive = true
         """;
+
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserCreated), typeof(given.UserUpdated), typeof(given.UserActivated)];
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_three_event_types() => _result.From.Count.ShouldEqual(3);
     [Fact] void should_have_user_created_event() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();

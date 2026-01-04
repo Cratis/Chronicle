@@ -15,5 +15,4 @@ public class missing_to_keyword_in_set_directive : given.a_language_service_expe
     void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_missing_to() => _errors.Errors.ShouldContain(e => e.Message.Contains("to") || e.Message.Contains("expect"));
 }

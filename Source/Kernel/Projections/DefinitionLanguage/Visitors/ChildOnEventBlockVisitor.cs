@@ -9,12 +9,13 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 /// <summary>
 /// Visitor for parsing child on event blocks.
 /// </summary>
-internal class ChildOnEventBlockVisitor
+internal sealed class ChildOnEventBlockVisitor
 {
     readonly TypeRefParser _typeRefs = new();
     readonly ExpressionParser _expressions = new();
     readonly MappingOperationParser _mappingOperations = new();
     readonly KeyDirectiveParser _keyDirectives = new();
+
     /// <summary>
     /// Visits and parses a child on-event block.
     /// </summary>

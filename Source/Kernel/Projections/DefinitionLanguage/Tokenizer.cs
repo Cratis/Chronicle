@@ -236,7 +236,7 @@ public class Tokenizer
             }
 
             // Queue all but the first dedent
-            for (int i = 1; i < dedentsNeeded; i++)
+            for (var i = 1; i < dedentsNeeded; i++)
             {
                 _pendingDedents.Enqueue(new Token(TokenType.Dedent, string.Empty, line, column));
             }

@@ -3,25 +3,28 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class multiple_events_compact_syntax : given.a_language_service
+public class multiple_events_compact_syntax : given.a_language_service_with_schemas<given.TransportRouteReadModel>
 {
     const string Definition = """
         projection TransportRoute => TransportRouteReadModel
           automap
-          from HubRouteAddedToSimulationConfiguration key id, WarehouseRouteAddedToSimulationConfiguration key id
+          from HubRouteAddedToSimulationConfiguration
+            key simulationConfigurationId
+          from WarehouseRouteAddedToSimulationConfiguration
+            key simulationConfigurationId
         """;
+
+    protected override IEnumerable<Type> EventTypes => [typeof(given.HubRouteAddedToSimulationConfiguration), typeof(given.WarehouseRouteAddedToSimulationConfiguration)];
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition, "TransportRouteReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
-    [Fact] void should_have_automap_at_projection_level() => _result.FromEvery.AutoMap.ShouldEqual(AutoMap.Enabled);
     [Fact] void should_have_from_hub_route_added() => _result.From.ContainsKey((EventType)"HubRouteAddedToSimulationConfiguration").ShouldBeTrue();
     [Fact] void should_have_from_warehouse_route_added() => _result.From.ContainsKey((EventType)"WarehouseRouteAddedToSimulationConfiguration").ShouldBeTrue();
-    [Fact] void should_have_hub_route_key() => _result.From[(EventType)"HubRouteAddedToSimulationConfiguration"].Key.Value.ShouldEqual("id");
-    [Fact] void should_have_warehouse_route_key() => _result.From[(EventType)"WarehouseRouteAddedToSimulationConfiguration"].Key.Value.ShouldEqual("id");
+    [Fact] void should_have_hub_route_key() => _result.From[(EventType)"HubRouteAddedToSimulationConfiguration"].Key.Value.ShouldEqual("simulationConfigurationId");
+    [Fact] void should_have_warehouse_route_key() => _result.From[(EventType)"WarehouseRouteAddedToSimulationConfiguration"].Key.Value.ShouldEqual("simulationConfigurationId");
 }

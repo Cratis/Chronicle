@@ -25,9 +25,14 @@ public class Compiler
     /// </summary>
     /// <param name="document">The AST document to extract from.</param>
     /// <returns>The read model identifier.</returns>
-    public ReadModelIdentifier GetReadModelIdentifier(Document document)
+    public Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(Document document)
     {
-        document.Validate();
+        var validationResult = document.Validate();
+        if (!validationResult.IsSuccess)
+        {
+            return CompilerErrors.From(validationResult.AsT1);
+        }
+
         var projection = document.Projections[0];
         return new ReadModelIdentifier(projection.ReadModelType.Name);
     }
@@ -46,10 +51,20 @@ public class Compiler
         IEnumerable<ReadModelDefinition> readModelDefinitions,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        document.Validate();
+        var documentValidationResult = document.Validate();
+        if (!documentValidationResult.IsSuccess)
+        {
+            return CompilerErrors.From(documentValidationResult.AsT1);
+        }
 
         // For now, compile the first projection
         var projection = document.Projections[0];
+        var validationResult = projection.Validate();
+        if (!validationResult.IsSuccess)
+        {
+            return CompilerErrors.From(validationResult.AsT1);
+        }
+
         var errors = new CompilerErrors();
 
         // Validate the projection if schemas are provided
@@ -458,7 +473,7 @@ public class Compiler
             null => string.Empty,  // Store null as empty string (expected by tests)
             string s => $"\"{s}\"",  // Store strings with quotes to distinguish from property names
             bool b => b.ToString(),  // Store as "True"/"False" (C# ToString() format expected by tests)
-            _ => value.ToString() ?? string.Empty  // Numbers as-is
+            _ => value.ToString() ?? string.Empty // Numbers as-is
         };
     }
 }

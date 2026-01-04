@@ -7,7 +7,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class simple_projection : given.a_language_service
+public class simple_projection : given.a_language_service_with_schemas<given.Users>
 {
     const string Definition = """
         projection MyProjection => Users
@@ -16,9 +16,11 @@ public class simple_projection : given.a_language_service
             name = name
         """;
 
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserRegistered)];
+
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition, "Users");
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_one_from_definition() => _result.From.Count.ShouldEqual(1);
     [Fact] void should_have_from_user_registered() => _result.From.ContainsKey("UserRegistered").ShouldBeTrue();

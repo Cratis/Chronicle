@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
 
@@ -17,30 +16,6 @@ public class a_language_service : Specification
     {
         _languageService = new LanguageService(new Generator());
         _projectionId = new ProjectionId(Guid.NewGuid().ToString());
-    }
-
-    protected ProjectionDefinition CompileGenerateAndRecompile(string definition, string readModelName)
-    {
-        var readModelDefinition = CreateReadModelDefinition(readModelName);
-        var result = _languageService.Compile(
-            definition,
-            ProjectionOwner.Client,
-            [readModelDefinition],
-            []);
-        var compiled = result.Match(
-            projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
-
-        var generated = _languageService.Generate(compiled, readModelDefinition);
-
-        var recompileResult = _languageService.Compile(
-            generated,
-            ProjectionOwner.Client,
-            [readModelDefinition],
-            []);
-        return recompileResult.Match(
-            projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Re-compilation of generated DSL failed: {string.Join(", ", errors.Errors)}\n\nGenerated DSL was:\n{generated}"));
     }
 
     ReadModelDefinition CreateReadModelDefinition(string name)

@@ -9,9 +9,10 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 /// <summary>
 /// Visitor for parsing nested children blocks.
 /// </summary>
-internal class NestedChildrenBlockVisitor
+internal sealed class NestedChildrenBlockVisitor
 {
     readonly ExpressionParser _expressions = new();
+
     /// <summary>
     /// Visits and parses a nested children block.
     /// </summary>

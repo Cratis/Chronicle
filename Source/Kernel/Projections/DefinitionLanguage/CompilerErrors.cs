@@ -8,12 +8,12 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// </summary>
 public class CompilerErrors
 {
-    readonly List<CompilerError> _errors = [];
-
     /// <summary>
     /// Gets an empty collection of compiler errors.
     /// </summary>
     public static readonly CompilerErrors Empty = new();
+
+    readonly List<CompilerError> _errors = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CompilerErrors"/> class.
@@ -36,6 +36,13 @@ public class CompilerErrors
     /// Gets a value indicating whether there are any errors.
     /// </summary>
     public bool HasErrors => _errors.Count > 0;
+
+    /// <summary>
+    /// Creates a CompilerErrors instance with a single error.
+    /// </summary>
+    /// <param name="errors">The errors to include.</param>
+    /// <returns>A new CompilerErrors instance.</returns>
+    public static CompilerErrors From(params CompilerError[] errors) => new(errors);
 
     /// <summary>
     /// Creates a CompilerErrors instance from ParsingErrors.

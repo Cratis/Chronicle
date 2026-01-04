@@ -3,11 +3,10 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.given;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling;
 
-public class two_events_comma_no_keys : a_language_service
+public class two_events_comma_no_keys : for_LanguageService.given.a_language_service_with_schemas<for_LanguageService.given.TransportRouteReadModel>
 {
     const string Definition = """
         projection TransportRoute => TransportRouteReadModel
@@ -15,19 +14,11 @@ public class two_events_comma_no_keys : a_language_service
           from HubRouteAdded, WarehouseRouteAdded
         """;
 
+    protected override IEnumerable<Type> EventTypes => [typeof(for_LanguageService.given.HubRouteAdded), typeof(for_LanguageService.given.WarehouseRouteAdded)];
+
     ProjectionDefinition _result;
 
-    void Because()
-    {
-        var result = _languageService.Compile(
-            Definition,
-            Concepts.Projections.ProjectionOwner.Client,
-            [],
-            []);
-        _result = result.Match(
-            projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Compilation failed: {string.Join(", ", errors.Errors)}"));
-    }
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_from_hub_route_added() => _result.From.ContainsKey((EventType)"HubRouteAdded").ShouldBeTrue();
     [Fact] void should_have_from_warehouse_route_added() => _result.From.ContainsKey((EventType)"WarehouseRouteAdded").ShouldBeTrue();

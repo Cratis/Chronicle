@@ -7,29 +7,31 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class children_block : given.a_language_service
+public class children_block : given.a_language_service_with_schemas<given.GroupReadModel>
 {
     const string Definition = """
         projection Group => GroupReadModel
-          children Members id userId
+          children members id userId
             automap
             from UserAddedToGroup
               key userId
               parent $eventContext.eventSourceId
-              Role = role
+              role = role
             from UserRoleChanged
               key userId
               parent groupId
-              Role = role
+              role = role
         """;
+
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAddedToGroup), typeof(given.UserRoleChanged)];
 
     ProjectionDefinition _result;
     ChildrenDefinition _childrenDef;
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition, "UserGroupReadModel");
-        _childrenDef = _result.Children[new PropertyPath("Members")];
+        _result = CompileGenerateAndRecompile(Definition);
+        _childrenDef = _result.Children[new PropertyPath("members")];
     }
 
     [Fact] void should_have_children_definition() => _childrenDef.ShouldNotBeNull();

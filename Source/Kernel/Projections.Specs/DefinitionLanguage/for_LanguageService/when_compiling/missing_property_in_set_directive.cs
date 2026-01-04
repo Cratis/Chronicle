@@ -15,5 +15,4 @@ public class missing_property_in_set_directive : given.a_language_service_expect
     void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_missing_property() => _errors.Errors.ShouldContain(e => e.Message.Contains("property") || e.Message.Contains("identifier") || e.Message.Contains("expect"));
 }

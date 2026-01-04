@@ -6,57 +6,68 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class complex_projection_with_all_features : given.a_language_service
+public class complex_projection_with_all_features : given.a_language_service_with_schemas<given.UserGroupReadModel>
 {
     const string Definition = """
         projection UserGroup => UserGroupReadModel
           automap
 
           every
-            LastUpdated = $eventContext.occurred
+            lastUpdated = $eventContext.occurred
             exclude children
 
           from GroupCreated
             key $eventSourceId
-            Name = name
-            Description = description
-            CreatedAt = $eventContext.occurred
-            MemberCount = 0
+            name = name
+            description = description
+            createdAt = $eventContext.occurred
+            memberCount = 0
 
           from GroupRenamed
             key $eventSourceId
-            Name = newName
+            name = newName
 
           from MemberJoined
             key $eventSourceId
-            increment MemberCount
+            increment memberCount
 
           from MemberLeft
             key $eventSourceId
-            decrement MemberCount
+            decrement memberCount
 
-          children Members id userId
+          children members id userId
             automap
             from UserAddedToGroup
               key userId
               parent $eventSourceId
-              Role = role
-              JoinedAt = $eventContext.occurred
+              role = role
+              joinedAt = $eventContext.occurred
             from UserRoleChanged
               key userId
               parent groupId
-              Role = role
+              role = role
             remove with UserRemovedFromGroup key userId
               parent groupId
 
-          join GroupSettings on SettingsId
+          join GroupSettings on settingsId
             events SettingsCreated, SettingsUpdated
             automap
         """;
 
+    protected override IEnumerable<Type> EventTypes => [
+        typeof(given.GroupCreated),
+        typeof(given.GroupRenamed),
+        typeof(given.MemberJoined),
+        typeof(given.MemberLeft),
+        typeof(given.UserAddedToGroup),
+        typeof(given.UserRoleChanged),
+        typeof(given.UserRemovedFromGroup),
+        typeof(given.SettingsCreated),
+        typeof(given.SettingsUpdated)];
+
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserGroupReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_multiple_from_events() => _result.From.Count.ShouldBeGreaterThan(2);
     [Fact] void should_have_group_created_event() => _result.From.ContainsKey((EventType)"GroupCreated").ShouldBeTrue();

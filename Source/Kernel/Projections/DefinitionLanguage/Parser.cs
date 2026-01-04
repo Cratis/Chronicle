@@ -15,10 +15,8 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class Parser(IEnumerable<Token> tokens) : IParsingContext
 {
     readonly List<Token> _tokens = tokens.Where(t => t.Type != TokenType.NewLine).ToList();
-    readonly ParsingErrors _errors = new([]);
-    int _position;
-
     readonly ProjectionParser _projections = new();
+    int _position;
 
     /// <inheritdoc/>
     public Token Current => _position < _tokens.Count ? _tokens[_position] : new Token(TokenType.EndOfInput, string.Empty, 0, 0);
@@ -27,7 +25,7 @@ public class Parser(IEnumerable<Token> tokens) : IParsingContext
     public bool IsAtEnd => Current.Type == TokenType.EndOfInput;
 
     /// <inheritdoc/>
-    public ParsingErrors Errors => _errors;
+    public ParsingErrors Errors { get; } = new([]);
 
     /// <summary>
     /// Parses the DSL into a Document AST.
@@ -46,14 +44,14 @@ public class Parser(IEnumerable<Token> tokens) : IParsingContext
             }
 
             // If we encountered errors and couldn't parse, try to recover by advancing
-            if (_errors.HasErrors && !IsAtEnd && projection is null)
+            if (Errors.HasErrors && !IsAtEnd && projection is null)
             {
                 Advance();
             }
         }
 
-        return _errors.HasErrors
-            ? _errors
+        return Errors.HasErrors
+            ? Errors
             : new Document(projections);
     }
 
@@ -81,5 +79,5 @@ public class Parser(IEnumerable<Token> tokens) : IParsingContext
     }
 
     /// <inheritdoc/>
-    public void ReportError(string message) => _errors.Add(message, Current.Line, Current.Column);
+    public void ReportError(string message) => Errors.Add(message, Current.Line, Current.Column);
 }

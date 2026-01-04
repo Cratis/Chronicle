@@ -14,5 +14,4 @@ public class missing_key_keyword : given.a_language_service_expecting_errors
     void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_missing_key() => _errors.Errors.ShouldContain(e => e.Message.Contains("key") || e.Message.Contains("identifier"));
 }

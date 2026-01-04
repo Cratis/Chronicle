@@ -13,6 +13,7 @@ public class JoinBlockVisitor : IDirectiveVisitor
 {
     readonly TypeRefParser _typeRefs = new();
     readonly MappingOperationParser _mappingOperations = new();
+
     /// <inheritdoc/>
     public ProjectionDirective? Visit(IParsingContext context)
     {

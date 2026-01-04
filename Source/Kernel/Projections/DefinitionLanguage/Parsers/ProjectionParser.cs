@@ -9,11 +9,16 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 /// <summary>
 /// Parses projection nodes.
 /// </summary>
-internal class ProjectionParser
+internal sealed class ProjectionParser
 {
     readonly TypeRefParser _typeRefs = new();
     readonly ProjectionDirectiveParser _directives = new();
 
+    /// <summary>
+    /// Parses a projection from the given context.
+    /// </summary>
+    /// <param name="context">The parsing context.</param>
+    /// <returns>The parsed projection node, or null if parsing failed.</returns>
     public ProjectionNode? Parse(IParsingContext context)
     {
         if (!context.Check(TokenType.Projection))
@@ -31,26 +36,31 @@ internal class ProjectionParser
         var readModelType = _typeRefs.Parse(context);
         if (readModelType is null) return null;
 
-        if (context.Expect(TokenType.Indent) is null) return null;
-
         var directives = new List<ProjectionDirective>();
-        while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
-        {
-            var directive = _directives.Parse(context);
-            if (directive is not null)
-            {
-                directives.Add(directive);
-            }
-            else
-            {
-                // No directive matched, advance to avoid infinite loop
-                context.Advance();
-            }
-        }
 
-        if (context.Check(TokenType.Dedent))
+        // Allow minimal projections without body (no indent)
+        if (context.Check(TokenType.Indent))
         {
             context.Advance();
+
+            while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
+            {
+                var directive = _directives.Parse(context);
+                if (directive is not null)
+                {
+                    directives.Add(directive);
+                }
+                else
+                {
+                    // No directive matched, advance to avoid infinite loop
+                    context.Advance();
+                }
+            }
+
+            if (context.Check(TokenType.Dedent))
+            {
+                context.Advance();
+            }
         }
 
         return new ProjectionNode(projectionName.Name, readModelType, directives);

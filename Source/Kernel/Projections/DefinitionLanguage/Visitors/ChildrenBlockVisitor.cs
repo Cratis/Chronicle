@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 public class ChildrenBlockVisitor : IDirectiveVisitor
 {
     readonly ExpressionParser _expressions = new();
+
     /// <inheritdoc/>
     public ProjectionDirective? Visit(IParsingContext context)
     {

@@ -29,10 +29,8 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         // Parse multiple comma-separated events on same line
         var eventSpecs = new List<(TypeRef EventType, Expression? Key)>();
 
-        while (true)
+        while (!context.IsAtEnd)
         {
-            if (context.IsAtEnd) break;
-
             var eventType = _typeRefs.Parse(context);
             if (eventType is null) return null;
 
@@ -52,6 +50,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
             if (context.Check(TokenType.Comma))
             {
                 context.Advance(); // Skip comma
+
                 // Continue loop to parse next event
             }
             else
@@ -102,13 +101,13 @@ public class FromEventBlockVisitor : IDirectiveVisitor
             }
 
             return new MultiFromEventBlock(
-                eventSpecs.Select(e => new FromEventBlock(
+                eventSpecs.ConvertAll(e => new FromEventBlock(
                     e.EventType,
                     autoMap,
                     e.Key,
                     null,
                     null,
-                    [])).ToList());
+                    [])));
         }
 
         if (context.Expect(TokenType.Indent) is null) return null;
@@ -171,13 +170,14 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         }
 
         // Multiple events - create a MultiFromEventBlock
-        var blocks = eventSpecs.Select(spec =>
+        var blocks = eventSpecs.ConvertAll(spec =>
         {
             var (eventType, inlineKey) = spec;
+
             // Use inline key if provided, otherwise fall back to block-level key/compositeKey
             var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
             return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings);
-        }).ToList();
+        });
 
         return new MultiFromEventBlock(blocks);
     }

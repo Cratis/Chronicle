@@ -9,10 +9,11 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 /// <summary>
 /// Visitor for parsing key directives (simple and composite keys).
 /// </summary>
-internal class KeyDirectiveVisitor : IDirectiveVisitor
+internal sealed class KeyDirectiveVisitor : IDirectiveVisitor
 {
     readonly KeyDirectiveParser _parser = new();
 
+    /// <inheritdoc/>
     public ProjectionDirective? Visit(IParsingContext context)
     {
         if (!context.Check(TokenType.Key))

@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class from_event_with_automap : given.a_language_service
+public class from_event_with_automap : given.a_language_service_with_schemas<given.UserReadModel>
 {
     const string Definition = """
         projection User => UserReadModel
@@ -15,9 +15,11 @@ public class from_event_with_automap : given.a_language_service
             automap
         """;
 
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserCreated)];
+
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition, "UserReadModel");
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
     [Fact] void should_have_automap_enabled() => _result.From[(EventType)"UserCreated"].AutoMap.ShouldEqual(AutoMap.Enabled);

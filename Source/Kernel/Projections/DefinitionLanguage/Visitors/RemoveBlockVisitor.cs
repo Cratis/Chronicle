@@ -9,10 +9,11 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 /// <summary>
 /// Visitor for parsing remove blocks.
 /// </summary>
-internal class RemoveBlockVisitor
+internal sealed class RemoveBlockVisitor
 {
     readonly TypeRefParser _typeRefs = new();
     readonly ExpressionParser _expressions = new();
+
     /// <summary>
     /// Visits and parses a remove block.
     /// </summary>

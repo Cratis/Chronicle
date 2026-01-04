@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class qualified_projection_name : given.a_language_service
+public class qualified_projection_name : given.a_language_service_with_schemas<given.Simulation>
 {
     const string Definition = """
         projection Core.Simulations.Simulation => Simulation
@@ -14,9 +14,11 @@ public class qualified_projection_name : given.a_language_service
             key $eventSourceId
         """;
 
+    protected override IEnumerable<Type> EventTypes => [typeof(given.SimulationAdded)];
+
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition, "Simulation");
+    void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_simulation_added_event() => _result.From.ContainsKey((EventType)"SimulationAdded").ShouldBeTrue();
     [Fact] void should_have_event_source_id_key() => _result.From[(EventType)"SimulationAdded"].Key.Value.ShouldEqual("$eventSourceId");

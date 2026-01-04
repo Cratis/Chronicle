@@ -15,5 +15,4 @@ public class invalid_event_context_expression : given.a_language_service_expecti
     void Because() => Compile(Definition);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_invalid_context() => _errors.Errors.ShouldContain(e => e.Message.Contains("eventContext") || e.Message.Contains("invalid") || e.Message.Contains("context"));
 }

@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 public class Generator : IGenerator
 {
     const string Tab = "    ";
-    static readonly string[] CompositeSeparator = [", "];
+    static readonly string[] _compositeSeparator = [", "];
 
     /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
@@ -109,9 +109,10 @@ public class Generator : IGenerator
         if (hasCompositeKey)
         {
             var keyValue = from.Key.Value;
+
             // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
             var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
-            var parts = innerContent.Split(CompositeSeparator, StringSplitOptions.None);
+            var parts = innerContent.Split(_compositeSeparator, StringSplitOptions.None);
 
             sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
             foreach (var part in parts)

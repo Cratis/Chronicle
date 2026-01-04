@@ -99,13 +99,13 @@ public class ProjectionValidator(
             return;
         }
 
-        if (collectionProperty.Type != JsonObjectType.Array)
+        if (!collectionProperty.Type.HasFlag(JsonObjectType.Array))
         {
             errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", 0, 0);
             return;
         }
 
-        var itemSchema = collectionProperty.Item;
+        var itemSchema = collectionProperty.Item?.ActualSchema;
         if (itemSchema is null)
         {
             errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", 0, 0);
@@ -141,13 +141,13 @@ public class ProjectionValidator(
             return;
         }
 
-        if (collectionProperty.Type != JsonObjectType.Array)
+        if (!collectionProperty.Type.HasFlag(JsonObjectType.Array))
         {
             errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", 0, 0);
             return;
         }
 
-        var nestedItemSchema = collectionProperty.Item;
+        var nestedItemSchema = collectionProperty.Item?.ActualSchema;
         if (nestedItemSchema is null)
         {
             errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", 0, 0);
@@ -197,7 +197,7 @@ public class ProjectionValidator(
     {
         var targetPath = assignment.PropertyName;
 
-        if (!targetSchema.Properties.TryGetValue(targetPath, out var targetProperty))
+        if (!TryResolveProperty(targetSchema, targetPath, out var targetProperty))
         {
             errors.Add($"Read model property '{targetPath}' not found", 0, 0);
             return;
@@ -208,7 +208,7 @@ public class ProjectionValidator(
         {
             var sourcePath = eventDataExpression.Path;
 
-            if (!eventSchema.Properties.TryGetValue(sourcePath, out var sourceProperty))
+            if (!TryResolveProperty(eventSchema, sourcePath, out var sourceProperty))
             {
                 errors.Add($"Event property '{sourcePath}' not found", 0, 0);
                 return;
@@ -222,6 +222,38 @@ public class ProjectionValidator(
         }
     }
 
+    bool TryResolveProperty(JsonSchema schema, string path, out JsonSchemaProperty property)
+    {
+        property = null!;
+        var parts = path.Split('.');
+        var currentSchema = schema;
+
+        foreach (var part in parts)
+        {
+            if (!currentSchema.Properties.TryGetValue(part, out var prop))
+            {
+                return false;
+            }
+
+            property = prop;
+
+            // If this isn't the last part, navigate to the nested schema
+            if (part != parts[^1])
+            {
+                if (prop.ActualSchema.Type == JsonObjectType.Object)
+                {
+                    currentSchema = prop.ActualSchema;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     bool AreTypesCompatible(JsonObjectType targetType, JsonObjectType sourceType)
     {
         // Exact match
@@ -230,8 +262,25 @@ public class ProjectionValidator(
             return true;
         }
 
+        // If target is nullable (has Null flag), check if source type (without null) is compatible
+        if (targetType.HasFlag(JsonObjectType.Null))
+        {
+            var targetWithoutNull = targetType & ~JsonObjectType.Null;
+            if (targetWithoutNull == sourceType)
+            {
+                return true;
+            }
+
+            // Check numeric compatibility for nullable targets
+            var numericTypes = new[] { JsonObjectType.Integer, JsonObjectType.Number };
+            if (numericTypes.Contains(targetWithoutNull) && numericTypes.Contains(sourceType))
+            {
+                return true;
+            }
+        }
+
         // Allow numeric conversions
-        var numericTypes = new[] { JsonObjectType.Integer, JsonObjectType.Number };
-        return numericTypes.Contains(targetType) && numericTypes.Contains(sourceType);
+        var numericTypesForNonNullable = new[] { JsonObjectType.Integer, JsonObjectType.Number };
+        return numericTypesForNonNullable.Contains(targetType) && numericTypesForNonNullable.Contains(sourceType);
     }
 }

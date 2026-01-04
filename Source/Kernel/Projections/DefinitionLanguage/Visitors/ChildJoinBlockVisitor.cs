@@ -9,10 +9,11 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 /// <summary>
 /// Visitor for parsing child join blocks.
 /// </summary>
-internal class ChildJoinBlockVisitor
+internal sealed class ChildJoinBlockVisitor
 {
     readonly TypeRefParser _typeRefs = new();
     readonly MappingOperationParser _mappingOperations = new();
+
     /// <summary>
     /// Visits and parses a child join block.
     /// </summary>
