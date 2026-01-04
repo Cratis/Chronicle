@@ -25,33 +25,38 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
 
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
 
-    [Fact] void should_have_children_for_configurations()
+    [Fact]
+    void should_have_children_for_configurations()
     {
         _result.Children.Keys.ShouldContain(nameof(Dashboard.Configurations));
     }
 
-    [Fact] void should_have_from_definition_for_simulation_configuration_added()
+    [Fact]
+    void should_have_from_definition_for_simulation_configuration_added()
     {
         var eventType = event_types.GetEventTypeFor(typeof(ConfigAdded)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_weights_set()
+    [Fact]
+    void should_have_from_definition_for_weights_set()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_simulation_run_ended()
+    [Fact]
+    void should_have_from_definition_for_simulation_run_ended()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RunEnded)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_map_name_from_weights_set_event()
+    [Fact]
+    void should_map_name_from_weights_set_event()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
@@ -59,7 +64,8 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
         fromDef.Properties.Keys.ShouldContain(nameof(Config.Name));
     }
 
-    [Fact] void should_map_description_from_weights_set_event()
+    [Fact]
+    void should_map_description_from_weights_set_event()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
@@ -67,7 +73,8 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
         fromDef.Properties.Keys.ShouldContain(nameof(Config.Description));
     }
 
-    [Fact] void should_map_last_simulation_total_distance_from_simulation_run_ended()
+    [Fact]
+    void should_map_last_simulation_total_distance_from_simulation_run_ended()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RunEnded)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
@@ -76,7 +83,8 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
         fromDef.Properties[nameof(Config.LastSimulationTotalDistance)].ShouldEqual(nameof(RunEnded.TotalDistance));
     }
 
-    [Fact] void should_map_last_simulation_total_time_from_simulation_run_ended()
+    [Fact]
+    void should_map_last_simulation_total_time_from_simulation_run_ended()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RunEnded)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];

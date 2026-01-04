@@ -7,7 +7,7 @@ public class when_creating_with_auto_map_set_to_false : Specification
 {
     ChildrenFromAttribute<SomeEvent> _attribute;
 
-    void Because() => _attribute = new ChildrenFromAttribute<SomeEvent>(autoMap: false);
+    void Because() => _attribute = new ChildrenFromAttribute<SomeEvent>(autoMap: AutoMap.Disabled);
 
-    [Fact] void should_have_auto_map_set_to_false() => _attribute.AutoMap.ShouldBeFalse();
+    [Fact] void should_have_auto_map_set_to_disabled() => _attribute.AutoMap.ShouldEqual(AutoMap.Disabled);
 }

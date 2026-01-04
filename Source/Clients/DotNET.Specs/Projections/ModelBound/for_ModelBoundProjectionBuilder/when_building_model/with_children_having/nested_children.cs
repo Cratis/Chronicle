@@ -29,18 +29,21 @@ public class nested_children : given.a_model_bound_projection_builder
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_children_definition_for_configurations() => _result.Children.Count.ShouldEqual(1);
 
-    [Fact] void should_have_children_for_configurations()
+    [Fact]
+    void should_have_children_for_configurations()
     {
         _result.Children.Keys.ShouldContain(nameof(NestedSimulationDashboard.Configurations));
     }
 
-    [Fact] void should_have_nested_children_for_hubs()
+    [Fact]
+    void should_have_nested_children_for_hubs()
     {
         var configChildrenDef = _result.Children[nameof(NestedSimulationDashboard.Configurations)];
         configChildrenDef.Children.Keys.ShouldContain(nameof(NestedSimulationConfiguration.Hubs));
     }
 
-    [Fact] void should_have_from_definition_for_hub_added_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_hub_added_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(NestedHubAdded)).ToContract();
         var configChildrenDef = _result.Children[nameof(NestedSimulationDashboard.Configurations)];
@@ -48,7 +51,8 @@ public class nested_children : given.a_model_bound_projection_builder
         hubsChildrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_auto_map_name_property_for_nested_child()
+    [Fact]
+    void should_auto_map_name_property_for_nested_child()
     {
         var eventType = event_types.GetEventTypeFor(typeof(NestedHubAdded)).ToContract();
         var configChildrenDef = _result.Children[nameof(NestedSimulationDashboard.Configurations)];

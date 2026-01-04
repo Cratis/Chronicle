@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Grains.ReadModels;
 /// </summary>
 public interface IReadModelReplayManager : IGrainWithStringKey
 {
-     /// <summary>
+    /// <summary>
     /// Record a replayed read model occurrence.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> for the observer.</param>

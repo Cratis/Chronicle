@@ -6,7 +6,9 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// <summary>
 /// Represents the different types of tokens in the projection DSL.
 /// </summary>
+#pragma warning disable CA1027 // Mark enums with FlagsAttribute
 public enum TokenType
+#pragma warning restore CA1027 // Mark enums with FlagsAttribute
 {
     /// <summary>
     /// An identifier (e.g., property name, event type name).

@@ -7,7 +7,7 @@ using EventTypes = Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageS
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class projection_with_no_automap : given.a_language_service_with_schemas<given.TransportRouteReadModel>
+public class projection_with_no_automap : EventTypes.a_language_service_with_schemas<EventTypes.TransportRouteReadModel>
 {
     const string Definition = """
         projection TransportRoute => TransportRouteReadModel

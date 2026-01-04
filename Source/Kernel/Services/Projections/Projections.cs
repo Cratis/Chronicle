@@ -5,7 +5,6 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
@@ -116,7 +115,7 @@ internal sealed class Projections(
         {
             subscription = await stream.SubscribeAsync((changeset, _) =>
             {
-                observer.OnNext(new Contracts.Projections.ProjectionChangeset+
+                observer.OnNext(new Contracts.Projections.ProjectionChangeset
                 {
                     Namespace = changeset.Namespace,
                     ReadModelKey = changeset.ReadModelKey,
@@ -198,11 +197,14 @@ internal sealed class Projections(
         var projectionKey = new ProjectionKey(projectionId, request.EventStore);
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
 
+        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+
         var compileResult = languageService.Compile(
             request.Dsl ?? string.Empty,
-            projectionId,
             Concepts.Projections.ProjectionOwner.Server,
-            new EventSequenceId(request.EventSequenceId));
+            allReadModels,
+            eventTypeSchemas);
 
         return await compileResult.Match(
             async definition =>

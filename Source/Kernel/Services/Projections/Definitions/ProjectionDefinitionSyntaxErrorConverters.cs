@@ -6,7 +6,7 @@ using Cratis.Chronicle.Projections.DefinitionLanguage;
 namespace Cratis.Chronicle.Services.Projections.Definitions;
 
 /// <summary>
-/// Converter methods for <see cref="SyntaxError"/> and <see cref="ParsingErrors"/>.
+/// Converter methods for <see cref="SyntaxError"/>, <see cref="ParsingErrors"/>, and <see cref="CompilerErrors"/>.
 /// </summary>
 internal static class ProjectionDefinitionSyntaxErrorConverters
 {
@@ -35,6 +35,24 @@ internal static class ProjectionDefinitionSyntaxErrorConverters
         return new()
         {
             Errors = errors.Errors.Select(e => e.ToContract()).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Convert to contract version of <see cref="CompilerErrors"/>.
+    /// </summary>
+    /// <param name="errors"><see cref="CompilerErrors"/> to convert.</param>
+    /// <returns>Converted contract version.</returns>
+    public static Contracts.Projections.ProjectionDefinitionParsingErrors ToContract(this CompilerErrors errors)
+    {
+        return new()
+        {
+            Errors = errors.Errors.Select(e => new Contracts.Projections.ProjectionDefinitionSyntaxError
+            {
+                Message = e.Message,
+                Line = e.Line,
+                Column = e.Column
+            }).ToList()
         };
     }
 }

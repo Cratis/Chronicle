@@ -24,7 +24,7 @@ public interface IChildrenFromAttribute : IKeyedAttribute
     string? IdentifiedBy { get; }
 
     /// <summary>
-    /// Gets a value indicating whether to automatically map matching properties from the event to the child model.
+    /// Gets the auto mapping behavior for properties from the event to the child model.
     /// </summary>
-    bool AutoMap { get; }
+    AutoMap AutoMap { get; }
 }

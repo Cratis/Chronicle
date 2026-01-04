@@ -128,7 +128,7 @@ static class ChildrenDefinitionExtensions
         var explicitParentKey = parentKeyProperty?.GetValue(attr) as string;
         var discoveredParentKey = explicitParentKey is null ? DiscoverEventPropertyForParentId(eventType, parentModelType, namingPolicy) : null;
         var parentKey = explicitParentKey ?? discoveredParentKey ?? WellKnownExpressions.EventSourceId;
-        var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
+        var autoMap = autoMapProperty?.GetValue(attr) as AutoMap? ?? AutoMap.Enabled;
 
         var childType = GetChildType(memberType);
         var identifiedBy = identifiedByProperty?.GetValue(attr) as string;
@@ -250,7 +250,7 @@ static class ChildrenDefinitionExtensions
                                     a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
 
                     // If this is the identified property and has no explicit mapping, map it to the key
-                    if (autoMap && !hasExplicitMapping && parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
+                    if (autoMap == AutoMap.Enabled && !hasExplicitMapping && parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
                     {
                         // If key is EventSourceId, use event context, otherwise use the key property from the event
                         if (key == WellKnownExpressions.EventSourceId)
@@ -265,7 +265,7 @@ static class ChildrenDefinitionExtensions
                     }
 
                     // Check if parameter has [Key] attribute and no explicit mapping and key is EventSourceId
-                    if (autoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
+                    if (autoMap == AutoMap.Enabled && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
                     {
                         fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
                     }
@@ -292,7 +292,7 @@ static class ChildrenDefinitionExtensions
 
             // If autoMap is enabled, map matching properties from event to child model
             // This is done AFTER processing constructor parameters so we don't overwrite explicit mappings
-            if (autoMap)
+            if (autoMap == AutoMap.Enabled)
             {
                 var fromDefinition = childrenDef.From[eventTypeId];
                 fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);

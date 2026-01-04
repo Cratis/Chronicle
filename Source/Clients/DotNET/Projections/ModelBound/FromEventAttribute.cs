@@ -8,8 +8,9 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </summary>
 /// <typeparam name="TEvent">The type of event to set from.</typeparam>
 /// <param name="key">Optional property name on the event that identifies the read model instance. Defaults to using the event source identifier.</param>
+/// <param name="autoMap">Auto mapping behavior for properties from the event to the read model. Defaults to Enabled.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true)]
-public sealed class FromEventAttribute<TEvent>(string? key = default) : Attribute, IProjectionAnnotation, IFromEventAttribute
+public sealed class FromEventAttribute<TEvent>(string? key = default, AutoMap autoMap = AutoMap.Enabled) : Attribute, IProjectionAnnotation, IFromEventAttribute
 {
     /// <summary>
     /// Gets the type of event this attribute projects from.
@@ -20,4 +21,9 @@ public sealed class FromEventAttribute<TEvent>(string? key = default) : Attribut
     /// Gets the property name on the event that identifies the read model instance.
     /// </summary>
     public string? Key { get; } = key;
+
+    /// <summary>
+    /// Gets the auto mapping behavior for properties from the event to the read model.
+    /// </summary>
+    public AutoMap AutoMap { get; } = autoMap;
 }

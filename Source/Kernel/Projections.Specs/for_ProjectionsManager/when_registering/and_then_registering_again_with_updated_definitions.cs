@@ -33,5 +33,5 @@ public class and_then_registering_again_with_updated_definitions : given.a_proje
 
     [Fact] void should_replace_first_projection_instance() => _firstProjectionSecondTime.ShouldNotEqual(_firstProjectionFirstTime);
     [Fact] void should_replace_second_projection_instance() => _secondProjectionSecondTime.ShouldNotEqual(_secondProjectionFirstTime);
-    [Fact] void should_create_projections_twice_for_each_definition() => _projectionFactory.Received(4).Create(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>());
+    [Fact] void should_create_projections_twice_for_each_definition() => _projectionFactory.Received(4).Create(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>());
 }

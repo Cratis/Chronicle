@@ -24,13 +24,15 @@ public class and_child_has_key_attribute : given.a_model_bound_projection_builde
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
 
-    [Fact] void should_use_key_property_as_identified_by()
+    [Fact]
+    void should_use_key_property_as_identified_by()
     {
         var childrenDef = _result.Children[nameof(OrderWithChildHavingKeyAttribute.Items)];
         childrenDef.IdentifiedBy.ShouldEqual(nameof(ItemWithKeyAttribute.ItemId));
     }
 
-    [Fact] void should_apply_naming_policy_to_identified_by()
+    [Fact]
+    void should_apply_naming_policy_to_identified_by()
     {
         var childrenDef = _result.Children[nameof(OrderWithChildHavingKeyAttribute.Items)];
         childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(ItemWithKeyAttribute.ItemId))));

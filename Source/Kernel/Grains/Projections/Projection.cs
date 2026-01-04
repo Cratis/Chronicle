@@ -218,8 +218,10 @@ public class Projection(
             var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             var readModelDefinition = await readModel.GetDefinition();
+            var eventStoreStorage = storage.GetEventStore(key.EventStore);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition);
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 

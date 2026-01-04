@@ -46,7 +46,8 @@ public class with_null_result : given.a_reducer_handler
     async Task Because() => await _handler.OnNext([_event], null, _serviceProvider);
 
     [Fact] void should_invoke_reducer() => _invoker.Received(1).Invoke(Arg.Any<IServiceProvider>(), Arg.Any<IEnumerable<EventAndContext>>(), Arg.Any<object>());
-    [Fact] void should_notify_observers_with_removed_flag() => _reducerObservers.Received(1).NotifyChange<MyReadModel>(
+    [Fact]
+    void should_notify_observers_with_removed_flag() => _reducerObservers.Received(1).NotifyChange<MyReadModel>(
         _eventStore.Namespace,
         Arg.Is<ReadModelKey>(k => k.Value == "event-source-id"),
         null,

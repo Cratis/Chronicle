@@ -63,7 +63,8 @@ public class and_there_are_mixed_changes_with_joins : given.a_changeset_converte
 
     [Fact] void should_indicate_has_changes_for_main_document() => _result.hasChanges.ShouldBeTrue();
     [Fact] void should_have_update_definition() => _result.UpdateDefinition.ShouldNotBeNull();
-    [Fact] void should_perform_update_on_joined_documents() => _collection.Received(1).UpdateManyAsync(
+    [Fact]
+    void should_perform_update_on_joined_documents() => _collection.Received(1).UpdateManyAsync(
         Arg.Any<FilterDefinition<BsonDocument>>(),
         Arg.Any<UpdateDefinition<BsonDocument>>(),
         Arg.Any<UpdateOptions>(),

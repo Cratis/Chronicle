@@ -57,7 +57,8 @@ public class and_child_added_then_properties_changed_for_same_child : given.a_ch
     [Fact] void should_remove_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldBeEmpty();
     [Fact] void should_keep_child_added() => _changeset.Changes.OfType<ChildAdded>().ShouldContainOnly(_childAdded);
     [Fact] void should_have_one_change() => _changeset.Changes.Count().ShouldEqual(1);
-    [Fact] void should_apply_property_change_to_child()
+    [Fact]
+    void should_apply_property_change_to_child()
     {
         var childDict = (IDictionary<string, object?>)_child;
         childDict["name"].ShouldEqual("Updated Name");

@@ -11,6 +11,7 @@ using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.DefinitionLanguage;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
 /// <param name="languageService"><see cref="Generator"/> for generating projection DSL strings.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
@@ -31,6 +33,7 @@ public class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IProjectionsServiceClient projectionsService,
     ILanguageService languageService,
+    IStorage storage,
     ILocalSiloDetails localSiloDetails,
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
@@ -137,7 +140,9 @@ public class ProjectionsManager(
         if (!subscribed && definition.IsActive)
         {
             logger.Subscribing(definition.Identifier, namespaceName);
-            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition);
+            var eventStoreStorage = storage.GetEventStore(_eventStoreName);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
 
             logger.SubscribingWithEventTypes(
                 definition.Identifier,

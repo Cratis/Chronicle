@@ -14,4 +14,4 @@ public record ProjectionDsl(string Value) : ConceptAs<string>(Value)
     /// </summary>
     /// <param name="value"><see cref="string"/> to convert from.</param>
     public static implicit operator ProjectionDsl(string value) => new(value);
- }
+}
