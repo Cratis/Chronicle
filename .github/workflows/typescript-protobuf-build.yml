@@ -45,12 +45,14 @@ jobs:
           dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
             Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
             Source/Kernel/Protobuf
-          cp Source/Kernel/Protobuf/*.proto Source/Clients/TypeScript/proto/
-          cp -r Source/Kernel/Protobuf/protobuf-net Source/Clients/TypeScript/proto/
 
       - name: Install TypeScript dependencies
         working-directory: ./Source/Clients/TypeScript
         run: yarn install
+
+      - name: Generate TypeScript from Proto
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn generate
 
       - name: Build TypeScript package
         working-directory: ./Source/Clients/TypeScript
@@ -76,7 +78,6 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add Source/Kernel/Protobuf/*.proto
           git add Source/Kernel/Protobuf/protobuf-net/*.proto
-          git add Source/Clients/TypeScript/proto/*.proto
-          git add Source/Clients/TypeScript/proto/protobuf-net/*.proto
-          git diff --cached --quiet || git commit -m "chore: update generated proto files [skip ci]"
+          git add Source/Clients/TypeScript/generated/**/*.ts
+          git diff --cached --quiet || git commit -m "chore: update generated proto and TypeScript files [skip ci]"
           git push

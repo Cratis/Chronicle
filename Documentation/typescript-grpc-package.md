@@ -38,22 +38,23 @@ dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
 
 ### 2. TypeScript Package (`Source/Clients/TypeScript`)
 
-An npm package that provides TypeScript bindings for the Chronicle gRPC services.
+An npm package that provides strongly-typed TypeScript bindings for the Chronicle gRPC services.
 
 **Structure:**
 - `package.json` - Package configuration with @cratis/chronicle.contracts as the package name
 - `tsconfig.json` - TypeScript compiler configuration
 - `rollup.config.mjs` - Rollup bundler configuration for ESM and CJS builds
-- `index.ts` - Main entry point that exports functions to load proto definitions
-- `proto/` - Directory containing bundled .proto files
+- `index.ts` - Main entry point that exports all generated services
+- `ChronicleConnection.ts` - Connection manager for Chronicle services
+- `ChronicleServices.ts` - Interface for all available services
+- `generated/` - Directory containing TypeScript files generated from proto definitions
 - `README.md` - Package documentation
 
 **How it works:**
-- Uses `@grpc/proto-loader` to load proto files at runtime
-- Bundles proto files with the package for easy consumption
-- Provides two functions:
-  - `loadChronicleProtos()` - Loads from bundled proto files
-  - `loadChronicleProtosFromPath(path)` - Loads from custom path
+- Uses `ts-proto` to generate TypeScript files from proto definitions
+- Generates strongly-typed clients with full IDE support
+- Provides `ChronicleConnection` class for easy connection management
+- Exports all service clients and types
 - Builds both ESM and CJS versions using Rollup
 
 ### 3. GitHub Workflow (`.github/workflows/typescript-protobuf-build.yml`)
@@ -68,12 +69,12 @@ Automates the build and publish process.
 1. Setup .NET 10 and Node.js 23
 2. Build the Contracts assembly
 3. Run ProtoGenerator to generate .proto files
-4. Copy proto files to TypeScript package
-5. Install TypeScript dependencies
+4. Install TypeScript dependencies
+5. Generate TypeScript files from proto definitions using ts-proto
 6. Build TypeScript package
 7. Set package version (if manual dispatch)
 8. Publish to NPM (if manual dispatch)
-9. Commit and push proto files back to repository
+9. Commit and push proto and TypeScript files back to repository
 
 **Required Secrets:**
 - `NPM_TOKEN` - NPM authentication token for publishing
@@ -113,28 +114,25 @@ yarn add @cratis/chronicle.contracts
 
 Use in your TypeScript code:
 ```typescript
-import { loadChronicleProtos, grpc } from '@cratis/chronicle.contracts';
+import { ChronicleConnection } from '@cratis/chronicle.contracts';
 
-// Load proto definitions
-const packageDefinition = loadChronicleProtos();
-
-// Access services
-const EventStores = packageDefinition.Cratis.Chronicle.Contracts.EventStores;
-
-// Create client
-const client = new EventStores(
-  'localhost:5000',
-  grpc.credentials.createInsecure()
-);
-
-// Call methods
-client.GetEventStores({}, (error, response) => {
-  if (error) {
-    console.error('Error:', error);
-    return;
-  }
-  console.log('Event stores:', response.items);
+// Create a connection
+const connection = new ChronicleConnection({
+    serverAddress: 'localhost:5000'
 });
+
+// Connect to Chronicle
+await connection.connect();
+
+// Use the services with full type safety and IDE completion
+const eventStores = await connection.eventStores.GetEventStores({});
+console.log('Event stores:', eventStores.items);
+
+// Access other services
+const namespaces = await connection.namespaces.GetNamespaces({ EventStore: 'my-store' });
+
+// Clean up
+connection.dispose();
 ```
 
 ## Publishing a New Version
@@ -152,7 +150,9 @@ client.GetEventStores({}, (error, response) => {
 
 **Proto files location:**
 - `Source/Kernel/Protobuf/*.proto` - Source proto files
-- `Source/Clients/TypeScript/proto/*.proto` - Bundled proto files for the npm package
+
+**TypeScript files location:**
+- `Source/Clients/TypeScript/generated/*.ts` - Generated TypeScript service clients
 
 **Proto files:**
 - `clients.proto` - Client connection services
@@ -178,5 +178,6 @@ When adding new gRPC services to the C# Contracts:
 1. The services should be decorated with `[Service]` attribute
 2. Methods should be decorated with `[Operation]` attribute
 3. Run the ProtoGenerator to update proto files
-4. The TypeScript package will automatically include the new services
-5. Publish a new version of the npm package
+4. Run the TypeScript generation to create new TypeScript clients
+5. The TypeScript package will automatically include the new services with full type safety
+6. Publish a new version of the npm package

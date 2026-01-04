@@ -1,6 +1,6 @@
 # @cratis/chronicle.contracts
 
-TypeScript gRPC contracts for Chronicle.
+TypeScript gRPC contracts for Chronicle with full type safety and IDE support.
 
 ## Installation
 
@@ -12,41 +12,88 @@ yarn add @cratis/chronicle.contracts
 
 ## Usage
 
-This package provides Chronicle gRPC service definitions that can be loaded at runtime using `@grpc/proto-loader`.
+This package provides strongly-typed Chronicle gRPC service clients generated from proto definitions using ts-proto.
+
+### Quick Start
 
 ```typescript
-import { loadChronicleProtos, grpc } from '@cratis/chronicle.contracts';
+import { ChronicleConnection } from '@cratis/chronicle.contracts';
 
-// Load the proto definitions from bundled files
-const packageDefinition = loadChronicleProtos();
+// Create a connection
+const connection = new ChronicleConnection({
+    serverAddress: 'localhost:5000'
+});
 
-// Access the services
-const EventStores = packageDefinition.Cratis.Chronicle.Contracts.EventStores;
+// Connect to Chronicle
+await connection.connect();
 
-// Create a client
-const client = new EventStores('localhost:5000', grpc.credentials.createInsecure());
+// Use the services with full type safety and IDE completion
+const eventStores = await connection.eventStores.GetEventStores({});
+console.log('Event stores:', eventStores.items);
 
-// Call service methods
-client.GetEventStores({}, (error, response) => {
-    if (error) {
-        console.error('Error:', error);
-        return;
-    }
-    console.log('Event stores:', response.items);
+// Clean up
+connection.dispose();
+```
+
+### Using Individual Services
+
+You can also import and use services directly:
+
+```typescript
+import { EventStoresClient } from '@cratis/chronicle.contracts';
+import * as grpc from '@grpc/grpc-js';
+
+const client = new EventStoresClient(
+    'localhost:5000',
+    grpc.credentials.createInsecure()
+);
+
+const response = await client.GetEventStores({});
+console.log('Event stores:', response.items);
+```
+
+### Configuration Options
+
+```typescript
+const connection = new ChronicleConnection({
+    serverAddress: 'localhost:5000',
+    credentials: grpc.credentials.createSsl(), // Optional: use SSL
+    connectTimeout: 10000, // Optional: connection timeout in ms
+    maxReceiveMessageSize: 1024 * 1024 * 10, // Optional: 10MB
+    maxSendMessageSize: 1024 * 1024 * 10, // Optional: 10MB
+    correlationId: 'my-correlation-id' // Optional: for request tracking
 });
 ```
 
-You can also load proto files from a custom path if needed:
+### Available Services
 
-```typescript
-import { loadChronicleProtosFromPath, grpc } from '@cratis/chronicle.contracts';
+The `ChronicleConnection` provides access to all Chronicle services:
 
-const packageDefinition = loadChronicleProtosFromPath('/path/to/proto/files');
-```
+- `eventStores` - Event store management
+- `namespaces` - Namespace management
+- `recommendations` - Recommendations
+- `identities` - Identity management
+- `eventSequences` - Event sequence operations
+- `eventTypes` - Event type management
+- `constraints` - Event constraints
+- `observers` - Observer management
+- `failedPartitions` - Failed partition handling
+- `reactors` - Reactor management
+- `reducers` - Reducer management
+- `projections` - Projection management
+- `readModels` - Read model operations
+- `jobs` - Job management
+- `eventSeeding` - Event seeding
+- `server` - Server information
 
-## Proto Files
+### Type Safety
 
-The proto files are generated from the Chronicle C# gRPC service contracts and are bundled with this package in the `proto` directory.
+All services are fully typed with TypeScript interfaces generated from proto definitions, providing:
+
+- **IntelliSense** in your IDE
+- **Compile-time type checking**
+- **Auto-completion** for all methods and parameters
+- **Type inference** for request and response objects
 
 ## License
 

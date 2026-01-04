@@ -19,10 +19,13 @@
         "allowSyntheticDefaultImports": true
     },
     "include": [
-        "index.ts"
+        "index.ts",
+        "generated/**/*",
+        "**/*.ts"
     ],
     "exclude": [
         "node_modules",
-        "dist"
+        "dist",
+        "**/*.spec.ts"
     ]
 }
