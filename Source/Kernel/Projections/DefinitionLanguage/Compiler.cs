@@ -156,10 +156,16 @@ public class Compiler
                 // AutoMap is handled within OnEventBlocks
                 break;
             case ChildrenBlock childrenBlock:
-                ProcessChildrenBlock(childrenBlock, children, removedWith);
+                ProcessChildrenBlock(childrenBlock, children);
                 break;
             case JoinBlock joinBlock:
                 ProcessJoinBlock(joinBlock, join);
+                break;
+            case RemoveWithDirective removeWith:
+                ProcessRemoveWithDirective(removeWith, removedWith);
+                break;
+            case RemoveWithJoinDirective removeWithJoin:
+                ProcessRemoveWithJoinDirective(removeWithJoin, removedWithJoin);
                 break;
             default:
                 throw new NotSupportedException($"Directive type {directive.GetType().Name} is not yet supported");
@@ -202,8 +208,7 @@ public class Compiler
 
     void ProcessChildrenBlock(
         ChildrenBlock childrenBlock,
-        Dictionary<PropertyPath, ChildrenDefinition> children,
-        Dictionary<EventType, RemovedWithDefinition> removedWith)
+        Dictionary<PropertyPath, ChildrenDefinition> children)
     {
         var collectionPath = new PropertyPath(childrenBlock.CollectionName);
         var identifiedBy = ConvertExpression(childrenBlock.IdentifierExpression);
@@ -217,7 +222,7 @@ public class Compiler
 
         foreach (var childBlock in childrenBlock.ChildBlocks)
         {
-            ProcessChildBlock(childBlock, childFrom, childJoin, nestedChildren, childRemovedWith, childRemovedWithJoin, ref childEvery);
+            ProcessChildBlock(childBlock, childFrom, childJoin, nestedChildren, childRemovedWith, childRemovedWithJoin, childEvery);
         }
 
         children[collectionPath] = new ChildrenDefinition(
@@ -233,6 +238,8 @@ public class Compiler
         };
     }
 
+    // TODO: Children currently don't support 'every' blocks in the DSL grammar
+    // The fromEvery parameter is here for potential future support
     void ProcessChildBlock(
         ChildBlock childBlock,
         Dictionary<EventType, FromDefinition> from,
@@ -240,7 +247,7 @@ public class Compiler
         Dictionary<PropertyPath, ChildrenDefinition> children,
         Dictionary<EventType, RemovedWithDefinition> removedWith,
         Dictionary<EventType, RemovedWithJoinDefinition> removedWithJoin,
-        ref FromEveryDefinition fromEvery)
+        FromEveryDefinition fromEvery)
     {
         switch (childBlock)
         {
@@ -311,7 +318,7 @@ public class Compiler
             nestedChildren.AutoMap,
             nestedChildren.ChildBlocks);
 
-        ProcessChildrenBlock(childrenBlock, children, removedWith);
+        ProcessChildrenBlock(childrenBlock, children);
     }
 
     void ProcessRemoveBlock(RemoveBlock remove, Dictionary<EventType, RemovedWithDefinition> removedWith)
@@ -327,6 +334,22 @@ public class Compiler
     {
         var eventType = EventType.Parse(removeJoin.EventType.Name);
         var key = removeJoin.Key != null ? ConvertExpression(removeJoin.Key) : PropertyExpression.NotSet;
+
+        removedWithJoin[eventType] = new RemovedWithJoinDefinition(key);
+    }
+
+    void ProcessRemoveWithDirective(RemoveWithDirective removeWith, Dictionary<EventType, RemovedWithDefinition> removedWith)
+    {
+        var eventType = EventType.Parse(removeWith.EventType.Name);
+        var key = removeWith.Key != null ? ConvertExpression(removeWith.Key) : PropertyExpression.NotSet;
+
+        removedWith[eventType] = new RemovedWithDefinition(key, ParentKey: null);
+    }
+
+    void ProcessRemoveWithJoinDirective(RemoveWithJoinDirective removeWithJoin, Dictionary<EventType, RemovedWithJoinDefinition> removedWithJoin)
+    {
+        var eventType = EventType.Parse(removeWithJoin.EventType.Name);
+        var key = removeWithJoin.Key != null ? ConvertExpression(removeWithJoin.Key) : PropertyExpression.NotSet;
 
         removedWithJoin[eventType] = new RemovedWithJoinDefinition(key);
     }

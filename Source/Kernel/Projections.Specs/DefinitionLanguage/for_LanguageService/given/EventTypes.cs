@@ -70,6 +70,10 @@ public record UserRegistered(string UserId, string Name);
 
 public record UserRemovedFromGroup(string UserId, string GroupId);
 
+public record UserDeleted(string UserId);
+
+public record ProfileCreated(string UserId, string Name);
+
 public record SettingsCreated(string SettingsId);
 
 public record SettingsUpdated(string SettingsId);

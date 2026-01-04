@@ -23,6 +23,7 @@ public record UserReadModel(
     string? City,
     string? FullName,
     string? GroupId,
+    string? UserId,
     string? SharedProperty,
     DateTimeOffset? CreatedAt,
     DateTimeOffset? UpdatedAt,
@@ -30,7 +31,7 @@ public record UserReadModel(
     string? ContactInfoEmail,
     string? AddressCity);
 
-public record GroupReadModel(string Name, List<Member> Members);
+public record GroupReadModel(string Name, string? Description, List<Member> Members);
 
 public record Member(string UserId, string? Role, DateTimeOffset? JoinedAt);
 

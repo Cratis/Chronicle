@@ -60,6 +60,18 @@ public class Generator : IGenerator
             GenerateChildrenBlock(sb, kv.Key, kv.Value, 1);
         }
 
+        // RemovedWith blocks
+        foreach (var kv in definition.RemovedWith)
+        {
+            GenerateRemovedWithBlock(sb, kv.Key.Id.Value, kv.Value, 1);
+        }
+
+        // RemovedWithJoin blocks
+        foreach (var kv in definition.RemovedWithJoin)
+        {
+            GenerateRemovedWithJoinBlock(sb, kv.Key.Id.Value, kv.Value, 1);
+        }
+
         var result = sb.ToString();
         return result.EndsWith('\n') ? result : result + '\n';
     }

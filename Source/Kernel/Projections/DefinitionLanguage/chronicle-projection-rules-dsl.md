@@ -159,6 +159,49 @@ join Group on GroupId
 
 ---
 
+### Removed With
+
+Remove a projection instance when a specific event occurs:
+
+```dsl
+projection User => UserReadModel
+  from UserCreated
+    Name = name
+    Email = email
+
+  remove with UserDeleted
+```
+
+With an explicit key:
+
+```dsl
+projection User => UserReadModel
+  from UserCreated key userId
+    Name = name
+
+  remove with UserDeleted key userId
+```
+
+---
+
+### Removed With Join
+
+Remove a projection instance when a joined event occurs:
+
+```dsl
+projection UserProfile => UserProfileReadModel
+  from ProfileCreated
+    UserId = userId
+
+  join User on UserId
+    events UserCreated
+    Name = name
+
+  remove via join on UserDeleted
+```
+
+---
+
 ### Children
 
 ```dsl
@@ -321,7 +364,9 @@ ProjDirective   = "automap", NL
 Block           = EveryBlock
                 | FromEventBlock
                 | JoinBlock
-                | ChildrenBlock ;
+                | ChildrenBlock
+                | RemoveWithBlock
+                | RemoveWithJoinBlock ;
 
 EveryBlock      = "every", NL,
                   INDENT,
@@ -362,10 +407,10 @@ ChildBlock      = FromEventBlock
                 | RemoveWithJoinBlock
                 | ChildrenBlock ;
 
-RemoveWithBlock = "remove", "on", TypeRef, [ KeyInline ], NL,
-                  INDENT,
-                    [ ParentDecl ],
-                  DEDENT ;
+RemoveWithBlock = "remove", "with", TypeRef, [ KeyInline ], NL,
+                  [ INDENT,
+                      [ ParentDecl ],
+                    DEDENT ] ;
 
 RemoveWithJoinBlock
                = "remove", "via", "join", "on", TypeRef, [ KeyInline ], NL ;
