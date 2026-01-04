@@ -1,0 +1,78 @@
+name: TypeScript Protobuf Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish'
+        required: true
+        default: '0.0.0'
+        type: string
+  push:
+    branches:
+      - "main"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build Contracts
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate Proto Files
+        run: |
+          dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+            Source/Kernel/Protobuf
+          cp Source/Kernel/Protobuf/*.proto Source/Clients/TypeScript/proto/
+
+      - name: Install TypeScript dependencies
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn install
+
+      - name: Build TypeScript package
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn build
+
+      - name: Set package version
+        if: github.event.inputs.version != ''
+        working-directory: ./Source/Clients/TypeScript
+        run: |
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Publish to NPM
+        if: github.event.inputs.version != ''
+        working-directory: ./Source/Clients/TypeScript
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit and push changes
+        if: success()
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add Source/Kernel/Protobuf/*.proto
+          git diff --cached --quiet || git commit -m "chore: update generated proto files [skip ci]"
+          git push

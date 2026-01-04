@@ -1,0 +1,108 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Observation;
+import "google/protobuf/empty.proto";
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message AllObserversRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
+message FailedPartition {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string ObserverId = 2;
+   string Partition = 3;
+   repeated FailedPartitionAttempt Attempts = 4;
+}
+message FailedPartitionAttempt {
+   SerializableDateTimeOffset Occurred = 1;
+   uint64 SequenceNumber = 2;
+   repeated string Messages = 3;
+   string StackTrace = 4;
+}
+message GetFailedPartitionsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+}
+message GetObserverInformationRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
+message IEnumerable_FailedPartition {
+   repeated FailedPartition items = 1;
+}
+message IEnumerable_ObserverInformation {
+   repeated ObserverInformation items = 1;
+}
+message ObserverInformation {
+   string Id = 1;
+   string EventSequenceId = 2;
+   ObserverType Type = 3;
+   ObserverOwner Owner = 4;
+   repeated EventType EventTypes = 5;
+   uint64 NextEventSequenceNumber = 6;
+   uint64 LastHandledEventSequenceNumber = 7;
+   ObserverRunningState RunningState = 8;
+   bool IsSubscribed = 9;
+}
+enum ObserverOwner {
+   None = 0;
+   Client = 1;
+   Kernel = 2;
+}
+enum ObserverRunningState {
+   Unknown = 0;
+   Active = 1;
+   Suspended = 2;
+   Replaying = 3;
+   Disconnected = 4;
+}
+enum ObserverType {
+   Unknown = 0;
+   Reactor = 1;
+   Projection = 2;
+   Reducer = 3;
+}
+message Replay {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
+message ReplayPartition {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+   string Partition = 5;
+}
+message RetryPartition {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+   string Partition = 5;
+}
+message SerializableDateTimeOffset {
+   int64 Ticks = 1;
+   double OffsetMinutes = 2;
+}
+service FailedPartitions {
+   rpc GetFailedPartitions (GetFailedPartitionsRequest) returns (IEnumerable_FailedPartition);
+   rpc ObserveFailedPartitions (GetFailedPartitionsRequest) returns (stream IEnumerable_FailedPartition);
+}
+service Observers {
+   rpc GetObserverInformation (GetObserverInformationRequest) returns (ObserverInformation);
+   rpc GetObservers (AllObserversRequest) returns (IEnumerable_ObserverInformation);
+   rpc ObserveObservers (AllObserversRequest) returns (stream IEnumerable_ObserverInformation);
+   rpc Replay (Replay) returns (.google.protobuf.Empty);
+   rpc ReplayPartition (ReplayPartition) returns (.google.protobuf.Empty);
+   rpc RetryPartition (RetryPartition) returns (.google.protobuf.Empty);
+}

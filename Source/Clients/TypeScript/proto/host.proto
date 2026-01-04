@@ -1,0 +1,7 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Host;
+import "google/protobuf/empty.proto";
+
+service Server {
+   rpc ReloadState (.google.protobuf.Empty) returns (.google.protobuf.Empty);
+}

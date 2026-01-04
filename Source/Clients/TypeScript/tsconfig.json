@@ -19,8 +19,7 @@
         "allowSyntheticDefaultImports": true
     },
     "include": [
-        "index.ts",
-        "generated/**/*"
+        "index.ts"
     ],
     "exclude": [
         "node_modules",

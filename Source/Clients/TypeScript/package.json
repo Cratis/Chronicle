@@ -13,7 +13,7 @@
     },
     "files": [
         "dist",
-        "generated",
+        "proto",
         "**/*.ts"
     ],
     "type": "module",
@@ -29,10 +29,10 @@
         }
     },
     "scripts": {
-        "clean": "rm -rf dist generated",
-        "generate": "grpc_tools_node_protoc --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts --ts_out=grpc_js:generated --js_out=import_style=commonjs,binary:generated --grpc_out=grpc_js:generated -I ../../Kernel/Protobuf ../../Kernel/Protobuf/*.proto",
-        "build": "tsc -b && rollup -c ./rollup.config.mjs",
-        "prepare": "yarn clean && yarn generate && yarn build"
+        "clean": "rm -rf dist",
+        "copy-proto": "mkdir -p proto && cp ../../Kernel/Protobuf/*.proto proto/",
+        "build": "yarn copy-proto && tsc -b && rollup -c ./rollup.config.mjs",
+        "prepare": "yarn clean && yarn build"
     },
     "dependencies": {
         "@grpc/grpc-js": "^1.12.4",
@@ -40,8 +40,6 @@
     },
     "devDependencies": {
         "@types/node": "^22.10.5",
-        "grpc-tools": "^1.12.4",
-        "grpc_tools_node_protoc_ts": "^5.3.3",
         "rollup": "^4.30.1",
         "rollup-plugin-commonjs": "^10.1.0",
         "rollup-plugin-peer-deps-external": "^2.2.4",
