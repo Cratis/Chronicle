@@ -13,6 +13,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
+using Tag = Cratis.Chronicle.Concepts.Events.Tag;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -148,8 +149,10 @@ public class EventSequenceStorage(
                     @namespace,
                     correlationId,
                     causation,
-                    await identityStorage.GetFor(causedByChain),
-                    tags),
+                    await identityStorage.GetFor(causedByChain))
+                {
+                    Tags = tags
+                },
                 content));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -222,8 +225,10 @@ public class EventSequenceStorage(
                         @namespace,
                         eventToAppend.CorrelationId,
                         eventToAppend.Causation,
-                        await identityStorage.GetFor(eventToAppend.CausedByChain),
-                        eventToAppend.Tags),
+                        await identityStorage.GetFor(eventToAppend.CausedByChain))
+                    {
+                        Tags = eventToAppend.Tags
+                    },
                     eventToAppend.Content));
             }
 

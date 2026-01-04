@@ -21,7 +21,6 @@ namespace Cratis.Chronicle.Events;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
 /// <param name="Causation">A collection of <see cref="Causation"/> for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
-/// <param name="Tags">A collection of tags associated with the event.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 public record EventContext(
     EventType EventType,
@@ -36,9 +35,13 @@ public record EventContext(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     Identity CausedBy,
-    IEnumerable<string> Tags,
     EventObservationState ObservationState = EventObservationState.Initial)
 {
+    /// <summary>
+    /// Gets the tags associated with the event.
+    /// </summary>
+    public IEnumerable<string> Tags { get; init; } = [];
+
     /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
     /// </summary>
@@ -92,8 +95,7 @@ public record EventContext(
             @namespace,
             correlationId,
             [],
-            Identity.NotSet,
-            []);
+            Identity.NotSet);
     }
 
     /// <summary>
@@ -119,19 +121,5 @@ public record EventContext(
     /// <param name="desiredState">The desired state.</param>
     /// <returns>A new copy with the desired state set.</returns>
     public EventContext WithState(EventObservationState desiredState) =>
-        new(
-            EventType,
-            EventSourceType,
-            EventSourceId,
-            EventStreamType,
-            EventStreamId,
-            SequenceNumber,
-            Occurred,
-            EventStore,
-            Namespace,
-            CorrelationId,
-            Causation,
-            CausedBy,
-            Tags,
-            desiredState);
+        this with { ObservationState = desiredState };
 }
