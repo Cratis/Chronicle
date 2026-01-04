@@ -1,0 +1,32 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+import { DataPage } from 'Components/DataPage/DataPage';
+import { GetGlobalSeedData } from 'Api/Seeding/GetGlobalSeedData';
+import { Column } from 'primereact/column';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+
+export const SeedData = () => {
+    const { eventStore } = useParams();
+    const [selectedNamespace, setSelectedNamespace] = useState<string>('');
+
+    return (
+        <DataPage
+            title="Seed Data"
+            query={GetGlobalSeedData}
+            queryArguments={{ eventStore }}
+            emptyMessage="No seed data found"
+            dataKey="eventSourceId">
+            <DataPage.MenuItems>
+                {/* TODO: Add menu items for adding seed data */}
+            </DataPage.MenuItems>
+            <DataPage.Columns>
+                <Column field="eventSourceId" header="Event Source ID" sortable />
+                <Column field="eventTypeId" header="Event Type ID" sortable />
+                <Column field="isGlobal" header="Global" sortable body={(rowData) => rowData.isGlobal ? 'Yes' : 'No'} />
+                <Column field="targetNamespace" header="Target Namespace" sortable />
+            </DataPage.Columns>
+        </DataPage>
+    );
+};

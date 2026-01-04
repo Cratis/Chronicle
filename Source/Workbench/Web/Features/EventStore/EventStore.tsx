@@ -29,6 +29,7 @@ import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
+import { SeedData } from './General/SeedData/SeedData';
 // import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
@@ -54,6 +55,7 @@ export const EventStore = () => {
                 { label: 'Webhooks', url: 'webhooks', icon: mdIcons.MdWebhook },
                 { label: strings.mainMenu.general.projections, url: ':namespace/projections', icon: mdIcons.MdTransform },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
+                { label: strings.mainMenu.general.seedData, url: 'seed-data', icon: mdIcons.MdGrain },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
@@ -83,6 +85,7 @@ export const EventStore = () => {
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'webhooks'} element={<Webhooks />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
+                <Route path={'seed-data'} element={<SeedData />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />
                 <Route path={'reducers'} element={<Reducers />} />

@@ -46,7 +46,8 @@
             "projections": "Projections",
             "reducers": "Reducers",
             "reactors": "Reactors",
-            "sinks": "Sinks"
+            "sinks": "Sinks",
+            "seedData": "Seed Data"
         },
         "system": {
             "groupLabel": "System",
