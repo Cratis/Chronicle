@@ -98,6 +98,24 @@ public class EventSeeding(
         }
     }
 
+    /// <inheritdoc/>
+    public Task<IEnumerable<SeedingEntry>> GetSeededEvents()
+    {
+        state.State ??= new EventSeeds(
+            new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
+            new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
+
+        var entries = new List<SeedingEntry>();
+        
+        // Collect all unique entries from both dictionaries
+        var allEntries = state.State.ByEventType.Values.SelectMany(e => e)
+            .Concat(state.State.ByEventSource.Values.SelectMany(e => e))
+            .Distinct()
+            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.IsGlobal, e.TargetNamespace));
+
+        return Task.FromResult(allEntries);
+    }
+
     List<EventToAppend> GetEventsToSeed(List<SeedingEntry> entriesList)
     {
         var eventsToAppend = new List<EventToAppend>();

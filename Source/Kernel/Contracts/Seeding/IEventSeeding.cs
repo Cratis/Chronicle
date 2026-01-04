@@ -17,4 +17,22 @@ public interface IEventSeeding
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task Seed(SeedRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get global seed data for an event store.
+    /// </summary>
+    /// <param name="request">The request containing the event store name.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Collection of global seed data entries.</returns>
+    [Operation]
+    Task<SeedDataResponse> GetGlobalSeedData(GetSeedDataRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get namespace-specific seed data.
+    /// </summary>
+    /// <param name="request">The request containing the event store and namespace names.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Collection of namespace-specific seed data entries.</returns>
+    [Operation]
+    Task<SeedDataResponse> GetNamespaceSeedData(GetSeedDataRequest request, CallContext context = default);
 }
