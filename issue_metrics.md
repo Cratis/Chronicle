@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 250 |
+| Number of items that remain open | 252 |
 | Number of items closed | 608 |
-| Total number of items created | 858 |
+| Total number of items created | 860 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Synchronization of CoPilot instructions | https://github.com/Cratis/Chronicle/issues/2421 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce Read Model and Event Type management in Workbench | https://github.com/Cratis/Chronicle/issues/2381 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce user and client credentials management | https://github.com/Cratis/Chronicle/issues/2379 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Bulk update on replay of projections or reducers for sinks | https://github.com/Cratis/Chronicle/issues/2364 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -238,6 +239,7 @@
 | Add support for removal in constraint index | https://github.com/Cratis/Chronicle/issues/1360 | None | [einari](https://github.com/einari) | None | 10 days, 7:31:36 | None |
 | Add support for "once only delivery" for projections | https://github.com/Cratis/Chronicle/issues/1357 | None | [einari](https://github.com/einari) | None | 180 days, 17:06:48 | None |
 | Add handled sequence number on the models during projection | https://github.com/Cratis/Chronicle/issues/1356 | None | [einari](https://github.com/einari) | None | 17 days, 3:38:32 | None |
+| Add support for tombstoning events | https://github.com/Cratis/Chronicle/issues/2420 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | None | None |
 | Add support for joining other event sequences in projections | https://github.com/Cratis/Chronicle/issues/1353 | None | [einari](https://github.com/einari) | None | None | None |
 | Add more integration test scenarios for Projections | https://github.com/Cratis/Chronicle/issues/1352 | None | [einari](https://github.com/einari) | None | 33 days, 10:05:22 | None |
 | Add integration specs for AppendedEventsQueues system | https://github.com/Cratis/Chronicle/issues/1351 | None | [einari](https://github.com/einari) | None | None | None |
@@ -334,7 +336,4 @@
 | Optimize the Docker image sizes | https://github.com/Cratis/Chronicle/issues/1096 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Leverage the Arm64 runner during build pipelines | https://github.com/Cratis/Chronicle/issues/1095 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 508 days, 23:22:41 | None |
 | Add retry policies for client observers and reducers | https://github.com/Cratis/Chronicle/issues/1091 | None | [einari](https://github.com/einari) | None | 405 days, 1:23:38 | None |
-| Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | None | [einari](https://github.com/einari) | None | 449 days, 2:17:39 | None |
-| Support unmanaged observers / reactors | https://github.com/Cratis/Chronicle/issues/1067 | None | [einari](https://github.com/einari) | None | None | None |
-| Identity is not resolved for reducer handlers | https://github.com/Cratis/Chronicle/issues/1066 | None | [einari](https://github.com/einari) | 334 days, 5:05:34 | 401 days, 1:11:14 | None |
-| Change to the concep
+| Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | None | [einari](https://github.com/e
