@@ -12,10 +12,9 @@ public class composite_key : given.a_language_service_with_schemas<given.OrderRe
     const string Definition = """
         projection Order => OrderReadModel
           from OrderCreated
-            key OrderKey {
+            key OrderKey
               customerId = customerId
               orderNumber = orderNumber
-            }
             total = total
         """;
 

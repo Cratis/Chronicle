@@ -122,13 +122,19 @@ public class Generator : IGenerator
         {
             var keyValue = from.Key.Value;
 
-            // Parse composite key: $composite(CustomerId=customerId, OrderNumber=orderNumber)
+            // Parse composite key: $composite(TypeName, CustomerId=customerId, OrderNumber=orderNumber)
             var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
             var parts = innerContent.Split(_compositeSeparator, StringSplitOptions.None);
 
-            sb.AppendLine($"{Indent(indent + 1)}key CompositeKey {{");
-            foreach (var part in parts)
+            // Extract type name from first part
+            var typeName = parts.Length > 0 ? parts[0].Trim() : "CompositeKey";
+
+            sb.AppendLine($"{Indent(indent + 1)}key {typeName}");
+
+            // Skip the first part (type name) and process the property mappings
+            for (var i = 1; i < parts.Length; i++)
             {
+                var part = parts[i];
                 var equalsIndex = part.IndexOf('=');
                 if (equalsIndex > 0)
                 {
@@ -137,7 +143,6 @@ public class Generator : IGenerator
                     sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
                 }
             }
-            sb.AppendLine($"{Indent(indent + 1)}}}");
         }
 
         // Parent key if present
@@ -308,6 +313,19 @@ public class Generator : IGenerator
         {
             var property = expression[14..^1];
             return $"$eventContext.{property}";
+        }
+
+        // Convert $causedBy(property) to $causedBy.property
+        if (expression.StartsWith("$causedBy(") && expression.EndsWith(')'))
+        {
+            var property = expression[10..^1];
+            return $"$causedBy.{property}";
+        }
+
+        // Handle plain $causedBy
+        if (expression.Equals("$causedBy", StringComparison.Ordinal))
+        {
+            return "$causedBy";
         }
 
         // Convert C# boolean ToString() to DSL format

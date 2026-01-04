@@ -49,36 +49,34 @@ Use composite keys when multiple properties together identify an instance:
 
 ```
 from OrderCreated
-  key OrderKey {
+  key OrderKey
     CustomerId = customerId
     OrderNumber = orderNumber
-  }
   Total = total
 ```
 
 ### Composite Key Structure
 
 ```
-key {TypeName} {
+key {TypeName}
   {Property} = {expression}
   {Property} = {expression}
   ...
-}
 ```
 
-The `{TypeName}` is the name of the composite key type.
+The `{TypeName}` must match a complex type defined in your read model schema.
 
-### Composite Key with Event Context
+### Composite Key with Event Context and Causation
 
-You can include event context values in composite keys:
+You can include event context and causation values in composite keys:
 
 ```
 from LineItemAdded
-  key LineItemKey {
+  key LineItemKey
     OrderId = orderId
     LineNumber = lineNumber
     SequenceNumber = $eventContext.sequenceNumber
-  }
+    CreatedBy = $causedBy.subject
   Product = productName
   Quantity = quantity
 ```

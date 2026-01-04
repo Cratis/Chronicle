@@ -47,6 +47,28 @@ public class ExpressionParser
                 return new EventContextExpression(propertyToken.Value);
             }
 
+            if (name.Equals("causedBy", StringComparison.OrdinalIgnoreCase))
+            {
+                // causedBy without property means the entire Identity object
+                if (!context.Check(TokenType.Dot))
+                {
+                    return new CausedByExpression(null);
+                }
+
+                context.Advance(); // Skip dot
+                var propertyToken = context.Expect(TokenType.Identifier);
+                if (propertyToken is null) return null;
+
+                var property = propertyToken.Value.ToLowerInvariant();
+                if (property != "subject" && property != "name" && property != "username")
+                {
+                    context.ReportError($"Unknown causedBy property '{propertyToken.Value}'. Valid properties are: subject, name, userName");
+                    return null;
+                }
+
+                return new CausedByExpression(propertyToken.Value);
+            }
+
             context.ReportError($"Unknown expression '${name}'");
             return null;
         }
@@ -152,6 +174,19 @@ public class ExpressionParser
         if (exprText == "$eventSourceId")
         {
             return new EventSourceIdExpression();
+        }
+
+        if (exprText.StartsWith("$causedBy"))
+        {
+            if (exprText == "$causedBy")
+            {
+                return new CausedByExpression(null);
+            }
+            if (exprText.StartsWith("$causedBy."))
+            {
+                var property = exprText.Substring(10);
+                return new CausedByExpression(property);
+            }
         }
 
         // Treat plain identifiers as event data property paths

@@ -202,9 +202,10 @@ public class Compiler
         PropertyExpression keyExpression;
         if (onEvent.CompositeKey != null)
         {
-            // Build composite key expression: $composite(prop1=expr1, prop2=expr2, ...)
+            // Build composite key expression: $composite(TypeName, prop1=expr1, prop2=expr2, ...)
+            var typeName = onEvent.CompositeKey.TypeName.Name;
             var parts = string.Join(", ", onEvent.CompositeKey.Parts.Select(p => $"{p.PropertyName}={ConvertExpression(p.Expression).Value}"));
-            keyExpression = new PropertyExpression($"{WellKnownExpressions.Composite}({parts})");
+            keyExpression = new PropertyExpression($"{WellKnownExpressions.Composite}({typeName}, {parts})");
         }
         else if (onEvent.Key != null)
         {
@@ -471,6 +472,7 @@ public class Compiler
             EventDataExpression eventData => new PropertyExpression(eventData.Path),
             EventContextExpression eventContext => new PropertyExpression($"$eventContext({eventContext.Property})"),
             EventSourceIdExpression => new PropertyExpression("$eventSourceId"),
+            CausedByExpression causedBy => new PropertyExpression(causedBy.Property == null ? "$causedBy" : $"$causedBy({causedBy.Property})"),
             LiteralExpression literal => new PropertyExpression(FormatLiteralForStorage(literal.Value)),
             TemplateExpression template => new PropertyExpression(ConvertTemplateToString(template)),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")
@@ -484,6 +486,7 @@ public class Compiler
             EventDataExpression eventData => eventData.Path,
             EventContextExpression eventContext => $"$eventContext({eventContext.Property})",
             EventSourceIdExpression => "$eventSourceId",
+            CausedByExpression causedBy => causedBy.Property == null ? "$causedBy" : $"$causedBy({causedBy.Property})",
             LiteralExpression literal => FormatLiteralForStorage(literal.Value),
             TemplateExpression template => ConvertTemplateToString(template),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")

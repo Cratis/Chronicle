@@ -68,12 +68,14 @@ public class ProjectionValidator(
                 case JoinBlock:
                 case EveryBlock:
                 case KeyDirective:
-                case CompositeKeyDirective:
                 case AutoMapDirective:
                 case NoAutoMapDirective:
                 case RemoveWithDirective:
                 case RemoveWithJoinDirective:
                     // These don't require validation at this stage
+                    break;
+                case CompositeKeyDirective compositeKey:
+                    ValidateCompositeKeyDirective(compositeKey, readModelSchema, errors);
                     break;
             }
         }
@@ -87,6 +89,12 @@ public class ProjectionValidator(
         {
             errors.Add($"Event type '{eventType}' not found", 0, 0);
             return;
+        }
+
+        // Validate composite key if present
+        if (fromEvent.CompositeKey is not null)
+        {
+            ValidateCompositeKeyDirective(fromEvent.CompositeKey, readModelSchema, errors);
         }
 
         ValidateMappings(fromEvent.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
@@ -257,6 +265,80 @@ public class ProjectionValidator(
         return true;
     }
 
+    void ValidateCompositeKeyDirective(CompositeKeyDirective compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        var typeName = compositeKey.TypeName.Name;
+
+        // Check if the composite key type exists in the read model schema
+        JsonSchema? keySchema = null;
+
+        // First, check in the definitions (most likely place for complex types)
+        if (readModelSchema.Definitions.TryGetValue(typeName, out var definedType))
+        {
+            keySchema = definedType;
+        }
+        // If not in definitions, check if it's a property in the read model (camelCase)
+        else
+        {
+            var camelCaseTypeName = LowercaseFirstLetter(typeName);
+            if (readModelSchema.Properties.TryGetValue(camelCaseTypeName, out var keyProperty))
+            {
+                keySchema = keyProperty.ActualSchema;
+            }
+        }
+
+        if (keySchema is null)
+        {
+            errors.Add($"Composite key type '{typeName}' not found in read model schema", 0, 0);
+            return;
+        }
+
+        // Validate that it's a complex type (object)
+        // Note: Nullable types might have JsonObjectType.Null flag set along with Object
+        // Also, some schemas might not have Type set but have Properties, which indicates it's an object
+        var isObject = keySchema.Type.HasFlag(JsonObjectType.Object) ||
+                      (keySchema.Properties.Count > 0 && keySchema.Type == JsonObjectType.None);
+
+        if (!isObject)
+        {
+            errors.Add($"Composite key type '{typeName}' must be a complex type (object) in the read model schema", 0, 0);
+            return;
+        }
+
+        // Validate each key part
+        foreach (var part in compositeKey.Parts)
+        {
+            // Validate that the property exists in the composite key type schema
+            if (!keySchema.Properties.ContainsKey(part.PropertyName))
+            {
+                errors.Add($"Property '{part.PropertyName}' not found in composite key type '{typeName}'", 0, 0);
+                continue;
+            }
+
+            // Composite keys only support simple assignment expressions (key = value)
+            // Validate expression type is supported
+            switch (part.Expression)
+            {
+                case EventDataExpression:
+                case EventContextExpression:
+                case EventSourceIdExpression:
+                case CausedByExpression:
+                case LiteralExpression:
+                    // These are valid for composite keys
+                    break;
+                case TemplateExpression:
+                    errors.Add("Template expressions are not supported in composite keys. Use simple expressions only.", 0, 0);
+                    continue;
+                default:
+                    errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", 0, 0);
+                    continue;
+            }
+
+            // Note: Type compatibility validation between expression and property type could be added here
+            // but would require knowing the event schema context, which isn't available at this level
+        }
+    }
+
     bool AreTypesCompatible(JsonObjectType targetType, JsonObjectType sourceType)
     {
         // Exact match
@@ -285,5 +367,14 @@ public class ProjectionValidator(
         // Allow numeric conversions
         var numericTypesForNonNullable = new[] { JsonObjectType.Integer, JsonObjectType.Number };
         return numericTypesForNonNullable.Contains(targetType) && numericTypesForNonNullable.Contains(sourceType);
+    }
+
+    static string LowercaseFirstLetter(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+        return char.ToLowerInvariant(value[0]) + value[1..];
     }
 }

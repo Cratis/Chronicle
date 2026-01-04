@@ -23,13 +23,12 @@ internal sealed class KeyDirectiveParser
     {
         context.Advance(); // Skip 'key'
 
-        // Check if next token is an identifier followed by left brace (composite key with type name)
-        if (context.Check(TokenType.Identifier) && context.Peek().Type == TokenType.LeftBrace)
+        // Check if next token is an identifier followed by indent (composite key with type name)
+        if (context.Check(TokenType.Identifier) && context.Peek().Type == TokenType.Indent)
         {
             var typeName = _typeRefs.Parse(context);
             if (typeName is null) return null;
 
-            if (context.Expect(TokenType.LeftBrace) is null) return null;
             if (context.Expect(TokenType.Indent) is null) return null;
 
             var parts = new List<KeyPart>();
@@ -48,7 +47,6 @@ internal sealed class KeyDirectiveParser
             }
 
             context.Expect(TokenType.Dedent);
-            context.Expect(TokenType.RightBrace);
 
             return new CompositeKeyDirective(typeName, parts);
         }

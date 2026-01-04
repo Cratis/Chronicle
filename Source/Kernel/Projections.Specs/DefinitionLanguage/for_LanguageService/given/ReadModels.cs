@@ -40,7 +40,7 @@ public record GroupReadModel(string Name, string? Description, List<Member> Memb
 
 public record Member(string UserId, string? Role, DateTimeOffset? JoinedAt);
 
-public record ActivityReadModel(string Id, string EventSourceId, long SequenceNumber, DateTimeOffset Occurred, string? CorrelationId);
+public record ActivityReadModel(string Id, string EventSourceId, long SequenceNumber, DateTimeOffset Occurred, string? CorrelationId, string? CreatedBySubject, string? CreatedByName, string? CreatedByUser);
 
 public record TestModel(string Name);
 
@@ -62,6 +62,8 @@ public record Department(string Id, string Name, List<Employee>? Employees);
 
 public record Employee(string Id, string Name);
 
-public record OrderReadModel(string Id, decimal Total);
+public record OrderKey(string CustomerId, string OrderNumber);
+
+public record OrderReadModel(string Id, decimal Total, OrderKey? OrderKey);
 
 public record Users(string Name);

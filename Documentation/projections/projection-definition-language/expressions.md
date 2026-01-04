@@ -71,6 +71,34 @@ from UserAssignedToGroup
   UserId = userId
 ```
 
+### Identity (Caused By)
+
+Access the identity that caused the event using `$causedBy`:
+
+```
+$causedBy.subject
+$causedBy.name
+$causedBy.userName
+```
+
+**Available Properties:**
+- `subject` - The identifier of the identity (unique ID)
+- `name` - Display name of the identity
+- `userName` - Username of the identity
+
+**Examples:**
+
+```
+from OrderPlaced
+  CreatedBySubject = $causedBy.subject
+  CreatedByName = $causedBy.name
+  CreatedByUser = $causedBy.userName
+
+from DocumentUpdated
+  UpdatedBy = `${$causedBy.name} (${$causedBy.userName})`
+  UpdatedById = $causedBy.subject
+```
+
 ### Literals
 
 Direct values of various types:
