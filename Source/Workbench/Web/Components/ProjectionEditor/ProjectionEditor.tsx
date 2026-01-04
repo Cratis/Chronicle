@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as monaco from 'monaco-editor';
 import {
     registerProjectionDslLanguage,
@@ -12,6 +12,9 @@ import {
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionDefinitionSyntaxError } from 'Api/Projections';
+import { Button } from 'primereact/button';
+import { Sidebar } from 'primereact/sidebar';
+import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 
 export interface ProjectionEditorProps {
     value: string;
@@ -34,6 +37,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
 }) => {
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -115,5 +119,31 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         }
     }, [errors]);
 
-    return <div ref={containerRef} style={{ height, width: '100%' }} />;
+    return (
+        <div style={{ position: 'relative', height, width: '100%' }}>
+            <Button
+                icon="pi pi-question-circle"
+                tooltip="Show DSL Help"
+                onClick={() => setIsHelpPanelOpen(true)}
+                className="p-button-rounded p-button-text"
+                style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    zIndex: 1000,
+                }}
+            />
+            <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+
+            <Sidebar
+                visible={isHelpPanelOpen}
+                onHide={() => setIsHelpPanelOpen(false)}
+                position="right"
+                style={{ width: '500px', backgroundColor: '#1e1e1e' }}
+                header="Projection DSL Reference"
+            >
+                <ProjectionHelpPanel />
+            </Sidebar>
+        </div>
+    );
 };

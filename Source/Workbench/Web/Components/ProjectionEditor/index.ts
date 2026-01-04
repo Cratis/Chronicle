@@ -3,11 +3,14 @@
 
 import type * as Monaco from 'monaco-editor';
 import { configuration, languageId, monarchLanguage } from './language';
-import { ProjectionDslCompletionProvider, ProjectionDslValidator } from './validation';
+import { ProjectionDslCompletionProvider } from './completionProvider';
+import { ProjectionDslValidator } from './validator';
+import { ProjectionDslHoverProvider } from './hoverProvider';
 import type { JsonSchema } from '../JsonSchema';
 
 let validator: ProjectionDslValidator;
 let completionProvider: ProjectionDslCompletionProvider;
+let hoverProvider: ProjectionDslHoverProvider;
 let disposables: Monaco.IDisposable[] = [];
 
 export * from './ProjectionEditor';
@@ -22,16 +25,23 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     // Set the Monarch tokenizer
     monaco.languages.setMonarchTokensProvider(languageId, monarchLanguage);
 
-    // Create validator and completion provider
+    // Create validator, completion provider, and hover provider
     validator = new ProjectionDslValidator();
     completionProvider = new ProjectionDslCompletionProvider();
+    hoverProvider = new ProjectionDslHoverProvider();
 
     // Register completion provider with helpful trigger characters
     const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, {
         provideCompletionItems: completionProvider.provideCompletionItems.bind(completionProvider),
-        triggerCharacters: ['.', ' ', '=', '\n'],
+        triggerCharacters: ['.', ' ', '=', '\n', '$'],
     });
     disposables.push(completionDisposable);
+
+    // Register hover provider
+    const hoverDisposable = monaco.languages.registerHoverProvider(languageId, {
+        provideHover: hoverProvider.provideHover.bind(hoverProvider),
+    });
+    disposables.push(hoverDisposable);
 
     // Register validation on model change
     const modelChangeDisposable = monaco.editor.onDidCreateModel((model) => {
@@ -72,6 +82,9 @@ export function setReadModelSchemas(schemas: JsonSchema[]): void {
     if (completionProvider) {
         completionProvider.setReadModelSchemas(schemas);
     }
+    if (hoverProvider) {
+        hoverProvider.setReadModelSchemas(schemas);
+    }
 }
 
 export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, JsonSchema>): void {
@@ -97,6 +110,9 @@ export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, Json
     if (completionProvider) {
         completionProvider.setEventSchemas(normalized);
     }
+    if (hoverProvider) {
+        hoverProvider.setEventSchemas(normalized);
+    }
 }
 
 export function disposeProjectionDslLanguage(): void {
@@ -112,5 +128,4 @@ function validateModel(monaco: typeof Monaco, model: Monaco.editor.ITextModel): 
 }
 
 export { languageId };
-export type { PropertySchema } from './validation';
 export type { JsonSchema } from '../JsonSchema';

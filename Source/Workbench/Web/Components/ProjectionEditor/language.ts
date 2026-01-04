@@ -5,20 +5,23 @@ import type { languages } from 'monaco-editor';
 
 export const languageId = 'projection-dsl';
 
-// Keywords for the Chronicle Rules DSL
+// Keywords for the Chronicle Projection DSL
 const KEYWORDS = [
     'projection',
     'every',
     'on',
+    'from',
     'key',
     'parent',
     'join',
     'automap',
+    'no',
     'children',
     'add',
+    'subtract',
     'remove',
     'via',
-    'from',
+    'with',
     'default',
     'increment',
     'decrement',
@@ -26,9 +29,12 @@ const KEYWORDS = [
     'count',
     'set',
     'unset',
+    'events',
+    'id',
+    'exclude',
 ] as const;
 
-// Built-in functions and types
+// Built-in expressions and functions
 const BUILTINS = [
     '$eventSourceId',
     '$causedBy',
