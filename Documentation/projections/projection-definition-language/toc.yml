@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
+- name: Architecture
+  href: architecture.md
 - name: From Event
   href: from-event.md
 - name: Property Mapping
