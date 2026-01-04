@@ -15,37 +15,21 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDsl, PreviewProjection } from 'Api/Projections';
+import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError } from 'Api/Projections';
 
 export const Projections = () => {
 
     const [dslValue, setDslValue] = useState('');
-    const [selectedProjection, setSelectedProjection] = useState<any | null>(null);
-
-    /*`Users
-| key=UserRegistered.userId
-| name=UserRegistered.name
-| email=UserRegistered.email
-| totalSpent+=OrderCompleted.amount
-| orderCount increment by OrderPlaced
-| orderCount decrement by OrderCancelled
-| lastLogin=$eventContext.occurred
-| status="active" on UserRegistered
-| orders=[
-|    orderId identifier
-|    key=OrderPlaced.orderId
-|    total=OrderPlaced.total
-| ]`);*/
-
+    const [selectedProjection, setSelectedProjection] = useState<unknown>(null);
     const params = useParams<EventStoreAndNamespaceParams>();
 
     const [readModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
-    const [readModelInstances, setReadModelInstances] = useState<unknown>();
+    const [readModelInstances, setReadModelInstances] = useState<unknown[]>([]);
     const [readModelSchema, setReadModelSchema] = useState<JsonSchema | null>(null);
-    const [syntaxErrors, setSyntaxErrors] = useState<any[]>([]);
+    const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDefinitionSyntaxError[]>([]);
 
     const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
@@ -58,8 +42,11 @@ export const Projections = () => {
                         <DataTable
                             value={projections.data}
                             selectionMode="single"
-                            selection={selectedProjection}
-                            onSelectionChange={(e) => { setSelectedProjection(e.value); setDslValue(e.value?.dsl ?? ''); }}>
+                            selection={selectedProjection as never}
+                            onSelectionChange={(e) => { setSelectedProjection(e.value); setDslValue(e.value?.dsl ?? ''); }}
+                            pt={{
+                                root: { className: 'rounded-lg overflow-hidden' }
+                            }}>
 
                             <Column field="readModel" header="Read Model" />
                         </DataTable>
@@ -87,7 +74,6 @@ export const Projections = () => {
                                         previewProjection.dsl = dslValue;
                                         const result = await previewProjection.execute();
 
-                                        console.log(result.response);
                                         setReadModelInstances(result.response?.readModelEntries ?? []);
                                         setReadModelSchema(result.response?.schema ?? null);
                                         setSyntaxErrors(result.response?.syntaxErrors ?? []);
@@ -110,11 +96,11 @@ export const Projections = () => {
 
                         <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                             <DataTable
-                                value={readModelInstances}
+                                value={readModelInstances as never[]}
                                 emptyMessage={strings.eventStore.general.projections.empty}
                                 className="p-datatable-sm"
                                 pt={{
-                                    root: { style: { border: 'none' } },
+                                    root: { className: 'rounded-lg overflow-hidden', style: { border: 'none' } },
                                     tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
                                 }}>
                                 {readModelSchema?.properties && Object.keys(readModelSchema.properties).map((_, index) => (
@@ -124,9 +110,7 @@ export const Projections = () => {
                         </div>
                     </div>
                 </Allotment.Pane>
-
             </Allotment>
-
         </Page>
     );
 };
