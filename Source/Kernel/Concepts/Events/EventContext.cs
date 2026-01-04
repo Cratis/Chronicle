@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
 /// <param name="Causation">A collection of <see cref="Causation"/> for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
+/// <param name="Tags">A collection of <see cref="Tag"/> associated with the event.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 public record EventContext(
     EventType EventType,
@@ -35,6 +36,7 @@ public record EventContext(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     Identity CausedBy,
+    IEnumerable<Tag> Tags,
     EventObservationState ObservationState = EventObservationState.Initial)
 {
     /// <summary>
@@ -50,7 +52,8 @@ public record EventContext(
         EventStreamType.All,
         EventStreamId.Default,
         EventSequenceNumber.Unavailable,
-        CorrelationId.NotSet);
+        CorrelationId.NotSet,
+        []);
 
     /// <summary>
     /// Creates a new <see cref="EventContext"/> from <see cref="EventSourceId"/> and other optional parameters.
@@ -64,6 +67,7 @@ public record EventContext(
     /// <param name="eventStreamId"><see cref="EventStreamId"/> to create from.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event as persisted in the event sequence.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
+    /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="occurred">Optional occurred.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
     public static EventContext From(
@@ -76,6 +80,7 @@ public record EventContext(
         EventStreamId eventStreamId,
         EventSequenceNumber sequenceNumber,
         CorrelationId correlationId,
+        IEnumerable<Tag> tags,
         DateTimeOffset? occurred = default)
     {
         return new(
@@ -90,7 +95,8 @@ public record EventContext(
             @namespace,
             correlationId,
             [],
-            Identity.NotSet);
+            Identity.NotSet,
+            tags);
     }
 
     /// <summary>
@@ -108,7 +114,8 @@ public record EventContext(
             EventStreamType.All,
             EventStreamId.Default,
             EventSequenceNumber.Unavailable,
-            CorrelationId.NotSet);
+            CorrelationId.NotSet,
+            []);
 
     /// <summary>
     /// Creates a copy of the context object with the new desired state.
@@ -129,5 +136,6 @@ public record EventContext(
             CorrelationId,
             Causation,
             CausedBy,
+            Tags,
             desiredState);
 }
