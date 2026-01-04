@@ -261,8 +261,18 @@ public class Compiler
         };
     }
 
-    // TODO: Children currently don't support 'every' blocks in the DSL grammar
-    // The fromEvery parameter is here for potential future support
+    /// <summary>
+    /// Process a child block and populate the appropriate dictionaries based on its type.
+    /// Children support 'every' blocks in the DSL for mapping all events to properties.
+    /// </summary>
+    /// <param name="childBlock">The child block to process.</param>
+    /// <param name="from">Dictionary of event type to from definitions.</param>
+    /// <param name="join">Dictionary of event type to join definitions.</param>
+    /// <param name="children">Dictionary of property path to children definitions.</param>
+    /// <param name="removedWith">Dictionary of event type to removed with definitions.</param>
+    /// <param name="removedWithJoin">Dictionary of event type to removed with join definitions.</param>
+    /// <param name="fromEvery">The from every definition to populate when processing every blocks.</param>
+    /// <exception cref="NotSupportedException">Thrown when the child block type is not yet supported.</exception>
     void ProcessChildBlock(
         ChildBlock childBlock,
         Dictionary<EventType, FromDefinition> from,
@@ -281,13 +291,16 @@ public class Compiler
                 ProcessChildJoinBlock(joinBlock, join);
                 break;
             case NestedChildrenBlock nestedChildren:
-                ProcessNestedChildrenBlock(nestedChildren, children, removedWith);
+                ProcessNestedChildrenBlock(nestedChildren, children);
                 break;
             case RemoveBlock remove:
                 ProcessRemoveBlock(remove, removedWith);
                 break;
             case RemoveViaJoinBlock removeJoin:
                 ProcessRemoveViaJoinBlock(removeJoin, removedWithJoin);
+                break;
+            case ChildEveryBlock everyBlock:
+                ProcessChildEveryBlock(everyBlock, fromEvery);
                 break;
             default:
                 throw new NotSupportedException($"Child block type {childBlock.GetType().Name} is not yet supported");
@@ -331,8 +344,7 @@ public class Compiler
 
     void ProcessNestedChildrenBlock(
         NestedChildrenBlock nestedChildren,
-        Dictionary<PropertyPath, ChildrenDefinition> children,
-        Dictionary<EventType, RemovedWithDefinition> removedWith)
+        Dictionary<PropertyPath, ChildrenDefinition> children)
     {
         // Convert to ChildrenBlock and process
         var childrenBlock = new ChildrenBlock(
@@ -359,6 +371,23 @@ public class Compiler
         var key = removeJoin.Key != null ? ConvertExpression(removeJoin.Key) : PropertyExpression.NotSet;
 
         removedWithJoin[eventType] = new RemovedWithJoinDefinition(key);
+    }
+
+    void ProcessChildEveryBlock(ChildEveryBlock everyBlock, FromEveryDefinition fromEvery)
+    {
+        // Cast IDictionary to Dictionary since we know it's a Dictionary instance
+        var properties = (Dictionary<PropertyPath, string>)fromEvery.Properties;
+
+        foreach (var operation in everyBlock.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        // Update automap if specified
+        if (everyBlock.AutoMap != AutoMap.Inherit)
+        {
+            fromEvery.AutoMap = everyBlock.AutoMap;
+        }
     }
 
     void ProcessRemoveWithDirective(RemoveWithDirective removeWith, Dictionary<EventType, RemovedWithDefinition> removedWith)

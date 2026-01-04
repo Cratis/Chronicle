@@ -65,7 +65,7 @@ public record MemberJoined(string GroupId, string UserId);
 
 public record MemberLeft(string GroupId, string UserId);
 
-public record UserAddedToGroup(string UserId, string GroupId, string Role);
+public record UserAddedToGroup(string UserId, string GroupId, string Role, string UserName);
 
 public record UserUpdated(string UserId, string Name, string? Email);
 

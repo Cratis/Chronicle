@@ -22,6 +22,7 @@ public class RemoveWithDirectiveVisitor : IDirectiveVisitor
             return null;
         }
 
+        var removeToken = context.Current;
         context.Advance(); // Skip 'remove'
 
         // Check for "via join"
@@ -41,7 +42,11 @@ public class RemoveWithDirectiveVisitor : IDirectiveVisitor
                 key = _expressions.Parse(context);
             }
 
-            return new RemoveWithJoinDirective(eventType, key);
+            return new RemoveWithJoinDirective(eventType, key)
+            {
+                Line = removeToken.Line,
+                Column = removeToken.Column
+            };
         }
 
         if (context.Expect(TokenType.With) is null) return null;
@@ -56,6 +61,10 @@ public class RemoveWithDirectiveVisitor : IDirectiveVisitor
             removeKey = _expressions.Parse(context);
         }
 
-        return new RemoveWithDirective(removeEventType, removeKey);
+        return new RemoveWithDirective(removeEventType, removeKey)
+        {
+            Line = removeToken.Line,
+            Column = removeToken.Column
+        };
     }
 }

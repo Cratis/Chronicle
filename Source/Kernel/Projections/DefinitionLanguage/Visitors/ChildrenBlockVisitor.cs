@@ -96,6 +96,12 @@ public class ChildrenBlockVisitor : IDirectiveVisitor
             return visitor.Visit(context);
         }
 
+        if (context.Check(TokenType.Every))
+        {
+            var visitor = new ChildEveryBlockVisitor();
+            return visitor.Visit(context);
+        }
+
         context.ReportError($"Unexpected token '{context.Current.Value}' in children block");
         return null;
     }

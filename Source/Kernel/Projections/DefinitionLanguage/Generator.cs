@@ -78,7 +78,7 @@ public class Generator : IGenerator
 
     static string Indent(int level) => string.Concat(Enumerable.Repeat(Tab, level));
 
-    void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent)
+    void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)
     {
         sb.AppendLine($"{Indent(indent)}every");
 
@@ -93,7 +93,8 @@ public class Generator : IGenerator
             GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
         }
 
-        if (!every.IncludeChildren)
+        // Only output 'exclude children' for top-level every blocks, not for child every blocks
+        if (!isChildContext && !every.IncludeChildren)
         {
             sb.AppendLine($"{Indent(indent + 1)}exclude children");
         }
@@ -206,7 +207,7 @@ public class Generator : IGenerator
         // FromEvery for children
         if (children.All.Properties.Count > 0)
         {
-            GenerateEveryBlock(sb, children.All, indent + 1);
+            GenerateEveryBlock(sb, children.All, indent + 1, isChildContext: true);
         }
 
         // Child on event blocks

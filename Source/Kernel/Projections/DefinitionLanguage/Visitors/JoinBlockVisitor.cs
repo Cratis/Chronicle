@@ -23,6 +23,7 @@ public class JoinBlockVisitor : IDirectiveVisitor
             return null;
         }
 
+        var joinToken = context.Current;
         context.Advance(); // Skip 'join'
 
         var joinNameToken = context.Expect(TokenType.Identifier);
@@ -85,6 +86,10 @@ public class JoinBlockVisitor : IDirectiveVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new JoinBlock(joinName, onProperty, eventTypes, autoMap, mappings);
+        return new JoinBlock(joinName, onProperty, eventTypes, autoMap, mappings)
+        {
+            Line = joinToken.Line,
+            Column = joinToken.Column
+        };
     }
 }

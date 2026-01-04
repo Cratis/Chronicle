@@ -38,7 +38,7 @@ public record UserReadModel(
 
 public record GroupReadModel(string Name, string? Description, List<Member> Members);
 
-public record Member(string UserId, string? Role, DateTimeOffset? JoinedAt);
+public record Member(string UserId, string? Name, string? Role, DateTimeOffset? JoinedAt);
 
 public record ActivityReadModel(string Id, string EventSourceId, long SequenceNumber, DateTimeOffset Occurred, string? CorrelationId, string? CreatedBySubject, string? CreatedByName, string? CreatedByUser);
 

@@ -8,14 +8,18 @@ using Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 
 /// <summary>
-/// Visitor for parsing every blocks.
+/// Visitor for parsing every blocks within children blocks.
 /// </summary>
-public class EveryBlockVisitor : IDirectiveVisitor
+public class ChildEveryBlockVisitor
 {
     readonly MappingOperationParser _mappingOperations = new();
 
-    /// <inheritdoc/>
-    public ProjectionDirective? Visit(IParsingContext context)
+    /// <summary>
+    /// Visits and parses a child every block.
+    /// </summary>
+    /// <param name="context">The parsing context.</param>
+    /// <returns>The parsed child every block, or null if parsing failed.</returns>
+    public ChildEveryBlock? Visit(IParsingContext context)
     {
         if (!context.Check(TokenType.Every))
         {
@@ -28,18 +32,11 @@ public class EveryBlockVisitor : IDirectiveVisitor
         if (context.Expect(TokenType.Indent) is null) return null;
 
         var mappings = new List<MappingOperation>();
-        var excludeChildren = false;
         var autoMap = AutoMap.Inherit; // Default to inherit (no explicit directive)
 
         while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
         {
-            if (context.Check(TokenType.Exclude))
-            {
-                context.Advance();
-                context.Expect(TokenType.Children);
-                excludeChildren = true;
-            }
-            else if (context.Check(TokenType.AutoMap))
+            if (context.Check(TokenType.AutoMap))
             {
                 context.Advance();
                 autoMap = AutoMap.Enabled;
@@ -65,7 +62,7 @@ public class EveryBlockVisitor : IDirectiveVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new EveryBlock(mappings, excludeChildren, autoMap)
+        return new ChildEveryBlock(mappings, autoMap)
         {
             Line = everyToken.Line,
             Column = everyToken.Column
