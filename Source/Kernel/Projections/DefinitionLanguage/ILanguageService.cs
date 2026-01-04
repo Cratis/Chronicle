@@ -42,4 +42,20 @@ public interface ILanguageService
     /// <param name="definition">The definition string to extract from.</param>
     /// <returns>The read model identifier or compiler errors.</returns>
     Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(string definition);
+
+    /// <summary>
+    /// Generates declarative C# projection code from a projection definition.
+    /// </summary>
+    /// <param name="definition">The ProjectionDefinition to generate code from.</param>
+    /// <param name="readModelDefinition">The read model definition the projection targets.</param>
+    /// <returns>The generated C# code for a declarative projection.</returns>
+    string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition);
+
+    /// <summary>
+    /// Generates model-bound C# read model code from a projection definition.
+    /// </summary>
+    /// <param name="definition">The ProjectionDefinition to generate code from.</param>
+    /// <param name="readModelDefinition">The read model definition the projection targets.</param>
+    /// <returns>The generated C# code for a model-bound read model.</returns>
+    string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition);
 }

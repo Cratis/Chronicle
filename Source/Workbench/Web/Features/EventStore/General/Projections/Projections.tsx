@@ -91,6 +91,8 @@ export const Projections = () => {
                                 errors={syntaxErrors}
                                 height="500px"
                                 theme="vs-dark"
+                                eventStore={params.eventStore}
+                                namespace={params.namespace}
                             />
                         </div>
 

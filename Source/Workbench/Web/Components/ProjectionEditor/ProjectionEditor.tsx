@@ -11,9 +11,10 @@ import {
     disposeProjectionDslLanguage,
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
-import { ProjectionDefinitionSyntaxError } from 'Api/Projections';
+import { ProjectionDefinitionSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode } from 'Api/Projections';
 import { Button } from 'primereact/button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
+import { ProjectionCodePanel } from './ProjectionCodePanel';
 import Strings from 'Strings';
 
 export interface ProjectionEditorProps {
@@ -24,6 +25,8 @@ export interface ProjectionEditorProps {
     errors?: ProjectionDefinitionSyntaxError[];
     height?: string;
     theme?: string;
+    eventStore?: string;
+    namespace?: string;
 }
 
 export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
@@ -34,10 +37,17 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     errors,
     height = '400px',
     theme = 'vs-dark',
+    eventStore,
+    namespace,
 }) => {
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
+    const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
+    const [declarativeCode, setDeclarativeCode] = useState('');
+    const [modelBoundCode, setModelBoundCode] = useState('');
+    const [generateDeclarativeCode] = GenerateDeclarativeCode.use();
+    const [generateModelBoundCode] = GenerateModelBoundCode.use();
 
     useEffect(() => {
         if (editorRef.current) {
@@ -46,7 +56,26 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                 editorRef.current?.layout();
             }, 350);
         }
-    }, [isHelpPanelOpen]);
+    }, [isHelpPanelOpen, isCodePanelOpen]);
+
+    useEffect(() => {
+        if (isCodePanelOpen && eventStore && namespace && value) {
+            (async () => {
+                generateDeclarativeCode.eventStore = eventStore;
+                generateDeclarativeCode.namespace = namespace;
+                generateDeclarativeCode.dsl = value;
+                const declarativeResult = await generateDeclarativeCode.execute();
+
+                generateModelBoundCode.eventStore = eventStore;
+                generateModelBoundCode.namespace = namespace;
+                generateModelBoundCode.dsl = value;
+                const modelBoundResult = await generateModelBoundCode.execute();
+
+                setDeclarativeCode(declarativeResult.response?.code || '// Unable to generate code');
+                setModelBoundCode(modelBoundResult.response?.code || '// Unable to generate code');
+            })();
+        }
+    }, [isCodePanelOpen, eventStore, namespace, value]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -132,6 +161,23 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         <div style={{ position: 'relative', height, width: '100%', display: 'flex', overflow: 'hidden' }}>
             <div style={{ flex: 1, position: 'relative', height: '100%', minWidth: 0, overflow: 'hidden' }}>
                 <Button
+                    icon="pi pi-code"
+                    tooltip="View Generated C# Code"
+                    tooltipOptions={{ position: 'left' }}
+                    onClick={() => setIsCodePanelOpen(!isCodePanelOpen)}
+                    className="p-button-rounded p-button-text p-button-lg"
+                    style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '60px',
+                        zIndex: 1000,
+                    }}
+                    pt={{
+                        icon: { style: { fontSize: '1.5rem' } },
+                        root: { style: { width: '3rem', height: '3rem' } }
+                    }}
+                />
+                <Button
                     icon="pi pi-question-circle"
                     tooltip={Strings.components.projectionEditor.tooltips.help}
                     tooltipOptions={{ position: 'left' }}
@@ -184,6 +230,42 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                     <ProjectionHelpPanel />
+                </div>
+            </div>
+
+            <div
+                style={{
+                    width: isCodePanelOpen ? '600px' : '0',
+                    height: '100%',
+                    overflow: 'hidden',
+                    transition: 'width 0.3s ease-in-out',
+                    borderLeft: isCodePanelOpen ? '1px solid #3e3e42' : 'none',
+                    display: isCodePanelOpen ? 'flex' : 'none',
+                    flexDirection: 'column',
+                    backgroundColor: '#1e1e1e',
+                }}
+            >
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem',
+                        borderBottom: '1px solid #3e3e42',
+                        backgroundColor: '#252526',
+                        minHeight: '60px',
+                    }}
+                >
+                    <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem' }}>Generated C# Code</h3>
+                    <Button
+                        icon="pi pi-times"
+                        onClick={() => setIsCodePanelOpen(false)}
+                        className="p-button-rounded p-button-text"
+                        style={{ color: '#cccccc' }}
+                    />
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <ProjectionCodePanel declarativeCode={declarativeCode} modelBoundCode={modelBoundCode} />
                 </div>
             </div>
         </div>

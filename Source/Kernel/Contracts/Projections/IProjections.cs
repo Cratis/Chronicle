@@ -98,4 +98,20 @@ public interface IProjections
     /// <param name="context">gRPC call context.</param>
     /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="ContractProjectionPreview"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
     Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Generate declarative C# projection code from DSL.
+    /// </summary>
+    /// <param name="request"><see cref="GenerateDeclarativeCodeRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="GeneratedCode"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
+    Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCodeFromDsl(GenerateDeclarativeCodeRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Generate model-bound C# read model code from DSL.
+    /// </summary>
+    /// <param name="request"><see cref="GenerateModelBoundCodeRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="GeneratedCode"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
+    Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCodeFromDsl(GenerateModelBoundCodeRequest request, CallContext context = default);
 }

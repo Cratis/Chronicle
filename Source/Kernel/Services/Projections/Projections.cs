@@ -299,4 +299,52 @@ internal sealed class Projections(
         cursor.Dispose();
         return snapshots;
     }
+
+    /// <inheritdoc/>
+    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCodeFromDsl(GenerateDeclarativeCodeRequest request, CallContext context = default)
+    {
+        var storage = serviceProvider.GetRequiredService<IStorage>();
+        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+
+        var compileResult = languageService.Compile(
+            request.Dsl ?? string.Empty,
+            Concepts.Projections.ProjectionOwner.Server,
+            allReadModels,
+            eventTypeSchemas);
+
+        return compileResult.Match(
+            definition =>
+            {
+                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition);
+                
+                return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
+            },
+            errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
+    }
+
+    /// <inheritdoc/>
+    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCodeFromDsl(GenerateModelBoundCodeRequest request, CallContext context = default)
+    {
+        var storage = serviceProvider.GetRequiredService<IStorage>();
+        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+
+        var compileResult = languageService.Compile(
+            request.Dsl ?? string.Empty,
+            Concepts.Projections.ProjectionOwner.Server,
+            allReadModels,
+            eventTypeSchemas);
+
+        return compileResult.Match(
+            definition =>
+            {
+                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                var code = languageService.GenerateModelBoundCode(definition, readModelDefinition);
+                
+                return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
+            },
+            errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
+    }
 }

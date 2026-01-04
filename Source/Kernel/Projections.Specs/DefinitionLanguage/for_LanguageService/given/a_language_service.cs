@@ -14,7 +14,7 @@ public class a_language_service : Specification
 
     void Establish()
     {
-        _languageService = new LanguageService(new Generator());
+        _languageService = new LanguageService(new Generator(), new DeclarativeCodeGenerator(), new ModelBoundCodeGenerator());
         _projectionId = new ProjectionId(Guid.NewGuid().ToString());
     }
 

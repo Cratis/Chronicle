@@ -12,7 +12,7 @@ public class a_language_service_expecting_errors : Specification
 
     void Establish()
     {
-        _languageService = new LanguageService(new Generator());
+        _languageService = new LanguageService(new Generator(), new DeclarativeCodeGenerator(), new ModelBoundCodeGenerator());
     }
 
     protected void Compile(string definition)

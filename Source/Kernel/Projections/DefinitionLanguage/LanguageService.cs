@@ -13,7 +13,12 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// Represents an implementation of the <see cref="ILanguageService"/>.
 /// </summary>
 /// <param name="generator">The generator used to generate projection language definition strings.</param>
-public class LanguageService(IGenerator generator) : ILanguageService
+/// <param name="declarativeCodeGenerator">The generator for declarative C# projection code.</param>
+/// <param name="modelBoundCodeGenerator">The generator for model-bound C# read model code.</param>
+public class LanguageService(
+    IGenerator generator,
+    DeclarativeCodeGenerator declarativeCodeGenerator,
+    ModelBoundCodeGenerator modelBoundCodeGenerator) : ILanguageService
 {
     /// <inheritdoc/>
     public Result<ProjectionDefinition, CompilerErrors> Compile(
@@ -68,4 +73,12 @@ public class LanguageService(IGenerator generator) : ILanguageService
             },
             parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
     }
+
+    /// <inheritdoc/>
+    public string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
+        declarativeCodeGenerator.Generate(definition, readModelDefinition);
+
+    /// <inheritdoc/>
+    public string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
+        modelBoundCodeGenerator.Generate(definition, readModelDefinition);
 }

@@ -23,7 +23,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
 
     void Establish()
     {
-        _languageService = new LanguageService(new Generator());
+        _languageService = new LanguageService(new Generator(), new DeclarativeCodeGenerator(), new ModelBoundCodeGenerator());
         _projectionId = new ProjectionId(Guid.NewGuid().ToString());
         _readModelDefinition = CreateReadModelDefinition<TReadModel>();
         _eventTypeSchemas = CreateEventTypeSchemas(EventTypes).ToList();
