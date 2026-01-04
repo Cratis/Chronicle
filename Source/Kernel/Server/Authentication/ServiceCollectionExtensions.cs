@@ -87,7 +87,14 @@ public static class ServiceCollectionExtensions
         {
             options.Cookie.Name = "Chronicle.Auth";
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = chronicleOptions.Tls.Disable ? CookieSecurePolicy.None : CookieSecurePolicy.Always;
+
+            // In development without a certificate, allow non-secure cookies
+            var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+#if DEVELOPMENT
+            options.Cookie.SecurePolicy = hasSecureCertificate ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
+#else
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+#endif
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;

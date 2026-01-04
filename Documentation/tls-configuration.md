@@ -4,10 +4,8 @@ Chronicle supports TLS encryption for secure communication between the .NET clie
 
 ## Overview
 
-TLS can be enabled or disabled based on your environment needs:
-
-- **Development**: TLS is disabled by default for easier local development
-- **Production**: TLS should be enabled with properly configured certificates
+- **Development**: TLS is optional. Development builds allow running without a certificate for easier local testing
+- **Production**: TLS is required. Production builds fail to start if no certificate is configured
 
 ## Server Configuration
 
@@ -17,8 +15,7 @@ TLS can be enabled or disabled based on your environment needs:
 {
     "tls": {
         "certificatePath": "/path/to/certificate.pfx",
-        "certificatePassword": "your-password",
-        "disable": false   // Set to true to disable TLS
+        "certificatePassword": "your-password"
     }
 }
 ```
@@ -28,7 +25,6 @@ TLS can be enabled or disabled based on your environment needs:
 ```bash
 Cratis__Chronicle__Tls__CertificatePath=/path/to/certificate.pfx
 Cratis__Chronicle__Tls__CertificatePassword=your-password
-Cratis__Chronicle__Tls__Disable=false
 ```
 
 ### Configuration Properties
@@ -37,7 +33,6 @@ Cratis__Chronicle__Tls__Disable=false
 |----------|------|---------|-------------|
 | `CertificatePath` | string | null | Path to the TLS certificate file (PFX format) |
 | `CertificatePassword` | string | null | Password for the certificate file |
-| `Disable` | bool | false | Whether to disable TLS |
 
 ## Client Configuration
 
@@ -51,38 +46,49 @@ var options = new ChronicleOptions
     {
         CertificatePath = "/path/to/certificate.pfx",
         CertificatePassword = "your-password",
-        Disable = false  // Set to true to disable TLS
+        Disable = false  // Set to true when connecting to a development server without TLS
     }
 };
 
 var client = new ChronicleClient(options);
 ```
 
+**Note**: The client's `Disable` property is used to connect to development servers running without TLS. The server does not support disabling TLS via configuration.
+
 ## Development vs Production
 
 ### Development
 
-For local development, TLS is disabled by default in the `chronicle.json` file:
+For local development, you can run the Chronicle server without a certificate. Development builds (Debug configuration) allow starting the server without TLS:
 
-```json
+- If no certificate is configured, the server starts without TLS
+- The server listens on HTTP instead of HTTPS
+- Authentication cookies and OAuth endpoints use HTTP
+
+To connect a client to a development server without TLS:
+
+```csharp
+var options = new ChronicleOptions
 {
-    "tls": {
-        "disable": true
+    ConnectionString = "chronicle://localhost:35000",
+    Tls = new Tls
+    {
+        Disable = true  // Connect to server without TLS
     }
-}
+};
 ```
 
-This allows for easier local development without certificate management. However, you can enable TLS for development to test TLS-related functionality. See [Local Certificate Setup](local-certificates.md) for guidance on generating and configuring development certificates.
+You can also enable TLS for development to test TLS-related functionality. See [Local Certificate Setup](local-certificates.md) for guidance on generating and configuring development certificates.
 
 ### Production
 
-In production environments, TLS should be enabled and properly configured:
+In production environments (Release builds), TLS is required. If no certificate is configured, the server will fail to start with an error:
 
 ```json
 {
     "tls": {
         "certificatePath": "/app/certs/production.pfx",
-        "certificatePassword": "${CERT_PASSWORD}",
+        "certificatePassword": "${CERT_PASSWORD}"
         "disable": false
     }
 }
@@ -174,16 +180,19 @@ services:
 
 ### Server Fails to Start
 
-**Error**: "TLS is enabled but no certificate is configured"
+**Error**: "No TLS certificate is configured"
 
-**Solution**: Either provide a certificate path in the configuration or disable TLS:
+**Solution**: This error occurs in production builds. Provide a certificate path in the configuration:
 ```json
 {
     "tls": {
-        "disable": true
+        "certificatePath": "/path/to/certificate.pfx",
+        "certificatePassword": "your-password"
     }
 }
 ```
+
+For development, use a Debug build which allows running without a certificate.
 
 ### Client Connection Errors
 

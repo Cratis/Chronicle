@@ -50,34 +50,32 @@ builder.WebHost.UseKestrel(options =>
     {
         listenOptions.Protocols = HttpProtocols.Http1;
 
-        if (!chronicleOptions.Tls.Disable)
+        if (serverCertificate is not null)
         {
-            if (serverCertificate is not null)
-            {
-                listenOptions.UseHttps(serverCertificate);
-            }
-            else
-            {
-                throw new InvalidOperationException("TLS is enabled but no certificate is configured. Please provide a certificate path in configuration or disable TLS.");
-            }
+            listenOptions.UseHttps(serverCertificate);
         }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+        }
+#endif
     });
 
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
 
-        if (!chronicleOptions.Tls.Disable)
+        if (serverCertificate is not null)
         {
-            if (serverCertificate is not null)
-            {
-                listenOptions.UseHttps(serverCertificate);
-            }
-            else
-            {
-                throw new InvalidOperationException("TLS is enabled but no certificate is configured. Please provide a certificate path in configuration or disable TLS.");
-            }
+            listenOptions.UseHttps(serverCertificate);
         }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+        }
+#endif
     });
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;

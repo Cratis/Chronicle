@@ -17,9 +17,4 @@ public class Tls
     /// Gets or inits the password for the certificate file.
     /// </summary>
     public string? CertificatePassword { get; init; }
-
-    /// <summary>
-    /// Gets or inits whether TLS is disabled. Default is false (TLS enabled).
-    /// </summary>
-    public bool Disable { get; init; }
 }
