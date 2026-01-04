@@ -24,7 +24,7 @@ public class DeclarativeCodeGenerator
     {
         var sb = new StringBuilder();
         var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title;
-        var projectionName = $"{readModelName}Projection";
+        var projectionName = definition.Identifier.Value;
 
         sb.AppendLine("using Cratis.Chronicle.Projections;")
           .AppendLine();

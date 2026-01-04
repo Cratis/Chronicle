@@ -100,6 +100,14 @@ public interface IProjections
     Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default);
 
     /// <summary>
+    /// Save a projection from its DSL representation.
+    /// </summary>
+    /// <param name="request"><see cref="SaveProjectionRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SaveFromDsl(SaveProjectionRequest request, CallContext context = default);
+
+    /// <summary>
     /// Generate declarative C# projection code from DSL.
     /// </summary>
     /// <param name="request"><see cref="GenerateDeclarativeCodeRequest"/> with all the details about the request.</param>

@@ -17,7 +17,7 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError } from 'Api/Projections';
+import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError, SaveProjection } from 'Api/Projections';
 import type { ReadModelSchema } from 'Api/ReadModels';
 
 export const Projections = () => {
@@ -36,8 +36,9 @@ export const Projections = () => {
     const [readModelSchema, setReadModelSchema] = useState<JsonSchema | null>(null);
     const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDefinitionSyntaxError[]>([]);
 
-    const [projections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
+    const [projections, refreshProjections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
+    const [saveProjection] = SaveProjection.use();
     const [createReadModel] = CreateReadModel.use();
 
     useEffect(() => {
@@ -91,11 +92,27 @@ export const Projections = () => {
                             model={[
                                 {
                                     label: strings.eventStore.general.projections.actions.new,
-                                    icon: <faIcons.FaPlus className='mr-2' />
+                                    icon: <faIcons.FaPlus className='mr-2' />,
+                                    command: () => {
+                                        setSelectedProjection(null);
+                                        setDslValue('');
+                                        setReadModelInstances([]);
+                                        setReadModelSchema(null);
+                                        setSyntaxErrors([]);
+                                    }
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.save,
-                                    icon: <faIcons.FaFloppyDisk className='mr-2' />
+                                    icon: <faIcons.FaFloppyDisk className='mr-2' />,
+                                    command: async () => {
+                                        saveProjection.eventStore = params.eventStore!;
+                                        saveProjection.namespace = params.namespace!;
+                                        saveProjection.dsl = dslValue;
+                                        const result = await saveProjection.execute();
+                                        if (result.isSuccess) {
+                                            refreshProjections();
+                                        }
+                                    }
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.preview,

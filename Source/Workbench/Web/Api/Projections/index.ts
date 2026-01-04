@@ -8,3 +8,4 @@ export * from './Projection';
 export * from './ProjectionDefinitionSyntaxError';
 export * from './ProjectionPreview';
 export * from './ProjectionWithDsl';
+export * from './SaveProjection';

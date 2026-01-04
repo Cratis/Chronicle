@@ -239,6 +239,33 @@ internal sealed class Projections(
             errors => Task.FromResult(new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(errors.ToContract())));
     }
 
+    /// <inheritdoc/>
+    public async Task SaveFromDsl(SaveProjectionRequest request, CallContext context = default)
+    {
+        var storage = serviceProvider.GetRequiredService<IStorage>();
+        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+
+        var compileResult = languageService.Compile(
+            request.Dsl ?? string.Empty,
+            Concepts.Projections.ProjectionOwner.Server,
+            allReadModels,
+            eventTypeSchemas);
+
+        await compileResult.Match(
+            async definition =>
+            {
+                var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
+
+                var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
+                await projectionsManager.Register([definition]);
+                return Task.CompletedTask;
+            },
+            errors => throw new InvalidOperationException($"Failed to save projection: {string.Join(", ", errors.Errors.Select(e => e.Message))}"));
+    }
+
     async Task<IEnumerable<ProjectionSnapshot>> GetSnapshotsForProjection(
         string projectionId,
         string eventStoreName,
