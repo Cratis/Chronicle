@@ -50,8 +50,10 @@ public class complex_projection_with_all_features : given.a_language_service_wit
               parent groupId
 
           join GroupSettings on settingsId
-            events SettingsCreated, SettingsUpdated
-            automap
+            with SettingsCreated
+              automap
+            with SettingsUpdated
+              automap
         """;
 
     protected override IEnumerable<Type> EventTypes => [

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -47,10 +48,12 @@ public class Generator : IGenerator
             GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1);
         }
 
-        // Join blocks
-        foreach (var kv in definition.Join)
+        // Join blocks - need to group by OnProperty to reconstruct original join blocks
+        foreach (var group in definition.Join.GroupBy(kv => kv.Value.On))
         {
-            GenerateJoinBlock(sb, kv.Key.Id.Value, kv.Value, 1);
+            var joins = group.ToList();
+
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, 1);
         }
 
         // Children blocks
@@ -165,32 +168,31 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateJoinBlock(StringBuilder sb, string joinName, JoinDefinition join, int indent)
+    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, int indent)
     {
-        // Note: joinName is the EventType key (which holds the join name for root-level joins)
-        sb.AppendLine($"{Indent(indent)}join {joinName} on {join.On.Path}");
+        sb.AppendLine($"{Indent(indent)}join {joinName} on {onProperty}");
 
-        // For now, we can't perfectly reconstruct which event types were in the join,
-        // so we'll need to look at other metadata or make assumptions
-        // For simplicity, assume single event type matching the join name for now
-        // TODO: Store event types explicitly in JoinDefinition if needed
-        sb.AppendLine($"{Indent(indent + 1)}events {joinName}");
-
-        // Inline key if present (though join typically doesn't have a key)
-        if (join.Key.IsSet())
+        foreach (var kv in joins)
         {
-            sb.AppendLine($"{Indent(indent + 1)}key {join.Key.Value}");
-        }
+            var eventType = kv.Key.Id.Value;
+            var join = kv.Value;
 
-        // NoAutoMap directive - only output if disabled (since enabled is now the default)
-        if (join.AutoMap == AutoMap.Disabled)
-        {
-            sb.AppendLine($"{Indent(indent + 1)}no automap");
-        }
+            sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
 
-        foreach (var kv in join.Properties)
-        {
-            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
+            // NoAutoMap directive - only output if disabled (since Inherit is default)
+            if (join.AutoMap == AutoMap.Disabled)
+            {
+                sb.AppendLine($"{Indent(indent + 2)}no automap");
+            }
+            else if (join.AutoMap == AutoMap.Enabled)
+            {
+                sb.AppendLine($"{Indent(indent + 2)}automap");
+            }
+
+            foreach (var prop in join.Properties)
+            {
+                GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
+            }
         }
     }
 
@@ -216,10 +218,12 @@ public class Generator : IGenerator
             GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
         }
 
-        // Child join blocks
-        foreach (var kv in children.Join)
+        // Child join blocks - need to group by OnProperty to reconstruct original join blocks
+        foreach (var group in children.Join.GroupBy(kv => kv.Value.On))
         {
-            GenerateJoinBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
+            var joins = group.ToList();
+
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, indent + 1);
         }
 
         // Nested children

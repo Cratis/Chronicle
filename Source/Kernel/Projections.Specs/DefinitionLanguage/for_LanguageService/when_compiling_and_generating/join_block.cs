@@ -12,8 +12,10 @@ public class join_block : given.a_language_service_with_schemas<given.UserGroupR
     const string Definition = """
         projection UserGroups => UserGroupReadModel
           join Group on groupId
-            events GroupCreated, GroupRenamed
-            automap
+            with GroupCreated
+              automap
+            with GroupRenamed
+              automap
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded)];

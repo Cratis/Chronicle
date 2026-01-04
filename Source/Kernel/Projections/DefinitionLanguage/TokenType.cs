@@ -233,5 +233,10 @@ public enum TokenType
     /// <summary>
     /// The keyword 'identified'.
     /// </summary>
-    Identified = 46
+    Identified = 46,
+
+    /// <summary>
+    /// A comment starting with #.
+    /// </summary>
+    Comment = 47
 }

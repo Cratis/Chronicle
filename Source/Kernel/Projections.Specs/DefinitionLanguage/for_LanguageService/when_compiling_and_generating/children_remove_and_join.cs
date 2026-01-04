@@ -16,7 +16,7 @@ public class children_remove_and_join : given.a_language_service_with_schemas<gi
               parent groupId
 
           join GroupSettings on settingsId
-            events SettingsCreated
+            with SettingsCreated
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded), typeof(given.UserRemoved)];
@@ -29,5 +29,5 @@ public class children_remove_and_join : given.a_language_service_with_schemas<gi
     [Fact] void should_have_members_child() => _result.Children.ContainsKey("members").ShouldBeTrue();
     [Fact] void should_have_user_removed_event() => _result.Children["members"].RemovedWith.ContainsKey((EventType)"UserRemoved").ShouldBeTrue();
     [Fact] void should_have_join_definition() => _result.Join.Count.ShouldEqual(1);
-    [Fact] void should_have_group_settings_join() => _result.Join.ContainsKey("GroupSettings").ShouldBeTrue();
+    [Fact] void should_have_settings_created_join() => _result.Join.ContainsKey((EventType)"SettingsCreated").ShouldBeTrue();
 }

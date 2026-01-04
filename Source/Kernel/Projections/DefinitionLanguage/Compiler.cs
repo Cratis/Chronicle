@@ -324,21 +324,24 @@ public class Compiler
 
     void ProcessChildJoinBlock(ChildJoinBlock joinBlock, Dictionary<EventType, JoinDefinition> join)
     {
-        var properties = new Dictionary<PropertyPath, string>();
-
-        foreach (var operation in joinBlock.Mappings)
+        // Each 'with' block creates a separate join definition
+        foreach (var withBlock in joinBlock.WithBlocks)
         {
-            ProcessMappingOperation(operation, properties);
-        }
+            var properties = new Dictionary<PropertyPath, string>();
 
-        // For joins, we need to handle each event type
-        foreach (var eventType in joinBlock.EventTypes)
-        {
-            var et = EventType.Parse(eventType.Name);
-            join[et] = new JoinDefinition(
+            foreach (var operation in withBlock.Mappings)
+            {
+                ProcessMappingOperation(operation, properties);
+            }
+
+            var eventType = EventType.Parse(withBlock.EventType.Name);
+            join[eventType] = new JoinDefinition(
                 new PropertyPath(joinBlock.OnProperty),
                 properties,
-                PropertyExpression.NotSet);
+                PropertyExpression.NotSet)
+            {
+                AutoMap = GetAutoMapValue(withBlock.AutoMap)
+            };
         }
     }
 
@@ -408,41 +411,24 @@ public class Compiler
 
     void ProcessJoinBlock(JoinBlock joinBlock, Dictionary<EventType, JoinDefinition> join)
     {
-        var properties = new Dictionary<PropertyPath, string>();
-
-        foreach (var operation in joinBlock.Mappings)
+        // Each 'with' block creates a separate join definition
+        foreach (var withBlock in joinBlock.WithBlocks)
         {
-            ProcessMappingOperation(operation, properties);
-        }
+            var properties = new Dictionary<PropertyPath, string>();
 
-        // For joins with multiple event types, create separate entries for each event type
-        // For joins with a single event type, use the join name as the key
-        if (joinBlock.EventTypes.Count == 1)
-        {
-            // Single event - use join name as key
-            var joinKey = EventType.Parse(joinBlock.JoinName);
-            join[joinKey] = new JoinDefinition(
+            foreach (var operation in withBlock.Mappings)
+            {
+                ProcessMappingOperation(operation, properties);
+            }
+
+            var eventType = EventType.Parse(withBlock.EventType.Name);
+            join[eventType] = new JoinDefinition(
                 new PropertyPath(joinBlock.OnProperty),
                 properties,
                 PropertyExpression.NotSet)
             {
-                AutoMap = GetAutoMapValue(joinBlock.AutoMap)
+                AutoMap = GetAutoMapValue(withBlock.AutoMap)
             };
-        }
-        else
-        {
-            // Multiple events - create one entry per event type
-            foreach (var eventType in joinBlock.EventTypes)
-            {
-                var et = EventType.Parse(eventType.Name);
-                join[et] = new JoinDefinition(
-                    new PropertyPath(joinBlock.OnProperty),
-                    properties,
-                    PropertyExpression.NotSet)
-                {
-                    AutoMap = GetAutoMapValue(joinBlock.AutoMap)
-                };
-            }
         }
     }
 

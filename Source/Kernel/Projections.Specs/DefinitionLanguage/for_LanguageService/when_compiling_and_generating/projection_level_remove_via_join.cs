@@ -12,7 +12,8 @@ public class projection_level_remove_via_join : given.a_language_service_with_sc
           from UserRegistered automap
 
           join Group on GroupId
-            events GroupCreated automap
+            with GroupCreated
+              automap
 
           remove via join on GroupDeleted
         """;

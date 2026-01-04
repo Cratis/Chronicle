@@ -16,8 +16,10 @@ public class children_with_join : given.a_language_service_with_schemas<given.Us
               key groupId
               parent userId
             join Group on groupId
-              events GroupCreated, GroupRenamed
-              automap
+              with GroupCreated
+                automap
+              with GroupRenamed
+                automap
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserAddedToGroup), typeof(given.GroupCreated), typeof(given.GroupRenamed)];
@@ -36,5 +38,5 @@ public class children_with_join : given.a_language_service_with_schemas<given.Us
     [Fact] void should_have_group_created_join() => _childrenDef.Join.ContainsKey((EventType)"GroupCreated").ShouldBeTrue();
     [Fact] void should_have_group_renamed_join() => _childrenDef.Join.ContainsKey((EventType)"GroupRenamed").ShouldBeTrue();
     [Fact] void should_have_join_on_group_id() => _childrenDef.Join[(EventType)"GroupCreated"].On.ShouldEqual(new PropertyPath("groupId"));
-    [Fact] void should_have_automap_enabled() => _childrenDef.Join[(EventType)"GroupCreated"].AutoMap.ShouldEqual(AutoMap.Inherit);
+    [Fact] void should_have_automap_enabled() => _childrenDef.Join[(EventType)"GroupCreated"].AutoMap.ShouldEqual(AutoMap.Enabled);
 }

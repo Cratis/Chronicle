@@ -66,10 +66,14 @@ KeyInline       = "key", Expr ;
 
 JoinBlock       = "join", Ident, "on", Ident, NL,
                   INDENT,
-                    "events", TypeRef, { ",", TypeRef }, NL,
-                    [ "no", "automap", NL ],
-                    { MappingLine },
+                    { WithEventBlock },
                   DEDENT ;
+
+WithEventBlock  = "with", TypeRef, NL,
+                  [ INDENT,
+                      [ "no", "automap", NL | "automap", NL ],
+                      { MappingLine },
+                    DEDENT ] ;
 
 ChildrenBlock   = "children", Ident, "identified", "by", Expr, NL,
                   INDENT,
@@ -247,10 +251,14 @@ Enrich with joined events:
 ```ebnf
 JoinBlock = "join", Ident, "on", Ident, NL,
             INDENT,
-              "events", TypeRef, { ",", TypeRef }, NL,
-              [ "no", "automap", NL ],
-              { MappingLine },
+              { WithEventBlock },
             DEDENT ;
+
+WithEventBlock = "with", TypeRef, NL,
+                 [ INDENT,
+                     [ "no", "automap", NL | "automap", NL ],
+                     { MappingLine },
+                   DEDENT ] ;
 ```
 
 ### Children Block

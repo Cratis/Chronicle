@@ -39,23 +39,56 @@ public class JoinBlockVisitor : IDirectiveVisitor
         // After "on property", expect newline then indent
         if (context.Check(TokenType.NewLine)) context.Advance();
         if (context.Expect(TokenType.Indent) is null) return null;
-        if (context.Expect(TokenType.Events) is null) return null;
 
-        var firstEventType = _typeRefs.Parse(context);
-        if (firstEventType is null) return null;
+        var withBlocks = new List<WithEventBlock>();
 
-        var eventTypes = new List<TypeRef> { firstEventType };
-        while (context.Check(TokenType.Comma))
+        // Parse all 'with' event blocks
+        while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
         {
-            context.Advance();
-            var eventType = _typeRefs.Parse(context);
-            if (eventType is not null)
+            if (context.Check(TokenType.With))
             {
-                eventTypes.Add(eventType);
+                var withBlock = ParseWithEventBlock(context);
+                if (withBlock is not null)
+                {
+                    withBlocks.Add(withBlock);
+                }
+            }
+            else
+            {
+                context.Advance(); // Skip unexpected tokens
             }
         }
 
-        var autoMap = AutoMap.Inherit; // Default to inherit (no explicit directive)
+        context.Expect(TokenType.Dedent);
+        return new JoinBlock(joinName, onProperty, withBlocks)
+        {
+            Line = joinToken.Line,
+            Column = joinToken.Column
+        };
+    }
+
+    WithEventBlock? ParseWithEventBlock(IParsingContext context)
+    {
+        if (!context.Check(TokenType.With))
+        {
+            return null;
+        }
+
+        context.Advance(); // Skip 'with'
+
+        var eventType = _typeRefs.Parse(context);
+        if (eventType is null) return null;
+
+        if (context.Check(TokenType.NewLine)) context.Advance();
+        if (!context.Check(TokenType.Indent))
+        {
+            // Empty with block - no mappings, just the event type
+            return new WithEventBlock(eventType, AutoMap.Inherit, []);
+        }
+
+        context.Advance(); // Skip indent
+
+        var autoMap = AutoMap.Inherit;
         var mappings = new List<MappingOperation>();
 
         while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
@@ -86,10 +119,6 @@ public class JoinBlockVisitor : IDirectiveVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new JoinBlock(joinName, onProperty, eventTypes, autoMap, mappings)
-        {
-            Line = joinToken.Line,
-            Column = joinToken.Column
-        };
+        return new WithEventBlock(eventType, autoMap, mappings);
     }
 }

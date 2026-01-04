@@ -6,14 +6,10 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 /// <summary>
 /// Represents a join within a children block.
 /// </summary>
-/// <param name="JoinName">The name of the join.</param>
+/// <param name="JoinName">The name of the join (collection/read model being joined).</param>
 /// <param name="OnProperty">The property to join on.</param>
-/// <param name="EventTypes">The event types that populate the join.</param>
-/// <param name="AutoMap">Whether to auto map.</param>
-/// <param name="Mappings">Collection of mapping operations.</param>
+/// <param name="WithBlocks">Collection of 'with' event blocks that populate the join.</param>
 public record ChildJoinBlock(
     string JoinName,
     string OnProperty,
-    IReadOnlyList<TypeRef> EventTypes,
-    bool AutoMap,
-    IReadOnlyList<MappingOperation> Mappings) : ChildBlock;
+    IReadOnlyList<WithEventBlock> WithBlocks) : ChildBlock;

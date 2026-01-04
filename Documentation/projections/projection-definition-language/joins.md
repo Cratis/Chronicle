@@ -6,8 +6,10 @@ Joins allow you to enrich a projection with data from related events that share 
 
 ```
 join {Name} on {Property}
-  events {EventType}, {EventType}, ...
-  {mappings}
+  with {EventType}
+    {mappings}
+  with {EventType}
+    {mappings}
 ```
 
 ## Simple Example
@@ -19,9 +21,12 @@ projection Order => OrderReadModel
     CustomerId = customerId
 
   join Customer on CustomerId
-    events CustomerCreated, CustomerUpdated
-    CustomerName = name
-    CustomerEmail = email
+    with CustomerCreated
+      CustomerName = name
+      CustomerEmail = email
+    with CustomerUpdated
+      CustomerName = name
+      CustomerEmail = email
 ```
 
 When a `CustomerCreated` or `CustomerUpdated` event occurs with a matching `CustomerId`, the projection updates with customer information.
@@ -32,8 +37,10 @@ Automatically map matching properties from joined events:
 
 ```
 join Group on GroupId
-  events GroupCreated, GroupRenamed
-  automap
+  with GroupCreated
+    automap
+  with GroupRenamed
+    automap
 ```
 
 ## Multiple Mappings
@@ -42,11 +49,16 @@ Apply multiple mappings within a join:
 
 ```
 join Product on ProductId
-  events ProductCreated, ProductUpdated
-  ProductName = name
-  ProductDescription = description
-  ProductPrice = price
-  LastProductUpdate = $eventContext.occurred
+  with ProductCreated
+    ProductName = name
+    ProductDescription = description
+    ProductPrice = price
+    LastProductUpdate = $eventContext.occurred
+  with ProductUpdated
+    ProductName = name
+    ProductDescription = description
+    ProductPrice = price
+    LastProductUpdate = $eventContext.occurred
 ```
 
 ## Multiple Events
@@ -55,9 +67,13 @@ Join multiple event types that share the same key:
 
 ```
 join Customer on CustomerId
-  events CustomerRegistered, CustomerUpdated, CustomerVerified
-  CustomerName = name
-  IsVerified = verified
+  with CustomerRegistered
+    CustomerName = name
+    IsVerified = verified
+  with CustomerUpdated
+    CustomerName = name
+  with CustomerVerified
+    IsVerified = verified
 ```
 
 ## Join with From Events
@@ -76,8 +92,10 @@ projection Order => OrderReadModel
     Status = "Shipped"
 
   join Customer on CustomerId
-    events CustomerCreated, CustomerUpdated
-    CustomerName = name
+    with CustomerCreated
+      CustomerName = name
+    with CustomerUpdated
+      CustomerName = name
 ```
 
 ## Multiple Joins
@@ -92,13 +110,13 @@ projection Order => OrderReadModel
     ProductId = productId
 
   join Customer on CustomerId
-    events CustomerCreated
-    CustomerName = name
+    with CustomerCreated
+      CustomerName = name
 
   join Product on ProductId
-    events ProductCreated
-    ProductName = name
-    ProductPrice = price
+    with ProductCreated
+      ProductName = name
+      ProductPrice = price
 ```
 
 ## Joins in Children
@@ -116,9 +134,12 @@ projection Group => GroupReadModel
       Role = role
 
     join User on UserId
-      events UserCreated, UserUpdated
-      UserName = name
-      UserEmail = email
+      with UserCreated
+        UserName = name
+        UserEmail = email
+      with UserUpdated
+        UserName = name
+        UserEmail = email
 ```
 
 ## Examples
@@ -131,12 +152,7 @@ projection Order => OrderReadModel
     OrderNumber = orderNumber
     CustomerId = customerId
     Total = total
-    PlacedAt = $eventContext.occurred
-
-  join Customer on CustomerId
-    events CustomerCreated, CustomerUpdated
-    automap
-```
+    PlacedAt = $eventContext.occurred\n\n  join Customer on CustomerId\n    with CustomerCreated\n      automap\n    with CustomerUpdated\n      automap\n```
 
 ### Product with Category Information
 
@@ -148,9 +164,12 @@ projection Product => ProductReadModel
     CategoryId = categoryId
 
   join Category on CategoryId
-    events CategoryCreated, CategoryRenamed
-    CategoryName = name
-    CategoryDescription = description
+    with CategoryCreated
+      CategoryName = name
+      CategoryDescription = description
+    with CategoryRenamed
+      CategoryName = name
+      CategoryDescription = description
 ```
 
 ### User Profile with Organization
@@ -167,9 +186,12 @@ projection UserProfile => UserProfileReadModel
     Avatar = avatarUrl
 
   join Organization on OrganizationId
-    events OrganizationCreated, OrganizationRenamed
-    OrganizationName = name
-    OrganizationType = type
+    with OrganizationCreated
+      OrganizationName = name
+      OrganizationType = type
+    with OrganizationRenamed
+      OrganizationName = name
+      OrganizationType = type
 ```
 
 ### Task with Assignee Details
@@ -186,9 +208,12 @@ projection Task => TaskReadModel
     AssignedAt = $eventContext.occurred
 
   join User on AssignedTo
-    events UserRegistered, UserUpdated
-    AssigneeName = name
-    AssigneeEmail = email
+    with UserRegistered
+      AssigneeName = name
+      AssigneeEmail = email
+    with UserUpdated
+      AssigneeName = name
+      AssigneeEmail = email
 ```
 
 ### Reservation with Room and Guest
@@ -203,16 +228,24 @@ projection Reservation => ReservationReadModel
     CheckOut = checkOutDate
 
   join Room on RoomId
-    events RoomCreated, RoomUpdated
-    RoomNumber = number
-    RoomType = type
-    RoomFloor = floor
+    with RoomCreated
+      RoomNumber = number
+      RoomType = type
+      RoomFloor = floor
+    with RoomUpdated
+      RoomNumber = number
+      RoomType = type
+      RoomFloor = floor
 
   join Guest on GuestId
-    events GuestRegistered, GuestUpdated
-    GuestName = name
-    GuestEmail = email
-    GuestPhone = phone
+    with GuestRegistered
+      GuestName = name
+      GuestEmail = email
+      GuestPhone = phone
+    with GuestUpdated
+      GuestName = name
+      GuestEmail = email
+      GuestPhone = phone
 ```
 
 ### Children with Join
@@ -224,8 +257,8 @@ projection Project => ProjectReadModel
     ManagerId = managerId
 
   join User on ManagerId
-    events UserCreated
-    ManagerName = name
+    with UserCreated
+      ManagerName = name
 
   children tasks identified by taskId
     from TaskAdded
@@ -233,8 +266,10 @@ projection Project => ProjectReadModel
       AssignedTo = assigneeId
 
     join User on AssignedTo
-      events UserCreated, UserUpdated
-      AssigneeName = name
+      with UserCreated
+        AssigneeName = name
+      with UserUpdated
+        AssigneeName = name
 ```
 
 ## How Joins Work

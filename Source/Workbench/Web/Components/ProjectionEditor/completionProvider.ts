@@ -64,7 +64,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             this.addChildrenCompletions(suggestions, context, activeSchema);
         } else if (this.isAfterKeyword(context, 'join')) {
             this.addJoinCompletions(suggestions, context, activeSchema);
-        } else if (this.isAfterKeyword(context, 'events')) {
+        } else if (this.isAfterKeyword(context, 'with')) {
             this.addEventTypeCompletions(suggestions, context);
         } else if (this.isInAssignment(context)) {
             this.addAssignmentValueCompletions(suggestions, context, model, position, activeSchema);

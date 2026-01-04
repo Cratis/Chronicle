@@ -15,8 +15,10 @@ public class remove_via_join_block : given.a_language_service_with_schemas<given
             from UserAddedToGroup
               parent userId
             join Group on groupId
-              events GroupCreated, GroupRenamed
-              automap
+              with GroupCreated
+                automap
+              with GroupRenamed
+                automap
             remove via join on GroupDeleted
         """;
 

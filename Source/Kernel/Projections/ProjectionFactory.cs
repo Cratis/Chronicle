@@ -366,6 +366,34 @@ public class ProjectionFactory(
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
+            // Auto-expand matching properties if AutoMap is enabled
+            if (joinDefinition.AutoMap == AutoMap.Enabled)
+            {
+                var eventSchema = eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema;
+
+                if (eventSchema is not null && currentReadModelSchema is not null)
+                {
+                    foreach (var eventProperty in eventSchema.Properties.Values)
+                    {
+                        // Skip properties that are already explicitly mapped
+                        if (joinDefinition.Properties.ContainsKey(eventProperty.Name))
+                        {
+                            continue;
+                        }
+
+                        // Look for matching property in read model (case-insensitive)
+                        var matchingReadModelProperty = currentReadModelSchema.Properties.Values
+                            .FirstOrDefault(rmp => rmp.Name.Equals(eventProperty.Name, StringComparison.OrdinalIgnoreCase));
+
+                        if (matchingReadModelProperty is not null)
+                        {
+                            // Add automatic mapping from event property to read model property
+                            joinDefinition.Properties[matchingReadModelProperty.Name] = eventProperty.Name;
+                        }
+                    }
+                }
+            }
+
             var propertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
             propertyMappers.AddRange(propertyMappersForEveryEventType);
             var joinObservable = projection.Event

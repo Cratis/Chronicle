@@ -65,19 +65,11 @@ export class ProjectionDslValidator {
         // Get the active read model schema for property validation
         const activeSchema = this.readModelSchemas.find((s) => this.getSchemaName(s) === readModelName);
 
-        // Validate read model has an identifier property
-        if (activeSchema?.properties) {
-            const hasId = activeSchema.properties['id'] || activeSchema.properties['Id'];
-            if (!hasId) {
-                const col = firstLine.indexOf(readModelName) + 1;
-                markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' should have an 'id' or 'Id' property to serve as identifier`));
-            }
-        }
-
         // Validate subsequent lines
         const contextStack: JsonSchema[] = [activeSchema!];
         const indentStack: number[] = [0]; // Track indentation levels for context
         let lastIndent = 0;
+        let hasFromStatements = false;
 
         for (let i = 1; i < lines.length; i++) {
             const lineNumber = i + 1;
@@ -101,6 +93,7 @@ export class ProjectionDslValidator {
             // Validate event types in from/every blocks
             const fromMatch = trimmed.match(/^from\s+(\w+)/);
             if (fromMatch) {
+                hasFromStatements = true;
                 const eventType = fromMatch[1];
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
                     const col = line.indexOf(eventType) + 1;
@@ -170,7 +163,7 @@ export class ProjectionDslValidator {
             }
 
             // Validate children references
-            const childrenMatch = trimmed.match(/^children\s+(\w+)\s+id\s+/);
+            const childrenMatch = trimmed.match(/^children\s+(\w+)\s+identified\s+by\s+/);
             if (childrenMatch) {
                 const currentSchema = contextStack[contextStack.length - 1];
                 if (currentSchema?.properties) {
@@ -225,6 +218,15 @@ export class ProjectionDslValidator {
                     const col = line.indexOf(keyName) + 1;
                     markers.push(this.createWarning(lineNumber, col, col + keyName.length, `Composite key type '${keyName}' not found in read model schema`));
                 }
+            }
+        }
+
+        // Validate read model has an identifier property, but only if there are from statements
+        if (hasFromStatements && activeSchema?.properties) {
+            const hasId = activeSchema.properties['id'] || activeSchema.properties['Id'];
+            if (!hasId) {
+                const col = firstLine.indexOf(readModelName) + 1;
+                markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' should have an 'id' or 'Id' property to serve as identifier`));
             }
         }
 

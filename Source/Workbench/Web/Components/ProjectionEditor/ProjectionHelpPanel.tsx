@@ -17,9 +17,9 @@ export const ProjectionHelpPanel: React.FC = () => {
                     Basic Structure
                 </h3>
                 <pre style={{ backgroundColor: '#2d2d30', padding: '12px', borderRadius: '4px', fontSize: '13px', margin: 0 }}>
-{`projection MyReadModel
-    from MyEvent
-        set property = eventProperty`}
+{`projection MyProjection => MyReadModel
+  from MyEvent
+    property = eventProperty`}
                 </pre>
             </div>
 
@@ -41,18 +41,18 @@ export const ProjectionHelpPanel: React.FC = () => {
                 <div style={{ fontSize: '13px' }}>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>projection</strong> - Define a projection and its target read model</div>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>from</strong> - Specify event type to project from</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>every</strong> - Project from a sequence of events</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>set</strong> - Set a property value</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>key</strong> - Define the read model key</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>join</strong> - Join with another read model</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>children</strong> - Define child collection</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>increment</strong> - Increase a numeric value</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>decrement</strong> - Decrease a numeric value</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>every</strong> - Apply mappings to all events</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>key</strong> - Define the read model key (defaults to $eventSourceId)</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>parent</strong> - Define parent key for hierarchical data</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>join</strong> - Join with another collection</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>children</strong> - Define child collection operations</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>increment</strong> - Increase a numeric value by 1</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>decrement</strong> - Decrease a numeric value by 1</div>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>count</strong> - Count occurrences</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>add</strong> - Add to a collection</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>subtract</strong> - Remove from a collection</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>remove</strong> - Remove the read model instance</div>
-                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>automap</strong> - Automatically map matching properties</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>add</strong> - Add value to a property (add &lt;property&gt; by &lt;expression&gt;)</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>subtract</strong> - Subtract value from a property (subtract &lt;property&gt; by &lt;expression&gt;)</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>remove</strong> - Remove read model instance or child item</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>no automap</strong> - Disable automatic property mapping</div>
                 </div>
             </div>
 
@@ -61,11 +61,11 @@ export const ProjectionHelpPanel: React.FC = () => {
                     Expressions
                 </h3>
                 <div style={{ fontSize: '13px' }}>
-                    <div style={{ marginBottom: '5px' }}><strong>$parent.</strong> - Access parent read model properties</div>
-                    <div style={{ marginBottom: '5px' }}><strong>$child.</strong> - Access child properties</div>
-                    <div style={{ marginBottom: '5px' }}><strong>$eventContext.</strong> - Access event metadata (correlationId, causationId, occurred)</div>
-                    <div style={{ marginBottom: '5px' }}><strong>$causedBy.</strong> - Access identity info (subject, name, userName)</div>
-                    <div style={{ marginBottom: '5px' }}><strong>$count</strong> - Current count value</div>
+                    <div style={{ marginBottom: '5px' }}><strong>$eventSourceId</strong> - Event source identifier (default key)</div>
+                    <div style={{ marginBottom: '5px' }}><strong>$eventContext.</strong> - Event metadata (occurred, sequenceNumber, correlationId, causationId, eventType, eventSourceId)</div>
+                    <div style={{ marginBottom: '5px' }}><strong>property</strong> - Event property reference</div>
+                    <div style={{ marginBottom: '5px' }}><strong>`template $&#123;expr&#125;`</strong> - Template strings with interpolation</div>
+                    <div style={{ marginBottom: '5px' }}><strong>Literals</strong> - true, false, null, numbers, "strings"</div>
                 </div>
             </div>
 
@@ -74,16 +74,20 @@ export const ProjectionHelpPanel: React.FC = () => {
                     Key Patterns
                 </h3>
                 <pre style={{ backgroundColor: '#2d2d30', padding: '12px', borderRadius: '4px', fontSize: '13px', margin: 0 }}>
-{`// Simple key
-key userId
+{`// Simple key (inline)
+from MyEvent key userId
+  name = name
 
 // Composite key
-key
+from MyEvent
+  key CompositeKey
     userId = userId
     tenantId = tenantId
 
-// Parent key
-parent key parentId`}
+// Parent relationship
+from ChildEvent
+  parent parentId
+  name = name`}
                 </pre>
             </div>
 
@@ -92,24 +96,28 @@ parent key parentId`}
                     Common Patterns
                 </h3>
                 <pre style={{ backgroundColor: '#2d2d30', padding: '12px', borderRadius: '4px', fontSize: '13px', margin: 0 }}>
-{`// Auto-map properties
+{`// Count events
 from MyEvent
-    automap
+  count eventCount
 
-// Count events
-from MyEvent
-    count eventCount
+// Arithmetic operations
+from PaymentReceived
+  add balance by amount
+  count paymentCount
 
-// Join to another model
-join OtherModel with otherId
-    set otherName = $child.name
+from PaymentRefunded
+  subtract balance by amount
+
+// Join collection
+join orders on customerId
+  events OrderPlaced
+    totalOrders = $count
 
 // Child collection
-children Items
-    from ItemAdded
-        add item
-            id = itemId
-            name = itemName`}
+children items identified by itemId
+  from ItemAdded
+    name = name
+    quantity = quantity`}
                 </pre>
             </div>
 
