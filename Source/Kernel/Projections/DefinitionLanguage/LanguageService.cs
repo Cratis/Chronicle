@@ -1,4 +1,4 @@
-    // Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -22,28 +22,24 @@ public class LanguageService(IGenerator generator) : ILanguageService
         IEnumerable<ReadModelDefinition> readModelDefinitions,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        try
-        {
-            var tokenizer = new Tokenizer(definition);
-            var tokens = tokenizer.Tokenize();
-            var parser = new Parser(tokens);
-            var parseResult = parser.Parse();
+        var tokenizer = new Tokenizer(definition);
+        var tokenizeResult = tokenizer.Tokenize();
 
-            return parseResult.Match(
-                document =>
-                {
-                    var compiler = new Compiler();
-                    return compiler.Compile(document, owner, readModelDefinitions, eventTypeSchemas);
-                },
-                parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Handle tokenizer errors
-            var errors = new CompilerErrors();
-            errors.Add(ex.Message);
-            return errors;
-        }
+        return tokenizeResult.Match(
+            tokens =>
+            {
+                var parser = new Parser(tokens);
+                var parseResult = parser.Parse();
+
+                return parseResult.Match(
+                    document =>
+                    {
+                        var compiler = new Compiler();
+                        return compiler.Compile(document, owner, readModelDefinitions, eventTypeSchemas);
+                    },
+                    parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
+            },
+            parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
     }
 
     /// <inheritdoc/>
@@ -53,26 +49,23 @@ public class LanguageService(IGenerator generator) : ILanguageService
     /// <inheritdoc/>
     public Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(string definition)
     {
-        try
-        {
-            var tokenizer = new Tokenizer(definition);
-            var tokens = tokenizer.Tokenize();
-            var parser = new Parser(tokens);
-            var parseResult = parser.Parse();
+        var tokenizer = new Tokenizer(definition);
+        var tokenizeResult = tokenizer.Tokenize();
 
-            return parseResult.Match(
-                document =>
-                {
-                    var compiler = new Compiler();
-                    return compiler.GetReadModelIdentifier(document);
-                },
-                parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
-        }
-        catch (InvalidOperationException ex)
-        {
-            var errors = new CompilerErrors();
-            errors.Add(ex.Message);
-            return errors;
-        }
+        return tokenizeResult.Match(
+            tokens =>
+            {
+                var parser = new Parser(tokens);
+                var parseResult = parser.Parse();
+
+                return parseResult.Match(
+                    document =>
+                    {
+                        var compiler = new Compiler();
+                        return compiler.GetReadModelIdentifier(document);
+                    },
+                    parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
+            },
+            parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
     }
 }

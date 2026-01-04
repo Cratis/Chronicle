@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
@@ -43,6 +44,7 @@ public class Tokenizer
     readonly string _input;
     readonly Stack<int> _indentStack = new();
     readonly Queue<Token> _pendingDedents = new();
+    readonly ParsingErrors _errors = new([]);
     int _position;
     int _line = 1;
     int _column = 1;
@@ -61,8 +63,8 @@ public class Tokenizer
     /// <summary>
     /// Tokenizes the input string into a list of tokens.
     /// </summary>
-    /// <returns>A list of tokens.</returns>
-    public IEnumerable<Token> Tokenize()
+    /// <returns>A result containing either the list of tokens or parsing errors.</returns>
+    public Result<IEnumerable<Token>, ParsingErrors> Tokenize()
     {
         var tokens = new List<Token>();
 
@@ -83,7 +85,10 @@ public class Tokenizer
         }
 
         tokens.Add(new Token(TokenType.EndOfInput, string.Empty, _line, _column));
-        return tokens;
+
+        return _errors.HasErrors
+            ? _errors
+            : tokens;
     }
 
     Token NextToken()
@@ -233,7 +238,13 @@ public class Tokenizer
 
             if (_indentStack.Peek() != indentLevel)
             {
-                throw new InvalidOperationException($"Indentation error: {indentLevel} spaces does not match any outer indentation level at line {line}, column {column}");
+                _errors.Add($"Indentation error: {indentLevel} spaces does not match any outer indentation level", line, column);
+
+                // Reset to closest valid indentation to allow parsing to continue
+                while (_indentStack.Count > 1 && _indentStack.Peek() > indentLevel)
+                {
+                    _indentStack.Pop();
+                }
             }
 
             // Queue all but the first dedent
@@ -306,7 +317,8 @@ public class Tokenizer
 
         if (_position >= _input.Length)
         {
-            throw new InvalidOperationException($"Unterminated string literal at line {line}, column {column}");
+            _errors.Add("Unterminated string literal", line, column);
+            return new Token(TokenType.StringLiteral, sb.ToString(), line, column);
         }
 
         Advance(); // Skip closing quote
@@ -328,7 +340,8 @@ public class Tokenizer
 
         if (_position >= _input.Length)
         {
-            throw new InvalidOperationException($"Unterminated template string at line {line}, column {column}");
+            _errors.Add("Unterminated template string", line, column);
+            return new Token(TokenType.TemplateLiteral, sb.ToString(), line, column);
         }
 
         Advance(); // Skip closing backtick
