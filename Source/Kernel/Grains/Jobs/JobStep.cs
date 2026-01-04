@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -31,6 +32,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     CancellationTokenSource? _cancellationTokenSource = new();
     IJob _job = new NullJob();
     bool _currentlyRunning;
+    IJobStepThrottle? _throttle;
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
@@ -82,6 +84,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         state.State.Id = Identifier;
         state.State.Type = grainType;
         _cancellationTokenSource = new();
+        _throttle = ServiceProvider.GetService<IJobStepThrottle>();
     }
 
     /// <inheritdoc/>
@@ -300,13 +303,28 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 Error = PerformWorkError.Cancelled
             };
         }
-        using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
 
-        // TODO: Should we do something here if it fails?
-        _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
-        var currentState = await _thisJobStep.GetState();
-        var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
-        return await performStepResult.Match(HandleJobStepResult, HandleException);
+        // Acquire throttle slot before performing work
+        if (_throttle is not null)
+        {
+            await _throttle.AcquireAsync(_cancellationTokenSource.Token);
+        }
+
+        try
+        {
+            using var scope = logger.BeginJobStepScope(Identifier, Name, JobStepStatus.Running);
+
+            // TODO: Should we do something here if it fails?
+            _ = await _thisJobStep.ReportStatusChange(JobStepStatus.Running);
+            var currentState = await _thisJobStep.GetState();
+            var performStepResult = await PerformStep(currentState, _cancellationTokenSource.Token);
+            return await performStepResult.Match(HandleJobStepResult, HandleException);
+        }
+        finally
+        {
+            // Always release throttle slot after work completes (success or failure)
+            _throttle?.Release();
+        }
 
         async Task<PerformWorkResult<JobStepResult>> HandleJobStepResult(JobStepResult jobStepResult)
         {
