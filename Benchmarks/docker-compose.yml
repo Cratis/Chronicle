@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: cratis/mongodb:latest
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=chronicle
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chronicle:
+    image: cratis/chronicle:latest
+    ports:
+      - "35000:35000"
+      - "30000:30000"
+    environment:
+      - CHRONICLE_MONGODB_CONNECTION_STRING=mongodb://mongodb:27017
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:35000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
