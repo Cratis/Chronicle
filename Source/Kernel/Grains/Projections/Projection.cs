@@ -95,6 +95,7 @@ public class Projection(
         var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
         var state = initialState;
+        Key? lastKey = null;
 
         foreach (var @event in events)
         {
@@ -109,6 +110,7 @@ public class Projection(
             }
 
             var key = (keyResult as ResolvedKey)!.Key;
+            lastKey = key;
             var context = new ProjectionEventContext(
                 key,
                 @event,
@@ -119,6 +121,13 @@ public class Projection(
             await HandleEventFor(projection!, context);
 
             state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
+        }
+
+        // Inject Id property into the read model before returning
+        if (lastKey is not null)
+        {
+            var stateDict = (IDictionary<string, object?>)state;
+            stateDict["Id"] = lastKey.Value.ToString();
         }
 
         return state;
@@ -166,7 +175,20 @@ public class Projection(
             readModelsByKey[key] = state;
         }
 
-        return readModelsByKey.Values.ToList();
+        // Inject Id property into each read model before returning
+        var results = new List<ExpandoObject>();
+        foreach (var kvp in readModelsByKey)
+        {
+            var readModel = kvp.Value;
+            var readModelDict = (IDictionary<string, object?>)readModel;
+
+            // Set the Id property with the key value
+            readModelDict["Id"] = kvp.Key.Value.ToString();
+
+            results.Add(readModel);
+        }
+
+        return results;
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
