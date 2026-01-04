@@ -68,10 +68,15 @@ try {
     $coverage = Get-Content $summaryFile | ConvertFrom-Json
     
     $currentDate = Get-Date -Format "yyyy-MM-dd"
-    # Simple week calculation (week of year)
-    $dayOfYear = (Get-Date).DayOfYear
-    $weekNum = [Math]::Ceiling($dayOfYear / 7)
-    $currentWeek = "$(Get-Date -Format 'yyyy')-W$($weekNum.ToString('00'))"
+    # Calculate week number - use a simple approach based on date
+    # This uses the year and month to create a consistent weekly bucket
+    $year = (Get-Date).Year
+    $month = (Get-Date).Month
+    $day = (Get-Date).Day
+    # Calculate week as: year + month*4 + week of month approximation
+    # This ensures all dates in the same week get the same identifier
+    $weekOfMonth = [Math]::Ceiling($day / 7)
+    $currentWeek = "$year-M$($month.ToString('00'))-W$weekOfMonth"
     
     # Process each assembly in the coverage report
     foreach ($assembly in $coverage.coverage.assemblies) {
