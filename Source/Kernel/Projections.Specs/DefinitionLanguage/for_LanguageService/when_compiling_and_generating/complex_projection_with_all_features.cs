@@ -35,7 +35,7 @@ public class complex_projection_with_all_features : given.a_language_service_wit
             key $eventSourceId
             decrement memberCount
 
-          children members id userId
+          children members identified by userId
             automap
             from UserAddedToGroup
               key userId

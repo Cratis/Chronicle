@@ -25,6 +25,7 @@ public class Tokenizer
         { "events", TokenType.Events },
         { "children", TokenType.Children },
         { "id", TokenType.Id },
+        { "identified", TokenType.Identified },
         { "remove", TokenType.Remove },
         { "via", TokenType.Via },
         { "automap", TokenType.AutoMap },

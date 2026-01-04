@@ -11,7 +11,7 @@ public class children_block : given.a_language_service_with_schemas<given.GroupR
 {
     const string Definition = """
         projection Group => GroupReadModel
-          children members id userId
+          children members identified by userId
             automap
             from UserAddedToGroup
               key userId

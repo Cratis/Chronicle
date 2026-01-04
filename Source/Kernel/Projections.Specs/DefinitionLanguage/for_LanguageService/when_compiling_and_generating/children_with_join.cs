@@ -11,7 +11,7 @@ public class children_with_join : given.a_language_service_with_schemas<given.Us
 {
     const string Definition = """
         projection User => UserReadModel
-          children groups id groupId
+          children groups identified by groupId
             from UserAddedToGroup
               key groupId
               parent userId

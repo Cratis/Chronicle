@@ -11,12 +11,12 @@ public class nested_children : given.a_language_service_with_schemas<given.Compa
 {
     const string Definition = """
         projection Company => CompanyReadModel
-          children departments id departmentId
+          children departments identified by departmentId
             from DepartmentCreated
               key departmentId
               parent $eventContext.eventSourceId
               name = name
-            children employees id employeeId
+            children employees identified by employeeId
               from EmployeeHired
                 key employeeId
                 parent departmentId

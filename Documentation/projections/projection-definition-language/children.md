@@ -5,7 +5,7 @@ Children define nested collections within a projection. Each child represents a 
 ## Basic Syntax
 
 ```
-children {CollectionName} id {Identifier}
+children {CollectionName} identified by {Identifier}
   {child blocks}
 ```
 
@@ -16,7 +16,7 @@ projection Group => GroupReadModel
   from GroupCreated
     Name = name
 
-  children members id userId
+  children members identified by userId
     from UserAddedToGroup key userId
       parent groupId
       Name = userName
@@ -27,12 +27,12 @@ This creates a `members` collection where each member is identified by `userId`.
 
 ## Identifier Expression
 
-The `id` specifies how to identify individual children:
+The `identified by` specifies how to identify individual children:
 
 ```
-children orders id orderId
-children members id userId
-children items id itemNumber
+children orders identified by orderId
+children members identified by userId
+children items identified by itemNumber
 ```
 
 ## Parent Key
@@ -40,7 +40,7 @@ children items id itemNumber
 Use `parent` to specify the relationship to the parent projection:
 
 ```
-children members id userId
+children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Name = userName
@@ -53,7 +53,7 @@ The `parent groupId` links the child to the correct parent instance.
 Apply AutoMap to children:
 
 ```
-children members id userId
+children members identified by userId
   automap
 
   from UserAddedToGroup
@@ -65,7 +65,7 @@ children members id userId
 Children can have multiple event types:
 
 ```
-children members id userId
+children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Name = userName
@@ -81,7 +81,7 @@ children members id userId
 Apply mappings to all events within a children collection using the `every` block:
 
 ```
-children members id userId
+children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role

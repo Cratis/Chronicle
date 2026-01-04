@@ -336,9 +336,9 @@ id expression
 
 Examples:
 ```
-children members id userId
-children items id lineNumber
-children versions id $eventContext.sequenceNumber
+children members identified by userId
+children items identified by lineNumber
+children versions identified by $eventContext.sequenceNumber
 ```
 
 ## Best Practices

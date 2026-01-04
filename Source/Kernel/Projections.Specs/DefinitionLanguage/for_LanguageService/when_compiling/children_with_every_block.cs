@@ -13,7 +13,7 @@ public class children_with_every_block : for_LanguageService.given.a_language_se
           from GroupCreated
             name = name
 
-          children members id userId
+          children members identified by userId
             from UserAddedToGroup key userId
               parent groupId
               role = role

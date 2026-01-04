@@ -105,9 +105,10 @@ public class Generator : IGenerator
         // Use inline syntax for simple keys when there are no other inline options (like automap)
         // Use block syntax for composite keys or when other content exists
         var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith("$composite(") && from.Key.Value.EndsWith(')');
-        var useInlineKey = from.Key.IsSet() && !hasCompositeKey;
+        var isDefaultKey = from.Key.IsSet() && from.Key.Value == "$eventSourceId";
+        var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !isDefaultKey;
 
-        // Build from statement with optional inline key
+        // Build from statement with optional inline key (skip if it's the default $eventSourceId)
         if (useInlineKey)
         {
             sb.AppendLine($"{Indent(indent)}from {eventTypeName} key {from.Key.Value}");
@@ -145,8 +146,8 @@ public class Generator : IGenerator
             }
         }
 
-        // Parent key if present
-        if (from.ParentKey?.IsSet() == true)
+        // Parent key if present (skip if it's the default $eventSourceId)
+        if (from.ParentKey?.IsSet() == true && from.ParentKey.Value != "$eventSourceId")
         {
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
@@ -195,7 +196,7 @@ public class Generator : IGenerator
 
     void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}children {collectionName.Path} id {children.IdentifiedBy.Path}");
+        sb.AppendLine($"{Indent(indent)}children {collectionName.Path} identified by {children.IdentifiedBy.Path}");
 
         // NoAutoMap directive - only output if disabled (since enabled is now the default)
         if (children.AutoMap == AutoMap.Disabled)
@@ -282,7 +283,22 @@ public class Generator : IGenerator
             return;
         }
 
-        // Parse the expression to determine the operation type
+        // Check for arithmetic operations from C# projections ($add, $subtract)
+        if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+        {
+            var innerExpression = expression[5..^1];
+            sb.AppendLine($"{Indent(indent)}add {property.Path} by {ConvertExpressionForOutput(innerExpression)}");
+            return;
+        }
+
+        if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+        {
+            var innerExpression = expression[10..^1];
+            sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(innerExpression)}");
+            return;
+        }
+
+        // Parse the expression to determine the operation type from DSL
         if (expression.StartsWith("+="))
         {
             var value = expression[2..].Trim();
@@ -293,15 +309,15 @@ public class Generator : IGenerator
             var value = expression[2..].Trim();
             sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(value)}");
         }
-        else if (expression == "increment")
+        else if (expression == "increment" || expression == "$increment")
         {
             sb.AppendLine($"{Indent(indent)}increment {property.Path}");
         }
-        else if (expression == "decrement")
+        else if (expression == "decrement" || expression == "$decrement")
         {
             sb.AppendLine($"{Indent(indent)}decrement {property.Path}");
         }
-        else if (expression == "count")
+        else if (expression == "count" || expression == "$count")
         {
             sb.AppendLine($"{Indent(indent)}count {property.Path}");
         }
@@ -314,6 +330,20 @@ public class Generator : IGenerator
 
     string ConvertExpressionForOutput(string expression)
     {
+        // Convert $add(expression) wrapper - this comes from C# projections
+        if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+        {
+            var innerExpression = expression[5..^1];
+            return ConvertExpressionForOutput(innerExpression);
+        }
+
+        // Convert $subtract(expression) wrapper - this comes from C# projections
+        if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+        {
+            var innerExpression = expression[10..^1];
+            return ConvertExpressionForOutput(innerExpression);
+        }
+
         // Convert $eventContext(property) to $eventContext.property
         if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
         {

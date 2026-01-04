@@ -110,7 +110,7 @@ projection Group => GroupReadModel
   from GroupCreated
     Name = name
 
-  children members id userId
+  children members identified by userId
     from UserAddedToGroup
       UserId = userId
       Role = role
@@ -227,7 +227,7 @@ projection Project => ProjectReadModel
     events UserCreated
     ManagerName = name
 
-  children tasks id taskId
+  children tasks identified by taskId
     from TaskAdded
       Title = title
       AssignedTo = assigneeId
@@ -288,7 +288,7 @@ join User on UserId
 Join within children for nested enrichment:
 
 ```
-children items id itemId
+children items identified by itemId
   from ItemAdded
     ProductId = productId
 

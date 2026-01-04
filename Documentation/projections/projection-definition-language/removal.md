@@ -40,7 +40,7 @@ projection User => UserReadModel
 Remove individual children:
 
 ```
-children members id userId
+children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role
@@ -86,7 +86,7 @@ remove via join on UserDeleted key userId
 Remove children when a joined event occurs:
 
 ```
-children groups id groupId
+children groups identified by groupId
   from UserAddedToGroup
     parent userId
     GroupId = groupId
@@ -125,7 +125,7 @@ projection Group => GroupReadModel
   from GroupCreated
     Name = name
 
-  children members id userId
+  children members identified by userId
     from UserAddedToGroup key userId
       parent groupId
       Name = userName
@@ -164,7 +164,7 @@ projection Order => OrderReadModel
     OrderNumber = orderNumber
     Total = 0
 
-  children items id lineNumber
+  children items identified by lineNumber
     from LineItemAdded key lineNumber
       parent orderId
       ProductId = productId
@@ -261,7 +261,7 @@ projection Department => DepartmentReadModel
     events CompanyCreated
     CompanyName = name
 
-  children employees id employeeId
+  children employees identified by employeeId
     from EmployeeAssigned key employeeId
       parent deptId
       Name = name
@@ -354,7 +354,7 @@ projection Order => OrderReadModel
     events CustomerCreated
     CustomerName = name
 
-  children items id itemId
+  children items identified by itemId
     from ItemAdded key itemId
       parent orderId
       ProductId = productId

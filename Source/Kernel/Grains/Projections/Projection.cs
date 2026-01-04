@@ -42,6 +42,7 @@ public class Projection(
 {
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
     readonly Dictionary<EventStoreNamespaceName, EngineProjection> _projectionsByNamespace = new();
+    string _identifierPropertyName = "id"; // Cached identifier property name from read model schema
 
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
@@ -52,6 +53,25 @@ public class Projection(
 
         State = definition;
         await WriteStateAsync();
+
+        // Cache the identifier property name from the read model schema
+        var allReadModels = await storage.GetEventStore(key.EventStore).ReadModels.GetAll();
+        var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == State.ReadModel);
+        _identifierPropertyName = "id"; // Default
+
+        if (readModelDefinition is not null)
+        {
+            var schema = readModelDefinition.GetSchemaForLatestGeneration();
+            // Check for 'Id' first (PascalCase), then 'id' (camelCase)
+            if (schema.Properties.ContainsKey("Id"))
+            {
+                _identifierPropertyName = "Id";
+            }
+            else if (schema.Properties.ContainsKey("id"))
+            {
+                _identifierPropertyName = "id";
+            }
+        }
 
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
@@ -127,7 +147,7 @@ public class Projection(
         if (lastKey is not null)
         {
             var stateDict = (IDictionary<string, object?>)state;
-            stateDict["id"] = lastKey.Value.ToString();
+            stateDict[_identifierPropertyName] = lastKey.Value.ToString();
         }
 
         return state;
@@ -182,8 +202,8 @@ public class Projection(
             var readModel = kvp.Value;
             var readModelDict = (IDictionary<string, object?>)readModel;
 
-            // Set the id property with the key value
-            readModelDict["id"] = kvp.Key.Value.ToString();
+            // Set the id property with the key value using the schema's property name
+            readModelDict[_identifierPropertyName] = kvp.Key.Value.ToString();
 
             results.Add(readModel);
         }

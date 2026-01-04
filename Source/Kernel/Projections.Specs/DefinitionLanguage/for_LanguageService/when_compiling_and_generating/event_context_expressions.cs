@@ -26,7 +26,7 @@ public class event_context_expressions : given.a_language_service_with_schemas<g
     void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_from_activity_logged() => _result.From.ContainsKey((EventType)"ActivityLogged").ShouldBeTrue();
-    [Fact] void should_have_event_source_id_key() => _result.From[(EventType)"ActivityLogged"].Key.Value.ShouldEqual("$eventSourceId");
+    [Fact] void should_not_have_key() => _result.From[(EventType)"ActivityLogged"].Key.IsSet().ShouldBeFalse();
     [Fact] void should_have_four_properties() => _result.From[(EventType)"ActivityLogged"].Properties.Count.ShouldEqual(4);
     [Fact] void should_map_occurred() => _result.From[(EventType)"ActivityLogged"].Properties[new PropertyPath("occurred")].ShouldEqual("$eventContext(occurred)");
     [Fact] void should_map_sequence_number() => _result.From[(EventType)"ActivityLogged"].Properties[new PropertyPath("sequenceNumber")].ShouldEqual("$eventContext(sequenceNumber)");

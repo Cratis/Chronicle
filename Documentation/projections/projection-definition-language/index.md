@@ -83,7 +83,7 @@ projection Group => GroupReadModel
     Name = name
     UpdatedAt = $eventContext.occurred
 
-  children members id userId
+  children members identified by userId
     from UserAddedToGroup key userId
       parent groupId
       Name = userName

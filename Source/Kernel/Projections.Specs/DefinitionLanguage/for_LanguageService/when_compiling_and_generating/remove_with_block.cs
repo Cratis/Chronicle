@@ -11,7 +11,7 @@ public class remove_with_block : given.a_language_service_with_schemas<given.Gro
 {
     const string Definition = """
         projection Group => GroupReadModel
-          children members id userId
+          children members identified by userId
             from UserAddedToGroup
               key userId
               parent groupId

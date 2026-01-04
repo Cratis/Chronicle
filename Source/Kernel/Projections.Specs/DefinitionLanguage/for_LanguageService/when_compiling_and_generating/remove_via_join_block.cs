@@ -11,7 +11,7 @@ public class remove_via_join_block : given.a_language_service_with_schemas<given
 {
     const string Definition = """
         projection User => UserReadModel
-          children groups id groupId
+          children groups identified by groupId
             from UserAddedToGroup
               parent userId
             join Group on groupId

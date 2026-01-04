@@ -258,7 +258,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             { label: 'key', insertText: 'key ', documentation: 'Define the projection key', detail: 'key <expression>' },
             { label: 'parent', insertText: 'parent ', documentation: 'Define parent relationship', detail: 'parent <expression>' },
             { label: 'join', insertText: 'join ', documentation: 'Join with child collection', detail: 'join <collection> on <property>' },
-            { label: 'children', insertText: 'children ', documentation: 'Define child collection operations', detail: 'children <collection> id <expression>' },
+            { label: 'children', insertText: 'children ', documentation: 'Define child collection operations', detail: 'children <collection> identified by <expression>' },
             { label: 'remove with', insertText: 'remove with ', documentation: 'Remove items based on event', detail: 'remove with <EventType>' },
             { label: 'remove via', insertText: 'remove via join on ', documentation: 'Remove items via join', detail: 'remove via join on <EventType>' },
             { label: 'no automap', insertText: 'no automap', documentation: 'Disable automatic property mapping', detail: 'no automap' },

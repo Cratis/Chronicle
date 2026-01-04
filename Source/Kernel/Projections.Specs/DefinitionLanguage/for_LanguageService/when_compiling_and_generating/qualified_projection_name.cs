@@ -21,5 +21,5 @@ public class qualified_projection_name : given.a_language_service_with_schemas<g
     void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_simulation_added_event() => _result.From.ContainsKey((EventType)"SimulationAdded").ShouldBeTrue();
-    [Fact] void should_have_event_source_id_key() => _result.From[(EventType)"SimulationAdded"].Key.Value.ShouldEqual("$eventSourceId");
+    [Fact] void should_not_have_key() => _result.From[(EventType)"SimulationAdded"].Key.IsSet().ShouldBeFalse();
 }

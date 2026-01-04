@@ -71,7 +71,7 @@ JoinBlock       = "join", Ident, "on", Ident, NL,
                     { MappingLine },
                   DEDENT ;
 
-ChildrenBlock   = "children", Ident, "id", Expr, NL,
+ChildrenBlock   = "children", Ident, "identified", "by", Expr, NL,
                   INDENT,
                     [ "no", "automap", NL ],
                     { ChildBlock },
@@ -258,7 +258,7 @@ JoinBlock = "join", Ident, "on", Ident, NL,
 Define nested collections:
 
 ```ebnf
-ChildrenBlock = "children", Ident, "id", Expr, NL,
+ChildrenBlock = "children", Ident, "identified", "by", Expr, NL,
                 INDENT,
                   [ "no", "automap", NL ],
                   { ChildBlock },
@@ -378,7 +378,7 @@ Beyond the grammar, these semantic rules apply:
 2. Properties referenced must exist on events and read models
 3. Type compatibility between expressions and target properties
 4. Numeric operations only on numeric properties
-5. `children` blocks must declare `id`
+5. `children` blocks must declare `identified by`
 6. `remove via join` requires an available join key
 7. Composite keys must contain at least one field
 8. Parent keys required in children's from and remove blocks
@@ -416,7 +416,7 @@ projection Order => OrderReadModel
     events CustomerCreated, CustomerUpdated
     CustomerName = name
 
-  children items id lineNumber
+  children items identified by lineNumber
     every
       UpdatedAt = $eventContext.occurred
 

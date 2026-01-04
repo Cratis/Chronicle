@@ -102,7 +102,7 @@ from UserRegistered key $eventSourceId
 Children must always specify an identifier:
 
 ```
-children members id userId
+children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role
@@ -173,7 +173,7 @@ from ReservationMade
 ### Children with Keys
 
 ```
-children orderLines id lineNumber
+children orderLines identified by lineNumber
   from LineItemAdded key lineNumber
     parent orderId
     Product = productName

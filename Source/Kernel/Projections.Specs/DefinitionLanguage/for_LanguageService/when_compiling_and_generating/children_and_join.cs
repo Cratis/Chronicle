@@ -9,7 +9,7 @@ public class children_and_join : given.a_language_service_with_schemas<given.Use
 {
     const string Definition = """
         projection UserGroup => UserGroupReadModel
-          children members id userId
+          children members identified by userId
             from UserAdded key userId
 
           join GroupSettings on settingsId

@@ -24,7 +24,7 @@ public class simple_projection : given.a_language_service_with_schemas<given.Use
 
     [Fact] void should_have_one_from_definition() => _result.From.Count.ShouldEqual(1);
     [Fact] void should_have_from_user_registered() => _result.From.ContainsKey("UserRegistered").ShouldBeTrue();
-    [Fact] void should_have_key_expression() => _result.From[(EventType)"UserRegistered"].Key.Value.ShouldEqual("$eventSourceId");
+    [Fact] void should_not_have_key_expression() => _result.From[(EventType)"UserRegistered"].Key.IsSet().ShouldBeFalse();
     [Fact] void should_have_one_property_mapping() => _result.From[(EventType)"UserRegistered"].Properties.Count.ShouldEqual(1);
     [Fact] void should_map_name_property() => _result.From[(EventType)"UserRegistered"].Properties[new PropertyPath("name")].ShouldEqual("name");
 }

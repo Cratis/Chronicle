@@ -228,5 +228,10 @@ public enum TokenType
     /// <summary>
     /// The keyword 'no'.
     /// </summary>
-    No = 45
+    No = 45,
+
+    /// <summary>
+    /// The keyword 'identified'.
+    /// </summary>
+    Identified = 46
 }

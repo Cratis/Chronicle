@@ -29,7 +29,8 @@ public class ChildrenBlockVisitor : IDirectiveVisitor
         if (collectionNameToken is null) return null;
         var collectionName = collectionNameToken.Value;
 
-        if (context.Expect(TokenType.Id) is null) return null;
+        if (context.Expect(TokenType.Identified) is null) return null;
+        if (context.Expect(TokenType.By) is null) return null;
 
         var identifierExpr = _expressions.Parse(context);
         if (identifierExpr is null) return null;
