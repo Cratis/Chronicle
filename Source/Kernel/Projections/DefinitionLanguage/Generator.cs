@@ -32,12 +32,11 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(1)}sequence {definition.EventSequenceId.Value}");
         }
 
-        // FromEvery block - only output if it has content, needs to exclude children when children exist,
-        // has explicit no automap directive, or if the projection has no other blocks (to ensure valid DSL with at least some content)
+        // FromEvery block - only output if it has meaningful content
+        // Don't output if it only has 'exclude children' directive without any other content
         var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Disabled;
-        var needsExcludeChildren = !definition.FromEvery.IncludeChildren && definition.Children.Count > 0;
         var hasNoOtherBlocks = definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0;
-        if (hasEveryContent || needsExcludeChildren || hasNoOtherBlocks)
+        if (hasEveryContent || hasNoOtherBlocks)
         {
             GenerateEveryBlock(sb, definition.FromEvery, 1);
         }
@@ -277,6 +276,12 @@ public class Generator : IGenerator
 
     void GeneratePropertyMapping(StringBuilder sb, PropertyPath property, string expression, int indent)
     {
+        // Skip 'id' or 'Id' property as it's implicitly set
+        if (property.Path.Equals("id", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         // Parse the expression to determine the operation type
         if (expression.StartsWith("+="))
         {
