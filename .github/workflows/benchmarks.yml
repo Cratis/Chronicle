@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
@@ -37,7 +37,22 @@ jobs:
         run: |
           cd /tmp/chronicle-server
           nohup dotnet Cratis.Chronicle.Server.dll > /tmp/chronicle.log 2>&1 &
-          sleep 10
+
+      - name: Wait for Chronicle to be ready
+        run: |
+          timeout=120
+          counter=0
+          until curl -f http://localhost:35000/health > /dev/null 2>&1; do
+            sleep 2
+            counter=$((counter + 2))
+            if [ $counter -ge $timeout ]; then
+              echo "Timeout waiting for Chronicle to be ready"
+              cat /tmp/chronicle.log
+              exit 1
+            fi
+            echo "Waiting for Chronicle... ($counter seconds)"
+          done
+          echo "Chronicle is ready!"
 
       - name: Run Benchmarks
         working-directory: ./Benchmarks/Chronicle.Benchmarks

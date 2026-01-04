@@ -31,7 +31,24 @@ public class ChronicleClientHelper : IDisposable
 
     public async Task WaitForConnection()
     {
-        await Task.Delay(1000);
+        // Attempt a simple operation to verify connection is ready
+        var retries = 5;
+        var delay = 200;
+
+        for (var i = 0; i < retries; i++)
+        {
+            try
+            {
+                await _eventStore.EventLog.GetTailSequenceNumber();
+                return;
+            }
+            catch
+            {
+                if (i == retries - 1) throw;
+                await Task.Delay(delay);
+                delay *= 2;
+            }
+        }
     }
 
     public void Dispose()

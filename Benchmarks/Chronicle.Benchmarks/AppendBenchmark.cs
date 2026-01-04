@@ -18,7 +18,8 @@ public class AppendBenchmark
     {
         _helper = new ChronicleClientHelper();
         await _helper.WaitForConnection();
-        _eventSourceId = Guid.NewGuid().ToString();
+        // Use a consistent event source ID for all iterations
+        _eventSourceId = EventSourceId.New();
     }
 
     [GlobalCleanup]
