@@ -27,6 +27,7 @@ import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
+import { SeedData } from './General/SeedData/SeedData';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -47,6 +48,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
+                { label: strings.mainMenu.general.seedData, url: 'seed-data', icon: mdIcons.MdGrain },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
@@ -73,6 +75,7 @@ export const EventStore = () => {
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
+                <Route path={'seed-data'} element={<SeedData />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />
                 <Route path={'reducers'} element={<Reducers />} />
