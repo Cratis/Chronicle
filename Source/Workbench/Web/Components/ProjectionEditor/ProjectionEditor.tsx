@@ -66,6 +66,9 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             lineNumbers: 'on',
             renderLineHighlight: 'all',
             tabSize: 2,
+            hover: {
+                above: false, // Always show hover below to prevent clipping at top
+            },
         });
 
         // Listen to content changes
