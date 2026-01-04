@@ -307,7 +307,17 @@ public abstract class JobStep<TRequest, TResult, TState>(
         // Acquire throttle slot before performing work
         if (_throttle is not null)
         {
-            await _throttle.AcquireAsync(_cancellationTokenSource.Token);
+            try
+            {
+                await _throttle.AcquireAsync(_cancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return new()
+                {
+                    Error = PerformWorkError.Cancelled
+                };
+            }
         }
 
         try
