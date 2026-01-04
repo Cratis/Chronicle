@@ -36,7 +36,7 @@ export const AddEventsDialog = () => {
 
     const handleAddRow = () => {
         const newEvent: EventRow = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             eventType: selectedEventType,
             content: '',
             isValid: false
@@ -108,6 +108,8 @@ export const AddEventsDialog = () => {
         const result = await appendMany.execute();
         if (result.isSuccess) {
             closeDialog(DialogResult.Ok);
+        } else {
+            console.error('Failed to append events:', result);
         }
     };
 
