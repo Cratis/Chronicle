@@ -25,6 +25,17 @@ export const ProjectionHelpPanel: React.FC = () => {
 
             <div style={{ marginBottom: '20px' }}>
                 <h3 style={{ color: '#4ec9b0', fontWeight: 600, marginTop: 0, marginBottom: '10px' }}>
+                    Defaults
+                </h3>
+                <div style={{ fontSize: '13px' }}>
+                    <div style={{ marginBottom: '5px' }}>• <strong>AutoMap enabled</strong> - Matching properties are automatically copied from events</div>
+                    <div style={{ marginBottom: '5px' }}>• <strong>Key defaults to $eventSourceId</strong> - No explicit key mapping needed unless using a different property</div>
+                    <div style={{ marginBottom: '5px' }}>• Use <strong style={{ color: '#569cd6' }}>no automap</strong> to disable automatic property mapping</div>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#4ec9b0', fontWeight: 600, marginTop: 0, marginBottom: '10px' }}>
                     Keywords
                 </h3>
                 <div style={{ fontSize: '13px' }}>
@@ -120,11 +131,11 @@ children Items
             <div style={{ borderBottom: '1px solid #3e3e42', marginBottom: '20px' }} />
 
             <div>
-                <a href="https://github.com/Cratis/Chronicle" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block', marginBottom: '5px' }}>
+                <a href="https://www.cratis.io/docs/Chronicle/projections" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block', marginBottom: '5px' }}>
                     Documentation
                 </a>
-                <a href="https://github.com/Cratis/Chronicle/tree/main/Documentation/projections/projection-definition-language" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block' }}>
-                    DSL Reference
+                <a href="https://www.cratis.io/docs/Chronicle/projections/projection-definition-language" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block' }}>
+                    PDL Reference
                 </a>
             </div>
         </div>
