@@ -33,8 +33,8 @@ public class Generator : IGenerator
         }
 
         // FromEvery block - only output if it has content, needs to exclude children when children exist,
-        // or if the projection has no other blocks (to ensure valid DSL with at least some content)
-        var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Enabled;
+        // has explicit no automap directive, or if the projection has no other blocks (to ensure valid DSL with at least some content)
+        var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Disabled;
         var needsExcludeChildren = !definition.FromEvery.IncludeChildren && definition.Children.Count > 0;
         var hasNoOtherBlocks = definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0;
         if (hasEveryContent || needsExcludeChildren || hasNoOtherBlocks)
@@ -82,10 +82,10 @@ public class Generator : IGenerator
     {
         sb.AppendLine($"{Indent(indent)}every");
 
-        // AutoMap directive
-        if (every.AutoMap == AutoMap.Enabled)
+        // NoAutoMap directive - only output if disabled (since enabled is now the default)
+        if (every.AutoMap == AutoMap.Disabled)
         {
-            sb.AppendLine($"{Indent(indent + 1)}automap");
+            sb.AppendLine($"{Indent(indent + 1)}no automap");
         }
 
         foreach (var kv in every.Properties)
@@ -146,10 +146,10 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
 
-        // AutoMap directive
-        if (from.AutoMap == AutoMap.Enabled)
+        // NoAutoMap directive - only output if disabled (since enabled is now the default)
+        if (from.AutoMap == AutoMap.Disabled)
         {
-            sb.AppendLine($"{Indent(indent + 1)}automap");
+            sb.AppendLine($"{Indent(indent + 1)}no automap");
         }
 
         // Property mappings
@@ -176,10 +176,10 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}key {join.Key.Value}");
         }
 
-        // AutoMap directive
-        if (join.AutoMap == AutoMap.Enabled)
+        // NoAutoMap directive - only output if disabled (since enabled is now the default)
+        if (join.AutoMap == AutoMap.Disabled)
         {
-            sb.AppendLine($"{Indent(indent + 1)}automap");
+            sb.AppendLine($"{Indent(indent + 1)}no automap");
         }
 
         foreach (var kv in join.Properties)
@@ -192,10 +192,10 @@ public class Generator : IGenerator
     {
         sb.AppendLine($"{Indent(indent)}children {collectionName.Path} id {children.IdentifiedBy.Path}");
 
-        // AutoMap directive
-        if (children.AutoMap == AutoMap.Enabled)
+        // NoAutoMap directive - only output if disabled (since enabled is now the default)
+        if (children.AutoMap == AutoMap.Disabled)
         {
-            sb.AppendLine($"{Indent(indent + 1)}automap");
+            sb.AppendLine($"{Indent(indent + 1)}no automap");
         }
 
         // FromEvery for children

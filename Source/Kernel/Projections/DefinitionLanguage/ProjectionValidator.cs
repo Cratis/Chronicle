@@ -70,6 +70,7 @@ public class ProjectionValidator(
                 case KeyDirective:
                 case CompositeKeyDirective:
                 case AutoMapDirective:
+                case NoAutoMapDirective:
                 case RemoveWithDirective:
                 case RemoveWithJoinDirective:
                     // These don't require validation at this stage

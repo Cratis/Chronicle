@@ -59,6 +59,13 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     }
 
     /// <inheritdoc/>
+    public IProjectionBuilder<TReadModel, TBuilder> NoAutoMap()
+    {
+        _autoMap = false;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public TBuilder From<TEvent>(Action<IFromBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);

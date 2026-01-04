@@ -37,7 +37,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
         INamingPolicy namingPolicy,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(namingPolicy, eventTypes, jsonSerializerOptions, false)
+        : base(namingPolicy, eventTypes, jsonSerializerOptions, true)
     {
         _identifier = identifier;
         _projectionType = projectionType;

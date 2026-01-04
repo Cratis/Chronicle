@@ -7,6 +7,11 @@
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.given;
 
+public class DefaultReadModel
+{
+    public string Name { get; set; } = string.Empty;
+}
+
 public record Simulation(string Name);
 
 public record UserReadModel(

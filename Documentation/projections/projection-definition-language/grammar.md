@@ -34,7 +34,7 @@ Projection      = "projection", Ident, "=>", TypeRef, NL,
                     { ProjDirective | Block },
                   DEDENT ;
 
-ProjDirective   = "automap", NL
+ProjDirective   = "no", "automap", NL
                 | KeyDecl
                 | CompositeKeyDecl ;
 
@@ -47,34 +47,33 @@ Block           = EveryBlock
 
 EveryBlock      = "every", NL,
                   INDENT,
+                    [ "no", "automap", NL ],
                     { MappingLine },
                     [ "exclude", "children", NL ],
                   DEDENT ;
 
 FromEventBlock  = "from", EventSpec, { ",", EventSpec },
-                  { FromEventOpt },
                   NL,
                   INDENT,
+                    [ "no", "automap", NL ],
                     [ ParentDecl ],
                     { MappingLine | KeyDecl | CompositeKeyDecl },
                   DEDENT ;
 
 EventSpec       = TypeRef, [ "key", Expr ] ;
 
-FromEventOpt    = "automap" ;
-
 KeyInline       = "key", Expr ;
 
 JoinBlock       = "join", Ident, "on", Ident, NL,
                   INDENT,
                     "events", TypeRef, { ",", TypeRef }, NL,
-                    [ "automap", NL ],
+                    [ "no", "automap", NL ],
                     { MappingLine },
                   DEDENT ;
 
 ChildrenBlock   = "children", Ident, "id", Expr, NL,
                   INDENT,
-                    [ "automap", NL ],
+                    [ "no", "automap", NL ],
                     { ChildBlock },
                   DEDENT ;
 
@@ -176,17 +175,18 @@ Projection = "projection", Ident, "=>", TypeRef, NL,
 **Example:**
 ```
 projection User => UserReadModel
-  automap
   from UserCreated
     Name = name
 ```
+
+**Note:** AutoMap is enabled by default. Use `no automap` to disable it.
 
 ### Directives
 
 Projection-level directives:
 
 ```ebnf
-ProjDirective = "automap", NL
+ProjDirective = "no", "automap", NL
               | KeyDecl
               | CompositeKeyDecl ;
 ```
@@ -211,6 +211,7 @@ Apply mappings to all events:
 ```ebnf
 EveryBlock = "every", NL,
              INDENT,
+               [ "no", "automap", NL ],
                { MappingLine },
                [ "exclude", "children", NL ],
              DEDENT ;
@@ -222,15 +223,14 @@ Handle specific events:
 
 ```ebnf
 FromEventBlock = "from", EventSpec, { ",", EventSpec },
-                 { FromEventOpt },
                  NL,
                  INDENT,
+                   [ "no", "automap", NL ],
                    [ ParentDecl ],
                    { MappingLine | KeyDecl | CompositeKeyDecl },
                  DEDENT ;
 
 EventSpec = TypeRef, [ "key", Expr ] ;
-FromEventOpt = "automap" ;
 ```
 
 ### Join Block
@@ -241,7 +241,7 @@ Enrich with joined events:
 JoinBlock = "join", Ident, "on", Ident, NL,
             INDENT,
               "events", TypeRef, { ",", TypeRef }, NL,
-              [ "automap", NL ],
+              [ "no", "automap", NL ],
               { MappingLine },
             DEDENT ;
 ```
@@ -253,7 +253,7 @@ Define nested collections:
 ```ebnf
 ChildrenBlock = "children", Ident, "id", Expr, NL,
                 INDENT,
-                  [ "automap", NL ],
+                  [ "no", "automap", NL ],
                   { ChildBlock },
                 DEDENT ;
 

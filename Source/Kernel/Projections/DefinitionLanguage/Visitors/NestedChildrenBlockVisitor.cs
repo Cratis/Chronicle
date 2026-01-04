@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 using Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 
@@ -38,7 +39,7 @@ internal sealed class NestedChildrenBlockVisitor
 
         if (context.Expect(TokenType.Indent) is null) return null;
 
-        var autoMap = false;
+        var autoMap = AutoMap.Inherit; // Default to inherit (no explicit directive)
         var childBlocks = new List<ChildBlock>();
 
         while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
@@ -46,7 +47,13 @@ internal sealed class NestedChildrenBlockVisitor
             if (context.Check(TokenType.AutoMap))
             {
                 context.Advance();
-                autoMap = true;
+                autoMap = AutoMap.Enabled;
+            }
+            else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
+            {
+                context.Advance(); // Skip 'no'
+                context.Advance(); // Skip 'automap'
+                autoMap = AutoMap.Disabled;
             }
             else
             {

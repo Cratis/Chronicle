@@ -6,6 +6,11 @@
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.given;
 
+public class DefaultEvent
+{
+    public string Name { get; set; } = string.Empty;
+}
+
 public record SimulationAdded(string Name, string? Source, string? Target);
 
 public record UserCreated(string UserId, string Name, int Age, ContactInfo ContactInfo, Address Address, string? Email, string? MiddleName, bool IsActive, double Score, string? ContactInfoEmail, string? AddressCity);

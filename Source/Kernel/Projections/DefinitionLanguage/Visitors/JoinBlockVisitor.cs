@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 using Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 
@@ -53,7 +54,7 @@ public class JoinBlockVisitor : IDirectiveVisitor
             }
         }
 
-        var autoMap = false;
+        var autoMap = AutoMap.Inherit; // Default to inherit (no explicit directive)
         var mappings = new List<MappingOperation>();
 
         while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
@@ -61,7 +62,13 @@ public class JoinBlockVisitor : IDirectiveVisitor
             if (context.Check(TokenType.AutoMap))
             {
                 context.Advance();
-                autoMap = true;
+                autoMap = AutoMap.Enabled;
+            }
+            else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
+            {
+                context.Advance(); // Skip 'no'
+                context.Advance(); // Skip 'automap'
+                autoMap = AutoMap.Disabled;
             }
             else
             {

@@ -27,6 +27,7 @@ public class Tokenizer
         { "remove", TokenType.Remove },
         { "via", TokenType.Via },
         { "automap", TokenType.AutoMap },
+        { "no", TokenType.No },
         { "exclude", TokenType.Exclude },
         { "increment", TokenType.Increment },
         { "decrement", TokenType.Decrement },

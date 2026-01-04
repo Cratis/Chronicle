@@ -20,6 +20,8 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// </summary>
 public class Compiler
 {
+    bool _hasNoAutoMapDirective;
+
     /// <summary>
     /// Gets the read model identifier from an AST Document.
     /// </summary>
@@ -80,6 +82,9 @@ public class Compiler
         }
 
         var identifier = new ProjectionId(projection.Name);
+
+        // Check if NoAutoMapDirective is present in the projection
+        _hasNoAutoMapDirective = projection.Directives.OfType<NoAutoMapDirective>().Any();
 
         // Extract event sequence ID from sequence directive, or default to Log
         var eventSequenceId = EventSequenceId.Log;
@@ -155,6 +160,9 @@ public class Compiler
             case AutoMapDirective:
                 // AutoMap is handled within OnEventBlocks
                 break;
+            case NoAutoMapDirective:
+                // NoAutoMap is tracked in _hasNoAutoMapDirective
+                break;
             case ChildrenBlock childrenBlock:
                 ProcessChildrenBlock(childrenBlock, children);
                 break;
@@ -170,6 +178,20 @@ public class Compiler
             default:
                 throw new NotSupportedException($"Directive type {directive.GetType().Name} is not yet supported");
         }
+    }
+
+    AutoMap GetAutoMapValue(AutoMap blockAutoMap)
+    {
+        // If block has explicit directive (Enabled or Disabled), use it
+        if (blockAutoMap != AutoMap.Inherit)
+        {
+            return blockAutoMap;
+        }
+
+        // Otherwise check projection-level directive
+        // If NoAutoMapDirective is present, default is Disabled (opt-out)
+        // Otherwise, default is Enabled (auto-map by default)
+        return _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled;
     }
 
     void ProcessOnEventBlock(FromEventBlock onEvent, Dictionary<EventType, FromDefinition> from)
@@ -202,7 +224,7 @@ public class Compiler
 
         from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression)
         {
-            AutoMap = onEvent.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+            AutoMap = GetAutoMapValue(onEvent.AutoMap)
         };
     }
 
@@ -234,7 +256,7 @@ public class Compiler
             childRemovedWith,
             childRemovedWithJoin)
         {
-            AutoMap = childrenBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+            AutoMap = GetAutoMapValue(childrenBlock.AutoMap)
         };
     }
 
@@ -374,7 +396,7 @@ public class Compiler
                 properties,
                 PropertyExpression.NotSet)
             {
-                AutoMap = joinBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+                AutoMap = GetAutoMapValue(joinBlock.AutoMap)
             };
         }
         else
@@ -388,7 +410,7 @@ public class Compiler
                     properties,
                     PropertyExpression.NotSet)
                 {
-                    AutoMap = joinBlock.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+                    AutoMap = GetAutoMapValue(joinBlock.AutoMap)
                 };
             }
         }
@@ -405,7 +427,7 @@ public class Compiler
 
         return new FromEveryDefinition(properties, !every.ExcludeChildren)
         {
-            AutoMap = every.AutoMap ? AutoMap.Enabled : AutoMap.Inherit
+            AutoMap = GetAutoMapValue(every.AutoMap)
         };
     }
 

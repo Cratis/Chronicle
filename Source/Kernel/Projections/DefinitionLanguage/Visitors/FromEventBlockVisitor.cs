@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 using Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 
@@ -64,13 +65,19 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         if (context.Check(TokenType.NewLine)) context.Advance();
 
         // Check for shared inline options that apply to all events
-        var autoMap = false;
+        var autoMap = AutoMap.Inherit; // Default to inherit (no explicit directive)
         while (!context.Check(TokenType.Indent) && !context.IsAtEnd)
         {
             if (context.Check(TokenType.AutoMap))
             {
                 context.Advance();
-                autoMap = true;
+                autoMap = AutoMap.Enabled;
+            }
+            else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
+            {
+                context.Advance(); // Skip 'no'
+                context.Advance(); // Skip 'automap'
+                autoMap = AutoMap.Disabled;
             }
             else
             {
@@ -118,7 +125,13 @@ public class FromEventBlockVisitor : IDirectiveVisitor
             if (context.Check(TokenType.AutoMap))
             {
                 context.Advance();
-                autoMap = true;
+                autoMap = AutoMap.Enabled;
+            }
+            else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
+            {
+                context.Advance(); // Skip 'no'
+                context.Advance(); // Skip 'automap'
+                autoMap = AutoMap.Disabled;
             }
             else if (context.Check(TokenType.Parent))
             {

@@ -2,54 +2,76 @@
 
 AutoMap automatically copies properties with matching names from the event to the read model, reducing boilerplate when property names align.
 
-## Basic Syntax
+**AutoMap is enabled by default for all projections.** To disable it, use the `no automap` directive.
 
-```
-automap
-```
+## Default Behavior
 
-## Projection-Level AutoMap
-
-Apply AutoMap to all events in the projection:
+By default, all property mappings automatically copy matching properties:
 
 ```
 projection User => UserReadModel
-  automap
-```
-
-This automatically maps all matching properties from every event to the read model.
-
-## Event-Level AutoMap
-
-Apply AutoMap to a specific event:
-
-```
-projection User => UserReadModel
-  from UserRegistered automap
+  from UserRegistered
     IsActive = true
 ```
 
-This auto-maps matching properties from `UserRegistered`, then applies the explicit `IsActive` mapping.
+This auto-maps all matching properties from `UserRegistered`, then applies the explicit `IsActive` mapping.
 
-## Join-Level AutoMap
+## Disabling AutoMap
 
-Apply AutoMap within join blocks:
+Use `no automap` to disable automatic property mapping when needed.
+
+### Projection-Level Disable
+
+Disable AutoMap for the entire projection:
+
+```
+projection User => UserReadModel
+  no automap
+
+  from UserRegistered
+    Name = name
+    Email = email
+```
+
+All properties must be mapped explicitly.
+
+### Event-Level Disable
+
+Disable AutoMap for a specific event:
+
+```
+projection User => UserReadModel
+  from UserRegistered
+    no automap
+    Name = name
+    Email = email
+
+  from UserUpdated
+    # AutoMap still enabled here
+    UpdatedAt = $eventContext.occurred
+```
+
+### Join-Level Disable
+
+Disable AutoMap within join blocks:
 
 ```
 join Group on GroupId
   events GroupCreated, GroupRenamed
-  automap
+  no automap
+  Name = name
 ```
 
-## Children-Level AutoMap
+### Children-Level Disable
 
-Apply AutoMap to children collections:
+Disable AutoMap for children collections:
 
 ```
 children members id userId
-  automap
+  no automap
 
   from UserAddedToGroup
+    UserId = userId
     Role = role
 ```
 
@@ -58,7 +80,7 @@ children members id userId
 AutoMap runs first, then explicit mappings override or add properties:
 
 ```
-from UserRegistered automap
+from UserRegistered
   IsActive = true
   CreatedAt = $eventContext.occurred
 ```
@@ -88,117 +110,127 @@ public class UserReadModel
 }
 ```
 
-With `automap`, `Name`, `Email`, and `Age` are automatically copied. `IsActive` must be set explicitly.
-
-## Multiple Levels
-
-AutoMap can be used at multiple levels:
-
-```
-projection Group => GroupReadModel
-  automap                      # Projection level
-
-  from GroupCreated
-    Description = description
-
-  join Team on TeamId
-    events TeamCreated
-    automap                    # Join level
-
-  children members id userId
-    automap                    # Children level
-
-    from UserAdded
-      Role = role
-```
+With default AutoMap, `Name`, `Email`, and `Age` are automatically copied. `IsActive` must be set explicitly.
 
 ## Scope and Precedence
 
-1. **Projection-level** AutoMap applies to all `from` events
-2. **Event-level** AutoMap applies only to that specific event
-3. **Explicit mappings** always override AutoMap values
-4. **Join-level** AutoMap applies to joined events
-5. **Children-level** AutoMap applies to child events
+1. **Projection-level** `no automap` disables AutoMap for all events
+2. **Event-level** `no automap` applies only to that specific event
+3. **Explicit mappings** always override AutoMap values when both exist
+4. **Join-level** `no automap` applies to joined events
+5. **Children-level** `no automap` applies to child events
+6. **Default is Enabled** - AutoMap works unless explicitly disabled
 
 ## Examples
 
-### Simple AutoMap
+### Default AutoMap
 
 ```
 projection Product => ProductReadModel
-  from ProductCreated automap
+  from ProductCreated
+    # Name, Price, Description auto-mapped if they exist
+    CreatedAt = $eventContext.occurred
 ```
 
-If `ProductCreated` has properties `Name`, `Price`, `Description` that match the read model, they're automatically mapped.
-
-### AutoMap with Overrides
+### Disable AutoMap Entirely
 
 ```
 projection Order => OrderReadModel
-  from OrderPlaced automap
+  no automap
+
+  from OrderPlaced
+    OrderId = orderId
+    CustomerId = customerId
+    Total = total
     Status = "Pending"
-    PlacedAt = $eventContext.occurred
 ```
 
-Matching properties are auto-mapped, then `Status` and `PlacedAt` are set explicitly.
-
-### Projection-Level with Event-Specific Mappings
+### Mixed Approach
 
 ```
 projection User => UserReadModel
-  automap
-
   from UserRegistered
+    # AutoMap enabled (default)
     IsActive = true
 
+  from UserProfileUpdated
+    no automap
+    # Must map everything explicitly
+    Name = fullName
+    Email = emailAddress
+```
+
+### Projection-Level Disable with Event-Level Override
+
+```
+projection User => UserReadModel
+  no automap
+
+  from UserRegistered
+    Name = name
+    Email = email
+
   from UserDeactivated
+    # Still disabled - no automap is inherited
     IsActive = false
     DeactivatedAt = $eventContext.occurred
 ```
 
-All matching properties from both events are auto-mapped, plus explicit mappings.
-
-### Join with AutoMap
+### Join with Disabled AutoMap
 
 ```
 projection Order => OrderReadModel
-  from OrderPlaced automap
+  from OrderPlaced
+    # AutoMap enabled
 
   join Customer on CustomerId
     events CustomerCreated, CustomerUpdated
-    automap
+    no automap
+    CustomerName = name
 ```
 
-### Children with Selective Overrides
+### Children with Selective Disable
 
 ```
 projection Group => GroupReadModel
-  from GroupCreated automap
+  from GroupCreated
+    # AutoMap enabled
 
   children members id userId
-    automap
+    no automap
 
     from UserAddedToGroup
+      UserId = userId
       Status = "Active"
 ```
 
-## When to Use AutoMap
+## When to Disable AutoMap
 
-**Use AutoMap when:**
+**Disable AutoMap when:**
+- Event and read model property names don't align
+- You need explicit control over all mappings
+- Property transformations are required
+- You want to be explicit for code clarity
+- Only a few properties actually match
+
+**Keep AutoMap (default) when:**
 - Event and read model property names align
 - You want to reduce boilerplate
 - Properties have compatible types
 - You're following naming conventions
-
-**Avoid AutoMap when:**
-- Property names differ significantly
-- You need transformations
-- Only a few properties match
-- Explicit mappings aid clarity
+- Most properties map directly
 
 ## Best Practices
 
-1. **Combine with Explicit Mappings**: Use AutoMap for bulk copying, explicit mappings for specifics
-2. **Document Assumptions**: AutoMap relies on naming conventions being consistent
-3. **Event-Level for Precision**: Apply AutoMap per event if only some events have matching properties
-4. **Projection-Level for Consistency**: Use projection-level AutoMap when all events follow the same schema
+1. **Leverage the Default**: AutoMap reduces boilerplate for most cases
+2. **Disable Selectively**: Use `no automap` only when needed
+3. **Document Assumptions**: AutoMap relies on naming conventions being consistent
+4. **Event-Level for Precision**: Apply `no automap` per event if only some events need explicit control
+5. **Explicit Overrides**: Let AutoMap handle the bulk, use explicit mappings for specifics
+
+## Migration from Explicit AutoMap
+
+If you're updating existing projections that used `automap` directive:
+- Remove all `automap` directives - they're now redundant (default behavior)
+- Add `no automap` only where you previously didn't have `automap`
+- Existing explicit mappings continue to work and override auto-mapped values

@@ -221,5 +221,10 @@ public enum TokenType
     /// <summary>
     /// Invalid token.
     /// </summary>
-    Invalid = 42
+    Invalid = 42,
+
+    /// <summary>
+    /// The keyword 'no'.
+    /// </summary>
+    No = 45
 }
