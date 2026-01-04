@@ -22,9 +22,4 @@ public class Tls
     /// Gets or inits whether TLS is disabled. Default is false (TLS enabled).
     /// </summary>
     public bool Disable { get; init; }
-
-    /// <summary>
-    /// Gets or inits the HTTP port for fetching development certificates. Default is 35001.
-    /// </summary>
-    public int DevelopmentCertificatePort { get; init; } = 35001;
 }
