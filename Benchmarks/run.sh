@@ -23,7 +23,7 @@ echo "Chronicle is ready!"
 
 echo "Building benchmarks..."
 cd Chronicle.Benchmarks
-dotnet build -c Release
+dotnet build -c Release /p:TreatWarningsAsErrors=false
 
 echo "Running benchmarks..."
 dotnet run -c Release --no-build -- --exporters json --artifacts ../results
@@ -33,3 +33,5 @@ cd ..
 docker-compose down
 
 echo "Benchmarks completed!"
+echo "Results are in: results/"
+

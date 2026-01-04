@@ -25,19 +25,33 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Run Mongo container
+      - name: Start MongoDB
         run: docker run -p 27017:27017 -d cratis/mongodb
+
+      - name: Build Chronicle Kernel
+        run: |
+          dotnet build Source/Kernel/Server/Server.csproj -c Release
+          dotnet publish Source/Kernel/Server/Server.csproj -c Release -o /tmp/chronicle-server
+
+      - name: Start Chronicle Kernel
+        run: |
+          cd /tmp/chronicle-server
+          nohup dotnet Cratis.Chronicle.Server.dll > /tmp/chronicle.log 2>&1 &
+          sleep 10
 
       - name: Run Benchmarks
         working-directory: ./Benchmarks
-        run: ./run.sh
+        run: |
+          cd Chronicle.Benchmarks
+          dotnet build -c Release /p:TreatWarningsAsErrors=false
+          dotnet run -c Release --no-build -- --exporters json --artifacts ../results
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Cratis Benchmarks
           tool: 'benchmarkdotnet'
-          output-file-path: Benchmarks/results/results.json
+          output-file-path: Benchmarks/results/BenchmarkDotNet.Artifacts/results/BenchmarkRun-001-*.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           # Show alert with commit comment on detecting possible performance regression
@@ -48,4 +62,3 @@ jobs:
           gh-pages-branch: 'main'
           skip-fetch-gh-pages: true
           benchmark-data-dir-path: 'Documentation/benchmarks'
-
