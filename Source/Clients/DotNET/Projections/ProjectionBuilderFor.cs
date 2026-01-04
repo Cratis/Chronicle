@@ -37,7 +37,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
         INamingPolicy namingPolicy,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(namingPolicy, eventTypes, jsonSerializerOptions, true)
+        : base(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Enabled)
     {
         _identifier = identifier;
         _projectionType = projectionType;

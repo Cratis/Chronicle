@@ -25,39 +25,122 @@ public class ModelBoundCodeGenerator
         var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title;
         var schema = readModelDefinition.GetSchemaForLatestGeneration();
 
-        sb.AppendLine("// Copyright (c) Cratis. All rights reserved.");
-        sb.AppendLine("// Licensed under the MIT license. See LICENSE file in the project root for full license information.");
-        sb.AppendLine();
-        sb.AppendLine("using Cratis.Chronicle.Keys;");
-        sb.AppendLine("using Cratis.Chronicle.Projections.ModelBound;");
-        sb.AppendLine();
+        sb.AppendLine("using Cratis.Chronicle.Keys;")
+          .AppendLine("using Cratis.Chronicle.Projections.ModelBound;")
+          .AppendLine();
+
+        // Add [FromEvent<>] attributes at class level for each event
+        foreach (var from in definition.From)
+        {
+            var eventTypeName = from.Key.Id.Value;
+            sb.AppendLine($"[FromEvent<{eventTypeName}>]");
+        }
+
         sb.AppendLine($"public record {readModelName}(");
 
-        // Generate properties
         var properties = new List<string>();
 
-        // Get all properties from schema
         if (schema.Properties?.Count > 0)
         {
-            var isFirst = true;
-            foreach (var prop in schema.Properties)
+            var propertyInfos = new Dictionary<string, PropertyInfo>();
+
+            // Collect all property operations from all events
+            foreach (var from in definition.From)
             {
-                var propType = GetCSharpType(prop.Value);
+                var eventTypeName = from.Key.Id.Value;
+                var fromDef = from.Value;
+
+                foreach (var prop in fromDef.Properties)
+                {
+                    var propertyName = prop.Key.Path;
+                    var expression = prop.Value;
+
+                    if (!propertyInfos.TryGetValue(propertyName, out var propInfo))
+                    {
+                        propInfo = new PropertyInfo { PropertyName = propertyName };
+                        propertyInfos[propertyName] = propInfo;
+                    }
+
+                    if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+                    {
+                        var innerExpr = expression.Substring(5, expression.Length - 6);
+                        propInfo.AddFroms.Add((eventTypeName, GetEventPropertyName(innerExpr)));
+                    }
+                    else if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+                    {
+                        var innerExpr = expression.Substring(10, expression.Length - 11);
+                        propInfo.SubtractFroms.Add((eventTypeName, GetEventPropertyName(innerExpr)));
+                    }
+                    else
+                    {
+                        propInfo.SetFroms.Add((eventTypeName, GetEventPropertyName(expression)));
+                    }
+                }
+            }
+
+            var isFirst = true;
+            foreach (var schemaProp in schema.Properties)
+            {
+                var propName = schemaProp.Key;
+                var propType = GetCSharpType(schemaProp.Value);
+                var attributes = new List<string>();
+
                 if (isFirst)
                 {
-                    properties.Add($"    [Key]");
-                    properties.Add($"    {propType} {prop.Key}");
+                    attributes.Add("[Key]");
                     isFirst = false;
                 }
-                else
+
+                if (propertyInfos.TryGetValue(propName, out var propInfo))
                 {
-                    properties.Add($"    {propType} {prop.Key}");
+                    // Only add property-level attributes for Add/Subtract operations
+                    // SetFrom is handled by [FromEvent<>] at class level with AutoMap
+                    foreach (var addFrom in propInfo.AddFroms)
+                    {
+                        if (addFrom.EventPropertyName == propName)
+                        {
+                            attributes.Add($"[AddFrom<{addFrom.EventTypeName}>]");
+                        }
+                        else
+                        {
+                            attributes.Add($"[AddFrom<{addFrom.EventTypeName}>(nameof({addFrom.EventTypeName}.{addFrom.EventPropertyName}))]");
+                        }
+                    }
+
+                    foreach (var subtractFrom in propInfo.SubtractFroms)
+                    {
+                        if (subtractFrom.EventPropertyName == propName)
+                        {
+                            attributes.Add($"[SubtractFrom<{subtractFrom.EventTypeName}>]");
+                        }
+                        else
+                        {
+                            attributes.Add($"[SubtractFrom<{subtractFrom.EventTypeName}>(nameof({subtractFrom.EventTypeName}.{subtractFrom.EventPropertyName}))]");
+                        }
+                    }
+                }
+
+                if (attributes.Count > 0)
+                {
+                    foreach (var attr in attributes)
+                    {
+                        properties.Add($"    {attr}");
+                    }
+                }
+
+                properties.Add($"    {propType} {propName}");
+
+                if (schemaProp.Key != schema.Properties.Last().Key)
+                {
+                    properties[^1] += ",";
+                    properties.Add(string.Empty);
                 }
             }
         }
 
-        sb.AppendLine(string.Join($",{Environment.NewLine}", properties));
-        sb.AppendLine(");");
+        sb.AppendJoin(Environment.NewLine, properties)
+          .AppendLine()
+          .AppendLine(");");
 
         return sb.ToString();
     }
@@ -72,5 +155,22 @@ public class ModelBoundCodeGenerator
             JsonObjectType.Boolean => "bool",
             _ => "object"
         };
+    }
+
+    static string GetEventPropertyName(string expression)
+    {
+        // Strip event source ID
+        if (expression == "$eventSourceId") return "Id";
+
+        // Event property path
+        return expression;
+    }
+
+    class PropertyInfo
+    {
+        public string PropertyName { get; set; } = string.Empty;
+        public List<(string EventTypeName, string EventPropertyName)> SetFroms { get; } = [];
+        public List<(string EventTypeName, string EventPropertyName)> AddFroms { get; } = [];
+        public List<(string EventTypeName, string EventPropertyName)> SubtractFroms { get; } = [];
     }
 }

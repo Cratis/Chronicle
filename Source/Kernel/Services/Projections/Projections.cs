@@ -318,7 +318,7 @@ internal sealed class Projections(
             {
                 var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
                 var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition);
-                
+
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },
             errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
@@ -342,7 +342,7 @@ internal sealed class Projections(
             {
                 var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
                 var code = languageService.GenerateModelBoundCode(definition, readModelDefinition);
-                
+
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },
             errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
