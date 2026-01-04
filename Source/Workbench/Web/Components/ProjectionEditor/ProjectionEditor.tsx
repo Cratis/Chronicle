@@ -13,8 +13,8 @@ import {
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionDefinitionSyntaxError } from 'Api/Projections';
 import { Button } from 'primereact/button';
-import { Sidebar } from 'primereact/sidebar';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
+import Strings from 'Strings';
 
 export interface ProjectionEditorProps {
     value: string;
@@ -98,7 +98,6 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         if (!model) return;
 
         if (errors && errors.length > 0) {
-            console.log('Setting markers for errors:', errors);
             const markers: monaco.editor.IMarkerData[] = errors.map(error => {
                 const line = model.getLineContent(error.line);
                 const endColumn = Math.max(error.column + 1, line.length);
@@ -111,39 +110,68 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     message: error.message,
                 };
             });
-            console.log('Markers:', markers);
             monaco.editor.setModelMarkers(model, 'projection-dsl', markers);
         } else {
-            console.log('Clearing markers');
             monaco.editor.setModelMarkers(model, 'projection-dsl', []);
         }
     }, [errors]);
 
     return (
-        <div style={{ position: 'relative', height, width: '100%' }}>
-            <Button
-                icon="pi pi-question-circle"
-                tooltip="Show DSL Help"
-                onClick={() => setIsHelpPanelOpen(true)}
-                className="p-button-rounded p-button-text"
-                style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    zIndex: 1000,
-                }}
-            />
-            <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+        <div style={{ position: 'relative', height, width: '100%', display: 'flex', overflow: 'hidden' }}>
+            <div style={{ flex: isHelpPanelOpen ? '1 1 auto' : '1', position: 'relative', transition: 'flex 0.3s', height: '100%' }}>
+                <Button
+                    icon="pi pi-question-circle"
+                    tooltip={Strings.components.projectionEditor.tooltips.help}
+                    tooltipOptions={{ position: 'left' }}
+                    onClick={() => {
+                        setIsHelpPanelOpen(!isHelpPanelOpen);
+                    }}
+                    className="p-button-rounded p-button-text p-button-lg"
+                    style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        zIndex: 1000,
+                    }}
+                    pt={{
+                        icon: { style: { fontSize: '1.5rem' } },
+                        root: { style: { width: '3rem', height: '3rem' } }
+                    }}
+                />
+                <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+            </div>
 
-            <Sidebar
-                visible={isHelpPanelOpen}
-                onHide={() => setIsHelpPanelOpen(false)}
-                position="right"
-                style={{ width: '500px', backgroundColor: '#1e1e1e' }}
-                header="Projection DSL Reference"
-            >
-                <ProjectionHelpPanel />
-            </Sidebar>
+            {isHelpPanelOpen && (
+                <div style={{
+                    width: '500px',
+                    height: '100%',
+                    backgroundColor: '#1e1e1e',
+                    borderLeft: '1px solid #3e3e42',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem',
+                        borderBottom: '1px solid #3e3e42',
+                        backgroundColor: '#252526'
+                    }}>
+                        <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem' }}>Projection DSL Reference</h3>
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => setIsHelpPanelOpen(false)}
+                            className="p-button-rounded p-button-text"
+                            style={{ color: '#cccccc' }}
+                        />
+                    </div>
+                    <div style={{ flex: 1, overflow: 'auto' }}>
+                        <ProjectionHelpPanel />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -359,6 +359,11 @@
         }
     },
     "components": {
+        "projectionEditor": {
+            "tooltips": {
+                "help": "Show Projection Definition Language help panel"
+            }
+        },
         "schemaEditor": {
             "columns": {
                 "property": "Property",
