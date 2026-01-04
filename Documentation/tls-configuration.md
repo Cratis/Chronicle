@@ -4,28 +4,21 @@ Chronicle supports TLS encryption for secure communication between the .NET clie
 
 ## Overview
 
-TLS is enabled by default for both the server and client. The system uses a certificate priority mechanism to determine which certificate to use:
+TLS can be enabled or disabled based on your environment needs:
 
-1. **ChronicleOptions** - Certificate path specified in configuration
-2. **Embedded Certificate** - Certificate bundled with the application
-3. **Development Mode Auto-Generated Certificate** - In-memory CA and server certificate (development builds only)
-4. **Dev Certificate** - ASP.NET Core development certificate (server fallback)
+- **Development**: TLS is disabled by default for easier local development
+- **Production**: TLS should be enabled with properly configured certificates
 
 ## Server Configuration
 
-### ChronicleOptions Properties
-
-You can configure the behavior of the Chronicle Server and TLS through properties in either through the `chronicle.json` file or through environment variables that you mount for the
-container.
-
-### The chronicle.json File
+### Configuration File (chronicle.json)
 
 ```json
 {
     "tls": {
-        "CertificatePath": "/path/to/certificate.pfx",
-        "CertificatePassword": "your-password",
-        "Disable": false   // Default is false (TLS enabled)
+        "certificatePath": "/path/to/certificate.pfx",
+        "certificatePassword": "your-password",
+        "disable": false   // Set to true to disable TLS
     }
 }
 ```
@@ -33,162 +26,188 @@ container.
 ### Environment Variables
 
 ```bash
-Cratis__Chronicle__CertificatePath=/path/to/certificate.pfx
-Cratis__Chronicle__CertificatePassword=your-password
-Cratis__Chronicle__DisableTls=false
+Cratis__Chronicle__Tls__CertificatePath=/path/to/certificate.pfx
+Cratis__Chronicle__Tls__CertificatePassword=your-password
+Cratis__Chronicle__Tls__Disable=false
 ```
+
+### Configuration Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `CertificatePath` | string | null | Path to the TLS certificate file (PFX format) |
+| `CertificatePassword` | string | null | Password for the certificate file |
+| `Disable` | bool | false | Whether to disable TLS |
 
 ## Client Configuration
 
-### ChronicleOptions Properties
-
-The client-side `ChronicleOptions` (in `Cratis.Chronicle` namespace) supports the following TLS properties:
+The client-side `ChronicleOptions` supports the following TLS properties:
 
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = new ChronicleConnectionString("localhost:35000"),
-    CertificatePath = "/path/to/certificate.pfx",
-    CertificatePassword = "your-password",
-    DisableTls = false,  // Default is false (TLS enabled)
-    ManagementPort = 8080  // Port to fetch development CA from server (default: 8080)
+    ConnectionString = "chronicle://localhost:35000",
+    Tls = new Tls
+    {
+        CertificatePath = "/path/to/certificate.pfx",
+        CertificatePassword = "your-password",
+        Disable = false  // Set to true to disable TLS
+    }
 };
 
 var client = new ChronicleClient(options);
 ```
 
-## Certificate Priority
+## Development vs Production
 
-### Server
+### Development
 
-1. **ChronicleOptions.CertificatePath** - If specified and the file exists
-2. **Embedded Certificate** - If `Certs/shared-dev.pfx` exists and is not the placeholder
-3. **Development Mode Auto-Generated Certificate** - In Debug builds with `DEVELOPMENT` symbol, an ephemeral CA and server certificate are generated at startup
-4. **Dev Certificate** - ASP.NET Core automatically uses development certificates via `UseHttps()`
-
-### Client
-
-1. **ChronicleOptions.CertificatePath** - If specified and the file exists
-2. **Embedded Certificate** - If `Certs/shared-dev.pfx` exists and is not the placeholder
-3. **Development CA Fetch** - When no certificate is configured, the client fetches the development CA from `http://<server>:<ManagementPort>/.well-known/chronicle/ca` and uses it for TLS validation
-4. **No Certificate** - Trusts development certificates and accepts localhost certificate name mismatches
-
-## Embedded Certificates
-
-### For Local Development
-
-By default, both the server and client include a placeholder certificate file at `Certs/shared-dev.pfx` containing the text "NOT-A-CERTIFICATE". This allows the applications to fall back to development certificates.
-
-**In development builds** (Development Docker Image):
-
-- The server automatically generates an ephemeral Certificate Authority (CA) and server certificate at startup
-- The CA certificate is exposed via HTTP at `http://<server>:<ManagementPort>/.well-known/chronicle/ca` (default port: 8080)
-- Clients without a configured certificate automatically fetch and trust this development CA
-- No certificate files need to be created or distributed for local development
-- The generated certificates are kept in-memory only and regenerated on each server restart
-
-This approach provides:
-
-- **Zero-config TLS** for local development
-- **No private keys** stored in the repository or Docker images
-- **Automatic trust** between development server and clients
-- **Secure by default** - TLS is always enabled even in development
-
-### For Production
-
-During the build and publish process, you can replace the placeholder certificate with a real certificate:
-
-1. Create a real `.pfx` certificate file
-2. Encode it as base64: `base64 certificate.pfx > certificate.txt`
-3. Add the base64-encoded certificate as a GitHub secret named `CHRONICLE_CERT_BASE64`
-4. Add the certificate password as a GitHub secret named `CHRONICLE_CERT_PASSWORD`
-5. The GitHub workflows will automatically inject the certificate during build
-
-## Disabling TLS
-
-To disable TLS (e.g., for local development or testing):
-
-### Server
+For local development, TLS is disabled by default in the `chronicle.json` file:
 
 ```json
 {
-  "Cratis": {
-    "Chronicle": {
-      "DisableTls": true
+    "tls": {
+        "disable": true
     }
-  }
 }
 ```
 
-### Client
+This allows for easier local development without certificate management. However, you can enable TLS for development to test TLS-related functionality. See [Local Certificate Setup](local-certificates.md) for guidance on generating and configuring development certificates.
+
+### Production
+
+In production environments, TLS should be enabled and properly configured:
+
+```json
+{
+    "tls": {
+        "certificatePath": "/app/certs/production.pfx",
+        "certificatePassword": "${CERT_PASSWORD}",
+        "disable": false
+    }
+}
+```
+
+**Important**: If TLS is enabled (`disable: false`) but no certificate is provided, the server will fail to start with an error message:
+
+```
+TLS is enabled but no certificate is configured. Please provide a certificate path in configuration or disable TLS.
+```
+
+## Certificate Requirements
+
+Chronicle requires certificates in **PFX (PKCS#12)** format. The certificate should include:
+
+- A valid private key
+- The certificate chain (if applicable)
+
+### Obtaining Certificates
+
+For production environments, obtain certificates from:
+
+- A trusted Certificate Authority (CA) like Let's Encrypt, DigiCert, etc.
+- Your organization's internal CA
+- Cloud provider certificate services (AWS Certificate Manager, Azure Key Vault, etc.)
+
+For development environments, generate self-signed certificates:
+
+- Using the [.NET CLI](local-certificates.md#option-1-using-net-cli-recommended-for-net-developers)
+- Using [OpenSSL](local-certificates.md#option-2-using-openssl)
+
+## Connection String Configuration
+
+The client can also disable TLS through the connection string:
 
 ```csharp
-var options = new ChronicleOptions
-{
-    Url = new ChronicleConnectionString("localhost:35000"),
-    DisableTls = true
-};
+var options = ChronicleOptions.FromConnectionString("chronicle://localhost:35000?disableTls=true");
 ```
 
 ## Certificate Validation
 
-The client automatically:
-- Accepts valid certificates with no errors
-- Accepts self-signed certificates that match the client certificate
-- **In development mode**: Fetches the development CA from the server and uses it to validate the TLS connection using a custom trust store
-- Accepts localhost certificates with name mismatches (for development)
+When TLS is enabled:
 
-This makes it easy to use development certificates while still providing security in production with proper certificates.
+### Server Validation
 
-## Development Mode
+The server uses the configured certificate for all HTTPS endpoints:
+- Management API (default port 8080)
+- gRPC service (default port 35000)
 
-### How It Works
+### Client Validation
 
-When running in Debug configuration (with the `DEVELOPMENT` symbol defined):
+The client validates server certificates using standard TLS validation rules:
 
-1. **Server startup**:
-   - Generates an ephemeral RSA key pair and creates a self-signed Certificate Authority (CA)
-   - Creates a server certificate signed by the CA (subject: `CN=localhost`)
-   - Configures Kestrel to use the generated server certificate for HTTPS
-   - Exposes the CA certificate (PEM format) at `/.well-known/chronicle/ca` on the configured `ManagementPort` (default: 8080)
-   - Logs: `Generated development certificate and CA for local development`
+- **Valid certificates**: Accepted without additional configuration
+- **Self-signed certificates**: Requires certificate trust configuration on the client machine
+- **Certificate name mismatches**: For development with localhost, name mismatches are accepted
 
-2. **Client connection**:
-   - If no certificate is configured, attempts to fetch the development CA from `http://<server>:<ManagementPort>/.well-known/chronicle/ca`
-   - If successful, uses the fetched CA in a custom trust store (via `X509ChainTrustMode.CustomRootTrust`)
-   - Validates the server's TLS certificate against the fetched CA during the TLS handshake
-   - Logs: `Fetching development CA from <url>`, `Fetched development CA from <url>`, `Using fetched development CA for validation`
+## Docker Deployment
 
-3. **TLS handshake**:
-   - The client builds an X509 chain using the fetched CA as a trusted root
-   - The server's certificate is validated against this chain
-   - Connection succeeds with full TLS encryption
+When running Chronicle in Docker with TLS enabled, mount the certificate file:
 
-### Benefits
+```yaml
+version: '3.8'
 
-- **No manual certificate setup** required for local development
-- **No private keys** in source control or Docker images
-- **Automatic trust** between server and client in development
-- **Secure by default** - TLS always enabled
-- **Simple Docker development** - the development image includes the auto-generated certificate logic
+services:
+  chronicle:
+    image: cratis/chronicle:latest
+    ports:
+      - "8080:8080"
+      - "35000:35000"
+    volumes:
+      - ./chronicle.json:/app/chronicle.json:ro
+      - ./certs/production.pfx:/app/certs/production.pfx:ro
+    environment:
+      - Cratis__Chronicle__Tls__CertificatePath=/app/certs/production.pfx
+      - Cratis__Chronicle__Tls__CertificatePassword=${CERT_PASSWORD}
+```
 
-### Disabling Development Mode
+## Security Best Practices
 
-In production builds (Release configuration), the `DEVELOPMENT` symbol is not defined, so:
-- The server uses the configured certificate path, embedded certificate, or ASP.NET Core dev certificate
-- The client does not attempt to fetch a development CA
-- Standard certificate validation applies
+1. **Use TLS in Production**: Always enable TLS for production deployments
+2. **Protect Certificate Passwords**: Use environment variables or secrets management
+3. **Certificate Rotation**: Implement a process for regular certificate renewal
+4. **Strong Encryption**: Use modern TLS protocols (TLS 1.2 or higher)
+5. **Secure Storage**: Protect certificate files with appropriate file permissions
+6. **Trusted CAs**: Use certificates from trusted Certificate Authorities in production
 
-## GitHub Actions Integration
+## Troubleshooting
 
-The GitHub workflows automatically inject certificates from secrets during the build process:
+### Server Fails to Start
 
-### publish.yml
-- Injects certificates for x64 and arm64 server builds
-- Injects certificates for NuGet package builds (both server and client)
+**Error**: "TLS is enabled but no certificate is configured"
 
-### pull-requests.yml
-- Injects certificates for PR builds
-- Injects certificates for NuGet package builds
+**Solution**: Either provide a certificate path in the configuration or disable TLS:
+```json
+{
+    "tls": {
+        "disable": true
+    }
+}
+```
 
-The injection uses the `CHRONICLE_CERT_BASE64` secret for the certificate content.
+### Client Connection Errors
+
+**Error**: "The remote certificate is invalid"
+
+**Solutions**:
+1. Ensure the server certificate is valid and not expired
+2. Verify the client trusts the certificate authority
+3. For development, install the self-signed certificate in the system trust store
+4. As a last resort for development only, disable TLS validation (not recommended)
+
+### Certificate Not Found
+
+**Error**: Certificate file not found at the specified path
+
+**Solutions**:
+1. Verify the file path is correct and accessible
+2. Use absolute paths to avoid working directory issues
+3. Check file permissions ensure the application can read the certificate
+4. In Docker, verify the volume mount is correctly configured
+
+## See Also
+
+- [Local Certificate Setup](local-certificates.md) - Generate and configure development certificates
+- [Production Hosting](production.md) - Production deployment guidance
+- [Configuration](configuration.md) - Complete configuration reference
+
