@@ -163,7 +163,9 @@
       <div class="small">Test coverage tracking for Chronicle</div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" 
+            integrity="sha384-/JzGyfMdUWdQvKVJJyv8mJZLTYNzwU8j6xd8jBPmB+FcYNVvMON4Cp1fLPfjDfFb" 
+            crossorigin="anonymous"></script>
     <script src="coverage-data.js"></script>
     <script id="main-script">
       'use strict';
@@ -197,7 +199,7 @@
 
           // Render footer
           document.getElementById('dl-button').onclick = () => {
-            const dataUrl = 'data:,' + JSON.stringify(data, null, 2);
+            const dataUrl = 'data:application/json,' + JSON.stringify(data, null, 2);
             const a = document.createElement('a');
             a.href = dataUrl;
             a.download = 'coverage_data.json';

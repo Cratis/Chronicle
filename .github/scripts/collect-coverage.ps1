@@ -27,7 +27,21 @@ if (Test-Path $OutputPath) {
         # Remove trailing semicolon and whitespace
         $jsonContent = $jsonContent.TrimEnd().TrimEnd(';')
         try {
-            $data = ConvertFrom-Json $jsonContent -AsHashtable
+            # Check PowerShell version for ConvertFrom-Json compatibility
+            if ($PSVersionTable.PSVersion.Major -ge 6) {
+                $data = ConvertFrom-Json $jsonContent -AsHashtable
+            } else {
+                $tempData = ConvertFrom-Json $jsonContent
+                # Convert to hashtable manually for older PowerShell versions
+                $data = @{
+                    lastUpdate = $tempData.lastUpdate
+                    repoUrl = $tempData.repoUrl
+                    entries = @{}
+                }
+                foreach ($prop in $tempData.entries.PSObject.Properties) {
+                    $data.entries[$prop.Name] = @($prop.Value)
+                }
+            }
         } catch {
             Write-Host "Warning: Could not parse existing data, starting fresh"
         }
@@ -54,7 +68,10 @@ try {
     $coverage = Get-Content $summaryFile | ConvertFrom-Json
     
     $currentDate = Get-Date -Format "yyyy-MM-dd"
-    $currentWeek = Get-Date -UFormat "%Y-W%V"
+    # Simple week calculation (week of year)
+    $dayOfYear = (Get-Date).DayOfYear
+    $weekNum = [Math]::Ceiling($dayOfYear / 7)
+    $currentWeek = "$(Get-Date -Format 'yyyy')-W$($weekNum.ToString('00'))"
     
     # Process each assembly in the coverage report
     foreach ($assembly in $coverage.coverage.assemblies) {
