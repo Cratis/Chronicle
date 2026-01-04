@@ -26,6 +26,7 @@ internal sealed class ProjectionParser
             context.ReportError("Expected 'projection'");
             return null;
         }
+        var projectionToken = context.Current;
         context.Advance();
 
         var projectionName = _typeRefs.Parse(context);
@@ -63,6 +64,10 @@ internal sealed class ProjectionParser
             }
         }
 
-        return new ProjectionNode(projectionName.Name, readModelType, directives);
+        return new ProjectionNode(projectionName.Name, readModelType, directives)
+        {
+            Line = projectionToken.Line,
+            Column = projectionToken.Column
+        };
     }
 }

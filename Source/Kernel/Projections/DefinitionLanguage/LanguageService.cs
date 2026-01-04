@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+    // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -41,7 +41,7 @@ public class LanguageService(IGenerator generator) : ILanguageService
         {
             // Handle tokenizer errors
             var errors = new CompilerErrors();
-            errors.Add(ex.Message, 0, 0);
+            errors.Add(ex.Message);
             return errors;
         }
     }
@@ -71,7 +71,7 @@ public class LanguageService(IGenerator generator) : ILanguageService
         catch (InvalidOperationException ex)
         {
             var errors = new CompilerErrors();
-            errors.Add(ex.Message, 0, 0);
+            errors.Add(ex.Message);
             return errors;
         }
     }

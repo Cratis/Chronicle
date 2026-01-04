@@ -37,7 +37,7 @@ public class ProjectionValidator(
 
         if (!_readModelLookup.TryGetValue(readModelIdentifier, out var readModelDefinition))
         {
-            errors.Add($"Read model '{readModelIdentifier}' not found", 0, 0);
+            errors.Add($"Read model '{readModelIdentifier}' not found", projection.Line, projection.Column);
             return null;
         }
 
@@ -87,7 +87,7 @@ public class ProjectionValidator(
 
         if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
         {
-            errors.Add($"Event type '{eventType}' not found", 0, 0);
+            errors.Add($"Event type '{eventType}' not found", fromEvent.Line, fromEvent.Column);
             return;
         }
 
@@ -106,20 +106,20 @@ public class ProjectionValidator(
 
         if (!readModelSchema.Properties.TryGetValue(collectionPath.Path, out var collectionProperty))
         {
-            errors.Add($"Read model property '{collectionPath.Path}' not found", 0, 0);
+            errors.Add($"Read model property '{collectionPath.Path}' not found", childrenBlock.Line, childrenBlock.Column);
             return;
         }
 
         if (!collectionProperty.Type.HasFlag(JsonObjectType.Array))
         {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", 0, 0);
+            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", childrenBlock.Line, childrenBlock.Column);
             return;
         }
 
         var itemSchema = collectionProperty.Item?.ActualSchema;
         if (itemSchema is null)
         {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", 0, 0);
+            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", childrenBlock.Line, childrenBlock.Column);
             return;
         }
 
@@ -148,20 +148,20 @@ public class ProjectionValidator(
 
         if (!itemSchema.Properties.TryGetValue(collectionPath.Path, out var collectionProperty))
         {
-            errors.Add($"Read model property '{collectionPath.Path}' not found", 0, 0);
+            errors.Add($"Read model property '{collectionPath.Path}' not found", nestedChildrenBlock.Line, nestedChildrenBlock.Column);
             return;
         }
 
         if (!collectionProperty.Type.HasFlag(JsonObjectType.Array))
         {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", 0, 0);
+            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", nestedChildrenBlock.Line, nestedChildrenBlock.Column);
             return;
         }
 
         var nestedItemSchema = collectionProperty.Item?.ActualSchema;
         if (nestedItemSchema is null)
         {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", 0, 0);
+            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", nestedChildrenBlock.Line, nestedChildrenBlock.Column);
             return;
         }
 
@@ -177,7 +177,7 @@ public class ProjectionValidator(
 
         if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
         {
-            errors.Add($"Event type '{eventType}' not found", 0, 0);
+            errors.Add($"Event type '{eventType}' not found", childOnEvent.Line, childOnEvent.Column);
             return;
         }
 
@@ -210,7 +210,7 @@ public class ProjectionValidator(
 
         if (!TryResolveProperty(targetSchema, targetPath, out var targetProperty))
         {
-            errors.Add($"Read model property '{targetPath}' not found", 0, 0);
+            errors.Add($"Read model property '{targetPath}' not found", assignment.Line, assignment.Column);
             return;
         }
 
@@ -221,14 +221,14 @@ public class ProjectionValidator(
 
             if (!TryResolveProperty(eventSchema, sourcePath, out var sourceProperty))
             {
-                errors.Add($"Event property '{sourcePath}' not found", 0, 0);
+                errors.Add($"Event property '{sourcePath}' not found", assignment.Line, assignment.Column);
                 return;
             }
 
             // Validate that types are compatible
             if (!AreTypesCompatible(targetProperty.Type, sourceProperty.Type))
             {
-                errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", 0, 0);
+                errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", assignment.Line, assignment.Column);
             }
         }
     }
@@ -289,7 +289,7 @@ public class ProjectionValidator(
 
         if (keySchema is null)
         {
-            errors.Add($"Composite key type '{typeName}' not found in read model schema", 0, 0);
+            errors.Add($"Composite key type '{typeName}' not found in read model schema", compositeKey.Line, compositeKey.Column);
             return;
         }
 
@@ -301,7 +301,7 @@ public class ProjectionValidator(
 
         if (!isObject)
         {
-            errors.Add($"Composite key type '{typeName}' must be a complex type (object) in the read model schema", 0, 0);
+            errors.Add($"Composite key type '{typeName}' must be a complex type (object) in the read model schema", compositeKey.Line, compositeKey.Column);
             return;
         }
 
@@ -311,7 +311,7 @@ public class ProjectionValidator(
             // Validate that the property exists in the composite key type schema
             if (!keySchema.Properties.ContainsKey(part.PropertyName))
             {
-                errors.Add($"Property '{part.PropertyName}' not found in composite key type '{typeName}'", 0, 0);
+                errors.Add($"Property '{part.PropertyName}' not found in composite key type '{typeName}'", part.Line, part.Column);
                 continue;
             }
 
@@ -327,10 +327,10 @@ public class ProjectionValidator(
                     // These are valid for composite keys
                     break;
                 case TemplateExpression:
-                    errors.Add("Template expressions are not supported in composite keys. Use simple expressions only.", 0, 0);
+                    errors.Add("Template expressions are not supported in composite keys. Use simple expressions only.", part.Line, part.Column);
                     continue;
                 default:
-                    errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", 0, 0);
+                    errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", part.Line, part.Column);
                     continue;
             }
 

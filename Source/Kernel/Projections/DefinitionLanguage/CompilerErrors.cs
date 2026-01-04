@@ -59,9 +59,9 @@ public class CompilerErrors
     /// Adds an error to the collection.
     /// </summary>
     /// <param name="message">The error message.</param>
-    /// <param name="line">The line number.</param>
-    /// <param name="column">The column number.</param>
-    public void Add(string message, int line, int column)
+    /// <param name="line">The line number. Defaults to 1.</param>
+    /// <param name="column">The column number. Defaults to 1.</param>
+    public void Add(string message, int line = 1, int column = 1)
     {
         _errors.Add(new CompilerError(message, line, column));
     }
