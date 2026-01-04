@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package bcl;
+
+// Represents a .NET Guid
+message Guid {
+  fixed64 lo = 1; // the first 8 bytes of the guid
+  fixed64 hi = 2; // the second 8 bytes of the guid
+}
+
+// Represents a .NET DateTime
+message DateTime {
+  sint64 value = 1; // the ticks count
+  // (default = Unspecified)
+  TimeSpanScale scale = 2;
+}
+
+// Represents a .NET TimeSpan
+message TimeSpan {
+  sint64 value = 1; // the size of the timespan
+  // (default = Days)
+  TimeSpanScale scale = 2;
+}
+
+// Represents a .NET DateTimeOffset
+message DateTimeOffset {
+  sint64 value = 1; // the ticks count
+  sint32 offset = 2; // the offset in minutes
+  // (default = Days)
+  TimeSpanScale scale = 3;
+}
+
+// Represents a .NET decimal
+message Decimal {
+  uint64 lo = 1; // the low 64 bits of the decimal
+  uint32 hi = 2; // the high 32 bits of the decimal
+  uint32 signScale = 3; // the sign and scale (bits 0-15 = scale, bit 31 = sign)
+}
+
+// TimeSpan scale
+enum TimeSpanScale {
+  DAYS = 0;
+  HOURS = 1;
+  MINUTES = 2;
+  SECONDS = 3;
+  MILLISECONDS = 4;
+  TICKS = 5;
+  MINMAX = 15;
+}

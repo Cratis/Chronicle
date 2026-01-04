@@ -30,7 +30,7 @@
     },
     "scripts": {
         "clean": "rm -rf dist",
-        "copy-proto": "mkdir -p proto && cp ../../Kernel/Protobuf/*.proto proto/",
+        "copy-proto": "mkdir -p proto && cp ../../Kernel/Protobuf/*.proto proto/ && cp -r ../../Kernel/Protobuf/protobuf-net proto/",
         "build": "yarn copy-proto && tsc -b && rollup -c ./rollup.config.mjs",
         "prepare": "yarn clean && yarn build"
     },

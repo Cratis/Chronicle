@@ -36,7 +36,8 @@ export function loadChronicleProtos() {
             longs: String,
             enums: String,
             defaults: true,
-            oneofs: true
+            oneofs: true,
+            includeDirs: [protoPath]
         }
     );
 
@@ -72,7 +73,8 @@ export function loadChronicleProtosFromPath(protoPath: string) {
             longs: String,
             enums: String,
             defaults: true,
-            oneofs: true
+            oneofs: true,
+            includeDirs: [protoPath]
         }
     );
 
