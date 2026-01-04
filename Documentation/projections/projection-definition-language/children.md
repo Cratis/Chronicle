@@ -76,6 +76,25 @@ children members id userId
     Role = role
 ```
 
+## Every Block in Children
+
+Apply mappings to all events within a children collection using the `every` block:
+
+```
+children members id userId
+  from UserAddedToGroup key userId
+    parent groupId
+    Role = role
+
+  every
+    Name = userName
+    UpdatedAt = $eventContext.occurred
+```
+
+The `every` block within children works similarly to the top-level every block but applies only to events within that specific children collection. It's useful for mappings that should apply to all events affecting child items.
+
+**Note:** The `exclude children` directive is not applicable within child every blocks as they already operate in a children context.
+
 ## Joins in Children
 
 Children can have joins:
@@ -185,6 +204,9 @@ projection Project => ProjectReadModel
     Status = "Active"
 
   children tasks id taskId
+    every
+      LastModified = $eventContext.occurred
+
     from TaskAdded key taskId
       parent projectId
       Title = title

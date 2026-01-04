@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
+- name: Architecture
+  href: architecture.md
 - name: Immediate Projections
   href: immediate-projections.md
 - name: Eventual Consistency

@@ -77,11 +77,18 @@ ChildrenBlock   = "children", Ident, "id", Expr, NL,
                     { ChildBlock },
                   DEDENT ;
 
-ChildBlock      = FromEventBlock
+ChildBlock      = ChildEveryBlock
+                | FromEventBlock
                 | JoinBlock
                 | RemoveWithBlock
                 | RemoveWithJoinBlock
                 | ChildrenBlock ;
+
+ChildEveryBlock = "every", NL,
+                  INDENT,
+                    [ "no", "automap", NL ],
+                    { MappingLine },
+                  DEDENT ;
 
 RemoveWithBlock = "remove", "with", TypeRef, [ KeyInline ], NL,
                   [ INDENT,
@@ -257,12 +264,21 @@ ChildrenBlock = "children", Ident, "id", Expr, NL,
                   { ChildBlock },
                 DEDENT ;
 
-ChildBlock = FromEventBlock
+ChildBlock = ChildEveryBlock
+           | FromEventBlock
            | JoinBlock
            | RemoveWithBlock
            | RemoveWithJoinBlock
            | ChildrenBlock ;
+
+ChildEveryBlock = "every", NL,
+                  INDENT,
+                    [ "no", "automap", NL ],
+                    { MappingLine },
+                  DEDENT ;
 ```
+
+**Note:** `ChildEveryBlock` applies mappings to all events within the children collection. Unlike the top-level `EveryBlock`, it does not support the `exclude children` directive as it operates within a children context.
 
 ### Removal Blocks
 
@@ -401,6 +417,9 @@ projection Order => OrderReadModel
     CustomerName = name
 
   children items id lineNumber
+    every
+      UpdatedAt = $eventContext.occurred
+
     from LineItemAdded key lineNumber
       parent orderId
       ProductId = productId
@@ -415,10 +434,12 @@ projection Order => OrderReadModel
 
 This projection uses:
 - Projection declaration
-- Every block with exclude children
+- Every block with exclude children at the projection level
 - Multiple from blocks with keys
 - Join block with multiple events
-- Children block with nested from and remove
+- Children block with:
+  - Child every block for common mappings across all child events
+  - Nested from and remove blocks
 - Projection-level removal
 
 ## See Also
