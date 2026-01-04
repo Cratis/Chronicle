@@ -99,12 +99,12 @@ jobs:
 
       - name: Collect coverage statistics
         run: |
-          pwsh .github/scripts/collect-coverage.ps1 \
-            -CoverageReportPath "./coverage-reports" \
-            -OutputPath "./Documentation/statistics/coverage-data.js" \
-            -Version "${{ needs.release.outputs.version }}" \
-            -CommitSha "${{ github.sha }}" \
-            -CommitMessage "${{ github.event.head_commit.message }}"
+          .github/scripts/collect-coverage.sh \
+            "./coverage-reports" \
+            "./Documentation/statistics/coverage-data.js" \
+            "${{ needs.release.outputs.version }}" \
+            "${{ github.sha }}" \
+            "${{ github.event.head_commit.message }}"
 
       - name: Commit coverage statistics
         run: |
