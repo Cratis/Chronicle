@@ -102,19 +102,6 @@ jobs:
         env:
           CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
 
-      - name: Inject certificate for development x64 if available
-        working-directory: ./Source/Kernel/Server/out/development/x64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development x64 build"
-          else
-            echo "No certificate secret found, using placeholder"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
@@ -157,19 +144,6 @@ jobs:
           fi
         env:
           CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Inject certificate for development arm64 if available
-        working-directory: ./Source/Kernel/Server/out/development/arm64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development arm64 build"
-          else
-            echo "No certificate secret found, using placeholder"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -272,121 +246,6 @@ jobs:
         with:
           path: ${{ env.NUGET_OUTPUT }}
           key: ${{ env.DOTNET_NUGET_CACHE }}
-
-  dotnet-x64-development:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [release]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        id: dotnet-x64-development-output
-        with:
-          path: ./Source/Kernel/Server/out/development/x64
-          key: ${{ env.DOTNET_X64_CACHE }}-development
-
-      - name: Build development x64 Kernel (DEVELOPMENT symbol)
-        working-directory: ./Source/Kernel/Server
-        run: |
-          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/development/x64
-
-      - name: Inject certificate for development x64 if available
-        working-directory: ./Source/Kernel/Server/out/development/x64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development x64 build"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Upload development outputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-development-out
-          path: ./Source/Kernel/Server/out/development
-
-  dotnet-arm64-development:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-24.04-arm
-    needs: [release]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        id: dotnet-arm64-development-output
-        with:
-          path: ./Source/Kernel/Server/out/development/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}-development
-
-      - name: Build development arm64 Kernel (DEVELOPMENT symbol)
-        working-directory: ./Source/Kernel/Server
-        run: |
-          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/development/arm64
-
-      - name: Inject certificate for development arm64 if available
-        working-directory: ./Source/Kernel/Server/out/development/arm64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development arm64 build"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Upload development outputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-development-out
-          path: ./Source/Kernel/Server/out/development
-
-  publish-nuget-packages:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [release, dotnet]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: actions/cache@v3
-        id: nuget-packages-output
-        with:
-          path: ${{ env.NUGET_OUTPUT }}
-          key: ${{ env.DOTNET_NUGET_CACHE }}
-          fail-on-cache-miss: true
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - name: Push NuGet packages
-        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
@@ -507,84 +366,4 @@ jobs:
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
-  publish-docker-development:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [dotnet-arm64, dotnet-x64, workbench, release]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: actions/cache@v3
-        id: dotnet-x64-output
-        with:
-          path: ./Source/Kernel/Server/out/x64
-          key: ${{ env.DOTNET_X64_CACHE }}
-          fail-on-cache-miss: true
-
-      - uses: actions/cache@v3
-        id: dotnet-arm64-output
-        with:
-          path: ./Source/Kernel/Server/out/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}
-          fail-on-cache-miss: true
-
-      - uses: actions/cache@v3
-        id: workbench-output
-        with:
-          path: ./Source/Workbench/Web/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
-        with:
-          platforms: all
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Prepare Docker tags
-        id: docker-tags
-        run: |
-          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}-development"
-          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
-            TAGS="${TAGS}\ncratis/chronicle:latest-development"
-          fi
-          echo "tags<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$TAGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Build Development Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Development/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.docker-tags.outputs.tags }}
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Trigger Documentation Build
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.PAT_DOCUMENTATION }}
-          repository: cratis/documentation
-          event-type: build-docs
-
-      - name: Trigger Dependency Updates on Sample Repository
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.PAT_DOCUMENTATION }}
-          repository: cratis/samples
-          event-type: update-dependencies
 
