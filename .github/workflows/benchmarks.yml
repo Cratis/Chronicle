@@ -40,18 +40,23 @@ jobs:
           sleep 10
 
       - name: Run Benchmarks
-        working-directory: ./Benchmarks
+        working-directory: ./Benchmarks/Chronicle.Benchmarks
         run: |
-          cd Chronicle.Benchmarks
           dotnet build -c Release /p:TreatWarningsAsErrors=false
-          dotnet run -c Release --no-build -- --exporters json --artifacts ../results
+          dotnet run -c Release --no-build -- --exporters json
+
+      - name: Find and Copy Results
+        run: |
+          mkdir -p Benchmarks/results
+          find Benchmarks/Chronicle.Benchmarks/BenchmarkDotNet.Artifacts -name "*.json" -type f -exec cp {} Benchmarks/results/ \;
+          ls -la Benchmarks/results/
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Cratis Benchmarks
           tool: 'benchmarkdotnet'
-          output-file-path: Benchmarks/results/BenchmarkDotNet.Artifacts/results/BenchmarkRun-001-*.json
+          output-file-path: Benchmarks/results/*.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           # Show alert with commit comment on detecting possible performance regression

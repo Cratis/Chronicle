@@ -34,4 +34,3 @@ docker-compose down
 
 echo "Benchmarks completed!"
 echo "Results are in: results/"
-
