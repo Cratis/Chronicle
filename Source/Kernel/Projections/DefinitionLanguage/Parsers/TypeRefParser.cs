@@ -31,6 +31,10 @@ public class TypeRefParser
             parts.Add(nextToken.Value);
         }
 
-        return new TypeRef(string.Join('.', parts));
+        return new TypeRef(string.Join('.', parts))
+        {
+            Line = identifierToken.Line,
+            Column = identifierToken.Column
+        };
     }
 }

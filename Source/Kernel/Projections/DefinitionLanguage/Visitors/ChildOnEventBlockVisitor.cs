@@ -28,6 +28,7 @@ internal sealed class ChildOnEventBlockVisitor
             return null;
         }
 
+        var fromToken = context.Current;
         context.Advance(); // Skip 'from'
 
         var eventType = _typeRefs.Parse(context);
@@ -48,7 +49,11 @@ internal sealed class ChildOnEventBlockVisitor
         // If no indent, this block has no body (everything was inline)
         if (!context.Check(TokenType.Indent))
         {
-            return new ChildOnEventBlock(eventType, key, null, null, []);
+            return new ChildOnEventBlock(eventType, key, null, null, [])
+            {
+                Line = fromToken.Line,
+                Column = fromToken.Column
+            };
         }
 
         if (context.Expect(TokenType.Indent) is null) return null;
@@ -103,6 +108,10 @@ internal sealed class ChildOnEventBlockVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new ChildOnEventBlock(eventType, key, compositeKey, parentKey, mappings);
+        return new ChildOnEventBlock(eventType, key, compositeKey, parentKey, mappings)
+        {
+            Line = fromToken.Line,
+            Column = fromToken.Column
+        };
     }
 }

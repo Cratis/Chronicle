@@ -26,6 +26,7 @@ internal sealed class NestedChildrenBlockVisitor
             return null;
         }
 
+        var childrenToken = context.Current;
         context.Advance(); // Skip 'children'
 
         var collectionNameToken = context.Expect(TokenType.Identifier);
@@ -66,7 +67,11 @@ internal sealed class NestedChildrenBlockVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new NestedChildrenBlock(collectionName, identifierExpr, autoMap, childBlocks);
+        return new NestedChildrenBlock(collectionName, identifierExpr, autoMap, childBlocks)
+        {
+            Line = childrenToken.Line,
+            Column = childrenToken.Column
+        };
     }
 
     ChildBlock? ParseNestedChildBlock(IParsingContext context)

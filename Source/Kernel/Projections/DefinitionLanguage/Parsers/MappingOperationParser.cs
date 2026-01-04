@@ -22,30 +22,46 @@ public class MappingOperationParser
     {
         if (context.Check(TokenType.Increment))
         {
+            var token = context.Current;
             context.Advance();
             var propToken = context.Expect(TokenType.Identifier);
             if (propToken is null) return null;
-            return new IncrementOperation(propToken.Value);
+            return new IncrementOperation(propToken.Value)
+            {
+                Line = token.Line,
+                Column = token.Column
+            };
         }
 
         if (context.Check(TokenType.Decrement))
         {
+            var token = context.Current;
             context.Advance();
             var propToken = context.Expect(TokenType.Identifier);
             if (propToken is null) return null;
-            return new DecrementOperation(propToken.Value);
+            return new DecrementOperation(propToken.Value)
+            {
+                Line = token.Line,
+                Column = token.Column
+            };
         }
 
         if (context.Check(TokenType.Count))
         {
+            var token = context.Current;
             context.Advance();
             var propToken = context.Expect(TokenType.Identifier);
             if (propToken is null) return null;
-            return new CountOperation(propToken.Value);
+            return new CountOperation(propToken.Value)
+            {
+                Line = token.Line,
+                Column = token.Column
+            };
         }
 
         if (context.Check(TokenType.Add))
         {
+            var token = context.Current;
             context.Advance();
             var propToken = context.Expect(TokenType.Identifier);
             if (propToken is null) return null;
@@ -54,11 +70,16 @@ public class MappingOperationParser
 
             var value = _expressions.Parse(context);
             if (value is null) return null;
-            return new AddOperation(propToken.Value, value);
+            return new AddOperation(propToken.Value, value)
+            {
+                Line = token.Line,
+                Column = token.Column
+            };
         }
 
         if (context.Check(TokenType.Subtract))
         {
+            var token = context.Current;
             context.Advance();
             var propToken = context.Expect(TokenType.Identifier);
             if (propToken is null) return null;
@@ -67,7 +88,11 @@ public class MappingOperationParser
 
             var value = _expressions.Parse(context);
             if (value is null) return null;
-            return new SubtractOperation(propToken.Value, value);
+            return new SubtractOperation(propToken.Value, value)
+            {
+                Line = token.Line,
+                Column = token.Column
+            };
         }
 
         // Assignment
@@ -80,7 +105,11 @@ public class MappingOperationParser
 
             var value = _expressions.Parse(context);
             if (value is null) return null;
-            return new AssignmentOperation(propNameToken.Value, value);
+            return new AssignmentOperation(propNameToken.Value, value)
+            {
+                Line = propNameToken.Line,
+                Column = propNameToken.Column
+            };
         }
 
         context.ReportError("Expected mapping operation");

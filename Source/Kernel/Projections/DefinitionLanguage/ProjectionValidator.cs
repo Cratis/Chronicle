@@ -22,7 +22,7 @@ public class ProjectionValidator(
     IEnumerable<ReadModelDefinition> readModelDefinitions,
     IEnumerable<EventTypeSchema> eventTypeSchemas)
 {
-    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.ToDictionary(_ => _.Identifier);
+    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.ToDictionary(_ => (ReadModelIdentifier)(_.GetSchemaForLatestGeneration().Title ?? _.Identifier));
     readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
 
     /// <summary>
@@ -37,7 +37,7 @@ public class ProjectionValidator(
 
         if (!_readModelLookup.TryGetValue(readModelIdentifier, out var readModelDefinition))
         {
-            errors.Add($"Read model '{readModelIdentifier}' not found", projection.Line, projection.Column);
+            errors.Add($"Read model '{readModelIdentifier}' not found", projection.ReadModelType.Line, projection.ReadModelType.Column);
             return null;
         }
 
@@ -45,6 +45,15 @@ public class ProjectionValidator(
 
         ValidateDirectives(projection.Directives, readModelSchema, errors);
         return readModelSchema;
+    }
+
+    static string LowercaseFirstLetter(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+        return char.ToLowerInvariant(value[0]) + value[1..];
     }
 
     void ValidateDirectives(IReadOnlyList<ProjectionDirective> directives, JsonSchema readModelSchema, CompilerErrors errors)
@@ -277,6 +286,7 @@ public class ProjectionValidator(
         {
             keySchema = definedType;
         }
+
         // If not in definitions, check if it's a property in the read model (camelCase)
         else
         {
@@ -367,14 +377,5 @@ public class ProjectionValidator(
         // Allow numeric conversions
         var numericTypesForNonNullable = new[] { JsonObjectType.Integer, JsonObjectType.Number };
         return numericTypesForNonNullable.Contains(targetType) && numericTypesForNonNullable.Contains(sourceType);
-    }
-
-    static string LowercaseFirstLetter(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return value;
-        }
-        return char.ToLowerInvariant(value[0]) + value[1..];
     }
 }

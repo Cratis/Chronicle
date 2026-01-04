@@ -21,6 +21,7 @@ internal sealed class KeyDirectiveParser
     /// <returns>The parsed projection directive, or null if parsing failed.</returns>
     public ProjectionDirective? Parse(IParsingContext context)
     {
+        var keyToken = context.Current;
         context.Advance(); // Skip 'key'
 
         // Check if next token is an identifier followed by indent (composite key with type name)
@@ -48,10 +49,18 @@ internal sealed class KeyDirectiveParser
 
             context.Expect(TokenType.Dedent);
 
-            return new CompositeKeyDirective(typeName, parts);
+            return new CompositeKeyDirective(typeName, parts)
+            {
+                Line = keyToken.Line,
+                Column = keyToken.Column
+            };
         }
 
         var keyExpr = _expressions.Parse(context);
-        return keyExpr is not null ? new KeyDirective(keyExpr) : null;
+        return keyExpr is not null ? new KeyDirective(keyExpr)
+        {
+            Line = keyToken.Line,
+            Column = keyToken.Column
+        } : null;
     }
 }

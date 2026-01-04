@@ -22,6 +22,7 @@ public class ChildrenBlockVisitor : IDirectiveVisitor
             return null;
         }
 
+        var childrenToken = context.Current;
         context.Advance(); // Skip 'children'
 
         var collectionNameToken = context.Expect(TokenType.Identifier);
@@ -62,7 +63,11 @@ public class ChildrenBlockVisitor : IDirectiveVisitor
         }
 
         context.Expect(TokenType.Dedent);
-        return new ChildrenBlock(collectionName, identifierExpr, autoMap, childBlocks);
+        return new ChildrenBlock(collectionName, identifierExpr, autoMap, childBlocks)
+        {
+            Line = childrenToken.Line,
+            Column = childrenToken.Column
+        };
     }
 
     ChildBlock? ParseChildBlock(IParsingContext context)

@@ -25,6 +25,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
             return null;
         }
 
+        var fromToken = context.Current;
         context.Advance(); // Skip 'from'
 
         // Parse multiple comma-separated events on same line
@@ -179,7 +180,11 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         {
             var (eventType, inlineKey) = eventSpecs[0];
             var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
-            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings);
+            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings)
+            {
+                Line = fromToken.Line,
+                Column = fromToken.Column
+            };
         }
 
         // Multiple events - create a MultiFromEventBlock
@@ -189,9 +194,17 @@ public class FromEventBlockVisitor : IDirectiveVisitor
 
             // Use inline key if provided, otherwise fall back to block-level key/compositeKey
             var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
-            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings);
+            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings)
+            {
+                Line = fromToken.Line,
+                Column = fromToken.Column
+            };
         });
 
-        return new MultiFromEventBlock(blocks);
+        return new MultiFromEventBlock(blocks)
+        {
+            Line = fromToken.Line,
+            Column = fromToken.Column
+        };
     }
 }
