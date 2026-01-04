@@ -202,7 +202,7 @@ services:
 **Solutions**:
 1. Verify the file path is correct and accessible
 2. Use absolute paths to avoid working directory issues
-3. Check file permissions ensure the application can read the certificate
+3. Check file permissions to ensure the application can read the certificate
 4. In Docker, verify the volume mount is correctly configured
 
 ## See Also
