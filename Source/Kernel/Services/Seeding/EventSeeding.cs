@@ -56,4 +56,44 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             await grain.Seed(entries);
         }
     }
+
+    /// <inheritdoc/>
+    public async Task<SeedDataResponse> GetGlobalSeedData(GetSeedDataRequest request, CallContext context = default)
+    {
+        var key = EventSeedingKey.ForGlobal(request.EventStore);
+        var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
+        var entries = await grain.GetSeededEvents();
+
+        return new SeedDataResponse
+        {
+            Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+            {
+                EventSourceId = e.EventSourceId.Value,
+                EventTypeId = e.EventTypeId.Value,
+                Content = e.Content,
+                IsGlobal = e.IsGlobal,
+                TargetNamespace = e.TargetNamespace.Value
+            }).ToList()
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<SeedDataResponse> GetNamespaceSeedData(GetSeedDataRequest request, CallContext context = default)
+    {
+        var key = EventSeedingKey.ForNamespace(request.EventStore, request.Namespace);
+        var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
+        var entries = await grain.GetSeededEvents();
+
+        return new SeedDataResponse
+        {
+            Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+            {
+                EventSourceId = e.EventSourceId.Value,
+                EventTypeId = e.EventTypeId.Value,
+                Content = e.Content,
+                IsGlobal = e.IsGlobal,
+                TargetNamespace = e.TargetNamespace.Value
+            }).ToList()
+        };
+    }
 }
