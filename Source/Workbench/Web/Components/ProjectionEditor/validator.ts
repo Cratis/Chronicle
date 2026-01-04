@@ -51,7 +51,7 @@ export class ProjectionDslValidator {
             return markers;
         }
 
-        const [, projectionName, readModelName] = projectionMatch;
+        const [, , readModelName] = projectionMatch;
 
         // Validate read model exists in schemas
         if (this.readModelSchemas.length > 0) {
@@ -65,13 +65,38 @@ export class ProjectionDslValidator {
         // Get the active read model schema for property validation
         const activeSchema = this.readModelSchemas.find((s) => this.getSchemaName(s) === readModelName);
 
+        // Validate read model has an identifier property
+        if (activeSchema?.properties) {
+            const hasId = activeSchema.properties['id'] || activeSchema.properties['Id'];
+            if (!hasId) {
+                const col = firstLine.indexOf(readModelName) + 1;
+                markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' should have an 'id' or 'Id' property to serve as identifier`));
+            }
+        }
+
         // Validate subsequent lines
+        const contextStack: JsonSchema[] = [activeSchema!];
+        const indentStack: number[] = [0]; // Track indentation levels for context
+        let lastIndent = 0;
+
         for (let i = 1; i < lines.length; i++) {
             const lineNumber = i + 1;
             const line = lines[i];
             const trimmed = line.trim();
 
             if (!trimmed || trimmed.startsWith('#')) continue;
+
+            // Calculate current indentation
+            const currentIndent = line.search(/\S/);
+
+            // Pop context when dedenting (exiting a children block)
+            while (currentIndent < lastIndent && indentStack.length > 1) {
+                const poppedIndent = indentStack.pop();
+                if (poppedIndent !== undefined && currentIndent < poppedIndent) {
+                    contextStack.pop();
+                }
+            }
+            lastIndent = currentIndent;
 
             // Validate event types in from/every blocks
             const fromMatch = trimmed.match(/^from\s+(\w+)/);
@@ -104,45 +129,68 @@ export class ProjectionDslValidator {
 
             // Validate property assignments
             const assignmentMatch = trimmed.match(/^(\w+)\s*=\s*(.+)$/);
-            if (assignmentMatch && activeSchema?.properties) {
-                const [, propertyName] = assignmentMatch;
-                if (!activeSchema.properties[propertyName]) {
-                    const col = line.indexOf(propertyName) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' not found in read model '${readModelName}'`));
+            if (assignmentMatch) {
+                const currentSchema = contextStack[contextStack.length - 1];
+                if (currentSchema?.properties) {
+                    const [, propertyName] = assignmentMatch;
+                    if (!currentSchema.properties[propertyName]) {
+                        const col = line.indexOf(propertyName) + 1;
+                        const schemaName = this.getSchemaName(currentSchema) || 'current schema';
+                        markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' not found in ${schemaName}`));
+                    }
                 }
             }
 
             // Validate increment/decrement/count targets
             const numericOpMatch = trimmed.match(/^(?:increment|decrement|count)\s+(\w+)$/);
-            if (numericOpMatch && activeSchema?.properties) {
-                const [, propertyName] = numericOpMatch;
-                if (!activeSchema.properties[propertyName]) {
-                    const col = line.indexOf(propertyName) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' not found in read model '${readModelName}'`));
+            if (numericOpMatch) {
+                const currentSchema = contextStack[contextStack.length - 1];
+                if (currentSchema?.properties) {
+                    const [, propertyName] = numericOpMatch;
+                    if (!currentSchema.properties[propertyName]) {
+                        const col = line.indexOf(propertyName) + 1;
+                        const schemaName = this.getSchemaName(currentSchema) || 'current schema';
+                        markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' not found in ${schemaName}`));
+                    }
                 }
             }
 
             // Validate add/subtract targets
             const addSubMatch = trimmed.match(/^(?:add|subtract)\s+(\w+)\s+by\s+/);
-            if (addSubMatch && activeSchema?.properties) {
-                const [, propertyName] = addSubMatch;
-                if (!activeSchema.properties[propertyName]) {
-                    const col = line.indexOf(propertyName) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' not found in read model '${readModelName}'`));
+            if (addSubMatch) {
+                const currentSchema = contextStack[contextStack.length - 1];
+                if (currentSchema?.properties) {
+                    const [, propertyName] = addSubMatch;
+                    if (!currentSchema.properties[propertyName]) {
+                        const col = line.indexOf(propertyName) + 1;
+                        const schemaName = this.getSchemaName(currentSchema) || 'current schema';
+                        markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' not found in ${schemaName}`));
+                    }
                 }
             }
 
             // Validate children references
             const childrenMatch = trimmed.match(/^children\s+(\w+)\s+id\s+/);
-            if (childrenMatch && activeSchema?.properties) {
-                const [, propertyName] = childrenMatch;
-                const prop = activeSchema.properties[propertyName];
-                if (!prop) {
-                    const col = line.indexOf(propertyName) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Collection property '${propertyName}' not found in read model '${readModelName}'`));
-                } else if (prop.type !== 'array' && !prop.items) {
-                    const col = line.indexOf(propertyName) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' is not a collection (array) type`));
+            if (childrenMatch) {
+                const currentSchema = contextStack[contextStack.length - 1];
+                if (currentSchema?.properties) {
+                    const [, propertyName] = childrenMatch;
+                    const prop = currentSchema.properties[propertyName];
+                    if (!prop) {
+                        const col = line.indexOf(propertyName) + 1;
+                        const schemaName = this.getSchemaName(currentSchema) || 'current schema';
+                        markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Collection property '${propertyName}' not found in ${schemaName}`));
+                    } else if (prop.type !== 'array' && !prop.items) {
+                        const col = line.indexOf(propertyName) + 1;
+                        markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' is not a collection (array) type`));
+                    } else {
+                        // Push child schema onto context stack for validating nested properties
+                        const childSchema = prop.items || (prop as any).item;
+                        if (childSchema) {
+                            contextStack.push(childSchema);
+                            indentStack.push(currentIndent);
+                        }
+                    }
                 }
             }
 
@@ -170,7 +218,7 @@ export class ProjectionDslValidator {
             if (keyMatch && activeSchema) {
                 const [, keyName] = keyMatch;
                 // Check if it's a composite key type (should exist in definitions or as a property)
-                const isInDefinitions = activeSchema.definitions && activeSchema.definitions[keyName];
+                const isInDefinitions = (activeSchema as any).definitions && (activeSchema as any).definitions[keyName];
                 const isProperty = activeSchema.properties && activeSchema.properties[keyName];
 
                 if (!isInDefinitions && !isProperty && !this.isBuiltInExpression(keyName)) {
