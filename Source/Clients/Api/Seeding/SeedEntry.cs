@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Api.Seeding;
 /// <param name="IsGlobal">Whether this seed data is global (applies to all namespaces).</param>
 /// <param name="TargetNamespace">The specific namespace this seed data applies to, if not global.</param>
 [ReadModel]
-public record SeedDataEntry(
+public record SeedEntry(
     string EventSourceId,
     string EventTypeId,
     string Content,
@@ -27,14 +27,14 @@ public record SeedDataEntry(
     /// <param name="eventSeeding">The event seeding contract.</param>
     /// <param name="eventStore">The event store name.</param>
     /// <returns>Collection of global seed data entries.</returns>
-    public static async Task<IEnumerable<SeedDataEntry>> AllGlobalSeedData(IEventSeeding eventSeeding, string eventStore)
+    public static async Task<IEnumerable<SeedEntry>> AllGlobalSeedEntries(IEventSeeding eventSeeding, string eventStore)
     {
         var response = await eventSeeding.GetGlobalSeedData(new GetSeedDataRequest
         {
             EventStore = eventStore
         });
 
-        return response.Entries.Select(e => new SeedDataEntry(
+        return response.Entries.Select(e => new SeedEntry(
             e.EventSourceId,
             e.EventTypeId,
             e.Content,
@@ -49,7 +49,7 @@ public record SeedDataEntry(
     /// <param name="eventStore">The event store name.</param>
     /// <param name="namespace">The namespace name.</param>
     /// <returns>Collection of namespace-specific seed data entries.</returns>
-    public static async Task<IEnumerable<SeedDataEntry>> AllSeedDataForNamespace(IEventSeeding eventSeeding, string eventStore, string @namespace)
+    public static async Task<IEnumerable<SeedEntry>> AllSeedEntriesForNamespace(IEventSeeding eventSeeding, string eventStore, string @namespace)
     {
         var response = await eventSeeding.GetNamespaceSeedData(new GetSeedDataRequest
         {
@@ -57,7 +57,7 @@ public record SeedDataEntry(
             Namespace = @namespace
         });
 
-        return response.Entries.Select(e => new SeedDataEntry(
+        return response.Entries.Select(e => new SeedEntry(
             e.EventSourceId,
             e.EventTypeId,
             e.Content,
