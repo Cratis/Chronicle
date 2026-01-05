@@ -1,4 +1,4 @@
-export * from './Add';
-export * from './GetGlobalSeedData';
-export * from './GetNamespaceSeedData';
+export * from './AddSeedData';
+export * from './AllGlobalSeedData';
+export * from './AllSeedDataForNamespace';
 export * from './SeedDataEntry';
