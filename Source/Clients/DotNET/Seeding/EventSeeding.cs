@@ -46,7 +46,7 @@ public class EventSeeding(
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
         foreach (var @event in events)
         {
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, false, _namespace));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, true, EventStoreNamespaceName.NotSet));
         }
         return this;
     }
@@ -57,15 +57,9 @@ public class EventSeeding(
         foreach (var @event in events)
         {
             var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, false, _namespace));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, true, EventStoreNamespaceName.NotSet));
         }
         return this;
-    }
-
-    /// <inheritdoc/>
-    public IEventSeedingScopeBuilder ForAllNamespaces()
-    {
-        return new EventSeedingScopeBuilder(this, true, EventStoreNamespaceName.NotSet);
     }
 
     /// <inheritdoc/>
