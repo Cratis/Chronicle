@@ -16,5 +16,5 @@ public sealed class TagAttribute(params string[] tags) : Attribute
     /// <summary>
     /// Gets the tags.
     /// </summary>
-    public IEnumerable<string> Tags { get; } = tags;
+    public IEnumerable<string> Tags { get; } = tags.Where(tag => !string.IsNullOrWhiteSpace(tag));
 }

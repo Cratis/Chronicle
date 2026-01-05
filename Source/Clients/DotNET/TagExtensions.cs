@@ -21,6 +21,7 @@ public static class TagExtensions
         var tagsAttributes = type.GetCustomAttributes<TagsAttribute>();
 
         return tagAttributes.SelectMany(_ => _.Tags)
-            .Concat(tagsAttributes.SelectMany(_ => _.Tags));
+            .Concat(tagsAttributes.SelectMany(_ => _.Tags))
+            .Distinct();
     }
 }
