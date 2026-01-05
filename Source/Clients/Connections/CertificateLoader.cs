@@ -16,15 +16,9 @@ public static class CertificateLoader
     /// </summary>
     /// <param name="certificatePath">The certificate path from options.</param>
     /// <param name="certificatePassword">The certificate password from options.</param>
-    /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <returns>The loaded certificate or null if TLS is disabled or no certificate is available.</returns>
-    public static X509Certificate2? LoadCertificate(string? certificatePath, string? certificatePassword, bool disableTls)
+    public static X509Certificate2? LoadCertificate(string? certificatePath, string? certificatePassword)
     {
-        if (disableTls)
-        {
-            return null;
-        }
-
         if (!string.IsNullOrEmpty(certificatePath) && File.Exists(certificatePath))
         {
             return LoadCertificateFromPath(certificatePath, certificatePassword);

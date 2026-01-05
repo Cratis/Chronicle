@@ -45,10 +45,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
     readonly ILoggerFactory _loggerFactory;
-    readonly bool _disableTls;
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
+    readonly bool _disableTls;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -69,7 +69,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
     /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
-    /// <param name="disableTls">Whether TLS is disabled.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
@@ -86,12 +85,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken,
         ILogger<ChronicleConnection> logger,
-        bool disableTls = false,
         string? certificatePath = null,
         string? certificatePassword = null,
         ITokenProvider? tokenProvider = null)
     {
-        GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
+        _disableTls = string.IsNullOrEmpty(_certificatePath) || string.IsNullOrEmpty(_certificatePassword);
+        GrpcClientFactory.AllowUnencryptedHttp2 = _disableTls;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
@@ -102,7 +101,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _cancellationToken = cancellationToken;
         _logger = logger;
         _loggerFactory = loggerFactory;
-        _disableTls = disableTls;
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
@@ -216,8 +214,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     GrpcChannel CreateGrpcChannel()
     {
-        var certificate = CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword, _disableTls);
-
+        var certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword) : null;
         var httpHandler = new SocketsHttpHandler
         {
             PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
@@ -229,7 +226,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!_disableTls && certificate is not null)
         {
             httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
-            _logger.UsingClientCertificate(!string.IsNullOrEmpty(_certificatePath) ? _certificatePath! : "embedded");
+            _logger.UsingClientCertificate(_certificatePath!);
         }
 
         if (!_disableTls)

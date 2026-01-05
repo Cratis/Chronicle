@@ -1,6 +1,7 @@
 # Local Certificate Setup for Development
 
 This guide explains how to set up TLS certificates for local Chronicle development. While TLS is disabled by default for development, you may want to enable it to test TLS-related functionality or to simulate production environments.
+The client will connect to the Chronicle Kernel unsecure if no certificate is specified.
 
 ## Overview
 
@@ -27,7 +28,6 @@ Update your `chronicle.json` configuration:
 ```json
 {
   "tls": {
-    "disable": false,
     "certificatePath": "./chronicle-dev.pfx",
     "certificatePassword": "YourPassword123"
   }
@@ -37,7 +37,6 @@ Update your `chronicle.json` configuration:
 Or use environment variables:
 
 ```bash
-export Cratis__Chronicle__Tls__Disable=false
 export Cratis__Chronicle__Tls__CertificatePath=./chronicle-dev.pfx
 export Cratis__Chronicle__Tls__CertificatePassword=YourPassword123
 ```
@@ -112,7 +111,6 @@ Update your `chronicle.json`:
 ```json
 {
   "tls": {
-    "disable": false,
     "certificatePath": "./chronicle-dev.pfx",
     "certificatePassword": "YourPassword123"
   }
@@ -189,7 +187,6 @@ services:
       - ./chronicle.json:/app/chronicle.json:ro
       - ./chronicle-dev.pfx:/app/chronicle-dev.pfx:ro
     environment:
-      - Cratis__Chronicle__Tls__Disable=false
       - Cratis__Chronicle__Tls__CertificatePath=/app/chronicle-dev.pfx
       - Cratis__Chronicle__Tls__CertificatePassword=YourPassword123
 ```
@@ -204,7 +201,6 @@ var options = new ChronicleOptions
     ConnectionString = "chronicle://localhost:35000",
     Tls = new Tls
     {
-        Disable = false,
         CertificatePath = "./chronicle-dev.pfx",
         CertificatePassword = "YourPassword123"
     }
@@ -231,7 +227,7 @@ If you encounter certificate validation errors:
 
 1. **Verify the certificate path is correct**
    - Use absolute paths or paths relative to the working directory
-   
+
 2. **Check certificate password**
    - Ensure the password matches the one used during generation
 
