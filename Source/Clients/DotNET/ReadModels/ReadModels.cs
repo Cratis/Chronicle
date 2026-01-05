@@ -100,7 +100,7 @@ public class ReadModels(
                 ? namingPolicy.GetPropertyName(property.Name)
                 : $"{prefix}.{namingPolicy.GetPropertyName(property.Name)}";
 
-            if (property.GetCustomAttribute<IndexAttribute>() is not null)
+            if (Attribute.IsDefined(property, typeof(IndexAttribute)))
             {
                 indexes.Add(new IndexDefinition { PropertyPath = propertyPath });
             }
