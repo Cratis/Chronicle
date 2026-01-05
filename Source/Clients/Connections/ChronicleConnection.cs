@@ -214,7 +214,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     GrpcChannel CreateGrpcChannel()
     {
-        var certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword) : null;
+        var certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
         var httpHandler = new SocketsHttpHandler
         {
             PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,

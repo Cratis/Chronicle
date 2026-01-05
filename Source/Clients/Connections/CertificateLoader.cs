@@ -17,15 +17,17 @@ public static class CertificateLoader
     /// <param name="certificatePath">The certificate path from options.</param>
     /// <param name="certificatePassword">The certificate password from options.</param>
     /// <returns>The loaded certificate or null if TLS is disabled or no certificate is available.</returns>
-    public static X509Certificate2? LoadCertificate(string? certificatePath, string? certificatePassword)
+    /// <exception cref="CertificateDoesNotExist">Thrown when the specified certificate file does not exist.</exception>
+    /// <exception cref="InvalidCertificateOrPassword">Thrown when the specified certificate file is invalid or the password is incorrect.</exception>
+    public static X509Certificate2 LoadCertificate(string certificatePath, string certificatePassword)
     {
-        if (!string.IsNullOrEmpty(certificatePath) && File.Exists(certificatePath))
+        if (!File.Exists(certificatePath))
         {
-            return LoadCertificateFromPath(certificatePath, certificatePassword);
+            throw new CertificateDoesNotExist(certificatePath);
         }
 
-        // Priority 3: No certificate (will trust dev certificates)
-        return null;
+        return LoadCertificateFromPath(certificatePath, certificatePassword) ??
+            throw new InvalidCertificateOrPassword(certificatePath);
     }
 
     /// <summary>
