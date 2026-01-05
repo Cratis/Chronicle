@@ -1,2 +1,6 @@
 - name: Camel Casing
   href: camel-casing.md
+- name: gRPC Message Size
+  href: grpc-message-size.md
+- name: Job Throttling
+  href: job-throttling.md
