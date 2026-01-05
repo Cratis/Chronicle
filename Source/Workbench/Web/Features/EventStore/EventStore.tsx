@@ -27,7 +27,7 @@ import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
-import { SeedData } from './General/SeedData/SeedData';
+import { EventsSeeding } from './General/Seeding/EventsSeeding';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
@@ -75,7 +75,7 @@ export const EventStore = () => {
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
-                <Route path={'seed-data'} element={<SeedData />} />
+                <Route path={'seed-data'} element={<EventsSeeding />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
                 <Route path={'projections'} element={<Projections />} />
                 <Route path={'reducers'} element={<Reducers />} />
