@@ -18,6 +18,9 @@ public static class TagExtensions
     public static IEnumerable<string> GetTags(this Type type)
     {
         var tagAttributes = type.GetCustomAttributes<TagAttribute>();
-        return tagAttributes.SelectMany(_ => _.Tags);
+        var tagsAttributes = type.GetCustomAttributes<TagsAttribute>();
+
+        return tagAttributes.SelectMany(_ => _.Tags)
+            .Concat(tagsAttributes.SelectMany(_ => _.Tags));
     }
 }

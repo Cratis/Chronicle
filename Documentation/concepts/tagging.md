@@ -1,6 +1,8 @@
 # Tagging
 
-Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. By applying the `[Tag]` attribute, you can assign one or more tags that describe the purpose, domain, or context of your artifacts.
+Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. By applying the `[Tag]` or `[Tags]` attribute, you can assign one or more tags that describe the purpose, domain, or context of your artifacts.
+
+> **Note**: Both `[Tag]` and `[Tags]` attributes can be used interchangeably. Use whichever feels more natural, or mix them - all tags will be merged together.
 
 ## Overview
 
@@ -20,7 +22,7 @@ Events can be tagged in two ways: statically using attributes, or dynamically wh
 
 ### Static Event Tags
 
-Apply the `[Tag]` attribute to your event types to assign static tags that will always be associated with that event type:
+Apply the `[Tag]` or `[Tags]` attribute to your event types to assign static tags that will always be associated with that event type:
 
 ```csharp
 using Cratis.Chronicle;
@@ -28,8 +30,13 @@ using Cratis.Chronicle;
 [Tag("analytics", "user-action")]
 public record UserLoggedIn(string UserId, DateTimeOffset LoggedInAt);
 
+// Or using Tags attribute (plural) for convenience
+[Tags("analytics", "user-action")]
+public record UserLoggedIn(string UserId, DateTimeOffset LoggedInAt);
+
+// Mix both Tag and Tags attributes
 [Tag("security")]
-[Tag("audit")]
+[Tags("audit")]
 public record UserPasswordChanged(string UserId, DateTimeOffset ChangedAt);
 ```
 
@@ -79,8 +86,14 @@ public class OrderConfirmationReactor { }
 
 ### Multiple Tags (Single Attribute)
 
+You can use either `[Tag]` or `[Tags]` (plural) for convenience:
+
 ```csharp
 [Tag("Notifications", "Customer", "Email")]
+public class CustomerNotificationReactor { }
+
+// Or using Tags attribute (plural)
+[Tags("Notifications", "Customer", "Email")]
 public class CustomerNotificationReactor { }
 ```
 
@@ -95,10 +108,17 @@ public class InventorySyncReactor { }
 
 ### Mixed Approach
 
+You can mix both `[Tag]` and `[Tags]` attributes - all tags will be merged:
+
 ```csharp
 [Tag("Notifications", "SMS")]
-[Tag("Customer")]
+[Tags("Customer")]
 public class SmsNotificationReactor { }
+
+// Or mix single and multiple attributes
+[Tag("Integration")]
+[Tags("ExternalAPI", "Inventory")]
+public class InventorySyncReactor { }
 ```
 
 ## Tagging Read Models
