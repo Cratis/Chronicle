@@ -28,14 +28,20 @@ public class EventSeeding(
     ILogger<EventSeeding> logger) : Grain, IEventSeeding
 {
     EventSeedingKey _key = EventSeedingKey.NotSet;
-    IEventSequence _eventSequence = null!;
+    IEventSequence? _eventSequence;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _key = EventSeedingKey.Parse(this.GetPrimaryKeyString());
-        _eventSequence = GrainFactory.GetGrain<IEventSequence>(
-            new EventSequenceKey(EventSequenceId.Log, _key.EventStore, _key.Namespace));
+
+        // Only create event sequence for namespace-specific grains
+        if (!_key.IsGlobal)
+        {
+            _eventSequence = GrainFactory.GetGrain<IEventSequence>(
+                new EventSequenceKey(EventSequenceId.Log, _key.EventStore, _key.Namespace));
+        }
+
         return Task.CompletedTask;
     }
 
@@ -54,25 +60,66 @@ public class EventSeeding(
                 new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
                 new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
-        var eventsToAppend = GetEventsToSeed(entriesList);
-        if (eventsToAppend.Count > 0)
+        // For global grains, just store the entries without appending
+        if (_key.IsGlobal)
         {
-            logger.AppendingSeededEvents(eventsToAppend.Count);
-            var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
-
-            await _eventSequence.AppendMany(
-                eventsToAppend,
-                CorrelationId.New(),
-                causation,
-                Identity.System,
-                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
-
+            foreach (var entry in entriesList)
+            {
+                var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.IsGlobal, entry.TargetNamespace);
+                if (!IsAlreadySeeded(seededEntry))
+                {
+                    TrackSeededEvent(seededEntry);
+                }
+            }
             await state.WriteStateAsync();
         }
         else
         {
-            logger.AllEventsAlreadySeeded();
+            // For namespace-specific grains, append events to the sequence
+            // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
+            if (_eventSequence is null)
+            {
+                throw new InvalidOperationException("Event sequence should be initialized for namespace-specific grains");
+            }
+
+            var eventsToAppend = GetEventsToSeed(entriesList);
+            if (eventsToAppend.Count > 0)
+            {
+                logger.AppendingSeededEvents(eventsToAppend.Count);
+                var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
+
+                await _eventSequence.AppendMany(
+                    eventsToAppend,
+                    CorrelationId.New(),
+                    causation,
+                    Identity.System,
+                    new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+
+                await state.WriteStateAsync();
+            }
+            else
+            {
+                logger.AllEventsAlreadySeeded();
+            }
         }
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<SeedingEntry>> GetSeededEvents()
+    {
+        state.State ??= new EventSeeds(
+            new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
+            new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
+
+        var entries = new List<SeedingEntry>();
+
+        // Collect all unique entries from both dictionaries
+        var allEntries = state.State.ByEventType.Values.SelectMany(e => e)
+            .Concat(state.State.ByEventSource.Values.SelectMany(e => e))
+            .Distinct()
+            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.IsGlobal, e.TargetNamespace));
+
+        return Task.FromResult(allEntries);
     }
 
     List<EventToAppend> GetEventsToSeed(List<SeedingEntry> entriesList)
@@ -81,7 +128,7 @@ public class EventSeeding(
 
         foreach (var entry in entriesList)
         {
-            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content);
+            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.IsGlobal, entry.TargetNamespace);
 
             // Check if this exact event has already been seeded
             var alreadySeeded = IsAlreadySeeded(seededEntry);

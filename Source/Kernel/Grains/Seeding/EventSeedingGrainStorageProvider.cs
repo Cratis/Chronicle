@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Seeding;
@@ -27,7 +28,8 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
         var key = EventSeedingKey.Parse(grainId.Key.ToString()!);
         var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
-        var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
+        var targetNamespace = GetTargetNamespace(key);
+        var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(targetNamespace).EventSeeding;
         actualGrainState.State = await eventSeedingStorage.Get();
     }
 
@@ -37,7 +39,11 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
         var key = EventSeedingKey.Parse(grainId.Key.ToString()!);
         var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
-        var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
+        var targetNamespace = GetTargetNamespace(key);
+        var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(targetNamespace).EventSeeding;
         await eventSeedingStorage.Save(actualGrainState.State);
     }
+
+    static EventStoreNamespaceName GetTargetNamespace(EventSeedingKey key) =>
+        key.IsGlobal ? EventStoreNamespaceName.Default : key.Namespace;
 }

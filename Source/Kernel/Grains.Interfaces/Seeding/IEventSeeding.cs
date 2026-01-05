@@ -14,4 +14,10 @@ public interface IEventSeeding : IGrainWithStringKey
     /// <param name="entries">Collection of <see cref="SeedingEntry"/> to seed.</param>
     /// <returns>Awaitable task.</returns>
     Task Seed(IEnumerable<SeedingEntry> entries);
+
+    /// <summary>
+    /// Get all seeded events.
+    /// </summary>
+    /// <returns>Collection of seeded event entries.</returns>
+    Task<IEnumerable<SeedingEntry>> GetSeededEvents();
 }

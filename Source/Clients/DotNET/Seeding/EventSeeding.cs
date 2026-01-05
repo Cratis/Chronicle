@@ -46,7 +46,7 @@ public class EventSeeding(
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
         foreach (var @event in events)
         {
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, true, EventStoreNamespaceName.NotSet));
         }
         return this;
     }
@@ -57,9 +57,15 @@ public class EventSeeding(
         foreach (var @event in events)
         {
             var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, true, EventStoreNamespaceName.NotSet));
         }
         return this;
+    }
+
+    /// <inheritdoc/>
+    public IEventSeedingScopeBuilder ForNamespace(EventStoreNamespaceName @namespace)
+    {
+        return new EventSeedingScopeBuilder(this, false, @namespace);
     }
 
     /// <inheritdoc/>
@@ -90,7 +96,9 @@ public class EventSeeding(
             serializedEntries.Add(new SerializedSeedingEntry(
                 entry.EventSourceId.Value,
                 entry.EventTypeId.Value,
-                JsonSerializer.Serialize(content)));
+                JsonSerializer.Serialize(content),
+                entry.IsGlobal,
+                entry.TargetNamespace.Value));
         }
 
         await servicesAccessor.Services.Seeding.Seed(
@@ -102,13 +110,44 @@ public class EventSeeding(
                 {
                     EventSourceId = e.EventSourceId,
                     EventTypeId = e.EventTypeId,
-                    Content = e.Content
+                    Content = e.Content,
+                    IsGlobal = e.IsGlobal,
+                    TargetNamespace = e.TargetNamespace
                 })
             });
 
         _entries.Clear();
     }
 
-    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event);
-    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content);
+    void AddScopedEntry(EventSourceId eventSourceId, EventTypeId eventTypeId, object @event, bool isGlobal, EventStoreNamespaceName targetNamespace)
+    {
+        _entries.Add(new SeedingEntry(eventSourceId, eventTypeId, @event, isGlobal, targetNamespace));
+    }
+
+    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, bool IsGlobal, EventStoreNamespaceName TargetNamespace);
+    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content, bool IsGlobal, string TargetNamespace);
+
+    class EventSeedingScopeBuilder(EventSeeding parent, bool isGlobal, EventStoreNamespaceName targetNamespace) : IEventSeedingScopeBuilder
+    {
+        public IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
+            where TEvent : class
+        {
+            var eventType = parent._eventTypes.GetEventTypeFor(typeof(TEvent));
+            foreach (var @event in events)
+            {
+                parent.AddScopedEntry(eventSourceId, eventType.Id, @event, isGlobal, targetNamespace);
+            }
+            return this;
+        }
+
+        public IEventSeedingScopeBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events)
+        {
+            foreach (var @event in events)
+            {
+                var eventType = parent._eventTypes.GetEventTypeFor(@event.GetType());
+                parent.AddScopedEntry(eventSourceId, eventType.Id, @event, isGlobal, targetNamespace);
+            }
+            return this;
+        }
+    }
 }
