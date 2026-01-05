@@ -57,6 +57,11 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the jobs configuration.
+    /// </summary>
+    public Jobs Jobs { get; init; } = new Jobs();
+
+    /// <summary>
     /// Gets the authentication configuration.
     /// </summary>
     public Authentication Authentication { get; init; } = new Authentication();
