@@ -58,7 +58,7 @@ internal class ModelBoundProjectionBuilder(
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            Categories = modelType.GetCategories().ToArray()
+            Tags = modelType.GetTags().ToArray()
         };
 
         var classLevelFromEvents = modelType.GetCustomAttributes()

@@ -37,7 +37,7 @@ public class ReactorDefinition
     public bool IsReplayable { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the categories the reactor belongs to.
+    /// Gets or sets the tags the reactor belongs to.
     /// </summary>
-    public IEnumerable<string> Categories { get; set; } = [];
+    public IEnumerable<string> Tags { get; set; } = [];
 }
