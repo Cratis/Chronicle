@@ -357,7 +357,7 @@ public class Reducers : IReducers
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
                 },
-                Categories = handler.ReducerType.GetCategories().ToArray()
+                Tags = handler.ReducerType.GetTags().ToArray()
             }
         };
 

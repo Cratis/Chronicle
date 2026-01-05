@@ -89,4 +89,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(13)]
     public EventObservationState ObservationState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags associated with the event.
+    /// </summary>
+    [ProtoMember(14)]
+    public IEnumerable<string> Tags { get; set; } = [];
 }

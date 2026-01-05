@@ -27,7 +27,7 @@ public static class ReactorDefinitionConverters
                 et => et.EventType.ToString(),
                 et => et.Key.ToString()),
             IsReplayable = definition.IsReplayable,
-            Categories = definition.Categories ?? []
+            Tags = definition.Tags ?? []
         };
 
     /// <summary>
@@ -42,5 +42,5 @@ public static class ReactorDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
             definition.IsReplayable,
-            definition.Categories);
+            definition.Tags);
 }

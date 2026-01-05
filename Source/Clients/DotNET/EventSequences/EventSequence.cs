@@ -65,6 +65,7 @@ public class EventSequence(
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default)
     {
         var eventClrType = @event.GetType();
@@ -86,6 +87,11 @@ public class EventSequence(
         var content = await eventSerializer.Serialize(@event);
         var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
+
+        // Merge static tags from the event type with dynamic tags
+        var staticTags = eventClrType.GetTags();
+        var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
+
         var response = await _servicesAccessor.Services.EventSequences.Append(new()
         {
             EventStore = eventStoreName,
@@ -104,6 +110,7 @@ public class EventSequence(
             Content = content.ToJsonString(),
             Causation = causationChain,
             CausedBy = identity.ToContract(),
+            Tags = allTags,
             ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract()
         });
 
@@ -118,11 +125,18 @@ public class EventSequence(
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
-            var eventType = eventTypes.GetEventTypeFor(@event.GetType());
+            var eventClrType = @event.GetType();
+            var eventType = eventTypes.GetEventTypeFor(eventClrType);
+            
+            // Merge static tags from the event type with dynamic tags
+            var staticTags = eventClrType.GetTags();
+            var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
+            
             return new Contracts.Events.EventToAppend
             {
                 EventSourceType = eventSourceType ?? EventSourceType.Default,
@@ -130,7 +144,8 @@ public class EventSequence(
                 EventStreamType = eventStreamType ?? EventStreamType.All,
                 EventStreamId = eventStreamId ?? EventStreamId.Default,
                 EventType = eventType.ToContract(),
-                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString()
+                Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString(),
+                Tags = allTags
             };
         }).ToList();
 
@@ -152,11 +167,18 @@ public class EventSequence(
     public async Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
-            var eventType = eventTypes.GetEventTypeFor(@event.Event.GetType());
+            var eventClrType = @event.Event.GetType();
+            var eventType = eventTypes.GetEventTypeFor(eventClrType);
+            
+            // Merge static tags from the event type with dynamic tags
+            var staticTags = eventClrType.GetTags();
+            var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
+            
             return new Contracts.Events.EventToAppend
             {
                 EventSourceType = @event.EventSourceType,
@@ -164,7 +186,8 @@ public class EventSequence(
                 EventStreamType = @event.EventStreamType,
                 EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToContract(),
-                Content = eventSerializer.Serialize(@event.Event).GetAwaiter().GetResult().ToString()
+                Content = eventSerializer.Serialize(@event.Event).GetAwaiter().GetResult().ToString(),
+                Tags = allTags
             };
         }).ToList();
 

@@ -90,6 +90,6 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
-            Categories = _projectionType.GetCategories().ToArray()
+            Tags = _projectionType.GetTags().ToArray()
         };
 }

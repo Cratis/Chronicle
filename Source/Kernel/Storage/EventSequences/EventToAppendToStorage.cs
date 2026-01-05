@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
 /// <param name="Causation">Collection of <see cref="Causation"/>.</param>
 /// <param name="CausedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
+/// <param name="Tags">Collection of tags associated with the event.</param>
 /// <param name="Occurred">The date and time the event occurred.</param>
 /// <param name="Content">The content of the event.</param>
 public record EventToAppendToStorage(
@@ -32,5 +33,6 @@ public record EventToAppendToStorage(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     IEnumerable<IdentityId> CausedByChain,
+    IEnumerable<Tag> Tags,
     DateTimeOffset Occurred,
     ExpandoObject Content);

@@ -58,7 +58,10 @@ public class EventConverter(
                 eventStoreNamespace,
                 @event.CorrelationId,
                 @event.Causation,
-                await identityStorage.GetFor(@event.CausedBy)),
+                await identityStorage.GetFor(@event.CausedBy))
+            {
+                Tags = @event.Tags.Select(_ => new Tag(_))
+            },
             releasedContentAsExpandoObject);
     }
 }

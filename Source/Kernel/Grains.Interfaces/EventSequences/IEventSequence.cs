@@ -70,6 +70,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/> for the event.</param>
     /// <param name="causedBy">The <see cref="Identity"/> of the entity that caused the event.</param>
+    /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to specify the type of the event source. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to specify the type of the event stream. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to specify the identifier of the event stream. Defaults to <see cref="EventStreamId.Default"/>.</param>
@@ -80,6 +81,7 @@ public interface IEventSequence : IGrainWithStringKey
         CorrelationId? correlationId = default,
         IEnumerable<Causation>? causation = default,
         Identity? causedBy = default,
+        IEnumerable<Tag>? tags = default,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default);
@@ -96,6 +98,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
+    /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="concurrencyScope">The <see cref="ConcurrencyScope"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<AppendResult> Append(
@@ -108,6 +111,7 @@ public interface IEventSequence : IGrainWithStringKey
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
+        IEnumerable<Tag> tags,
         ConcurrencyScope concurrencyScope);
 
     /// <summary>

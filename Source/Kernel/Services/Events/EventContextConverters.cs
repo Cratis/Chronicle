@@ -31,6 +31,7 @@ internal static class EventContextConverters
         CorrelationId = context.CorrelationId,
         Causation = context.Causation.Select(_ => _.ToContract()).ToList(),
         CausedBy = context.CausedBy.ToContract(),
+        Tags = context.Tags.Select(_ => _.Value),
         ObservationState = context.ObservationState.ToContract()
     };
 
@@ -52,5 +53,8 @@ internal static class EventContextConverters
         context.CorrelationId,
         context.Causation.Select(_ => _.ToChronicle()),
         context.CausedBy.ToChronicle(),
-        context.ObservationState.ToChronicle());
+        context.ObservationState.ToChronicle())
+    {
+        Tags = context.Tags.Select(_ => new Tag(_))
+    };
 }

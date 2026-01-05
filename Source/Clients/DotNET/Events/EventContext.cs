@@ -38,6 +38,11 @@ public record EventContext(
     EventObservationState ObservationState = EventObservationState.Initial)
 {
     /// <summary>
+    /// Gets the tags associated with the event.
+    /// </summary>
+    public IEnumerable<string> Tags { get; init; } = [];
+
+    /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
     /// </summary>
     /// <returns>A new <see cref="EventContext"/>.</returns>
@@ -116,18 +121,5 @@ public record EventContext(
     /// <param name="desiredState">The desired state.</param>
     /// <returns>A new copy with the desired state set.</returns>
     public EventContext WithState(EventObservationState desiredState) =>
-        new(
-            EventType,
-            EventSourceType,
-            EventSourceId,
-            EventStreamType,
-            EventStreamId,
-            SequenceNumber,
-            Occurred,
-            EventStore,
-            Namespace,
-            CorrelationId,
-            Causation,
-            CausedBy,
-            desiredState);
+        this with { ObservationState = desiredState };
 }

@@ -45,7 +45,7 @@ public class ReducerDefinition
     public SinkDefinition Sink { get; set; } = SinkDefinition.None;
 
     /// <summary>
-    /// Gets or sets the categories the reducer belongs to.
+    /// Gets or sets the tags the reducer belongs to.
     /// </summary>
-    public IEnumerable<string> Categories { get; set; } = [];
+    public IEnumerable<string> Tags { get; set; } = [];
 }
