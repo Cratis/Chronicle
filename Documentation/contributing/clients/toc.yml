@@ -8,3 +8,5 @@
   href: ./api.md
 - name: Internalization
   href: ./internalization.md
+- name: TypeScript gRPC Client
+  href: ./typescript-grpc-package.md
