@@ -11,10 +11,10 @@
         <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
-        <!-- Define DEVELOPMENT compile symbol automatically for Debug configuration -->
-        <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-            <DefineConstants>$(DefineConstants);DEVELOPMENT</DefineConstants>
-        </PropertyGroup>
+    <!-- Define DEVELOPMENT compile symbol automatically for Debug configuration -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <DefineConstants>$(DefineConstants);DEVELOPMENT</DefineConstants>
+    </PropertyGroup>
 
     <!-- 3rd party package references -->
     <ItemGroup>

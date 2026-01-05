@@ -62,7 +62,13 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    var internalScheme = chronicleOptions.Tls.Disable ? Uri.UriSchemeHttp : Uri.UriSchemeHttps;
+                    // In development without a certificate, use HTTP; otherwise use HTTPS
+                    var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+#if DEVELOPMENT
+                    var internalScheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+#else
+                    var internalScheme = Uri.UriSchemeHttps;
+#endif
                     var internalAuthority = new UriBuilder(internalScheme, "localhost", chronicleOptions.ManagementPort).Uri;
                     options.SetIssuer(internalAuthority);
                 }
@@ -84,7 +90,13 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    scheme = chronicleOptions.Tls.Disable ? Uri.UriSchemeHttp : Uri.UriSchemeHttps;
+                    // In development without a certificate, use HTTP; otherwise use HTTPS
+                    var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+#if DEVELOPMENT
+                    scheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+#else
+                    scheme = Uri.UriSchemeHttps;
+#endif
                     host = "localhost";
                 }
 

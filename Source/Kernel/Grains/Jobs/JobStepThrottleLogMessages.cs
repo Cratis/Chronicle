@@ -7,9 +7,9 @@ namespace Cratis.Chronicle.Grains.Jobs;
 
 internal static partial class JobStepThrottleLogMessages
 {
-    [LoggerMessage(0, LogLevel.Debug, "Acquiring job step slot")]
+    [LoggerMessage(LogLevel.Debug, "Acquiring job step slot")]
     internal static partial void AcquiringJobStepSlot(this ILogger<JobStepThrottle> logger);
 
-    [LoggerMessage(1, LogLevel.Debug, "Releasing job step slot")]
+    [LoggerMessage(LogLevel.Debug, "Releasing job step slot")]
     internal static partial void ReleasingJobStepSlot(this ILogger<JobStepThrottle> logger);
 }

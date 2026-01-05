@@ -90,30 +90,6 @@ jobs:
           CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
           CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
 
-      - name: Inject certificate if available
-        working-directory: ./Source/Kernel/Server/out/x64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for x64 build"
-          else
-            echo "No certificate secret found, using placeholder"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Inject certificate for development x64 if available
-        working-directory: ./Source/Kernel/Server/out/development/x64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development x64 build"
-          else
-            echo "No certificate secret found, using placeholder"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
 
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
@@ -145,30 +121,6 @@ jobs:
         env:
           CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
           CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
-
-      - name: Inject certificate if available
-        working-directory: ./Source/Kernel/Server/out/arm64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for arm64 build"
-          else
-            echo "No certificate secret found, using placeholder"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
-
-      - name: Inject certificate for development arm64 if available
-        working-directory: ./Source/Kernel/Server/out/development/arm64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development arm64 build"
-          else
-            echo "No certificate secret found, using placeholder"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
 
 
   workbench:
@@ -237,25 +189,7 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
-      - name: Inject certificate into server if available
-        working-directory: ./Source/Kernel/Server
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected into server"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
 
-      - name: Inject certificate into client if available
-        working-directory: ./Source/Clients/Connections
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected into client"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
 
       - name: Build
         run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }}
@@ -301,15 +235,6 @@ jobs:
         run: |
           dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/development/x64
 
-      - name: Inject certificate for development x64 if available
-        working-directory: ./Source/Kernel/Server/out/development/x64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development x64 build"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
 
       - name: Upload development outputs
         uses: actions/upload-artifact@v4
@@ -345,15 +270,6 @@ jobs:
         run: |
           dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/development/arm64
 
-      - name: Inject certificate for development arm64 if available
-        working-directory: ./Source/Kernel/Server/out/development/arm64
-        run: |
-          if [ ! -z "$CHRONICLE_CERT_BASE64" ]; then
-            echo "$CHRONICLE_CERT_BASE64" | base64 -d > Certs/shared-dev.pfx
-            echo "Certificate injected for development arm64 build"
-          fi
-        env:
-          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
 
       - name: Upload development outputs
         uses: actions/upload-artifact@v4
