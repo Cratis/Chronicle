@@ -48,7 +48,7 @@ public class EventSeeding(
         {
             var eventType_clrType = @event.GetType();
             var staticTags = eventType_clrType.GetTags().Select(t => (Tag)t);
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, false, _namespace));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, true, EventStoreNamespaceName.NotSet));
         }
         return this;
     }
@@ -60,15 +60,9 @@ public class EventSeeding(
         {
             var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
             var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, false, _namespace));
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, true, EventStoreNamespaceName.NotSet));
         }
         return this;
-    }
-
-    /// <inheritdoc/>
-    public IEventSeedingScopeBuilder ForAllNamespaces()
-    {
-        return new EventSeedingScopeBuilder(this, true, EventStoreNamespaceName.NotSet);
     }
 
     /// <inheritdoc/>
