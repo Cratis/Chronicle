@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Api.Seeding;
 /// <param name="Content">The JSON content of the event.</param>
 /// <param name="IsGlobal">Whether this seed data is global (applies to all namespaces).</param>
 [Command]
-public record AddSeedData(
+public record AddSeedentry(
     string EventStore,
     string Namespace,
     string EventSourceId,
