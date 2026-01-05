@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Grains.Workers;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Jobs;
@@ -20,11 +19,13 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// Initializes a new instance of the <see cref="JobStep{TRequest, TResult, TState}"/> class.
 /// </remarks>
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
+/// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="logger">The logger.</param>
 [KeepAlive]
 public abstract class JobStep<TRequest, TResult, TState>(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TState> state,
+    IJobStepThrottle throttle,
     ILogger<JobStep<TRequest, TResult, TState>> logger) : GrainWithBackgroundTask<TRequest, JobStepResult>, IJobStep<TRequest, TResult, TState>, IJobObserver, IDisposable
     where TState : JobStepState
 {
@@ -32,7 +33,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
     CancellationTokenSource? _cancellationTokenSource = new();
     IJob _job = new NullJob();
     bool _currentlyRunning;
-    IJobStepThrottle? _throttle;
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
@@ -84,7 +84,6 @@ public abstract class JobStep<TRequest, TResult, TState>(
         state.State.Id = Identifier;
         state.State.Type = grainType;
         _cancellationTokenSource = new();
-        _throttle = ServiceProvider.GetService<IJobStepThrottle>();
     }
 
     /// <inheritdoc/>
@@ -305,19 +304,16 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
 
         // Acquire throttle slot before performing work
-        if (_throttle is not null)
+        try
         {
-            try
+            await throttle.AcquireAsync(_cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return new()
             {
-                await _throttle.AcquireAsync(_cancellationTokenSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return new()
-                {
-                    Error = PerformWorkError.Cancelled
-                };
-            }
+                Error = PerformWorkError.Cancelled
+            };
         }
 
         try
@@ -333,7 +329,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         finally
         {
             // Always release throttle slot after work completes (success or failure)
-            _throttle?.Release();
+            throttle.Release();
         }
 
         async Task<PerformWorkResult<JobStepResult>> HandleJobStepResult(JobStepResult jobStepResult)
