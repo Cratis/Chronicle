@@ -34,14 +34,14 @@ public class EventSeeding(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _key = EventSeedingKey.Parse(this.GetPrimaryKeyString());
-        
+
         // Only create event sequence for namespace-specific grains
         if (!_key.IsGlobal)
         {
             _eventSequence = GrainFactory.GetGrain<IEventSequence>(
                 new EventSequenceKey(EventSequenceId.Log, _key.EventStore, _key.Namespace));
         }
-        
+
         return Task.CompletedTask;
     }
 
@@ -112,7 +112,7 @@ public class EventSeeding(
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
         var entries = new List<SeedingEntry>();
-        
+
         // Collect all unique entries from both dictionaries
         var allEntries = state.State.ByEventType.Values.SelectMany(e => e)
             .Concat(state.State.ByEventSource.Values.SelectMany(e => e))

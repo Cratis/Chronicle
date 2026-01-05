@@ -2,17 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DataPage } from 'Components/DataPage/DataPage';
-import { GetGlobalSeedData } from 'Api/Seeding/GetGlobalSeedData';
+import { AllGlobalSeedEntries } from 'Api/Seeding/AllGlobalSeedEntries';
 import { Column } from 'primereact/column';
 import { useParams } from 'react-router-dom';
 
-export const SeedData = () => {
+export const EventsSeeding = () => {
     const { eventStore } = useParams();
 
     return (
         <DataPage
             title="Seed Data"
-            query={GetGlobalSeedData}
+            query={AllGlobalSeedEntries}
             queryArguments={{ eventStore }}
             emptyMessage="No seed data found"
             dataKey="eventSourceId">
