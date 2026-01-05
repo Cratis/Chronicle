@@ -8,12 +8,20 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 252 |
+| Number of items that remain open | 260 |
 | Number of items closed | 608 |
-| Total number of items created | 860 |
+| Total number of items created | 868 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Generate TypeScript gRPC package | https://github.com/Cratis/Chronicle/issues/2437 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add events in sequences page | https://github.com/Cratis/Chronicle/issues/2435 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Improve seed data and add editor | https://github.com/Cratis/Chronicle/issues/2433 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Throttling for job system | https://github.com/Cratis/Chronicle/issues/2431 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Simplify TLS | https://github.com/Cratis/Chronicle/issues/2429 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Performance benchmarks | https://github.com/Cratis/Chronicle/issues/2427 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Build statistics | https://github.com/Cratis/Chronicle/issues/2425 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Introduce tags support and wire up for event | https://github.com/Cratis/Chronicle/issues/2423 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Synchronization of CoPilot instructions | https://github.com/Cratis/Chronicle/issues/2421 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce Read Model and Event Type management in Workbench | https://github.com/Cratis/Chronicle/issues/2381 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce user and client credentials management | https://github.com/Cratis/Chronicle/issues/2379 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -327,13 +335,4 @@
 | Consider moving away from Expando Object in favor of dynamically created CLR types internally | https://github.com/Cratis/Chronicle/issues/1202 | None | [einari](https://github.com/einari) | None | None | None |
 | Switch to NSubstitute - change everything away from Moq | https://github.com/Cratis/Chronicle/issues/1201 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 165 days, 22:48:12 | None |
 | Bring back Benchmark project | https://github.com/Cratis/Chronicle/issues/1200 | None | [einari](https://github.com/einari) | None | None | None |
-| Bring back specifications project | https://github.com/Cratis/Chronicle/issues/1199 | None | [einari](https://github.com/einari) | None | 54 days, 14:02:15 | None |
-| Introduce an Orleans based aggregate root | https://github.com/Cratis/Chronicle/issues/1198 | None | [einari](https://github.com/einari) | None | 41 days, 17:36:00 | None |
-| Introduce an Orleans client enabling running Chronicle in-process for Orleans based solutions | https://github.com/Cratis/Chronicle/issues/1197 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 54 days, 14:42:18 | None |
-| 10.1.0 | https://github.com/Cratis/Chronicle/issues/1196 | None | [einari](https://github.com/einari) | None | 0:00:07 | None |
-| Move away from Guids representing projections | https://github.com/Cratis/Chronicle/issues/1195 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | None | 37 days, 18:07:19 | None |
-| Add global exception handler | https://github.com/Cratis/Chronicle/issues/1175 | None | [einari](https://github.com/einari) | None | None | None |
-| Optimize the Docker image sizes | https://github.com/Cratis/Chronicle/issues/1096 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
-| Leverage the Arm64 runner during build pipelines | https://github.com/Cratis/Chronicle/issues/1095 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 508 days, 23:22:41 | None |
-| Add retry policies for client observers and reducers | https://github.com/Cratis/Chronicle/issues/1091 | None | [einari](https://github.com/einari) | None | 405 days, 1:23:38 | None |
-| Expose Failed Partition API to the client | https://github.com/Cratis/Chronicle/issues/1068 | None | [einari](https://github.com/e
+| Bring back specifications project | https://github.com/Cratis/Chron
