@@ -90,7 +90,7 @@ public static class ServiceCollectionExtensions
 
             // In development without a certificate, allow non-secure cookies
             var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT && DEBUG
+#if DEVELOPMENT
             options.Cookie.SecurePolicy = hasSecureCertificate ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
 #else
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;

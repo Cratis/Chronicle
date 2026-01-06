@@ -24,7 +24,7 @@ public interface IAuthenticationService
     /// <returns>A task representing the asynchronous operation.</returns>
     Task EnsureDefaultAdminUser();
 
-#if DEVELOPMENT && DEBUG
+#if DEVELOPMENT
     /// <summary>
     /// Ensures default client credentials exist for development.
     /// </summary>

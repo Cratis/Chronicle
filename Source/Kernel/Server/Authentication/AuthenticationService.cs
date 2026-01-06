@@ -66,7 +66,7 @@ public class AuthenticationService(
         await userStorage.Create(user);
     }
 
-#if DEVELOPMENT && DEBUG
+#if DEVELOPMENT
     /// <inheritdoc/>
     public async Task EnsureDefaultClientCredentials()
     {
