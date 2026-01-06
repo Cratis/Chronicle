@@ -54,6 +54,8 @@ public class ReadModelDefinitionsStorage(
             definition.Identifier,
             definition.Name,
             definition.Owner,
+            definition.ObserverType,
+            definition.ObserverIdentifier,
             definition.Sink,
             definition.Schemas.ToDictionary(_ => _.Key.ToString(), _ => BsonDocument.Parse(_.Value.ToJson())));
         return Collection.ReplaceOneAsync(rm => rm.Id == readModel.Id, readModel, new ReplaceOptions { IsUpsert = true });
@@ -71,6 +73,8 @@ public class ReadModelDefinitionsStorage(
             readModel.Id,
             readModel.Name,
             readModel.Owner,
+            readModel.ObserverType,
+            readModel.ObserverIdentifier,
             readModel.Sink,
             schemas,
             []);

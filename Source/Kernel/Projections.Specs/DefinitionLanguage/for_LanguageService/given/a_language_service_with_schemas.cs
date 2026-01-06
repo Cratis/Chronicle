@@ -76,7 +76,9 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             {
                 [ReadModelGeneration.First] = schema
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
     }
 
     static IEnumerable<EventTypeSchema> CreateEventTypeSchemas(IEnumerable<Type> eventTypes)

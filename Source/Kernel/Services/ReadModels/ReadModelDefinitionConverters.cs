@@ -32,7 +32,9 @@ internal static class ReadModelDefinitionConverters
             Name = definition.Name,
             Sink = definition.Sink.ToContract(),
             Schema = latestSchema.ToJson(),
-            Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList()
+            Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList(),
+            ObserverType = (Contracts.ReadModels.ReadModelObserverType)(int)definition.ObserverType,
+            ObserverIdentifier = definition.ObserverIdentifier
         };
     }
 
@@ -53,6 +55,8 @@ internal static class ReadModelDefinitionConverters
             contract.Type.Identifier,
             contract.Name,
             (ReadModelOwner)(int)owner,
+            (ReadModelObserverType)(int)contract.ObserverType,
+            contract.ObserverIdentifier,
             contract.Sink.ToChronicle(),
             new Dictionary<ReadModelGeneration, JsonSchema>
             {

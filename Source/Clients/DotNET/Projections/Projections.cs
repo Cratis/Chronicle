@@ -54,6 +54,9 @@ public class Projections(
     public bool HasFor(ProjectionId projectionId) => Definitions.Any(_ => _.Identifier == projectionId);
 
     /// <inheritdoc/>
+    public bool HasFor<TReadModel>() => _handlersByModelType.ContainsKey(typeof(TReadModel));
+
+    /// <inheritdoc/>
     public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>

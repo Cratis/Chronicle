@@ -32,7 +32,9 @@ public class a_mongodb_converter : Specification
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(ReadModel)) },
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
         _converter = new(_expandoObjectConverter, _typeFormats, _model);
     }
 }

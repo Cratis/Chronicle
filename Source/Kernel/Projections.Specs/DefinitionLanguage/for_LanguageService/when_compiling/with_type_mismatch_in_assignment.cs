@@ -36,7 +36,9 @@ public class with_type_mismatch_in_assignment : for_LanguageService.given.a_lang
             {
                 [ReadModelGeneration.First] = readModelSchema
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
 
         var eventSchema = new JsonSchema { Title = "TestEvent" };
         eventSchema.Properties.Add("value", new JsonSchemaProperty { Type = JsonObjectType.Integer });

@@ -67,11 +67,14 @@ public class an_in_memory_sink : Specification
             "test-read-model",
             "TestReadModel",
             ReadModelOwner.Client,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, schema }
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
 
         var typeFormats = Substitute.For<ITypeFormats>();
         _sink = new InMemorySink(readModelDefinition, typeFormats);

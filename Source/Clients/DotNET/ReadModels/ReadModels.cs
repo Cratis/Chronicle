@@ -39,21 +39,40 @@ public class ReadModels(
         readModels.AddRange(projections.GetAllHandlers());
         readModels.AddRange(reducers.GetAllHandlers());
 
-        var readModelDefinitions = readModels.ConvertAll(readModel => new ReadModelDefinition
+        var readModelDefinitions = readModels.ConvertAll(readModel =>
         {
-            Type = new()
+            var observerType = readModel switch
             {
-                Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
-                Generation = ReadModelGeneration.First,
-            },
-            Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
-            Sink = new()
+                IProjectionHandler => ReadModelObserverType.Projection,
+                IReducerHandler => ReadModelObserverType.Reducer,
+                _ => ReadModelObserverType.Projection
+            };
+
+            var observerIdentifier = readModel switch
             {
-                ConfigurationId = Guid.Empty,
-                TypeId = WellKnownSinkTypes.MongoDB
-            },
-            Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
-            Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty)
+                IProjectionHandler projectionHandler => projectionHandler.Id.Value,
+                IReducerHandler reducerHandler => reducerHandler.Id.Value,
+                _ => string.Empty
+            };
+
+            return new ReadModelDefinition
+            {
+                Type = new()
+                {
+                    Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
+                    Generation = ReadModelGeneration.First,
+                },
+                Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
+                Sink = new()
+                {
+                    ConfigurationId = Guid.Empty,
+                    TypeId = WellKnownSinkTypes.MongoDB
+                },
+                Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
+                Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
+                ObserverType = observerType,
+                ObserverIdentifier = observerIdentifier
+            };
         });
 
         await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
@@ -67,6 +86,28 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task Register<TReadModel>()
     {
+        var observerType = ReadModelObserverType.Projection;
+        var observerIdentifier = string.Empty;
+
+        if (projections.HasFor<TReadModel>())
+        {
+            var handler = projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
+            if (handler is IProjectionHandler projectionHandler)
+            {
+                observerType = ReadModelObserverType.Projection;
+                observerIdentifier = projectionHandler.Id.Value;
+            }
+        }
+        else if (reducers.HasFor<TReadModel>())
+        {
+            var handler = reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
+            if (handler is IReducerHandler reducerHandler)
+            {
+                observerType = ReadModelObserverType.Reducer;
+                observerIdentifier = reducerHandler.Id.Value;
+            }
+        }
+
         var readModelDefinitions = new List<ReadModelDefinition>()
         {
             new()
@@ -83,7 +124,9 @@ public class ReadModels(
                     TypeId = WellKnownSinkTypes.MongoDB
                 },
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
-                Indexes = GetIndexesForType(typeof(TReadModel), string.Empty)
+                Indexes = GetIndexesForType(typeof(TReadModel), string.Empty),
+                ObserverType = observerType,
+                ObserverIdentifier = observerIdentifier
             }
         };
         await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
@@ -123,7 +166,7 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
-        if (projections.HasFor(typeof(TReadModel)))
+        if (projections.HasFor<TReadModel>())
         {
             var projectionSnapshots = await projections.GetSnapshotsById<TReadModel>(readModelKey);
             return projectionSnapshots.Select(snapshot => new ReadModelSnapshot<TReadModel>(
@@ -149,7 +192,7 @@ public class ReadModels(
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
-        var hasProjection = projections.HasFor(typeof(TReadModel));
+        var hasProjection = projections.HasFor<TReadModel>();
         var hasReducer = reducers.HasFor<TReadModel>();
 
         if (!hasProjection && !hasReducer)

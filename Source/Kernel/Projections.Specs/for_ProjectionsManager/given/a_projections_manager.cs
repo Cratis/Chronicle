@@ -79,7 +79,9 @@ public class a_projections_manager : Specification
             ReadModelOwner.Client,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
 
         _secondReadModelDefinition = new ReadModelDefinition(
             "second-read-model",
@@ -87,6 +89,8 @@ public class a_projections_manager : Specification
             ReadModelOwner.Client,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
     }
 }

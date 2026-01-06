@@ -58,6 +58,8 @@ internal sealed class Reducers(
             ReadModelIdentifier.NotSet,
             ReadModelName.NotSet,
             ReadModelOwner.None,
+            ReadModelObserverType.Reducer,
+            ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);

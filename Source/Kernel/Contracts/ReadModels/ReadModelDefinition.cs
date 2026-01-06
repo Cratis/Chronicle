@@ -40,4 +40,16 @@ public class ReadModelDefinition
     /// </summary>
     [ProtoMember(6, IsRequired = true)]
     public IList<IndexDefinition> Indexes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the type of owner for the read model.
+    /// </summary>
+    [ProtoMember(7)]
+    public ReadModelObserverType ObserverType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the observer identifier for the read model.
+    /// </summary>
+    [ProtoMember(8)]
+    public string ObserverIdentifier { get; set; } = string.Empty;
 }

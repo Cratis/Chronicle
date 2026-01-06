@@ -21,6 +21,13 @@ public interface IProjections
     /// <summary>
     /// Check if there is a definition for a specific type.
     /// </summary>
+    /// <returns>True if it exists, false if not.</returns>
+    /// <typeparam name="TReadModel">Type of read model to check for.</typeparam>
+    bool HasFor<TReadModel>();
+
+    /// <summary>
+    /// Check if there is a definition for a specific type.
+    /// </summary>
     /// <param name="readModelType">Type of read model to check for.</param>
     /// <returns>True if it exists, false if not.</returns>
     bool HasFor(Type readModelType);

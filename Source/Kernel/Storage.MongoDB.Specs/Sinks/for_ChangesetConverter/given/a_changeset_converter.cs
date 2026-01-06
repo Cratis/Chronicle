@@ -40,7 +40,9 @@ public class a_changeset_converter : Specification
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(TestReadModel)) },
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
 
         _converter = new ChangesetConverter(
             _readModel,

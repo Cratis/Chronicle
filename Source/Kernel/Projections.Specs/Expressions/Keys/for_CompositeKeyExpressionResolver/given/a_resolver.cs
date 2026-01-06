@@ -28,7 +28,9 @@ public class a_resolver : Specification
             {
                 { ReadModelGeneration.First, new JsonSchema() }
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
 
         _projection = Substitute.For<IProjection>();
         _projection.Identifier.Returns((ProjectionId)Guid.NewGuid().ToString());

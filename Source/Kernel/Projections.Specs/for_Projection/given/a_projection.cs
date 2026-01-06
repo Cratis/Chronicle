@@ -24,7 +24,7 @@ public class a_projection : Specification
             string.Empty,
             string.Empty,
             string.Empty,
-            new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema>(), []),
+            new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema>(), [], ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified),
             new JsonSchema(),
             true,
             []);

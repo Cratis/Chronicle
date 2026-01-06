@@ -36,6 +36,8 @@ public class a_language_service : Specification
             {
                 [ReadModelGeneration.First] = schema
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
     }
 }

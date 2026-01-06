@@ -13,7 +13,7 @@ public class when_getting_for_unknown_type : Specification
 
     void Establish() => _sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([]));
 
-    void Because() => _result = Catch.Exception(() => _sinks.GetFor("bc5e82fd-9845-4464-9802-a7e21bd8a919", SinkConfigurationId.None, new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, null!)));
+    void Because() => _result = Catch.Exception(() => _sinks.GetFor("bc5e82fd-9845-4464-9802-a7e21bd8a919", SinkConfigurationId.None, new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, null!, new Dictionary<ReadModelGeneration, JsonSchema>(), [], ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified)));
 
     [Fact] void should_throw_unknown_result_store() => _result.ShouldBeOfExactType<UnknownSink>();
 }

@@ -62,4 +62,13 @@ public interface IReadModels
     /// <returns>The <see cref="GetInstancesResponse"/> with the instances.</returns>
     [Operation]
     Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get snapshots of a read model grouped by CorrelationId.
+    /// </summary>
+    /// <param name="request">The <see cref="GetSnapshotsByKeyRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns><see cref="GetSnapshotsByKeyResponse"/> containing the snapshots.</returns>
+    [Operation]
+    Task<GetSnapshotsByKeyResponse> GetSnapshotsByKey(GetSnapshotsByKeyRequest request, CallContext context = default);
 }

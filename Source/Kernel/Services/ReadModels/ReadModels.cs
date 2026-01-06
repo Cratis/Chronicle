@@ -13,7 +13,8 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
-internal sealed class ReadModels(IGrainFactory grainFactory, IStorage storage) : IReadModels
+/// <param name="projections">The projections service.</param>
+internal sealed class ReadModels(IGrainFactory grainFactory, IStorage storage, Contracts.Projections.IProjections projections) : IReadModels
 {
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
@@ -88,6 +89,47 @@ internal sealed class ReadModels(IGrainFactory grainFactory, IStorage storage) :
             TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetSnapshotsByKeyResponse> GetSnapshotsByKey(GetSnapshotsByKeyRequest request, CallContext context = default)
+    {
+        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
+        var definition = await readModel.GetDefinition();
+
+        IList<ReadModelSnapshot> snapshots;
+
+        if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
+        {
+            var projectionSnapshotsResponse = await projections.GetSnapshotsById(new Contracts.Projections.GetSnapshotsByIdRequest
+            {
+                ProjectionId = definition.ObserverIdentifier,
+                EventStore = request.EventStore,
+                Namespace = request.Namespace,
+                EventSequenceId = request.EventSequenceId,
+                ReadModelKey = request.ReadModelKey
+            });
+
+            snapshots = projectionSnapshotsResponse.Snapshots.Select(s => new ReadModelSnapshot
+            {
+                ReadModel = s.ReadModel,
+                Events = s.Events,
+                Occurred = s.Occurred,
+                CorrelationId = s.CorrelationId.ToString()
+            }).ToList();
+        }
+        else
+        {
+            // For reducers, snapshots are typically computed on the client side
+            // Server-side reducers would need additional implementation here
+            // For now, return empty snapshots as reducers typically run client-side
+            snapshots = [];
+        }
+
+        return new GetSnapshotsByKeyResponse
+        {
+            Snapshots = snapshots
         };
     }
 }

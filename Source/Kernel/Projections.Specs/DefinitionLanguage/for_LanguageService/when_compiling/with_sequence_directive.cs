@@ -38,7 +38,9 @@ public class with_sequence_directive : for_LanguageService.given.a_language_serv
             {
                 [ReadModelGeneration.First] = schema
             },
-            []);
+            [],
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified);
 
         var eventSchema = new JsonSchema { Title = "SimulationAdded" };
         eventSchema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
