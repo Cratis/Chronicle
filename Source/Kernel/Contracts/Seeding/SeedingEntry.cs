@@ -26,4 +26,10 @@ public class SeedingEntry
     /// </summary>
     [ProtoMember(3)]
     public string Content { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags associated with the event.
+    /// </summary>
+    [ProtoMember(4, IsRequired = true)]
+    public IList<string> Tags { get; set; } = [];
 }

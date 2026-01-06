@@ -55,6 +55,6 @@ internal static class EventContextConverters
         context.CausedBy.ToChronicle(),
         context.ObservationState.ToChronicle())
     {
-        Tags = context.Tags.Select(_ => new Tag(_))
+        Tags = context.Tags.Select(_ => new Concepts.Events.Tag(_))
     };
 }

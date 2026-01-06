@@ -12,11 +12,11 @@ public class when_seeding_already_seeded_events : given.an_event_seeding_grain
     void Establish()
     {
         // Add an entry to the state to simulate it was already seeded
-        var seededEntry = new Storage.Seeding.SeededEventEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}");
+        var seededEntry = new Storage.Seeding.SeededEventEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}", null);
         _state.State.ByEventType["test-event-type"] = [seededEntry];
 
         _entries = [
-            new SeedingEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}")
+            new SeedingEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}", null)
         ];
     }
 

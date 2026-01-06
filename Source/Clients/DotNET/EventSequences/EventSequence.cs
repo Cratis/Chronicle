@@ -132,11 +132,11 @@ public class EventSequence(
         {
             var eventClrType = @event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
-            
+
             // Merge static tags from the event type with dynamic tags
             var staticTags = eventClrType.GetTags();
             var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
-            
+
             return new Contracts.Events.EventToAppend
             {
                 EventSourceType = eventSourceType ?? EventSourceType.Default,
@@ -174,11 +174,11 @@ public class EventSequence(
         {
             var eventClrType = @event.Event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
-            
+
             // Merge static tags from the event type with dynamic tags
             var staticTags = eventClrType.GetTags();
             var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
-            
+
             return new Contracts.Events.EventToAppend
             {
                 EventSourceType = @event.EventSourceType,
