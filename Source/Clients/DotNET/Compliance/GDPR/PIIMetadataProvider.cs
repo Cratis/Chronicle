@@ -16,9 +16,9 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
 
     /// <inheritdoc/>
     public bool CanProvide(PropertyInfo property) =>
-        Attribute.IsDefined(property, typeof(PIIAttribute)) ||
-        (property.DeclaringType is not null && Attribute.IsDefined(property.DeclaringType, typeof(PIIAttribute))) ||
-        CanProvide(property.PropertyType);
+         Attribute.IsDefined(property, typeof(PIIAttribute)) ||
+         (property.DeclaringType is not null && Attribute.IsDefined(property.DeclaringType, typeof(PIIAttribute))) ||
+         CanProvide(property.PropertyType);
 
     /// <inheritdoc/>
     public ComplianceMetadata Provide(Type type)

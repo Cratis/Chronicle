@@ -19,12 +19,7 @@ public class Tls
     public string? CertificatePassword { get; set; }
 
     /// <summary>
-    /// Gets or sets whether TLS is disabled. Default is false (TLS enabled).
+    /// Gets whether TLS is enabled.
     /// </summary>
-    public bool Disable { get; set; }
-
-    /// <summary>
-    /// Gets or sets the HTTP port for fetching development certificates. Default is 35001.
-    /// </summary>
-    public int DevelopmentCertificatePort { get; set; } = 35001;
+    public bool IsDisabled => string.IsNullOrEmpty(CertificatePath) || string.IsNullOrEmpty(CertificatePassword);
 }

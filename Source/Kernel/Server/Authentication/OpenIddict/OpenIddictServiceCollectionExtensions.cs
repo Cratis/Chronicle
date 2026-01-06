@@ -53,8 +53,26 @@ public static class OpenIddictServiceCollectionExtensions
                     .AddDevelopmentEncryptionCertificate()
                        .AddDevelopmentSigningCertificate();
 
+                // Determine if we have a secure certificate configured
+                var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+
+                // In development without a certificate, allow HTTP connections
+#if DEVELOPMENT
+                if (!hasSecureCertificate)
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough()
+                           .DisableTransportSecurityRequirement();
+                }
+                else
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough();
+                }
+#else
                 options.UseAspNetCore()
                        .EnableTokenEndpointPassthrough();
+#endif
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
                 {
@@ -62,7 +80,12 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    var internalScheme = chronicleOptions.Tls.Disable ? Uri.UriSchemeHttp : Uri.UriSchemeHttps;
+                    // In development without a certificate, use HTTP; otherwise use HTTPS
+#if DEVELOPMENT
+                    var internalScheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+#else
+                    var internalScheme = Uri.UriSchemeHttps;
+#endif
                     var internalAuthority = new UriBuilder(internalScheme, "localhost", chronicleOptions.ManagementPort).Uri;
                     options.SetIssuer(internalAuthority);
                 }
@@ -84,7 +107,13 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    scheme = chronicleOptions.Tls.Disable ? Uri.UriSchemeHttp : Uri.UriSchemeHttps;
+                    // In development without a certificate, use HTTP; otherwise use HTTPS
+                    var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+#if DEVELOPMENT
+                    scheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+#else
+                    scheme = Uri.UriSchemeHttps;
+#endif
                     host = "localhost";
                 }
 

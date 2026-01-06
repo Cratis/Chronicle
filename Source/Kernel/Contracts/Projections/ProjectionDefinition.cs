@@ -102,8 +102,8 @@ public class ProjectionDefinition
     public SerializableDateTimeOffset? LastUpdated { get; set; }
 
     /// <summary>
-    /// Gets or sets the categories the projection belongs to.
+    /// Gets or sets the tags the projection belongs to.
     /// </summary>
     [ProtoMember(16, IsRequired = true)]
-    public IList<string> Categories { get; set; } = [];
+    public IList<string> Tags { get; set; } = [];
 }

@@ -150,6 +150,7 @@ public class EventSequence(
         CorrelationId? correlationId = null,
         IEnumerable<Causation>? causation = null,
         Identity? causedBy = null,
+        IEnumerable<Tag>? tags = null,
         EventSourceType? eventSourceType = null,
         EventStreamType? eventStreamType = null,
         EventStreamId? eventStreamId = null)
@@ -159,6 +160,7 @@ public class EventSequence(
 
         correlationId ??= CorrelationId.New();
         causation ??= [];
+        tags ??= [];
 
         if (causedBy is null &&
             RequestContext.Get(WellKnownKeys.UserIdentity) is string userSubject && !string.IsNullOrEmpty(userSubject) &&
@@ -180,6 +182,7 @@ public class EventSequence(
             correlationId,
             causation,
             causedBy,
+            tags,
             ConcurrencyScope.None);
     }
 
@@ -194,6 +197,7 @@ public class EventSequence(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
+        IEnumerable<Tag> tags,
         ConcurrencyScope concurrencyScope)
     {
         try
@@ -220,6 +224,7 @@ public class EventSequence(
                 correlationId,
                 causation,
                 causedBy,
+                tags,
                 compliantEvent,
                 constraintContext);
         }
@@ -283,6 +288,7 @@ public class EventSequence(
                     correlationId,
                     causation,
                     identity,
+                    eventToAppend.Tags,
                     DateTimeOffset.UtcNow,
                     compliantEvent));
 
@@ -419,6 +425,7 @@ public class EventSequence(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
+        IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
         ConstraintValidationContext constraintContext)
     {
@@ -449,6 +456,7 @@ public class EventSequence(
                     correlationId,
                     causation,
                     identity,
+                    tags,
                     occurred,
                     compliantEvent);
             }

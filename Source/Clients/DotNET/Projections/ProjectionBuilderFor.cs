@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 
@@ -90,6 +89,6 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
-            Categories = _projectionType.GetCategories().ToArray()
+            Tags = _projectionType.GetTags().ToArray()
         };
 }

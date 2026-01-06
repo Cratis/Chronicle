@@ -35,6 +35,7 @@ public class existing_sequence_number(context context) : Given<context>(context)
                 EventSourceId.Value,
                 Concepts.Events.EventStreamType.All,
                 Concepts.Events.EventStreamId.Default,
+                [],
                 new Dictionary<string, BsonDocument>() { { "1", FirstEvent.ToBsonDocument() } },
                 []);
 

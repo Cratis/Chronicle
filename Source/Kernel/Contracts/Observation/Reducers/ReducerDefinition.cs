@@ -48,8 +48,8 @@ public class ReducerDefinition
     public SinkDefinition Sink { get; set; }
 
     /// <summary>
-    /// Gets or sets the categories the reducer belongs to.
+    /// Gets or sets the tags the reducer belongs to.
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
-    public IList<string> Categories { get; set; } = [];
+    public IList<string> Tags { get; set; } = [];
 }

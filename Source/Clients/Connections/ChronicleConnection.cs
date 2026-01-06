@@ -45,12 +45,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
     readonly ILoggerFactory _loggerFactory;
-    readonly bool _disableTls;
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
-    readonly int _developmentCertificatePort;
     readonly ITokenProvider _tokenProvider;
-    X509Certificate2? _fetchedDevCa;
+    readonly bool _disableTls;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -71,10 +69,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
     /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
-    /// <param name="disableTls">Whether TLS is disabled.</param>
+    /// <param name="disableTls">Whether to disable TLS for the connection.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
-    /// <param name="developmentCertificatePort">Port used to fetch the development CA over HTTP. Default is 35001.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
@@ -89,13 +86,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken,
         ILogger<ChronicleConnection> logger,
-        bool disableTls = false,
+        bool disableTls,
         string? certificatePath = null,
         string? certificatePassword = null,
-        int developmentCertificatePort = 35001,
         ITokenProvider? tokenProvider = null)
     {
-        GrpcClientFactory.AllowUnencryptedHttp2 = disableTls;
+        _disableTls = disableTls;
+        GrpcClientFactory.AllowUnencryptedHttp2 = _disableTls;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
@@ -106,10 +103,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _cancellationToken = cancellationToken;
         _logger = logger;
         _loggerFactory = loggerFactory;
-        _disableTls = disableTls;
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
-        _developmentCertificatePort = developmentCertificatePort;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
 
         _cancellationToken.Register(() =>
@@ -141,7 +136,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
-        _fetchedDevCa?.Dispose();
         if (_tokenProvider is IDisposable disposableTokenProvider)
         {
             disposableTokenProvider.Dispose();
@@ -222,45 +216,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     GrpcChannel CreateGrpcChannel()
     {
-        var certificate = CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword, _disableTls);
-
-        if (!_disableTls && certificate is null)
-        {
-            // In development, fetch CA from HTTP-only port
-            // In production, this would fail and fall back to default validation
-            var wellKnownUrl = $"http://{_connectionString.ServerAddress.Host}:{_developmentCertificatePort}/.well-known/chronicle/ca";
-            try
-            {
-                _logger.FetchingDevelopmentCa(wellKnownUrl);
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                var pem = http.GetStringAsync(wellKnownUrl).GetAwaiter().GetResult();
-                if (!string.IsNullOrWhiteSpace(pem))
-                {
-                    const string header = "-----BEGIN CERTIFICATE-----";
-                    const string footer = "-----END CERTIFICATE-----";
-                    var start = pem.IndexOf(header, StringComparison.Ordinal);
-                    var end = pem.IndexOf(footer, StringComparison.Ordinal);
-                    if (start >= 0 && end > start)
-                    {
-                        var base64 = pem.Substring(start + header.Length, end - (start + header.Length)).Replace("\n", string.Empty).Replace("\r", string.Empty).Trim();
-                        var bytes = Convert.FromBase64String(base64);
-
-                        // Create PEM with line breaks and use CreateFromPem to avoid deprecated constructors
-                        var base64WithBreaks = Convert.ToBase64String(bytes, Base64FormattingOptions.InsertLineBreaks);
-                        var caPem = header + "\n" + base64WithBreaks + "\n" + footer + "\n";
-                        _fetchedDevCa = X509Certificate2.CreateFromPem(caPem);
-                        _logger.FetchedDevelopmentCa(wellKnownUrl);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.FailedFetchingDevelopmentCa(wellKnownUrl, ex);
-
-                // ignore fetch errors; fallback to default validation
-            }
-        }
-
+        var certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
         var httpHandler = new SocketsHttpHandler
         {
             PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
@@ -272,7 +228,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!_disableTls && certificate is not null)
         {
             httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
-            _logger.UsingClientCertificate(!string.IsNullOrEmpty(_certificatePath) ? _certificatePath! : "embedded");
+            _logger.UsingClientCertificate(_certificatePath!);
         }
 
         if (!_disableTls)
@@ -289,38 +245,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     return cert.GetCertHashString() == certificate.GetCertHashString();
                 }
 
-                if (_fetchedDevCa is not null && cert is not null)
-                {
-                    _logger.UsingFetchedDevelopmentCa();
-                    try
-                    {
-                        using var buildChain = new X509Chain();
-
-                        // Use a custom trust store so the fetched CA is treated as a trusted root
-                        buildChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-                        buildChain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
-#if NET5_0_OR_GREATER
-                        buildChain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-                        buildChain.ChainPolicy.CustomTrustStore.Add(_fetchedDevCa);
-#else
-                        // Fallback for older runtimes: add to ExtraStore (may not be sufficient on all platforms)
-                        buildChain.ChainPolicy.ExtraStore.Add(_fetchedDevCa);
-#endif
-
-                        if (cert is X509Certificate2 serverCert)
-                        {
-                            return buildChain.Build(serverCert);
-                        }
-
-                        using var tmp = new X509Certificate2(cert);
-                        return buildChain.Build(tmp);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-                }
-
+                // For development: accept localhost certificates with name mismatches
                 return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
             };
         }

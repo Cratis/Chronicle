@@ -14,14 +14,9 @@ public static class CertificateLoader
     /// Loads a certificate based on the priority: ChronicleOptions → Embedded Certificate → Dev Certificate.
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
-    /// <returns>The loaded certificate or null if TLS is disabled or no certificate is available.</returns>
+    /// <returns>The loaded certificate or null if no certificate is available.</returns>
     public static X509Certificate2? LoadCertificate(Configuration.ChronicleOptions options)
     {
-        if (options.Tls.Disable)
-        {
-            return null;
-        }
-
         if (!string.IsNullOrEmpty(options.Tls.CertificatePath) && File.Exists(options.Tls.CertificatePath))
         {
             return LoadCertificateFromPath(options.Tls.CertificatePath, options.Tls.CertificatePassword);

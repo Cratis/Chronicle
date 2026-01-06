@@ -27,6 +27,7 @@ public class when_round_tripping_event_context_conversion : Specification
             CorrelationId.New(),
             [new Causation(DateTimeOffset.UtcNow, "causationType", properties)],
             new Identity("TheSubject", "TheUserName"),
+            [],
             EventObservationState.Initial
         );
     }

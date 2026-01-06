@@ -28,7 +28,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="RemovedWithJoin">All the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
-/// <param name="Categories">Collection of categories the projection belongs to.</param>
+/// <param name="Tags">Collection of tags the projection belongs to.</param>
 public record ProjectionDefinition(
     ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
@@ -46,7 +46,7 @@ public record ProjectionDefinition(
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,
     DateTimeOffset? LastUpdated = default,
-    IEnumerable<string>? Categories = default)
+    IEnumerable<string>? Tags = default)
 {
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.

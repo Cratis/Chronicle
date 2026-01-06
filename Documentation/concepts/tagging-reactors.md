@@ -1,20 +1,22 @@
-# Categorizing Reactors
+# Tagging Reactors
 
-Categories provide a way to organize and tag your reactors for better discoverability and management. By applying the `[Category]` attribute to your reactor classes, you can assign one or more categories that describe the purpose or domain of the reactor.
+Tags provide a way to organize and categorize your reactors for better discoverability and management. By applying the `[Tag]` attribute to your reactor classes, you can assign one or more tags that describe the purpose or domain of the reactor.
 
-## Adding Categories
+> **Note**: Tags replaced the previous `[Category]` attribute. Use `[Tag]` for all new code.
 
-You can categorize reactors in multiple ways:
+## Adding Tags
 
-### Single Category
+You can tag reactors in multiple ways:
 
-Apply a single category to your reactor:
+### Single Tag
+
+Apply a single tag to your reactor:
 
 ```csharp
-using Cratis.Chronicle.Observation;
+using Cratis.Chronicle;
 using Cratis.Chronicle.Reactors;
 
-[Category("Notifications")]
+[Tag("Notifications")]
 public class OrderConfirmationReactor
 {
     readonly IEmailService _emailService;
@@ -31,12 +33,12 @@ public class OrderConfirmationReactor
 }
 ```
 
-### Multiple Categories (Single Attribute)
+### Multiple Tags (Single Attribute)
 
-Use the params feature to specify multiple categories in a single attribute:
+Use the params feature to specify multiple tags in a single attribute:
 
 ```csharp
-[Category("Notifications", "Customer", "Email")]
+[Tag("Notifications", "Customer", "Email")]
 public class CustomerNotificationReactor
 {
     readonly IEmailService _emailService;
@@ -53,14 +55,14 @@ public class CustomerNotificationReactor
 }
 ```
 
-### Multiple Categories (Multiple Attributes)
+### Multiple Tags (Multiple Attributes)
 
-Apply multiple `[Category]` attributes:
+Apply multiple `[Tag]` attributes:
 
 ```csharp
-[Category("Integration")]
-[Category("ExternalAPI")]
-[Category("Inventory")]
+[Tag("Integration")]
+[Tag("ExternalAPI")]
+[Tag("Inventory")]
 public class InventorySyncReactor
 {
     readonly IInventoryApi _inventoryApi;
@@ -82,8 +84,8 @@ public class InventorySyncReactor
 Combine both approaches:
 
 ```csharp
-[Category("Notifications", "SMS")]
-[Category("Customer")]
+[Tag("Notifications", "SMS")]
+[Tag("Customer")]
 public class SmsNotificationReactor
 {
     readonly ISmsService _smsService;
@@ -102,56 +104,62 @@ public class SmsNotificationReactor
 
 ## Best Practices
 
-- **Use meaningful names**: Choose category names that clearly describe the purpose or domain
-- **Be consistent**: Establish category naming conventions across your organization
-- **Don't over-categorize**: Apply only relevant categories; too many can reduce their usefulness
-- **Group related reactors**: Use categories to group reactors that serve similar purposes
+- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
+- **Be consistent**: Establish tag naming conventions across your organization
+- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
+- **Group related reactors**: Use tags to group reactors that serve similar purposes
 
-## Common Category Examples
+## Common Tag Examples
 
-Here are some common patterns for categorizing reactors:
+Here are some common patterns for tagging reactors:
 
 ```csharp
 // By integration type
-[Category("Notifications")]
-[Category("ExternalAPI")]
-[Category("MessageQueue")]
-[Category("FileSystem")]
+[Tag("Notifications")]
+[Tag("ExternalAPI")]
+[Tag("MessageQueue")]
+[Tag("FileSystem")]
 
 // By domain
-[Category("Sales")]
-[Category("Inventory")]
-[Category("Customer")]
-[Category("Shipping")]
+[Tag("Sales")]
+[Tag("Inventory")]
+[Tag("Customer")]
+[Tag("Shipping")]
 
 // By communication channel
-[Category("Email")]
-[Category("SMS")]
-[Category("Push")]
-[Category("Webhook")]
+[Tag("Email")]
+[Tag("SMS")]
+[Tag("Push")]
+[Tag("Webhook")]
 
 // By purpose
-[Category("Integration")]
-[Category("Alerting")]
-[Category("Monitoring")]
-[Category("Automation")]
+[Tag("Integration")]
+[Tag("Alerting")]
+[Tag("Monitoring")]
+[Tag("Automation")]
 
 // By stakeholder
-[Category("Customer")]
-[Category("Operations")]
-[Category("Finance")]
-[Category("Support")]
+[Tag("Customer")]
+[Tag("Operations")]
+[Tag("Finance")]
+[Tag("Support")]
 ```
 
-## Querying by Category
+## Querying by Tag
 
-Categories stored in the event store definition can be used for:
+Tags stored in the event store definition can be used for:
 
 - Filtering and searching for specific reactors
 - Organizing reactors in administrative interfaces
 - Generating documentation
-- Managing reactor deployments by category
-- Monitoring and alerting based on category groups
-- Controlling reactor activation by category
+- Managing reactor deployments by tag
+- Monitoring and alerting based on tag groups
+- Controlling reactor activation by tag
 
 Note: The specific querying capabilities depend on your Chronicle setup and tooling.
+
+## See Also
+
+- [Tagging](tagging.md) - Comprehensive guide to tagging in Chronicle
+- [Reducers Tagging](../reducers/tagging-reducers.md) - Tagging reducers
+

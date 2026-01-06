@@ -5,7 +5,6 @@ using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
@@ -58,7 +57,7 @@ internal class ModelBoundProjectionBuilder(
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            Categories = modelType.GetCategories().ToArray()
+            Tags = modelType.GetTags().ToArray()
         };
 
         var classLevelFromEvents = modelType.GetCustomAttributes()

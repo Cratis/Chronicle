@@ -48,6 +48,7 @@ public interface IEventSequenceStorage
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
+    /// <param name="tags">Collection of tags associated with the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
@@ -61,6 +62,7 @@ public interface IEventSequenceStorage
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         ExpandoObject content);
 

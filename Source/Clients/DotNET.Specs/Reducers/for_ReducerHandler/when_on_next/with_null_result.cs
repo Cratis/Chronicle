@@ -39,7 +39,9 @@ public class with_null_result : given.a_reducer_handler
                 _eventStore.Namespace,
                 (CorrelationId)Guid.NewGuid(),
                 [],
-                Identities.Identity.NotSet),
+                Identities.Identity.NotSet,
+                [],
+                EventObservationState.Initial),
             new { });
     }
 

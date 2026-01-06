@@ -106,6 +106,7 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
         ExpandoObject content)
     {
@@ -125,6 +126,7 @@ public class EventSequenceStorage(
                 eventSourceId,
                 eventStreamType,
                 eventStreamId,
+                tags.Select(_ => _.Value),
                 new Dictionary<string, BsonDocument>
                 {
                     { eventType.Generation.ToString(), document }
@@ -146,7 +148,8 @@ public class EventSequenceStorage(
                     @namespace,
                     correlationId,
                     causation,
-                    await identityStorage.GetFor(causedByChain)),
+                    await identityStorage.GetFor(causedByChain),
+                    tags),
                 content));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -197,6 +200,7 @@ public class EventSequenceStorage(
                     eventToAppend.EventSourceId,
                     eventToAppend.EventStreamType,
                     eventToAppend.EventStreamId,
+                    eventToAppend.Tags.Select(_ => _.Value),
                     new Dictionary<string, BsonDocument>
                     {
                         { eventToAppend.EventType.Generation.ToString(), document }
@@ -218,7 +222,8 @@ public class EventSequenceStorage(
                         @namespace,
                         eventToAppend.CorrelationId,
                         eventToAppend.Causation,
-                        await identityStorage.GetFor(eventToAppend.CausedByChain)),
+                        await identityStorage.GetFor(eventToAppend.CausedByChain),
+                        eventToAppend.Tags),
                     eventToAppend.Content));
             }
 

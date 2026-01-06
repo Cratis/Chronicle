@@ -20,8 +20,5 @@
         "backoffDelay": 1,
         "exponentialBackoffDelayFactor": 2,
         "maximumBackoffDelay": 600
-    },
-    "tls": {
-        "disable": false
     }
 }

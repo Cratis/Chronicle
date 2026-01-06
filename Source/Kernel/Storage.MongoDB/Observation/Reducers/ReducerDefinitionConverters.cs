@@ -28,7 +28,7 @@ public static class ReducerDefinitionConverters
             ReadModel = definition.ReadModel,
             IsActive = definition.IsActive,
             Sink = definition.Sink,
-            Categories = definition.Categories
+            Tags = definition.Tags
         };
 
     /// <summary>
@@ -44,5 +44,5 @@ public static class ReducerDefinitionConverters
             definition.ReadModel,
             definition.IsActive,
             definition.Sink,
-            definition.Categories);
+            definition.Tags);
 }

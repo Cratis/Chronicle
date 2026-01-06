@@ -167,10 +167,6 @@ public class ChronicleOptions(
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
     public static ChronicleOptions FromConnectionString(ChronicleConnectionString connectionString) => new(connectionString)
     {
-        Tls = new Tls
-        {
-            Disable = connectionString.DisableTls
-        },
         Authentication = new Authentication()
     };
 }
