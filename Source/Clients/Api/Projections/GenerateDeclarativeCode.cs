@@ -19,7 +19,7 @@ public record GenerateDeclarativeCode(string EventStore, string Namespace, strin
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>The generated C# code or errors.</returns>
-    public async Task<GeneratedCodeResult> Handle(IProjections projections)
+    internal async Task<GeneratedCodeResult> Handle(IProjections projections)
     {
         var request = new GenerateDeclarativeCodeRequest
         {
@@ -32,7 +32,7 @@ public record GenerateDeclarativeCode(string EventStore, string Namespace, strin
 
         return result.Value switch
         {
-            Contracts.Projections.GeneratedCode code => new GeneratedCodeResult(code.Code, []),
+            GeneratedCode code => new GeneratedCodeResult(code.Code, []),
             ProjectionDefinitionParsingErrors errors => new GeneratedCodeResult(
                 string.Empty,
                 errors.Errors.Select(e => new ProjectionDefinitionSyntaxError(e.Message, e.Line, e.Column))),

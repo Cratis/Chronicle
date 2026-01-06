@@ -19,7 +19,7 @@ public record Projection(string Identifier, string ReadModel)
     /// <param name="projections"><see cref="IProjections"/> for interacting with projections.</param>
     /// <param name="eventStore">The event store to get projections for.</param>
     /// <returns>All projections.</returns>
-    public static async Task<IEnumerable<Projection>> AllProjections(IProjections projections, string eventStore)
+    internal static async Task<IEnumerable<Projection>> AllProjections(IProjections projections, string eventStore)
     {
         var definitions = await projections.GetAllDefinitions(new GetAllDefinitionsRequest { EventStore = eventStore });
         return definitions.Select(d => new Projection(d.Identifier, d.ReadModel));
