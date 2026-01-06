@@ -14,7 +14,7 @@ import { ReadModelOccurrences, ReadModelInstances as ReadModelInstancesApi } fro
 import * as faIcons from 'react-icons/fa6';
 import { Menubar } from 'primereact/menubar';
 import strings from 'Strings';
-import { FluxCapacitor } from '../../../../Icons';
+import { FluxCapacitor } from 'Icons';
 
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -161,9 +161,11 @@ export const ReadModels = () => {
             <div className="h-full" style={{ height: '100%' }}>
                 <Allotment className="h-full" proportionalLayout={false}>
                     <ReadModelInstances
-                        instances={instances}
+                        instances={instances.data}
                         page={page}
                         pageSize={pageSize}
+                        totalItems={instances.paging.totalItems}
+                        isPerforming={instances.isPerforming}
                         setPage={setPage}
                         setPageSize={setPageSize}
                     />

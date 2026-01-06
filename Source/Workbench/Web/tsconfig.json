@@ -50,6 +50,12 @@
             "Components": [
                 "Components/index"
             ],
+            "Icons/*": [
+                "Icons/*"
+            ],
+            "Icons": [
+                "Icons/index"
+            ],
             "Browser": [
                 "./Infrastructure/Browser"
             ],

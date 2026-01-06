@@ -82,6 +82,7 @@ export default defineConfig({
             'Shared': path.resolve('./Shared'),
             'State': path.resolve('./State'),
             'Components': path.resolve('./Components'),
+            'Icons': path.resolve('./Icons'),
             'Browser': path.resolve('./Infrastructure/Browser'),
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),

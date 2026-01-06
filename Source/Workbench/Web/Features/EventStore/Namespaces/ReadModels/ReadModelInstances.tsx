@@ -9,16 +9,19 @@ import { Button } from 'primereact/button';
 import strings from 'Strings';
 import { Json } from 'Features';
 import * as faIcons from 'react-icons/fa6';
+import { ReadModelInstance } from 'Api/ReadModels';
 
 interface Props {
-    instances: Json[];
+    instances: ReadModelInstance[];
     page: number;
     pageSize: number;
+    totalItems: number;
+    isPerforming: boolean;
     setPage: (p: number) => void;
     setPageSize: (s: number) => void;
 }
 
-export default function ReadModelInstances({ instances, page, pageSize, setPage, setPageSize }: Props) {
+export default function ReadModelInstances({ instances, page, pageSize, totalItems, isPerforming, setPage, setPageSize }: Props) {
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
     const [selectedObject, setSelectedObject] = useState<Json | null>(null);
 
@@ -44,17 +47,17 @@ export default function ReadModelInstances({ instances, page, pageSize, setPage,
     }, []);
 
     const currentData = useMemo<Json[]>(() => {
-        if (!instances.data || instances.data.length === 0) return [];
+        if (!instances || instances.length === 0) return [];
 
         if (navigationPath.length === 0) {
-            return instances.data.map((item: any) => item.instance as Json);
+            return instances.map((item: ReadModelInstance) => item.instance as Json);
         }
 
         const pathToArray = navigationPath.slice(0, -1);
         const arrayKey = navigationPath[navigationPath.length - 1];
 
         const arrayData: Json[] = [];
-        instances.data.forEach((item: any) => {
+        instances.forEach((item: ReadModelInstance) => {
             const parentValue = getValueAtPath(item.instance as Json, pathToArray);
             if (parentValue) {
                 const maybeArray = (parentValue as { [k: string]: Json })[arrayKey];
@@ -69,7 +72,7 @@ export default function ReadModelInstances({ instances, page, pageSize, setPage,
         });
 
         return arrayData;
-    }, [instances.data, navigationPath, getValueAtPath]);
+    }, [instances, navigationPath, getValueAtPath]);
 
     const objectArray = useMemo(() => {
         return currentData.filter((i): i is { [k: string]: Json } => i !== null && typeof i === 'object' && !Array.isArray(i));
@@ -206,7 +209,7 @@ export default function ReadModelInstances({ instances, page, pageSize, setPage,
                     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
                         <DataTable
                             value={objectArray}
-                            loading={instances.isPerforming}
+                            loading={isPerforming}
                             emptyMessage={strings.eventStore.namespaces.readModels.empty}
                             className="p-datatable-sm"
                             selectionMode="single"
@@ -218,10 +221,10 @@ export default function ReadModelInstances({ instances, page, pageSize, setPage,
 
                                 if (selectedObject && deepEqual(selectedObject, rowData)) {
                                     setSelectedObject(null);
-                                    setObjectNavigationPath([]);
+                                    setNavigationPath([]);
                                 } else {
                                     setSelectedObject(rowData);
-                                    setObjectNavigationPath([]);
+                                    setNavigationPath([]);
                                 }
                             }}
                             style={selectedObject ? { minWidth: '100%', width: 'max-content' } : { minWidth: '100%' }}
@@ -230,12 +233,12 @@ export default function ReadModelInstances({ instances, page, pageSize, setPage,
                         </DataTable>
                     </div>
 
-                    {instances.paging.totalItems > 0 && navigationPath.length === 0 && (
+                    {totalItems > 0 && navigationPath.length === 0 && (
                         <div style={{ borderTop: '1px solid var(--surface-border)', flexShrink: 0 }}>
                             <Paginator
                                 first={page * pageSize}
                                 rows={pageSize}
-                                totalRecords={instances.paging.totalItems}
+                                totalRecords={totalItems}
                                 rowsPerPageOptions={[10, 25, 50, 100]}
                                 onPageChange={onPageChange}
                             />
