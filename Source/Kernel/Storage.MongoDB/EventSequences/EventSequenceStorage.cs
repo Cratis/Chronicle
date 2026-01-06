@@ -148,10 +148,8 @@ public class EventSequenceStorage(
                     @namespace,
                     correlationId,
                     causation,
-                    await identityStorage.GetFor(causedByChain))
-                {
-                    Tags = tags
-                },
+                    await identityStorage.GetFor(causedByChain),
+                    tags),
                 content));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -224,10 +222,8 @@ public class EventSequenceStorage(
                         @namespace,
                         eventToAppend.CorrelationId,
                         eventToAppend.Causation,
-                        await identityStorage.GetFor(eventToAppend.CausedByChain))
-                    {
-                        Tags = eventToAppend.Tags
-                    },
+                        await identityStorage.GetFor(eventToAppend.CausedByChain),
+                        eventToAppend.Tags),
                     eventToAppend.Content));
             }
 
