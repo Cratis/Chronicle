@@ -91,6 +91,7 @@ export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments
                     totalRecords={result.paging.totalItems}
                     selectionMode='single'
                     selection={props.selection}
+                    onSelectionChange={props.onSelectionChange}
                     dataKey={props.dataKey}
                     filters={filters}
                     filterDisplay='menu'
