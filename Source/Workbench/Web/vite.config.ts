@@ -8,6 +8,7 @@ import react from "@vitejs/plugin-react";
 import path from 'path';
 import { EmitMetadataPlugin } from '@cratis/arc.vite';
 import tailwindcss from "@tailwindcss/vite";
+import http from 'http';
 
 export default defineConfig({
     optimizeDeps: {
@@ -63,21 +64,15 @@ export default defineConfig({
         open: false,
         proxy: {
             '/api': {
-                target: 'https://localhost:8080',
-                ws: true,
-                secure: false,
-                changeOrigin: true
+                target: 'http://localhost:8080',
+                ws: true
             },
             '/identity': {
-                target: 'https://localhost:8080',
-                ws: true,
-                secure: false,
-                changeOrigin: true
+                target: 'http://localhost:8080',
+                ws: true
             },
             '/swagger': {
-                target: 'https://localhost:8080',
-                secure: false,
-                changeOrigin: true
+                target: 'http://localhost:8080'
             }
         }
     },
