@@ -23,8 +23,8 @@ public class when_creating_copy_with_new_desired_state : Specification
         Guid.NewGuid().ToString(),
         CorrelationId.New(),
         [new Causation(DateTimeOffset.UtcNow, "Something", new Dictionary<string, string>() { { "prop", "42" } })],
-        ["First Tag", "Second Tag"]
-        Identity.System);
+        Identity.System,
+        ["First Tag", "Second Tag"]);
 
     void Because() => _copy = _original.WithState(EventObservationState.Replay);
 
