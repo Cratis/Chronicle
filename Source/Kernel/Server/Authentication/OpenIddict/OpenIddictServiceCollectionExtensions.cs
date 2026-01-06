@@ -53,8 +53,26 @@ public static class OpenIddictServiceCollectionExtensions
                     .AddDevelopmentEncryptionCertificate()
                        .AddDevelopmentSigningCertificate();
 
+                // Determine if we have a secure certificate configured
+                var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+
+                // In development without a certificate, allow HTTP connections
+#if DEVELOPMENT
+                if (!hasSecureCertificate)
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough()
+                           .DisableTransportSecurityRequirement();
+                }
+                else
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough();
+                }
+#else
                 options.UseAspNetCore()
                        .EnableTokenEndpointPassthrough();
+#endif
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
                 {
@@ -63,8 +81,7 @@ public static class OpenIddictServiceCollectionExtensions
                 else
                 {
                     // In development without a certificate, use HTTP; otherwise use HTTPS
-                    var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT && DEBUG
+#if DEVELOPMENT
                     var internalScheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
 #else
                     var internalScheme = Uri.UriSchemeHttps;
@@ -92,7 +109,7 @@ public static class OpenIddictServiceCollectionExtensions
                 {
                     // In development without a certificate, use HTTP; otherwise use HTTPS
                     var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT && DEBUG
+#if DEVELOPMENT
                     scheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
 #else
                     scheme = Uri.UriSchemeHttps;
