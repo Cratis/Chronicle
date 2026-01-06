@@ -150,7 +150,7 @@ public class ImmediateProjection(
             ? eventsWithSequenceNumber[^1].Context.SequenceNumber
             : EventSequenceNumber.Unavailable;
 
-        var state = await projectionGrain.Process(_projectionKey!.Namespace, initialState, events);
+        var state = await projectionGrain.ProcessForSingleReadModel(_projectionKey!.Namespace, initialState, events);
 
         var projectedEventsCount = events.Count(_ => _ is not null);
 

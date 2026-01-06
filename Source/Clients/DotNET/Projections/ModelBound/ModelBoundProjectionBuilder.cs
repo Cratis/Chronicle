@@ -259,12 +259,14 @@ internal class ModelBoundProjectionBuilder(
             {
                 allEventTypesReferencedByModel.Add(eventType);
                 var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+                var autoMapProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.AutoMap));
                 var key = keyProperty?.GetValue(attr) as string;
+                var autoMap = autoMapProperty?.GetValue(attr) as AutoMap? ?? AutoMap.Enabled;
                 if (!string.IsNullOrEmpty(key))
                 {
                     PropertyValidator.ValidatePropertyExists(eventType, key);
                 }
-                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName, key);
+                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName, key, autoMap);
             }
         }
 
@@ -365,12 +367,14 @@ internal class ModelBoundProjectionBuilder(
             {
                 eventTypesReferencedByMember.Add(eventType);
                 var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+                var autoMapProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.AutoMap));
                 var key = keyProperty?.GetValue(attr) as string;
+                var autoMap = autoMapProperty?.GetValue(attr) as AutoMap? ?? AutoMap.Enabled;
                 if (!string.IsNullOrEmpty(key))
                 {
                     PropertyValidator.ValidatePropertyExists(eventType, key);
                 }
-                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name, key);
+                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name, key, autoMap);
             }
         }
 

@@ -25,4 +25,9 @@ public class JoinDefinition
     /// Gets or sets the key expression, represents the key to use for identifying the model instance.
     /// </summary>
     public required PropertyExpression Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Inherit;
 }

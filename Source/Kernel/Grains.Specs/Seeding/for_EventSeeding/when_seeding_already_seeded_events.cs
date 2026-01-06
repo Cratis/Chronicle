@@ -12,17 +12,18 @@ public class when_seeding_already_seeded_events : given.an_event_seeding_grain
     void Establish()
     {
         // Add an entry to the state to simulate it was already seeded
-        var seededEntry = new Storage.Seeding.SeededEventEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}", null);
+        var seededEntry = new Storage.Seeding.SeededEventEntry("event-source-1", "test-event-type", /*lang=json,strict*/ "{\"value\":\"test1\"}");
         _state.State.ByEventType["test-event-type"] = [seededEntry];
 
         _entries = [
-            new SeedingEntry("event-source-1", "test-event-type", "{\"value\":\"test1\"}", null)
+            new SeedingEntry("event-source-1", "test-event-type", /*lang=json,strict*/ "{\"value\":\"test1\"}")
         ];
     }
 
     async Task Because() => await _grain.Seed(_entries);
 
-    [Fact] void should_not_append_events() => _eventSequence.DidNotReceive().AppendMany(
+    [Fact]
+    void should_not_append_events() => _eventSequence.DidNotReceive().AppendMany(
         Arg.Any<IEnumerable<EventToAppend>>(),
         Arg.Any<CorrelationId>(),
         Arg.Any<IEnumerable<Concepts.Auditing.Causation>>(),

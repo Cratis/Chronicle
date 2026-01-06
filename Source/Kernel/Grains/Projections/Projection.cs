@@ -42,6 +42,7 @@ public class Projection(
 {
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
     readonly Dictionary<EventStoreNamespaceName, EngineProjection> _projectionsByNamespace = new();
+    string _identifierPropertyName = "id"; // Cached identifier property name from read model schema
 
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
@@ -52,6 +53,25 @@ public class Projection(
 
         State = definition;
         await WriteStateAsync();
+
+        // Cache the identifier property name from the read model schema
+        var allReadModels = await storage.GetEventStore(key.EventStore).ReadModels.GetAll();
+        var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == State.ReadModel);
+        _identifierPropertyName = "id"; // Default
+
+        if (readModelDefinition is not null)
+        {
+            var schema = readModelDefinition.GetSchemaForLatestGeneration();
+            // Check for 'Id' first (PascalCase), then 'id' (camelCase)
+            if (schema.Properties.ContainsKey("Id"))
+            {
+                _identifierPropertyName = "Id";
+            }
+            else if (schema.Properties.ContainsKey("id"))
+            {
+                _identifierPropertyName = "id";
+            }
+        }
 
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
@@ -88,13 +108,14 @@ public class Projection(
     }
 
     /// <inheritdoc/>
-    public async Task<ExpandoObject> Process(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
+    public async Task<ExpandoObject> ProcessForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
         var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
         var state = initialState;
+        Key? lastKey = null;
 
         foreach (var @event in events)
         {
@@ -109,6 +130,7 @@ public class Projection(
             }
 
             var key = (keyResult as ResolvedKey)!.Key;
+            lastKey = key;
             var context = new ProjectionEventContext(
                 key,
                 @event,
@@ -121,7 +143,72 @@ public class Projection(
             state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
         }
 
+        // Inject id property into the read model before returning
+        if (lastKey is not null)
+        {
+            var stateDict = (IDictionary<string, object?>)state;
+            stateDict[_identifierPropertyName] = lastKey.Value.ToString();
+        }
+
         return state;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
+        var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+
+        var readModelsByKey = new Dictionary<Key, ExpandoObject>();
+
+        foreach (var @event in events)
+        {
+            var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
+            var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
+
+            if (keyResult is DeferredKey)
+            {
+                continue;
+            }
+
+            var key = (keyResult as ResolvedKey)!.Key;
+
+            if (!readModelsByKey.TryGetValue(key, out var state))
+            {
+                state = new ExpandoObject();
+                readModelsByKey[key] = state;
+            }
+
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
+            var context = new ProjectionEventContext(
+                key,
+                @event,
+                changeset,
+                projection.GetOperationTypeFor(@event.Context.EventType),
+                false);
+
+            await HandleEventFor(projection!, context);
+
+            state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
+            readModelsByKey[key] = state;
+        }
+
+        // Inject id property into each read model before returning
+        var results = new List<ExpandoObject>();
+        foreach (var kvp in readModelsByKey)
+        {
+            var readModel = kvp.Value;
+            var readModelDict = (IDictionary<string, object?>)readModel;
+
+            // Set the id property with the key value using the schema's property name
+            readModelDict[_identifierPropertyName] = kvp.Key.Value.ToString();
+
+            results.Add(readModel);
+        }
+
+        return results;
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
@@ -173,8 +260,10 @@ public class Projection(
             var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             var readModelDefinition = await readModel.GetDefinition();
+            var eventStoreStorage = storage.GetEventStore(key.EventStore);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition);
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 

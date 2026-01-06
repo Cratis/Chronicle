@@ -97,4 +97,10 @@ public class ProjectionDefinition
     /// Gets or sets the tags the projection belongs to.
     /// </summary>
     public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events at the projection level.
+    /// </summary>
+    public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Disabled;
+
 }

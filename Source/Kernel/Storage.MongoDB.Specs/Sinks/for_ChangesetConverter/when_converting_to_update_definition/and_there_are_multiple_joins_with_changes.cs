@@ -63,7 +63,8 @@ public class and_there_are_multiple_joins_with_changes : given.a_changeset_conve
     async Task Because() => _result = await _converter.ToUpdateDefinition(_key, _changeset, _eventSequenceNumber);
 
     [Fact] void should_not_indicate_has_changes_for_main_document() => _result.hasChanges.ShouldBeFalse();
-    [Fact] void should_perform_update_on_all_joined_documents() => _collection.Received(3).UpdateManyAsync(
+    [Fact]
+    void should_perform_update_on_all_joined_documents() => _collection.Received(3).UpdateManyAsync(
         Arg.Any<FilterDefinition<BsonDocument>>(),
         Arg.Any<UpdateDefinition<BsonDocument>>(),
         Arg.Any<UpdateOptions>(),

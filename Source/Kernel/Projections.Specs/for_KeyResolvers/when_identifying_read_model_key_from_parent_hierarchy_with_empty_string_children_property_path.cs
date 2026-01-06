@@ -114,9 +114,11 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_empty_st
         }
     }
 
-    [Fact] void should_treat_empty_string_as_not_set_and_query_sink_with_child_projection_children_property_path() =>
+    [Fact]
+    void should_treat_empty_string_as_not_set_and_query_sink_with_child_projection_children_property_path() =>
         _queriedChildPropertyPath.ShouldEqual((PropertyPath)"hubs.id");
 
-    [Fact] void should_not_incorrectly_use_parent_empty_string_as_prefix() =>
+    [Fact]
+    void should_not_incorrectly_use_parent_empty_string_as_prefix() =>
         _queriedChildPropertyPath.ShouldNotEqual((PropertyPath)".id");
 }

@@ -116,9 +116,11 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
         }
     }
 
-    [Fact] void should_query_sink_with_child_projection_children_property_path() =>
+    [Fact]
+    void should_query_sink_with_child_projection_children_property_path() =>
         _queriedChildPropertyPath.ShouldEqual((PropertyPath)"hubs.id");
 
-    [Fact] void should_not_query_sink_with_parent_projection_children_property_path() =>
+    [Fact]
+    void should_not_query_sink_with_parent_projection_children_property_path() =>
         _queriedChildPropertyPath.ShouldNotEqual((PropertyPath)"configurations.id");
 }

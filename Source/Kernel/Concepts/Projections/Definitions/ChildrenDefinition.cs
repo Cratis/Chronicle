@@ -43,4 +43,11 @@ public record ChildrenDefinition(
         All,
         RemovedWith,
         RemovedWithJoin,
-        FromEventProperty);
+        FromEventProperty)
+{
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public AutoMap AutoMap { get; set; } = AutoMap.Inherit;
+}
+

@@ -19,14 +19,14 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-/// <param name="autoMap">Whether to automatically map properties.</param>
+/// <param name="autoMap">AutoMap behavior for properties - defaults to Enabled at top level.</param>
 /// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
 /// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 public class ProjectionBuilder<TReadModel, TBuilder>(
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
     JsonSerializerOptions jsonSerializerOptions,
-    bool autoMap) : IProjectionBuilder<TReadModel, TBuilder>
+    AutoMap autoMap) : IProjectionBuilder<TReadModel, TBuilder>
     where TBuilder : class
 {
 #pragma warning disable CA1051 // Visible instance fields
@@ -40,7 +40,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
-    protected bool _autoMap = autoMap;
+    protected AutoMap _autoMap = autoMap;
     protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
     /// <inheritdoc/>
@@ -54,7 +54,14 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public IProjectionBuilder<TReadModel, TBuilder> AutoMap()
     {
-        _autoMap = true;
+        _autoMap = global::Cratis.Chronicle.Projections.AutoMap.Enabled;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IProjectionBuilder<TReadModel, TBuilder> NoAutoMap()
+    {
+        _autoMap = global::Cratis.Chronicle.Projections.AutoMap.Disabled;
         return this;
     }
 
@@ -72,7 +79,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
         var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
-        if (_autoMap)
+        if (_autoMap == global::Cratis.Chronicle.Projections.AutoMap.Enabled)
         {
             builder.AutoMap();
         }
@@ -105,7 +112,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
         var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
-        if (_autoMap)
+        if (_autoMap == global::Cratis.Chronicle.Projections.AutoMap.Enabled)
         {
             builder.AutoMap();
         }

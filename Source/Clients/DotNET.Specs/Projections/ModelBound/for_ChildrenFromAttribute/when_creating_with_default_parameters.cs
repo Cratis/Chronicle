@@ -12,7 +12,7 @@ public class when_creating_with_default_parameters : Specification
 
     void Because() => _attribute = new ChildrenFromAttribute<SomeEvent>();
 
-    [Fact] void should_have_auto_map_set_to_true() => _attribute.AutoMap.ShouldBeTrue();
+    [Fact] void should_have_auto_map_set_to_enabled() => _attribute.AutoMap.ShouldEqual(AutoMap.Enabled);
 }
 
 public record SomeEvent(Guid ItemId, string Name);

@@ -4,12 +4,12 @@
 import { InputText } from 'primereact/inputtext';
 import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
-import { SchemaProperty } from './types';
+import { JsonSchemaProperty } from '../JsonSchema';
 
 export interface NameCellProps {
-    rowData: SchemaProperty;
+    rowData: JsonSchemaProperty;
     isEditMode: boolean;
-    onUpdate: (oldName: string, field: keyof SchemaProperty, value: unknown) => void;
+    onUpdate: (oldName: string, field: keyof JsonSchemaProperty, value: unknown) => void;
     validationError?: string;
 }
 

@@ -77,12 +77,14 @@ public class and_child_added_in_parent_then_resolved_join_with_multiple_properti
     [Fact] void should_remove_resolved_join() => _parentChangeset.Changes.OfType<ResolvedJoin>().ShouldBeEmpty();
     [Fact] void should_keep_child_added() => _parentChangeset.Changes.OfType<ChildAdded>().ShouldContainOnly(_childAdded);
     [Fact] void should_have_one_change() => _parentChangeset.Changes.Count().ShouldEqual(1);
-    [Fact] void should_apply_name_change_to_child()
+    [Fact]
+    void should_apply_name_change_to_child()
     {
         var childDict = (IDictionary<string, object?>)_child;
         childDict["name"].ShouldEqual("Updated Name");
     }
-    [Fact] void should_apply_description_change_to_child()
+    [Fact]
+    void should_apply_description_change_to_child()
     {
         var childDict = (IDictionary<string, object?>)_child;
         childDict["description"].ShouldEqual("Updated Description");

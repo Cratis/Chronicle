@@ -5144,6 +5144,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"monaco-editor@npm:^0.52.2":
+  version: 0.52.2
+  resolution: "monaco-editor@npm:0.52.2"
+  checksum: 10/0d4962d69ffa0a8df040faa9c582cef1893fa3fb617feca8f1425c5e670e74c2856104b9a2b01cbda0103a5e5f92f58843206bc9a0e070471c0c1270d7f52a96
+  languageName: node
+  linkType: hard
+
 "motion-dom@npm:^12.23.23":
   version: 12.24.3
   resolution: "motion-dom@npm:12.24.3"
@@ -7308,6 +7315,7 @@ __metadata:
     globals: "npm:16.5.0"
     hash-files: "npm:1.1.1"
     mocha: "npm:11.7.5"
+    monaco-editor: "npm:^0.52.2"
     primeicons: "npm:^7.0.0"
     primereact: "npm:^10.9.7"
     react: "npm:19.2.3"

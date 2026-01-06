@@ -30,25 +30,29 @@ public class nested_children_with_joins : given.a_model_bound_projection_builder
 
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
 
-    [Fact] void should_have_children_for_departments()
+    [Fact]
+    void should_have_children_for_departments()
     {
         _result.Children.Keys.ShouldContain(nameof(JoinedOrganization.Departments));
     }
 
-    [Fact] void should_have_join_for_department_renamed_on_first_level_children()
+    [Fact]
+    void should_have_join_for_department_renamed_on_first_level_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(JoinedDeptRenamed)).ToContract();
         var deptChildrenDef = _result.Children[nameof(JoinedOrganization.Departments)];
         deptChildrenDef.Join.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_nested_children_for_teams()
+    [Fact]
+    void should_have_nested_children_for_teams()
     {
         var deptChildrenDef = _result.Children[nameof(JoinedOrganization.Departments)];
         deptChildrenDef.Children.Keys.ShouldContain(nameof(JoinedDepartment.Teams));
     }
 
-    [Fact] void should_have_join_for_team_renamed_on_nested_children()
+    [Fact]
+    void should_have_join_for_team_renamed_on_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(JoinedTeamRenamed)).ToContract();
         var deptChildrenDef = _result.Children[nameof(JoinedOrganization.Departments)];
@@ -56,7 +60,8 @@ public class nested_children_with_joins : given.a_model_bound_projection_builder
         teamChildrenDef.Join.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_map_name_from_join_on_nested_children()
+    [Fact]
+    void should_map_name_from_join_on_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(JoinedTeamRenamed)).ToContract();
         var deptChildrenDef = _result.Children[nameof(JoinedOrganization.Departments)];

@@ -31,7 +31,8 @@ public class with_auto_map_disabled : given.a_model_bound_projection_builder
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
 
-    [Fact] void should_not_auto_map_properties()
+    [Fact]
+    void should_not_auto_map_properties()
     {
         var eventType = event_types.GetEventTypeFor(typeof(ProductItemAdded)).ToContract();
         var childrenDef = _result.Children[nameof(OrderWithExplicitMappedChildren.Items)];
@@ -50,5 +51,5 @@ public record ProductLineItem([Key] Guid Id, string ProductName, int Quantity, d
 
 public record OrderWithExplicitMappedChildren(
     [Key] Guid Id,
-    [ChildrenFrom<ProductItemAdded>(key: nameof(ProductItemAdded.ItemId), autoMap: false)]
+    [ChildrenFrom<ProductItemAdded>(key: nameof(ProductItemAdded.ItemId), autoMap: AutoMap.Disabled)]
     IEnumerable<ProductLineItem> Items);

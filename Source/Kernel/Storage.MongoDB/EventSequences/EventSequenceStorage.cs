@@ -671,6 +671,54 @@ public class EventSequenceStorage(
         return new EventCursor(converter, cursor);
     }
 
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetEventsWithLimit(
+        EventSequenceNumber start,
+        int limit,
+        EventSourceId? eventSourceId = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        CancellationToken cancellationToken = default)
+    {
+        logger.GettingRange(eventSequenceId, start, EventSequenceNumber.Unavailable);
+
+        var collection = _collection;
+        var filters = new List<FilterDefinition<Event>>
+            {
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start)
+            };
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamType, eventStreamType));
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventStreamId, eventStreamId));
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+
+        var filter = Builders<Event>.Filter.And([.. filters]);
+
+        var cursor = await collection.Find(filter)
+                                     .SortByAscendingSequenceNumber()
+                                     .Limit(limit)
+                                     .ToCursorAsync(cancellationToken)
+                                     .ConfigureAwait(false);
+        return new EventCursor(converter, cursor);
+    }
+
     UpdateOneModel<Event> CreateRedactionUpdateModelFor(
         AppendedEvent @event,
         RedactionReason reason,

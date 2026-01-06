@@ -1,11 +1,17 @@
 - name: Overview
   href: index.md
+- name: Architecture
+  href: architecture.md
+- name: Immediate Projections
+  href: immediate-projections.md
 - name: Eventual Consistency
   href: eventual-consistency.md
 - name: Watching Projections
   href: watching-projections.md
 - name: Categorizing Projections
   href: categorizing-projections.md
+- name: Projection Definition Language
+  href: projection-definition-language/toc.yml
 - name: Model-Bound Projections
   href: model-bound/toc.yml
 - name: Declarative Projections

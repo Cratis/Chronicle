@@ -125,6 +125,15 @@
                         "name": "Name"
                     }
                 }
+            },
+            "projections": {
+                "title": "Projections",
+                "empty": "No result.",
+                "actions": {
+                    "new": "New",
+                    "save": "Save",
+                    "preview": "Preview"
+                }
             }
         },
         "namespaces": {
@@ -350,6 +359,11 @@
         }
     },
     "components": {
+        "projectionEditor": {
+            "tooltips": {
+                "help": "Show Projection Definition Language help panel"
+            }
+        },
         "schemaEditor": {
             "columns": {
                 "property": "Property",

@@ -55,7 +55,7 @@ export const MenuItems = ({ children }: MenuItemsProps) => {
     }, [children, context.selectedItem]);
 
     return (
-        <div className="px-4 py-2" style={{ flexShrink: 0 }}>
+        <div className="px-4 py-4" style={{ flexShrink: 0 }}>
             <Menubar
                 aria-label="Actions"
                 model={items}

@@ -21,7 +21,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
 
     void Establish()
     {
-        var client = new MongoClient($"mongodb://localhost:{ChronicleInProcessFixture.MongoDBPort}");
+        var client = new MongoClient($"mongodb://localhost:{XUnit.Integration.ChronicleFixture.MongoDBPort}");
         _database = client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
         const string collectionName = "test_read_model";
         _collection = _database.GetCollection<BsonDocument>(collectionName);

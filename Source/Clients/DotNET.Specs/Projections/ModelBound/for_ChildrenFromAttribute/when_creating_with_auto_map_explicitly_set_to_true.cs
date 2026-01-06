@@ -7,7 +7,7 @@ public class when_creating_with_auto_map_explicitly_set_to_true : Specification
 {
     ChildrenFromAttribute<SomeEvent> _attribute;
 
-    void Because() => _attribute = new ChildrenFromAttribute<SomeEvent>(autoMap: true);
+    void Because() => _attribute = new ChildrenFromAttribute<SomeEvent>(autoMap: AutoMap.Enabled);
 
-    [Fact] void should_have_auto_map_set_to_true() => _attribute.AutoMap.ShouldBeTrue();
+    [Fact] void should_have_auto_map_set_to_enabled() => _attribute.AutoMap.ShouldEqual(AutoMap.Enabled);
 }
