@@ -14,6 +14,7 @@ import { ReadModelOccurrences, ReadModelInstances as ReadModelInstancesApi } fro
 import * as faIcons from 'react-icons/fa6';
 import { Menubar } from 'primereact/menubar';
 import strings from 'Strings';
+import { FluxCapacitor } from '../../../../Icons';
 
 export const ReadModels = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -117,6 +118,12 @@ export const ReadModels = () => {
                             label: strings.eventStore.namespaces.readModels.actions.query,
                             icon: <faIcons.FaArrowsRotate className='mr-2' />,
                             command: executeQuery,
+                            disabled: !selectedReadModel || !selectedOccurrence
+                        },
+                        {
+                            label: strings.eventStore.namespaces.readModels.actions.timeMachine,
+                            icon: <FluxCapacitor size={20} />,
+                            command: () => {},
                             disabled: !selectedReadModel || !selectedOccurrence
                         }
                     ]}

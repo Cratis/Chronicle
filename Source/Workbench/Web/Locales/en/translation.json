@@ -256,6 +256,7 @@
                 "actions": {
                     "filter": "Filter",
                     "query": "Perform Query",
+                    "timeMachine": "Time Machine",
                     "navigateBack": "Navigate Back"
                 },
                 "labels": {
