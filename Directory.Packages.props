@@ -12,12 +12,12 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.1" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.3.1" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.3.1" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.4.0" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.4.0" />
     <PackageVersion Include="Cratis.Arc" Version="18.7.9" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.9" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.7.9" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.7.9" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.11" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.7.11" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.7.11" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="18.7.9" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
@@ -70,7 +70,7 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.1" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.266" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.267" />
     <!-- Not categorized -->
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.2.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -101,7 +101,7 @@
     <!-- Testing & Specifications -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.4" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
-    <PackageVersion Include="Testcontainers" Version="4.9.0" />
+    <PackageVersion Include="Testcontainers" Version="4.10.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />

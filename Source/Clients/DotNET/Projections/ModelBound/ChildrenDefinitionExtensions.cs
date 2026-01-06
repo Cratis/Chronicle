@@ -417,7 +417,7 @@ static class ChildrenDefinitionExtensions
 
         var properties = childType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-        var keyProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute)));
+        var keyProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute), true));
         if (keyProperty is not null)
         {
             return keyProperty.Name;
