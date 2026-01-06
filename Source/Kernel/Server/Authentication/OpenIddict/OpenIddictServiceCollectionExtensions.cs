@@ -64,7 +64,7 @@ public static class OpenIddictServiceCollectionExtensions
                 {
                     // In development without a certificate, use HTTP; otherwise use HTTPS
                     var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT
+#if DEVELOPMENT && DEBUG
                     var internalScheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
 #else
                     var internalScheme = Uri.UriSchemeHttps;
@@ -92,7 +92,7 @@ public static class OpenIddictServiceCollectionExtensions
                 {
                     // In development without a certificate, use HTTP; otherwise use HTTPS
                     var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT
+#if DEVELOPMENT && DEBUG
                     scheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
 #else
                     scheme = Uri.UriSchemeHttps;
