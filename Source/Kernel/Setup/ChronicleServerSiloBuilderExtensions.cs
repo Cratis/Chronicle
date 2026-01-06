@@ -88,6 +88,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
+            var projections = new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp, jsonSerializerOptions);
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.EventStores(grainFactory, storage),
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
@@ -100,8 +101,8 @@ public static class ChronicleServerSiloBuilderExtensions
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
-                new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp, jsonSerializerOptions),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage),
+                projections,
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, projections),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
