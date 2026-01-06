@@ -21,21 +21,21 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
     /// </summary>
     /// <param name="readModels">The read models service.</param>
     /// <param name="eventStore">The event store name.</param>
-    /// <param name="eventStoreNameSpace">The event store namespace.</param>
+    /// <param name="namespace">The event store namespace.</param>
     /// <param name="readModel">The read model identifier.</param>
     /// <param name="readModelKey">The read model key.</param>
     /// <returns>Collection of snapshots.</returns>
-    public static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
+    internal static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
         IReadModels readModels,
         string eventStore,
-        string eventStoreNameSpace,
+        string @namespace,
         string readModel,
         string readModelKey)
     {
         var response = await readModels.GetSnapshotsByKey(new GetSnapshotsByKeyRequest
         {
             EventStore = eventStore,
-            Namespace = eventStoreNameSpace,
+            Namespace = @namespace,
             ReadModelIdentifier = readModel,
             ReadModelKey = readModelKey
         });

@@ -19,7 +19,7 @@ public record SaveProjection(string EventStore, string Namespace, string Dsl)
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(IProjections projections)
+    internal async Task Handle(IProjections projections)
     {
         var request = new SaveProjectionRequest
         {

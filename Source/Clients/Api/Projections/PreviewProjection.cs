@@ -20,7 +20,7 @@ public record PreviewProjection(string EventStore, string Namespace, string Dsl)
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>The projection preview.</returns>
-    public async Task<ProjectionPreview> Handle(IProjections projections)
+    internal async Task<ProjectionPreview> Handle(IProjections projections)
     {
         var request = new PreviewProjectionRequest
         {

@@ -20,7 +20,7 @@ public record ProjectionWithDsl(string Identifier, string ReadModel, string Dsl)
     /// <param name="projections"><see cref="IProjections"/> for interacting with projections.</param>
     /// <param name="eventStore">The event store to get projections for.</param>
     /// <returns>All projections with their DSL representation.</returns>
-    public static async Task<IEnumerable<ProjectionWithDsl>> AllProjectionsWithDsl(IProjections projections, string eventStore)
+    internal static async Task<IEnumerable<ProjectionWithDsl>> AllProjectionsWithDsl(IProjections projections, string eventStore)
     {
         var dsls = await projections.GetAllDsls(new GetAllDslsRequest { EventStore = eventStore });
         return dsls.Select(d => new ProjectionWithDsl(d.Identifier, d.ReadModel, d.Dsl));
