@@ -9,12 +9,17 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 public enum ReadModelObserverType
 {
     /// <summary>
+    /// The read model observer type is not set.
+    /// </summary>
+    NotSet = 0,
+
+    /// <summary>
     /// The read model is owned by a reducer.
     /// </summary>
-    Reducer = 0,
+    Reducer = 1,
 
     /// <summary>
     /// The read model is owned by a projection.
     /// </summary>
-    Projection = 1
+    Projection = 2
 }
