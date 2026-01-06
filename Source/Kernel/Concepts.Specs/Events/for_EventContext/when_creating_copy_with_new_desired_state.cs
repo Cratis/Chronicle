@@ -23,6 +23,7 @@ public class when_creating_copy_with_new_desired_state : Specification
         Guid.NewGuid().ToString(),
         CorrelationId.New(),
         [new Causation(DateTimeOffset.UtcNow, "Something", new Dictionary<string, string>() { { "prop", "42" } })],
+        ["First Tag", "Second Tag"]
         Identity.System);
 
     void Because() => _copy = _original.WithState(EventObservationState.Replay);
@@ -38,5 +39,6 @@ public class when_creating_copy_with_new_desired_state : Specification
     [Fact] void should_have_same_correlation_id() => _copy.CorrelationId.ShouldEqual(_original.CorrelationId);
     [Fact] void should_have_same_causation() => _copy.Causation.ShouldEqual(_original.Causation);
     [Fact] void should_have_same_caused_by() => _copy.CausedBy.ShouldEqual(_original.CausedBy);
+    [Fact] void should_have_same_tags() => _copy.Tags.ShouldEqual(_original.Tags);
     [Fact] void should_have_new_state() => _copy.ObservationState.ShouldEqual(EventObservationState.Replay);
 }
