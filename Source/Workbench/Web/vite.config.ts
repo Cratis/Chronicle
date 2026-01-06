@@ -8,7 +8,6 @@ import react from "@vitejs/plugin-react";
 import path from 'path';
 import { EmitMetadataPlugin } from '@cratis/arc.vite';
 import tailwindcss from "@tailwindcss/vite";
-import http from 'http';
 
 export default defineConfig({
     optimizeDeps: {
