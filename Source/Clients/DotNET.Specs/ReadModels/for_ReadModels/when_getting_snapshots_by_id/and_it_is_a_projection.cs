@@ -33,13 +33,13 @@ public class and_it_is_a_projection : given.all_dependencies
             DateTimeOffset.UtcNow,
             CorrelationId.New());
 
-        _projections.HasFor(typeof(MyReadModel)).Returns(true);
+        _projections.HasFor<MyReadModel>().Returns(true);
         _projections.GetSnapshotsById<MyReadModel>(_key).Returns([_projectionSnapshot]);
     }
 
     async Task Because() => _result = await _readModels.GetSnapshotsById<MyReadModel>(_key);
 
-    [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor(typeof(MyReadModel));
+    [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor<MyReadModel>();
     [Fact] void should_get_snapshots_from_projection() => _projections.Received(1).GetSnapshotsById<MyReadModel>(_key);
     [Fact] void should_return_one_snapshot() => _result.Count().ShouldEqual(1);
     [Fact] void should_return_snapshot_with_correct_instance() => _result.First().Instance.Name.ShouldEqual("Test");

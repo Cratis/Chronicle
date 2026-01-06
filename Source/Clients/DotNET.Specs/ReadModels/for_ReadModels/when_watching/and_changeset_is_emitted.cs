@@ -26,7 +26,7 @@ public class and_changeset_is_emitted : given.all_dependencies
         _namespace = "test-namespace";
 
         _projectionObservable = new Subject<ProjectionChangeset<MyReadModel>>();
-        _projections.HasFor(typeof(MyReadModel)).Returns(true);
+        _projections.HasFor<MyReadModel>().Returns(true);
         _projections.Watch<MyReadModel>().Returns(_projectionObservable);
 
         var observable = _readModels.Watch<MyReadModel>();

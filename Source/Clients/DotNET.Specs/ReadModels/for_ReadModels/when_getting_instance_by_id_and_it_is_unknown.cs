@@ -17,7 +17,7 @@ public class when_getting_instance_by_id_and_it_is_unknown : given.all_dependenc
     {
         _key = "test-key";
 
-        _projections.HasFor(typeof(MyReadModel)).Returns(false);
+        _projections.HasFor<MyReadModel>().Returns(false);
 #pragma warning disable CA2263 // Prefer generic overload when type is known
         _reducers.HasFor(typeof(MyReadModel)).Returns(false);
 #pragma warning restore CA2263 // Prefer generic overload when type is known

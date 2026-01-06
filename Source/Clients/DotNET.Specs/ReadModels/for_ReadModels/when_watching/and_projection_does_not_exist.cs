@@ -12,7 +12,7 @@ public class and_projection_does_not_exist : given.all_dependencies
 
     Exception _result;
 
-    void Establish() => _projections.HasFor(typeof(MyReadModel)).Returns(false);
+    void Establish() => _projections.HasFor<MyReadModel>().Returns(false);
 
     void Because() => _result = Catch.Exception(() => _readModels.Watch<MyReadModel>());
 

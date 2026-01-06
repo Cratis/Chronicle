@@ -23,7 +23,7 @@ public class and_both_projection_and_reducer_exist : given.all_dependencies
         _projectionObservable = new Subject<ProjectionChangeset<MyReadModel>>();
         _reducerObservable = new Subject<ReducerChangeset<MyReadModel>>();
 
-        _projections.HasFor(typeof(MyReadModel)).Returns(true);
+        _projections.HasFor<MyReadModel>().Returns(true);
         _projections.Watch<MyReadModel>().Returns(_projectionObservable);
 
         _reducers.HasFor<MyReadModel>().Returns(true);
@@ -32,7 +32,7 @@ public class and_both_projection_and_reducer_exist : given.all_dependencies
 
     void Because() => _result = _readModels.Watch<MyReadModel>();
 
-    [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor(typeof(MyReadModel));
+    [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor<MyReadModel>();
     [Fact] void should_check_if_reducer_exists() => _reducers.Received(1).HasFor<MyReadModel>();
     [Fact] void should_get_observable_from_projection() => _projections.Received(1).Watch<MyReadModel>();
     [Fact] void should_get_observable_from_reducer() => _reducers.Received(1).Watch<MyReadModel>();

@@ -25,7 +25,7 @@ public class and_reducer_exists : given.all_dependencies
 
     void Because() => _result = _readModels.Watch<MyReadModel>();
 
-    [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor(typeof(MyReadModel));
+    [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor<MyReadModel>();
     [Fact] void should_check_if_reducer_exists() => _reducers.Received(1).HasFor<MyReadModel>();
     [Fact] void should_get_observable_from_reducer() => _reducers.Received(1).Watch<MyReadModel>();
     [Fact] void should_return_observable() => _result.ShouldNotBeNull();
