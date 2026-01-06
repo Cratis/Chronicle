@@ -69,6 +69,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
     /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
+    /// <param name="disableTls">Whether to disable TLS for the connection.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
@@ -85,11 +86,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken,
         ILogger<ChronicleConnection> logger,
+        bool disableTls,
         string? certificatePath = null,
         string? certificatePassword = null,
         ITokenProvider? tokenProvider = null)
     {
-        _disableTls = string.IsNullOrEmpty(_certificatePath) || string.IsNullOrEmpty(_certificatePassword);
+        _disableTls = disableTls;
         GrpcClientFactory.AllowUnencryptedHttp2 = _disableTls;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;

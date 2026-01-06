@@ -75,6 +75,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             options.LoggerFactory,
             CancellationToken.None,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
+            options.Tls.IsDisabled,
             options.Tls.CertificatePath,
             options.Tls.CertificatePassword,
             tokenProvider);
@@ -189,7 +190,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 options.ConnectionString.Username ?? string.Empty,
                 options.ConnectionString.Password ?? string.Empty,
                 options.ManagementPort,
-                options.Tls.Disable,
+                options.Tls.IsDisabled,
                 options.LoggerFactory.CreateLogger<OAuthTokenProvider>());
         }
 

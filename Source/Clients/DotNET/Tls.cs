@@ -17,4 +17,9 @@ public class Tls
     /// Gets or sets the password for the certificate file.
     /// </summary>
     public string? CertificatePassword { get; set; }
+
+    /// <summary>
+    /// Gets whether TLS is enabled.
+    /// </summary>
+    public bool IsDisabled => string.IsNullOrEmpty(CertificatePath) || string.IsNullOrEmpty(CertificatePassword);
 }
