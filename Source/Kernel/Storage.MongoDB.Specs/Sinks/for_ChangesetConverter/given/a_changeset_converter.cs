@@ -35,14 +35,14 @@ public class a_changeset_converter : Specification
             typeof(TestReadModel).FullName,
             nameof(TestReadModel),
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(TestReadModel)) },
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
 
         _converter = new ChangesetConverter(
             _readModel,

@@ -23,14 +23,14 @@ public class a_resolver : Specification
             "SomethingId",
             "Something",
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, new JsonSchema() }
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
 
         _projection = Substitute.For<IProjection>();
         _projection.Identifier.Returns((ProjectionId)Guid.NewGuid().ToString());

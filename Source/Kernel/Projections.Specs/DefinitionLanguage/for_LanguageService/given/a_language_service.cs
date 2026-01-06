@@ -29,6 +29,8 @@ public class a_language_service : Specification
             new ReadModelIdentifier(Guid.NewGuid().ToString()),
             new ReadModelName(name),
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(
                 new Concepts.Sinks.SinkConfigurationId(Guid.NewGuid()),
                 Concepts.Sinks.WellKnownSinkTypes.MongoDB),
@@ -36,8 +38,6 @@ public class a_language_service : Specification
             {
                 [ReadModelGeneration.First] = schema
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
     }
 }

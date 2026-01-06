@@ -69,6 +69,8 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             new ReadModelIdentifier(name),
             new ReadModelName(name),
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(
                 new Concepts.Sinks.SinkConfigurationId(Guid.NewGuid()),
                 Concepts.Sinks.WellKnownSinkTypes.MongoDB),
@@ -76,9 +78,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             {
                 [ReadModelGeneration.First] = schema
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
     }
 
     static IEnumerable<EventTypeSchema> CreateEventTypeSchemas(IEnumerable<Type> eventTypes)

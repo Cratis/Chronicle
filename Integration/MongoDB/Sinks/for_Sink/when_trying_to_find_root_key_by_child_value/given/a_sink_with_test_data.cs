@@ -79,14 +79,14 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
             "test-read-model",
             "TestReadModel",
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, schema }
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
 
         var mongoDBConverter = Substitute.For<IMongoDBConverter>();
         var collections = new TestCollections(_database, collectionName);

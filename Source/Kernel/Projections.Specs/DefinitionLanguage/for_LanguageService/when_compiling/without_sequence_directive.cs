@@ -31,6 +31,8 @@ public class without_sequence_directive : for_LanguageService.given.a_language_s
             new ReadModelIdentifier("Simulation"),
             new ReadModelName("Simulation"),
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(
                 new Concepts.Sinks.SinkConfigurationId(Guid.NewGuid()),
                 Concepts.Sinks.WellKnownSinkTypes.MongoDB),
@@ -38,9 +40,7 @@ public class without_sequence_directive : for_LanguageService.given.a_language_s
             {
                 [ReadModelGeneration.First] = schema
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
 
         var eventSchema = new JsonSchema { Title = "SimulationAdded" };
         eventSchema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });

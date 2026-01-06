@@ -22,6 +22,8 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
             _readModelType.Identifier,
             _readModelName,
             ReadModelOwner.None,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } },
             []);

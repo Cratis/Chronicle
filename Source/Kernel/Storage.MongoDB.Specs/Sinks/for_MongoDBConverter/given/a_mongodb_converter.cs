@@ -27,14 +27,14 @@ public class a_mongodb_converter : Specification
             typeof(ReadModel).FullName,
             nameof(ReadModel),
             ReadModelOwner.Client,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(ReadModel)) },
             },
-            [],
-            ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified);
+            []);
         _converter = new(_expandoObjectConverter, _typeFormats, _model);
     }
 }
