@@ -9,7 +9,7 @@ import { ProjectionEditor, setCreateReadModelCallback } from 'Components/Project
 import { ReadModelCreation } from 'Components/ReadModelCreation';
 import { Menubar } from 'primereact/menubar';
 import { Dialog } from 'primereact/dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
@@ -45,6 +45,12 @@ export const Projections = () => {
     const [saveProjection] = SaveProjection.use();
     const [createReadModel] = CreateReadModel.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+
+    const selectedReadModel = useMemo(() => {
+        if (!selectedProjection || !readModels.data) return null;
+        const projection = selectedProjection as { readModel: string };
+        return readModels.data.find(rm => rm.identifier === projection.readModel) || null;
+    }, [selectedProjection, readModels.data]);
 
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
@@ -195,17 +201,14 @@ export const Projections = () => {
                 />
             </Dialog>
 
-            {(selectedProjection && selectedInstance && readModels.data) && (() => {
-                const projection = selectedProjection as { readModel: string };
-                const readModel = readModels.data.find(rm => rm.identifier === projection.readModel);
-                if (!readModel) return null;
-                return (
+            <>
+                {selectedReadModel && selectedInstance && (
                     <TimeMachineDialogWrapper
-                        readModel={readModel}
+                        readModel={selectedReadModel}
                         readModelKey={typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance ? selectedInstance.id as string : ''}
                     />
-                );
-            })()}
+                )}
+            </>
         </Page>
     );
 };
