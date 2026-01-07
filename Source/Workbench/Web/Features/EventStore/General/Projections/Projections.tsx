@@ -49,7 +49,8 @@ export const Projections = () => {
     const selectedReadModel = useMemo(() => {
         if (!selectedProjection || !readModels.data) return null;
         const projection = selectedProjection as { readModel: string };
-        return readModels.data.find(rm => rm.identifier === projection.readModel) || null;
+        const found = readModels.data.find(rm => rm.identifier.endsWith(`.${projection.readModel}`) || rm.identifier === projection.readModel) || null;
+        return found;
     }, [selectedProjection, readModels.data]);
 
     useEffect(() => {
