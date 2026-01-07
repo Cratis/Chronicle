@@ -44,6 +44,6 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
             e.Context.SequenceNumber,
             e.Context.EventType.Id,
             e.Context.Occurred,
-            e.Content))));
+            JsonNode.Parse(e.Content)!.AsObject()))));
     }
 }

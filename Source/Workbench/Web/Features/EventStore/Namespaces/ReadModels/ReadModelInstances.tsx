@@ -19,11 +19,12 @@ interface Props {
     isPerforming: boolean;
     setPage: (p: number) => void;
     setPageSize: (s: number) => void;
+    selectedInstance: Json | null;
+    setSelectedInstance: (instance: Json | null) => void;
 }
 
-export default function ReadModelInstances({ instances, page, pageSize, totalItems, isPerforming, setPage, setPageSize }: Props) {
+export default function ReadModelInstances({ instances, page, pageSize, totalItems, isPerforming, setPage, setPageSize, selectedInstance, setSelectedInstance }: Props) {
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
-    const [selectedObject, setSelectedObject] = useState<Json | null>(null);
 
     const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
         let current: Json = data;
@@ -93,9 +94,8 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
     }, [navigationPath, setPage]);
 
     const handleObjectClick = useCallback((value: Json) => {
-        setSelectedObject(value);
-        setObjectNavigationPath([]);
-    }, []);
+        setSelectedInstance(value);
+    }, [setSelectedInstance]);
 
     const columns = useMemo(() => {
         if (currentData.length === 0) return [];
@@ -213,21 +213,28 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
                             emptyMessage={strings.eventStore.namespaces.readModels.empty}
                             className="p-datatable-sm"
                             selectionMode="single"
+                            selection={(selectedInstance && typeof selectedInstance === 'object' && !Array.isArray(selectedInstance)) ? selectedInstance as { [k: string]: Json } : null}
+                            onSelectionChange={(e) => {
+                                if (e.value === null) {
+                                    setSelectedInstance(null);
+                                    setNavigationPath([]);
+                                }
+                            }}
                             onRowClick={(e) => {
                                 const rowData = { ...e.data };
                                 // Remove internal properties before showing
                                 delete rowData.__arrayIndex;
                                 delete rowData.__sourceInstance;
 
-                                if (selectedObject && deepEqual(selectedObject, rowData)) {
-                                    setSelectedObject(null);
+                                if (selectedInstance && deepEqual(selectedInstance, rowData)) {
+                                    setSelectedInstance(null);
                                     setNavigationPath([]);
                                 } else {
-                                    setSelectedObject(rowData);
+                                    setSelectedInstance(rowData);
                                     setNavigationPath([]);
                                 }
                             }}
-                            style={selectedObject ? { minWidth: '100%', width: 'max-content' } : { minWidth: '100%' }}
+                            style={selectedInstance ? { minWidth: '100%', width: 'max-content' } : { minWidth: '100%' }}
                         >
                             {...columns}
                         </DataTable>

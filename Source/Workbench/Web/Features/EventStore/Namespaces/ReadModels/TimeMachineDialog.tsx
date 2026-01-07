@@ -12,12 +12,11 @@ import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
 import { ReadModelContent } from 'Features/EventStore/Namespaces/ReadModels/ReadModelContent';
 
 export interface TimeMachineDialogProps {
-    currentReadModel: string;
-    currentReadModelKey: string;
-    readModelDefinition: ReadModelDefinition;
+    readModel: ReadModelDefinition;
+    readModelKey: string;
 }
 
-export const TimeMachineDialog = ({ currentReadModel, currentReadModelKey, readModelDefinition }: TimeMachineDialogProps) => {
+export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialogProps) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [versions, setVersions] = useState<Version[]>([]);
     const [currentVersion, setCurrentVersion] = useState(0);
@@ -25,8 +24,8 @@ export const TimeMachineDialog = ({ currentReadModel, currentReadModelKey, readM
     const [snapshots] = AllSnapshotsForReadModel.use({
         eventStore: params.eventStore!,
         namespace: params.namespace!,
-        readModel: currentReadModel,
-        readModelKey: currentReadModelKey
+        readModel: readModel.identifier,
+        readModelKey: readModelKey
     });
 
     const { closeDialog } = useDialogContext();
@@ -44,12 +43,13 @@ export const TimeMachineDialog = ({ currentReadModel, currentReadModelKey, readM
                     occurred: new Date(event.occurred),
                     content: event.content || {},
                 }));
+                console.log(mappedEvents);
 
                 return {
                     id: `snapshot-${index}`,
                     timestamp,
-                    label: `Order @ ${snapshot.occurred.toLocaleString()}`,
-                    content: <ReadModelContent readModel={snapshot.instance} timestamp={timestamp} readModelDefinition={readModelDefinition} />,
+                    label: `${readModel.identifier} @ ${snapshot.occurred.toLocaleString()}`,
+                    content: <ReadModelContent readModel={snapshot.instance} timestamp={timestamp} readModelDefinition={readModel} />,
                     events: mappedEvents,
                 };
             });

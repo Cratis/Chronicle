@@ -90,7 +90,7 @@ export const EventStore = () => {
                     <Route path={'sequences-future'} element={<SequencesFuture />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
-                    <Route path={'read-models'} element={<ReadModels />} />
+                    <Route path={'read-models/*'} element={<ReadModels />} />
                     <Route path={'projections'} element={<Projections />} />
                     <Route path={'identities'} element={<Identities />} />
                 </Route>

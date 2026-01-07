@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { Dropdown } from 'primereact/dropdown';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import ReadModelInstances from './ReadModelInstances';
@@ -15,14 +15,32 @@ import * as faIcons from 'react-icons/fa6';
 import { Menubar } from 'primereact/menubar';
 import strings from 'Strings';
 import { FluxCapacitor } from 'Icons';
+import { Json } from 'Features';
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { TimeMachineDialog } from './TimeMachineDialog';
 
-export const ReadModels = () => {
-    const params = useParams<EventStoreAndNamespaceParams>();
+interface ReadModelsRouteParams {
+    readonly readModel?: string;
+    readonly occurrence?: string;
+    readonly instance?: string;
+}
+
+type ReadModelsParams = EventStoreAndNamespaceParams & ReadModelsRouteParams;
+
+const useReadModelsParams = (): Readonly<Partial<ReadModelsParams>> => {
+    return useParams<ReadModelsParams>();
+};
+
+const ReadModelsContent = () => {
+    const params = useReadModelsParams();
+    const navigate = useNavigate();
     const [allReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const filterPanelRef = useRef<OverlayPanel>(null);
 
     const [selectedReadModel, setSelectedReadModel] = useState<ReadModelDefinition | null>(null);
     const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
+    const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
+    const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
 
@@ -89,6 +107,23 @@ export const ReadModels = () => {
     }, [occurrences.data, selectedReadModel]);
 
     useEffect(() => {
+        if (params.readModel && allReadModels.data.length > 0 && !selectedReadModel) {
+            const readModel = allReadModels.data.find(rm => rm.identifier === params.readModel);
+            if (readModel) {
+                setSelectedReadModel(readModel);
+            }
+        }
+
+        if (params.occurrence && !selectedOccurrence) {
+            setSelectedOccurrence(params.occurrence);
+        }
+
+        if (params.instance && !selectedInstance) {
+            setSelectedInstance({ id: params.instance });
+        }
+    }, [params, allReadModels.data]);
+
+    useEffect(() => {
         if (occurrenceOptions.length > 0 && !selectedOccurrence) {
             const defaultOccurrence = occurrenceOptions.find(occ => occ.value === 'Default')?.value;
             if (defaultOccurrence) {
@@ -103,6 +138,27 @@ export const ReadModels = () => {
             performInstancesQuery(instancesArgs);
         }
     }, [selectedOccurrence, selectedReadModel]);
+
+    useEffect(() => {
+        let newPath = `/event-store/${params.eventStore}/${params.namespace}/read-models`;
+
+        if (selectedReadModel) {
+            newPath += `/${selectedReadModel.identifier}`;
+
+            if (selectedOccurrence) {
+                newPath += `/${selectedOccurrence}`;
+
+                if (selectedInstance && typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance) {
+                    newPath += `/${selectedInstance.id}`;
+                }
+            }
+        }
+
+        const currentPath = window.location.pathname;
+        if (newPath !== currentPath) {
+            navigate(newPath, { replace: true });
+        }
+    }, [selectedReadModel, selectedOccurrence, selectedInstance, navigate, params.eventStore, params.namespace]);
 
     return (
         <Page title={strings.eventStore.namespaces.readModels.title}>
@@ -123,8 +179,10 @@ export const ReadModels = () => {
                         {
                             label: strings.eventStore.namespaces.readModels.actions.timeMachine,
                             icon: <FluxCapacitor size={20} />,
-                            command: () => {},
-                            disabled: !selectedReadModel || !selectedOccurrence
+                            command: async () => {
+                                await showTimeMachineDialog();
+                            },
+                            disabled: !selectedReadModel || !selectedOccurrence || !selectedInstance
                         }
                     ]}
                 />
@@ -168,9 +226,29 @@ export const ReadModels = () => {
                         isPerforming={instances.isPerforming}
                         setPage={setPage}
                         setPageSize={setPageSize}
+                        selectedInstance={selectedInstance}
+                        setSelectedInstance={setSelectedInstance}
                     />
                 </Allotment>
             </div>
+
+            {(selectedReadModel && selectedOccurrence && selectedInstance) && (
+                <TimeMachineDialogWrapper
+                    readModel={selectedReadModel}
+                    readModelKey={typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance ? selectedInstance.id as string : ''} />
+            )}
+
         </Page>
+    );
+};
+
+export const ReadModels = () => {
+    return (
+        <Routes>
+            <Route path="/" element={<ReadModelsContent />} />
+            <Route path=":readModel" element={<ReadModelsContent />} />
+            <Route path=":readModel/:occurrence" element={<ReadModelsContent />} />
+            <Route path=":readModel/:occurrence/:instance" element={<ReadModelsContent />} />
+        </Routes>
     );
 };
