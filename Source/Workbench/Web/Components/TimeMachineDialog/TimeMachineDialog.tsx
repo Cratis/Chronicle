@@ -88,4 +88,3 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
         </Dialog>
     );
 };
-

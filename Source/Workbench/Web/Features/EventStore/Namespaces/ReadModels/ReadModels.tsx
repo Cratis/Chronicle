@@ -17,7 +17,7 @@ import strings from 'Strings';
 import { FluxCapacitor } from 'Icons';
 import { Json } from 'Features';
 import { useDialog } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog } from './TimeMachineDialog';
+import { TimeMachineDialog } from 'Components';
 
 interface ReadModelsRouteParams {
     readonly readModel?: string;

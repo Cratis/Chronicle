@@ -132,7 +132,8 @@
                 "actions": {
                     "new": "New",
                     "save": "Save",
-                    "preview": "Preview"
+                    "preview": "Preview",
+                    "timeMachine": "Time Machine"
                 }
             }
         },

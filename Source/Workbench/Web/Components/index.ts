@@ -8,3 +8,4 @@ export * from './DataTables';
 export * from './Dialogs';
 export * from './ItemsList';
 export * from './SchemaEditor';
+export * from './TimeMachineDialog';

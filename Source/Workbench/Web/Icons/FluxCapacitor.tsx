@@ -14,14 +14,14 @@ export const FluxCapacitor = ({ size = 20 }: { size?: number }) => (
         <text x="0"
             y="47"
             fill="#000000"
-            font-size="5px"
-            font-weight="bold"
-            font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif">Created by Fajriah Robiatul Adawiah</text>
+            fontSize="5px"
+            fontWeight="bold"
+            fontFamily="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif">Created by Fajriah Robiatul Adawiah</text>
         <text x="0"
             y="52"
             fill="#000000"
-            font-size="5px"
-            font-weight="bold"
-            font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif">from the Noun Project</text>
+            fontSize="5px"
+            fontWeight="bold"
+            fontFamily="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif">from the Noun Project</text>
     </svg>
 );

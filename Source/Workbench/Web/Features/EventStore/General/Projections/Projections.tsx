@@ -19,6 +19,9 @@ import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError, SaveProjection } from 'Api/Projections';
 import type { ReadModelSchema } from 'Api/ReadModels';
+import { FluxCapacitor } from 'Icons';
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { TimeMachineDialog } from 'Components';
 
 export const Projections = () => {
 
@@ -27,6 +30,7 @@ export const Projections = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
     const [newReadModelName, setNewReadModelName] = useState('');
+    const [selectedInstance, setSelectedInstance] = useState<unknown>(null);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
@@ -40,6 +44,7 @@ export const Projections = () => {
     const [previewProjection] = PreviewProjection.use();
     const [saveProjection] = SaveProjection.use();
     const [createReadModel] = CreateReadModel.use();
+    const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
 
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
@@ -99,6 +104,7 @@ export const Projections = () => {
                                         setReadModelInstances([]);
                                         setReadModelSchema(null);
                                         setSyntaxErrors([]);
+                                        setSelectedInstance(null);
                                     }
                                 },
                                 {
@@ -126,7 +132,16 @@ export const Projections = () => {
                                         setReadModelInstances(result.response?.readModelEntries ?? []);
                                         setReadModelSchema(result.response?.schema ?? null);
                                         setSyntaxErrors(result.response?.syntaxErrors ?? []);
+                                        setSelectedInstance(null);
                                     }
+                                },
+                                {
+                                    label: strings.eventStore.general.projections.actions.timeMachine,
+                                    icon: <FluxCapacitor size={20} />,
+                                    command: async () => {
+                                        await showTimeMachineDialog();
+                                    },
+                                    disabled: !selectedProjection || !selectedInstance
                                 }
                             ]}
                         />
@@ -150,6 +165,9 @@ export const Projections = () => {
                                 value={readModelInstances as never[]}
                                 emptyMessage={strings.eventStore.general.projections.empty}
                                 className="p-datatable-sm"
+                                selectionMode="single"
+                                selection={selectedInstance as never}
+                                onSelectionChange={(e) => setSelectedInstance(e.value)}
                                 pt={{
                                     root: { className: 'rounded-lg overflow-hidden', style: { border: 'none' } },
                                     tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
@@ -176,6 +194,18 @@ export const Projections = () => {
                     onCancel={handleCancelReadModel}
                 />
             </Dialog>
+
+            {(selectedProjection && selectedInstance && readModels.data) && (() => {
+                const projection = selectedProjection as { readModel: string };
+                const readModel = readModels.data.find(rm => rm.identifier === projection.readModel);
+                if (!readModel) return null;
+                return (
+                    <TimeMachineDialogWrapper
+                        readModel={readModel}
+                        readModelKey={typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance ? selectedInstance.id as string : ''}
+                    />
+                );
+            })()}
         </Page>
     );
 };
