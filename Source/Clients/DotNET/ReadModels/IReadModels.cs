@@ -26,16 +26,18 @@ public interface IReadModels
     /// </summary>
     /// <typeparam name="TReadModel">The read model type.</typeparam>
     /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
+    /// <param name="sessionId">Optional <see cref="ReadModelSessionId"/> to get for a specific session.</param>
     /// <returns>The read model instance.</returns>
-    Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key);
+    Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null);
 
     /// <summary>
     /// Get a read model instance by its key.
     /// </summary>
     /// <param name="readModelType">The read model type.</param>
     /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
+    /// <param name="sessionId">Optional <see cref="ReadModelSessionId"/> to get for a specific session.</param>
     /// <returns>The read model instance.</returns>
-    Task<object> GetInstanceById(Type readModelType, ReadModelKey key);
+    Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null);
 
     /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.
@@ -51,4 +53,13 @@ public interface IReadModels
     /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
     /// <returns>An observable of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
     IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
+
+    /// <summary>
+    /// Dehydrate a session.
+    /// </summary>
+    /// <param name="sessionId">The <see cref="ReadModelSessionId"/> to dehydrate.</param>
+    /// <param name="readModelType">Type of read model.</param>
+    /// <param name="readModelKey"><see cref="ReadModelKey"/> to dehydrate for.</param>
+    /// <returns>Awaitable task.</returns>
+    Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey);
 }

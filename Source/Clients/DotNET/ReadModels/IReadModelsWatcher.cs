@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections;
+namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Defines a watcher for a projection.
+/// Defines a watcher for a read model.
 /// </summary>
-public interface IProjectionWatcher
+public interface IReadModelsWatcher
 {
     /// <summary>
     /// Start the watcher.
@@ -20,13 +20,13 @@ public interface IProjectionWatcher
 }
 
 /// <summary>
-/// Defines a watcher for a projection.
+/// Defines a watcher for a read model.
 /// </summary>
 /// <typeparam name="TReadModel">Type of read model the watcher is for.</typeparam>
-public interface IProjectionWatcher<TReadModel> : IProjectionWatcher
+public interface IReadModelsWatcher<TReadModel> : IReadModelsWatcher
 {
     /// <summary>
-    /// Gets the observable for the projection.
+    /// Gets the observable for the read model.
     /// </summary>
-    IObservable<ProjectionChangeset<TReadModel>> Observable { get; }
+    IObservable<ReadModelChangeset<TReadModel>> Observable { get; }
 }

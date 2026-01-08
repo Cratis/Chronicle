@@ -71,4 +71,31 @@ public interface IReadModels
     /// <returns><see cref="GetSnapshotsByKeyResponse"/> containing the snapshots.</returns>
     [Operation]
     Task<GetSnapshotsByKeyResponse> GetSnapshotsByKey(GetSnapshotsByKeyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get a read model instance by its key.
+    /// </summary>
+    /// <param name="request">The <see cref="GetInstanceByKeyRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns><see cref="GetInstanceByKeyResponse"/> containing the read model instance.</returns>
+    [Operation]
+    Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Watch for changes to a read model.
+    /// </summary>
+    /// <param name="request">The <see cref="WatchRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>An observable stream of <see cref="ReadModelChangeset"/>.</returns>
+    [Operation]
+    IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Dehydrate a read model session.
+    /// </summary>
+    /// <param name="request">The <see cref="DehydrateSessionRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default);
 }

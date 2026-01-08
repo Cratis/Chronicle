@@ -32,6 +32,6 @@ public class ReadModelSnapshot
     /// <summary>
     /// Gets or sets the correlation identifier.
     /// </summary>
-    [ProtoMember(4)]
-    public string CorrelationId { get; set; } = string.Empty;
+    [ProtoMember(4, IsRequired = true)]
+    public Guid CorrelationId { get; set; } = Guid.Empty;
 }

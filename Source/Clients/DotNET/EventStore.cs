@@ -146,22 +146,24 @@ public class EventStore : IEventStore
         var projections = new Projections.Projections(
             this,
             EventTypes,
-            new ProjectionWatcherManager(new ProjectionWatcherFactory(this, jsonSerializerOptions), this),
             clientArtifactsProvider,
             namingPolicy,
-            _eventSerializer,
             serviceProvider,
             jsonSerializerOptions);
 
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
+        var readModelsWatcherManager = new ReadModelsWatcherManager(new ReadModelsWatcherFactory(this, jsonSerializerOptions), this);
+
         ReadModels = new ReadModels.ReadModels(
             this,
             namingPolicy,
             projections,
             Reducers,
-            schemaGenerator);
+            schemaGenerator,
+            jsonSerializerOptions,
+            readModelsWatcherManager);
 
         Seeding = new EventSeeding(
             eventStoreName,

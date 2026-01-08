@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -133,35 +132,4 @@ public interface IReducers
     /// <param name="reducerId"><see cref="ReducerId"/> to replay.</param>
     /// <returns>Awaitable task.</returns>
     Task Replay(ReducerId reducerId);
-
-    /// <summary>
-    /// Get a read model instance by its key by replaying events through the reducer.
-    /// </summary>
-    /// <param name="readModelType">The read model type.</param>
-    /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
-    /// <returns>The result of the reducer in the form of a <see cref="ReducerInstanceResult"/>.</returns>
-    Task<ReducerInstanceResult> GetInstanceById(Type readModelType, ReadModelKey key);
-
-    /// <summary>
-    /// Get a read model instance by its key by replaying events through the reducer.
-    /// </summary>
-    /// <typeparam name="TReadModel">The read model type.</typeparam>
-    /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
-    /// <returns>The result of the reducer in the form of a <see cref="ReducerInstanceResult{TReadModel}"/>.</returns>
-    Task<ReducerInstanceResult<TReadModel>> GetInstanceById<TReadModel>(ReadModelKey key);
-
-    /// <summary>
-    /// Get snapshots of a reducer grouped by CorrelationId by walking through events from the beginning.
-    /// </summary>
-    /// <typeparam name="TReadModel">Type of read model.</typeparam>
-    /// <param name="readModelKey"><see cref="ReadModelKey"/> to get snapshots for.</param>
-    /// <returns>Collection of <see cref="ReducerSnapshot{TReadModel}"/>.</returns>
-    Task<IEnumerable<ReducerSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey);
-
-    /// <summary>
-    /// Observe changes for a specific read model produced by reducers.
-    /// </summary>
-    /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
-    /// <returns>An observable of <see cref="ReducerChangeset{TReadModel}"/>.</returns>
-    IObservable<ReducerChangeset<TReadModel>> Watch<TReadModel>();
 }

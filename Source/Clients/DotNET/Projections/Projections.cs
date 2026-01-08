@@ -8,9 +8,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections.ModelBound;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,19 +22,15 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> the projections belongs to.</param>
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
-/// <param name="projectionWatcherManager"><see cref="IProjectionWatcherManager"/> for managing watchers.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-/// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing events.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
 public class Projections(
     IEventStore eventStore,
     IEventTypes eventTypes,
-    IProjectionWatcherManager projectionWatcherManager,
     IClientArtifactsProvider clientArtifacts,
     INamingPolicy namingPolicy,
-    IEventSerializer eventSerializer,
     IServiceProvider serviceProvider,
     JsonSerializerOptions jsonSerializerOptions) : IProjections
 {
@@ -75,121 +69,6 @@ public class Projections(
 
     /// <inheritdoc/>
     public ProjectionId GetProjectionIdForModel(Type readModelType) => _handlersByModelType[readModelType].Id;
-
-    /// <inheritdoc/>
-    public async Task<ProjectionResult> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
-    {
-        var handler = _handlersByModelType[readModelType];
-        var result = await GetInstanceById(handler.Id, readModelKey);
-        var model = result.ReadModel.Deserialize(readModelType, jsonSerializerOptions)!;
-        return new(model, result.ProjectedEventsCount, result.LastHandledEventSequenceNumber);
-    }
-
-    /// <inheritdoc/>
-    public async Task<ProjectionResult<TReadModel>> GetInstanceById<TReadModel>(ReadModelKey modelKey)
-    {
-        var handler = _handlersByModelType[typeof(TReadModel)];
-        var request = new GetInstanceByIdRequest
-        {
-            ProjectionId = handler.Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = modelKey,
-        };
-
-        var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
-        return result.ToClient<TReadModel>(jsonSerializerOptions);
-    }
-
-    /// <inheritdoc/>
-    public async Task<ProjectionResultRaw> GetInstanceById(ProjectionId identifier, ReadModelKey readModelKey)
-    {
-        var handler = Definitions.Single(_ => _.Identifier == identifier);
-        var request = new GetInstanceByIdRequest
-        {
-            ProjectionId = handler.Identifier,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey,
-        };
-
-        var result = await _servicesAccessor.Services.Projections.GetInstanceById(request);
-        return result.ToClient();
-    }
-
-    /// <inheritdoc/>
-    public async Task<ProjectionResult> GetInstanceByIdForSession(
-        ProjectionSessionId sessionId,
-        Type readModelType,
-        ReadModelKey readModelKey)
-    {
-        var handler = _handlersByModelType[readModelType];
-
-        var request = new GetInstanceByIdForSessionRequest
-        {
-            ProjectionId = handler.Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey,
-            SessionId = sessionId
-        };
-
-        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSession(request);
-        return result.ToClient(readModelType, jsonSerializerOptions);
-    }
-
-    /// <inheritdoc/>
-    public async Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(
-        ProjectionSessionId sessionId,
-        Type readModelType,
-        ReadModelKey readModelKey,
-        IEnumerable<object> events)
-    {
-        var handler = _handlersByModelType[readModelType];
-        var eventsToApplyTasks = events.Select(async _ =>
-            new EventToApply(
-                eventTypes.GetEventTypeFor(_.GetType()),
-                await eventSerializer.Serialize(_))).ToArray();
-
-        var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
-
-        var request = new GetInstanceByIdForSessionWithEventsAppliedRequest
-        {
-            ProjectionId = handler.Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey,
-            SessionId = sessionId,
-            Events = eventsToApply.ToContract(jsonSerializerOptions)
-        };
-
-        var result = await _servicesAccessor.Services.Projections.GetInstanceByIdForSessionWithEventsApplied(request);
-        return result.ToClient(readModelType, jsonSerializerOptions);
-    }
-
-    /// <inheritdoc/>
-    public async Task DehydrateSession(ProjectionSessionId sessionId, Type readModelType, ReadModelKey readModelKey)
-    {
-        var handler = _handlersByModelType[readModelType];
-        var request = new DehydrateSessionRequest
-        {
-            ProjectionId = handler.Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey,
-            SessionId = sessionId
-        };
-
-        await _servicesAccessor.Services.Projections.DehydrateSession(request);
-    }
-
-    /// <inheritdoc/>
-    public IObservable<ProjectionChangeset<TReadModel>> Watch<TReadModel>() => projectionWatcherManager.GetWatcher<TReadModel>().Observable;
 
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TProjection>()
@@ -275,36 +154,6 @@ public class Projections(
             Owner = ProjectionOwner.Client,
             Projections = [.. Definitions]
         });
-    }
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
-    {
-        var handler = _handlersByModelType[typeof(TReadModel)];
-        var request = new GetSnapshotsByIdRequest
-        {
-            ProjectionId = handler.Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey
-        };
-
-        var response = await _servicesAccessor.Services.Projections.GetSnapshotsById(request);
-        var snapshots = new List<ProjectionSnapshot<TReadModel>>();
-
-        foreach (var snapshot in response.Snapshots)
-        {
-            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
-            var events = snapshot.Events.ToClient(jsonSerializerOptions);
-            snapshots.Add(new ProjectionSnapshot<TReadModel>(
-                readModel,
-                events,
-                snapshot.Occurred,
-                snapshot.CorrelationId));
-        }
-
-        return snapshots;
     }
 
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
