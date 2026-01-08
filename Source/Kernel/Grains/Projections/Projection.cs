@@ -140,7 +140,7 @@ public class Projection(
 
             await HandleEventFor(projection!, context);
 
-            state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
+            state = ApplyActualChanges(key, changeset.Changes, state);
         }
 
         // Inject id property into the read model before returning
@@ -161,7 +161,8 @@ public class Projection(
         var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
 
-        var readModelsByKey = new Dictionary<Key, ExpandoObject>();
+        // First pass: resolve keys and group events by key value
+        var eventsByKeyValue = new Dictionary<string, (Key Key, List<AppendedEvent> Events)>();
 
         foreach (var @event in events)
         {
@@ -174,36 +175,54 @@ public class Projection(
             }
 
             var key = (keyResult as ResolvedKey)!.Key;
+            var keyValue = key.Value.ToString()!;
 
-            if (!readModelsByKey.TryGetValue(key, out var state))
+            if (!eventsByKeyValue.TryGetValue(keyValue, out var entry))
             {
-                state = new ExpandoObject();
-                readModelsByKey[key] = state;
+                entry = (key, []);
+                eventsByKeyValue[keyValue] = entry;
             }
 
-            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
-            var context = new ProjectionEventContext(
-                key,
-                @event,
-                changeset,
-                projection.GetOperationTypeFor(@event.Context.EventType),
-                false);
+            entry.Events.Add(@event);
+        }
 
-            await HandleEventFor(projection!, context);
+        // Second pass: process each group of events for each key
+        var readModelsByKeyValue = new Dictionary<string, ExpandoObject>();
 
-            state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
-            readModelsByKey[key] = state;
+        foreach (var (keyValue, (_, eventsForKey)) in eventsByKeyValue)
+        {
+            var state = new ExpandoObject();
+
+            foreach (var @event in eventsForKey)
+            {
+                var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
+                var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
+                var key = (keyResult as ResolvedKey)!.Key;
+
+                var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
+                var context = new ProjectionEventContext(
+                    key,
+                    @event,
+                    changeset,
+                    projection.GetOperationTypeFor(@event.Context.EventType),
+                    false);
+
+                await HandleEventFor(projection!, context);
+
+                state = ApplyActualChanges(key, changeset.Changes, state);
+            }
+
+            readModelsByKeyValue[keyValue] = state;
         }
 
         // Inject id property into each read model before returning
         var results = new List<ExpandoObject>();
-        foreach (var kvp in readModelsByKey)
+        foreach (var (keyValue, readModel) in readModelsByKeyValue)
         {
-            var readModel = kvp.Value;
             var readModelDict = (IDictionary<string, object?>)readModel;
 
             // Set the id property with the key value using the schema's property name
-            readModelDict[_identifierPropertyName] = kvp.Key.Value.ToString();
+            readModelDict[_identifierPropertyName] = keyValue;
 
             results.Add(readModel);
         }
