@@ -40,7 +40,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
-    protected AutoMap _autoMap = autoMap;
+    protected AutoMap _autoMap = Chronicle.Projections.AutoMap.Enabled;
     protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
     /// <inheritdoc/>
@@ -54,14 +54,14 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public IProjectionBuilder<TReadModel, TBuilder> AutoMap()
     {
-        _autoMap = global::Cratis.Chronicle.Projections.AutoMap.Enabled;
+        _autoMap = Chronicle.Projections.AutoMap.Enabled;
         return this;
     }
 
     /// <inheritdoc/>
     public IProjectionBuilder<TReadModel, TBuilder> NoAutoMap()
     {
-        _autoMap = global::Cratis.Chronicle.Projections.AutoMap.Disabled;
+        _autoMap = Chronicle.Projections.AutoMap.Disabled;
         return this;
     }
 
@@ -79,7 +79,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
         var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
-        if (_autoMap == global::Cratis.Chronicle.Projections.AutoMap.Enabled)
+        if (_autoMap == Chronicle.Projections.AutoMap.Enabled)
         {
             builder.AutoMap();
         }
