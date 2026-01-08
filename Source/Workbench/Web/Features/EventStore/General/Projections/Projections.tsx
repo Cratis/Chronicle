@@ -179,7 +179,17 @@ export const Projections = () => {
                                     tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
                                 }}>
                                 {readModelSchema?.properties && Object.keys(readModelSchema.properties).map((_, index) => (
-                                    <Column key={index} field={_} header={_} />
+                                    <Column
+                                        key={index}
+                                        field={_}
+                                        header={_}
+                                        body={(rowData) => {
+                                            const value = rowData[_];
+                                            if (value === null || value === undefined) return '';
+                                            if (typeof value === 'object') return JSON.stringify(value);
+                                            return String(value);
+                                        }}
+                                    />
                                 ))}
                             </DataTable>
                         </div>
