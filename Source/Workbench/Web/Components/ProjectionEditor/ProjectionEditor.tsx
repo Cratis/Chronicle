@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import React, { useEffect, useRef, useState } from 'react';
-import * as monaco from 'monaco-editor';
+import Editor, { OnMount, Monaco } from '@monaco-editor/react';
+import type { editor } from 'monaco-editor';
 import {
     registerProjectionDslLanguage,
     setReadModelSchemas,
@@ -23,7 +24,6 @@ export interface ProjectionEditorProps {
     readModelSchemas?: JsonSchema[],
     eventSchemas?: JsonSchema[],
     errors?: ProjectionDefinitionSyntaxError[];
-    height?: string;
     theme?: string;
     eventStore?: string;
     namespace?: string;
@@ -35,13 +35,12 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     readModelSchemas,
     eventSchemas,
     errors,
-    height = '400px',
     theme = 'vs-dark',
     eventStore,
     namespace,
 }) => {
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+    const monacoRef = useRef<Monaco | null>(null);
     const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
     const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
     const [declarativeCode, setDeclarativeCode] = useState('');
@@ -69,29 +68,11 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         }
     };
 
-    useEffect(() => {
-        if (editorRef.current) {
-            // Wait for CSS transition to complete (300ms) then trigger layout
-            setTimeout(() => {
-                editorRef.current?.layout();
-            }, 350);
-        }
-    }, [isHelpPanelOpen, isCodePanelOpen]);
-
-    useEffect(() => {
-        if (!containerRef.current || !editorRef.current) return;
-
-        // Set up ResizeObserver to handle window/container resize
-        const resizeObserver = new ResizeObserver(() => {
-            editorRef.current?.layout();
-        });
-
-        resizeObserver.observe(containerRef.current);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, []);
+    const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
+        editorRef.current = editor;
+        monacoRef.current = monacoInstance;
+        registerProjectionDslLanguage(monacoInstance);
+    };
 
     useEffect(() => {
         if (isCodePanelOpen) {
@@ -100,38 +81,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     }, [isCodePanelOpen, eventStore, namespace, value]);
 
     useEffect(() => {
-        if (!containerRef.current) return;
-
-        // Register the language (only once)
-        registerProjectionDslLanguage(monaco);
-
-        // Create editor
-        editorRef.current = monaco.editor.create(containerRef.current, {
-            value,
-            language: languageId,
-            theme,
-            minimap: { enabled: false },
-            automaticLayout: false,
-            scrollBeyondLastLine: false,
-            fontSize: 14,
-            lineNumbers: 'on',
-            renderLineHighlight: 'all',
-            tabSize: 2,
-            hover: {
-                above: false, // Always show hover below to prevent clipping at top
-            },
-        });
-
-        // Listen to content changes
-        if (onChange) {
-            editorRef.current.onDidChangeModelContent(() => {
-                const newValue = editorRef.current?.getValue() || '';
-                onChange(newValue);
-            });
-        }
-
         return () => {
-            editorRef.current?.dispose();
             disposeProjectionDslLanguage();
         };
     }, []);
@@ -146,26 +96,19 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         }
     }, [readModelSchemas, eventSchemas]);
 
-    // Update value when it changes externally
-    useEffect(() => {
-        if (editorRef.current && editorRef.current.getValue() !== value) {
-            editorRef.current.setValue(value);
-        }
-    }, [value]);
-
     // Update markers when errors change
     useEffect(() => {
-        if (!editorRef.current) return;
+        if (!editorRef.current || !monacoRef.current) return;
 
         const model = editorRef.current.getModel();
         if (!model) return;
 
         if (errors && errors.length > 0) {
-            const markers: monaco.editor.IMarkerData[] = errors.map(error => {
+            const markers: editor.IMarkerData[] = errors.map(error => {
                 const line = model.getLineContent(error.line);
                 const endColumn = Math.max(error.column + 1, line.length);
                 return {
-                    severity: monaco.MarkerSeverity.Error,
+                    severity: monacoRef.current!.MarkerSeverity.Error,
                     startLineNumber: error.line,
                     startColumn: error.column,
                     endLineNumber: error.line,
@@ -173,14 +116,14 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     message: error.message,
                 };
             });
-            monaco.editor.setModelMarkers(model, 'projection-dsl', markers);
+            monacoRef.current.editor.setModelMarkers(model, 'projection-dsl', markers);
         } else {
-            monaco.editor.setModelMarkers(model, 'projection-dsl', []);
+            monacoRef.current.editor.setModelMarkers(model, 'projection-dsl', []);
         }
     }, [errors]);
 
     return (
-        <div style={{ position: 'relative', height, width: '100%', display: 'flex', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', overflow: 'hidden' }}>
             <div style={{ flex: 1, position: 'relative', height: '100%', minWidth: 0, overflow: 'hidden' }}>
                 <Button
                     icon="pi pi-code"
@@ -216,7 +159,25 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                         root: { style: { width: '3rem', height: '3rem' } }
                     }}
                 />
-                <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+                <Editor
+                    height="100%"
+                    language={languageId}
+                    value={value}
+                    theme={theme}
+                    onChange={(newValue) => onChange?.(newValue || '')}
+                    onMount={handleEditorDidMount}
+                    options={{
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        renderLineHighlight: 'all',
+                        tabSize: 2,
+                        hover: {
+                            above: false,
+                        },
+                    }}
+                />
             </div>
 
             <div

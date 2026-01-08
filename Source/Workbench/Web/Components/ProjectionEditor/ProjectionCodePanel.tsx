@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import React, { useRef, useEffect, useState } from 'react';
-import * as monaco from 'monaco-editor';
+import React, { useState } from 'react';
+import Editor from '@monaco-editor/react';
 import { SelectButton } from 'primereact/selectbutton';
 import { Button } from 'primereact/button';
 
@@ -13,8 +13,6 @@ interface ProjectionCodePanelProps {
 }
 
 export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declarativeCode, modelBoundCode, onRefresh }) => {
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
     const [codeType, setCodeType] = useState<'declarative' | 'modelBound'>('declarative');
 
     const codeTypeOptions = [
@@ -29,35 +27,7 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
         }
     };
 
-    useEffect(() => {
-        if (!containerRef.current) return;
-
-        editorRef.current = monaco.editor.create(containerRef.current, {
-            value: declarativeCode || '// Loading...',
-            language: 'csharp',
-            theme: 'vs-dark',
-            readOnly: true,
-            minimap: { enabled: false },
-            automaticLayout: true,
-            scrollBeyondLastLine: false,
-            fontSize: 13,
-            lineNumbers: 'on',
-            renderLineHighlight: 'none',
-        });
-
-        return () => {
-            editorRef.current?.dispose();
-        };
-    }, []);
-
-    useEffect(() => {
-        if (editorRef.current) {
-            const code = codeType === 'declarative' ? declarativeCode : modelBoundCode;
-            if (code) {
-                editorRef.current.setValue(code);
-            }
-        }
-    }, [codeType, declarativeCode, modelBoundCode]);
+    const currentCode = codeType === 'declarative' ? declarativeCode : modelBoundCode;
 
     return (
         <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
@@ -85,14 +55,28 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
                 />
             </div>
             <div
-                ref={containerRef}
                 style={{
                     flex: 1,
                     border: '1px solid #3e3e42',
                     borderRadius: '4px',
                     overflow: 'hidden'
                 }}
-            />
+            >
+                <Editor
+                    height="100%"
+                    language="csharp"
+                    value={currentCode || '// Loading...'}
+                    theme="vs-dark"
+                    options={{
+                        readOnly: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        renderLineHighlight: 'none',
+                    }}
+                />
+            </div>
         </div>
     );
 };

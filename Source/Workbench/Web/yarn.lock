@@ -1019,6 +1019,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@monaco-editor/loader@npm:^1.5.0":
+  version: 1.7.0
+  resolution: "@monaco-editor/loader@npm:1.7.0"
+  dependencies:
+    state-local: "npm:^1.0.6"
+  checksum: 10/7ee7406f0a7036e2638430d151c65593dcce88e3f344e2e19556c284c23c1b51d5edb08b8c15a6454aaa62f5af459a296db76b9543686e2ea5037c54723d2f2d
+  languageName: node
+  linkType: hard
+
+"@monaco-editor/react@npm:^4.7.0":
+  version: 4.7.0
+  resolution: "@monaco-editor/react@npm:4.7.0"
+  dependencies:
+    "@monaco-editor/loader": "npm:^1.5.0"
+  peerDependencies:
+    monaco-editor: ">= 0.25.0 < 1"
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10/d72392c4ed6faf8d830ba43421461e1b767b5978edba0739457d7781aa9533c66982be7f59bb156a77a2b578eddfb4711f50e0d84f0f0d25d28b5ab11140f5cc
+  languageName: node
+  linkType: hard
+
 "@napi-rs/wasm-runtime@npm:^1.1.0":
   version: 1.1.0
   resolution: "@napi-rs/wasm-runtime@npm:1.1.0"
@@ -1714,13 +1736,6 @@ __metadata:
   version: 8.1.5
   resolution: "@types/sinonjs__fake-timers@npm:8.1.5"
   checksum: 10/3a0b285fcb8e1eca435266faa27ffff206608b69041022a42857274e44d9305822e85af5e7a43a9fae78d2ab7dc0fcb49f3ae3bda1fa81f0203064dbf5afd4f6
-  languageName: node
-  linkType: hard
-
-"@types/trusted-types@npm:^2.0.7":
-  version: 2.0.7
-  resolution: "@types/trusted-types@npm:2.0.7"
-  checksum: 10/8e4202766a65877efcf5d5a41b7dd458480b36195e580a3b1085ad21e948bc417d55d6f8af1fd2a7ad008015d4117d5fdfe432731157da3c68678487174e4ba3
   languageName: node
   linkType: hard
 
@@ -2794,18 +2809,6 @@ __metadata:
     "@babel/runtime": "npm:^7.8.7"
     csstype: "npm:^3.0.2"
   checksum: 10/bed2341adf8864bf932b3289c24f35fdd99930af77df46688abf2d753ff291df49a15850c874d686d9be6ec4e1c6835673906e64dbd8b2839d227f117a11fd41
-  languageName: node
-  linkType: hard
-
-"dompurify@npm:3.2.7":
-  version: 3.2.7
-  resolution: "dompurify@npm:3.2.7"
-  dependencies:
-    "@types/trusted-types": "npm:^2.0.7"
-  dependenciesMeta:
-    "@types/trusted-types":
-      optional: true
-  checksum: 10/51b7866fb834ee62d6c415f41ece5ce11db7b463f60a822932a1f832573a40b98be7715550298690e7647988fbe086db1098bda9b10548b3166fc975eb9bd849
   languageName: node
   linkType: hard
 
@@ -4951,15 +4954,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:14.0.0":
-  version: 14.0.0
-  resolution: "marked@npm:14.0.0"
-  bin:
-    marked: bin/marked.js
-  checksum: 10/5f69e58e177bde75fb6145127c939c096d05494c5dff92d73af8a550097d6631c82e919f8a375e3743379a2623418151086b925a902a2be123590b887716f2bb
-  languageName: node
-  linkType: hard
-
 "math-intrinsics@npm:^1.1.0":
   version: 1.1.0
   resolution: "math-intrinsics@npm:1.1.0"
@@ -5155,16 +5149,6 @@ __metadata:
     _mocha: bin/_mocha
     mocha: bin/mocha.js
   checksum: 10/878fcec45d79dad3ec01b896ae75eabd0075b8f91866b338b81b2ef8a2279f1e70fb07fc89054108a46864fbc1e6f6898dc31e64c033ded585748c5fcbf7e704
-  languageName: node
-  linkType: hard
-
-"monaco-editor@npm:^0.55.1":
-  version: 0.55.1
-  resolution: "monaco-editor@npm:0.55.1"
-  dependencies:
-    dompurify: "npm:3.2.7"
-    marked: "npm:14.0.0"
-  checksum: 10/73836b612a923342001b8cbb459aad0de486c94672fb7cf9d28bdafed9f3b7523d5aba510d9f8e7d24476a5aacf0d3a5c0cdc520ed4764f6f89f8cf5ba8d9329
   languageName: node
   linkType: hard
 
@@ -6370,6 +6354,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"state-local@npm:^1.0.6":
+  version: 1.0.7
+  resolution: "state-local@npm:1.0.7"
+  checksum: 10/1d956043e270861d40a639ff3457938cf61dbc7e25209d21b55060d8dfaf74742b8a1e525ed6fcb0c2d89b7d3e305bb8589bf27392012889456b3ad82a4b7d0a
+  languageName: node
+  linkType: hard
+
 "std-env@npm:^3.10.0":
   version: 3.10.0
   resolution: "std-env@npm:3.10.0"
@@ -7310,6 +7301,7 @@ __metadata:
     "@cratis/arc.react.mvvm": "npm:^18.7.14"
     "@cratis/arc.vite": "npm:^18.7.14"
     "@cratis/components": "npm:^0.1.10"
+    "@monaco-editor/react": "npm:^4.7.0"
     "@tailwindcss/postcss": "npm:4.1.18"
     "@tailwindcss/vite": "npm:4.1.18"
     "@types/chai": "npm:5.2.3"
@@ -7341,7 +7333,6 @@ __metadata:
     globals: "npm:17.0.0"
     hash-files: "npm:1.1.1"
     mocha: "npm:11.7.5"
-    monaco-editor: "npm:^0.55.1"
     primeicons: "npm:^7.0.0"
     primereact: "npm:^10.9.7"
     react: "npm:19.2.3"
