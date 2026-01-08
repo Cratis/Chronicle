@@ -91,9 +91,9 @@ export const Projections = () => {
                             value={projections.data}
                             selectionMode="single"
                             selection={selectedProjection as never}
-                            onSelectionChange={(e) => { 
-                                setSelectedProjection(e.value); 
-                                setDslValue(e.value?.dsl ?? ''); 
+                            onSelectionChange={(e) => {
+                                setSelectedProjection(e.value);
+                                setDslValue(e.value?.dsl ?? '');
                                 setReadModelInstances([]);
                                 setSelectedInstance(null);
                                 setPage(0);

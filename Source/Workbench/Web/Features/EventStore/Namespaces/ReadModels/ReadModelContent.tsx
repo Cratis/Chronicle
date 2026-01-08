@@ -4,7 +4,10 @@
 import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
 import { Json } from 'Features/index';
 import { Tooltip } from 'primereact/tooltip';
-import React from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import * as faIcons from 'react-icons/fa6';
+import strings from 'Strings';
+import { ObjectNavigationalBar } from 'Components';
 
 
 export interface ReadModelContentProps {
@@ -15,6 +18,69 @@ export interface ReadModelContentProps {
 
 // Component to render the SimulatedOrder as a table
 export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: ReadModelContentProps) => {
+    const [navigationPath, setNavigationPath] = useState<string[]>([]);
+
+    const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
+        let current: Json = data;
+        for (const segment of path) {
+            if (current === null || current === undefined) return null;
+            if (typeof current === 'object' && !Array.isArray(current) && current !== null) {
+                current = (current as { [key: string]: Json })[segment];
+            } else {
+                return null;
+            }
+        }
+        return current;
+    }, []);
+
+    const navigateToProperty = useCallback((key: string) => {
+        setNavigationPath([...navigationPath, key]);
+    }, [navigationPath]);
+
+    const navigateToBreadcrumb = useCallback((index: number) => {
+        if (index === 0) {
+            setNavigationPath([]);
+        } else {
+            setNavigationPath(navigationPath.slice(0, index));
+        }
+    }, [navigationPath]);
+
+    const currentData = useMemo(() => {
+        if (navigationPath.length === 0) {
+            return readModel;
+        }
+
+        const lastKey = navigationPath[navigationPath.length - 1];
+        const pathToParent = navigationPath.slice(0, -1);
+
+        const parentValue = pathToParent.length > 0 
+            ? getValueAtPath(readModel, pathToParent)
+            : readModel;
+        
+        if (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) {
+            const value = (parentValue as { [k: string]: Json })[lastKey];
+            
+            if (Array.isArray(value)) {
+                return value;
+            } else if (value && typeof value === 'object') {
+                return value;
+            }
+        }
+
+        return readModel;
+    }, [readModel, navigationPath, getValueAtPath]);
+
+    const currentProperties = useMemo(() => {
+        const schema = JSON.parse(readModelDefinition.schema);
+        const properties = schema.properties || {};
+
+        if (navigationPath.length === 0) {
+            return properties;
+        }
+
+        return {};
+    }, [readModelDefinition.schema, navigationPath]);
+
     const tableStyle: React.CSSProperties = {
         width: '100%',
         borderCollapse: 'collapse',
@@ -47,38 +113,123 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
         cursor: 'help',
     };
 
-    // Parse the schema to get property definitions
-    const schema = JSON.parse(readModelDefinition.schema);
-    const properties = schema.properties || {};
+    const renderValue = (value: Json, propertyName: string) => {
+        if (value === null || value === undefined) return '';
 
-    return (
-        <div className="order-content">
-            <Tooltip target=".property-info-icon" />
+        if (Array.isArray(value)) {
+            return (
+                <div
+                    className="flex align-items-center gap-2 cursor-pointer"
+                    onClick={() => navigateToProperty(propertyName)}
+                    style={{ color: 'var(--primary-color)', display: 'flex', alignItems: 'center' }}
+                >
+                    <span>{strings.eventStore.namespaces.readModels.labels.array}[{value.length}]</span>
+                    <faIcons.FaArrowRight style={{ fontSize: '0.875rem', display: 'inline-flex' }} />
+                </div>
+            );
+        }
+
+        if (typeof value === 'object') {
+            return (
+                <div
+                    className="flex align-items-center gap-2 cursor-pointer"
+                    onClick={() => navigateToProperty(propertyName)}
+                    style={{ color: 'var(--primary-color)', display: 'flex', alignItems: 'center' }}
+                >
+                    <span>{strings.eventStore.namespaces.readModels.labels.object}</span>
+                    <faIcons.FaArrowRight style={{ fontSize: '0.875rem', display: 'inline-flex' }} />
+                </div>
+            );
+        }
+
+        return String(value);
+    };
+
+    const renderTable = () => {
+        if (Array.isArray(currentData)) {
+            if (currentData.length === 0) return <div style={{ padding: '12px', color: 'rgba(255,255,255,0.6)' }}>Empty array</div>;
+            
+            const firstItem = currentData[0];
+            if (typeof firstItem === 'object' && firstItem !== null && !Array.isArray(firstItem)) {
+                const keys = Object.keys(firstItem);
+                
+                return (
+                    <table style={tableStyle}>
+                        <tbody>
+                            {currentData.map((item, index) => (
+                                <React.Fragment key={index}>
+                                    {index > 0 && (
+                                        <tr style={{ height: '8px', background: 'rgba(255,255,255,0.05)' }}>
+                                            <td colSpan={2}></td>
+                                        </tr>
+                                    )}
+                                    {keys.map((key) => (
+                                        <tr key={`${index}-${key}`} style={rowStyle}>
+                                            <td style={labelStyle}>{key}</td>
+                                            <td style={valueStyle}>{renderValue((item as any)[key], key)}</td>
+                                        </tr>
+                                    ))}
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                );
+            } else {
+                return (
+                    <table style={tableStyle}>
+                        <tbody>
+                            {currentData.map((item, index) => (
+                                <tr key={index} style={rowStyle}>
+                                    <td style={labelStyle}>[{index}]</td>
+                                    <td style={valueStyle}>{renderValue(item, `[${index}]`)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                );
+            }
+        }
+
+        const entries = navigationPath.length === 0
+            ? Object.entries(currentProperties)
+            : Object.entries(currentData as { [key: string]: Json });
+
+        return (
             <table style={tableStyle}>
                 <tbody>
-                    {Object.entries(properties).map(([propertyName, propertyDef]: [string, any]) => {
-                        const value = (readModel as any)[propertyName];
-                        const formattedValue = value !== undefined && value !== null
-                            ? (typeof value === 'object' ? JSON.stringify(value) : String(value))
-                            : '';
-
+                    {entries.map(([propertyName, propertyDef]: [string, any]) => {
+                        const value = navigationPath.length === 0
+                            ? (currentData as any)[propertyName]
+                            : propertyDef;
+                        
                         return (
                             <tr key={propertyName} style={rowStyle}>
                                 <td style={labelStyle}>
                                     {propertyName}
-                                    {propertyDef.description && (
+                                    {navigationPath.length === 0 && propertyDef.description && (
                                         <i
                                             className="pi pi-info-circle property-info-icon"
                                             style={infoIconStyle}
                                             data-pr-tooltip={propertyDef.description} />
                                     )}
                                 </td>
-                                <td style={valueStyle}>{formattedValue}</td>
+                                <td style={valueStyle}>{renderValue(value, propertyName)}</td>
                             </tr>
                         );
                     })}
                 </tbody>
             </table>
+        );
+    };
+
+    return (
+        <div className="order-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Tooltip target=".property-info-icon" />
+            <ObjectNavigationalBar 
+                navigationPath={navigationPath}
+                onNavigate={navigateToBreadcrumb}
+            />
+            {renderTable()}
             <div style={{
                 marginTop: '20px',
                 padding: '12px',
