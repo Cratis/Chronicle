@@ -59,13 +59,13 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
 
         const result: Json[] = [];
         instances.forEach((item: ReadModelInstance) => {
-            const parentValue = pathToParent.length > 0 
+            const parentValue = pathToParent.length > 0
                 ? getValueAtPath(item.instance as Json, pathToParent)
                 : item.instance as Json;
-            
+
             if (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) {
                 const value = (parentValue as { [k: string]: Json })[lastKey];
-                
+
                 if (Array.isArray(value)) {
                     result.push(...value.map((val: Json, idx: number) => ({
                         __arrayIndex: idx,
@@ -133,10 +133,10 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                             <div
                                 className="flex align-items-center gap-2 cursor-pointer"
                                 onClick={(e) => { e.stopPropagation(); navigateToArray(key); }}
-                                style={{ color: 'var(--primary-color)' }}
+                                style={{ color: 'var(--primary-color)', display: 'flex', alignItems: 'center' }}
                             >
                                 <span>{strings.eventStore.namespaces.readModels.labels.array}[{value.length}]</span>
-                                <faIcons.FaArrowRight style={{ fontSize: '0.875rem' }} />
+                                <faIcons.FaArrowRight style={{ fontSize: '0.875rem', display: 'inline-flex' }} />
                             </div>
                         );
                     }
@@ -146,10 +146,10 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                             <div
                                 className="flex align-items-center gap-2 cursor-pointer"
                                 onClick={(e) => { e.stopPropagation(); navigateToObject(key); }}
-                                style={{ color: 'var(--primary-color)' }}
+                                style={{ color: 'var(--primary-color)', display: 'flex', alignItems: 'center' }}
                             >
                                 <span>{strings.eventStore.namespaces.readModels.labels.object}</span>
-                                <faIcons.FaArrowRight style={{ fontSize: '0.875rem' }} />
+                                <faIcons.FaArrowRight style={{ fontSize: '0.875rem', display: 'inline-flex' }} />
                             </div>
                         );
                     }
