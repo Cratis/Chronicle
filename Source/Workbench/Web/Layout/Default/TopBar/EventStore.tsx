@@ -7,16 +7,23 @@ import { ImDatabase } from "react-icons/im";
 import { ItemsList } from 'Components/ItemsList/ItemsList';
 import { EventStoreViewModel } from './EventStoreViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
+import { useNavigate } from 'react-router-dom';
 
 export const EventStore = withViewModel(EventStoreViewModel, ({ viewModel }) => {
     const selectEventStorePanel = useRef<OverlayPanel>(null);
+    const navigate = useNavigate();
+
+    const handleEventStoreClick = (eventStore: string) => {
+        navigate(`/event-store/${eventStore}`);
+        selectEventStorePanel.current?.hide();
+    };
 
     return (<div className='flex-1 cursor-pointer' onClick={(e) => selectEventStorePanel.current?.toggle(e)}>
         <div className={'flex justify-end gap-3 '}>
             <ImDatabase size={25} />
 
             <OverlayPanel ref={selectEventStorePanel}>
-                <ItemsList<string> items={viewModel.eventStores} />
+                <ItemsList<string> items={viewModel.eventStores} onItemClicked={handleEventStoreClick} />
             </OverlayPanel>
         </div>
     </div>);
