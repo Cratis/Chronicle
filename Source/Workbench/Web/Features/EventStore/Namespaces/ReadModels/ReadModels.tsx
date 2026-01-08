@@ -68,6 +68,8 @@ const ReadModelsContent = () => {
     const handleReadModelChange = useCallback((readModel: ReadModelDefinition | null) => {
         setSelectedReadModel(readModel);
         setSelectedOccurrence(null);
+        setSelectedInstance(null);
+        setPage(0);
     }, []);
 
     const handleOccurrenceChange = useCallback((occurrence: string | null) => {
