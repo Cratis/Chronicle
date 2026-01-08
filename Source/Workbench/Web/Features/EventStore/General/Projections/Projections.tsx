@@ -153,21 +153,20 @@ export const Projections = () => {
                             ]}
                         />
 
-                        <div className="py-4">
+                        <div className="pt-4" style={{ height: '500px' }}>
                             <ProjectionEditor
                                 value={dslValue}
                                 onChange={setDslValue}
                                 readModelSchemas={readModelSchemas}
                                 eventSchemas={eventSchemas}
                                 errors={syntaxErrors}
-                                height="500px"
                                 theme="vs-dark"
                                 eventStore={params.eventStore}
                                 namespace={params.namespace}
                             />
                         </div>
 
-                        <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+                        <div className="pt-4">
                             <DataTable
                                 value={readModelInstances as never[]}
                                 emptyMessage={strings.eventStore.general.projections.empty}
