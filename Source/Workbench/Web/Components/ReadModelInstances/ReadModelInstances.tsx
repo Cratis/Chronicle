@@ -23,7 +23,7 @@ interface Props {
     setSelectedInstance: (instance: Json | null) => void;
 }
 
-export default function ReadModelInstances({ instances, page, pageSize, totalItems, isPerforming, setPage, setPageSize, selectedInstance, setSelectedInstance }: Props) {
+export function ReadModelInstances({ instances, page, pageSize, totalItems, isPerforming, setPage, setPageSize, selectedInstance, setSelectedInstance }: Props) {
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
 
     const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
@@ -54,25 +54,34 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
             return instances.map((item: ReadModelInstance) => item.instance as Json);
         }
 
-        const pathToArray = navigationPath.slice(0, -1);
-        const arrayKey = navigationPath[navigationPath.length - 1];
+        const lastKey = navigationPath[navigationPath.length - 1];
+        const pathToParent = navigationPath.slice(0, -1);
 
-        const arrayData: Json[] = [];
+        const result: Json[] = [];
         instances.forEach((item: ReadModelInstance) => {
-            const parentValue = getValueAtPath(item.instance as Json, pathToArray);
-            if (parentValue) {
-                const maybeArray = (parentValue as { [k: string]: Json })[arrayKey];
-                if (Array.isArray(maybeArray)) {
-                    arrayData.push(...maybeArray.map((val: Json, idx: number) => ({
+            const parentValue = pathToParent.length > 0 
+                ? getValueAtPath(item.instance as Json, pathToParent)
+                : item.instance as Json;
+            
+            if (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) {
+                const value = (parentValue as { [k: string]: Json })[lastKey];
+                
+                if (Array.isArray(value)) {
+                    result.push(...value.map((val: Json, idx: number) => ({
                         __arrayIndex: idx,
                         __sourceInstance: item.instance as Json,
                         ...(typeof val === 'object' && val !== null ? (val as { [k: string]: Json }) : {})
                     }) as Json));
+                } else if (value && typeof value === 'object') {
+                    result.push({
+                        __sourceInstance: item.instance as Json,
+                        ...(value as { [k: string]: Json })
+                    } as Json);
                 }
             }
         });
 
-        return arrayData;
+        return result;
     }, [instances, navigationPath, getValueAtPath]);
 
     const objectArray = useMemo(() => {
@@ -80,6 +89,11 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
     }, [currentData]);
 
     const navigateToArray = useCallback((key: string) => {
+        setNavigationPath([...navigationPath, key]);
+        setPage(0);
+    }, [navigationPath, setPage]);
+
+    const navigateToObject = useCallback((key: string) => {
         setNavigationPath([...navigationPath, key]);
         setPage(0);
     }, [navigationPath, setPage]);
@@ -131,7 +145,7 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
                         return (
                             <div
                                 className="flex align-items-center gap-2 cursor-pointer"
-                                onClick={() => handleObjectClick(value)}
+                                onClick={(e) => { e.stopPropagation(); navigateToObject(key); }}
                                 style={{ color: 'var(--primary-color)' }}
                             >
                                 <span>{strings.eventStore.namespaces.readModels.labels.object}</span>
@@ -144,7 +158,7 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
                 }}
             />
         ));
-    }, [currentData, navigateToArray, handleObjectClick]);
+    }, [currentData, navigateToArray, navigateToObject]);
 
     const breadcrumbItems = useMemo(() => {
         const items: { name: string; path: string[] }[] = [{ name: strings.eventStore.namespaces.readModels.labels.root, path: [] }];
@@ -165,35 +179,34 @@ export default function ReadModelInstances({ instances, page, pageSize, totalIte
     return (
         <>
             <div className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                {navigationPath.length > 0 && (
-                    <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Button
-                                icon={<faIcons.FaArrowLeft />}
-                                className="p-button-text p-button-sm"
-                                onClick={() => navigateToBreadcrumb(navigationPath.length - 1)}
-                                tooltip={strings.eventStore.namespaces.readModels.actions.navigateBack}
-                                tooltipOptions={{ position: 'top' }}
-                            />
-                            <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
-                                {breadcrumbItems.map((item, index) => (
-                                    <span key={index}>
-                                        {index > 0 && <span className="mx-2">&gt;</span>}
-                                        <span
-                                            onClick={() => navigateToBreadcrumb(index)}
-                                            style={{
-                                                cursor: 'pointer',
-                                                textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none'
-                                            }}
-                                        >
-                                            {item.name}
-                                        </span>
+                <div className="px-4 py-2 mb-2 border-bottom-1 surface-border">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Button
+                            icon={<faIcons.FaArrowLeft />}
+                            className="p-button-text p-button-sm"
+                            onClick={() => navigateToBreadcrumb(navigationPath.length - 1)}
+                            tooltip={strings.eventStore.namespaces.readModels.actions.navigateBack}
+                            tooltipOptions={{ position: 'top' }}
+                            disabled={navigationPath.length === 0}
+                        />
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
+                            {breadcrumbItems.map((item, index) => (
+                                <span key={index}>
+                                    {index > 0 && <span className="mx-2">&gt;</span>}
+                                    <span
+                                        onClick={() => navigateToBreadcrumb(index)}
+                                        style={{
+                                            cursor: 'pointer',
+                                            textDecoration: index < breadcrumbItems.length - 1 ? 'underline' : 'none'
+                                        }}
+                                    >
+                                        {item.name}
                                     </span>
-                                ))}
-                            </div>
+                                </span>
+                            ))}
                         </div>
                     </div>
-                )}
+                </div>
 
                 <div
                     className="card"

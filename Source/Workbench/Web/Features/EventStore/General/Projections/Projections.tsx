@@ -21,7 +21,8 @@ import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxErr
 import type { ReadModelSchema } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog } from 'Components';
+import { TimeMachineDialog, ReadModelInstances } from 'Components';
+import { Json } from 'Features';
 
 export const Projections = () => {
 
@@ -30,13 +31,15 @@ export const Projections = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
     const [newReadModelName, setNewReadModelName] = useState('');
-    const [selectedInstance, setSelectedInstance] = useState<unknown>(null);
+    const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
-    const [readModelInstances, setReadModelInstances] = useState<unknown[]>([]);
+    const [readModelInstances, setReadModelInstances] = useState<{ instance: unknown }[]>([]);
     const [readModelSchema, setReadModelSchema] = useState<JsonSchema | null>(null);
     const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDefinitionSyntaxError[]>([]);
 
@@ -98,8 +101,7 @@ export const Projections = () => {
                     </div>
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
-
-                    <div className="px-4 py-4">
+                    <div className="px-4 py-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Menubar
                             model={[
                                 {
@@ -112,6 +114,7 @@ export const Projections = () => {
                                         setReadModelSchema(null);
                                         setSyntaxErrors([]);
                                         setSelectedInstance(null);
+                                        setPage(0);
                                     }
                                 },
                                 {
@@ -136,10 +139,12 @@ export const Projections = () => {
                                         previewProjection.dsl = dslValue;
                                         const result = await previewProjection.execute();
 
-                                        setReadModelInstances(result.response?.readModelEntries ?? []);
+                                        const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => ({ instance: entry }));
+                                        setReadModelInstances(instances);
                                         setReadModelSchema(result.response?.schema ?? null);
                                         setSyntaxErrors(result.response?.syntaxErrors ?? []);
                                         setSelectedInstance(null);
+                                        setPage(0);
                                     }
                                 },
                                 {
@@ -153,7 +158,7 @@ export const Projections = () => {
                             ]}
                         />
 
-                        <div className="pt-4" style={{ height: '500px' }}>
+                        <div className="pt-4" style={{ height: '500px', flexShrink: 0 }}>
                             <ProjectionEditor
                                 value={dslValue}
                                 onChange={setDslValue}
@@ -166,32 +171,18 @@ export const Projections = () => {
                             />
                         </div>
 
-                        <div className="pt-4">
-                            <DataTable
-                                value={readModelInstances as never[]}
-                                emptyMessage={strings.eventStore.general.projections.empty}
-                                className="p-datatable-sm"
-                                selectionMode="single"
-                                selection={selectedInstance as never}
-                                onSelectionChange={(e) => setSelectedInstance(e.value)}
-                                pt={{
-                                    root: { className: 'rounded-lg overflow-hidden', style: { border: 'none' } },
-                                    tbody: { style: { borderTop: '1px solid var(--surface-border)' } }
-                                }}>
-                                {readModelSchema?.properties && Object.keys(readModelSchema.properties).map((_, index) => (
-                                    <Column
-                                        key={index}
-                                        field={_}
-                                        header={_}
-                                        body={(rowData) => {
-                                            const value = rowData[_];
-                                            if (value === null || value === undefined) return '';
-                                            if (typeof value === 'object') return JSON.stringify(value);
-                                            return String(value);
-                                        }}
-                                    />
-                                ))}
-                            </DataTable>
+                        <div className="pt-4" style={{ flex: 1, minHeight: 0 }}>
+                            <ReadModelInstances
+                                instances={readModelInstances}
+                                page={page}
+                                pageSize={pageSize}
+                                totalItems={readModelInstances.length}
+                                isPerforming={false}
+                                setPage={setPage}
+                                setPageSize={setPageSize}
+                                selectedInstance={selectedInstance}
+                                setSelectedInstance={setSelectedInstance}
+                            />
                         </div>
                     </div>
                 </Allotment.Pane>
