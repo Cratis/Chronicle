@@ -79,6 +79,21 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     }, [isHelpPanelOpen, isCodePanelOpen]);
 
     useEffect(() => {
+        if (!containerRef.current || !editorRef.current) return;
+
+        // Set up ResizeObserver to handle window/container resize
+        const resizeObserver = new ResizeObserver(() => {
+            editorRef.current?.layout();
+        });
+
+        resizeObserver.observe(containerRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
         if (isCodePanelOpen) {
             fetchCode();
         }
