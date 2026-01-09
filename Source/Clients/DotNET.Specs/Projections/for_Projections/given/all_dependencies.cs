@@ -11,7 +11,6 @@ public class all_dependencies : Specification
 {
     protected IEventStore _eventStore;
     protected IEventTypes _eventTypes;
-    protected IProjectionWatcherManager _projectionWatcherManager;
     protected IClientArtifactsProvider _clientArtifacts;
     protected IEventSerializer _eventSerializer;
     protected IServiceProvider _serviceProvider;
@@ -22,7 +21,6 @@ public class all_dependencies : Specification
     {
         _eventStore = Substitute.For<IEventStore>();
         _eventTypes = Substitute.For<IEventTypes>();
-        _projectionWatcherManager = Substitute.For<IProjectionWatcherManager>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _serviceProvider = Substitute.For<IServiceProvider>();

@@ -53,13 +53,13 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
         const lastKey = navigationPath[navigationPath.length - 1];
         const pathToParent = navigationPath.slice(0, -1);
 
-        const parentValue = pathToParent.length > 0 
+        const parentValue = pathToParent.length > 0
             ? getValueAtPath(readModel, pathToParent)
             : readModel;
-        
+
         if (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) {
             const value = (parentValue as { [k: string]: Json })[lastKey];
-            
+
             if (Array.isArray(value)) {
                 return value;
             } else if (value && typeof value === 'object') {
@@ -148,11 +148,11 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
     const renderTable = () => {
         if (Array.isArray(currentData)) {
             if (currentData.length === 0) return <div style={{ padding: '12px', color: 'rgba(255,255,255,0.6)' }}>Empty array</div>;
-            
+
             const firstItem = currentData[0];
             if (typeof firstItem === 'object' && firstItem !== null && !Array.isArray(firstItem)) {
                 const keys = Object.keys(firstItem);
-                
+
                 return (
                     <table style={tableStyle}>
                         <tbody>
@@ -201,7 +201,7 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
                         const value = navigationPath.length === 0
                             ? (currentData as any)[propertyName]
                             : propertyDef;
-                        
+
                         return (
                             <tr key={propertyName} style={rowStyle}>
                                 <td style={labelStyle}>
@@ -225,7 +225,7 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
     return (
         <div className="order-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Tooltip target=".property-info-icon" />
-            <ObjectNavigationalBar 
+            <ObjectNavigationalBar
                 navigationPath={navigationPath}
                 onNavigate={navigateToBreadcrumb}
             />

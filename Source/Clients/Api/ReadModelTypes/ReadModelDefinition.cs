@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Api.ReadModelTypes;
 /// <param name="Identifier">Identifier of the read model.</param>
 /// <param name="Generation">Generation of the read model.</param>
 /// <param name="Name">Name of the read model.</param>
+/// <param name="DisplayName">Display name of the read model.</param>
 /// <param name="Schema">JSON schema for the read model.</param>
 /// <param name="Indexes">Collection of property paths for indexes.</param>
 [ReadModel]
@@ -19,6 +20,7 @@ public record ReadModelDefinition(
     string Identifier,
     ulong Generation,
     string Name,
+    string DisplayName,
     string Schema,
     IEnumerable<string> Indexes)
 {
@@ -39,6 +41,7 @@ public record ReadModelDefinition(
             rm.Type.Identifier,
             rm.Type.Generation,
             rm.Name,
+            rm.DisplayName,
             rm.Schema,
             rm.Indexes.Select(i => i.PropertyPath)));
     }

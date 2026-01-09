@@ -57,6 +57,7 @@ internal sealed class Reducers(
         var model = new ReadModelDefinition(
             ReadModelIdentifier.NotSet,
             ReadModelName.NotSet,
+            ReadModelDisplayName.NotSet,
             ReadModelOwner.None,
             ReadModelObserverType.Reducer,
             ReadModelObserverIdentifier.Unspecified,

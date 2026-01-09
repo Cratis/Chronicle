@@ -78,6 +78,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
         _readModelDefinition = new ReadModelDefinition(
             "test-read-model",
             "TestReadModel",
+            "TestReadModel",
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,

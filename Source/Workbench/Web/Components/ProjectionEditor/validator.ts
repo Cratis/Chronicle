@@ -3,13 +3,22 @@
 
 import type { editor } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
+import type { ReadModelInfo } from './index';
 
 export class ProjectionDslValidator {
-    private readModelSchemas: JsonSchema[] = [];
+    private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 
+    setReadModels(readModels: ReadModelInfo[]): void {
+        this.readModels = readModels || [];
+    }
+
+    // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
-        this.readModelSchemas = schemas || [];
+        this.readModels = schemas.map(schema => ({
+            displayName: this.getSchemaName(schema) || '',
+            schema
+        }));
     }
 
     setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
@@ -54,8 +63,8 @@ export class ProjectionDslValidator {
         const [, , readModelName] = projectionMatch;
 
         // Validate read model exists in schemas
-        if (this.readModelSchemas.length > 0) {
-            const readModelExists = this.readModelSchemas.some((s) => this.getSchemaName(s) === readModelName);
+        if (this.readModels.length > 0) {
+            const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
             if (!readModelExists) {
                 const col = firstLine.indexOf(readModelName) + 1;
                 markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' not found in available schemas`));
@@ -63,7 +72,8 @@ export class ProjectionDslValidator {
         }
 
         // Get the active read model schema for property validation
-        const activeSchema = this.readModelSchemas.find((s) => this.getSchemaName(s) === readModelName);
+        const activeReadModel = this.readModels.find((rm) => rm.displayName === readModelName);
+        const activeSchema = activeReadModel?.schema;
 
         // Validate subsequent lines
         const contextStack: JsonSchema[] = [activeSchema!];

@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// </summary>
 /// <param name="Identifier">Unique identifier of the model.</param>
 /// <param name="Name">Name of the model.</param>
+/// <param name="DisplayName">Display name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
 /// <param name="ObserverType">The type of owner for the read model.</param>
 /// <param name="ObserverIdentifier">The observer identifier for the read model.</param>
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 public record ReadModelDefinition(
     ReadModelIdentifier Identifier,
     ReadModelName Name,
+    ReadModelDisplayName DisplayName,
     ReadModelOwner Owner,
     ReadModelObserverType ObserverType,
     ReadModelObserverIdentifier ObserverIdentifier,
@@ -29,6 +31,7 @@ public record ReadModelDefinition(
     IDictionary<ReadModelGeneration, JsonSchema> Schemas,
     IReadOnlyCollection<IndexDefinition> Indexes)
 {
+    // Note: no compatibility constructor — callers must provide a DisplayName explicitly.
     /// <summary>
     /// Gets the latest generation of the read model.
     /// </summary>

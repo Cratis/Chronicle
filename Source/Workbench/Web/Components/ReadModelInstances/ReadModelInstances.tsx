@@ -168,7 +168,7 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
     return (
         <>
             <div className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <ObjectNavigationalBar 
+                <ObjectNavigationalBar
                     navigationPath={navigationPath}
                     onNavigate={navigateToBreadcrumb}
                 />

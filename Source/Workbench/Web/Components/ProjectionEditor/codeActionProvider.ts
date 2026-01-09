@@ -3,13 +3,22 @@
 
 import type * as Monaco from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
+import type { ReadModelInfo } from './index';
 
 export class ProjectionDslCodeActionProvider {
-    private readModelSchemas: JsonSchema[] = [];
+    private readModels: ReadModelInfo[] = [];
     private onCreateReadModel?: (readModelName: string) => void;
 
+    setReadModels(readModels: ReadModelInfo[]): void {
+        this.readModels = readModels;
+    }
+
+    // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
-        this.readModelSchemas = schemas;
+        this.readModels = schemas.map(schema => ({
+            displayName: (schema as any).title || (schema as any).name || '',
+            schema
+        }));
     }
 
     setCreateReadModelCallback(callback: (readModelName: string) => void): void {
@@ -37,8 +46,8 @@ export class ProjectionDslCodeActionProvider {
                     const readModelName = match[1];
 
                     // Check if this read model already exists
-                    const exists = this.readModelSchemas.some(
-                        schema => (schema as any).title === readModelName
+                    const exists = this.readModels.some(
+                        rm => rm.displayName === readModelName
                     );
 
                     if (!exists && this.onCreateReadModel) {

@@ -53,6 +53,7 @@ public class ReadModelDefinitionsStorage(
         var readModel = new ReadModel(
             definition.Identifier,
             definition.Name,
+            definition.DisplayName,
             definition.Owner,
             definition.ObserverType,
             definition.ObserverIdentifier,
@@ -72,6 +73,7 @@ public class ReadModelDefinitionsStorage(
         return new(
             readModel.Id,
             readModel.Name,
+            readModel.DisplayName,
             readModel.Owner,
             readModel.ObserverType,
             readModel.ObserverIdentifier,

@@ -14,7 +14,6 @@ public class all_dependencies : Specification
 {
     protected IEventStore _eventStore;
     protected IEventTypes _eventTypes;
-    protected IProjectionWatcherManager _projectionWatcherManager;
     protected IClientArtifactsProvider _clientArtifacts;
     protected INamingPolicy _namingPolicy;
     protected IEventSerializer _eventSerializer;
@@ -34,7 +33,6 @@ public class all_dependencies : Specification
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
 
         _eventTypes = Substitute.For<IEventTypes>();
-        _projectionWatcherManager = Substitute.For<IProjectionWatcherManager>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _namingPolicy = new DefaultNamingPolicy();
@@ -58,10 +56,8 @@ public class all_dependencies : Specification
         _projections = new Projections(
             _eventStore,
             _eventTypes,
-            _projectionWatcherManager,
             _clientArtifacts,
             _namingPolicy,
-            _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
 

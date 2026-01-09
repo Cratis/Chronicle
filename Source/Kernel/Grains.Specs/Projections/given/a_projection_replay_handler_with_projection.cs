@@ -18,9 +18,10 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
     void Establish()
     {
         _projection = Substitute.For<Chronicle.Projections.IProjection>();
-        _readModel = new(
+        _readModel = new ReadModelDefinition(
             _readModelType.Identifier,
             _readModelName,
+            new ReadModelDisplayName(_readModelName.Value),
             ReadModelOwner.None,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,

@@ -166,7 +166,7 @@ public class ModelBoundCodeGenerator
         return expression;
     }
 
-    class PropertyInfo
+    sealed class PropertyInfo
     {
         public string PropertyName { get; set; } = string.Empty;
         public List<(string EventTypeName, string EventPropertyName)> SetFroms { get; } = [];

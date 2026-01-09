@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Projections;
@@ -20,6 +21,9 @@ public class all_dependencies : Specification
     protected IJsonSchemaGenerator _schemaGenerator;
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
+    protected IReadModelWatcherManager _readModelWatcherManager;
+    protected IReducerObservers _reducerObservers;
+    protected JsonSerializerOptions _jsonSerializerOptions;
     protected ReadModels _readModels;
 
     void Establish()
@@ -33,6 +37,9 @@ public class all_dependencies : Specification
         _reducers = Substitute.For<IReducers>();
         _additionalReadModels = [];
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
+        _readModelWatcherManager = Substitute.For<IReadModelWatcherManager>();
+        _reducerObservers = Substitute.For<IReducerObservers>();
+        _jsonSerializerOptions = new();
 
         _services = Substitute.For<IServices>();
 
@@ -46,6 +53,9 @@ public class all_dependencies : Specification
             _namingPolicy,
             _projections,
             _reducers,
-            _schemaGenerator);
+            _schemaGenerator,
+            _jsonSerializerOptions,
+            _readModelWatcherManager,
+            _reducerObservers);
     }
 }

@@ -27,10 +27,10 @@ public class DeclarativeCodeGenerator
         var projectionName = definition.Identifier.Value;
 
         sb.AppendLine("using Cratis.Chronicle.Projections;")
-          .AppendLine();
-        sb.AppendLine($"public class {projectionName} : IProjectionFor<{readModelName}>");
-        sb.AppendLine("{");
-        sb.AppendLine($"    public void Define(IProjectionBuilderFor<{readModelName}> builder) => builder");
+          .AppendLine()
+            .AppendLine($"public class {projectionName} : IProjectionFor<{readModelName}>")
+            .AppendLine("{")
+            .AppendLine($"    public void Define(IProjectionBuilderFor<{readModelName}> builder) => builder");
 
         var lines = new List<string>();
 
@@ -61,6 +61,40 @@ public class DeclarativeCodeGenerator
         return sb.ToString();
     }
 
+    static string ConvertExpression(string expression)
+    {
+        // Handle event context properties - these return ToEventContextProperty syntax
+        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
+        {
+            var property = expression.Substring(14, expression.Length - 15);
+            return $"c => c.{property}";
+        }
+
+        // Handle literals
+        if (expression == "True") return "true";
+        if (expression == "False") return "false";
+        if (expression.StartsWith('\"') && expression.EndsWith('\"')) return expression;
+        if (double.TryParse(expression, out _)) return expression;
+
+        // Event source ID
+        if (expression == "$eventSourceId") return "e => e.EventSourceId";
+
+        // Property path from event
+        return $"e => e.{expression}";
+    }
+
+    static string ConvertExpressionForSet(string expression)
+    {
+        // For Set operations, event context properties need ToEventContextProperty
+        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
+        {
+            var property = expression.Substring(14, expression.Length - 15);
+            return $"ToEventContextProperty(c => c.{property})";
+        }
+
+        return $"To({ConvertExpression(expression)})";
+    }
+
     void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, List<string> lines, int indent)
     {
         var indentStr = new string(' ', indent);
@@ -85,14 +119,14 @@ public class DeclarativeCodeGenerator
             // Add key configuration
             if (hasKey)
             {
-                var keyLine = GenerateKeyExpression(fromDef.Key, indentStr);
+                var keyLine = GenerateKeyExpression(fromDef.Key!, indentStr);
                 propLines.Add(keyLine);
             }
 
             // Add parent key configuration
             if (hasParentKey)
             {
-                var parentKeyLine = GenerateParentKeyExpression(fromDef.ParentKey, indentStr);
+                var parentKeyLine = GenerateParentKeyExpression(fromDef.ParentKey!, indentStr);
                 propLines.Add(parentKeyLine);
             }
 
@@ -149,7 +183,7 @@ public class DeclarativeCodeGenerator
         {
             // Parse: $composite(TypeName, prop1=expr1, prop2=expr2)
             var inner = keyExpression.Substring(11, keyExpression.Length - 12);
-            var parts = inner.Split(new[] { ", " }, StringSplitOptions.None);
+            var parts = inner.Split([", "], StringSplitOptions.None);
             var typeName = parts[0];
             var propMappings = parts.Skip(1);
 
@@ -164,15 +198,14 @@ public class DeclarativeCodeGenerator
             result[^1] += ")";
             return string.Join(Environment.NewLine, result);
         }
-        else if (keyExpression.StartsWith("$eventContext("))
+
+        if (keyExpression.StartsWith("$eventContext("))
         {
             var property = keyExpression.Substring(14, keyExpression.Length - 15);
             return $"{indentStr}    .UsingKeyFromContext(c => c.{property})";
         }
-        else
-        {
-            return $"{indentStr}    .UsingKey({ConvertExpression(keyExpression)})";
-        }
+
+        return $"{indentStr}    .UsingKey({ConvertExpression(keyExpression)})";
     }
 
     string GenerateParentKeyExpression(string keyExpression, string indentStr)
@@ -180,7 +213,7 @@ public class DeclarativeCodeGenerator
         if (keyExpression.StartsWith("$composite("))
         {
             var inner = keyExpression.Substring(11, keyExpression.Length - 12);
-            var parts = inner.Split(new[] { ", " }, StringSplitOptions.None);
+            var parts = inner.Split([", "], StringSplitOptions.None);
             var typeName = parts[0];
             var propMappings = parts.Skip(1);
 
@@ -195,15 +228,14 @@ public class DeclarativeCodeGenerator
             result[^1] += ")";
             return string.Join(Environment.NewLine, result);
         }
-        else if (keyExpression.StartsWith("$eventContext("))
+
+        if (keyExpression.StartsWith("$eventContext("))
         {
             var property = keyExpression.Substring(14, keyExpression.Length - 15);
             return $"{indentStr}    .UsingParentKeyFromContext(c => c.{property})";
         }
-        else
-        {
-            return $"{indentStr}    .UsingParentKey({ConvertExpression(keyExpression)})";
-        }
+
+        return $"{indentStr}    .UsingParentKey({ConvertExpression(keyExpression)})";
     }
 
     void GenerateJoinBlocks(IDictionary<EventType, JoinDefinition> joinBlocks, List<string> lines, int indent)
@@ -288,39 +320,5 @@ public class DeclarativeCodeGenerator
             var removedDef = removed.Value;
             lines.Add($"{indentStr}.RemovedWith<{eventTypeName}>(e => e.{removedDef.Key})");
         }
-    }
-
-    static string ConvertExpression(string expression)
-    {
-        // Handle event context properties - these return ToEventContextProperty syntax
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
-        {
-            var property = expression.Substring(14, expression.Length - 15);
-            return $"c => c.{property}";
-        }
-
-        // Handle literals
-        if (expression == "True") return "true";
-        if (expression == "False") return "false";
-        if (expression.StartsWith('\"') && expression.EndsWith('\"')) return expression;
-        if (double.TryParse(expression, out _)) return expression;
-
-        // Event source ID
-        if (expression == "$eventSourceId") return "e => e.EventSourceId";
-
-        // Property path from event
-        return $"e => e.{expression}";
-    }
-
-    static string ConvertExpressionForSet(string expression)
-    {
-        // For Set operations, event context properties need ToEventContextProperty
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
-        {
-            var property = expression.Substring(14, expression.Length - 15);
-            return $"ToEventContextProperty(c => c.{property})";
-        }
-
-        return $"To({ConvertExpression(expression)})";
     }
 }

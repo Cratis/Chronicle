@@ -3,6 +3,7 @@
 
 import type { editor, languages, IRange, Position } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
+import type { ReadModelInfo } from './index';
 
 interface CompletionContext {
     lineContent: string;
@@ -14,11 +15,19 @@ interface CompletionContext {
 }
 
 export class ProjectionDslCompletionProvider implements languages.CompletionItemProvider {
-    private readModelSchemas: JsonSchema[] = [];
+    private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 
+    setReadModels(readModels: ReadModelInfo[]): void {
+        this.readModels = readModels || [];
+    }
+
+    // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
-        this.readModelSchemas = schemas || [];
+        this.readModels = schemas.map(schema => ({
+            displayName: this.getSchemaName(schema) || '',
+            schema
+        }));
     }
 
     setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
@@ -139,15 +148,14 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         // After "projection ", suggest read model names
         if (trimmed.startsWith('projection ')) {
             const afterProjection = trimmed.substring('projection '.length);
-            this.readModelSchemas.forEach((schema) => {
-                const name = this.getSchemaName(schema);
-                if (name && (!afterProjection || name.startsWith(afterProjection))) {
+            this.readModels.forEach((readModel) => {
+                if (!afterProjection || readModel.displayName.startsWith(afterProjection)) {
                     suggestions.push({
-                        label: name,
+                        label: readModel.displayName,
                         kind: 6, // Class
-                        insertText: `${name} =>  ${name}`,
-                        documentation: `Read model: ${name}`,
-                        detail: this.getSchemaDescription(schema),
+                        insertText: `${readModel.displayName} =>  ${readModel.displayName}`,
+                        documentation: `Read model: ${readModel.displayName}`,
+                        detail: this.getSchemaDescription(readModel.schema),
                         range: this.getRangeForWord(context),
                     });
                 }
@@ -483,7 +491,8 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         if (!match) return undefined;
 
         const readModelName = match[1];
-        return this.readModelSchemas.find((s) => this.getSchemaName(s) === readModelName);
+        const readModel = this.readModels.find((rm) => rm.displayName === readModelName);
+        return readModel?.schema;
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {

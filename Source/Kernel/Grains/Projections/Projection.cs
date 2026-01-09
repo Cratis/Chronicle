@@ -42,7 +42,7 @@ public class Projection(
 {
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
     readonly Dictionary<EventStoreNamespaceName, EngineProjection> _projectionsByNamespace = new();
-    string _identifierPropertyName = "id"; // Cached identifier property name from read model schema
+    string _identifierPropertyName = "id";
 
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
@@ -62,6 +62,7 @@ public class Projection(
         if (readModelDefinition is not null)
         {
             var schema = readModelDefinition.GetSchemaForLatestGeneration();
+
             // Check for 'Id' first (PascalCase), then 'id' (camelCase)
             if (schema.Properties.ContainsKey("Id"))
             {

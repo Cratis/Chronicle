@@ -34,10 +34,8 @@ public class and_there_are_two_projections : given.all_dependencies
         _projections = new Projections(
             _eventStore,
             _eventTypes,
-            _projectionWatcherManager,
             _clientArtifacts,
             _namingPolicy,
-            _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
     }

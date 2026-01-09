@@ -26,6 +26,7 @@ public class a_mongodb_converter : Specification
         _model = new ReadModelDefinition(
             typeof(ReadModel).FullName,
             nameof(ReadModel),
+            nameof(ReadModel),
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,

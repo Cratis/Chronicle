@@ -40,7 +40,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
-    protected AutoMap _autoMap = Chronicle.Projections.AutoMap.Enabled;
+    protected AutoMap _autoMap = autoMap;
     protected ReadModelIdentifier _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
     /// <inheritdoc/>
@@ -176,7 +176,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, _autoMap);
+        var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
         builderCallback(builder);
         _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
         return (this as TBuilder)!;

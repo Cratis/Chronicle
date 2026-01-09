@@ -28,6 +28,7 @@ public class with_type_mismatch_in_assignment : for_LanguageService.given.a_lang
         _readModelDefinition = new ReadModelDefinition(
             new ReadModelIdentifier("TestModel"),
             new ReadModelName("TestModel"),
+            new ReadModelDisplayName("TestModel"),
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,

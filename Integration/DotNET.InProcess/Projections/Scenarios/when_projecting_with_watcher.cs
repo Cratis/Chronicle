@@ -4,6 +4,7 @@
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
 using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
+using Cratis.Chronicle.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_watcher.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios;
@@ -17,7 +18,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
 
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes)];
 
-        public ProjectionChangeset<ReadModel> WatchResult;
+        public ReadModelChangeset<ReadModel> WatchResult;
 
         TaskCompletionSource _tcs;
 #pragma warning disable CA2213 // Disposable fields should be disposed
@@ -29,7 +30,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
             EventsToAppend.Add(EventAppended);
-            _observable = EventStore.Projections.Watch<ReadModel>().Subscribe(result =>
+            _observable = EventStore.ReadModels.Watch<ReadModel>().Subscribe(result =>
             {
                 WatchResult = result;
                 _tcs.SetResult();

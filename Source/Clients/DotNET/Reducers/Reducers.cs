@@ -233,6 +233,44 @@ public class Reducers : IReducers
         });
     }
 
+    /// <summary>
+    /// Get snapshots for a reduced read model by its key.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of the read model.</typeparam>
+    /// <param name="readModelKey">The <see cref="ReadModelKey"/> to get snapshots for.</param>
+    /// <returns>Collection of <see cref="ReadModelSnapshot{TReadModel}"/>.</returns>
+    internal async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        var readModelType = typeof(TReadModel);
+        var handler = GetHandlerForReadModelType(readModelType);
+
+        var request = new Contracts.ReadModels.GetSnapshotsByKeyRequest
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ReadModelIdentifier = readModelType.GetReadModelIdentifier(),
+            EventSequenceId = handler.EventSequenceId,
+            ReadModelKey = readModelKey
+        };
+
+        var response = await _servicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
+
+        var snapshots = new List<ReadModelSnapshot<TReadModel>>();
+        foreach (var snapshot in response.Snapshots)
+        {
+            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, _jsonSerializerOptions)!;
+            var events = snapshot.Events.ToClient(_jsonSerializerOptions);
+
+            snapshots.Add(new ReadModelSnapshot<TReadModel>(
+                readModel,
+                events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        return snapshots;
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
         var handler = new ReducerHandler(

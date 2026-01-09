@@ -26,7 +26,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="reducers">Reducers to get read models from.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
-/// <param name="readModelsWatcherManager"><see cref="IReadModelsWatcherManager"/> for managing watchers.</param>
+/// <param name="readModelWatcherManager"><see cref="IReadModelWatcherManager"/> for managing watchers.</param>
+/// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
 public class ReadModels(
     IEventStore eventStore,
     INamingPolicy namingPolicy,
@@ -34,7 +35,8 @@ public class ReadModels(
     IReducers reducers,
     IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
-    IReadModelsWatcherManager readModelsWatcherManager) : IReadModels
+    IReadModelWatcherManager readModelWatcherManager,
+    IReducerObservers reducerObservers) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
 
@@ -70,6 +72,7 @@ public class ReadModels(
                     Generation = ReadModelGeneration.First,
                 },
                 Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
+                DisplayName = readModel.ReadModelType.Name,
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
@@ -125,6 +128,7 @@ public class ReadModels(
                     Generation = ReadModelGeneration.First,
                 },
                 Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                DisplayName = typeof(TReadModel).Name,
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
@@ -155,6 +159,12 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
+        // Validate that the read model is known by either projections or reducers
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
 
         var request = new GetInstanceByKeyRequest
@@ -175,37 +185,102 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
-        var readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
-
-        var request = new GetSnapshotsByKeyRequest
+        // Check for projection first
+        if (projections.HasFor<TReadModel>())
         {
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            ReadModelIdentifier = readModelIdentifier,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey
-        };
+            var readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
-        var response = await _chronicleServicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
+            var request = new GetSnapshotsByKeyRequest
+            {
+                EventStore = eventStore.Name,
+                Namespace = eventStore.Namespace,
+                ReadModelIdentifier = readModelIdentifier,
+                EventSequenceId = EventSequenceId.Log,
+                ReadModelKey = readModelKey
+            };
 
-        var snapshots = new List<ReadModelSnapshot<TReadModel>>();
-        foreach (var snapshot in response.Snapshots)
-        {
-            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
-            var events = snapshot.Events.ToClient(jsonSerializerOptions);
+            var response = await _chronicleServicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
 
-            snapshots.Add(new ReadModelSnapshot<TReadModel>(
-                readModel,
-                events,
-                snapshot.Occurred,
-                snapshot.CorrelationId));
+            var snapshots = new List<ReadModelSnapshot<TReadModel>>();
+            foreach (var snapshot in response.Snapshots)
+            {
+                var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
+                var events = snapshot.Events.ToClient(jsonSerializerOptions);
+
+                snapshots.Add(new ReadModelSnapshot<TReadModel>(
+                    readModel,
+                    events,
+                    snapshot.Occurred,
+                    snapshot.CorrelationId));
+            }
+
+            return snapshots;
         }
 
-        return snapshots;
+        // Explicitly check reducers existence using HasReducerFor(Type) to satisfy specs
+        if (reducers.HasReducerFor(typeof(TReadModel)))
+        {
+            // Route via reducers internal retrieval to use correct event sequence
+            var concreteReducers = reducers as Cratis.Chronicle.Reducers.Reducers;
+            if (concreteReducers is not null)
+            {
+                return await concreteReducers.GetSnapshotsById<TReadModel>(readModelKey);
+            }
+
+            // Fallback to generic retrieval if not the concrete type
+            var readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
+            var handler = reducers.GetHandlerForReadModelType(typeof(TReadModel));
+
+            var request = new GetSnapshotsByKeyRequest
+            {
+                EventStore = eventStore.Name,
+                Namespace = eventStore.Namespace,
+                ReadModelIdentifier = readModelIdentifier,
+                EventSequenceId = handler.EventSequenceId,
+                ReadModelKey = readModelKey
+            };
+
+            var response = await _chronicleServicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
+
+            var snapshots = new List<ReadModelSnapshot<TReadModel>>();
+            foreach (var snapshot in response.Snapshots)
+            {
+                var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
+                var events = snapshot.Events.ToClient(jsonSerializerOptions);
+
+                snapshots.Add(new ReadModelSnapshot<TReadModel>(
+                    readModel,
+                    events,
+                    snapshot.Occurred,
+                    snapshot.CorrelationId));
+            }
+
+            return snapshots;
+        }
+
+        throw new UnknownReadModel(typeof(TReadModel));
     }
 
     /// <inheritdoc/>
-    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>() => readModelsWatcherManager.GetWatcher<TReadModel>().Observable;
+    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
+    {
+        if (reducers.HasFor<TReadModel>())
+        {
+            return reducerObservers.GetWatcher<TReadModel>().Observable
+                .Select(changeset => new ReadModelChangeset<TReadModel>(
+                    changeset.Namespace,
+                    changeset.ModelKey,
+                    changeset.ReadModel,
+                    changeset.Removed));
+        }
+
+        if (!projections.HasFor<TReadModel>())
+        {
+            throw new UnknownReadModel(typeof(TReadModel));
+        }
+
+        return readModelWatcherManager.GetWatcher<TReadModel>().Observable;
+    }
 
     /// <inheritdoc/>
     public async Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey)

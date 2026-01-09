@@ -19,8 +19,9 @@ public class a_resolver : Specification
 
     void Establish()
     {
-        _model = new(
+        _model = new ReadModelDefinition(
             "SomethingId",
+            "Something",
             "Something",
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,

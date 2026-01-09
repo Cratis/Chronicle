@@ -28,6 +28,7 @@ public class a_language_service : Specification
         return new ReadModelDefinition(
             new ReadModelIdentifier(Guid.NewGuid().ToString()),
             new ReadModelName(name),
+            new ReadModelDisplayName(name),
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,

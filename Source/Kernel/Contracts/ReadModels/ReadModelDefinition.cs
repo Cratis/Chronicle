@@ -24,6 +24,12 @@ public class ReadModelDefinition
     public string Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the display name of the model.
+    /// </summary>
+    [ProtoMember(9)]
+    public string DisplayName { get; set; }
+
+    /// <summary>
     /// Gets or sets the projection sink definition.
     /// </summary>
     [ProtoMember(3)]

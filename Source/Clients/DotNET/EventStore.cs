@@ -154,7 +154,7 @@ public class EventStore : IEventStore
         Projections = projections;
         FailedPartitions = new FailedPartitions(this);
 
-        var readModelsWatcherManager = new ReadModelsWatcherManager(new ReadModelsWatcherFactory(this, jsonSerializerOptions), this);
+        var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions), this);
 
         ReadModels = new ReadModels.ReadModels(
             this,
@@ -163,7 +163,8 @@ public class EventStore : IEventStore
             Reducers,
             schemaGenerator,
             jsonSerializerOptions,
-            readModelsWatcherManager);
+            readModelsWatcherManager,
+            reducerObservers);
 
         Seeding = new EventSeeding(
             eventStoreName,

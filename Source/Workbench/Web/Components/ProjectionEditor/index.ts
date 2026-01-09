@@ -9,6 +9,11 @@ import { ProjectionDslHoverProvider } from './hoverProvider';
 import { ProjectionDslCodeActionProvider } from './codeActionProvider';
 import type { JsonSchema } from '../JsonSchema';
 
+export interface ReadModelInfo {
+    displayName: string;
+    schema: JsonSchema;
+}
+
 let validator: ProjectionDslValidator;
 let completionProvider: ProjectionDslCompletionProvider;
 let hoverProvider: ProjectionDslHoverProvider;
@@ -92,12 +97,18 @@ export function setReadModelSchema(schema: JsonSchema): void {
     }
 }
 
-export function setReadModelSchemas(schemas: JsonSchema[]): void {
+export function setReadModelSchemas(readModels: ReadModelInfo[]): void {
     if (validator) {
-        validator.setReadModelSchemas(schemas);
+        validator.setReadModels(readModels);
+    }
+    if (completionProvider) {
+        completionProvider.setReadModels(readModels);
+    }
+    if (hoverProvider) {
+        hoverProvider.setReadModels(readModels);
     }
     if (codeActionProvider) {
-        codeActionProvider.setReadModelSchemas(schemas);
+        codeActionProvider.setReadModels(readModels);
     }
 }
 

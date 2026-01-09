@@ -76,6 +76,7 @@ public class a_projections_manager : Specification
         _firstReadModelDefinition = new ReadModelDefinition(
             "first-read-model",
             "FirstReadModel",
+            "FirstReadModel",
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
@@ -85,6 +86,7 @@ public class a_projections_manager : Specification
 
         _secondReadModelDefinition = new ReadModelDefinition(
             "second-read-model",
+            "SecondReadModel",
             "SecondReadModel",
             ReadModelOwner.Client,
             ReadModelObserverType.Projection,

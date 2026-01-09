@@ -3,13 +3,22 @@
 
 import type { editor, languages, Position, IMarkdownString } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
+import type { ReadModelInfo } from './index';
 
 export class ProjectionDslHoverProvider implements languages.HoverProvider {
-    private readModelSchemas: JsonSchema[] = [];
+    private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 
+    setReadModels(readModels: ReadModelInfo[]): void {
+        this.readModels = readModels || [];
+    }
+
+    // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
-        this.readModelSchemas = schemas || [];
+        this.readModels = schemas.map(schema => ({
+            displayName: this.getSchemaName(schema) || '',
+            schema
+        }));
     }
 
     setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
