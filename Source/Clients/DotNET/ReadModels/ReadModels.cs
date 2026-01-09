@@ -221,7 +221,7 @@ public class ReadModels(
         if (reducers.HasReducerFor(typeof(TReadModel)))
         {
             // Route via reducers internal retrieval to use correct event sequence
-            var concreteReducers = reducers as Cratis.Chronicle.Reducers.Reducers;
+            var concreteReducers = reducers as Reducers.Reducers;
             if (concreteReducers is not null)
             {
                 return await concreteReducers.GetSnapshotsById<TReadModel>(readModelKey);
