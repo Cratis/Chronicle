@@ -47,7 +47,7 @@ public record OrderPlaced(string CustomerName);
 public record OrderItemAdded(Guid ItemId, string ProductName, int Quantity);
 
 /// <summary>
-/// Child model inherits NoAutoMap because the attribute is marked with Inherited = true
+/// Child model inherits NoAutoMap because the attribute is marked with Inherited = true.
 /// </summary>
 /// <param name="Id">The id.</param>
 /// <param name="ProductName">The product name.</param>
