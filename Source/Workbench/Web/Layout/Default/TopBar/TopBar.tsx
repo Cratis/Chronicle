@@ -8,7 +8,6 @@ import { FaBars } from 'react-icons/fa6';
 // import { Profile } from "./Profile";
 // import { Notifications } from './Notifications';
 // import { Connection } from './Connection';
-import { EventStore } from './EventStore';
 import { Breadcrumb } from './Breadcrumb';
 
 export const TopBar = () => {
@@ -30,9 +29,6 @@ export const TopBar = () => {
                 </div>
             </div>
             <div className="flex-1 flex items-center justify-end px-5 gap-6">
-                <div>
-                    <EventStore />
-                </div>
                 {/* <div>
                     <Connection />
                 </div>

@@ -5,7 +5,7 @@ import { injectable } from 'tsyringe';
 import { IEventStores } from 'State/EventStores/IEventStores';
 
 @injectable()
-export class EventStoreViewModel {
+export class BreadCrumbViewModel {
     constructor(eventStores: IEventStores) {
         eventStores.eventStores.subscribe(result => {
             this.eventStores = result;
