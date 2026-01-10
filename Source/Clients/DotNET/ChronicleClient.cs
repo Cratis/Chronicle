@@ -66,6 +66,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _connection = new ChronicleConnection(
             options.Url,
             options.ConnectTimeout,
+            options.MaxReceiveMessageSize,
+            options.MaxSendMessageSize,
             connectionLifecycle,
             new Tasks.TaskFactory(),
             options.CorrelationIdAccessor,

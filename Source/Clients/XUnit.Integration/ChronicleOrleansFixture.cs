@@ -21,14 +21,12 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
+        await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+
         await base.DisposeAsync();
 
-        _ = Task.Run(async () =>
-        {
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        });
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     /// <inheritdoc/>

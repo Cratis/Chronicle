@@ -32,6 +32,11 @@ public static class ReducerTypeExtensions
     /// </remarks>
     public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
     {
+        if (methodInfo.IsSpecialName)
+        {
+            return false;
+        }
+
         var returnType = methodInfo.ReturnType;
         var isReducerMethod = returnType == readModelType ||
                               returnType == typeof(Task<>).MakeGenericType(readModelType) ||

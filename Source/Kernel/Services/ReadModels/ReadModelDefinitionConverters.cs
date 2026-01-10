@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -25,7 +26,8 @@ internal static class ReadModelDefinitionConverters
             Identifier = definition.Identifier,
             Name = definition.Name,
             Generation = latestGeneration.Value,
-            Schema = latestSchema.ToJson()
+            Schema = latestSchema.ToJson(),
+            Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList()
         };
     }
 
@@ -38,6 +40,9 @@ internal static class ReadModelDefinitionConverters
     public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner)
     {
         var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
+        var indexes = contract.Indexes
+            .Select(i => new IndexDefinition(new PropertyPath(i.PropertyPath)))
+            .ToArray();
 
         return new(
             contract.Identifier,
@@ -46,7 +51,8 @@ internal static class ReadModelDefinitionConverters
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { (ReadModelGeneration)contract.Generation, schema }
-            }
+            },
+            indexes
         );
     }
 }

@@ -11,21 +11,7 @@
       ]
     },
     "Observation": {
-      "folders": {
-        "Webhooks": {
-          "folders": {},
-          "files": [
-            "RegisterWebhook.ts",
-            "AllWebhooks.ts",
-            "GetAllWebhooks.ts",
-            "WebhookTarget.ts",
-            "BasicAuthorization.ts",
-            "BearerTokenAuthorization.ts",
-            "OAuthAuthorization.ts",
-            "WebhookDefinition.ts"
-          ]
-        }
-      },
+      "folders": {},
       "files": [
         "Replay.ts",
         "TryRecoverFailedPartition.ts",

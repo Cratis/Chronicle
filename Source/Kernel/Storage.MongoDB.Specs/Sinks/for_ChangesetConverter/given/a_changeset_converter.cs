@@ -31,13 +31,14 @@ public class a_changeset_converter : Specification
         _sinkCollections.GetCollection().Returns(_collection);
 
         _readModel = new ReadModelDefinition(
-            typeof(TestReadModel).FullName!,
+            typeof(TestReadModel).FullName,
             nameof(TestReadModel),
             ReadModelOwner.Client,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, generator.Generate(typeof(TestReadModel)) },
-            });
+            },
+            []);
 
         _converter = new ChangesetConverter(
             _readModel,

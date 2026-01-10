@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />

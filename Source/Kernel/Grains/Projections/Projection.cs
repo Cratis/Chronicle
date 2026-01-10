@@ -1,34 +1,47 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Grains.Recommendations;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Utilities;
+using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjection"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Projection"/> class.
-/// </remarks>
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
+/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
+/// <param name="storage"><see cref="IStorage"/> for persisting projection state.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class Projection(
     IProjectionDefinitionComparer projectionDefinitionComparer,
+    IProjectionFactory projectionFactory,
+    IObjectComparer objectComparer,
+    IStorage storage,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
+    readonly Dictionary<EventStoreNamespaceName, EngineProjection> _projectionsByNamespace = new();
 
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
@@ -43,6 +56,7 @@ public class Projection(
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
             logger.ProjectionHasChanged(key.ProjectionId);
+            _projectionsByNamespace.Clear();
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
             await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
@@ -64,6 +78,107 @@ public class Projection(
     {
         _definitionObservers.Unsubscribe(subscriber);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventType>> GetEventTypes()
+    {
+        var projection = await GetOrCreateProjectionForNamespace(EventStoreNamespaceName.Default);
+        return projection.EventTypes;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ExpandoObject> Process(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
+        var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+        var state = initialState;
+
+        foreach (var @event in events)
+        {
+            var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
+            var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
+            var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
+
+            // Skip deferred keys in immediate projections - they need parent data that's not yet available
+            if (keyResult is DeferredKey)
+            {
+                continue;
+            }
+
+            var key = (keyResult as ResolvedKey)!.Key;
+            var context = new ProjectionEventContext(
+                key,
+                @event,
+                changeset,
+                projection.GetOperationTypeFor(@event.Context.EventType),
+                false);
+
+            await HandleEventFor(projection!, context);
+
+            state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState);
+        }
+
+        return state;
+    }
+
+    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
+    {
+        if (projection.Accepts(context.Event.Context.EventType))
+        {
+            projection.OnNext(context);
+        }
+
+        foreach (var child in projection.ChildProjections)
+        {
+            await HandleEventFor(child, context);
+        }
+    }
+
+    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    break;
+
+                case ChildAdded childAdded:
+                    var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    items.Add(childAdded.Child);
+                    break;
+
+                case Joined joined:
+                    state = ApplyActualChanges(key, joined.Changes, state);
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    state = ApplyActualChanges(key, resolvedJoin.Changes, state);
+                    break;
+            }
+        }
+
+        return state;
+    }
+
+    async Task<EngineProjection> GetOrCreateProjectionForNamespace(EventStoreNamespaceName eventStoreNamespace)
+    {
+        if (!_projectionsByNamespace.TryGetValue(eventStoreNamespace, out var projection))
+        {
+            var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
+            var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
+            var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
+            var readModelDefinition = await readModel.GetDefinition();
+
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition);
+            _projectionsByNamespace[eventStoreNamespace] = projection;
+        }
+
+        return projection;
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)

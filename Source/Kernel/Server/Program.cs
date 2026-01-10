@@ -75,14 +75,15 @@ builder.Host
         }))
    .ConfigureServices((context, services) =>
    {
+       services.AddCodeFirstGrpc();
+       services.AddCodeFirstGrpcReflection();
+
        services
           .AddBindingsByConvention()
           .AddChronicleTelemetry(context.Configuration)
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
-
-       services.AddCodeFirstGrpc();
    });
 
 var app = builder.Build();
@@ -102,6 +103,7 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
     app.MapFallbackToFile("index.html");
 }
 app.MapGrpcServices();
+app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
 using var cancellationToken = new CancellationTokenSource();

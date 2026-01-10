@@ -90,7 +90,9 @@ public class ProjectionObserverSubscriber(
 
             foreach (var @event in events)
             {
-                changeset = await _pipeline.Handle(@event);
+                var pipelineContext = await _pipeline.Handle(@event);
+                changeset = pipelineContext.Changeset;
+
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }

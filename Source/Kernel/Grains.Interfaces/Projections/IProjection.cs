@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.Grains.Projections;
@@ -36,4 +39,19 @@ public interface IProjection : IGrainWithStringKey
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
     Task UnsubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
+
+    /// <summary>
+    /// Get the event types the projection is interested in.
+    /// </summary>
+    /// <returns>The event types.</returns>
+    Task<IEnumerable<EventType>> GetEventTypes();
+
+    /// <summary>
+    /// Process a set of events through the projection.
+    /// </summary>
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="initialState">The initial projected state.</param>
+    /// <param name="events">The events to process.</param>
+    /// <returns>The resulting projected state.</returns>
+    Task<ExpandoObject> Process(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
 }

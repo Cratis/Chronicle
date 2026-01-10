@@ -117,6 +117,11 @@ public class ProjectionsManager(
             logger.Subscribing(definition.Identifier, namespaceName);
             var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition);
 
+            logger.SubscribingWithEventTypes(
+                definition.Identifier,
+                projection.EventTypes.Count(),
+                string.Join(", ", projection.EventTypes.Select(et => et.Id)));
+
             await observer.Subscribe<IProjectionObserverSubscriber>(
                 ObserverType.Projection,
                 projection.EventTypes,

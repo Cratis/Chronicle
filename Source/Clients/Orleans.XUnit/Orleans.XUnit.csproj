@@ -47,6 +47,7 @@
 
     <ItemGroup>
       <PackageReference Include="Cratis.Arc" />
+      <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="xunit">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>

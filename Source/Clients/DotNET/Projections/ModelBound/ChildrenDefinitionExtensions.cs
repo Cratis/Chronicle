@@ -38,6 +38,83 @@ static class ChildrenDefinitionExtensions
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         Type? parentModelType = null)
     {
+        var childrenDef = ProcessChildrenFromAttributeCore(
+            definition.Children,
+            getOrCreateEventType,
+            namingPolicy,
+            memberName,
+            memberType,
+            attr,
+            eventType,
+            processMember,
+            definition,
+            parentModelType);
+
+        // Recursively process nested children on the child type
+        var childType = GetChildType(memberType);
+        if (childType is not null)
+        {
+            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef);
+        }
+    }
+
+    /// <summary>
+    /// Processes a ChildrenFrom attribute and adds the children definition to a parent children definition (for nested children).
+    /// </summary>
+    /// <param name="parentChildrenDef">The parent children definition to add the nested children to.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="namingPolicy">The naming policy for converting property names.</param>
+    /// <param name="memberName">The member name on the projection model.</param>
+    /// <param name="memberType">The type of the member.</param>
+    /// <param name="attr">The ChildrenFrom attribute to process.</param>
+    /// <param name="eventType">The event type to create children from.</param>
+    /// <param name="processMember">The action to process child members recursively.</param>
+    /// <param name="definition">The root projection definition for processing member attributes.</param>
+    /// <param name="parentModelType">The type of the parent model that contains this children collection.</param>
+    internal static void ProcessChildrenFromAttributeForNestedChildren(
+        this ChildrenDefinition parentChildrenDef,
+        Func<Type, EventType> getOrCreateEventType,
+        INamingPolicy namingPolicy,
+        string memberName,
+        Type memberType,
+        Attribute attr,
+        Type eventType,
+        Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
+        ProjectionDefinition definition,
+        Type? parentModelType = null)
+    {
+        var childrenDef = ProcessChildrenFromAttributeCore(
+            parentChildrenDef.Children,
+            getOrCreateEventType,
+            namingPolicy,
+            memberName,
+            memberType,
+            attr,
+            eventType,
+            processMember,
+            definition,
+            parentModelType);
+
+        // Recursively process nested children on the child type
+        var childType = GetChildType(memberType);
+        if (childType is not null)
+        {
+            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef);
+        }
+    }
+
+    static ChildrenDefinition ProcessChildrenFromAttributeCore(
+        IDictionary<string, ChildrenDefinition> targetChildren,
+        Func<Type, EventType> getOrCreateEventType,
+        INamingPolicy namingPolicy,
+        string memberName,
+        Type memberType,
+        Attribute attr,
+        Type eventType,
+        Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
+        ProjectionDefinition definition,
+        Type? parentModelType = null)
+    {
         var propertyPath = new PropertyPath(memberName);
         var propertyName = namingPolicy.GetPropertyName(propertyPath);
         var eventTypeId = getOrCreateEventType(eventType);
@@ -65,18 +142,19 @@ static class ChildrenDefinitionExtensions
             ? identifiedBy
             : namingPolicy.GetPropertyName(new PropertyPath(identifiedBy));
 
-        if (!definition.Children.TryGetValue(propertyName, out var childrenDef))
+        if (!targetChildren.TryGetValue(propertyName, out var childrenDef))
         {
             childrenDef = new ChildrenDefinition
             {
                 IdentifiedBy = identifiedByWithNaming,
                 From = new Dictionary<EventType, FromDefinition>(),
                 Join = new Dictionary<EventType, JoinDefinition>(),
+                Children = new Dictionary<string, ChildrenDefinition>(),
                 All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
                 RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>()
             };
-            definition.Children[propertyName] = childrenDef;
+            targetChildren[propertyName] = childrenDef;
         }
 
         var keyExpression = key == WellKnownExpressions.EventSourceId ? key : namingPolicy.GetPropertyName(new PropertyPath(key));
@@ -90,13 +168,6 @@ static class ChildrenDefinitionExtensions
 
         if (childType is not null)
         {
-            // If autoMap is enabled, map matching properties from event to child model
-            if (autoMap)
-            {
-                var fromDefinition = childrenDef.From[eventTypeId];
-                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
-            }
-
             // For records, process constructor parameters to pick up attributes
             var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .OrderByDescending(c => c.GetParameters().Length)
@@ -123,6 +194,51 @@ static class ChildrenDefinitionExtensions
                         var contextPropertyName = contextPropertyNameProperty?.GetValue(contextAttr) as string;
                         var propertyToUse = contextPropertyName ?? parameter.Name!;
                         fromDefinition.Properties[paramPropertyName] = $"$eventContext({propertyToUse})";
+                    }
+
+                    // Process SetFrom attributes on constructor parameters
+                    foreach (var (setFromAttr, setFromEventType) in parameter.GetAttributesOfGenericType<SetFromAttribute<object>>())
+                    {
+                        var eventPropertyNameProperty = setFromAttr.GetType().GetProperty(nameof(SetFromAttribute<object>.EventPropertyName));
+                        var eventPropertyName = eventPropertyNameProperty?.GetValue(setFromAttr) as string;
+                        var propertyToUse = eventPropertyName ?? parameter.Name!;
+                        childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse);
+                    }
+
+                    // Process AddFrom attributes on constructor parameters
+                    foreach (var (addFromAttr, addFromEventType) in parameter.GetAttributesOfGenericType<AddFromAttribute<object>>())
+                    {
+                        var eventPropertyNameProperty = addFromAttr.GetType().GetProperty(nameof(AddFromAttribute<object>.EventPropertyName));
+                        var eventPropertyName = eventPropertyNameProperty?.GetValue(addFromAttr) as string;
+                        var propertyToUse = eventPropertyName ?? parameter.Name!;
+                        childrenDef.From.AddAddMapping(getOrCreateEventType, namingPolicy, addFromEventType, paramPropertyName, propertyToUse);
+                    }
+
+                    // Process SubtractFrom attributes on constructor parameters
+                    foreach (var (subtractFromAttr, subtractFromEventType) in parameter.GetAttributesOfGenericType<SubtractFromAttribute<object>>())
+                    {
+                        var eventPropertyNameProperty = subtractFromAttr.GetType().GetProperty(nameof(SubtractFromAttribute<object>.EventPropertyName));
+                        var eventPropertyName = eventPropertyNameProperty?.GetValue(subtractFromAttr) as string;
+                        var propertyToUse = eventPropertyName ?? parameter.Name!;
+                        childrenDef.From.AddSubtractMapping(getOrCreateEventType, namingPolicy, subtractFromEventType, paramPropertyName, propertyToUse);
+                    }
+
+                    // Process Increment attributes on constructor parameters
+                    foreach (var (incrementAttr, incrementEventType) in parameter.GetAttributesOfGenericType<IncrementAttribute<object>>())
+                    {
+                        childrenDef.From.AddIncrementMapping(getOrCreateEventType, incrementEventType, paramPropertyName);
+                    }
+
+                    // Process Decrement attributes on constructor parameters
+                    foreach (var (decrementAttr, decrementEventType) in parameter.GetAttributesOfGenericType<DecrementAttribute<object>>())
+                    {
+                        childrenDef.From.AddDecrementMapping(getOrCreateEventType, decrementEventType, paramPropertyName);
+                    }
+
+                    // Process Count attributes on constructor parameters
+                    foreach (var (countAttr, countEventType) in parameter.GetAttributesOfGenericType<CountAttribute<object>>())
+                    {
+                        childrenDef.From.AddCountMapping(getOrCreateEventType, countEventType, paramPropertyName);
                     }
 
                     // Check if this parameter has any explicit mapping attributes
@@ -153,16 +269,108 @@ static class ChildrenDefinitionExtensions
                     {
                         fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
                     }
+
+                    // Process Join attributes on constructor parameters
+                    foreach (var (joinAttr, joinEventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
+                    {
+                        childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName);
+                    }
+
+                    // Process RemovedWith attributes on constructor parameters
+                    foreach (var (removedAttr, removedEventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+                    {
+                        childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, removedAttr, removedEventType);
+                    }
+
+                    // Process RemovedWithJoin attributes on constructor parameters
+                    foreach (var (removedJoinAttr, removedJoinEventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+                    {
+                        childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, removedJoinAttr, removedJoinEventType);
+                    }
                 }
+            }
+
+            // If autoMap is enabled, map matching properties from event to child model
+            // This is done AFTER processing constructor parameters so we don't overwrite explicit mappings
+            if (autoMap)
+            {
+                var fromDefinition = childrenDef.From[eventTypeId];
+                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
             }
 
             // Process class-level RemovedWith attributes on the child type
             ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, childrenDef);
 
+            // Collect class-level FromEvent attributes on the child type
+            var childClassLevelFromEvents = childType.GetCustomAttributes()
+                .Where(attr => attr.GetType().IsGenericType &&
+                              attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
+                .ToList();
+
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                processMember(childProperty, definition, [], false, null, childrenDef);
+                processMember(childProperty, definition, childClassLevelFromEvents, false, null, childrenDef);
+            }
+        }
+
+        return childrenDef;
+    }
+
+    static void ProcessNestedChildren(
+        Type childType,
+        Func<Type, EventType> getOrCreateEventType,
+        INamingPolicy namingPolicy,
+        Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
+        ProjectionDefinition definition,
+        ChildrenDefinition parentChildrenDef)
+    {
+        // Process constructor parameters for ChildrenFrom attributes
+        var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        if (primaryConstructor is not null)
+        {
+            foreach (var parameter in primaryConstructor.GetParameters())
+            {
+                foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+                {
+                    parentChildrenDef.ProcessChildrenFromAttributeForNestedChildren(
+                        getOrCreateEventType,
+                        namingPolicy,
+                        parameter.Name!,
+                        parameter.ParameterType,
+                        attr,
+                        eventType,
+                        processMember,
+                        definition,
+                        childType);
+                }
+            }
+        }
+
+        // Process properties for ChildrenFrom attributes
+        foreach (var property in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            // Skip if already processed as constructor parameter
+            if (primaryConstructor?.GetParameters().Any(p => p.Name?.Equals(property.Name, StringComparison.OrdinalIgnoreCase) == true) == true)
+            {
+                continue;
+            }
+
+            foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                parentChildrenDef.ProcessChildrenFromAttributeForNestedChildren(
+                    getOrCreateEventType,
+                    namingPolicy,
+                    property.Name,
+                    property.PropertyType,
+                    attr,
+                    eventType,
+                    processMember,
+                    definition,
+                    childType);
             }
         }
     }
@@ -209,7 +417,7 @@ static class ChildrenDefinitionExtensions
 
         var properties = childType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-        var keyProperty = properties.FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>(true) is not null);
+        var keyProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute), true));
         if (keyProperty is not null)
         {
             return keyProperty.Name;

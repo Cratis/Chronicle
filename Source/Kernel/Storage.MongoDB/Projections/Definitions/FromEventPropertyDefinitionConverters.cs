@@ -17,7 +17,7 @@ public static class FromEventPropertyDefinitionConverters
     /// <returns>A Kernel FromEventPropertyDefinition.</returns>
     public static KernelDefs.FromEventPropertyDefinition ToKernel(this FromEventPropertyDefinition source) =>
         new(
-            source.Event,
+            source.Event.ToKernel(),
             source.PropertyExpression);
 
     /// <summary>
@@ -28,7 +28,7 @@ public static class FromEventPropertyDefinitionConverters
     public static FromEventPropertyDefinition ToMongoDB(this KernelDefs.FromEventPropertyDefinition source) =>
         new()
         {
-            Event = source.Event,
+            Event = source.Event.ToMongoDB(),
             PropertyExpression = source.PropertyExpression
         };
 }

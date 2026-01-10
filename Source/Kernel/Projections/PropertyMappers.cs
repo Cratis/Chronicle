@@ -30,7 +30,7 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             var property = targetProperty.LastSegment.Value;
             var originalValue = actualTarget.TryGetValue(property, out var value) ? value : null;
-            var newValue = actualTarget![property] = eventValueProvider(@event);
+            var newValue = actualTarget[property] = eventValueProvider(@event);
             return new(targetProperty, originalValue, newValue, arrayIndexers);
         };
     }
@@ -51,7 +51,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
@@ -80,7 +80,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
@@ -108,7 +108,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
@@ -135,7 +135,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
@@ -162,7 +162,7 @@ public static class PropertyMappers
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            if (!actualTarget!.TryGetValue(lastSegment.Value, out var valueAsObject))
+            if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
                 actualTarget[lastSegment.Value] = valueAsObject;
@@ -178,6 +178,7 @@ public static class PropertyMappers
     {
         return targetType switch
         {
+            _ when targetType == typeof(TimeSpan) => (TimeSpan)currentValue + (TimeSpan)valueToAdd,
             _ when targetType == typeof(double) => Add((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToAdd, typeof(double))),
             _ when targetType == typeof(float) => Add((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToAdd, typeof(float))),
             _ when targetType == typeof(decimal) => Add((decimal)Convert.ChangeType(currentValue, typeof(decimal)), (decimal)Convert.ChangeType(valueToAdd, typeof(decimal))),
@@ -193,6 +194,7 @@ public static class PropertyMappers
     {
         return targetType switch
         {
+            _ when targetType == typeof(TimeSpan) => (TimeSpan)currentValue - (TimeSpan)valueToSubtract,
             _ when targetType == typeof(double) => Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))),
             _ when targetType == typeof(float) => Subtract((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToSubtract, typeof(float))),
             _ when targetType == typeof(decimal) => Subtract((decimal)Convert.ChangeType(currentValue, typeof(decimal)), (decimal)Convert.ChangeType(valueToSubtract, typeof(decimal))),

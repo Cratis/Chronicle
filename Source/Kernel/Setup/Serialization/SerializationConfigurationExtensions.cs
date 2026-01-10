@@ -46,7 +46,8 @@ public static class SerializationConfigurationExtensions
             builder.Services
                 .AddCompleteSerializer<AppendedEventSerializer>()
                 .AddCompleteSerializer<OneOfSerializer>()
-                .AddCompleteSerializer<ConcurrencyScopesSerializer>();
+                .AddCompleteSerializer<ConcurrencyScopesSerializer>()
+                .AddCompleteSerializer<ExpandoObjectSerializer>();
         });
         return services;
     }

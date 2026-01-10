@@ -23,6 +23,7 @@ public class TypeFormats : ITypeFormats
         { typeof(DateTimeOffset), "date-time-offset" },
         { typeof(DateOnly), "date" },
         { typeof(TimeOnly), "time" },
+        { typeof(TimeSpan), "duration" },
         { typeof(Guid), "guid" }
     };
 

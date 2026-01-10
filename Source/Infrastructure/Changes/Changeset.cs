@@ -25,7 +25,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     TTarget _initialState = initialState;
 
     /// <inheritdoc/>
-    public TSource Incoming { get; } = incoming;
+    public TSource Incoming { get; set; } = incoming;
 
     /// <inheritdoc/>
     public TTarget InitialState
@@ -51,6 +51,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void Add(Change change)
     {
         _changes.Add(change);
+        Consolidate();
     }
 
     /// <inheritdoc/>
@@ -58,11 +59,11 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     {
         var workingState = CurrentState.Clone()!;
         var differences = SetProperties(workingState, propertyMappers, arrayIndexers);
+
         if (differences.Count != 0)
         {
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
-
         CurrentState = workingState;
     }
 
@@ -82,20 +83,19 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         var childChangeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
         Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
+        Consolidate();
         CurrentState = workingState;
         return childChangeset;
     }
 
     /// <inheritdoc/>
-    public void Optimize()
-    {
-        OptimizeResolveJoinsAgainstChildrenAdded(parent);
-    }
-
-    /// <inheritdoc/>
     public void AddChild(PropertyPath childrenProperty, object child)
     {
-        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!));
+        var workingState = CurrentState.Clone()!;
+        var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, ArrayIndexers.NoIndexers);
+        items.Add(child);
+        Add(new ChildAdded(child, childrenProperty, PropertyPath.Root, null!, ArrayIndexers.NoIndexers));
+        CurrentState = workingState;
     }
 
     /// <inheritdoc/>
@@ -107,7 +107,50 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         ArrayIndexers arrayIndexers)
         where TChild : new()
     {
-        var workingState = CurrentState.Clone()!;
+        var workingState = CurrentState.Clone();
+
+        // Check if there's already a ChildAdded change that matches this child in the same parent context
+        var parentKey = arrayIndexers.All.First().Identifier;
+        var existingChildAdded = _changes
+            .OfType<ChildAdded>()
+            .FirstOrDefault(_ => Equals(_.Key.ToString(), parentKey.ToString()));
+
+        if (existingChildAdded is not null)
+        {
+            // Optimize by updating the existing child in-memory instead of creating a new change
+            ApplyPropertyMappers(workingState!, propertyMappers, arrayIndexers);
+
+            var existingCollection = workingState.EnsureCollection<TTarget, object>(
+                existingChildAdded.ChildrenProperty,
+                existingChildAdded.ArrayIndexers);
+            var childToUpdate = existingCollection.FindByKey(existingChildAdded.IdentifiedByProperty, existingChildAdded.Key);
+            if (childToUpdate is null)
+            {
+                return;
+            }
+
+            // Replace the existing ChildAdded with a new one containing the updated child
+            var index = _changes.IndexOf(existingChildAdded);
+            _changes[index] = new ChildAdded(
+                childToUpdate,
+                existingChildAdded.ChildrenProperty,
+                existingChildAdded.IdentifiedByProperty,
+                existingChildAdded.Key,
+                existingChildAdded.ArrayIndexers);
+
+            // Update the item in the current state's collection
+            var collection = CurrentState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
+            var existingItem = collection.FindByKey(identifiedByProperty, key);
+            if (existingItem is not null && collection is IList<object> list)
+            {
+                var itemIndex = list.IndexOf(existingItem);
+                list[itemIndex] = childToUpdate;
+            }
+
+            CurrentState = workingState;
+            return;
+        }
+
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
         object? item = null;
 
@@ -141,7 +184,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         {
             items.Add(item);
             SetProperties(workingState, propertyMappers, arrayIndexers);
-            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
+            Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
         }
 
         CurrentState = workingState;
@@ -218,7 +261,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         return default!;
     }
 
-    static void OptimizeResolveJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
+    static void ConsolidateJoinsAgainstChildrenAdded(Changeset<TSource, TTarget>? parent)
     {
         if (parent is null)
         {
@@ -255,6 +298,178 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
 
+    void Consolidate()
+    {
+        ConsolidateJoinsAgainstChildrenAdded(parent);
+        ConsolidatePropertiesChangedIntoChildAdded();
+        ConsolidateConflictingOperations();
+    }
+
+    void ConsolidatePropertiesChangedIntoChildAdded()
+    {
+        // Find all ChildAdded changes and their matching PropertiesChanged
+        var childAddedChanges = _changes.OfType<ChildAdded>().ToList();
+        if (childAddedChanges.Count == 0)
+        {
+            return;
+        }
+
+        var changesToRemove = new List<int>();
+
+        for (var i = 0; i < _changes.Count; i++)
+        {
+            var change = _changes[i];
+            if (change is PropertiesChanged<TTarget> propertiesChanged)
+            {
+                // Find matching ChildAdded for each property difference
+                var remainingDifferences = new List<PropertyDifference>();
+
+                foreach (var diff in propertiesChanged.Differences)
+                {
+                    var matchingChildAdded = FindMatchingChildAdded(childAddedChanges, diff);
+
+                    if (matchingChildAdded != null)
+                    {
+                        // Apply the property change to the child
+                        var propertyPath = PropertyPath.CreateFrom([diff.PropertyPath.LastSegment]);
+                        propertyPath.SetValue(matchingChildAdded.Child, diff.Changed!, diff.ArrayIndexers);
+                    }
+                    else
+                    {
+                        // Keep this difference as it doesn't match any ChildAdded
+                        remainingDifferences.Add(diff);
+                    }
+                }
+
+                // If all differences were consolidated, mark this PropertiesChanged for removal
+                if (remainingDifferences.Count == 0)
+                {
+                    changesToRemove.Add(i);
+                }
+
+                // If some differences remain, update the PropertiesChanged
+                else if (remainingDifferences.Count != propertiesChanged.Differences.Count())
+                {
+                    _changes[i] = new PropertiesChanged<TTarget>(propertiesChanged.State, remainingDifferences);
+                }
+            }
+        }
+
+        // Remove PropertiesChanged that were fully consolidated, in reverse order
+        foreach (var index in changesToRemove.OrderDescending())
+        {
+            _changes.RemoveAt(index);
+        }
+    }
+
+    ChildAdded? FindMatchingChildAdded(List<ChildAdded> childAddedChanges, PropertyDifference diff)
+    {
+        // A PropertiesChanged targets a child if:
+        // 1. The property path points to a child within an array
+        // 2. The array indexers match a ChildAdded's key and array property
+        if (diff.ArrayIndexers.IsEmpty)
+        {
+            return null;
+        }
+
+        foreach (var childAdded in childAddedChanges)
+        {
+            // Check if the array indexers match
+            foreach (var indexer in diff.ArrayIndexers.All)
+            {
+                if (indexer.ArrayProperty == childAdded.ChildrenProperty &&
+                    indexer.IdentifierProperty == childAdded.IdentifiedByProperty &&
+                    Equals(indexer.Identifier, childAdded.Key))
+                {
+                    return childAdded;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    void ConsolidateConflictingOperations()
+    {
+        // Find all arrays that have ChildAdded or ChildRemoved operations
+        var arraysWithChildOperations = new HashSet<PropertyPath>();
+        foreach (var change in _changes)
+        {
+            if (change is ChildAdded childAdded)
+            {
+                arraysWithChildOperations.Add(childAdded.ChildrenProperty);
+            }
+            else if (change is ChildRemoved childRemoved)
+            {
+                arraysWithChildOperations.Add(childRemoved.ChildrenProperty);
+            }
+        }
+
+        // If there are arrays with child operations, filter out PropertiesChanged that set those arrays to empty
+        if (arraysWithChildOperations.Count > 0)
+        {
+            var changesToUpdate = new List<(int Index, Change Change)>();
+
+            for (var i = 0; i < _changes.Count; i++)
+            {
+                var change = _changes[i];
+                if (change is PropertiesChanged<TTarget> propertiesChanged)
+                {
+                    // Filter out property differences that conflict with child operations
+                    var nonConflictingDifferences = propertiesChanged.Differences
+                        .Where(diff => !ShouldFilterPropertyDifference(diff, arraysWithChildOperations))
+                        .ToList();
+
+                    // Only keep the PropertiesChanged if there are non-conflicting differences
+                    if (nonConflictingDifferences.Count != propertiesChanged.Differences.Count())
+                    {
+                        if (nonConflictingDifferences.Count != 0)
+                        {
+                            changesToUpdate.Add((i, new PropertiesChanged<TTarget>(
+                                propertiesChanged.State,
+                                nonConflictingDifferences)));
+                        }
+                        else
+                        {
+                            changesToUpdate.Add((i, null!));
+                        }
+                    }
+                }
+            }
+
+            // Apply updates in reverse order to avoid index shifting
+            foreach (var (index, change) in changesToUpdate.OrderByDescending(t => t.Index))
+            {
+                if (change is null)
+                {
+                    _changes.RemoveAt(index);
+                }
+                else
+                {
+                    _changes[index] = change;
+                }
+            }
+        }
+    }
+
+    bool ShouldFilterPropertyDifference(PropertyDifference diff, HashSet<PropertyPath> arraysWithChildOperations)
+    {
+        // Check if this property difference is setting an array to empty
+        if (diff.Changed is System.Collections.IEnumerable enumerable && enumerable.CountElements() == 0)
+        {
+            // Check if this array path matches any of the arrays with child operations
+            foreach (var arrayPath in arraysWithChildOperations)
+            {
+                if (diff.PropertyPath.Equals(arrayPath))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     List<PropertyDifference> SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
         var differences = new List<PropertyDifference>();
@@ -269,5 +484,17 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         }
 
         return differences;
+    }
+
+    void ApplyPropertyMappers(object target, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
+    {
+        foreach (var propertyMapper in propertyMappers)
+        {
+            var difference = propertyMapper(Incoming, (TTarget)target, arrayIndexers);
+            if (difference.HasChanges())
+            {
+                difference.PropertyPath.SetValue(target, difference.Changed!, difference.ArrayIndexers);
+            }
+        }
     }
 }

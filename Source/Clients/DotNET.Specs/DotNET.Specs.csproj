@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="protobuf-net.Grpc" />

@@ -247,9 +247,14 @@ internal class ModelBoundProjectionBuilder(
             targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
-        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+        // Only process ChildrenFromAttribute when at root level.
+        // For nested children, ProcessNestedChildren handles adding them to the correct parent ChildrenDefinition.
+        if (isRoot)
         {
-            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
+            foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
@@ -347,10 +352,15 @@ internal class ModelBoundProjectionBuilder(
             targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
-        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+        // Only process ChildrenFromAttribute when at root level.
+        // For nested children, ProcessNestedChildren handles adding them to the correct parent ChildrenDefinition.
+        if (isRoot)
         {
-            var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
-            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
+            foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
+                definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)

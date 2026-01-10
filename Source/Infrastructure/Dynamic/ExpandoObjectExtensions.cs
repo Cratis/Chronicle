@@ -8,6 +8,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Concepts;
 using Cratis.Reflection;
 using Cratis.Strings;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Dynamic;
 
@@ -265,7 +266,12 @@ public static class ExpandoObjectExtensions
     /// <param name="key">The key value to check for.</param>
     /// <returns>True if there is an item, false if not.</returns>
     public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
-        items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
+        items!.Any((IDictionary<string, object> _) =>
+        {
+            if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
+            var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
+            return itemValue.Equals(convertedKey);
+        });
 
     /// <summary>
     /// Get an item with a specific key in a collection of <see cref="ExpandoObject"/> items.
@@ -276,7 +282,12 @@ public static class ExpandoObjectExtensions
     /// <returns>The item or null if not found.</returns>
     public static ExpandoObject? GetItem(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key)
     {
-        var item = items!.SingleOrDefault((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
+        var item = items!.SingleOrDefault((IDictionary<string, object> _) =>
+        {
+            if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
+            var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
+            return itemValue.Equals(convertedKey);
+        });
         return item is not null ? item as ExpandoObject : null;
     }
 

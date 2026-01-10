@@ -6,6 +6,8 @@
   href: eventual-consistency.md
 - name: Watching Projections
   href: watching-projections.md
+- name: Getting Snapshots
+  href: getting-snapshots.md
 - name: Model-Bound Projections
   href: model-bound/toc.yml
 - name: Declarative Projections

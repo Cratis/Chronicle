@@ -34,7 +34,8 @@
                         "Cratis.*.dll"
                     ]
                 },
-                "searchPaths": [],
+                "searchPaths": [
+                ],
                 "searchMicrosoftSymbolServer": false,
                 "searchNuGetOrgSymbolServer": true
             },
@@ -44,7 +45,7 @@
             },
             "sourceFileMap": {
                 "/home/runner/work/orleans/orleans": "/Volumes/Code/Microsoft/dotnet/orleans",
-                "/home/runner/work/applications/applications": "/Volumes/Code/Cratis/Applications"
+                "/home/runner/work/arc/arc": "/Volumes/Code/Cratis/Arc"
             }
         },
         {

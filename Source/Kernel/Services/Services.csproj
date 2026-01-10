@@ -18,6 +18,9 @@
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
         <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
+        <ProjectReference Include="..\Projections\Projections.csproj" />
+
+        <ProjectReference Include="..\Storage\Storage.csproj" />
 
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>

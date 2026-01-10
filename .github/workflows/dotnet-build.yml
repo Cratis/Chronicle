@@ -174,3 +174,34 @@ jobs:
       - name: Run API integration tests
         working-directory: ./Integration/Api
         run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
+  mongodb:
+    runs-on: ubuntu-latest
+    needs: [dotnet-build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./**/bin
+          key: ${{ env.DOTNET_CACHE }}
+
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run MongoDB integration tests
+        working-directory: ./Integration/MongoDB
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
