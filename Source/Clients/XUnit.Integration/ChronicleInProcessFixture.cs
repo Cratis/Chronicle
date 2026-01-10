@@ -21,8 +21,7 @@ public class ChronicleInProcessFixture : ChronicleFixture
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
-        var builder = new ContainerBuilder()
-            .WithImage("mongo")
+        var builder = new ContainerBuilder("mongo")
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(MongoDBPort, 27017)
             .WithHostname(HostName)
