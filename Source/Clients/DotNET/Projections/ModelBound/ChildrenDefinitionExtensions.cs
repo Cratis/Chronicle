@@ -122,13 +122,11 @@ static class ChildrenDefinitionExtensions
         var keyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.Key));
         var identifiedByProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.IdentifiedBy));
         var parentKeyProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.ParentKey));
-        var autoMapProperty = attr.GetType().GetProperty(nameof(ChildrenFromAttribute<object>.AutoMap));
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
         var explicitParentKey = parentKeyProperty?.GetValue(attr) as string;
         var discoveredParentKey = explicitParentKey is null ? DiscoverEventPropertyForParentId(eventType, parentModelType, namingPolicy) : null;
         var parentKey = explicitParentKey ?? discoveredParentKey ?? WellKnownExpressions.EventSourceId;
-        var autoMap = autoMapProperty?.GetValue(attr) as bool? ?? true;
 
         var childType = GetChildType(memberType);
         var identifiedBy = identifiedByProperty?.GetValue(attr) as string;
@@ -136,6 +134,11 @@ static class ChildrenDefinitionExtensions
         {
             identifiedBy = DiscoverKeyPropertyName(childType);
         }
+
+        // Check if child type or parent type has NoAutoMapAttribute to determine if auto-mapping should be disabled
+        // If parent has NoAutoMap, children should also not auto-map (inheritance of the policy)
+        var shouldAutoMap = childType?.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Length == 0 &&
+                           (parentModelType?.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Length == 0);
 
         // Apply naming policy to identifiedBy to ensure consistent casing
         var identifiedByWithNaming = string.IsNullOrEmpty(identifiedBy) || identifiedBy == WellKnownExpressions.EventSourceId
@@ -152,7 +155,8 @@ static class ChildrenDefinitionExtensions
                 Children = new Dictionary<string, ChildrenDefinition>(),
                 All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
-                RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>()
+                RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
+                AutoMap = shouldAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Enabled : (Contracts.Projections.AutoMap)AutoMap.Disabled
             };
             targetChildren[propertyName] = childrenDef;
         }
@@ -250,7 +254,7 @@ static class ChildrenDefinitionExtensions
                                     a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
 
                     // If this is the identified property and has no explicit mapping, map it to the key
-                    if (autoMap && !hasExplicitMapping && parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
+                    if (shouldAutoMap && !hasExplicitMapping && parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
                     {
                         // If key is EventSourceId, use event context, otherwise use the key property from the event
                         if (key == WellKnownExpressions.EventSourceId)
@@ -265,7 +269,7 @@ static class ChildrenDefinitionExtensions
                     }
 
                     // Check if parameter has [Key] attribute and no explicit mapping and key is EventSourceId
-                    if (autoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
+                    if (shouldAutoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
                     {
                         fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
                     }
@@ -290,13 +294,8 @@ static class ChildrenDefinitionExtensions
                 }
             }
 
-            // If autoMap is enabled, map matching properties from event to child model
-            // This is done AFTER processing constructor parameters so we don't overwrite explicit mappings
-            if (autoMap)
-            {
-                var fromDefinition = childrenDef.From[eventTypeId];
-                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
-            }
+            // Property auto-mapping is handled by the server based on the AutoMap flag
+            // No need to explicitly map properties here
 
             // Process class-level RemovedWith attributes on the child type
             ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, childrenDef);

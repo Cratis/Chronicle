@@ -28,7 +28,7 @@ Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | API Server        | REST API for client interactions         |
+| 8080  | Management API    | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | Primary Chronicle gRPC service port      |
@@ -84,6 +84,7 @@ volumes:
 5. **Enable health checks** for container orchestration
 6. **Set up monitoring** for all exposed ports
 7. **Use secrets management** for sensitive configuration values
+8. **Enable TLS** with proper certificates (see [TLS Configuration](../tls-configuration.md))
 
 ## Health Checks
 
@@ -99,10 +100,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 ## Security Considerations
 
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
-- **Connection Encryption**: Use TLS for MongoDB connections in production
+- **Connection Encryption**: Use TLS for all connections in production
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
 - **Regular Updates**: Keep Chronicle and MongoDB images updated
+- **TLS Certificates**: Configure valid TLS certificates for production (see [TLS Configuration](../tls-configuration.md))
 
 ## Scaling
 

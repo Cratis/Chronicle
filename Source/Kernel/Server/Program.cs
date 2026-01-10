@@ -7,8 +7,10 @@ using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
+using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.Security;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
@@ -39,13 +41,43 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
+var serverCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+
 builder.WebHost.UseKestrel(options =>
 {
-    if (chronicleOptions.Features.Api)
+    // Always listen on ManagementPort for API
+    options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions =>
     {
-        options.ListenAnyIP(chronicleOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
-    }
-    options.ListenAnyIP(chronicleOptions.Port, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+        listenOptions.Protocols = HttpProtocols.Http1;
+
+        if (serverCertificate is not null)
+        {
+            listenOptions.UseHttps(serverCertificate);
+        }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+        }
+#endif
+    });
+
+    options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2;
+
+        if (serverCertificate is not null)
+        {
+            listenOptions.UseHttps(serverCertificate);
+        }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+        }
+#endif
+    });
+
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
@@ -55,7 +87,11 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .AddCratisArc()
+    .AddCratisArc(options =>
+    {
+        options.GeneratedApis.RoutePrefix = "api";
+        options.GeneratedApis.SegmentsToSkipForRoute = 3;
+    })
    .AddCratisMongoDB(
        configureOptions: mongo =>
        {
@@ -75,7 +111,6 @@ builder.Host
         }))
    .ConfigureServices((context, services) =>
    {
-       services.AddCodeFirstGrpc();
        services.AddCodeFirstGrpcReflection();
 
        services
@@ -84,27 +119,80 @@ builder.Host
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
+
+       // Add authentication services
+       services.AddChronicleAuthentication(chronicleOptions);
    });
 
 var app = builder.Build();
+
+// Initialize default admin user if authentication is enabled
+if (chronicleOptions.Authentication.Enabled)
+{
+    var authService = app.Services.GetRequiredService<IAuthenticationService>();
+    await authService.EnsureDefaultAdminUser();
+#if DEVELOPMENT
+    await authService.EnsureDefaultClientCredentials();
+#endif
+}
+
 app.UseRouting();
+
 app.UseCratisArc();
+app.UseRouting();
+
+// Add authentication and authorization middleware AFTER routing but BEFORE endpoints
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.UseMiddleware<GrpcAuthenticationMiddleware>();
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 
 if (chronicleOptions.Features.Api)
 {
-    app.UseCratisChronicleApi();
+    // Configure API endpoints but without calling UseRouting again (already called above)
+    app.UseWebSockets();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        var resourceName = typeof(ApiApplicationBuilderExtensions).Namespace + ".SwaggerDark.css";
+        using var stream = typeof(ApiApplicationBuilderExtensions).Assembly.GetManifestResourceStream(resourceName);
+        if (stream is not null)
+        {
+            using var streamReader = new StreamReader(stream);
+            var styles = streamReader.ReadToEnd();
+            options.HeadContent = $"{options.HeadContent}<style>{styles}</style>";
+        }
+    });
 }
 
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+// Map Identity API endpoints for SPA authentication - MUST be before MapControllers
+if (chronicleOptions.Authentication.Enabled)
 {
-    app.UseDefaultFiles()
-        .UseStaticFiles();
-
-    app.MapFallbackToFile("index.html");
+    app.MapGroup("/identity")
+        .MapIdentityApi<ChronicleUser>()
+        .AllowAnonymous();
 }
+
+// Map controllers for API and OAuth
+if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
+{
+    app.MapControllers();
+}
+
+app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
-app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint);
+app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+
+// Map workbench static files and fallback AFTER API endpoints to avoid conflicts
+if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.MapFallbackToFile("index.html");
+}
 
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>

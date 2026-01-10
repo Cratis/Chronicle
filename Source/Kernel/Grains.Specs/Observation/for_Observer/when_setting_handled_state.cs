@@ -21,7 +21,8 @@ public class when_setting_handled_state : given.an_observer
     async Task Because() => _error = await Catch.Exception(() => _observer.SetHandledStats(_eventSequenceNumber));
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
-    [Fact] void should_have_correct_state() => _stateStorage.State.ShouldEqual(_initialState with
+    [Fact]
+    void should_have_correct_state() => _stateStorage.State.ShouldEqual(_initialState with
     {
         LastHandledEventSequenceNumber = _eventSequenceNumber
     });

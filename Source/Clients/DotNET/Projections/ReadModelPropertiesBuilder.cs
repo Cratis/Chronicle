@@ -32,20 +32,6 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     readonly INamingPolicy _namingPolicy = namingPolicy;
 
     /// <inheritdoc/>
-    public TBuilder AutoMap()
-    {
-        var eventProperties = typeof(TEvent).GetProperties().Select(_ => _.Name);
-        var modelProperties = typeof(TReadModel).GetProperties().Select(_ => _.Name);
-
-        foreach (var property in eventProperties.Intersect(modelProperties))
-        {
-            Set(property).To(property);
-        }
-
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
     public TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
         var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());

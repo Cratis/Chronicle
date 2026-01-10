@@ -2,3 +2,5 @@
   href: production.md
 - name: Configuration
   href: configuration.md
+- name: Local Certificates
+  href: local-certificates.md

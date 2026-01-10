@@ -16,7 +16,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <summary>
     /// The exposed MongoDb port.
     /// </summary>
-    public const int MongoDBPort = 27018;
+    public const int MongoDBPort = 27017;
 
 #if NET8_0
     readonly object _containerLock = new();

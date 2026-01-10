@@ -24,9 +24,7 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             .UntilInternalTcpPortIsAvailable(27017)
             .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        var builder = new ContainerBuilder();
-#pragma warning restore CS0618 // Type or member is obsolete
+        var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
 
             // For some reason, this makes the container crash every time

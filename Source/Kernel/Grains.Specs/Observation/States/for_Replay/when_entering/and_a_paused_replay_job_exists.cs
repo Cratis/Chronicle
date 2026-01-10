@@ -50,7 +50,7 @@ public class and_a_paused_replay_job_exists : given.a_replay_state
                 {
                     _pausedJob
                 }.ToImmutableList());
-        }
+    }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 

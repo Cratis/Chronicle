@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="humanizer" />
+        <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="NJsonSchema" />

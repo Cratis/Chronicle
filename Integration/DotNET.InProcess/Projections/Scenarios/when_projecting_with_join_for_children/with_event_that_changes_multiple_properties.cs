@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.InProcess.Integration.AggregateRoots.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Concepts;
 using Cratis.Chronicle.InProcess.Integration.Projections.Events;
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.with_event_that_changes_multiple_properties.context;

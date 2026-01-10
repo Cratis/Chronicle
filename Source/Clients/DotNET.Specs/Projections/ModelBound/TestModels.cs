@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 

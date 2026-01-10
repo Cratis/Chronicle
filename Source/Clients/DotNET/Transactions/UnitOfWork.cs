@@ -83,7 +83,10 @@ public class UnitOfWork(
         if (_eventSequenceOperations is not null)
         {
             var result = await _eventSequenceOperations.Perform();
-            _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
+            if (result.SequenceNumbers?.Any() == true)
+            {
+                _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
+            }
             _appendManyResult = result;
         }
 

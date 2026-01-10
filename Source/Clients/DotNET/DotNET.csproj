@@ -12,7 +12,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
-        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Orleans.XUnit" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
@@ -48,7 +48,6 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <PackageReference Include="FluentValidation" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />

@@ -2,7 +2,9 @@
     "general": {
         "buttons": {
             "ok": "OK",
-            "cancel": "Cancel"
+            "cancel": "Cancel",
+            "yes": "Yes",
+            "no": "No"
         }
     },
     "layout": {
@@ -28,12 +30,16 @@
         "recommendations": "Recommendations",
         "jobs": "Jobs",
         "sequences": "Sequences",
+        "pivot": "Pivot",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
+        "readModels": "Read Models",
         "identities": "Identities",
         "general": {
             "groupLabel": "General",
-            "types": "Types",
+            "eventTypes": "Event Types",
+            "readModelTypes": "Read Model Types",
+            "readModels": "Read Models",
             "namespaces": "Namespaces",
             "webhooks": "Webhooks",
             "sequences": "Sequences",
@@ -41,18 +47,26 @@
             "reducers": "Reducers",
             "reactors": "Reactors",
             "sinks": "Sinks"
+        },
+        "system": {
+            "groupLabel": "System",
+            "users": "Users",
+            "applications": "Applications"
         }
     },
     "eventStore": {
         "general": {
-            "types": {
-                "title": "Types",
+            "eventTypes": {
+                "title": "Event Types",
                 "empty": "No types found",
+                "cannotEditReason": "Defined by code",
                 "actions": {
                     "create": "Create"
                 },
                 "columns": {
                     "name": "Name",
+                    "owner": "Owner",
+                    "source": "Source",
                     "generation": "Generation",
                     "tombstone": "Tombstone"
                 },
@@ -61,6 +75,16 @@
                         "title": "Add event type",
                         "name": "Name"
                     }
+                },
+                "owners": {
+                    "unknown": "Unknown",
+                    "client": "Client",
+                    "server": "Server"
+                },
+                "sources": {
+                    "unknown": "Unknown",
+                    "code": "Code",
+                    "user": "User"
                 }
             },
             "namespaces": {
@@ -99,6 +123,39 @@
                             "url": "Target URL"
                         }
                     }
+                },
+            "readModels": {
+                "title": "Read Model Types",
+                "empty": "No read models found",
+                "actions": {
+                    "create": "Create",
+                    "edit": "Edit",
+                    "addProperty": "Add Property",
+                    "save": "Save"
+                },
+                "columns": {
+                    "name": "Name",
+                    "generation": "Generation"
+                },
+                "schema": {
+                    "propertyName": "Property Name",
+                    "type": "Type"
+                },
+                "dialogs": {
+                    "addReadModel": {
+                        "title": "Add Read Model",
+                        "name": "Name"
+                    }
+                }
+            },
+            "projections": {
+                "title": "Projections",
+                "empty": "No result.",
+                "actions": {
+                    "new": "New",
+                    "save": "Save",
+                    "preview": "Preview",
+                    "timeMachine": "Time Machine"
                 }
             }
         },
@@ -215,7 +272,140 @@
                     "name": "Name",
                     "userName": "UserName"
                 }
+            },
+            "readModels": {
+                "title": "Read Models",
+                "empty": "No instances found. Select a read model to view data.",
+                "actions": {
+                    "filter": "Filter",
+                    "query": "Perform Query",
+                    "timeMachine": "Time Machine",
+                    "navigateBack": "Navigate Back"
+                },
+                "labels": {
+                    "readModel": "Read Model",
+                    "occurrence": "Occurrence",
+                    "objectDetails": "Object Details",
+                    "root": "Root",
+                    "default": "Default",
+                    "generation": "Generation",
+                    "array": "Array",
+                    "object": "Object",
+                    "null": "null"
+                },
+                "placeholders": {
+                    "selectReadModel": "Select a Read Model",
+                    "selectOccurrence": "Select an Occurrence"
+                }
             }
+        },
+        "system": {
+            "users": {
+                "title": "Users",
+                "empty": "No users found",
+                "actions": {
+                    "add": "Add User",
+                    "changePassword": "Change Password",
+                    "remove": "Remove User"
+                },
+                "columns": {
+                    "id": "ID",
+                    "username": "Username",
+                    "email": "Email",
+                    "active": "Active",
+                    "created": "Created",
+                    "lastModified": "Last Modified",
+                    "yes": "Yes",
+                    "no": "No"
+                },
+                "dialogs": {
+                    "addUser": {
+                        "title": "Add User",
+                        "username": "Username",
+                        "email": "Email (optional)",
+                        "password": "Password",
+                        "generatePassword": "Generate password",
+                        "showPassword": "Show password",
+                        "hidePassword": "Hide password"
+                    },
+                    "changePassword": {
+                        "title": "Change Password",
+                        "password": "New Password",
+                        "generatePassword": "Generate password",
+                        "showPassword": "Show password",
+                        "hidePassword": "Hide password"
+                    },
+                    "removeUser": {
+                        "title": "Remove User",
+                        "message": "Are you sure you want to remove user '{username}'? This action cannot be undone."
+                    }
+                }
+            },
+            "applications": {
+                "title": "Applications",
+                "empty": "No applications found",
+                "actions": {
+                    "add": "Add Application",
+                    "changeSecret": "Change Secret",
+                    "remove": "Remove Application"
+                },
+                "columns": {
+                    "id": "ID",
+                    "clientId": "Client ID",
+                    "active": "Active",
+                    "created": "Created",
+                    "lastModified": "Last Modified",
+                    "yes": "Yes",
+                    "no": "No"
+                },
+                "dialogs": {
+                    "addApplication": {
+                        "title": "Add Application",
+                        "clientId": "Client ID",
+                        "clientSecret": "Client Secret",
+                        "generateSecret": "Generate secret",
+                        "showSecret": "Show secret",
+                        "hideSecret": "Hide secret"
+                    },
+                    "changeSecret": {
+                        "title": "Change Secret",
+                        "clientSecret": "New Client Secret",
+                        "generateSecret": "Generate secret",
+                        "showSecret": "Show secret",
+                        "hideSecret": "Hide secret"
+                    },
+                    "removeApplication": {
+                        "title": "Remove Application",
+                        "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "projectionEditor": {
+            "tooltips": {
+                "help": "Show Projection Definition Language help panel"
+            }
+        },
+        "schemaEditor": {
+            "columns": {
+                "property": "Property",
+                "type": "Type"
+            },
+            "actions": {
+                "edit": "Edit",
+                "save": "Save",
+                "cancel": "Cancel",
+                "addProperty": "Add Property",
+                "navigateBack": "Navigate Back"
+            },
+            "tooltips": {
+                "navigateToObjectProperties": "Navigate to object properties",
+                "navigateToItemDefinition": "Navigate to item definition",
+                "deleteProperty": "Delete property"
+            },
+            "emptyMessage": "No properties defined"
         }
     }
 }

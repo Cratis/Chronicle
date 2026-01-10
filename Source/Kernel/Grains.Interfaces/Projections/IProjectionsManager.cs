@@ -23,6 +23,12 @@ public interface IProjectionsManager : IGrainWithStringKey
     Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions();
 
     /// <summary>
+    /// Get all the projections with their DSL representation.
+    /// </summary>
+    /// <returns>A collection of <see cref="ProjectionWithDsl"/>.</returns>
+    Task<IEnumerable<ProjectionWithDsl>> GetProjectionDsls();
+
+    /// <summary>
     /// Register a set of <see cref="ProjectionDefinition"/> for the event store it belongs to.
     /// </summary>
     /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>

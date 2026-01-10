@@ -27,7 +27,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
                 void OptionsConfigurator(ChronicleOptions options)
                 {
                     options.ArtifactsProvider = fixture;
-                    options.Url = "chronicle://localhost:35001";
+                    options.ConnectionString = "chronicle://localhost:35001";
                 }
 
                 services.Configure<ChronicleAspNetCoreOptions>(OptionsConfigurator);

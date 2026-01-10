@@ -104,6 +104,11 @@ public static class WellKnownGrainStorageProviders
     public const string ReadModelsManager = "read-models-manager";
 
     /// <summary>
+    /// The name of the storage provider used for the read models replay manager.
+    /// </summary>
+    public const string ReadModelReplayManager = "read-model-replay-manager";
+
+    /// <summary>
     /// The name of the storage provider used for event seeding.
     /// </summary>
     public const string EventSeeding = "event-seeding";

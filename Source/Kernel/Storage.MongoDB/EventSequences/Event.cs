@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="EventSourceId">The <see cref="EventSourceId"/> for the event.</param>
 /// <param name="EventStreamType">the <see cref="EventStreamType"/> to append to.</param>
 /// <param name="EventStreamId">The <see cref="EventStreamId"/> to append to.</param>
+/// <param name="Tags">Collection of tags associated with the event.</param>
 /// <param name="Content">The content per event type generation.</param>
 /// <param name="Compensations">Any compensations for the event.</param>
 public record Event(
@@ -34,5 +35,6 @@ public record Event(
     EventSourceId EventSourceId,
     EventStreamType EventStreamType,
     EventStreamId EventStreamId,
+    IEnumerable<string> Tags,
     IDictionary<string, BsonDocument> Content,
     IEnumerable<EventCompensation> Compensations);
