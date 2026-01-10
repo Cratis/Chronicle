@@ -61,6 +61,7 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+
         // Auto-mapped properties should not be in client-side Properties
         fromDef.Properties.Keys.ShouldNotContain(nameof(Config.Name));
     }
@@ -71,6 +72,7 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+
         // Auto-mapped properties should not be in client-side Properties
         fromDef.Properties.Keys.ShouldNotContain(nameof(Config.Description));
     }

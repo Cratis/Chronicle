@@ -14,11 +14,11 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.4.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.4.0" />
-    <PackageVersion Include="Cratis.Arc" Version="18.7.14" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.14" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.7.14" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.7.14" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="18.7.14" />
+    <PackageVersion Include="Cratis.Arc" Version="18.7.21" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.21" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.7.21" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.7.21" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="18.7.21" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.1" />
@@ -70,7 +70,7 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="9.2.1" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.267" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.275" />
     <!-- Not categorized -->
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.2.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
