@@ -21,6 +21,7 @@ import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import { ReadModelTypes } from './General/ReadModelTypes/ReadModelTypes';
 import { ReadModels } from './Namespaces/ReadModels/ReadModels';
+import { Pivot } from './Namespaces/Pivot/Pivot';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
@@ -35,6 +36,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
+                { label: strings.mainMenu.pivot, url: ':namespace/pivot', icon: mdIcons.MdTimeline },
                 { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
                 { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
                 { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
@@ -88,6 +90,7 @@ export const EventStore = () => {
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />
                     <Route path={'sequences-future'} element={<SequencesFuture />} />
+                    <Route path={'pivot'} element={<Pivot />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
                     <Route path={'read-models/*'} element={<ReadModels />} />
