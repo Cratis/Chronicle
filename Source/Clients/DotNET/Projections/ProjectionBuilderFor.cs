@@ -89,6 +89,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
-            Tags = _projectionType.GetTags().ToArray()
+            Tags = _projectionType.GetTags().ToArray(),
+            AutoMap = (Contracts.Projections.AutoMap)_autoMap
         };
 }

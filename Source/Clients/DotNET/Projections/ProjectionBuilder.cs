@@ -79,11 +79,6 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
         var builder = new FromBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
-        if (_autoMap == Chronicle.Projections.AutoMap.Enabled)
-        {
-            builder.AutoMap();
-        }
-
         builderCallback?.Invoke(builder);
         var fromDefinition = builder.Build();
 
@@ -111,11 +106,6 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         }
 
         var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
-
-        if (_autoMap == Chronicle.Projections.AutoMap.Enabled)
-        {
-            builder.AutoMap();
-        }
 
         builderCallback?.Invoke(builder);
         var eventType = eventTypes.GetEventTypeFor(typeof(TEvent));

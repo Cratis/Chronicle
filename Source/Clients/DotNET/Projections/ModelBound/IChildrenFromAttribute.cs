@@ -22,9 +22,4 @@ public interface IChildrenFromAttribute : IKeyedAttribute
     /// Gets the optional name of the property to identify children by.
     /// </summary>
     string? IdentifiedBy { get; }
-
-    /// <summary>
-    /// Gets the auto mapping behavior for properties from the event to the child model.
-    /// </summary>
-    AutoMap AutoMap { get; }
 }

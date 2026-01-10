@@ -65,6 +65,22 @@ internal class ModelBoundProjectionBuilder(
                           attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
             .ToList();
 
+        // Initialize From definitions for class-level FromEvent attributes
+        // This ensures that even if NoAutoMapAttribute prevents auto-mapping,
+        // we still have the From definition structure
+        foreach (var attr in classLevelFromEvents)
+        {
+            var eventType = attr.GetType().GetGenericArguments()[0];
+            var eventTypeId = GetOrCreateEventType(eventType);
+            if (!definition.From.ContainsKey(eventTypeId))
+            {
+                definition.From[eventTypeId] = new FromDefinition
+                {
+                    Properties = new Dictionary<string, string>()
+                };
+            }
+        }
+
         ProcessClassLevelRemovedWith(modelType, definition);
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
@@ -255,18 +271,18 @@ internal class ModelBoundProjectionBuilder(
             var eventType = attr.GetType().GetGenericArguments()[0];
             var eventProperty = eventType.GetProperty(memberName);
 
-            if (eventProperty is not null)
+            // Only auto-map if the model doesn't have NoAutoMap attribute and event has matching property
+            var shouldAutoMap = modelType is not null && !modelType.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Any();
+            if (eventProperty is not null && shouldAutoMap)
             {
                 allEventTypesReferencedByModel.Add(eventType);
                 var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-                var autoMapProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.AutoMap));
                 var key = keyProperty?.GetValue(attr) as string;
-                var autoMap = autoMapProperty?.GetValue(attr) as AutoMap? ?? AutoMap.Enabled;
                 if (!string.IsNullOrEmpty(key))
                 {
                     PropertyValidator.ValidatePropertyExists(eventType, key);
                 }
-                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName, key, autoMap);
+                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName, key);
             }
         }
 
@@ -363,18 +379,20 @@ internal class ModelBoundProjectionBuilder(
             var eventType = attr.GetType().GetGenericArguments()[0];
             var eventProperty = eventType.GetProperty(property.Name);
 
-            if (eventProperty is not null)
+            // Only auto-map if the model doesn't have NoAutoMap attribute and event has matching property
+            // For root level (modelType is not null), check the modelType
+            // For children (modelType is null or childrenDef is not null), we already checked in the child processing
+            var shouldAutoMap = modelType is null || !modelType.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Any();
+            if (eventProperty is not null && shouldAutoMap)
             {
                 eventTypesReferencedByMember.Add(eventType);
                 var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-                var autoMapProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.AutoMap));
                 var key = keyProperty?.GetValue(attr) as string;
-                var autoMap = autoMapProperty?.GetValue(attr) as AutoMap? ?? AutoMap.Enabled;
                 if (!string.IsNullOrEmpty(key))
                 {
                     PropertyValidator.ValidatePropertyExists(eventType, key);
                 }
-                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name, key, autoMap);
+                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name, key);
             }
         }
 

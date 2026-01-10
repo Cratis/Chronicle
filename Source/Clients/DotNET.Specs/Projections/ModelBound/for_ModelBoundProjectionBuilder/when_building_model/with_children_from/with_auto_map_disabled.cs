@@ -47,9 +47,10 @@ public class with_auto_map_disabled : given.a_model_bound_projection_builder
 [EventType]
 public record ProductItemAdded(Guid ItemId, string ProductName, int Quantity, double Price);
 
+[NoAutoMap]
 public record ProductLineItem([Key] Guid Id, string ProductName, int Quantity, double Price);
 
 public record OrderWithExplicitMappedChildren(
     [Key] Guid Id,
-    [ChildrenFrom<ProductItemAdded>(key: nameof(ProductItemAdded.ItemId), autoMap: AutoMap.Disabled)]
+    [ChildrenFrom<ProductItemAdded>(key: nameof(ProductItemAdded.ItemId))]
     IEnumerable<ProductLineItem> Items);
