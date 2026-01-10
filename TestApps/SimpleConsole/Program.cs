@@ -17,5 +17,5 @@ var store = await client.GetEventStore("TestStore");
 
 Console.WriteLine("Appending event...");
 var @event = new MyEvent();
-var result = await store.EventLog.Append(Guid.NewGuid(), @event);
+var result = await store.EventLog.Append("MyThing", @event);
 Console.WriteLine($"Event appended. {result.SequenceNumber}");
