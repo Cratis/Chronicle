@@ -131,6 +131,9 @@ if (chronicleOptions.Authentication.Enabled)
 {
     var authService = app.Services.GetRequiredService<IAuthenticationService>();
     await authService.EnsureDefaultAdminUser();
+#if DEVELOPMENT
+    await authService.EnsureDefaultClientCredentials();
+#endif
 }
 
 app.UseRouting();
