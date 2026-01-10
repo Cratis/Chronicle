@@ -21,6 +21,13 @@
     align-items: center;
 }
 
+.breadcrumbContainer {
+    margin-left: var(--sidebar-closed-width);
+    padding-left: 1rem;
+    display: flex;
+    align-items: center;
+}
+
 .hamburgerMenuButton {
   outline: none !important;
 }

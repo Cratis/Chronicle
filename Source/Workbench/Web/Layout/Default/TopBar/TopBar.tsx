@@ -4,23 +4,19 @@
 import { useLayoutContext } from '../context/LayoutContext';
 import { Button } from 'primereact/button';
 import css from './TopBar.module.css';
-import { FaBars, FaHouse } from 'react-icons/fa6';
+import { FaBars } from 'react-icons/fa6';
 // import { Profile } from "./Profile";
 // import { Notifications } from './Notifications';
 // import { Connection } from './Connection';
-import { useNavigate, useParams } from 'react-router-dom';
 import { EventStore } from './EventStore';
-import * as Shared from 'Shared';
+import { Breadcrumb } from './Breadcrumb';
 
 export const TopBar = () => {
-    const navigate = useNavigate();
-    const params = useParams<Shared.EventStoreAndNamespaceParams>();
-
     const { toggleLeftSidebarOpen } = useLayoutContext();
 
     return (
         <div className={css.container}>
-            <div className={`flex items-center justify-between ${css.leftSide}`}>
+            <div className={`flex items-center ${css.leftSide}`}>
                 <div className={css.sidebarToggle}>
                     <Button
                         onClick={toggleLeftSidebarOpen}
@@ -28,14 +24,10 @@ export const TopBar = () => {
                         className={css.hamburgerMenuButton}>
                         <FaBars />
                     </Button>
-                    <a href="#" onClick={() => navigate('/')}>
-                        <FaHouse />
-                    </a>
                 </div>
-                <div className="flex-1 flex align-center justify-center">
-                    <div className="font-extrabold text-2xl m-2">{params.eventStore}</div>
+                <div className={css.breadcrumbContainer}>
+                    <Breadcrumb />
                 </div>
-
             </div>
             <div className="flex-1 flex items-center justify-end px-5 gap-6">
                 <div>
