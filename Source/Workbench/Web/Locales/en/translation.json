@@ -104,26 +104,6 @@
                     }
                 }
             },
-            "webhooks": {
-                "title": "Webhooks",
-                "empty": "No webhooks found",
-                "actions": {
-                    "create": "Create"
-                },
-                "columns": {
-                    "id": "Identifier",
-                    "name": "Name"
-                },
-                "dialogs": {
-                    "addWebhook": {
-                        "title": "Add webhook",
-                        "eventSequence": "Select an Event Sequence",
-                        "eventTypes": "Select an Event Type",
-                        "target": {
-                            "url": "Target URL"
-                        }
-                    }
-                },
             "readModels": {
                 "title": "Read Model Types",
                 "empty": "No read models found",
