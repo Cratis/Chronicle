@@ -137,9 +137,8 @@ static class ChildrenDefinitionExtensions
 
         // Check if child type or parent type has NoAutoMapAttribute to determine if auto-mapping should be disabled
         // If parent has NoAutoMap, children should also not auto-map (inheritance of the policy)
-        var shouldAutoMap = childType is not null &&
-                           !childType.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Any() &&
-                           (parentModelType is null || !parentModelType.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Any());
+        var shouldAutoMap = childType?.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Length == 0 &&
+                           (parentModelType?.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Length == 0);
 
         // Apply naming policy to identifiedBy to ensure consistent casing
         var identifiedByWithNaming = string.IsNullOrEmpty(identifiedBy) || identifiedBy == WellKnownExpressions.EventSourceId
@@ -156,7 +155,8 @@ static class ChildrenDefinitionExtensions
                 Children = new Dictionary<string, ChildrenDefinition>(),
                 All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
-                RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>()
+                RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
+                AutoMap = shouldAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Enabled : (Contracts.Projections.AutoMap)AutoMap.Disabled
             };
             targetChildren[propertyName] = childrenDef;
         }

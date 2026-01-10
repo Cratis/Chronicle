@@ -76,6 +76,7 @@ internal class ModelBoundProjectionBuilder(
             {
                 definition.From[eventTypeId] = new FromDefinition
                 {
+                    Key = WellKnownExpressions.EventSourceId,
                     Properties = new Dictionary<string, string>()
                 };
             }
@@ -85,6 +86,9 @@ internal class ModelBoundProjectionBuilder(
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
         BuildFromEveryDefinition(definition);
+
+        var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
+        definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
 
         return definition;
     }
@@ -272,7 +276,7 @@ internal class ModelBoundProjectionBuilder(
             var eventProperty = eventType.GetProperty(memberName);
 
             // Only auto-map if the model doesn't have NoAutoMap attribute and event has matching property
-            var shouldAutoMap = modelType is not null && !modelType.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Any();
+            var shouldAutoMap = modelType?.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Length == 0;
             if (eventProperty is not null && shouldAutoMap)
             {
                 allEventTypesReferencedByModel.Add(eventType);
@@ -382,7 +386,7 @@ internal class ModelBoundProjectionBuilder(
             // Only auto-map if the model doesn't have NoAutoMap attribute and event has matching property
             // For root level (modelType is not null), check the modelType
             // For children (modelType is null or childrenDef is not null), we already checked in the child processing
-            var shouldAutoMap = modelType is null || !modelType.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Any();
+            var shouldAutoMap = modelType?.GetCustomAttributes(typeof(NoAutoMapAttribute), inherit: true).Length == 0;
             if (eventProperty is not null && shouldAutoMap)
             {
                 eventTypesReferencedByMember.Add(eventType);
