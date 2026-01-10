@@ -49,21 +49,28 @@ public class set_from_context : given.a_model_bound_projection_builder
     }
 
     [Fact]
-    void should_auto_map_name_property()
+    void should_not_auto_map_name_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(TransportTypeAdded)).ToContract();
         var childrenDef = _result.Children[nameof(TransportTypesForSimulation.TransportTypes)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(TransportType.Name));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(TransportType.Name));
     }
 
     [Fact]
-    void should_auto_map_co2_per_km_property()
+    void should_not_auto_map_co2_per_km_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(TransportTypeAdded)).ToContract();
         var childrenDef = _result.Children[nameof(TransportTypesForSimulation.TransportTypes)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(TransportType.Co2PerKm));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(TransportType.Co2PerKm));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(TransportTypesForSimulation.TransportTypes)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 
     [Fact]

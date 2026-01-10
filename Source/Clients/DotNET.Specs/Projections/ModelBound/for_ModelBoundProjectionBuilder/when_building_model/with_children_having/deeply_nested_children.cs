@@ -61,14 +61,23 @@ public class deeply_nested_children : given.a_model_bound_projection_builder
     }
 
     [Fact]
-    void should_auto_map_name_property_for_deeply_nested_child()
+    void should_not_auto_map_name_property_for_deeply_nested_child()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DeepMemberAdded)).ToContract();
         var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
         var teamChildrenDef = deptChildrenDef.Children[nameof(DeepDepartment.Teams)];
         var memberChildrenDef = teamChildrenDef.Children[nameof(DeepTeam.Members)];
         var fromDef = memberChildrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(DeepMember.Name));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(DeepMember.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_deeply_nested_children()
+    {
+        var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
+        var teamChildrenDef = deptChildrenDef.Children[nameof(DeepDepartment.Teams)];
+        var memberChildrenDef = teamChildrenDef.Children[nameof(DeepTeam.Members)];
+        memberChildrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 }
 

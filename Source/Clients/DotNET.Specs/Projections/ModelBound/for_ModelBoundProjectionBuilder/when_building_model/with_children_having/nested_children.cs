@@ -52,13 +52,21 @@ public class nested_children : given.a_model_bound_projection_builder
     }
 
     [Fact]
-    void should_auto_map_name_property_for_nested_child()
+    void should_not_auto_map_name_property_for_nested_child()
     {
         var eventType = event_types.GetEventTypeFor(typeof(NestedHubAdded)).ToContract();
         var configChildrenDef = _result.Children[nameof(NestedSimulationDashboard.Configurations)];
         var hubsChildrenDef = configChildrenDef.Children[nameof(NestedSimulationConfiguration.Hubs)];
         var fromDef = hubsChildrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(NestedHub.Name));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(NestedHub.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_nested_children()
+    {
+        var configChildrenDef = _result.Children[nameof(NestedSimulationDashboard.Configurations)];
+        var hubsChildrenDef = configChildrenDef.Children[nameof(NestedSimulationConfiguration.Hubs)];
+        hubsChildrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 }
 

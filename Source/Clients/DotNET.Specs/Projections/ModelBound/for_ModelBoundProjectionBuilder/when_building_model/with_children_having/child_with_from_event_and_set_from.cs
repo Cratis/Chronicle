@@ -56,21 +56,30 @@ public class child_with_from_event_and_set_from : given.a_model_bound_projection
     }
 
     [Fact]
-    void should_map_name_from_weights_set_event()
+    void should_not_map_name_from_weights_set_event()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Config.Name));
+        // Auto-mapped properties should not be in client-side Properties
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Config.Name));
     }
 
     [Fact]
-    void should_map_description_from_weights_set_event()
+    void should_not_map_description_from_weights_set_event()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WeightsSetForConfig)).ToContract();
         var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Config.Description));
+        // Auto-mapped properties should not be in client-side Properties
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Config.Description));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(Dashboard.Configurations)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 
     [Fact]

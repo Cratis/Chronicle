@@ -50,12 +50,19 @@ public class key_attribute_should_default_to_event_source_id : given.a_model_bou
     }
 
     [Fact]
-    void should_auto_map_name_property()
+    void should_not_auto_map_name_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(EmployeeHired)).ToContract();
         var childrenDef = _result.Children[nameof(Department.Employees)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Employee.Name));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Employee.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(Department.Employees)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 
     [Fact]

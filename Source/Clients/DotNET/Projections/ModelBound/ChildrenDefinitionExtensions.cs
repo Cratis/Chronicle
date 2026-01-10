@@ -294,13 +294,8 @@ static class ChildrenDefinitionExtensions
                 }
             }
 
-            // If auto-mapping is enabled (no NoAutoMapAttribute), map matching properties from event to child model
-            // This is done AFTER processing constructor parameters so we don't overwrite explicit mappings
-            if (shouldAutoMap)
-            {
-                var fromDefinition = childrenDef.From[eventTypeId];
-                fromDefinition.AutoMapMatchingProperties(namingPolicy, eventType, childType);
-            }
+            // Property auto-mapping is handled by the server based on the AutoMap flag
+            // No need to explicitly map properties here
 
             // Process class-level RemovedWith attributes on the child type
             ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, childrenDef);

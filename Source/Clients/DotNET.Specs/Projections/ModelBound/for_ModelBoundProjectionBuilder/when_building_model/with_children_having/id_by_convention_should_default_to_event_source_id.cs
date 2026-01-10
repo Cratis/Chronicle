@@ -49,12 +49,19 @@ public class id_by_convention_should_default_to_event_source_id : given.a_model_
     }
 
     [Fact]
-    void should_auto_map_license_plate_property()
+    void should_not_auto_map_license_plate_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(VehicleRegistered)).ToContract();
         var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Vehicle.LicensePlate));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Vehicle.LicensePlate));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 
     [Fact]

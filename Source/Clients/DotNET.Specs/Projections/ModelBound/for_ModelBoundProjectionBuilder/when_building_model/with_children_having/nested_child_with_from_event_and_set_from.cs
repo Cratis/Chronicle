@@ -68,13 +68,22 @@ public class nested_child_with_from_event_and_set_from : given.a_model_bound_pro
     }
 
     [Fact]
-    void should_map_name_from_route_details_updated()
+    void should_not_map_name_from_route_details_updated()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RouteDetailsUpdated)).ToContract();
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
         var routeChildren = warehouseChildren.Children[nameof(Warehouse.Routes)];
         var fromDef = routeChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Route.Name));
+        // Auto-mapped properties should not be in client-side Properties
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Route.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_nested_children()
+    {
+        var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
+        var routeChildren = warehouseChildren.Children[nameof(Warehouse.Routes)];
+        routeChildren.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 }
 

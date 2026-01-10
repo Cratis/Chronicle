@@ -47,11 +47,17 @@ public class from_event_and_property_attributes : given.a_model_bound_projection
     }
 
     [Fact]
-    void should_map_product_name_from_product_registered()
+    void should_not_map_product_name_from_product_registered()
     {
         var eventType = event_types.GetEventTypeFor(typeof(ProductRegisteredInInventory)).ToContract();
         var properties = _result.From.First(kvp => kvp.Key.Id == eventType.Id && kvp.Key.Generation == eventType.Generation).Value.Properties;
-        properties.Keys.ShouldContain(nameof(InventoryStatus.ProductName));
+        properties.Keys.ShouldNotContain(nameof(InventoryStatus.ProductName));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_projection()
+    {
+        _result.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 
     [Fact]

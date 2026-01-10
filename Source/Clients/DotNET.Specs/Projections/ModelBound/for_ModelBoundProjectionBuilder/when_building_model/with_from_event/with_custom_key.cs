@@ -26,19 +26,25 @@ public class with_custom_key : given.a_model_bound_projection_builder
     }
 
     [Fact]
-    void should_map_email_property()
+    void should_not_auto_map_email_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(UserRegisteredWithCustomId)).ToContract();
         var properties = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties;
-        properties.Keys.ShouldContain(nameof(UserProfile.Email));
+        properties.Keys.ShouldNotContain(nameof(UserProfile.Email));
     }
 
     [Fact]
-    void should_map_name_property()
+    void should_not_auto_map_name_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(UserRegisteredWithCustomId)).ToContract();
         var properties = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties;
-        properties.Keys.ShouldContain(nameof(UserProfile.Name));
+        properties.Keys.ShouldNotContain(nameof(UserProfile.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled()
+    {
+        _result.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 
     [Fact]

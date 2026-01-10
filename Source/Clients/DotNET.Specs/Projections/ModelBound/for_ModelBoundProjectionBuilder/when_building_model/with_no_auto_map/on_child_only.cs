@@ -29,13 +29,26 @@ public class on_child_only : given.a_model_bound_projection_builder
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
 
     [Fact]
-    void should_auto_map_root_properties()
+    void should_not_auto_map_root_properties_in_client()
     {
         var eventType = event_types.GetEventTypeFor(typeof(CompanyCreated)).ToContract();
         var fromDef = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
 
-        // Root should still auto-map
-        fromDef.Properties.Keys.ShouldContain(nameof(CompanyWithNoAutoMapChild.Name));
+        // Root properties should NOT be auto-mapped on client side (server handles it)
+        fromDef.Properties.Keys.ShouldNotContain(nameof(CompanyWithNoAutoMapChild.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_root()
+    {
+        _result.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
+    }
+
+    [Fact]
+    void should_have_auto_map_disabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(CompanyWithNoAutoMapChild.Departments)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Disabled);
     }
 
     [Fact]
