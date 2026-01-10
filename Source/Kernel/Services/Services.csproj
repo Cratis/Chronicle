@@ -3,7 +3,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Services</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Services</RootNamespace>
-        <NoWarn>$(NoWarn);CS8618</NoWarn>
+        <NoWarn>$(NoWarn);CS8618;MA0182</NoWarn>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -11,6 +11,7 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Specs" />
     </ItemGroup>
 
     <ItemGroup>

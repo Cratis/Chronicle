@@ -309,12 +309,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.react.mvvm@npm:^18.7.14":
-  version: 18.7.14
-  resolution: "@cratis/arc.react.mvvm@npm:18.7.14"
+"@cratis/arc.react.mvvm@npm:^18.7.21":
+  version: 18.7.21
+  resolution: "@cratis/arc.react.mvvm@npm:18.7.21"
   dependencies:
-    "@cratis/arc": "npm:18.7.14"
-    "@cratis/arc.react": "npm:18.7.14"
+    "@cratis/arc": "npm:18.7.21"
+    "@cratis/arc.react": "npm:18.7.21"
     mobx: "npm:^6.15.0"
     mobx-react: "npm:^9.2.1"
     reflect-metadata: "npm:^0.2.2"
@@ -324,11 +324,23 @@ __metadata:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
     react-router-dom: ^7.0.0
-  checksum: 10/365ebf88c8947d9fe9370ffe3a4edf50b77c6f46733e823987462dc75a1ffd643b733addef23a5bb1d068c8d353ec5981416c7c1ca0073de93cf6ecf313fb3e7
+  checksum: 10/2d15fbb198e65ab015e400b1525cb82d878d6fa58b8cf5ecfd0bd716aedb19032f84040527c4693775e31e9aca6d83d65efd24f23f76792a1d614c13959db3a0
   languageName: node
   linkType: hard
 
-"@cratis/arc.react@npm:18.7.14, @cratis/arc.react@npm:^18.5.0, @cratis/arc.react@npm:^18.7.14":
+"@cratis/arc.react@npm:18.7.21, @cratis/arc.react@npm:^18.7.21":
+  version: 18.7.21
+  resolution: "@cratis/arc.react@npm:18.7.21"
+  dependencies:
+    "@cratis/arc": "npm:18.7.21"
+    tsyringe: "npm:^4.10.0"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0
+  checksum: 10/c0cfcab3b89c501179543dff0d0a34d70f211641c31df090affe11d5fa9f85b9581f54f46664f21db0d03fe641b581706fdbae4d192154b82ba1a3113f969ed1
+  languageName: node
+  linkType: hard
+
+"@cratis/arc.react@npm:^18.5.0":
   version: 18.7.14
   resolution: "@cratis/arc.react@npm:18.7.14"
   dependencies:
@@ -340,7 +352,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.vite@npm:^18.5.0, @cratis/arc.vite@npm:^18.7.14":
+"@cratis/arc.vite@npm:^18.5.0":
   version: 18.7.14
   resolution: "@cratis/arc.vite@npm:18.7.14"
   dependencies:
@@ -351,12 +363,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc@npm:18.7.14, @cratis/arc@npm:^18.5.0, @cratis/arc@npm:^18.7.14":
+"@cratis/arc.vite@npm:^18.7.21":
+  version: 18.7.21
+  resolution: "@cratis/arc.vite@npm:18.7.21"
+  dependencies:
+    "@cratis/arc": "npm:18.7.21"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0
+  checksum: 10/168f0c779feeca6475903bcacb3381cfdfbc53f95d09b468a92795d086578b3801eebfa78d4f5891f8103631e3827f49bd812778ccd99fbac6e64d7cde5c4893
+  languageName: node
+  linkType: hard
+
+"@cratis/arc@npm:18.7.14, @cratis/arc@npm:^18.5.0":
   version: 18.7.14
   resolution: "@cratis/arc@npm:18.7.14"
   dependencies:
     "@cratis/fundamentals": "npm:^7.3.1"
   checksum: 10/a17cdbd72016158f02417330a8620e9824470eb1b2d9e0fe642db0db32c31265cdae7610957d0fcaca53baa4a9ec7e994520401766f4674f9b3a284ce57234f4
+  languageName: node
+  linkType: hard
+
+"@cratis/arc@npm:18.7.21, @cratis/arc@npm:^18.7.21":
+  version: 18.7.21
+  resolution: "@cratis/arc@npm:18.7.21"
+  dependencies:
+    "@cratis/fundamentals": "npm:^7.4.0"
+  checksum: 10/7e7b7c47d0af722f0bbe7e8c936aab27460c8c1c0d9a86c9ad2ce4fb4bc902bbd716c8e6702c14dad0313a6c8e72a29a4df188d9717f7056451e3f73f9930807
   languageName: node
   linkType: hard
 
@@ -394,6 +426,15 @@ __metadata:
   dependencies:
     reflect-metadata: "npm:^0.2.2"
   checksum: 10/56e24730a4dcd878c6d2edd604f1c548804784c3b2849d9d9659e038147fa6abd98817434cb65509fd3a08d6a374a4642904d8f492a128344f0fcd64c9656a2d
+  languageName: node
+  linkType: hard
+
+"@cratis/fundamentals@npm:^7.4.0":
+  version: 7.4.0
+  resolution: "@cratis/fundamentals@npm:7.4.0"
+  dependencies:
+    reflect-metadata: "npm:^0.2.2"
+  checksum: 10/596babf42a8853fe711691c5a66f3d1e378263282d7041ea9ba76893fc485f62cb8f5c765052080e13f498f7257a038ef143cd1798b3054f74de68ca9e9b132d
   languageName: node
   linkType: hard
 
@@ -1668,12 +1709,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:25.0.3":
-  version: 25.0.3
-  resolution: "@types/node@npm:25.0.3"
+"@types/node@npm:25.0.5":
+  version: 25.0.5
+  resolution: "@types/node@npm:25.0.5"
   dependencies:
     undici-types: "npm:~7.16.0"
-  checksum: 10/5889b00f398eff4d4af28c3e5e97976f65c39a63fa3d7011f35cbf8640675fa6835e5dd47dce94d6ba48667711ddcd1f5c9bc5d93233e6a8e9ea1e502e8aa5a4
+  checksum: 10/4e1b7cc8ded8a8a8d0216fcb3a8c666a468737fc901f24f9a65ecadd177db4e556b75713fd964c6e172a6968a29e2bfb79aa467a16ed5e47ec2d134396670e99
   languageName: node
   linkType: hard
 
@@ -1695,12 +1736,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:19.2.7":
-  version: 19.2.7
-  resolution: "@types/react@npm:19.2.7"
+"@types/react@npm:19.2.8":
+  version: 19.2.8
+  resolution: "@types/react@npm:19.2.8"
   dependencies:
     csstype: "npm:^3.2.2"
-  checksum: 10/dc0b756eee2c9782d282ae47eaa8d537b2a569eb889a6808c4b172d70fb690b2b1d8fe6239db451aa1c90d2a947cc21c9b537ce177ba9e6121468e403e4079c5
+  checksum: 10/688e7605876e2729c25fdfd2c131d7080cb8e98db528aedccab89005bcbca097a6149fa6e137ae4f1807bdc44220e0c5c7b4a968b5b681dadb7761968bac6de5
   languageName: node
   linkType: hard
 
@@ -5750,15 +5791,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:7.11.0":
-  version: 7.11.0
-  resolution: "react-router-dom@npm:7.11.0"
+"react-router-dom@npm:7.12.0":
+  version: 7.12.0
+  resolution: "react-router-dom@npm:7.12.0"
   dependencies:
-    react-router: "npm:7.11.0"
+    react-router: "npm:7.12.0"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10/47ae509e044957f3c0baae9d594f199832b1d96e4deab69a95f557835cb04bebef1625c4fe1daa1077f1b647c559c636deaa7c35b03d72cc06942d88944e6b37
+  checksum: 10/d2733cbb00f00617a227a454b3fb76645433ce8564b02a0ff05064a2da782ce192a8d87a2f2ab0c92f899689c0b562096ec8217b6af483b97c17e540257ed5e9
   languageName: node
   linkType: hard
 
@@ -5778,9 +5819,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router@npm:7.11.0":
-  version: 7.11.0
-  resolution: "react-router@npm:7.11.0"
+"react-router@npm:7.12.0":
+  version: 7.12.0
+  resolution: "react-router@npm:7.12.0"
   dependencies:
     cookie: "npm:^1.0.1"
     set-cookie-parser: "npm:^2.6.0"
@@ -5790,7 +5831,7 @@ __metadata:
   peerDependenciesMeta:
     react-dom:
       optional: true
-  checksum: 10/34c787880f19a7fadaef2906ecd0c1a1576052ad240bfba72708840d5e5181f604818351ff2e82d2761a2f33dfd63e2f68ab35ffd7552aa04563f1a7154b5b58
+  checksum: 10/578324f792721200bd57a220c7931af692613943051c9bb0c6303613849ec9a2c2365a3a6afe1b3976c13edc8f71616bb9cfdb13c0ac501f239ad11a6884e3f8
   languageName: node
   linkType: hard
 
@@ -6998,25 +7039,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-tsconfig-paths@npm:6.0.3":
-  version: 6.0.3
-  resolution: "vite-tsconfig-paths@npm:6.0.3"
+"vite-tsconfig-paths@npm:6.0.4":
+  version: 6.0.4
+  resolution: "vite-tsconfig-paths@npm:6.0.4"
   dependencies:
     debug: "npm:^4.1.1"
     globrex: "npm:^0.1.2"
     tsconfck: "npm:^3.0.3"
+    vite: "npm:*"
   peerDependencies:
     vite: "*"
   peerDependenciesMeta:
     vite:
       optional: true
-  checksum: 10/271cdc040a03181d13e4253e99ec6deec1cbe4ec4cb2a1377d46dba403483f8e38a5c2ed29ad0493ed51c2cfd658847cb1cdc73e438d6a8bcdd2b52df19d72e2
+  checksum: 10/85f871cd5e321f2865972559b01c518664e6e34f9039b630dd77c2f379f8fdc386e15f7237aa5c108d813030c6e9bc8edfbf61687df7684803111a2495edadac
   languageName: node
   linkType: hard
 
-"vite@npm:7.3.0":
-  version: 7.3.0
-  resolution: "vite@npm:7.3.0"
+"vite@npm:*, vite@npm:7.3.1":
+  version: 7.3.1
+  resolution: "vite@npm:7.3.1"
   dependencies:
     esbuild: "npm:^0.27.0"
     fdir: "npm:^6.5.0"
@@ -7065,7 +7107,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10/044490133aaf4cc024700995edaac10ff182262c721a44a8ac7839207b3e5af435c8b9dd8ee4658dc0f47147fa4211632cca3120177aa4bab99a7cb095e5149e
+  checksum: 10/62e48ffa4283b688f0049005405a004447ad38ffc99a0efea4c3aa9b7eed739f7402b43f00668c0ee5a895b684dc953d62f0722d8a92c5b2f6c95f051bceb208
   languageName: node
   linkType: hard
 
@@ -7296,10 +7338,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/arc": "npm:^18.7.14"
-    "@cratis/arc.react": "npm:^18.7.14"
-    "@cratis/arc.react.mvvm": "npm:^18.7.14"
-    "@cratis/arc.vite": "npm:^18.7.14"
+    "@cratis/arc": "npm:^18.7.21"
+    "@cratis/arc.react": "npm:^18.7.21"
+    "@cratis/arc.react.mvvm": "npm:^18.7.21"
+    "@cratis/arc.vite": "npm:^18.7.21"
     "@cratis/components": "npm:^0.1.10"
     "@monaco-editor/react": "npm:^4.7.0"
     "@tailwindcss/postcss": "npm:4.1.18"
@@ -7307,8 +7349,8 @@ __metadata:
     "@types/chai": "npm:5.2.3"
     "@types/chai-as-promised": "npm:8.0.2"
     "@types/mocha": "npm:10.0.10"
-    "@types/node": "npm:25.0.3"
-    "@types/react": "npm:19.2.7"
+    "@types/node": "npm:25.0.5"
+    "@types/react": "npm:19.2.8"
     "@types/react-dom": "npm:19.2.3"
     "@types/sinon": "npm:21.0.0"
     "@types/sinon-chai": "npm:4.0.0"
@@ -7338,7 +7380,7 @@ __metadata:
     react: "npm:19.2.3"
     react-dom: "npm:19.2.3"
     react-icons: "npm:^5.5.0"
-    react-router-dom: "npm:7.11.0"
+    react-router-dom: "npm:7.12.0"
     sinon: "npm:21.0.1"
     sinon-chai: "npm:4.0.1"
     tailwindcss: "npm:4.1.18"
@@ -7348,9 +7390,9 @@ __metadata:
     typescript: "npm:5.9.3"
     typescript-eslint: "npm:8.52.0"
     usehooks-ts: "npm:3.1.1"
-    vite: "npm:7.3.0"
+    vite: "npm:7.3.1"
     vite-plugin-commonjs: "npm:0.10.4"
-    vite-tsconfig-paths: "npm:6.0.3"
+    vite-tsconfig-paths: "npm:6.0.4"
     vitest: "npm:4.0.16"
   languageName: unknown
   linkType: soft
