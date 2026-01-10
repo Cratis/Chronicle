@@ -28,6 +28,6 @@ public class join_block : given.a_language_service_with_schemas<given.UserGroupR
     [Fact] void should_have_group_created_join() => _result.Join.ContainsKey((EventType)"GroupCreated").ShouldBeTrue();
     [Fact] void should_have_group_renamed_join() => _result.Join.ContainsKey((EventType)"GroupRenamed").ShouldBeTrue();
     [Fact] void should_have_join_on_group_id() => _result.Join[(EventType)"GroupCreated"].On.ShouldEqual(new PropertyPath("groupId"));
-    [Fact] void should_have_automap_enabled() => _result.Join[(EventType)"GroupCreated"].AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_have_automap_enabled() => _result.AutoMap.ShouldEqual(AutoMap.Enabled);
     [Fact] void should_have_same_on_property_for_second_event() => _result.Join[(EventType)"GroupRenamed"].On.ShouldEqual(new PropertyPath("groupId"));
 }

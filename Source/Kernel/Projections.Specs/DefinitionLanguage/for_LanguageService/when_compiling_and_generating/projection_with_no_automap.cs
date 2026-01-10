@@ -22,5 +22,5 @@ public class projection_with_no_automap : EventTypes.a_language_service_with_sch
     void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_from_hub_route_added() => _result.From.ContainsKey((EventType)"HubRouteAdded").ShouldBeTrue();
-    [Fact] void should_have_automap_disabled() => _result.From[(EventType)"HubRouteAdded"].AutoMap.ShouldEqual(AutoMap.Disabled);
+    [Fact] void should_have_automap_disabled() => _result.AutoMap.ShouldEqual(AutoMap.Disabled);
 }

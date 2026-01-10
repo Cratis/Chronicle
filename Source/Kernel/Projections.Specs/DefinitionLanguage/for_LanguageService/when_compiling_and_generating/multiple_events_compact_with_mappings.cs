@@ -28,9 +28,7 @@ public class multiple_events_compact_with_mappings : given.a_language_service_wi
     [Fact] void should_have_event_a_key() => _result.From[(EventType)"EventA"].Key.Value.ShouldEqual("keyA");
     [Fact] void should_have_event_b_key() => _result.From[(EventType)"EventB"].Key.Value.ShouldEqual("keyB");
     [Fact] void should_not_have_event_c_key() => _result.From[(EventType)"EventC"].Key.IsSet().ShouldBeFalse();
-    [Fact] void should_have_automap_on_event_a() => _result.From[(EventType)"EventA"].AutoMap.ShouldEqual(AutoMap.Enabled);
-    [Fact] void should_have_automap_on_event_b() => _result.From[(EventType)"EventB"].AutoMap.ShouldEqual(AutoMap.Enabled);
-    [Fact] void should_have_automap_on_event_c() => _result.From[(EventType)"EventC"].AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_have_automap_enabled() => _result.AutoMap.ShouldEqual(AutoMap.Enabled);
     [Fact] void should_have_shared_property_on_event_a() => _result.From[(EventType)"EventA"].Properties.ContainsKey(new PropertyPath("sharedProperty")).ShouldBeTrue();
     [Fact] void should_have_shared_property_on_event_b() => _result.From[(EventType)"EventB"].Properties.ContainsKey(new PropertyPath("sharedProperty")).ShouldBeTrue();
     [Fact] void should_have_shared_property_on_event_c() => _result.From[(EventType)"EventC"].Properties.ContainsKey(new PropertyPath("sharedProperty")).ShouldBeTrue();

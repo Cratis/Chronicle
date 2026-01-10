@@ -53,7 +53,9 @@ public class a_projections_manager : Specification
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
             null,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            null,
+            AutoMap.Enabled);
 
         _secondDefinition = new ProjectionDefinition(
             ProjectionOwner.Client,
@@ -71,7 +73,9 @@ public class a_projections_manager : Specification
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
             null,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            null,
+            AutoMap.Enabled);
 
         _firstReadModelDefinition = new ReadModelDefinition(
             "first-read-model",

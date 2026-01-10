@@ -24,9 +24,4 @@ public class FromDefinition
     /// Gets or sets the optional parent key expression, typically used in child relationships for identifying parent read model.
     /// </summary>
     public PropertyExpression? ParentKey { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether properties should be auto-mapped from events.
-    /// </summary>
-    public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Inherit;
 }

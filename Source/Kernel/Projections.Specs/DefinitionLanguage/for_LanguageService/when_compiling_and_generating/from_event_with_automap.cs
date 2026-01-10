@@ -22,7 +22,7 @@ public class from_event_with_automap : given.a_language_service_with_schemas<giv
     void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
-    [Fact] void should_have_automap_enabled() => _result.From[(EventType)"UserCreated"].AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_have_automap_enabled() => _result.AutoMap.ShouldEqual(AutoMap.Enabled);
     [Fact] void should_have_key() => _result.From[(EventType)"UserCreated"].Key.ShouldNotBeNull();
     [Fact] void should_have_key_value() => _result.From[(EventType)"UserCreated"].Key.Value.ShouldEqual("userId");
 }

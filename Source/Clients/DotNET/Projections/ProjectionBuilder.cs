@@ -112,7 +112,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
         var builder = new JoinBuilder<TReadModel, TEvent, TBuilder>(this, namingPolicy);
 
-        if (_autoMap == global::Cratis.Chronicle.Projections.AutoMap.Enabled)
+        if (_autoMap == Chronicle.Projections.AutoMap.Enabled)
         {
             builder.AutoMap();
         }

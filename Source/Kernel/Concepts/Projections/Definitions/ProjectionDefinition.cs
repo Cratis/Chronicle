@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
 /// <param name="Tags">Collection of tags the projection belongs to.</param>
+/// <param name="AutoMap">Whether properties should be auto-mapped from events at the projection level.</param>
 public record ProjectionDefinition(
     ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
@@ -46,7 +47,8 @@ public record ProjectionDefinition(
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,
     DateTimeOffset? LastUpdated = default,
-    IEnumerable<string>? Tags = default)
+    IEnumerable<string>? Tags = default,
+    AutoMap AutoMap = AutoMap.Enabled)
 {
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.

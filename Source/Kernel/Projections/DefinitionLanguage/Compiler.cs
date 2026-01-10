@@ -123,7 +123,9 @@ public class Compiler
             removedWith,
             removedWithJoin,
             FromEventProperty: null,
-            LastUpdated: DateTimeOffset.UtcNow);
+            LastUpdated: DateTimeOffset.UtcNow,
+            Tags: default,
+            AutoMap: _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled);
     }
 
     void ProcessDirective(
@@ -223,10 +225,7 @@ public class Compiler
             ProcessMappingOperation(operation, properties);
         }
 
-        from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression)
-        {
-            AutoMap = GetAutoMapValue(onEvent.AutoMap)
-        };
+        from[eventType] = new FromDefinition(properties, keyExpression, parentKeyExpression);
     }
 
     void ProcessChildrenBlock(
@@ -338,10 +337,7 @@ public class Compiler
             join[eventType] = new JoinDefinition(
                 new PropertyPath(joinBlock.OnProperty),
                 properties,
-                PropertyExpression.NotSet)
-            {
-                AutoMap = GetAutoMapValue(withBlock.AutoMap)
-            };
+                PropertyExpression.NotSet);
         }
     }
 
@@ -425,10 +421,7 @@ public class Compiler
             join[eventType] = new JoinDefinition(
                 new PropertyPath(joinBlock.OnProperty),
                 properties,
-                PropertyExpression.NotSet)
-            {
-                AutoMap = GetAutoMapValue(withBlock.AutoMap)
-            };
+                PropertyExpression.NotSet);
         }
     }
 

@@ -24,7 +24,7 @@ public class from_event_with_block_key : given.a_language_service_with_schemas<g
     void Because() => _result = CompileGenerateAndRecompile(Definition);
 
     [Fact] void should_have_from_user_assigned_to_group() => _result.From.ContainsKey((EventType)"UserAssignedToGroup").ShouldBeTrue();
-    [Fact] void should_have_automap_enabled() => _result.From[(EventType)"UserAssignedToGroup"].AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_have_automap_enabled() => _result.AutoMap.ShouldEqual(AutoMap.Enabled);
     [Fact] void should_have_key() => _result.From[(EventType)"UserAssignedToGroup"].Key.ShouldNotBeNull();
     [Fact] void should_have_key_value() => _result.From[(EventType)"UserAssignedToGroup"].Key.Value.ShouldEqual("userId");
     [Fact] void should_have_group_id_property() => _result.From[(EventType)"UserAssignedToGroup"].Properties.ContainsKey(new PropertyPath("groupId")).ShouldBeTrue();

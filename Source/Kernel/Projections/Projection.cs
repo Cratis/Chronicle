@@ -7,6 +7,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
@@ -33,6 +34,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> for the root read model.</param>
     /// <param name="readModelSchema">The target <see cref="JsonSchema"/> for the read model.</param>
     /// <param name="rewindable">Whether the projection is rewindable.</param>
+    /// <param name="autoMap">Whether properties should be auto-mapped from events at the projection level.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
         EventSequenceId eventSequenceId,
@@ -44,6 +46,7 @@ public class Projection : IProjection, IDisposable
         ReadModelDefinition readModel,
         JsonSchema readModelSchema,
         bool rewindable,
+        AutoMap autoMap,
         IEnumerable<IProjection> childProjections)
     {
         EventSequenceId = eventSequenceId;
@@ -52,6 +55,7 @@ public class Projection : IProjection, IDisposable
         ReadModel = readModel;
         TargetReadModelSchema = readModelSchema;
         IsRewindable = rewindable;
+        AutoMap = autoMap;
         Event = FilterEventTypes(_subject);
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
@@ -85,6 +89,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public bool IsRewindable { get; }
+
+    /// <inheritdoc/>
+    public AutoMap AutoMap { get; }
 
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> Event { get; }

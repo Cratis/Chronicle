@@ -26,10 +26,4 @@ public class JoinDefinition
     /// </summary>
     [ProtoMember(3)]
     public string Key { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether properties should be auto-mapped from events.
-    /// </summary>
-    [ProtoMember(4)]
-    public AutoMap AutoMap { get; set; }
 }

@@ -35,10 +35,10 @@ public class DeclarativeCodeGenerator
         var lines = new List<string>();
 
         // Generate From blocks
-        GenerateFromBlocks(definition.From, lines, 8);
+        GenerateFromBlocks(definition.From, definition.AutoMap, lines, 8);
 
         // Generate Join blocks
-        GenerateJoinBlocks(definition.Join, lines, 8);
+        GenerateJoinBlocks(definition.Join, definition.AutoMap, lines, 8);
 
         // Generate Children blocks
         GenerateChildrenBlocks(definition.Children, lines, 8);
@@ -95,7 +95,7 @@ public class DeclarativeCodeGenerator
         return $"To({ConvertExpression(expression)})";
     }
 
-    void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, List<string> lines, int indent)
+    void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, AutoMap autoMap, List<string> lines, int indent)
     {
         var indentStr = new string(' ', indent);
 
@@ -106,7 +106,7 @@ public class DeclarativeCodeGenerator
             var hasKey = fromDef.Key is not null && !string.IsNullOrEmpty(fromDef.Key.Value);
             var hasParentKey = fromDef.ParentKey is not null && !string.IsNullOrEmpty(fromDef.ParentKey);
             var hasProperties = fromDef.Properties.Count > 0;
-            var needsLambda = hasKey || hasParentKey || hasProperties || fromDef.AutoMap == AutoMap.Disabled;
+            var needsLambda = hasKey || hasParentKey || hasProperties || autoMap == AutoMap.Disabled;
 
             if (!needsLambda)
             {
@@ -238,7 +238,7 @@ public class DeclarativeCodeGenerator
         return $"{indentStr}    .UsingParentKey({ConvertExpression(keyExpression)})";
     }
 
-    void GenerateJoinBlocks(IDictionary<EventType, JoinDefinition> joinBlocks, List<string> lines, int indent)
+    void GenerateJoinBlocks(IDictionary<EventType, JoinDefinition> joinBlocks, AutoMap autoMap, List<string> lines, int indent)
     {
         var indentStr = new string(' ', indent);
 
@@ -247,7 +247,7 @@ public class DeclarativeCodeGenerator
             var eventTypeName = join.Key.Id.Value;
             var joinDef = join.Value;
 
-            if (joinDef.Properties.Count == 0 && joinDef.AutoMap != AutoMap.Disabled)
+            if (joinDef.Properties.Count == 0 && autoMap != AutoMap.Disabled)
             {
                 lines.Add($"{indentStr}.Join<{eventTypeName}>(j => j.On(m => m.{joinDef.On}))");
             }
@@ -291,13 +291,13 @@ public class DeclarativeCodeGenerator
             // Generate child From blocks
             if (childDef.From.Count > 0)
             {
-                GenerateFromBlocks(childDef.From, lines, indent + 4);
+                GenerateFromBlocks(childDef.From, childDef.AutoMap, lines, indent + 4);
             }
 
             // Generate child Join blocks
             if (childDef.Join.Count > 0)
             {
-                GenerateJoinBlocks(childDef.Join, lines, indent + 4);
+                GenerateJoinBlocks(childDef.Join, childDef.AutoMap, lines, indent + 4);
             }
 
             // Generate nested children

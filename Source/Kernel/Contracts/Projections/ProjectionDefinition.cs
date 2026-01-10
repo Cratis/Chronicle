@@ -106,4 +106,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(16, IsRequired = true)]
     public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events at the projection level.
+    /// </summary>
+    [ProtoMember(17)]
+    public AutoMap AutoMap { get; set; }
 }

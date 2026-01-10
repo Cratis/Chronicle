@@ -33,6 +33,19 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(1)}sequence {definition.EventSequenceId.Value}");
         }
 
+        // NoAutoMap directive at projection level - only output if disabled (since Disabled is the default)
+        // Do NOT output anything if AutoMap is enabled, as we want to show explicit mappings
+        if (definition.AutoMap == AutoMap.Disabled)
+        {
+            // Only output if there are property mappings that would otherwise be auto-mapped
+            var hasAnyPropertyMappings = definition.From.Values.Any(f => f.Properties.Count > 0) ||
+                                       definition.Join.Values.Any(j => j.Properties.Count > 0);
+            if (!hasAnyPropertyMappings)
+            {
+                sb.AppendLine($"{Indent(1)}no automap");
+            }
+        }
+
         // FromEvery block - only output if it has meaningful content
         // Don't output if it only has 'exclude children' directive without any other content
         var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Disabled;
@@ -45,7 +58,7 @@ public class Generator : IGenerator
         // On event blocks
         foreach (var kv in definition.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, definition.AutoMap, 1);
         }
 
         // Join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -53,13 +66,13 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, definition.AutoMap, 1);
         }
 
         // Children blocks
         foreach (var kv in definition.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, 1);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, definition.AutoMap, 1);
         }
 
         // RemovedWith blocks
@@ -102,8 +115,12 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
+    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, AutoMap parentAutoMap, int indent)
     {
+        // Determine the effective AutoMap setting for this from block
+        // If parent has AutoMap enabled, this from block inherits it unless explicitly disabled
+        var effectiveAutoMap = parentAutoMap == AutoMap.Enabled ? AutoMap.Enabled : AutoMap.Disabled;
+
         // Determine if we should use inline key syntax or block key syntax
         // Use inline syntax for simple keys when there are no other inline options (like automap)
         // Use block syntax for composite keys or when other content exists
@@ -155,21 +172,24 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
 
-        // NoAutoMap directive - only output if disabled (since enabled is now the default)
-        if (from.AutoMap == AutoMap.Disabled)
+        // Only generate property mappings if AutoMap is NOT enabled
+        // When AutoMap is enabled, properties are auto-mapped and should not be explicitly listed
+        if (effectiveAutoMap != AutoMap.Enabled)
         {
-            sb.AppendLine($"{Indent(indent + 1)}no automap");
-        }
-
-        // Property mappings
-        foreach (var kv in from.Properties)
-        {
-            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
+            // Property mappings
+            foreach (var kv in from.Properties)
+            {
+                GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
+            }
         }
     }
 
-    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, int indent)
+    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, AutoMap parentAutoMap, int indent)
     {
+        // Determine the effective AutoMap setting for join blocks
+        // If parent has AutoMap enabled, join blocks inherit it unless explicitly disabled
+        var effectiveAutoMap = parentAutoMap == AutoMap.Enabled ? AutoMap.Enabled : AutoMap.Disabled;
+
         sb.AppendLine($"{Indent(indent)}join {joinName} on {onProperty}");
 
         foreach (var kv in joins)
@@ -179,31 +199,35 @@ public class Generator : IGenerator
 
             sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
 
-            // NoAutoMap directive - only output if disabled (since Inherit is default)
-            if (join.AutoMap == AutoMap.Disabled)
+            // Only generate property mappings if AutoMap is NOT enabled
+            // When AutoMap is enabled, properties are auto-mapped and should not be explicitly listed
+            if (effectiveAutoMap != AutoMap.Enabled)
             {
-                sb.AppendLine($"{Indent(indent + 2)}no automap");
-            }
-            else if (join.AutoMap == AutoMap.Enabled)
-            {
-                sb.AppendLine($"{Indent(indent + 2)}automap");
-            }
-
-            foreach (var prop in join.Properties)
-            {
-                GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
+                foreach (var prop in join.Properties)
+                {
+                    GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
+                }
             }
         }
     }
 
-    void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, int indent)
+    void GenerateChildrenBlock(StringBuilder sb, PropertyPath collectionName, ChildrenDefinition children, AutoMap parentAutoMap, int indent)
     {
+        // Determine the effective AutoMap for this children block
+        // If the children block has AutoMap set to Inherit, use the parent's setting
+        // Otherwise use the children's own AutoMap setting
+        var effectiveAutoMap = children.AutoMap == AutoMap.Inherit ? parentAutoMap : children.AutoMap;
+
         sb.AppendLine($"{Indent(indent)}children {collectionName.Path} identified by {children.IdentifiedBy.Path}");
 
-        // NoAutoMap directive - only output if disabled (since enabled is now the default)
-        if (children.AutoMap == AutoMap.Disabled)
+        // NoAutoMap directive - only output if disabled and different from parent
+        if (effectiveAutoMap == AutoMap.Disabled && parentAutoMap != AutoMap.Disabled)
         {
             sb.AppendLine($"{Indent(indent + 1)}no automap");
+        }
+        else if (effectiveAutoMap == AutoMap.Enabled && parentAutoMap != AutoMap.Enabled)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}automap");
         }
 
         // FromEvery for children
@@ -215,7 +239,7 @@ public class Generator : IGenerator
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, effectiveAutoMap, indent + 1);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -223,13 +247,13 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, indent + 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, effectiveAutoMap, indent + 1);
         }
 
         // Nested children
         foreach (var kv in children.Children)
         {
-            GenerateChildrenBlock(sb, kv.Key, kv.Value, indent + 1);
+            GenerateChildrenBlock(sb, kv.Key, kv.Value, effectiveAutoMap, indent + 1);
         }
 
         // RemovedWith blocks

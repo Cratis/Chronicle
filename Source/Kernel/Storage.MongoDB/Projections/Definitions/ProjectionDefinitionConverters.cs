@@ -46,7 +46,8 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Value.ToKernel()),
             source.FromEventProperty?.ToKernel(),
             source.LastUpdated,
-            source.Tags
+            source.Tags,
+            source.AutoMap
         );
 
     /// <summary>
@@ -83,6 +84,7 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Value.ToMongoDB()),
             FromEventProperty = source.FromEventProperty?.ToMongoDB(),
             LastUpdated = source.LastUpdated,
-            Tags = source.Tags ?? []
+            Tags = source.Tags ?? [],
+            AutoMap = source.AutoMap
         };
 }

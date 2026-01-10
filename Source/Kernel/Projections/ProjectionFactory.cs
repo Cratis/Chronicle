@@ -235,6 +235,7 @@ public class ProjectionFactory(
             rootReadModel,
             currentReadModelSchema,
             projectionDefinition.IsRewindable,
+            projectionDefinition.AutoMap,
             childProjections);
 
         // Set parent relationships immediately after creation
@@ -366,8 +367,8 @@ public class ProjectionFactory(
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
-            // Auto-expand matching properties if AutoMap is enabled
-            if (joinDefinition.AutoMap == AutoMap.Enabled)
+            // Auto-expand matching properties if AutoMap is enabled at the projection level
+            if (projection.AutoMap == AutoMap.Enabled)
             {
                 var eventSchema = eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema;
 
@@ -424,8 +425,8 @@ public class ProjectionFactory(
         JsonSchema currentReadModelSchema,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        // Auto-expand matching properties if AutoMap is enabled
-        if (fromDefinition.AutoMap == AutoMap.Enabled)
+        // Auto-expand matching properties if AutoMap is enabled at the projection level
+        if (projection.AutoMap == AutoMap.Enabled)
         {
             var eventSchema = eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema;
 

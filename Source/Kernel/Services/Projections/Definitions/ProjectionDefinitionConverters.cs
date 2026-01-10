@@ -38,7 +38,8 @@ internal static class ProjectionDefinitionConverters
             FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
             RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             RemovedWithJoin = definition.RemovedWithJoin.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
-            LastUpdated = definition.LastUpdated ?? null!
+            LastUpdated = definition.LastUpdated ?? null!,
+            AutoMap = (Contracts.Projections.AutoMap)definition.AutoMap
         };
     }
 
@@ -66,7 +67,8 @@ internal static class ProjectionDefinitionConverters
             contract.RemovedWith.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.RemovedWithJoin.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.FromEventProperty?.ToChronicle() ?? null!,
-            contract.LastUpdated ?? null!
+            contract.LastUpdated ?? null!,
+            AutoMap: (AutoMap)contract.AutoMap
         );
     }
 }

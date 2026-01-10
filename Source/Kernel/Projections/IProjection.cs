@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
@@ -70,6 +71,11 @@ public interface IProjection
     /// Gets whether or not the projection is rewindable.
     /// </summary>
     bool IsRewindable { get; }
+
+    /// <summary>
+    /// Gets whether properties should be auto-mapped from events at the projection level.
+    /// </summary>
+    AutoMap AutoMap { get; }
 
     /// <summary>
     /// Gets the <see cref="IObservable{T}">observable</see> <see cref="ProjectionEventContext">event</see>.

@@ -47,7 +47,6 @@ static class FromDefinitionExtensions
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
         var eventPropertyPath = new PropertyPath(eventPropertyName);
         fromDefinition.Properties[propertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
-        fromDefinition.AutoMap = (Contracts.Projections.AutoMap)autoMap;
 
         if (!string.IsNullOrEmpty(key))
         {
@@ -188,8 +187,7 @@ static class FromDefinitionExtensions
             fromDefinition = new FromDefinition
             {
                 Key = WellKnownExpressions.EventSourceId,
-                Properties = new Dictionary<string, string>(),
-                AutoMap = (Contracts.Projections.AutoMap)AutoMap.Enabled
+                Properties = new Dictionary<string, string>()
             };
             targetFrom[eventTypeId] = fromDefinition;
         }
