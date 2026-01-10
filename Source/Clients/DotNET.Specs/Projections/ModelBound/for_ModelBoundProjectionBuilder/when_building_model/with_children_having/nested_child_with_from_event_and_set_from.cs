@@ -74,6 +74,7 @@ public class nested_child_with_from_event_and_set_from : given.a_model_bound_pro
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
         var routeChildren = warehouseChildren.Children[nameof(Warehouse.Routes)];
         var fromDef = routeChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
+
         // Auto-mapped properties should not be in client-side Properties
         fromDef.Properties.Keys.ShouldNotContain(nameof(Route.Name));
     }
