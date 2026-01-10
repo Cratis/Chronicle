@@ -40,8 +40,7 @@ static class FromDefinitionExtensions
     /// <param name="propertyName">The property name on the projection model.</param>
     /// <param name="eventPropertyName">The property name on the event.</param>
     /// <param name="key">Optional key expression to use for identifying the model instance.</param>
-    /// <param name="autoMap">The auto mapping behavior. Defaults to Enabled.</param>
-    internal static void AddSetMappingWithKey(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string eventPropertyName, string? key, AutoMap autoMap = AutoMap.Enabled)
+    internal static void AddSetMappingWithKey(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string eventPropertyName, string? key)
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
