@@ -10,7 +10,8 @@
 }
 
 .leftSide {
-    flex: 0 0 var(--sidebar-width);
+    flex: 1;
+    min-width: 0;
 }
 
 .sidebarToggle {
