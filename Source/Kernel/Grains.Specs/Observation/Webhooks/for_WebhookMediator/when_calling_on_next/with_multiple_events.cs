@@ -41,6 +41,7 @@ public class with_multiple_events : given.a_webhook_mediator
                     EventStreamId.Default,
                     (ulong)i,
                     CorrelationId.NotSet,
+                    tags: null,
                     DateTimeOffset.UtcNow),
                 content))
             .ToArray();

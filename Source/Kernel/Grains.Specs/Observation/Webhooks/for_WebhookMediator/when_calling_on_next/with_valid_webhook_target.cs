@@ -40,6 +40,7 @@ public class with_valid_webhook_target : given.a_webhook_mediator
                 EventStreamId.Default,
                 0,
                 CorrelationId.NotSet,
+                tags: null,
                 DateTimeOffset.UtcNow),
             content)];
 
