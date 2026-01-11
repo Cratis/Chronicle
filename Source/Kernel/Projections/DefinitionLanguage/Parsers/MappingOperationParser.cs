@@ -24,9 +24,9 @@ public class MappingOperationParser
         {
             var token = context.Current;
             context.Advance();
-            var propToken = context.Expect(TokenType.Identifier);
-            if (propToken is null) return null;
-            return new IncrementOperation(propToken.Value)
+            var propPath = ParsePropertyPath(context);
+            if (propPath is null) return null;
+            return new IncrementOperation(propPath)
             {
                 Line = token.Line,
                 Column = token.Column
@@ -37,9 +37,9 @@ public class MappingOperationParser
         {
             var token = context.Current;
             context.Advance();
-            var propToken = context.Expect(TokenType.Identifier);
-            if (propToken is null) return null;
-            return new DecrementOperation(propToken.Value)
+            var propPath = ParsePropertyPath(context);
+            if (propPath is null) return null;
+            return new DecrementOperation(propPath)
             {
                 Line = token.Line,
                 Column = token.Column
@@ -50,9 +50,9 @@ public class MappingOperationParser
         {
             var token = context.Current;
             context.Advance();
-            var propToken = context.Expect(TokenType.Identifier);
-            if (propToken is null) return null;
-            return new CountOperation(propToken.Value)
+            var propPath = ParsePropertyPath(context);
+            if (propPath is null) return null;
+            return new CountOperation(propPath)
             {
                 Line = token.Line,
                 Column = token.Column
@@ -114,5 +114,47 @@ public class MappingOperationParser
 
         context.ReportError("Expected mapping operation");
         return null;
+    }
+
+    string? ParsePropertyPath(IParsingContext context)
+    {
+        var propToken = context.Expect(TokenType.Identifier);
+        if (propToken is null) return null;
+
+        var propertyPath = propToken.Value;
+
+        // Check for dynamic dictionary key expression like: theDictionary.$eventContext.type.id
+        while (context.Check(TokenType.Dot))
+        {
+            context.Advance(); // Skip dot
+
+            // Check if next token is a $ (expression)
+            if (context.Check(TokenType.Dollar))
+            {
+                context.Advance(); // Skip $
+                var nameToken = context.Expect(TokenType.Identifier);
+                if (nameToken is null) return null;
+
+                propertyPath += ".$" + nameToken.Value;
+
+                // Continue building the expression path
+                while (context.Check(TokenType.Dot))
+                {
+                    context.Advance();
+                    var nextToken = context.Expect(TokenType.Identifier);
+                    if (nextToken is null) return null;
+                    propertyPath += "." + nextToken.Value;
+                }
+            }
+            else
+            {
+                // Regular property path
+                var nextToken = context.Expect(TokenType.Identifier);
+                if (nextToken is null) return null;
+                propertyPath += "." + nextToken.Value;
+            }
+        }
+
+        return propertyPath;
     }
 }
