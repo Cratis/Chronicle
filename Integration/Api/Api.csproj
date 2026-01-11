@@ -13,12 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="chronicle.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Cratis.Arc.Swagger" />

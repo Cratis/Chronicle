@@ -1,5 +1,0 @@
-{
-    "Chronicle": {
-        "ConnectionString": "chronicle://localhost:35001?disableTls=true"
-    }
-}

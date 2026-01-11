@@ -9,6 +9,9 @@ public class an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) 
 
     void Establish()
     {
-        Client = CreateClient();
+        Client = CreateClient(new()
+        {
+            BaseAddress = new("http://localhost:8080")
+        });
     }
 }
