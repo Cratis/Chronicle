@@ -83,6 +83,7 @@ export const configuration: languages.LanguageConfiguration = {
             end: /^\s*$/,
         },
     },
+    wordPattern: /@?[a-zA-Z_$][\w$]*/,
 };
 
 export const monarchLanguage: languages.IMonarchLanguage = {
@@ -105,9 +106,23 @@ export const monarchLanguage: languages.IMonarchLanguage = {
             // Template strings with ${...} interpolation
             [/`/, { token: 'string.template', next: '@templateString' }],
 
-            // Identifiers and keywords
+            // Escaped identifiers (@ prefix allows using keywords as identifiers)
+            [/@[a-zA-Z_$][\w$]*/, 'identifier.escape'],
+
+            // Check for uppercase keywords (error case - keywords must be lowercase)
             [
-                /[a-zA-Z_$][\w$]*/,
+                /[A-Z][a-zA-Z_$][\w$]*/,
+                {
+                    cases: {
+                        '@keywords': 'invalid',
+                        '@default': 'identifier',
+                    },
+                },
+            ],
+
+            // Identifiers and keywords (lowercase only for keywords)
+            [
+                /[a-z_$][\w$]*/,
                 {
                     cases: {
                         '@keywords': 'keyword',
