@@ -296,6 +296,12 @@ internal class ModelBoundProjectionBuilder(
         {
             _fromEveryAttributes.Add((propertyName, fromEveryAttr));
         }
+
+        var fromAllAttr = parameter.GetCustomAttribute<FromAllAttribute>();
+        if (fromAllAttr is not null)
+        {
+            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(fromAllAttr.ContextProperty, fromAllAttr.Property)));
+        }
     }
 
     void ProcessMember(
@@ -407,6 +413,12 @@ internal class ModelBoundProjectionBuilder(
         if (fromEveryAttr is not null)
         {
             _fromEveryAttributes.Add((propertyName, fromEveryAttr));
+        }
+
+        var fromAllAttr = property.GetCustomAttribute<FromAllAttribute>();
+        if (fromAllAttr is not null)
+        {
+            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(fromAllAttr.ContextProperty, fromAllAttr.Property)));
         }
     }
 }
