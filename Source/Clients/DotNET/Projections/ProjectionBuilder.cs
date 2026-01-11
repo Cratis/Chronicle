@@ -128,6 +128,20 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     }
 
     /// <inheritdoc/>
+    public TBuilder FromAll(Action<IFromAllBuilder<TReadModel>> builderCallback)
+    {
+        var builder = new FromAllBuilder<TReadModel>(namingPolicy);
+        builderCallback(builder);
+        var fromAllDefinition = builder.Build();
+        _fromEveryDefinition = new FromEveryDefinition
+        {
+            Properties = new Dictionary<string, string>(_fromEveryDefinition.Properties.Concat(fromAllDefinition.Properties)),
+            IncludeChildren = fromAllDefinition.IncludeChildren
+        };
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
     public TBuilder RemovedWith<TEvent>(Action<RemovedWithBuilder<TReadModel, TEvent>>? builderCallback = default)
     {
         var type = typeof(TEvent);
