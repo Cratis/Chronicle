@@ -67,3 +67,10 @@ public record OrderKey(string CustomerId, string OrderNumber);
 public record OrderReadModel(string Id, decimal Total, OrderKey? OrderKey);
 
 public record Users(string Name);
+
+public record ModelWithKeywordProperties(
+    string From,
+    string Projection,
+    string Key,
+    string Join,
+    string Children);

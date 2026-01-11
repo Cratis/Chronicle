@@ -73,6 +73,13 @@ public record UserActivated(string UserId);
 
 public record UserRegistered(string UserId, string Name);
 
+public record UserRegisteredWithKeywordValues(
+    string From,
+    string Projection,
+    string Key,
+    string Join,
+    string Children);
+
 public record UserRemovedFromGroup(string UserId, string GroupId);
 
 public record UserDeleted(string UserId);

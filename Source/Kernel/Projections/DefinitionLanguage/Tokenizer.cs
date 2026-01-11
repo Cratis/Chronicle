@@ -11,37 +11,6 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 /// </summary>
 public class Tokenizer
 {
-    static readonly Dictionary<string, TokenType> _keywords = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "projection", TokenType.Projection },
-        { "sequence", TokenType.Sequence },
-        { "every", TokenType.Every },
-        { "from", TokenType.From },
-        { "key", TokenType.Key },
-        { "parent", TokenType.Parent },
-        { "on", TokenType.On },
-        { "with", TokenType.With },
-        { "join", TokenType.Join },
-        { "events", TokenType.Events },
-        { "children", TokenType.Children },
-        { "id", TokenType.Id },
-        { "identified", TokenType.Identified },
-        { "remove", TokenType.Remove },
-        { "via", TokenType.Via },
-        { "automap", TokenType.AutoMap },
-        { "no", TokenType.No },
-        { "exclude", TokenType.Exclude },
-        { "increment", TokenType.Increment },
-        { "decrement", TokenType.Decrement },
-        { "count", TokenType.Count },
-        { "add", TokenType.Add },
-        { "subtract", TokenType.Subtract },
-        { "by", TokenType.By },
-        { "true", TokenType.True },
-        { "false", TokenType.False },
-        { "null", TokenType.Null }
-    };
-
     readonly string _input;
     readonly Stack<int> _indentStack = new();
     readonly Queue<Token> _pendingDedents = new();
@@ -185,6 +154,10 @@ public class Tokenizer
             case '$':
                 Advance();
                 return new Token(TokenType.Dollar, "$", line, column);
+
+            case '@':
+                Advance();
+                return ScanEscapedIdentifier(line, column);
         }
 
         // Identifier or keyword
@@ -276,7 +249,7 @@ public class Tokenizer
 
         var value = sb.ToString();
 
-        if (_keywords.TryGetValue(value, out var tokenType))
+        if (Keywords.TokenMapping.TryGetValue(value, out var tokenType))
         {
             return new Token(tokenType, value, line, column);
         }
@@ -362,6 +335,24 @@ public class Tokenizer
         }
 
         return new Token(TokenType.NumberLiteral, sb.ToString(), line, column);
+    }
+
+    Token ScanEscapedIdentifier(int line, int column)
+    {
+        var sb = new StringBuilder();
+
+        // @ was already consumed, now scan the identifier
+        while (_position < _input.Length &&
+               (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
+        {
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        var value = sb.ToString();
+
+        // Escaped identifiers are always returned as identifiers, even if they match keywords
+        return new Token(TokenType.Identifier, value, line, column);
     }
 
     void SkipComment()

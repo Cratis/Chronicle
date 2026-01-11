@@ -107,6 +107,10 @@ public class Compiler
             ProcessDirective(directive, from, join, children, removedWith, removedWithJoin, ref fromEvery);
         }
 
+        // Also check if any from blocks have AutoMap disabled - if so, disable for entire projection
+        var hasAnyFromBlockWithDisabledAutoMap = projection.Directives.OfType<FromEventBlock>().Any(f => f.AutoMap == AutoMap.Disabled) ||
+                                                  projection.Directives.OfType<MultiFromEventBlock>().Any(m => m.Blocks.Any(b => b.AutoMap == AutoMap.Disabled));
+
         return new ProjectionDefinition(
             owner,
             eventSequenceId,
@@ -125,7 +129,7 @@ public class Compiler
             FromEventProperty: null,
             LastUpdated: DateTimeOffset.UtcNow,
             Tags: default,
-            AutoMap: _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled);
+            AutoMap: _hasNoAutoMapDirective || hasAnyFromBlockWithDisabledAutoMap ? AutoMap.Disabled : AutoMap.Enabled);
     }
 
     void ProcessDirective(
