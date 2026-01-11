@@ -33,7 +33,7 @@ const dimensions: PivotDimension<AppendedEvent>[] = [
     {
         key: 'timeline-hour',
         label: 'Occurred (Hour)',
-        getValue: (item) => hourBucket(item.context.occurred.toLocaleDateString()),
+        getValue: (item) => hourBucket(item.context.occurred.toISOString()),
         formatValue: (value) => {
             if (typeof value !== 'string') {
                 return 'Unknown';
@@ -123,10 +123,10 @@ export const Pivot = () => {
                     filters={filters}
                     defaultDimensionKey="type"
                     cardRenderer={cardRenderer}
-                    getItemId={(item) => item.context.sequenceNumber}
+                    getItemId={(item) => String(item.context.sequenceNumber)}
                     searchFields={[
-                        // 'context.eventType.id',
-                        // 'context.correlationId'
+                        (_) => _.context.eventType.id,
+                        (_) => _.context.correlationId.toString()
                     ]}
                     emptyContent={<span>No events match the current filters.</span>}
                     isLoading={events.isPerforming}
