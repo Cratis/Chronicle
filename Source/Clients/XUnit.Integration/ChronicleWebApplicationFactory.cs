@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
@@ -27,7 +27,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
                 void OptionsConfigurator(ChronicleOptions options)
                 {
                     options.ArtifactsProvider = fixture;
-                    options.ConnectionString = "chronicle://localhost:35001";
+                    options.ConnectionString = "chronicle://localhost:35001?disableTls=true";
                 }
 
                 services.Configure<ChronicleAspNetCoreOptions>(OptionsConfigurator);

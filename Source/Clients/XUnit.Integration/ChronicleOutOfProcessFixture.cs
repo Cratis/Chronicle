@@ -30,6 +30,7 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             // For some reason, this makes the container crash every time
             // .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
+            .WithEnvironment("Cratis__Chronicle__Authentication__Enabled", "false")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)

@@ -62,18 +62,18 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<User>> GetAll()
+    public async Task<UsersResponse> GetAll()
     {
         var users = await storage.System.Users.GetAll();
-        return users.Select(ToContract);
+        return new UsersResponse { Users = users.Select(ToContract).ToList() };
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<User>> ObserveAll(CallContext context = default) =>
+    public IObservable<UsersResponse> ObserveAll(CallContext context = default) =>
         storage.System.Users
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
-            .Select(users => users.Select(ToContract).ToArray());
+            .Select(users => new UsersResponse { Users = users.Select(ToContract).ToList() });
 
     static User ToContract(ChronicleUser user) => new()
     {

@@ -5,13 +5,10 @@ namespace Cratis.Chronicle.Integration.Api.given;
 
 public class an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) : Specification(fixture)
 {
-    protected HttpClient Client { get; private set; }
+    protected HttpClient Client { get; private set; } = null!;
 
     void Establish()
     {
-        Client = CreateClient(new()
-        {
-            BaseAddress = new("http://localhost:8080")
-        });
+        Client = CreateClient();
     }
 }
