@@ -5,9 +5,15 @@ import { PivotDimension, PivotFilter, PivotViewer } from '@cratis/components/Piv
 import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
+import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
+import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
+import { QueryResultWithState } from '@cratis/arc/queries';
+import { getThemeColors, type ThemeColors } from 'Utilities/ThemeColors';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
@@ -102,9 +108,40 @@ const cardRenderer = (event: AppendedEvent) => {
     );
 };
 
+const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeRegistration[]>, onClose: () => void) => {
+    const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === event.context.eventType.id);
+    const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
+
+    return (
+        <div style={{ padding: '20px', height: '100%', overflow: 'auto' }}>
+            <button
+                onClick={onClose}
+                style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    color: 'var(--text-color-secondary)',
+                }}
+            >
+                ✕
+            </button>
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--text-color)' }}>{event.context.eventType.id}</h2>
+            <ObjectContentViewer object={event.content} schema={schema} />
+        </div>
+    );
+};
 
 export const Pivot = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [themeColors, setThemeColors] = useState<Partial<ThemeColors>>({});
+
+    useEffect(() => {
+        setThemeColors(getThemeColors());
+    }, []);
 
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
@@ -113,6 +150,7 @@ export const Pivot = () => {
     };
 
     const [events] = AppendedEvents.use(queryArgs);
+    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
 
     return (
         <Page title={strings.mainMenu.pivot}>
@@ -123,11 +161,13 @@ export const Pivot = () => {
                     filters={filters}
                     defaultDimensionKey="type"
                     cardRenderer={cardRenderer}
+                    detailRenderer={(item, onClose) => detailRenderer(item, eventTypes, onClose)}
                     getItemId={(item) => String(item.context.sequenceNumber)}
                     searchFields={[
                         (_) => _.context.eventType.id,
                         (_) => _.context.correlationId.toString()
                     ]}
+                    colors={themeColors}
                     className="flex-1 min-h-0"
                     emptyContent={<span>No events match the current filters.</span>}
                     isLoading={events.isPerforming}
