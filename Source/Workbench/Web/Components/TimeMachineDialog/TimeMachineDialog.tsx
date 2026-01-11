@@ -9,7 +9,7 @@ import { AllSnapshotsForReadModel } from 'Api/ReadModels/AllSnapshotsForReadMode
 import { EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
-import { ReadModelContent } from 'Features/EventStore/Namespaces/ReadModels/ReadModelContent';
+import { ObjectContentViewer } from 'Components/ObjectContentViewer';
 
 export interface TimeMachineDialogProps {
     readModel: ReadModelDefinition;
@@ -45,11 +45,12 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
                 }));
                 console.log(mappedEvents);
 
+                const schema = JSON.parse(readModel.schema);
                 return {
                     id: `snapshot-${index}`,
                     timestamp,
                     label: `${readModel.identifier} @ ${snapshot.occurred.toLocaleString()}`,
-                    content: <ReadModelContent readModel={snapshot.instance} timestamp={timestamp} readModelDefinition={readModel} />,
+                    content: <ObjectContentViewer object={snapshot.instance} timestamp={timestamp} schema={schema} />,
                     events: mappedEvents,
                 };
             });
