@@ -142,7 +142,7 @@ public partial class Observer(
             subscriberArgs,
             isReplayable);
 
-        State.SubscribesToAllEvents = false;
+        State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())
@@ -187,7 +187,7 @@ public partial class Observer(
             subscriberArgs,
             isReplayable);
 
-        State.SubscribesToAllEvents = true;
+        State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())
