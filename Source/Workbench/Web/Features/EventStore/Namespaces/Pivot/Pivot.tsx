@@ -153,7 +153,7 @@ export const Pivot = () => {
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
 
     return (
-        <Page title={strings.mainMenu.pivot}>
+        <Page title={strings.mainMenu.pivot} noBackground noPadding>
             <div className="p-4 h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
                     data={events.data}

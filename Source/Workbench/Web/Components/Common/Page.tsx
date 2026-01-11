@@ -8,6 +8,7 @@ export interface PageProps extends HTMLAttributes<HTMLDivElement> {
     title: string;
     children?: ReactNode;
     noBackground?: boolean;
+    noPadding?: boolean;
 }
 
 export const Page = ({ title, children, noBackground, ...rest }: PageProps) => {
@@ -18,7 +19,7 @@ export const Page = ({ title, children, noBackground, ...rest }: PageProps) => {
     }, [title, setPageTitle]);
 
     return (
-        <div className='px-6 py-4 flex flex-col h-full' {...rest}>
+        <div className={`flex flex-col h-full${rest.noPadding ? '' : ' px-6 py-4'}`} {...rest}>
             <main className={`${noBackground ? '' : 'panel'} overflow-hidden h-full flex flex-col flex-1`}>
                 {children}
             </main>
