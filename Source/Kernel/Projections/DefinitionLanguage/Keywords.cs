@@ -20,7 +20,7 @@ public static class Keywords
 
     static Keywords()
     {
-        TokenMapping = new Dictionary<string, TokenType>(StringComparer.OrdinalIgnoreCase)
+        TokenMapping = new Dictionary<string, TokenType>(StringComparer.Ordinal)
         {
             { "projection", TokenType.Projection },
             { "sequence", TokenType.Sequence },
@@ -51,6 +51,6 @@ public static class Keywords
             { "null", TokenType.Null }
         };
 
-        All = new HashSet<string>(TokenMapping.Keys, StringComparer.OrdinalIgnoreCase);
+        All = new HashSet<string>(TokenMapping.Keys, StringComparer.Ordinal);
     }
 }

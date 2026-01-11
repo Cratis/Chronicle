@@ -88,9 +88,9 @@ public class Generator : IGenerator
 
     static string EscapeIfKeyword(string identifier)
     {
-        // Check if the identifier is a keyword (case-insensitive)
-        // If it is, prefix it with @ to escape it
-        return Keywords.All.Contains(identifier) ? $"@{identifier}" : identifier;
+        // Keywords are now case-sensitive and must be lowercase (enforced in tokenizer)
+        // So we don't need to escape any identifiers since uppercase versions are not keywords
+        return identifier;
     }
 
     void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)

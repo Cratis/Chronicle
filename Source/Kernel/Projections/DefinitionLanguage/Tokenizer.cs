@@ -249,9 +249,17 @@ public class Tokenizer
 
         var value = sb.ToString();
 
-        if (Keywords.TokenMapping.TryGetValue(value, out var tokenType))
+        // Check if this is a keyword (case-insensitive check first)
+        var lowerValue = value.ToLowerInvariant();
+        if (Keywords.TokenMapping.TryGetValue(lowerValue, out var tokenType))
         {
-            return new Token(tokenType, value, line, column);
+            // If the value doesn't match the exact lowercase keyword, it's an error
+            if (value != lowerValue)
+            {
+                _errors.Add($"Keyword '{lowerValue}' must be lowercase, not '{value}'", line, column);
+                // Still tokenize it as a keyword to allow parsing to continue, but log the error
+            }
+            return new Token(tokenType, lowerValue, line, column);
         }
 
         return new Token(TokenType.Identifier, value, line, column);
