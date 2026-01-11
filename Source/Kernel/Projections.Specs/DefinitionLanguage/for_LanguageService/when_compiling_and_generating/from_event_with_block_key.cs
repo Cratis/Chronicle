@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
@@ -28,5 +29,5 @@ public class from_event_with_block_key : given.a_language_service_with_schemas<g
     [Fact] void should_have_key() => _result.From[(EventType)"UserAssignedToGroup"].Key.ShouldNotBeNull();
     [Fact] void should_have_key_value() => _result.From[(EventType)"UserAssignedToGroup"].Key.Value.ShouldEqual("userId");
     [Fact] void should_have_group_id_property() => _result.From[(EventType)"UserAssignedToGroup"].Properties.ContainsKey(new PropertyPath("groupId")).ShouldBeTrue();
-    [Fact] void should_map_group_id_to_event_source_id() => _result.From[(EventType)"UserAssignedToGroup"].Properties[new PropertyPath("groupId")].ShouldEqual("$eventContext(eventSourceId)");
+    [Fact] void should_map_group_id_to_event_source_id() => _result.From[(EventType)"UserAssignedToGroup"].Properties[new PropertyPath("groupId")].ShouldEqual($"{WellKnownExpressions.EventContext}(eventSourceId)");
 }

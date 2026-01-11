@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -64,9 +65,9 @@ public class DeclarativeCodeGenerator
     static string ConvertExpression(string expression)
     {
         // Handle event context properties - these return ToEventContextProperty syntax
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
+        if (expression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && expression.EndsWith(')'))
         {
-            var property = expression.Substring(14, expression.Length - 15);
+            var property = expression[(WellKnownExpressions.EventContext.Length + 1)..^1];
             return $"c => c.{property}";
         }
 
@@ -77,7 +78,7 @@ public class DeclarativeCodeGenerator
         if (double.TryParse(expression, out _)) return expression;
 
         // Event source ID
-        if (expression == "$eventSourceId") return "e => e.EventSourceId";
+        if (expression == WellKnownExpressions.EventSourceId) return "e => e.EventSourceId";
 
         // Property path from event
         return $"e => e.{expression}";
@@ -86,13 +87,43 @@ public class DeclarativeCodeGenerator
     static string ConvertExpressionForSet(string expression)
     {
         // For Set operations, event context properties need ToEventContextProperty
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
+        if (expression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && expression.EndsWith(')'))
         {
-            var property = expression.Substring(14, expression.Length - 15);
+            var property = expression[(WellKnownExpressions.EventContext.Length + 1)..^1];
             return $"ToEventContextProperty(c => c.{property})";
         }
 
         return $"To({ConvertExpression(expression)})";
+    }
+
+    static string NormalizeExpression(string expression)
+    {
+        if (expression.StartsWith("+=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
+        }
+
+        if (expression.StartsWith("-=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
+        }
+
+        if (expression.Equals("increment", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Increment;
+        }
+
+        if (expression.Equals("decrement", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Decrement;
+        }
+
+        if (expression.Equals("count", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Count;
+        }
+
+        return expression;
     }
 
     void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, AutoMap autoMap, List<string> lines, int indent)
@@ -134,33 +165,33 @@ public class DeclarativeCodeGenerator
             foreach (var prop in fromDef.Properties)
             {
                 var propertyPath = prop.Key.Path;
-                var expression = prop.Value;
+                var normalizedExpression = NormalizeExpression(prop.Value);
 
-                if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+                if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                 {
-                    var innerExpr = expression.Substring(5, expression.Length - 6);
+                    var innerExpr = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
                     propLines.Add($"{indentStr}    .Add(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
                 }
-                else if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                 {
-                    var innerExpr = expression.Substring(10, expression.Length - 11);
+                    var innerExpr = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
                     propLines.Add($"{indentStr}    .Subtract(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
                 }
-                else if (expression == "$increment")
+                else if (normalizedExpression == WellKnownExpressions.Increment)
                 {
                     propLines.Add($"{indentStr}    .Increment(m => m.{propertyPath})");
                 }
-                else if (expression == "$decrement")
+                else if (normalizedExpression == WellKnownExpressions.Decrement)
                 {
                     propLines.Add($"{indentStr}    .Decrement(m => m.{propertyPath})");
                 }
-                else if (expression == "$count")
+                else if (normalizedExpression == WellKnownExpressions.Count)
                 {
                     propLines.Add($"{indentStr}    .Count(m => m.{propertyPath})");
                 }
                 else
                 {
-                    propLines.Add($"{indentStr}    .Set(m => m.{propertyPath}).{ConvertExpressionForSet(expression)}");
+                    propLines.Add($"{indentStr}    .Set(m => m.{propertyPath}).{ConvertExpressionForSet(normalizedExpression)}");
                 }
             }
 
@@ -179,10 +210,10 @@ public class DeclarativeCodeGenerator
 
     string GenerateKeyExpression(string keyExpression, string indentStr)
     {
-        if (keyExpression.StartsWith("$composite("))
+        if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
         {
             // Parse: $composite(TypeName, prop1=expr1, prop2=expr2)
-            var inner = keyExpression.Substring(11, keyExpression.Length - 12);
+            var inner = keyExpression[(WellKnownExpressions.Composite.Length + 1)..^1];
             var parts = inner.Split([", "], StringSplitOptions.None);
             var typeName = parts[0];
             var propMappings = parts.Skip(1);
@@ -199,9 +230,9 @@ public class DeclarativeCodeGenerator
             return string.Join(Environment.NewLine, result);
         }
 
-        if (keyExpression.StartsWith("$eventContext("))
+        if (keyExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal))
         {
-            var property = keyExpression.Substring(14, keyExpression.Length - 15);
+            var property = keyExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
             return $"{indentStr}    .UsingKeyFromContext(c => c.{property})";
         }
 
@@ -210,9 +241,9 @@ public class DeclarativeCodeGenerator
 
     string GenerateParentKeyExpression(string keyExpression, string indentStr)
     {
-        if (keyExpression.StartsWith("$composite("))
+        if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
         {
-            var inner = keyExpression.Substring(11, keyExpression.Length - 12);
+            var inner = keyExpression[(WellKnownExpressions.Composite.Length + 1)..^1];
             var parts = inner.Split([", "], StringSplitOptions.None);
             var typeName = parts[0];
             var propMappings = parts.Skip(1);
@@ -229,9 +260,9 @@ public class DeclarativeCodeGenerator
             return string.Join(Environment.NewLine, result);
         }
 
-        if (keyExpression.StartsWith("$eventContext("))
+        if (keyExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal))
         {
-            var property = keyExpression.Substring(14, keyExpression.Length - 15);
+            var property = keyExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
             return $"{indentStr}    .UsingParentKeyFromContext(c => c.{property})";
         }
 

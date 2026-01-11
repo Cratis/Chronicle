@@ -28,11 +28,13 @@ import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
+import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
+                { label: 'Dashboard', url: 'dashboard', icon: mdIcons.MdSpaceDashboard },
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
@@ -72,6 +74,9 @@ export const EventStore = () => {
         <Routes>
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
+
+                <Route index element={<Dashboard />} />
+                <Route path={'dashboard'} element={<Dashboard />} />
 
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />

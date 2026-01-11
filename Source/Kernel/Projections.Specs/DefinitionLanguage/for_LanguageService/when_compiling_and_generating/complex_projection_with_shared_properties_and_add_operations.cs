@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 
@@ -40,10 +41,10 @@ public class complex_projection_with_shared_properties_and_add_operations : give
     [Fact] void should_not_have_explicit_mappings_in_order_placed() => _result.Definition.From[(EventType)"OrderPlaced"].Properties.Count.ShouldEqual(0);
 
     [Fact] void should_have_four_add_operations_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties.Count.ShouldEqual(4);
-    [Fact] void should_add_total_distance_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalDistance")].ShouldEqual("+= distance");
-    [Fact] void should_add_total_elapsed_time_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalElapsedTime")].ShouldEqual("+= elapsedTime");
-    [Fact] void should_add_total_co2_foot_print_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalCo2FootPrint")].ShouldEqual("+= co2FootPrint");
-    [Fact] void should_add_total_cost_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalCost")].ShouldEqual("+= cost");
+    [Fact] void should_add_total_distance_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalDistance")].ShouldEqual($"{WellKnownExpressions.Add}(distance)");
+    [Fact] void should_add_total_elapsed_time_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalElapsedTime")].ShouldEqual($"{WellKnownExpressions.Add}(elapsedTime)");
+    [Fact] void should_add_total_co2_foot_print_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalCo2FootPrint")].ShouldEqual($"{WellKnownExpressions.Add}(co2FootPrint)");
+    [Fact] void should_add_total_cost_in_item_loaded() => _result.Definition.From[(EventType)"ItemLoadedOnTransport"].Properties[new PropertyPath("totalCost")].ShouldEqual($"{WellKnownExpressions.Add}(cost)");
 
     [Fact] void should_have_four_add_operations_in_item_delivered() => _result.Definition.From[(EventType)"ItemDeliveredToDestination"].Properties.Count.ShouldEqual(4);
 

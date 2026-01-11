@@ -197,7 +197,7 @@ static class ChildrenDefinitionExtensions
                         var contextPropertyNameProperty = contextAttr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
                         var contextPropertyName = contextPropertyNameProperty?.GetValue(contextAttr) as string;
                         var propertyToUse = contextPropertyName ?? parameter.Name!;
-                        fromDefinition.Properties[paramPropertyName] = $"$eventContext({propertyToUse})";
+                        fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}({propertyToUse})";
                     }
 
                     // Process SetFrom attributes on constructor parameters
@@ -253,25 +253,35 @@ static class ChildrenDefinitionExtensions
                                     a.GetType().GetGenericTypeDefinition() == typeof(AddFromAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
 
+                    var isIdentifiedByProperty = parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase);
+                    var hasKeyAttribute = parameter.GetCustomAttribute<KeyAttribute>() is not null;
+                    var keyExpressionMatchesParameter = paramPropertyName.Equals(keyExpression, StringComparison.OrdinalIgnoreCase);
+
                     // If this is the identified property and has no explicit mapping, map it to the key
-                    if (shouldAutoMap && !hasExplicitMapping && parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase))
+                    // BUT skip if the key expression matches the parameter name AND it doesn't have [Key] attribute
+                    // - This prevents auto-mapping properties that are only identifiers, not actual fields needing values
+                    if (shouldAutoMap && !hasExplicitMapping && isIdentifiedByProperty)
                     {
-                        // If key is EventSourceId, use event context, otherwise use the key property from the event
-                        if (key == WellKnownExpressions.EventSourceId)
+                        var shouldSkipMapping = keyExpressionMatchesParameter && !hasKeyAttribute;
+                        if (!shouldSkipMapping)
                         {
-                            fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
-                        }
-                        else
-                        {
-                            // Map to the key from the event (keyExpression already has naming policy applied)
-                            fromDefinition.Properties[paramPropertyName] = keyExpression;
+                            // If key is EventSourceId, use event context, otherwise use the key property from the event
+                            if (key == WellKnownExpressions.EventSourceId)
+                            {
+                                fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}(EventSourceId)";
+                            }
+                            else
+                            {
+                                // Map to the key from the event (keyExpression already has naming policy applied)
+                                fromDefinition.Properties[paramPropertyName] = keyExpression;
+                            }
                         }
                     }
 
                     // Check if parameter has [Key] attribute and no explicit mapping and key is EventSourceId
-                    if (shouldAutoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
+                    if (shouldAutoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && hasKeyAttribute && !isIdentifiedByProperty)
                     {
-                        fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
+                        fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}(EventSourceId)";
                     }
 
                     // Process Join attributes on constructor parameters

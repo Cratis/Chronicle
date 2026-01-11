@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -129,8 +130,8 @@ public class Generator : IGenerator
         // Determine if we should use inline key syntax or block key syntax
         // Use inline syntax for simple keys
         // Use block syntax for composite keys or when other content exists
-        var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith("$composite(") && from.Key.Value.EndsWith(')');
-        var isDefaultKey = from.Key.IsSet() && from.Key.Value == "$eventSourceId";
+        var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
+        var isDefaultKey = from.Key.IsSet() && from.Key.Value == WellKnownExpressions.EventSourceId;
         var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !isDefaultKey;
 
         // Build from statement with optional inline key (skip if it's the default $eventSourceId)
@@ -149,7 +150,7 @@ public class Generator : IGenerator
             var keyValue = from.Key.Value;
 
             // Parse composite key: $composite(TypeName, CustomerId=customerId, OrderNumber=orderNumber)
-            var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
+            var innerContent = keyValue[(WellKnownExpressions.Composite.Length + 1)..^1];
             var parts = innerContent.Split(_compositeSeparator, StringSplitOptions.None);
 
             // Extract type name from first part
@@ -172,7 +173,7 @@ public class Generator : IGenerator
         }
 
         // Parent key if present (skip if it's the default $eventSourceId)
-        if (from.ParentKey?.IsSet() == true && from.ParentKey.Value != "$eventSourceId")
+        if (from.ParentKey?.IsSet() == true && from.ParentKey.Value != WellKnownExpressions.EventSourceId)
         {
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
@@ -306,123 +307,147 @@ public class Generator : IGenerator
 
         var propertyName = EscapePropertyPath(property.Path);
 
+        var normalizedExpression = NormalizeExpression(expression);
+
         // Check for arithmetic operations from C# projections ($add, $subtract)
-        if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[5..^1];
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
             sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
             return;
         }
 
-        if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[10..^1];
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
             sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
             return;
         }
 
         // Parse the expression to determine the operation type from DSL
-        if (expression.StartsWith("+="))
-        {
-            var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(value)}");
-        }
-        else if (expression.StartsWith("-="))
-        {
-            var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(value)}");
-        }
-        else if (expression == "increment" || expression == "$increment")
+        if (normalizedExpression == WellKnownExpressions.Increment)
         {
             sb.AppendLine($"{Indent(indent)}increment {propertyName}");
         }
-        else if (expression == "decrement" || expression == "$decrement")
+        else if (normalizedExpression == WellKnownExpressions.Decrement)
         {
             sb.AppendLine($"{Indent(indent)}decrement {propertyName}");
         }
-        else if (expression == "count" || expression == "$count")
+        else if (normalizedExpression == WellKnownExpressions.Count)
         {
             sb.AppendLine($"{Indent(indent)}count {propertyName}");
         }
         else
         {
-            sb.AppendLine($"{Indent(indent)}{propertyName} = {ConvertExpressionForOutput(expression)}");
+            sb.AppendLine($"{Indent(indent)}{propertyName} = {ConvertExpressionForOutput(normalizedExpression)}");
         }
     }
 
     string ConvertExpressionForOutput(string expression)
     {
+        var normalizedExpression = NormalizeExpression(expression);
+
         // Convert $add(expression) wrapper - this comes from C# projections
-        if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[5..^1];
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
             return ConvertExpressionForOutput(innerExpression);
         }
 
         // Convert $subtract(expression) wrapper - this comes from C# projections
-        if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[10..^1];
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
             return ConvertExpressionForOutput(innerExpression);
         }
 
         // Convert $eventContext(property) to $eventContext.property
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var property = expression[14..^1];
-            return $"$eventContext.{property}";
+            var property = normalizedExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
+            return $"{WellKnownExpressions.EventContext}.{property}";
         }
 
         // Convert $causedBy(property) to $causedBy.property
-        if (expression.StartsWith("$causedBy(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.CausedBy}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var property = expression[10..^1];
-            return $"$causedBy.{property}";
+            var property = normalizedExpression[10..^1];
+            return $"{WellKnownExpressions.CausedBy}.{property}";
         }
 
         // Handle plain $causedBy
-        if (expression.Equals("$causedBy", StringComparison.Ordinal))
+        if (normalizedExpression.Equals(WellKnownExpressions.CausedBy, StringComparison.Ordinal))
         {
-            return "$causedBy";
+            return WellKnownExpressions.CausedBy;
         }
 
         // Convert C# boolean ToString() to DSL format
-        if (expression.Equals("True", StringComparison.Ordinal))
+        if (normalizedExpression.Equals("True", StringComparison.Ordinal))
         {
             return "true";
         }
-        if (expression.Equals("False", StringComparison.Ordinal))
+        if (normalizedExpression.Equals("False", StringComparison.Ordinal))
         {
             return "false";
         }
 
         // Convert empty string (C# null representation) to DSL null
-        if (string.IsNullOrEmpty(expression))
+        if (string.IsNullOrEmpty(normalizedExpression))
         {
             return "null";
         }
 
         // String literals already have quotes from Compiler - return as-is
-        if (expression.StartsWith('\"') && expression.EndsWith('\"'))
+        if (normalizedExpression.StartsWith('\"') && normalizedExpression.EndsWith('\"'))
         {
-            return expression;
+            return normalizedExpression;
         }
 
         // Numeric literals
-        if (double.TryParse(expression, out _))
+        if (double.TryParse(normalizedExpression, out _))
         {
-            return expression;
+            return normalizedExpression;
         }
 
         // Event context, template expressions, etc.
-        if (expression.Contains('$') || expression.Contains('`'))
+        if (normalizedExpression.Contains('$') || normalizedExpression.Contains('`'))
         {
-            return expression;
+            return normalizedExpression;
         }
 
         // Property paths and simple names - check if they're keywords and escape if needed
-        var parts = expression.Split(['.']);
+        var parts = normalizedExpression.Split(['.']);
         var escapedParts = parts.Select(part => Keywords.All.Contains(part.ToLowerInvariant()) ? $"@{part}" : part).ToArray();
         return string.Join('.', escapedParts);
+    }
+
+    string NormalizeExpression(string expression)
+    {
+        if (expression.StartsWith("+=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
+        }
+
+        if (expression.StartsWith("-=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
+        }
+
+        if (expression.Equals("increment", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Increment;
+        }
+
+        if (expression.Equals("decrement", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Decrement;
+        }
+
+        if (expression.Equals("count", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Count;
+        }
+
+        return expression;
     }
 }
