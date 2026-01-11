@@ -162,6 +162,9 @@ public class Compiler
             case EveryBlock every:
                 fromEvery = ProcessEveryBlock(every);
                 break;
+            case FromAllBlock fromAll:
+                fromEvery = ProcessFromAllBlock(fromAll);
+                break;
             case SequenceDirective:
                 // Sequence is handled before processing directives
                 break;
@@ -447,6 +450,21 @@ public class Compiler
         return new FromEveryDefinition(properties, !every.ExcludeChildren)
         {
             AutoMap = GetAutoMapValue(every.AutoMap)
+        };
+    }
+
+    FromEveryDefinition ProcessFromAllBlock(FromAllBlock fromAll)
+    {
+        var properties = new Dictionary<PropertyPath, string>();
+
+        foreach (var operation in fromAll.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        return new FromEveryDefinition(properties, IncludeChildren: true)
+        {
+            AutoMap = GetAutoMapValue(fromAll.AutoMap)
         };
     }
 
