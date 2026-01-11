@@ -116,7 +116,7 @@ export const Pivot = () => {
 
     return (
         <Page title={strings.mainMenu.pivot}>
-            <div className="p-4 h-full">
+            <div className="p-4 h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
                     data={events.data}
                     dimensions={dimensions}
@@ -128,6 +128,7 @@ export const Pivot = () => {
                         (_) => _.context.eventType.id,
                         (_) => _.context.correlationId.toString()
                     ]}
+                    className="flex-1 min-h-0"
                     emptyContent={<span>No events match the current filters.</span>}
                     isLoading={events.isPerforming}
                 />
