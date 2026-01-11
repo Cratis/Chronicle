@@ -1,7 +1,7 @@
 <RunSettings>
   <RunConfiguration>
     <TestCaseFilter>
-        FullyQualifiedName!~Cratis.Chronicle.InProcess.Integration&amp;FullyQualifiedName!~Cratis.Chronicle.Integration;FullyQualifiedName!~Cratis.Chronicle.MongoDB.Integration
+        FullyQualifiedName!~Cratis.Chronicle.InProcess.Integration&amp;FullyQualifiedName!~Cratis.Chronicle.Integration&amp;FullyQualifiedName!~Cratis.Chronicle.MongoDB.Integration
     </TestCaseFilter>
   </RunConfiguration>
 </RunSettings>
