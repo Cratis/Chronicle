@@ -45,7 +45,18 @@ public class ExpressionParser
                 if (context.Expect(TokenType.Dot) is null) return null;
                 var propertyToken = context.Expect(TokenType.Identifier);
                 if (propertyToken is null) return null;
-                return new EventContextExpression(propertyToken.Value);
+
+                // Build property path by consuming all dot-separated identifiers
+                var propertyPath = propertyToken.Value;
+                while (context.Check(TokenType.Dot))
+                {
+                    context.Advance(); // Skip dot
+                    var nextToken = context.Expect(TokenType.Identifier);
+                    if (nextToken is null) return null;
+                    propertyPath += "." + nextToken.Value;
+                }
+
+                return new EventContextExpression(propertyPath);
             }
 
             if (name.Equals("causedBy", StringComparison.OrdinalIgnoreCase))
