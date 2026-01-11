@@ -51,7 +51,7 @@ public class Generator : IGenerator
         // On event blocks
         foreach (var kv in definition.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, definition.AutoMap, 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1);
         }
 
         // Join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -59,7 +59,7 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, definition.AutoMap, 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, 1);
         }
 
         // Children blocks
@@ -115,10 +115,10 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, AutoMap parentAutoMap, int indent)
+    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
     {
         // Determine if we should use inline key syntax or block key syntax
-        // Use inline syntax for simple keys when there are no other inline options (like automap)
+        // Use inline syntax for simple keys
         // Use block syntax for composite keys or when other content exists
         var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith("$composite(") && from.Key.Value.EndsWith(')');
         var isDefaultKey = from.Key.IsSet() && from.Key.Value == "$eventSourceId";
@@ -176,7 +176,7 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, AutoMap parentAutoMap, int indent)
+    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, int indent)
     {
         sb.AppendLine($"{Indent(indent)}join {joinName} on {onProperty}");
 
@@ -223,7 +223,7 @@ public class Generator : IGenerator
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, effectiveAutoMap, indent + 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -231,7 +231,7 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, effectiveAutoMap, indent + 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, indent + 1);
         }
 
         // Nested children

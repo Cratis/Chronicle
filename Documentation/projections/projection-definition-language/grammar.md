@@ -54,11 +54,10 @@ EveryBlock      = "every", NL,
 
 FromEventBlock  = "from", EventSpec, { ",", EventSpec },
                   NL,
-                  INDENT,
-                    [ "no", "automap", NL ],
+                  [ INDENT,
                     [ ParentDecl ],
                     { MappingLine | KeyDecl | CompositeKeyDecl },
-                  DEDENT ;
+                  DEDENT ] ;
 
 EventSpec       = TypeRef, [ "key", Expr ] ;
 
@@ -71,7 +70,6 @@ JoinBlock       = "join", Ident, "on", Ident, NL,
 
 WithEventBlock  = "with", TypeRef, NL,
                   [ INDENT,
-                      [ "no", "automap", NL | "automap", NL ],
                       { MappingLine },
                     DEDENT ] ;
 
@@ -235,14 +233,15 @@ Handle specific events:
 ```ebnf
 FromEventBlock = "from", EventSpec, { ",", EventSpec },
                  NL,
-                 INDENT,
-                   [ "no", "automap", NL ],
+                 [ INDENT,
                    [ ParentDecl ],
                    { MappingLine | KeyDecl | CompositeKeyDecl },
-                 DEDENT ;
+                 DEDENT ] ;
 
 EventSpec = TypeRef, [ "key", Expr ] ;
 ```
+
+**Note:** AutoMap for from blocks is controlled at the projection or children level, not within individual from blocks.
 
 ### Join Block
 
@@ -256,10 +255,11 @@ JoinBlock = "join", Ident, "on", Ident, NL,
 
 WithEventBlock = "with", TypeRef, NL,
                  [ INDENT,
-                     [ "no", "automap", NL | "automap", NL ],
                      { MappingLine },
                    DEDENT ] ;
 ```
+
+**Note:** AutoMap for join blocks is controlled at the projection or children level, not within individual with blocks.
 
 ### Children Block
 

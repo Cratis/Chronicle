@@ -10,9 +10,8 @@ public class from_event_with_automap : given.a_language_service_with_schemas<giv
 {
     const string Definition = """
         projection User => UserReadModel
-          from UserCreated
-            key userId
-            automap
+          automap
+          from UserCreated key userId
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserCreated)];

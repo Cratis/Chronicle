@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 using Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 
@@ -65,27 +64,6 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         // Skip newline if present after all events
         if (context.Check(TokenType.NewLine)) context.Advance();
 
-        // Check for shared inline options that apply to all events
-        var autoMap = AutoMap.Inherit; // Default to inherit (no explicit directive)
-        while (!context.Check(TokenType.Indent) && !context.IsAtEnd)
-        {
-            if (context.Check(TokenType.AutoMap))
-            {
-                context.Advance();
-                autoMap = AutoMap.Enabled;
-            }
-            else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
-            {
-                context.Advance(); // Skip 'no'
-                context.Advance(); // Skip 'automap'
-                autoMap = AutoMap.Disabled;
-            }
-            else
-            {
-                break;
-            }
-        }
-
         // Only process mappings if there's an indent (i.e., there's a body)
         var mappings = new List<MappingOperation>();
         Expression? parentKey = null;
@@ -101,7 +79,6 @@ public class FromEventBlockVisitor : IDirectiveVisitor
                 var singleEvent = eventSpecs[0];
                 return new FromEventBlock(
                     singleEvent.EventType,
-                    autoMap,
                     singleEvent.Key,
                     null,
                     null,
@@ -111,7 +88,6 @@ public class FromEventBlockVisitor : IDirectiveVisitor
             return new MultiFromEventBlock(
                 eventSpecs.ConvertAll(e => new FromEventBlock(
                     e.EventType,
-                    autoMap,
                     e.Key,
                     null,
                     null,
@@ -123,18 +99,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
 
         while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
         {
-            if (context.Check(TokenType.AutoMap))
-            {
-                context.Advance();
-                autoMap = AutoMap.Enabled;
-            }
-            else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
-            {
-                context.Advance(); // Skip 'no'
-                context.Advance(); // Skip 'automap'
-                autoMap = AutoMap.Disabled;
-            }
-            else if (context.Check(TokenType.Parent))
+            if (context.Check(TokenType.Parent))
             {
                 context.Advance();
                 parentKey = _expressions.Parse(context);
@@ -180,7 +145,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
         {
             var (eventType, inlineKey) = eventSpecs[0];
             var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
-            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings)
+            return new FromEventBlock(eventType, finalKey, compositeKey, parentKey, mappings)
             {
                 Line = fromToken.Line,
                 Column = fromToken.Column
@@ -194,7 +159,7 @@ public class FromEventBlockVisitor : IDirectiveVisitor
 
             // Use inline key if provided, otherwise fall back to block-level key/compositeKey
             var finalKey = inlineKey ?? (compositeKey is null && blockLevelKey is null ? null : blockLevelKey);
-            return new FromEventBlock(eventType, autoMap, finalKey, compositeKey, parentKey, mappings)
+            return new FromEventBlock(eventType, finalKey, compositeKey, parentKey, mappings)
             {
                 Line = fromToken.Line,
                 Column = fromToken.Column

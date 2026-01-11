@@ -11,9 +11,9 @@ public class from_event_with_block_key : given.a_language_service_with_schemas<g
 {
     const string Definition = """
         projection User => UserReadModel
+          automap
           from UserAssignedToGroup
             key userId
-            automap
             groupId = $eventContext.eventSourceId
         """;
 

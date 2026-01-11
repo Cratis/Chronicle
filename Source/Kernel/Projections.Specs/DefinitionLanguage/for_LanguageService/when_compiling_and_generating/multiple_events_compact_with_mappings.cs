@@ -11,8 +11,8 @@ public class multiple_events_compact_with_mappings : given.a_language_service_wi
 {
     const string Definition = """
         projection User => UserReadModel
+          automap
           from EventA key keyA, EventB key keyB, EventC
-            automap
             sharedProperty = sharedValue
         """;
 
