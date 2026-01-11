@@ -526,6 +526,20 @@ public class ProjectionFactory(
             };
         }
 
+        // Check if this is a dynamic property path (dictionary with runtime-determined keys)
+        // Pattern: propertyName.$eventContext... or propertyName.$causedBy...
+        var propertyPathString = propertyPath.Path;
+        if (propertyPathString.Contains(".$", StringComparison.Ordinal))
+        {
+            // Extract the base property name (before .$)
+            var dynamicKeyIndex = propertyPathString.IndexOf(".$", StringComparison.Ordinal);
+            var basePropertyPath = propertyPathString[..dynamicKeyIndex];
+
+            // Get or create the schema property for the base property and mark it as dynamic
+            var baseSchema = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(basePropertyPath));
+            baseSchema?.ActualTypeSchema.MarkAsDynamic();
+        }
+
         return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
     }
 
