@@ -19,7 +19,7 @@
         "@cratis/arc.react": "^18.7.21",
         "@cratis/arc.react.mvvm": "^18.7.21",
         "@cratis/arc.vite": "^18.7.21",
-        "@cratis/components": "^0.1.15",
+        "@cratis/components": "^0.1.16",
         "@monaco-editor/react": "^4.7.0",
         "allotment": "^1.20.5",
         "echarts": "^6.0.0",
