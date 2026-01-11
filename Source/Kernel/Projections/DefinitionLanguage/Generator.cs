@@ -88,9 +88,18 @@ public class Generator : IGenerator
 
     static string EscapeIfKeyword(string identifier)
     {
-        // Keywords are now case-sensitive and must be lowercase (enforced in tokenizer)
-        // So we don't need to escape any identifiers since uppercase versions are not keywords
-        return identifier;
+        var lowerIdentifier = identifier.ToLowerInvariant();
+        return Keywords.All.Contains(lowerIdentifier) ? $"@{identifier}" : identifier;
+    }
+
+    static string EscapePropertyPath(string path)
+    {
+        var segments = path.Split('.');
+        for (var i = 0; i < segments.Length; i++)
+        {
+            segments[i] = EscapeIfKeyword(segments[i]);
+        }
+        return string.Join('.', segments);
     }
 
     void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)
@@ -155,7 +164,7 @@ public class Generator : IGenerator
                 var equalsIndex = part.IndexOf('=');
                 if (equalsIndex > 0)
                 {
-                    var propertyName = part.Substring(0, equalsIndex);
+                    var propertyName = EscapePropertyPath(part.Substring(0, equalsIndex));
                     var expression = part.Substring(equalsIndex + 1);
                     sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
                 }
@@ -168,8 +177,8 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
 
-        // Property mappings - always output if they exist
-        // These are explicit mappings that were defined in the DSL
+        // Property mappings - filter out redundant mappings when they would be handled by automap
+        // Only output explicit mappings where the target property name differs from the source expression
         foreach (var kv in from.Properties)
         {
             GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
@@ -187,7 +196,7 @@ public class Generator : IGenerator
 
             sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
 
-            // Property mappings - always output if they exist
+            // Property mappings - filter out redundant mappings when automap is enabled
             foreach (var prop in join.Properties)
             {
                 GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
@@ -295,7 +304,7 @@ public class Generator : IGenerator
             return;
         }
 
-        var propertyName = EscapeIfKeyword(property.Path);
+        var propertyName = EscapePropertyPath(property.Path);
 
         // Check for arithmetic operations from C# projections ($add, $subtract)
         if (expression.StartsWith("$add(") && expression.EndsWith(')'))
@@ -337,7 +346,6 @@ public class Generator : IGenerator
         }
         else
         {
-            // Simple assignment
             sb.AppendLine($"{Indent(indent)}{propertyName} = {ConvertExpressionForOutput(expression)}");
         }
     }
@@ -414,7 +422,7 @@ public class Generator : IGenerator
 
         // Property paths and simple names - check if they're keywords and escape if needed
         var parts = expression.Split(['.']);
-        var escapedParts = parts.Select(part => Keywords.All.Contains(part) ? $"@{part}" : part).ToArray();
+        var escapedParts = parts.Select(part => Keywords.All.Contains(part.ToLowerInvariant()) ? $"@{part}" : part).ToArray();
         return string.Join('.', escapedParts);
     }
 }

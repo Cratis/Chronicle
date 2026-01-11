@@ -16,10 +16,16 @@ public class projection_with_default_automap : EventTypes.a_language_service_wit
 
     protected override IEnumerable<Type> EventTypes => [typeof(EventTypes.HubRouteAdded)];
 
-    ProjectionDefinition _result;
+    given.CompilerResult _compilerResult;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _compilerResult = CompileGenerateAndRecompile(Definition);
 
-    [Fact] void should_have_from_hub_route_added() => _result.From.ContainsKey((EventType)"HubRouteAdded").ShouldBeTrue();
-    [Fact] void should_have_automap_enabled() => _result.AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_have_from_hub_route_added() => _compilerResult.Definition.From.ContainsKey((EventType)"HubRouteAdded").ShouldBeTrue();
+    [Fact] void should_have_automap_enabled() => _compilerResult.Definition.AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_not_have_any_property_mappings() => _compilerResult.Definition.From[(EventType)"HubRouteAdded"].Properties.Count.ShouldEqual(0);
+    [Fact] void should_not_generate_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("id = id");
+    [Fact] void should_not_generate_simulation_configuration_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
+    [Fact] void should_not_generate_transport_type_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("transportTypeId = transportTypeId");
+    [Fact] void should_not_generate_source_hub_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("sourceHubId = sourceHubId");
+    [Fact] void should_not_generate_destination_hub_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("destinationHubId = destinationHubId");
 }

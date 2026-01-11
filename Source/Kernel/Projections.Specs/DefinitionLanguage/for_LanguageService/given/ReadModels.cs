@@ -74,3 +74,17 @@ public record ModelWithKeywordProperties(
     string Key,
     string Join,
     string Children);
+
+public record SimulatedOrderReadModel(
+    string OrderId,
+    string SimulationId,
+    string SimulationConfigurationId,
+    string SimulationRunId,
+    string? DestinationPostalCode,
+    DateTimeOffset? OrderDate,
+    string? OptimalRoute,
+    decimal TotalDistance,
+    TimeSpan TotalElapsedTime,
+    decimal TotalCo2FootPrint,
+    decimal TotalCost,
+    DateTimeOffset? Timestamp);
