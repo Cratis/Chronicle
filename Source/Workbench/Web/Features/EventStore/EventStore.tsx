@@ -34,7 +34,7 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                { label: 'Dashboard', url: 'dashboard', icon: mdIcons.MdSpaceDashboard },
+                { label: 'Dashboard', url: ':namespace/dashboard', icon: mdIcons.MdSpaceDashboard },
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
@@ -75,8 +75,7 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
-                <Route index element={<Dashboard />} />
-                <Route path={'dashboard'} element={<Dashboard />} />
+                <Route index element={<Navigate to={'Default/dashboard'} replace />} />
 
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
@@ -90,7 +89,8 @@ export const EventStore = () => {
                 <Route path={'applications'} element={<Applications />} />
 
                 <Route path={':namespace'}>
-                    <Route path={''} element={<Navigate to={'recommendations'} />} />
+                    <Route path={''} element={<Navigate to={'dashboard'} replace />} />
+                    <Route path={'dashboard'} element={<Dashboard />} />
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />

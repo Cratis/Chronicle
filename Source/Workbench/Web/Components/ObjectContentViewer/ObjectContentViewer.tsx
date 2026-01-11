@@ -1,23 +1,22 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
 import { Json } from 'Features/index';
 import { Tooltip } from 'primereact/tooltip';
 import React, { useState, useCallback, useMemo } from 'react';
 import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { ObjectNavigationalBar } from 'Components';
+import { JsonSchema, JsonSchemaProperty } from 'Components/JsonSchema';
 
 
-export interface ReadModelContentProps {
-    readModel: Json;
-    timestamp: Date;
-    readModelDefinition: ReadModelDefinition;
+export interface ObjectContentViewerProps {
+    object: Json;
+    timestamp?: Date;
+    schema: JsonSchema;
 }
 
-// Component to render the SimulatedOrder as a table
-export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: ReadModelContentProps) => {
+export const ObjectContentViewer = ({ object, timestamp, schema }: ObjectContentViewerProps) => {
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
 
     const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
@@ -47,15 +46,15 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
 
     const currentData = useMemo(() => {
         if (navigationPath.length === 0) {
-            return readModel;
+            return object;
         }
 
         const lastKey = navigationPath[navigationPath.length - 1];
         const pathToParent = navigationPath.slice(0, -1);
 
         const parentValue = pathToParent.length > 0
-            ? getValueAtPath(readModel, pathToParent)
-            : readModel;
+            ? getValueAtPath(object, pathToParent)
+            : object;
 
         if (parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)) {
             const value = (parentValue as { [k: string]: Json })[lastKey];
@@ -67,11 +66,10 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
             }
         }
 
-        return readModel;
-    }, [readModel, navigationPath, getValueAtPath]);
+        return object;
+    }, [object, navigationPath, getValueAtPath]);
 
     const currentProperties = useMemo(() => {
-        const schema = JSON.parse(readModelDefinition.schema);
         const properties = schema.properties || {};
 
         if (navigationPath.length === 0) {
@@ -79,7 +77,7 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
         }
 
         return {};
-    }, [readModelDefinition.schema, navigationPath]);
+    }, [schema, navigationPath]);
 
     const tableStyle: React.CSSProperties = {
         width: '100%',
@@ -166,7 +164,7 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
                                     {keys.map((key) => (
                                         <tr key={`${index}-${key}`} style={rowStyle}>
                                             <td style={labelStyle}>{key}</td>
-                                            <td style={valueStyle}>{renderValue((item as any)[key], key)}</td>
+                                            <td style={valueStyle}>{renderValue((item as Record<string, Json>)[key], key)}</td>
                                         </tr>
                                     ))}
                                 </React.Fragment>
@@ -197,23 +195,28 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
         return (
             <table style={tableStyle}>
                 <tbody>
-                    {entries.map(([propertyName, propertyDef]: [string, any]) => {
+                    {entries.map(([propertyName, propertyDef]: [string, JsonSchemaProperty | Json]) => {
                         const value = navigationPath.length === 0
-                            ? (currentData as any)[propertyName]
+                            ? (currentData as Record<string, Json>)[propertyName]
                             : propertyDef;
+
+                        const isSchemaProperty = navigationPath.length === 0;
+                        const description = isSchemaProperty && typeof propertyDef === 'object' && propertyDef !== null && 'description' in propertyDef
+                            ? (propertyDef as JsonSchemaProperty).description
+                            : undefined;
 
                         return (
                             <tr key={propertyName} style={rowStyle}>
                                 <td style={labelStyle}>
                                     {propertyName}
-                                    {navigationPath.length === 0 && propertyDef.description && (
+                                    {description && (
                                         <i
                                             className="pi pi-info-circle property-info-icon"
                                             style={infoIconStyle}
-                                            data-pr-tooltip={propertyDef.description} />
+                                            data-pr-tooltip={description} />
                                     )}
                                 </td>
-                                <td style={valueStyle}>{renderValue(value, propertyName)}</td>
+                                <td style={valueStyle}>{renderValue(value as Json, propertyName)}</td>
                             </tr>
                         );
                     })}
@@ -230,16 +233,18 @@ export const ReadModelContent = ({ readModel, timestamp, readModelDefinition }: 
                 onNavigate={navigateToBreadcrumb}
             />
             {renderTable()}
-            <div style={{
-                marginTop: '20px',
-                padding: '12px',
-                background: 'rgba(100, 150, 255, 0.1)',
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: 'rgba(255,255,255,0.6)'
-            }}>
-                Snapshot captured: {timestamp.toLocaleString()}
-            </div>
+            {timestamp && (
+                <div style={{
+                    marginTop: '20px',
+                    padding: '12px',
+                    background: 'rgba(100, 150, 255, 0.1)',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    color: 'rgba(255,255,255,0.6)'
+                }}>
+                    Snapshot captured: {timestamp.toLocaleString()}
+                </div>
+            )}
         </div>
     );
 };
