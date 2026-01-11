@@ -75,6 +75,10 @@ public record ModelWithKeywordProperties(
     string Join,
     string Children);
 
+public record KeywordKey(string From, string Projection, string Key, string Join, string Children);
+
+public record KeywordKeyReadModel(KeywordKey Key);
+
 public record SimulatedOrderReadModel(
     string OrderId,
     string SimulationId,
