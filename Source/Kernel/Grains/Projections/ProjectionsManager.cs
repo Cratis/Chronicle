@@ -73,9 +73,9 @@ public class ProjectionsManager(
                 var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
                 var readModelSchema = readModel.GetSchemaForLatestGeneration();
                 return new ProjectionWithDsl(
-                definition.Identifier,
-                readModelSchema.Title ?? readModel.Identifier,
-                languageService.Generate(definition, readModel));
+                    definition.Identifier,
+                    readModelSchema.Title ?? readModel.Identifier,
+                    languageService.Generate(definition, readModel));
             }).ToArray();
     }
 
