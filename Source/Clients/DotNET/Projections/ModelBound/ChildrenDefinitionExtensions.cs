@@ -197,7 +197,7 @@ static class ChildrenDefinitionExtensions
                         var contextPropertyNameProperty = contextAttr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
                         var contextPropertyName = contextPropertyNameProperty?.GetValue(contextAttr) as string;
                         var propertyToUse = contextPropertyName ?? parameter.Name!;
-                        fromDefinition.Properties[paramPropertyName] = $"$eventContext({propertyToUse})";
+                        fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}({propertyToUse})";
                     }
 
                     // Process SetFrom attributes on constructor parameters
@@ -268,7 +268,7 @@ static class ChildrenDefinitionExtensions
                             // If key is EventSourceId, use event context, otherwise use the key property from the event
                             if (key == WellKnownExpressions.EventSourceId)
                             {
-                                fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
+                                fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}(EventSourceId)";
                             }
                             else
                             {
@@ -281,7 +281,7 @@ static class ChildrenDefinitionExtensions
                     // Check if parameter has [Key] attribute and no explicit mapping and key is EventSourceId
                     if (shouldAutoMap && !hasExplicitMapping && key == WellKnownExpressions.EventSourceId && hasKeyAttribute && !isIdentifiedByProperty)
                     {
-                        fromDefinition.Properties[paramPropertyName] = "$eventContext(EventSourceId)";
+                        fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}(EventSourceId)";
                     }
 
                     // Process Join attributes on constructor parameters

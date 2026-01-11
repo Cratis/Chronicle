@@ -450,23 +450,23 @@ public class Compiler
                 break;
             case AddOperation add:
                 var addPath = new PropertyPath(add.PropertyName);
-                properties[addPath] = $"+= {ConvertExpressionToString(add.Value)}";
+                properties[addPath] = $"{WellKnownExpressions.Add}({ConvertExpressionToString(add.Value)})";
                 break;
             case SubtractOperation subtract:
                 var subtractPath = new PropertyPath(subtract.PropertyName);
-                properties[subtractPath] = $"-= {ConvertExpressionToString(subtract.Value)}";
+                properties[subtractPath] = $"{WellKnownExpressions.Subtract}({ConvertExpressionToString(subtract.Value)})";
                 break;
             case IncrementOperation increment:
                 var incrementPath = new PropertyPath(increment.PropertyName);
-                properties[incrementPath] = "increment";
+                properties[incrementPath] = WellKnownExpressions.Increment;
                 break;
             case DecrementOperation decrement:
                 var decrementPath = new PropertyPath(decrement.PropertyName);
-                properties[decrementPath] = "decrement";
+                properties[decrementPath] = WellKnownExpressions.Decrement;
                 break;
             case CountOperation count:
                 var countPath = new PropertyPath(count.PropertyName);
-                properties[countPath] = "count";
+                properties[countPath] = WellKnownExpressions.Count;
                 break;
             default:
                 throw new NotSupportedException($"Operation type {operation.GetType().Name} is not yet supported");
@@ -478,9 +478,9 @@ public class Compiler
         return astExpression switch
         {
             EventDataExpression eventData => new PropertyExpression(eventData.Path),
-            EventContextExpression eventContext => new PropertyExpression($"$eventContext({eventContext.Property})"),
-            EventSourceIdExpression => new PropertyExpression("$eventSourceId"),
-            CausedByExpression causedBy => new PropertyExpression(causedBy.Property == null ? "$causedBy" : $"$causedBy({causedBy.Property})"),
+            EventContextExpression eventContext => new PropertyExpression($"{WellKnownExpressions.EventContext}({eventContext.Property})"),
+            EventSourceIdExpression => new PropertyExpression(WellKnownExpressions.EventSourceId),
+            CausedByExpression causedBy => new PropertyExpression(causedBy.Property == null ? WellKnownExpressions.CausedBy : $"{WellKnownExpressions.CausedBy}({causedBy.Property})"),
             LiteralExpression literal => new PropertyExpression(FormatLiteralForStorage(literal.Value)),
             TemplateExpression template => new PropertyExpression(ConvertTemplateToString(template)),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")
@@ -492,9 +492,9 @@ public class Compiler
         return astExpression switch
         {
             EventDataExpression eventData => eventData.Path,
-            EventContextExpression eventContext => $"$eventContext({eventContext.Property})",
-            EventSourceIdExpression => "$eventSourceId",
-            CausedByExpression causedBy => causedBy.Property == null ? "$causedBy" : $"$causedBy({causedBy.Property})",
+            EventContextExpression eventContext => $"{WellKnownExpressions.EventContext}({eventContext.Property})",
+            EventSourceIdExpression => WellKnownExpressions.EventSourceId,
+            CausedByExpression causedBy => causedBy.Property == null ? WellKnownExpressions.CausedBy : $"{WellKnownExpressions.CausedBy}({causedBy.Property})",
             LiteralExpression literal => FormatLiteralForStorage(literal.Value),
             TemplateExpression template => ConvertTemplateToString(template),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")
