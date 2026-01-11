@@ -18,7 +18,7 @@ export const Dashboard = () => {
     const title = eventStore ? `${eventStore}` : 'Dashboard';
 
     return (
-        <Page title={title}>
+        <Page title={title} noBackground>
             <div className="flex h-full flex-col gap-4 overflow-auto pb-4">
                 {/* Top Status Bar */}
                 <StatusSummary />
