@@ -21,6 +21,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Subscribing observer with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<Observer> logger, int count, string eventTypes);
 
+    [LoggerMessage(LogLevel.Information, "Subscribing observer to all event types")]
+    internal static partial void SubscribingToAllEvents(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
 

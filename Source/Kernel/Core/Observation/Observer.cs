@@ -192,6 +192,58 @@ public partial class Observer(
             subscriberArgs,
             isReplayable,
             filters);
+
+        State = State with { SubscribesToAllEvents = false };
+        await WriteStateAsync();
+
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
+        await ResumeJobs();
+        await TryRecoverAllFailedPartitions();
+        await TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
+    public async Task SubscribeToAllEvents<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null,
+        bool isReplayable = true)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        var owner = GetOwner<TObserverSubscriber>();
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        logger.Subscribing();
+        logger.SubscribingToAllEvents();
+
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = [],
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            [],
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable);
+
+        State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
 
         if (State.RunningState == ObserverRunningState.Quarantined)
