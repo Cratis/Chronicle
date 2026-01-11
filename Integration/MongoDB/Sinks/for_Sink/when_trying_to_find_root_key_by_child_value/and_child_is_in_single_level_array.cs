@@ -5,41 +5,45 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Monads;
 using MongoDB.Bson;
+using context = Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value.and_child_is_in_single_level_array.context;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value;
 
 [Collection(MongoDBCollection.Name)]
-public class and_child_is_in_single_level_array(ChronicleInProcessFixture fixture) : given.a_sink_with_test_data(fixture)
+public class and_child_is_in_single_level_array(context context) : Given<context>(context)
 {
-    Guid _rootKey;
-    Guid _childKey;
-    Option<Key> _result;
-
-    void Establish()
+    public class context(ChronicleInProcessFixture fixture) : given.a_sink_with_test_data(fixture)
     {
-        _rootKey = Guid.NewGuid();
-        _childKey = Guid.NewGuid();
+        public Guid RootKey;
+        public Guid ChildKey;
+        public Option<Key> Result;
 
-        // Insert a document with a child in a single-level array
-        var document = new BsonDocument
+        void Establish()
         {
-            ["name"] = "Root Document",
-            ["children"] = new BsonArray
+            RootKey = Guid.NewGuid();
+            ChildKey = Guid.NewGuid();
+
+            // Insert a document with a child in a single-level array
+            var document = new BsonDocument
             {
-                new BsonDocument { ["childId"] = _childKey.ToString(), ["name"] = "Child 1" },
-                new BsonDocument { ["childId"] = Guid.NewGuid().ToString(), ["name"] = "Child 2" }
-            }
-        };
-        InsertDocument(_rootKey, document);
+                ["name"] = "Root Document",
+                ["children"] = new BsonArray
+                {
+                    new BsonDocument { ["childId"] = ChildKey.ToString(), ["name"] = "Child 1" },
+                    new BsonDocument { ["childId"] = Guid.NewGuid().ToString(), ["name"] = "Child 2" }
+                }
+            };
+            InsertDocument(RootKey, document);
+        }
+
+        async Task Because() => Result = await _sink.TryFindRootKeyByChildValue(new PropertyPath("children.childId"), ChildKey.ToString());
     }
 
-    async Task Because() => _result = await _sink.TryFindRootKeyByChildValue(new PropertyPath("children.childId"), _childKey.ToString());
-
-    [Fact] void should_return_a_value() => _result.HasValue.ShouldBeTrue();
+    [Fact] void should_return_a_value() => Context.Result.HasValue.ShouldBeTrue();
     [Fact]
     void should_return_the_root_key()
     {
-        _result.TryGetValue(out var key).ShouldBeTrue();
-        key.Value.ToString().ShouldEqual(_rootKey.ToString());
+        Context.Result.TryGetValue(out var key).ShouldBeTrue();
+        key.Value.ToString().ShouldEqual(Context.RootKey.ToString());
     }
 }

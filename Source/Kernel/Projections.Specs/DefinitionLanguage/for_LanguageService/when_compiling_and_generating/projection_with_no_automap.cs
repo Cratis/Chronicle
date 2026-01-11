@@ -11,8 +11,8 @@ public class projection_with_no_automap : EventTypes.a_language_service_with_sch
 {
     const string Definition = """
         projection TransportRoute => TransportRouteReadModel
+            no automap
             from HubRouteAdded key id
-                no automap
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(EventTypes.HubRouteAdded)];

@@ -33,17 +33,10 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(1)}sequence {definition.EventSequenceId.Value}");
         }
 
-        // NoAutoMap directive at projection level - only output if disabled (since Disabled is the default)
-        // Do NOT output anything if AutoMap is enabled, as we want to show explicit mappings
+        // NoAutoMap directive at projection level - output if AutoMap is explicitly disabled
         if (definition.AutoMap == AutoMap.Disabled)
         {
-            // Only output if there are property mappings that would otherwise be auto-mapped
-            var hasAnyPropertyMappings = definition.From.Values.Any(f => f.Properties.Count > 0) ||
-                                       definition.Join.Values.Any(j => j.Properties.Count > 0);
-            if (!hasAnyPropertyMappings)
-            {
-                sb.AppendLine($"{Indent(1)}no automap");
-            }
+            sb.AppendLine($"{Indent(1)}no automap");
         }
 
         // FromEvery block - only output if it has meaningful content
@@ -58,7 +51,7 @@ public class Generator : IGenerator
         // On event blocks
         foreach (var kv in definition.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, definition.AutoMap, 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1);
         }
 
         // Join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -66,7 +59,7 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, definition.AutoMap, 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, 1);
         }
 
         // Children blocks
@@ -93,6 +86,22 @@ public class Generator : IGenerator
 
     static string Indent(int level) => string.Concat(Enumerable.Repeat(Tab, level));
 
+    static string EscapeIfKeyword(string identifier)
+    {
+        var lowerIdentifier = identifier.ToLowerInvariant();
+        return Keywords.All.Contains(lowerIdentifier) ? $"@{identifier}" : identifier;
+    }
+
+    static string EscapePropertyPath(string path)
+    {
+        var segments = path.Split('.');
+        for (var i = 0; i < segments.Length; i++)
+        {
+            segments[i] = EscapeIfKeyword(segments[i]);
+        }
+        return string.Join('.', segments);
+    }
+
     void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)
     {
         sb.AppendLine($"{Indent(indent)}every");
@@ -115,14 +124,10 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, AutoMap parentAutoMap, int indent)
+    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
     {
-        // Determine the effective AutoMap setting for this from block
-        // If parent has AutoMap enabled, this from block inherits it unless explicitly disabled
-        var effectiveAutoMap = parentAutoMap == AutoMap.Enabled ? AutoMap.Enabled : AutoMap.Disabled;
-
         // Determine if we should use inline key syntax or block key syntax
-        // Use inline syntax for simple keys when there are no other inline options (like automap)
+        // Use inline syntax for simple keys
         // Use block syntax for composite keys or when other content exists
         var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith("$composite(") && from.Key.Value.EndsWith(')');
         var isDefaultKey = from.Key.IsSet() && from.Key.Value == "$eventSourceId";
@@ -159,7 +164,7 @@ public class Generator : IGenerator
                 var equalsIndex = part.IndexOf('=');
                 if (equalsIndex > 0)
                 {
-                    var propertyName = part.Substring(0, equalsIndex);
+                    var propertyName = EscapePropertyPath(part.Substring(0, equalsIndex));
                     var expression = part.Substring(equalsIndex + 1);
                     sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
                 }
@@ -172,24 +177,16 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
 
-        // Only generate property mappings if AutoMap is NOT enabled
-        // When AutoMap is enabled, properties are auto-mapped and should not be explicitly listed
-        if (effectiveAutoMap != AutoMap.Enabled)
+        // Property mappings - filter out redundant mappings when they would be handled by automap
+        // Only output explicit mappings where the target property name differs from the source expression
+        foreach (var kv in from.Properties)
         {
-            // Property mappings
-            foreach (var kv in from.Properties)
-            {
-                GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
-            }
+            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
         }
     }
 
-    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, AutoMap parentAutoMap, int indent)
+    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, int indent)
     {
-        // Determine the effective AutoMap setting for join blocks
-        // If parent has AutoMap enabled, join blocks inherit it unless explicitly disabled
-        var effectiveAutoMap = parentAutoMap == AutoMap.Enabled ? AutoMap.Enabled : AutoMap.Disabled;
-
         sb.AppendLine($"{Indent(indent)}join {joinName} on {onProperty}");
 
         foreach (var kv in joins)
@@ -199,14 +196,10 @@ public class Generator : IGenerator
 
             sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
 
-            // Only generate property mappings if AutoMap is NOT enabled
-            // When AutoMap is enabled, properties are auto-mapped and should not be explicitly listed
-            if (effectiveAutoMap != AutoMap.Enabled)
+            // Property mappings - filter out redundant mappings when automap is enabled
+            foreach (var prop in join.Properties)
             {
-                foreach (var prop in join.Properties)
-                {
-                    GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
-                }
+                GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
             }
         }
     }
@@ -239,7 +232,7 @@ public class Generator : IGenerator
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, effectiveAutoMap, indent + 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -247,7 +240,7 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, effectiveAutoMap, indent + 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, indent + 1);
         }
 
         // Nested children
@@ -311,18 +304,20 @@ public class Generator : IGenerator
             return;
         }
 
+        var propertyName = EscapePropertyPath(property.Path);
+
         // Check for arithmetic operations from C# projections ($add, $subtract)
         if (expression.StartsWith("$add(") && expression.EndsWith(')'))
         {
             var innerExpression = expression[5..^1];
-            sb.AppendLine($"{Indent(indent)}add {property.Path} by {ConvertExpressionForOutput(innerExpression)}");
+            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
             return;
         }
 
         if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
         {
             var innerExpression = expression[10..^1];
-            sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(innerExpression)}");
+            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
             return;
         }
 
@@ -330,29 +325,28 @@ public class Generator : IGenerator
         if (expression.StartsWith("+="))
         {
             var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}add {property.Path} by {ConvertExpressionForOutput(value)}");
+            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(value)}");
         }
         else if (expression.StartsWith("-="))
         {
             var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(value)}");
+            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(value)}");
         }
         else if (expression == "increment" || expression == "$increment")
         {
-            sb.AppendLine($"{Indent(indent)}increment {property.Path}");
+            sb.AppendLine($"{Indent(indent)}increment {propertyName}");
         }
         else if (expression == "decrement" || expression == "$decrement")
         {
-            sb.AppendLine($"{Indent(indent)}decrement {property.Path}");
+            sb.AppendLine($"{Indent(indent)}decrement {propertyName}");
         }
         else if (expression == "count" || expression == "$count")
         {
-            sb.AppendLine($"{Indent(indent)}count {property.Path}");
+            sb.AppendLine($"{Indent(indent)}count {propertyName}");
         }
         else
         {
-            // Simple assignment
-            sb.AppendLine($"{Indent(indent)}{property.Path} = {ConvertExpressionForOutput(expression)}");
+            sb.AppendLine($"{Indent(indent)}{propertyName} = {ConvertExpressionForOutput(expression)}");
         }
     }
 
@@ -426,7 +420,9 @@ public class Generator : IGenerator
             return expression;
         }
 
-        // Everything else (property paths, simple names) - return as-is
-        return expression;
+        // Property paths and simple names - check if they're keywords and escape if needed
+        var parts = expression.Split(['.']);
+        var escapedParts = parts.Select(part => Keywords.All.Contains(part.ToLowerInvariant()) ? $"@{part}" : part).ToArray();
+        return string.Join('.', escapedParts);
     }
 }
