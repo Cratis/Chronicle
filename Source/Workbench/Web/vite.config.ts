@@ -87,6 +87,7 @@ export default defineConfig({
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),
             'Strings': path.resolve('./Strings'),
+            'Utilities': path.resolve('./Utilities'),
             'given': path.resolve('./given.ts'),
         }
     }
