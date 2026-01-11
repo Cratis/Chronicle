@@ -7,9 +7,10 @@ import { useWorkbenchContext } from '../../Layout/Default/context/WorkbenchConte
 export interface PageProps extends HTMLAttributes<HTMLDivElement> {
     title: string;
     children?: ReactNode;
+    noBackground?: boolean;
 }
 
-export const Page = ({ title, children, ...rest }: PageProps) => {
+export const Page = ({ title, children, noBackground, ...rest }: PageProps) => {
     const { setPageTitle } = useWorkbenchContext();
 
     useEffect(() => {
@@ -18,7 +19,7 @@ export const Page = ({ title, children, ...rest }: PageProps) => {
 
     return (
         <div className='px-6 py-4 flex flex-col h-full' {...rest}>
-            <main className={`panel overflow-hidden h-full flex flex-col flex-1`}>
+            <main className={`${noBackground ? '' : 'panel'} overflow-hidden h-full flex flex-col flex-1`}>
                 {children}
             </main>
         </div>
