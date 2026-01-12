@@ -77,6 +77,13 @@ public interface IProjectionBuilder<TReadModel, TBuilder>
     TBuilder FromEvery(Action<IFromEveryBuilder<TReadModel>> builderCallback);
 
     /// <summary>
+    /// Start building property expressions that applies for all event types in the system.
+    /// </summary>
+    /// <param name="builderCallback">Callback for building.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder FromAll(Action<IFromAllBuilder<TReadModel>> builderCallback);
+
+    /// <summary>
     /// Defines what event removes a child. This is optional, your system can chose to not support removal.
     /// </summary>
     /// <typeparam name="TEvent">Type of event.</typeparam>
