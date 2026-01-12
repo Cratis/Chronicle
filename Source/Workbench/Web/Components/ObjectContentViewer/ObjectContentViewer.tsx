@@ -196,9 +196,7 @@ export const ObjectContentViewer = ({ object, timestamp, schema }: ObjectContent
             <table style={tableStyle}>
                 <tbody>
                     {entries.map(([propertyName, propertyDef]: [string, JsonSchemaProperty | Json]) => {
-                        const value = navigationPath.length === 0
-                            ? (currentData as Record<string, Json>)[propertyName]
-                            : propertyDef;
+                        const value = (currentData as Record<string, Json>)[propertyName];
 
                         const isSchemaProperty = navigationPath.length === 0;
                         const description = isSchemaProperty && typeof propertyDef === 'object' && propertyDef !== null && 'description' in propertyDef
