@@ -19,5 +19,5 @@ public class with_multiple_projection_definitions : given.a_projections_manager
 
     [Fact] void should_be_able_to_retrieve_first_projection() => _manager.TryGet(_eventStore, _namespace, _firstDefinition.Identifier, out _firstProjection).ShouldBeTrue();
     [Fact] void should_be_able_to_retrieve_second_projection() => _manager.TryGet(_eventStore, _namespace, _secondDefinition.Identifier, out _secondProjection).ShouldBeTrue();
-    [Fact] void should_create_projections_for_both_definitions() => _projectionFactory.Received(2).Create(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>());
+    [Fact] void should_create_projections_for_both_definitions() => _projectionFactory.Received(2).Create(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>());
 }

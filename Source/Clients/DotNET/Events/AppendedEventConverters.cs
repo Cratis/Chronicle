@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Dynamic;
 using System.Text.Json;
 
 namespace Cratis.Chronicle.Events;
@@ -30,9 +29,13 @@ internal static class AppendedEventConverters
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
     /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
     /// <returns>Converted Chronicle version.</returns>
+    /// <remarks>
+    /// This converter is a generic fallback that deserializes content to object (which becomes JsonElement).
+    /// In the main flow, AppendedEvent instances are created directly with content deserialized to the actual event type.
+    /// </remarks>
     internal static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new(
             @event.Context.ToClient(),
-            JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
+            JsonSerializer.Deserialize<object>(@event.Content, jsonSerializerOptions)!);
 
     /// <summary>
     /// Convert to a client version of a collection of <see cref="Contracts.Events.AppendedEvent"/>.

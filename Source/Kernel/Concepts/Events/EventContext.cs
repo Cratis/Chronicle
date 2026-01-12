@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
 /// <param name="Causation">A collection of <see cref="Causation"/> for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
+/// <param name="Tags">A collection of <see cref="Tag"/> for the event.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 public record EventContext(
     EventType EventType,
@@ -35,6 +36,7 @@ public record EventContext(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     Identity CausedBy,
+    IEnumerable<Tag> Tags,
     EventObservationState ObservationState = EventObservationState.Initial)
 {
     /// <summary>
@@ -64,6 +66,7 @@ public record EventContext(
     /// <param name="eventStreamId"><see cref="EventStreamId"/> to create from.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event as persisted in the event sequence.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
+    /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="occurred">Optional occurred.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
     public static EventContext From(
@@ -76,6 +79,7 @@ public record EventContext(
         EventStreamId eventStreamId,
         EventSequenceNumber sequenceNumber,
         CorrelationId correlationId,
+        IEnumerable<Tag>? tags = null,
         DateTimeOffset? occurred = default)
     {
         return new(
@@ -90,7 +94,11 @@ public record EventContext(
             @namespace,
             correlationId,
             [],
-            Identity.NotSet);
+            Identity.NotSet,
+            [])
+        {
+            Tags = tags ?? []
+        };
     }
 
     /// <summary>
@@ -116,18 +124,5 @@ public record EventContext(
     /// <param name="desiredState">The desired state.</param>
     /// <returns>A new copy with the desired state set.</returns>
     public EventContext WithState(EventObservationState desiredState) =>
-        new(
-            EventType,
-            EventSourceType,
-            EventSourceId,
-            EventStreamType,
-            EventStreamId,
-            SequenceNumber,
-            Occurred,
-            EventStore,
-            Namespace,
-            CorrelationId,
-            Causation,
-            CausedBy,
-            desiredState);
+        this with { ObservationState = desiredState };
 }

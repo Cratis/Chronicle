@@ -66,12 +66,14 @@ public class and_child_added_then_properties_changed_with_mixed_properties : giv
     [Fact] void should_keep_properties_changed_with_non_child_property() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().Count().ShouldEqual(1);
     [Fact] void should_keep_child_added() => _changeset.Changes.OfType<ChildAdded>().ShouldContainOnly(_childAdded);
     [Fact] void should_have_two_changes() => _changeset.Changes.Count().ShouldEqual(2);
-    [Fact] void should_apply_child_property_to_child()
+    [Fact]
+    void should_apply_child_property_to_child()
     {
         var childDict = (IDictionary<string, object?>)_child;
         childDict["name"].ShouldEqual("Updated Name");
     }
-    [Fact] void should_keep_non_child_property_in_properties_changed()
+    [Fact]
+    void should_keep_non_child_property_in_properties_changed()
     {
         var propertiesChanged = _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().First();
         propertiesChanged.Differences.ShouldContainOnly(_nonChildPropertyDifference);

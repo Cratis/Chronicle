@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Storage;
@@ -40,24 +39,38 @@ public class Reactors(
     async Task Subscribe<TReactor>(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
         where TReactor : IReactor
     {
+        var system = typeof(TReactor).IsSystemEventStoreOnly();
+        if (system && eventStore != EventStoreName.System)
+        {
+            return;
+        }
+
+        var defaultNamespaceOnly = typeof(TReactor).IsDefaultNamespaceOnly();
+        if (defaultNamespaceOnly && namespaceName != EventStoreNamespaceName.Default)
+        {
+            return;
+        }
+
+        var reactorId = typeof(TReactor).GetReactorId();
+        var reactorType = typeof(TReactor);
         var key = new ObserverKey(
-            $"$system.{typeof(TReactor).Name}",
+            $"$system.{reactorId}",
             eventStore,
             namespaceName,
-            EventSequenceId.System);
+            reactorType.GetEventSequenceId());
 
         var reactorDefinition = new ReactorDefinition(
             key.ObserverId,
             ReactorOwner.Kernel,
-            EventSequenceId.System,
-            typeof(TReactor).GetEventTypes().Select(et => new EventTypeWithKeyExpression(et, WellKnownExpressions.EventSourceId)).ToArray(),
+            reactorType.GetEventSequenceId(),
+            reactorType.GetEventTypes().Select(et => new EventTypeWithKeyExpression(et, WellKnownExpressions.EventSourceId)).ToArray(),
             false);
         await storage.GetEventStore(eventStore).Reactors.Save(reactorDefinition);
 
         var observer = grainFactory.GetGrain<IObserver>(key);
         await observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
             ObserverType.Reactor,
-            typeof(TReactor).GetEventTypes(),
+            reactorType.GetEventTypes(),
             localSiloDetails.SiloAddress,
             null,
             false);

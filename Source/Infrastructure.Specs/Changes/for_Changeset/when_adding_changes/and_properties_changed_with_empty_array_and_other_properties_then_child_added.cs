@@ -54,7 +54,8 @@ public class and_properties_changed_with_empty_array_and_other_properties_then_c
     [Fact] void should_keep_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().Count().ShouldEqual(1);
     [Fact] void should_keep_child_added() => _changeset.Changes.OfType<ChildAdded>().ShouldContainOnly(_childAdded);
     [Fact] void should_have_two_changes() => _changeset.Changes.Count().ShouldEqual(2);
-    [Fact] void should_only_keep_non_conflicting_property_in_properties_changed()
+    [Fact]
+    void should_only_keep_non_conflicting_property_in_properties_changed()
     {
         var propertiesChanged = _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().First();
         propertiesChanged.Differences.ShouldContainOnly(_namePropertyDifference);

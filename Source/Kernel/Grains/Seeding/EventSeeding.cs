@@ -81,7 +81,8 @@ public class EventSeeding(
 
         foreach (var entry in entriesList)
         {
-            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content);
+            var tags = entry.Tags?.Select(t => t.Value) ?? [];
+            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
 
             // Check if this exact event has already been seeded
             var alreadySeeded = IsAlreadySeeded(seededEntry);
@@ -99,6 +100,7 @@ public class EventSeeding(
                     EventStreamType.All,
                     EventStreamId.Default,
                     new EventType(entry.EventTypeId, EventTypeGeneration.First),
+                    entry.Tags ?? [],
                     content));
             }
         }
@@ -108,11 +110,14 @@ public class EventSeeding(
 
     bool IsAlreadySeeded(SeededEventEntry entry)
     {
+        var entryTagsSet = new HashSet<string>(entry.Tags ?? []);
+
         // Check in ByEventType
         if (state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries) &&
             byTypeEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
                                       e.EventTypeId == entry.EventTypeId &&
-                                      e.Content == entry.Content))
+                                      e.Content == entry.Content &&
+                                      new HashSet<string>(e.Tags ?? []).SetEquals(entryTagsSet)))
         {
             return true;
         }
@@ -121,7 +126,8 @@ public class EventSeeding(
         if (state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries) &&
             bySourceEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
                                         e.EventTypeId == entry.EventTypeId &&
-                                        e.Content == entry.Content))
+                                        e.Content == entry.Content &&
+                                        new HashSet<string>(e.Tags ?? []).SetEquals(entryTagsSet)))
         {
             return true;
         }

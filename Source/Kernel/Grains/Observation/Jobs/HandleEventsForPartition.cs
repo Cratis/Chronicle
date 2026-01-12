@@ -23,13 +23,15 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
 /// </remarks>
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
+/// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
+    IJobStepThrottle throttle,
     IStorage storage,
-    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, logger), IHandleEventsForPartition
+    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 

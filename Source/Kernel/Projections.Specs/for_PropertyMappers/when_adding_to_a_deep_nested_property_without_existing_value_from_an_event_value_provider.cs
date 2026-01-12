@@ -34,7 +34,8 @@ public class when_adding_to_a_deep_nested_property_without_existing_value_from_a
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                []),
             new ExpandoObject());
 
         _propertyMapper = PropertyMappers.AddWithEventValueProvider(new TypeFormats(), "deep.nested.property", new JsonSchemaProperty { Type = JsonObjectType.Integer }, _ =>

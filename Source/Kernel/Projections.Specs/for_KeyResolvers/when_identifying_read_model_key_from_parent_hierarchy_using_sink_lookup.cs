@@ -53,7 +53,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                []),
             new
             {
                 parentId = ParentKey,
@@ -115,9 +116,11 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
         }
     }
 
-    [Fact] void should_query_sink_with_child_projection_children_property_path() =>
+    [Fact]
+    void should_query_sink_with_child_projection_children_property_path() =>
         _queriedChildPropertyPath.ShouldEqual((PropertyPath)"hubs.id");
 
-    [Fact] void should_not_query_sink_with_parent_projection_children_property_path() =>
+    [Fact]
+    void should_not_query_sink_with_parent_projection_children_property_path() =>
         _queriedChildPropertyPath.ShouldNotEqual((PropertyPath)"configurations.id");
 }

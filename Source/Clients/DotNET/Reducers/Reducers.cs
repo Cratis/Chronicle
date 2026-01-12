@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
@@ -10,6 +9,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
@@ -36,12 +36,11 @@ public class Reducers : IReducers
     readonly IServiceProvider _serviceProvider;
     readonly IReducerValidator _reducerValidator;
     readonly IEventTypes _eventTypes;
-    readonly IEventSerializer _eventSerializer;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
-    IEnumerable<Type> _aggregateRootStateTypes = [];
+    readonly IReducerObservers _reducerObservers;
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
 
@@ -55,10 +54,10 @@ public class Reducers : IReducers
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
     /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
-    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
+    /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Reducers(
         IEventStore eventStore,
@@ -66,10 +65,10 @@ public class Reducers : IReducers
         IServiceProvider serviceProvider,
         IReducerValidator reducerValidator,
         IEventTypes eventTypes,
-        IEventSerializer eventSerializer,
         INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
         IIdentityProvider identityProvider,
+        IReducerObservers reducerObservers,
         ILogger<Reducers> logger)
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -83,17 +82,16 @@ public class Reducers : IReducers
         _serviceProvider = serviceProvider;
         _reducerValidator = reducerValidator;
         _eventTypes = eventTypes;
-        _eventSerializer = eventSerializer;
         _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
         _identityProvider = identityProvider;
+        _reducerObservers = reducerObservers;
         _logger = logger;
     }
 
     /// <inheritdoc/>
     public Task Discover()
     {
-        _aggregateRootStateTypes = _clientArtifacts.AggregateRootStateTypes;
         _handlersByType = _clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _,
@@ -188,6 +186,12 @@ public class Reducers : IReducers
     public bool HasReducerFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
+    public bool HasFor<TReadModel>() => HasFor(typeof(TReadModel));
+
+    /// <inheritdoc/>
+    public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor<TReducer>()
         where TReducer : IReducer =>
             GetFailedPartitionsFor(typeof(TReducer));
@@ -229,19 +233,58 @@ public class Reducers : IReducers
         });
     }
 
+    /// <summary>
+    /// Get snapshots for a reduced read model by its key.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of the read model.</typeparam>
+    /// <param name="readModelKey">The <see cref="ReadModelKey"/> to get snapshots for.</param>
+    /// <returns>Collection of <see cref="ReadModelSnapshot{TReadModel}"/>.</returns>
+    internal async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
+    {
+        var readModelType = typeof(TReadModel);
+        var handler = GetHandlerForReadModelType(readModelType);
+
+        var request = new Contracts.ReadModels.GetSnapshotsByKeyRequest
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ReadModelIdentifier = readModelType.GetReadModelIdentifier(),
+            EventSequenceId = handler.EventSequenceId,
+            ReadModelKey = readModelKey
+        };
+
+        var response = await _servicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
+
+        var snapshots = new List<ReadModelSnapshot<TReadModel>>();
+        foreach (var snapshot in response.Snapshots)
+        {
+            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, _jsonSerializerOptions)!;
+            var events = snapshot.Events.ToClient(_jsonSerializerOptions);
+
+            snapshots.Add(new ReadModelSnapshot<TReadModel>(
+                readModel,
+                events,
+                snapshot.Occurred,
+                snapshot.CorrelationId));
+        }
+
+        return snapshots;
+    }
+
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
         var handler = new ReducerHandler(
             _eventStore,
             reducerType.GetReducerId(),
+            reducerType,
             reducerType.GetEventSequenceId(),
             new ReducerInvoker(
                 _eventTypes,
                 reducerType,
                 readModelType,
                 _namingPolicy.GetReadModelName(readModelType)),
-            _eventSerializer,
-            ShouldReducerBeActive(reducerType, readModelType));
+            ShouldReducerBeActive(reducerType),
+            _reducerObservers);
 
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
@@ -271,10 +314,12 @@ public class Reducers : IReducers
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
+                IsActive = handler.IsActive,
                 Sink = new SinkDefinition
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
-                }
+                },
+                Tags = handler.ReducerType.GetTags().ToArray()
             }
         };
 
@@ -306,10 +351,11 @@ public class Reducers : IReducers
         var appendedEvents = operation.Events.Select(@event =>
         {
             var context = @event.Context.ToClient();
-            var contentAsExpando = JsonSerializer.Deserialize<ExpandoObject>(@event.Content)!;
+            var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
+            var content = JsonSerializer.Deserialize(@event.Content, eventType, _jsonSerializerOptions)!;
             return new AppendedEvent(
                 context,
-                contentAsExpando);
+                content);
         }).ToList();
 
         try
@@ -353,10 +399,16 @@ public class Reducers : IReducers
         messages.OnNext(new(new(result)));
     }
 
-    bool ShouldReducerBeActive(Type reducerType, Type readModelType)
+    bool ShouldReducerBeActive(Type reducerType)
     {
         var active = reducerType.IsActive();
-        if (!active || _aggregateRootStateTypes.Contains(readModelType))
+        if (!active)
+        {
+            return false;
+        }
+
+        var readModelType = reducerType.GetReadModelType();
+        if (readModelType.IsPassive())
         {
             return false;
         }

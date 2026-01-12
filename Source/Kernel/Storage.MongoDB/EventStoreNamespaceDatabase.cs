@@ -43,9 +43,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
-        var client = clientManager.GetClientFor(settings);
-        _database = client.GetDatabase(databaseName);
+        Client = clientManager.GetClientFor(settings);
+        _database = Client.GetDatabase(databaseName);
     }
+
+    /// <inheritdoc/>
+    public IMongoClient Client { get; }
 
     /// <inheritdoc/>
     public IMongoCollection<T> GetCollection<T>(string? name = null) => name == null ? _database.GetCollection<T>() : _database.GetCollection<T>(name);

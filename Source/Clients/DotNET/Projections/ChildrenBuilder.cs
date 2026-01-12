@@ -18,14 +18,14 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-/// <param name="autoMap">Whether to automatically map properties.</param>
+/// <param name="autoMap">AutoMap behavior for properties - inherits from parent by default.</param>
 /// <typeparam name="TParentReadModel">Parent read model type.</typeparam>
 /// <typeparam name="TChildReadModel">Child read model type.</typeparam>
 public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
     JsonSerializerOptions jsonSerializerOptions,
-    bool autoMap) :
+    AutoMap autoMap) :
     ProjectionBuilder<TChildReadModel, IChildrenBuilder<TParentReadModel, TChildReadModel>>(namingPolicy, eventTypes, jsonSerializerOptions, autoMap),
     IChildrenBuilder<TParentReadModel, TChildReadModel>
 {

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
@@ -15,8 +16,9 @@ namespace Cratis.Chronicle.Projections;
 /// Represents the implementation of <see cref="IProjectionsManager"/>.
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 [Singleton]
-public class ProjectionsManager(IProjectionFactory projectionFactory) : IProjectionsManager
+public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage) : IProjectionsManager
 {
     readonly ConcurrentDictionary<string, ProjectionDefinition> _definitions = new();
     readonly ConcurrentDictionary<string, IProjection> _projections = new();
@@ -35,9 +37,11 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
                 throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
             }
             var readModel = readModelDefinition;
+            var eventStoreStorage = storage.GetEventStore(eventStore);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
             foreach (var @namespace in namespaces)
             {
-                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
+                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
                 var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
                 _projections[key] = projection;
             }
@@ -47,13 +51,15 @@ public class ProjectionsManager(IProjectionFactory projectionFactory) : IProject
     /// <inheritdoc/>
     public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions)
     {
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         foreach (var definition in _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(kvp => kvp.Value))
         {
             var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
             var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
             if (!_projections.ContainsKey(key))
             {
-                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
+                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
             }
         }
     }

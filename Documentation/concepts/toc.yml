@@ -14,6 +14,8 @@
   href: observers.md
 - name: Projection
   href: projection.md
+- name: Categorizing Reactors
+  href: categorizing-reactors.md
 - name: Constraints
   href: constraints.md
 - name: Event Metadata Tags

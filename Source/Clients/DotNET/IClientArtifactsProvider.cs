@@ -51,24 +51,9 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> ComplianceForPropertiesProviders { get; }
 
     /// <summary>
-    /// Gets all the available rule types.
-    /// </summary>
-    IEnumerable<Type> Rules { get; }
-
-    /// <summary>
     /// Gets all the available event information provider types.
     /// </summary>
     IEnumerable<Type> AdditionalEventInformationProviders { get; }
-
-    /// <summary>
-    /// Gets all the available aggregate root types.
-    /// </summary>
-    IEnumerable<Type> AggregateRoots { get; }
-
-    /// <summary>
-    /// Gets all the available aggregate root state types.
-    /// </summary>
-    IEnumerable<Type> AggregateRootStateTypes { get; }
 
     /// <summary>
     /// Gets all the available constraint types represented by <see cref="IConstraint"/> .

@@ -19,36 +19,49 @@ public static class ServiceCollectionExtensions
     /// Adds the Chronicle connection to the <see cref="IServiceCollection"/>.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="url">The Chronicle URL to connect to. If not provided, defaults to <see cref="ChronicleUrl.Default"/>.</param>
-    /// <param name="urlFactory">A factory function to create the Chronicle URL. If provided, it will be used to determine the URL instead of the default.</param>
+    /// <param name="connectionString">The Chronicle URL to connect to. If not provided, defaults to <see cref="ChronicleConnectionString.Default"/>.</param>
+    /// <param name="connectionStringFactory">A factory function to create the Chronicle URL. If provided, it will be used to determine the URL instead of the default.</param>
+    /// <param name="disableTls">Whether to disable TLS for the connection.</param>
+    /// <param name="certificatePath">Path to the TLS certificate file.</param>
+    /// <param name="certificatePassword">Password for the TLS certificate file.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
-    /// If the <paramref name="url"/> is not specified, it will use the <paramref name="urlFactory"/> if specified, if not, it defaults to <see cref="ChronicleUrl.Default"/>.
+    /// If the <paramref name="connectionString"/> is not specified, it will use the <paramref name="connectionStringFactory"/> if specified, if not, it defaults to <see cref="ChronicleConnectionString.Default"/>.
     /// </remarks>
-    public static IServiceCollection AddCratisChronicleConnection(this IServiceCollection services, ChronicleUrl? url = default, Func<IServiceProvider, ChronicleUrl>? urlFactory = default)
+    public static IServiceCollection AddCratisChronicleConnection(
+        this IServiceCollection services,
+        ChronicleConnectionString? connectionString = default,
+        Func<IServiceProvider, ChronicleConnectionString>? connectionStringFactory = default,
+        bool disableTls = false,
+        string? certificatePath = null,
+        string? certificatePassword = null)
     {
         services.TryAddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
         services.AddSingleton<IChronicleConnection>(sp =>
         {
-            url ??= urlFactory?.Invoke(sp) ?? ChronicleUrl.Default;
+            connectionString ??= connectionStringFactory?.Invoke(sp) ?? ChronicleConnectionString.Default;
 
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
-            logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", url);
+            logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", connectionString);
 #pragma warning restore CA1848 // Use the LoggerMessage delegates
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
             return new ChronicleConnection(
-                url,
+                connectionString,
                 5,
                 null,
                 null,
                 connectionLifecycle,
                 new Cratis.Tasks.TaskFactory(),
                 correlationIdAccessor,
+                sp.GetRequiredService<ILoggerFactory>(),
+                lifetime.ApplicationStopping,
                 sp.GetRequiredService<ILogger<ChronicleConnection>>(),
-                lifetime.ApplicationStopping);
+                disableTls,
+                certificatePath,
+                certificatePassword);
         });
 
         services.AddSingleton(sp =>

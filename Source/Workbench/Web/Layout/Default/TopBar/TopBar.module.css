@@ -10,7 +10,8 @@
 }
 
 .leftSide {
-    flex: 0 0 var(--sidebar-width);
+    flex: 1;
+    min-width: 0;
 }
 
 .sidebarToggle {
@@ -18,6 +19,13 @@
     position: absolute;
     display: flex;
     justify-content: center;
+    align-items: center;
+}
+
+.breadcrumbContainer {
+    margin-left: var(--sidebar-closed-width);
+    padding-left: 1rem;
+    display: flex;
     align-items: center;
 }
 

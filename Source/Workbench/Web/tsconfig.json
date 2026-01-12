@@ -21,31 +21,61 @@
         "noFallthroughCasesInSwitch": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "baseUrl": "./",
+        "baseUrl": ".",
         "paths": {
+            "Api": [
+                "./Api"
+            ],
             "Api/*": [
-                "./Api/*"
+                "Api/*"
+            ],
+            "assets": [
+                "./assets"
+            ],
+            "assets/*": [
+                "./assets/*"
             ],
             "Shared/*": [
-                "./Shared/*"
+                "Shared/*"
+            ],
+            "Shared": [
+                "Shared/index"
             ],
             "State/*": [
-                "./State/*"
+                "State/*"
             ],
             "Components/*": [
-                "./Components/*"
+                "Components/*"
+            ],
+            "Components": [
+                "Components/index"
+            ],
+            "Icons/*": [
+                "Icons/*"
+            ],
+            "Icons": [
+                "Icons/index"
+            ],
+            "Browser": [
+                "./Infrastructure/Browser"
+            ],
+            "Browser/*": [
+                "./Infrastructure/Browser/*"
             ],
             "Layout/*": [
-                "./Layout/*"
+                "Layout/*"
             ],
             "Features/*": [
-                "./Features/*"
+                "Features/*"
             ],
             "Strings": [
-                "Strings"
+                "./Strings"
+            ],
+            "Strings/*": [
+                "./Strings/*"
             ],
             "given": [
-                "given"
+                "./given.ts"
             ]
         }
     },
@@ -54,7 +84,6 @@
         "**/*.tsx"
     ],
     "exclude": [
-        "**/for_*/**",
         "vite.config.ts"
     ],
     "references": [

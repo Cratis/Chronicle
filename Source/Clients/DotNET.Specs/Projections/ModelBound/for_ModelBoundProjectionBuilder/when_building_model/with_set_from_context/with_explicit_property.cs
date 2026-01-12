@@ -13,7 +13,8 @@ public class with_explicit_property : given.a_model_bound_projection_builder
 
     void Because() => _result = builder.Build(typeof(EventAuditEntry));
 
-    [Fact] void should_map_timestamp_property_to_occurred_on_event_context()
+    [Fact]
+    void should_map_timestamp_property_to_occurred_on_event_context()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DebitAccountOpened)).ToContract();
         var fromDefinition = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;

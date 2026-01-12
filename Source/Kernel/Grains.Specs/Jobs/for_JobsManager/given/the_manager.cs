@@ -56,7 +56,7 @@ public class the_manager : Specification
         _silo.AddService(_jobTypes);
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
-        _managerKey = new ("event-store", "namespace");
+        _managerKey = new("event-store", "namespace");
         _manager = await _silo.CreateGrainAsync<JobsManager>(0, _managerKey);
     }
 

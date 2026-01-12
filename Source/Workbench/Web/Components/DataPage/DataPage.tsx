@@ -55,8 +55,11 @@ export const MenuItems = ({ children }: MenuItemsProps) => {
     }, [children, context.selectedItem]);
 
     return (
-        <div className="px-4 py-2">
-            <Menubar aria-label="Actions" model={items} />
+        <div className="px-4 py-4" style={{ flexShrink: 0 }}>
+            <Menubar
+                aria-label="Actions"
+                model={items}
+            />
         </div>);
 };
 
@@ -66,15 +69,19 @@ export const Columns = ({ children }: ColumnProps) => {
 
     if (context.query.prototype instanceof QueryFor) {
         return (
-            <DataTableForQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
-                {children}
-            </DataTableForQuery>);
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '1rem', overflow: 'hidden' }}>
+                <DataTableForQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
+                    {children}
+                </DataTableForQuery>
+            </div>);
 
     } else {
         return (
-            <DataTableForObservableQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
-                {children}
-            </DataTableForObservableQuery>);
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '1rem', overflow: 'hidden' }}>
+                <DataTableForObservableQuery {...context} selection={context.selectedItem} onSelectionChange={context.onSelectionChanged}>
+                    {children}
+                </DataTableForObservableQuery>
+            </div>);
     }
 };
 
@@ -170,16 +177,20 @@ const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDat
     return (
         <DataPageContext.Provider value={context}>
             <Page title={props.title}>
-                <Allotment className="h-full" proportionalLayout={false}>
-                    <Allotment.Pane className="flex-grow">
-                        {props.children}
-                    </Allotment.Pane>
-                    {props.detailsComponent && selectedItem &&
-                        <Allotment.Pane preferredSize="450px">
-                            <props.detailsComponent item={selectedItem} />
+                <div className="h-full" style={{ height: '100%' }}>
+                    <Allotment className="h-full" proportionalLayout={false}>
+                        <Allotment.Pane className="flex-grow">
+                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                                {props.children}
+                            </div>
                         </Allotment.Pane>
-                    }
-                </Allotment>
+                        {props.detailsComponent && selectedItem &&
+                            <Allotment.Pane preferredSize="450px">
+                                <props.detailsComponent item={selectedItem} />
+                            </Allotment.Pane>
+                        }
+                    </Allotment>
+                </div>
             </Page>
         </DataPageContext.Provider>
     );

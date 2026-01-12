@@ -19,8 +19,8 @@ internal static class SinkDefinitionConverters
     {
         return new()
         {
-            ConfigurationId = definition.ConfigurationId,
-            TypeId = definition.TypeId
+            ConfigurationId = definition.Configuration,
+            TypeId = definition.Type
         };
     }
 
