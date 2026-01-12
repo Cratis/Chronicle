@@ -17,6 +17,11 @@ import { getThemeColors, type ThemeColors } from 'Utilities/ThemeColors';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
+const ellipsis = (value: string) => {
+    const maxLength = 20;
+    return value.length > maxLength ? `${value.substring(0, maxLength)}...` : value;
+};
+
 const hourBucket = (isoDate: string) => {
     const date = new Date(isoDate);
     const bucket = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:00:00`;
@@ -24,6 +29,12 @@ const hourBucket = (isoDate: string) => {
 };
 
 const dimensions: PivotDimension<AppendedEvent>[] = [
+    {
+        key: 'sequence',
+        label: 'Sequence',
+        getValue: (item) => item.context.sequenceNumber.toString(),
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
     {
         key: 'type',
         label: 'Event Type',
@@ -82,32 +93,6 @@ const filters: PivotFilter<AppendedEvent>[] = [
     },
 ];
 
-const cardRenderer = (event: AppendedEvent) => {
-    const properties: Array<[string, string]> = [
-        ['Type', event.context.eventType.id],
-        ['Occurred', event.context.occurred.toLocaleString()],
-        ['Correlation', event.context.correlationId.toString()]
-    ];
-
-    const limited = properties.slice(0, 3);
-    const hasMore = properties.length > 3;
-
-    return (
-        <div className="pv-card-body">
-            <div className="pv-card-title">{event.context.eventType.id}</div>
-            <dl>
-                {limited.map(([key, value]) => (
-                    <div key={key} className="pv-card-row">
-                        <dt>{key}</dt>
-                        <dd>{value}</dd>
-                    </div>
-                ))}
-                {hasMore && <div className="pv-card-more">…</div>}
-            </dl>
-        </div>
-    );
-};
-
 const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeRegistration[]>, onClose: () => void) => {
     const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === event.context.eventType.id);
     const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
@@ -156,11 +141,16 @@ export const Pivot = () => {
         <Page title={strings.mainMenu.pivot} noBackground noPadding>
             <div className="p-4 h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
-                    data={events.data}
+                    data={events.data ?? []}
                     dimensions={dimensions}
                     filters={filters}
-                    defaultDimensionKey="type"
-                    cardRenderer={cardRenderer}
+                    defaultDimensionKey="sequence"
+                    cardRenderer={(event) => ({
+                        title: ellipsis(event.context.eventType.id),
+                        labels: ['Sequence #', 'Occurred'],
+                        values: [String(event.context.sequenceNumber), event.context.occurred.toLocaleString()],
+                    })}
+
                     detailRenderer={(item, onClose) => detailRenderer(item, eventTypes, onClose)}
                     getItemId={(item) => String(item.context.sequenceNumber)}
                     searchFields={[
