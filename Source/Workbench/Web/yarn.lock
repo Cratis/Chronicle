@@ -360,9 +360,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^0.1.17":
-  version: 0.1.17
-  resolution: "@cratis/components@npm:0.1.17"
+"@cratis/components@npm:^0.1.18":
+  version: 0.1.18
+  resolution: "@cratis/components@npm:0.1.18"
   dependencies:
     "@cratis/arc": "npm:^18.7.17"
     "@cratis/arc.react": "npm:^18.7.17"
@@ -384,7 +384,7 @@ __metadata:
     usehooks-ts: "npm:3.1.1"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/88c7f02948c4765d03394dc65da6f181551ffbdd8d7bd991e6f07c61c3014e743316d8f9fcf046bea6d9194290ada9ddbe5f4c49ce25115d8b333c6876fab574
+  checksum: 10/f0ff60c09c64d975d6ce8158885f538a5cad15f719d29a0b33a6ca7a1474b07a9bb802706a6b05c10c74491674dea8f1a5a9099c91244aafd82b3ec71b431284
   languageName: node
   linkType: hard
 
@@ -7253,7 +7253,7 @@ __metadata:
     "@cratis/arc.react": "npm:^18.7.21"
     "@cratis/arc.react.mvvm": "npm:^18.7.21"
     "@cratis/arc.vite": "npm:^18.7.21"
-    "@cratis/components": "npm:^0.1.17"
+    "@cratis/components": "npm:^0.1.18"
     "@monaco-editor/react": "npm:^4.7.0"
     "@tailwindcss/postcss": "npm:4.1.18"
     "@tailwindcss/vite": "npm:4.1.18"
