@@ -12,8 +12,8 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
-using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Contracts.Seeding;
 
 namespace Cratis.Chronicle.Contracts;
 

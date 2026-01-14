@@ -36,15 +36,15 @@ public interface IUsers
     /// <summary>
     /// Gets all users.
     /// </summary>
-    /// <returns><see cref="UsersResponse"/>.</returns>
+    /// <returns><see cref="IEnumerable{T}"/> of <see cref="User"/>.</returns>
     [Operation]
-    Task<UsersResponse> GetAll();
+    Task<IEnumerable<User>> GetAll();
 
     /// <summary>
     /// Observe all users.
     /// </summary>
     /// <param name="context">The gRPC <see cref="CallContext"/>.</param>
-    /// <returns>An observable of <see cref="UsersResponse"/>.</returns>
+    /// <returns>An observable of <see cref="IEnumerable{T}"/> of <see cref="User"/>.</returns>
     [Operation]
-    IObservable<UsersResponse> ObserveAll(CallContext context = default);
+    IObservable<IEnumerable<User>> ObserveAll(CallContext context = default);
 }

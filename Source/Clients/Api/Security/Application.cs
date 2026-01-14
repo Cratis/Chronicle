@@ -31,5 +31,5 @@ public record Application(
     internal static ISubject<IEnumerable<Application>> AllApplications(IApplications applications) =>
         applications.InvokeAndWrapWithTransformSubject(
             token => applications.ObserveAll(token),
-            response => response.Applications.ToApi());
+            response => response.ToApi());
 }

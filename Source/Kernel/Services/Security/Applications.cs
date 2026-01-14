@@ -63,18 +63,18 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     }
 
     /// <inheritdoc/>
-    public async Task<ApplicationsResponse> GetAll()
+    public async Task<IEnumerable<Application>> GetAll()
     {
         var clients = await storage.System.Applications.GetAll();
-        return new ApplicationsResponse { Applications = clients.Select(ToContract).ToList() };
+        return clients.Select(ToContract).ToList();
     }
 
     /// <inheritdoc/>
-    public IObservable<ApplicationsResponse> ObserveAll(CallContext context = default) =>
+    public IObservable<IEnumerable<Application>> ObserveAll(CallContext context = default) =>
         storage.System.Applications
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
-            .Select(apps => new ApplicationsResponse { Applications = apps.Select(ToContract).ToList() });
+            .Select(apps => apps.Select(ToContract));
 
     static Application ToContract(Storage.Security.Application client) => new()
     {
