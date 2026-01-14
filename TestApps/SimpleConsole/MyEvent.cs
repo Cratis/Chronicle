@@ -11,3 +11,4 @@ namespace TestApp;
 [EventType]
 public record MyEvent();
 
+

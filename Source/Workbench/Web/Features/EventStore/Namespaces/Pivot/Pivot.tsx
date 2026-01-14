@@ -5,7 +5,6 @@ import { PivotDimension, PivotFilter, PivotViewer } from '@cratis/components/Piv
 import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
@@ -13,9 +12,13 @@ import { ObjectContentViewer } from 'Components/ObjectContentViewer';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { QueryResultWithState } from '@cratis/arc/queries';
-import { getThemeColors, type ThemeColors } from 'Utilities/ThemeColors';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
+
+const ellipsis = (value: string) => {
+    const maxLength = 20;
+    return value.length > maxLength ? `${value.substring(0, maxLength)}...` : value;
+};
 
 const hourBucket = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -24,6 +27,12 @@ const hourBucket = (isoDate: string) => {
 };
 
 const dimensions: PivotDimension<AppendedEvent>[] = [
+    {
+        key: 'sequence',
+        label: 'Sequence',
+        getValue: (item) => item.context.sequenceNumber.toString(),
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
     {
         key: 'type',
         label: 'Event Type',
@@ -82,66 +91,21 @@ const filters: PivotFilter<AppendedEvent>[] = [
     },
 ];
 
-const cardRenderer = (event: AppendedEvent) => {
-    const properties: Array<[string, string]> = [
-        ['Type', event.context.eventType.id],
-        ['Occurred', event.context.occurred.toLocaleString()],
-        ['Correlation', event.context.correlationId.toString()]
-    ];
-
-    const limited = properties.slice(0, 3);
-    const hasMore = properties.length > 3;
-
-    return (
-        <div className="pv-card-body">
-            <div className="pv-card-title">{event.context.eventType.id}</div>
-            <dl>
-                {limited.map(([key, value]) => (
-                    <div key={key} className="pv-card-row">
-                        <dt>{key}</dt>
-                        <dd>{value}</dd>
-                    </div>
-                ))}
-                {hasMore && <div className="pv-card-more">…</div>}
-            </dl>
-        </div>
-    );
-};
-
-const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeRegistration[]>, onClose: () => void) => {
+const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeRegistration[]>) => {
     const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === event.context.eventType.id);
     const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
+    const content = typeof event.content === 'string' ? JSON.parse(event.content) : event.content;
 
     return (
         <div style={{ padding: '20px', height: '100%', overflow: 'auto' }}>
-            <button
-                onClick={onClose}
-                style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    background: 'transparent',
-                    border: 'none',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    color: 'var(--text-color-secondary)',
-                }}
-            >
-                ✕
-            </button>
             <h2 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--text-color)' }}>{event.context.eventType.id}</h2>
-            <ObjectContentViewer object={event.content} schema={schema} />
+            <ObjectContentViewer object={content} schema={schema} />
         </div>
     );
 };
 
 export const Pivot = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [themeColors, setThemeColors] = useState<Partial<ThemeColors>>({});
-
-    useEffect(() => {
-        setThemeColors(getThemeColors());
-    }, []);
 
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
@@ -153,21 +117,25 @@ export const Pivot = () => {
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
 
     return (
-        <Page title={strings.mainMenu.pivot}>
+        <Page title={strings.mainMenu.pivot} noBackground noPadding>
             <div className="p-4 h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
-                    data={events.data}
+                    data={events.data ?? []}
                     dimensions={dimensions}
                     filters={filters}
                     defaultDimensionKey="type"
-                    cardRenderer={cardRenderer}
-                    detailRenderer={(item, onClose) => detailRenderer(item, eventTypes, onClose)}
+                    cardRenderer={(event) => ({
+                        title: ellipsis(event.context.eventType.id),
+                        labels: ['Sequence #', 'Occurred'],
+                        values: [String(event.context.sequenceNumber), event.context.occurred.toLocaleString()],
+                    })}
+
+                    detailRenderer={(item) => detailRenderer(item, eventTypes)}
                     getItemId={(item) => String(item.context.sequenceNumber)}
                     searchFields={[
                         (_) => _.context.eventType.id,
                         (_) => _.context.correlationId.toString()
                     ]}
-                    colors={themeColors}
                     className="flex-1 min-h-0"
                     emptyContent={<span>No events match the current filters.</span>}
                     isLoading={events.isPerforming}
