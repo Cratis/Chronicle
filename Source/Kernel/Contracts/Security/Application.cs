@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents an application in the Chronicle system.
 /// </summary>
 [ProtoContract]
-public record Application
+public class Application
 {
     /// <summary>
     /// The unique identifier for the client.

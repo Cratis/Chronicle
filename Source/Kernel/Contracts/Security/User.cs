@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents a user in the Chronicle system.
 /// </summary>
 [ProtoContract]
-public record User
+public class User
 {
     /// <summary>
     /// The unique identifier for the user.
