@@ -36,15 +36,15 @@ public interface IApplications
     /// <summary>
     /// Gets all applications.
     /// </summary>
-    /// <returns><see cref="IEnumerable{T}"/> of <see cref="Application"/>.</returns>
+    /// <returns><see cref="IList{T}"/> of <see cref="Application"/>.</returns>
     [Operation]
-    Task<IEnumerable<Application>> GetAll();
+    Task<IList<Application>> GetAll();
 
     /// <summary>
     /// Observe all applications.
     /// </summary>
     /// <param name="context">The gRPC <see cref="CallContext"/>.</param>
-    /// <returns>An observable of <see cref="IEnumerable{T}"/> of <see cref="User"/>.</returns>
+    /// <returns>An observable of <see cref="IList{T}"/> of <see cref="Application"/>.</returns>
     [Operation]
-    IObservable<IEnumerable<Application>> ObserveAll(CallContext context = default);
+    IObservable<IList<Application>> ObserveAll(CallContext context = default);
 }
