@@ -9,7 +9,7 @@
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />
     <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.1" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.2" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.4.0" />
