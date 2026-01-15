@@ -12,10 +12,10 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.2" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.4.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.5.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.4.0" />
     <PackageVersion Include="Cratis.Arc" Version="18.7.9" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.14" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="18.7.26" />
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="18.7.14" />
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="18.7.11" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="18.7.9" />
@@ -26,7 +26,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.1" />
