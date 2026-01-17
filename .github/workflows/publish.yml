@@ -208,6 +208,16 @@ jobs:
           node-version: '23.x'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Install protoc
+        run: |
+          PROTOC_VERSION="28.3"
+          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}
+          sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
+          sudo unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
+          rm -f $PROTOC_ZIP
+          protoc --version
+
       - name: Build Contracts
         working-directory: ./Source/Kernel/Contracts
         run: dotnet build -c Release
