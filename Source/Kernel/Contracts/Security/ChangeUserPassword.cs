@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents the command for changing a user's password.
 /// </summary>
 [ProtoContract]
-public record ChangeUserPassword
+public class ChangeUserPassword
 {
     /// <summary>
     /// The unique identifier for the user.

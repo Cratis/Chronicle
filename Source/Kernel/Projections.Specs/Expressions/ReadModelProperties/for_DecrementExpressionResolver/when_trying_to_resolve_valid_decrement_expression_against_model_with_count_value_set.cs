@@ -42,8 +42,8 @@ public class when_trying_to_resolve_valid_decrement_expression_against_model_wit
 
     void Because()
     {
-        _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Decrement}()")(_event, _target, ArrayIndexers.NoIndexers);
-        _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Decrement}()")(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), WellKnownExpressions.Decrement)(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), WellKnownExpressions.Decrement)(_event, _target, ArrayIndexers.NoIndexers);
     }
 
     [Fact] void should_resolve_to_a_propertymapper_that_increments_into_the_property() => ((double)((dynamic)_target).targetProperty).ShouldEqual(40d);

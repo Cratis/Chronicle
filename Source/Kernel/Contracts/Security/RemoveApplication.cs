@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents the command for removing an application.
 /// </summary>
 [ProtoContract]
-public record RemoveApplication
+public class RemoveApplication
 {
     /// <summary>
     /// The unique identifier for the client.

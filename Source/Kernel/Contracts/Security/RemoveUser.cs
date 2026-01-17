@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents the command for removing a user.
 /// </summary>
 [ProtoContract]
-public record RemoveUser
+public class RemoveUser
 {
     /// <summary>
     /// The unique identifier for the user.

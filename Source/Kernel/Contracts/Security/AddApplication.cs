@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents the command for adding an application.
 /// </summary>
 [ProtoContract]
-public record AddApplication
+public class AddApplication
 {
     /// <summary>
     /// The unique identifier for the client.

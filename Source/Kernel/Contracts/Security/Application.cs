@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents an application in the Chronicle system.
 /// </summary>
 [ProtoContract]
-public record Application
+public class Application
 {
     /// <summary>
     /// The unique identifier for the client.
@@ -30,12 +30,12 @@ public record Application
     /// <summary>
     /// When the client was created.
     /// </summary>
-    [ProtoMember(4)]
-    public DateTimeOffset CreatedAt { get; set; }
+    [ProtoMember(4, IsRequired = true)]
+    public SerializableDateTimeOffset CreatedAt { get; set; } = new();
 
     /// <summary>
     /// When the client was last modified.
     /// </summary>
     [ProtoMember(5)]
-    public DateTimeOffset? LastModifiedAt { get; set; }
+    public SerializableDateTimeOffset? LastModifiedAt { get; set; }
 }

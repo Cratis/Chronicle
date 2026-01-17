@@ -33,5 +33,5 @@ public record User(
     internal static ISubject<IEnumerable<User>> AllUsers(IUsers users) =>
         users.InvokeAndWrapWithTransformSubject(
             token => users.ObserveAll(token),
-            users => users.ToApi());
+            response => response.ToApi());
 }

@@ -24,9 +24,7 @@ public class when_getting_event_stores(context context) : Given<context>(context
         }
     }
 
-    [Fact]
-    void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
 
-    [Fact]
-    void should_return_two_event_stores_including_system() => Context.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
+    [Fact] void should_return_two_event_stores_including_system() => Context.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
 }

@@ -103,7 +103,7 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         var productChildren = storeChildren.Children[nameof(Store.Products)];
         var fromDef = productChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Product.PriceChanges)];
-        expression.ShouldEqual($"{WellKnownExpressions.Increment}()");
+        expression.ShouldEqual(WellKnownExpressions.Increment);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         var productChildren = storeChildren.Children[nameof(Store.Products)];
         var fromDef = productChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Product.AdjustmentsRemaining)];
-        expression.ShouldEqual($"{WellKnownExpressions.Decrement}()");
+        expression.ShouldEqual(WellKnownExpressions.Decrement);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         var productChildren = storeChildren.Children[nameof(Store.Products)];
         var fromDef = productChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Product.StockUpdateCount)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 }
 
