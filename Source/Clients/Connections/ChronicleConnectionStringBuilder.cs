@@ -23,6 +23,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string SchemeKey = "Scheme";
     const string ApiKeyKey = "apiKey";
     const string DisableTlsKey = "disableTls";
+    const string CertificatePathKey = "certificatePath";
+    const string CertificatePasswordKey = "certificatePassword";
     const int DefaultPort = 35000;
 
     /// <summary>
@@ -165,6 +167,44 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets the path to the certificate file for TLS.
+    /// </summary>
+    public string? CertificatePath
+    {
+        get => ContainsKey(CertificatePathKey) ? (string)this[CertificatePathKey] : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(CertificatePathKey);
+            }
+            else
+            {
+                this[CertificatePathKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the password for the certificate file.
+    /// </summary>
+    public string? CertificatePassword
+    {
+        get => ContainsKey(CertificatePasswordKey) ? (string)this[CertificatePasswordKey] : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(CertificatePasswordKey);
+            }
+            else
+            {
+                this[CertificatePasswordKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
     /// Builds a Chronicle connection string from the current settings.
     /// </summary>
     /// <returns>The Chronicle connection string.</returns>
@@ -199,6 +239,16 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("disableTls=true");
         }
 
+        if (ContainsKey(CertificatePathKey))
+        {
+            queryParams.Add($"certificatePath={Uri.EscapeDataString((string)this[CertificatePathKey])}");
+        }
+
+        if (ContainsKey(CertificatePasswordKey))
+        {
+            queryParams.Add($"certificatePassword={Uri.EscapeDataString((string)this[CertificatePasswordKey])}");
+        }
+
         // Add any other query parameters that aren't our special keys
         foreach (var key in Keys)
         {
@@ -210,7 +260,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != PasswordKey &&
                 keyStr != SchemeKey &&
                 keyStr != ApiKeyKey &&
-                keyStr != DisableTlsKey)
+                keyStr != DisableTlsKey &&
+                keyStr != CertificatePathKey &&
+                keyStr != CertificatePasswordKey)
             {
                 queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
             }
