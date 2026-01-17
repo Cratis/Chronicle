@@ -188,6 +188,59 @@ jobs:
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
+  publish-typescript-client:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build Contracts
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate Proto Files
+        run: |
+          dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+            Source/Kernel/Protobuf
+
+      - name: Install TypeScript dependencies
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn install
+
+      - name: Generate TypeScript from Proto
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn generate
+
+      - name: Build TypeScript package
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn build
+
+      - name: Set package version
+        working-directory: ./Source/Clients/TypeScript
+        run: |
+          npm version ${{ needs.release.outputs.version }} --no-git-tag-version
+
+      - name: Publish to NPM
+        working-directory: ./Source/Clients/TypeScript
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
