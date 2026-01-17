@@ -1,12 +1,13 @@
+---
 name: TypeScript Build
 
 env:
   DOTNET_VERSION: "10.0.x"
 
-on:
+"on":
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "Source/Clients/TypeScript/**"
       - "Source/Kernel/Contracts/**"
@@ -45,8 +46,10 @@ jobs:
 
       - name: Generate Proto Files
         run: |
-          dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-            Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            $CONTRACTS_DLL \
             Source/Kernel/Protobuf
 
       - name: Install TypeScript dependencies

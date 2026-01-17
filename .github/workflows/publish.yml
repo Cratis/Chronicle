@@ -214,8 +214,10 @@ jobs:
 
       - name: Generate Proto Files
         run: |
-          dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-            Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            $CONTRACTS_DLL \
             Source/Kernel/Protobuf
 
       - name: Install TypeScript dependencies
