@@ -46,7 +46,7 @@ foreach (var group in servicesByNamespace)
     try
     {
         var schema = generator.GetSchema(packageServices);
-        var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", "").Replace(".", "_").ToLowerInvariant();
+        var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", string.Empty).Replace('.', '_').ToLowerInvariant();
         if (string.IsNullOrEmpty(fileName))
         {
             fileName = "chronicle";
