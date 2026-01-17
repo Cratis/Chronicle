@@ -17,6 +17,9 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// <param name="codecProvider">The <see cref="ICodecProvider"/>.</param>
 public class ConceptAsSerializer(ICodecProvider codecProvider) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
+    const string ConceptAsTypeName = "ConceptAs";
+    const string ValuePropertyName = "Value";
+
     /// <inheritdoc/>
     public object? DeepCopy(object? input, CopyContext context)
     {
@@ -72,7 +75,7 @@ public class ConceptAsSerializer(ICodecProvider codecProvider) : IGeneralizedCod
         var underlyingType = GetUnderlyingType(type);
 
         // Get the Value property
-        var valueProperty = type.GetProperty("Value") ?? throw new InvalidOperationException($"ConceptAs type {type} must have a Value property");
+        var valueProperty = type.GetProperty(ValuePropertyName) ?? throw new InvalidOperationException($"ConceptAs type {type} must have a {ValuePropertyName} property");
         var underlyingValue = valueProperty.GetValue(value);
 
         // Write the underlying value
@@ -82,16 +85,16 @@ public class ConceptAsSerializer(ICodecProvider codecProvider) : IGeneralizedCod
 
     static bool IsConceptAsType(Type type)
     {
-        if ((type == null) || (!type.IsClass && !type.IsValueType))
+        if (type is null || (!type.IsClass && !type.IsValueType))
         {
             return false;
         }
 
         // Check if the type has ConceptAs in its base type hierarchy
         var baseType = type.BaseType;
-        while (baseType != null)
+        while (baseType is not null)
         {
-            if (baseType.IsGenericType && baseType.Name.StartsWith("ConceptAs"))
+            if (baseType.IsGenericType && baseType.Name.StartsWith(ConceptAsTypeName))
             {
                 return true;
             }
@@ -105,9 +108,9 @@ public class ConceptAsSerializer(ICodecProvider codecProvider) : IGeneralizedCod
     {
         // Walk up the type hierarchy to find ConceptAs<T>
         var baseType = conceptAsType.BaseType;
-        while (baseType != null)
+        while (baseType is not null)
         {
-            if (baseType.IsGenericType && baseType.Name.StartsWith("ConceptAs"))
+            if (baseType.IsGenericType && baseType.Name.StartsWith(ConceptAsTypeName))
             {
                 return baseType.GetGenericArguments()[0];
             }
