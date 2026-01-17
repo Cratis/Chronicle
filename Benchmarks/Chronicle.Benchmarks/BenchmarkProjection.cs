@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Projections;
 
-namespace Chronicle.Benchmarks;
+namespace Cratis.Chronicle.Benchmarks;
 
 public record BenchmarkProjectionModel(string Id, string Name, int Value, DateTimeOffset Timestamp);
 

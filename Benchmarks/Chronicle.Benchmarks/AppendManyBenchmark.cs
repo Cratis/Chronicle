@@ -4,7 +4,7 @@
 using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Events;
 
-namespace Chronicle.Benchmarks;
+namespace Cratis.Chronicle.Benchmarks;
 
 [MemoryDiagnoser]
 [SimpleJob(warmupCount: 3, iterationCount: 10)]

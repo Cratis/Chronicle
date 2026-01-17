@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reducers;
 
-namespace Chronicle.Benchmarks;
+namespace Cratis.Chronicle.Benchmarks;
 
 public record BenchmarkReadModel(int EventsProcessed);
 

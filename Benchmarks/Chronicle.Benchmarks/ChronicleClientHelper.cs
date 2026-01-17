@@ -6,7 +6,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
 
-namespace Chronicle.Benchmarks;
+namespace Cratis.Chronicle.Benchmarks;
 
 public class ChronicleClientHelper : IDisposable
 {
