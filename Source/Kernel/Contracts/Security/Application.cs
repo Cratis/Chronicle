@@ -30,12 +30,12 @@ public class Application
     /// <summary>
     /// When the client was created.
     /// </summary>
-    [ProtoMember(4)]
-    public DateTimeOffset CreatedAt { get; set; }
+    [ProtoMember(4, IsRequired = true)]
+    public SerializableDateTimeOffset CreatedAt { get; set; } = new();
 
     /// <summary>
     /// When the client was last modified.
     /// </summary>
     [ProtoMember(5)]
-    public DateTimeOffset? LastModifiedAt { get; set; }
+    public SerializableDateTimeOffset? LastModifiedAt { get; set; }
 }

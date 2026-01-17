@@ -36,12 +36,12 @@ public class User
     /// <summary>
     /// When the user was created.
     /// </summary>
-    [ProtoMember(5)]
-    public DateTimeOffset CreatedAt { get; set; }
+    [ProtoMember(5, IsRequired = true)]
+    public SerializableDateTimeOffset CreatedAt { get; set; } = new();
 
     /// <summary>
     /// When the user was last modified.
     /// </summary>
     [ProtoMember(6)]
-    public DateTimeOffset? LastModifiedAt { get; set; }
+    public SerializableDateTimeOffset? LastModifiedAt { get; set; }
 }
