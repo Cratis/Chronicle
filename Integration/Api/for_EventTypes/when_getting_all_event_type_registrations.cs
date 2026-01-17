@@ -40,15 +40,11 @@ public class when_getting_all_event_type_registrations(context context) : Given<
         }
     }
 
-    [Fact]
-    void should_return_registered_event_types() => Context.Result.Count().ShouldBeGreaterThanOrEqual(2);
+    [Fact] void should_return_registered_event_types() => Context.Result.Count().ShouldBeGreaterThanOrEqual(2);
 
-    [Fact]
-    void should_include_first_event_type() => Context.Result.ShouldContain(_ => _.Type.Id == "26f57829-c3a0-45ca-b1fc-2e05e6e54b8e");
+    [Fact] void should_include_first_event_type() => Context.Result.ShouldContain(_ => _.Type.Id == "26f57829-c3a0-45ca-b1fc-2e05e6e54b8e");
 
-    [Fact]
-    void should_include_second_event_type() => Context.Result.ShouldContain(_ => _.Type.Id == "8f7b4a3c-d2e1-4f9a-b8c7-1d6e3f2a4b5c");
+    [Fact] void should_include_second_event_type() => Context.Result.ShouldContain(_ => _.Type.Id == "8f7b4a3c-d2e1-4f9a-b8c7-1d6e3f2a4b5c");
 
-    [Fact]
-    void should_have_schema_for_first_event_type() => Context.Result.First(_ => _.Type.Id == "26f57829-c3a0-45ca-b1fc-2e05e6e54b8e").Schema.ShouldNotBeNull();
+    [Fact] void should_have_schema_for_first_event_type() => Context.Result.First(_ => _.Type.Id == "26f57829-c3a0-45ca-b1fc-2e05e6e54b8e").Schema.ShouldNotBeNull();
 }
