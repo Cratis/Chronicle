@@ -294,6 +294,9 @@ Benchmarks/results
 .mono
 .target
 **/coverage
+coverage-results/
+coverage-reports/
+!Documentation/statistics/coverage-data.js
 
 vite.*.js
 vite*.map

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes" />
+    <style>
+      html {
+        font-family: BlinkMacSystemFont,-apple-system,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Fira Sans","Droid Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background-color: #fff;
+        font-size: 16px;
+      }
+      body {
+        color: #4a4a4a;
+        margin: 8px;
+        font-size: 1em;
+        font-weight: 400;
+      }
+      header {
+        margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+      }
+      main {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      a {
+        color: #3273dc;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      a:hover {
+        color: #000;
+      }
+      button {
+        color: #fff;
+        background-color: #3298dc;
+        border-color: transparent;
+        cursor: pointer;
+        text-align: center;
+        padding: 8px 16px;
+        margin: 4px;
+        border-radius: 4px;
+        border: none;
+      }
+      button:hover {
+        background-color: #2793da;
+      }
+      .spacer {
+        flex: auto;
+      }
+      .small {
+        font-size: 0.75rem;
+      }
+      footer {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+      }
+      .header-label {
+        margin-right: 4px;
+      }
+      .coverage-set {
+        margin: 8px 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      .coverage-title {
+        font-size: 3rem;
+        font-weight: 600;
+        word-break: break-word;
+        text-align: center;
+      }
+      .coverage-graphs {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+      }
+      .coverage-chart {
+        max-width: 1200px;
+        width: 100%;
+        margin: 20px 0;
+      }
+      .project-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin: 20px 0;
+        gap: 8px;
+      }
+      .toggle-button {
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: 2px solid #3298dc;
+        background-color: #3298dc;
+        color: white;
+        cursor: pointer;
+      }
+      .toggle-button.inactive {
+        background-color: white;
+        color: #3298dc;
+      }
+      .summary-stats {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+      }
+      .stat-card {
+        padding: 20px;
+        border-radius: 8px;
+        background-color: #f5f5f5;
+        min-width: 150px;
+        text-align: center;
+      }
+      .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #3298dc;
+      }
+      .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 8px;
+      }
+    </style>
+    <title>Test Coverage Statistics</title>
+  </head>
+
+  <body>
+    <header id="header">
+      <div class="header-item">
+        <strong class="header-label">Last Update:</strong>
+        <span id="last-update"></span>
+      </div>
+      <div class="header-item">
+        <strong class="header-label">Repository:</strong>
+        <a id="repository-link" rel="noopener"></a>
+      </div>
+    </header>
+    <main id="main">
+      <div class="coverage-set">
+        <h1 class="coverage-title">Test Coverage Statistics</h1>
+        
+        <div id="summary-stats" class="summary-stats"></div>
+        
+        <div class="project-toggles" id="project-toggles"></div>
+        
+        <div class="coverage-graphs">
+          <canvas id="coverage-chart" class="coverage-chart"></canvas>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <button id="dl-button">Download data as JSON</button>
+      <div class="spacer"></div>
+      <div class="small">Test coverage tracking for Chronicle</div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="coverage-data.js"></script>
+    <script id="main-script">
+      'use strict';
+      (function() {
+        const projectColors = [
+          '#178600', // .NET green
+          '#3298dc', // Blue
+          '#f1e05a', // Yellow
+          '#f34b7d', // Pink
+          '#a270ba', // Purple
+          '#dea584', // Tan
+          '#00add8', // Cyan
+          '#ff6b6b', // Red
+          '#4ecdc4', // Teal
+          '#95e1d3', // Mint
+        ];
+
+        let chart = null;
+        let chartData = null;
+        let activeProjects = new Set();
+
+        function init() {
+          const data = window.COVERAGE_DATA;
+
+          // Render header
+          const lastUpdate = data.lastUpdate ? new Date(data.lastUpdate).toString() : 'No data yet';
+          document.getElementById('last-update').textContent = lastUpdate;
+          const repoLink = document.getElementById('repository-link');
+          repoLink.href = data.repoUrl;
+          repoLink.textContent = data.repoUrl;
+
+          // Render footer
+          document.getElementById('dl-button').onclick = () => {
+            const dataUrl = 'data:application/json,' + JSON.stringify(data, null, 2);
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'coverage_data.json';
+            a.click();
+          };
+
+          return data;
+        }
+
+        function prepareCoverageData(data) {
+          if (!data.entries || Object.keys(data.entries).length === 0) {
+            return { projects: [], dates: [], coverageByProject: {} };
+          }
+
+          const allDates = new Set();
+          const projects = Object.keys(data.entries);
+          const coverageByProject = {};
+
+          // Collect all unique dates and organize data by project
+          projects.forEach(project => {
+            const entries = data.entries[project] || [];
+            coverageByProject[project] = {};
+            
+            entries.forEach(entry => {
+              const date = new Date(entry.date).toLocaleDateString();
+              allDates.add(date);
+              coverageByProject[project][date] = entry.lineCoverage;
+            });
+          });
+
+          const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+
+          return {
+            projects,
+            dates: sortedDates,
+            coverageByProject
+          };
+        }
+
+        function renderSummaryStats(chartData) {
+          const summaryContainer = document.getElementById('summary-stats');
+          summaryContainer.innerHTML = '';
+
+          if (chartData.projects.length === 0) {
+            summaryContainer.innerHTML = '<p>No coverage data available yet.</p>';
+            return;
+          }
+
+          // Calculate overall coverage (average of latest values)
+          let totalCoverage = 0;
+          let projectCount = 0;
+
+          chartData.projects.forEach(project => {
+            const dates = chartData.dates;
+            if (dates.length > 0) {
+              const latestDate = dates[dates.length - 1];
+              const coverage = chartData.coverageByProject[project][latestDate];
+              if (coverage !== undefined) {
+                totalCoverage += coverage;
+                projectCount++;
+              }
+            }
+          });
+
+          const avgCoverage = projectCount > 0 ? (totalCoverage / projectCount).toFixed(1) : 0;
+
+          // Create stat cards
+          const stats = [
+            { label: 'Average Coverage', value: avgCoverage + '%' },
+            { label: 'Projects Tracked', value: chartData.projects.length },
+            { label: 'Data Points', value: chartData.dates.length }
+          ];
+
+          stats.forEach(stat => {
+            const card = document.createElement('div');
+            card.className = 'stat-card';
+            card.innerHTML = `
+              <div class="stat-value">${stat.value}</div>
+              <div class="stat-label">${stat.label}</div>
+            `;
+            summaryContainer.appendChild(card);
+          });
+        }
+
+        function renderProjectToggles(chartData) {
+          const toggleContainer = document.getElementById('project-toggles');
+          toggleContainer.innerHTML = '';
+
+          if (chartData.projects.length === 0) {
+            return;
+          }
+
+          // Initialize all projects as active
+          chartData.projects.forEach(project => activeProjects.add(project));
+
+          chartData.projects.forEach((project, index) => {
+            const button = document.createElement('button');
+            button.className = 'toggle-button';
+            button.textContent = project;
+            button.style.borderColor = projectColors[index % projectColors.length];
+            
+            button.onclick = () => {
+              if (activeProjects.has(project)) {
+                activeProjects.delete(project);
+                button.classList.add('inactive');
+              } else {
+                activeProjects.add(project);
+                button.classList.remove('inactive');
+              }
+              updateChart();
+            };
+
+            toggleContainer.appendChild(button);
+          });
+        }
+
+        function createChart(chartData) {
+          const canvas = document.getElementById('coverage-chart');
+          const ctx = canvas.getContext('2d');
+
+          if (chartData.projects.length === 0) {
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('No coverage data available yet', canvas.width / 2, canvas.height / 2);
+            return;
+          }
+
+          const datasets = chartData.projects.map((project, index) => ({
+            label: project,
+            data: chartData.dates.map(date => chartData.coverageByProject[project][date] || null),
+            borderColor: projectColors[index % projectColors.length],
+            backgroundColor: projectColors[index % projectColors.length] + '40',
+            tension: 0.1,
+            hidden: false
+          }));
+
+          chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: chartData.dates,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                title: {
+                  display: true,
+                  text: 'Test Coverage Over Time'
+                },
+                legend: {
+                  display: true,
+                  position: 'bottom'
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      let label = context.dataset.label || '';
+                      if (label) {
+                        label += ': ';
+                      }
+                      if (context.parsed.y !== null) {
+                        label += context.parsed.y.toFixed(1) + '%';
+                      }
+                      return label;
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  title: {
+                    display: true,
+                    text: 'Coverage (%)'
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Date'
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        function updateChart() {
+          if (!chart) return;
+
+          chart.data.datasets.forEach((dataset, index) => {
+            const project = chartData.projects[index];
+            dataset.hidden = !activeProjects.has(project);
+          });
+
+          chart.update();
+        }
+
+        // Initialize
+        const data = init();
+        chartData = prepareCoverageData(data);
+        renderSummaryStats(chartData);
+        renderProjectToggles(chartData);
+        createChart(chartData);
+      })();
+    </script>
+  </body>
+</html>
