@@ -108,7 +108,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async Task RemoveAllDatabases()
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(MongoDBPort)}")
+        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
         {
             DirectConnection = true
         };
