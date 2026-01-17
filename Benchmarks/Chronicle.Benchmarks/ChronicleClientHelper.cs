@@ -13,13 +13,15 @@ public class ChronicleClientHelper : IDisposable
     readonly ChronicleClient _client;
     readonly IEventStore _eventStore;
     readonly ILoggerFactory _loggerFactory;
+    readonly ChronicleBenchmarkFixture _fixture;
 
-    public ChronicleClientHelper(string url = "http://localhost:35000")
+    public ChronicleClientHelper(ChronicleBenchmarkFixture fixture)
     {
+        _fixture = fixture;
         _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         var options = new ChronicleOptions(
-            url: new ChronicleUrl(url),
+            url: new ChronicleUrl(_fixture.ChronicleUrl),
             connectTimeout: 30,
             loggerFactory: _loggerFactory);
 
@@ -32,7 +34,7 @@ public class ChronicleClientHelper : IDisposable
     public async Task WaitForConnection()
     {
         // Attempt a simple operation to verify connection is ready
-        var retries = 5;
+        const int retries = 5;
         var delay = 200;
 
         for (var i = 0; i < retries; i++)

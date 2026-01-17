@@ -6,7 +6,7 @@ This directory contains performance benchmarks for Chronicle.
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Docker (for building and running Chronicle container)
 - .NET 10 SDK
 
 ### Execute
@@ -16,11 +16,19 @@ This directory contains performance benchmarks for Chronicle.
 ```
 
 This will:
-1. Start Chronicle infrastructure (MongoDB + Chronicle Kernel) via Docker Compose
-2. Build the benchmark project
-3. Run all benchmarks
-4. Generate results in `results/` directory
-5. Clean up infrastructure
+1. Build the benchmark project (which also builds the Chronicle Docker image)
+2. Run all benchmarks (TestContainers will automatically start Chronicle and MongoDB)
+3. Generate results in `results/` directory
+4. Clean up infrastructure automatically
+
+## Infrastructure
+
+The benchmarks use **TestContainers** to automatically manage the Chronicle infrastructure:
+- Chronicle Kernel container is built from the local source using `cratis/chronicle:local-development` image
+- MongoDB container is automatically started and linked
+- All containers are cleaned up automatically after benchmarks complete
+
+This approach matches the Integration test strategy used in the `Integration/Api` project.
 
 ## Benchmarks
 

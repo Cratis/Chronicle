@@ -10,22 +10,28 @@ namespace Cratis.Chronicle.Benchmarks;
 [SimpleJob(warmupCount: 3, iterationCount: 10)]
 public class AppendBenchmark
 {
+    ChronicleBenchmarkFixture? _fixture;
     ChronicleClientHelper? _helper;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
     [GlobalSetup]
     public async Task Setup()
     {
-        _helper = new ChronicleClientHelper();
+        _fixture = new ChronicleBenchmarkFixture();
+        _helper = new ChronicleClientHelper(_fixture);
         await _helper.WaitForConnection();
         // Use a consistent event source ID for all iterations
         _eventSourceId = EventSourceId.New();
     }
 
     [GlobalCleanup]
-    public void Cleanup()
+    public async Task Cleanup()
     {
         _helper?.Dispose();
+        if (_fixture != null)
+        {
+            await _fixture.DisposeAsync();
+        }
     }
 
     [Benchmark]
