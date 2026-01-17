@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Orleans.Concepts;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 using Orleans.TestingHost;
@@ -19,7 +18,6 @@ public class ClusteringSiloConfigurator : ISiloConfigurator
         var jsonOptions = ClusteringSerializationConfiguration.CreateJsonSerializerOptions();
 
         siloBuilder.Services.AddSingleton(jsonOptions);
-        siloBuilder.Services.AddConceptSerializer();
         siloBuilder.Services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
                 ClusteringSerializationConfiguration.IsSerializableType,

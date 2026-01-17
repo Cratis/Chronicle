@@ -20,6 +20,5 @@
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-        <PackageReference Include="Cratis.Applications.Orleans" />
     </ItemGroup>
 </Project>
