@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Reflection;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
@@ -25,9 +26,20 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
-ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 
+#pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+var logger = builder.Logging.Services
+    .BuildServiceProvider()
+    .GetRequiredService<ILoggerFactory>()
+    .CreateLogger<Kernel>();
+#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
+var assembly = Assembly.GetExecutingAssembly();
+logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
+
+var env = Environment.GetEnvironmentVariables();
+
+ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks()
@@ -42,6 +54,21 @@ if (chronicleOptions.Features.Api)
 }
 
 var serverCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+
+if (serverCertificate is not null)
+{
+    logger.TlsCertificateLoaded();
+}
+else
+{
+#if DEVELOPMENT
+    logger.TlsCertificateMissingDevelopment();
+#else
+    logger.TlsCertificateMissingProduction();
+#endif
+}
+
+logger.ServerListening(chronicleOptions.ManagementPort, chronicleOptions.Port);
 
 builder.WebHost.UseKestrel(options =>
 {
@@ -126,6 +153,9 @@ builder.Host
 
 var app = builder.Build();
 
+logger = app.Services.GetRequiredService<ILogger<Kernel>>();
+logger.ServerConfigured();
+
 // Initialize default admin user if authentication is enabled
 if (chronicleOptions.Authentication.Enabled)
 {
@@ -197,10 +227,15 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
 {
+    logger.ServerShuttingDown();
     Console.WriteLine("******* SHUTTING DOWN CHRONICLE SERVER *******");
     cancellationToken.Cancel();
     eventArgs.Cancel = true;
 };
+
+logger.ServerStarted(
+    chronicleOptions.ManagementPort,
+    chronicleOptions.Port);
 
 await app.RunAsync(cancellationToken.Token);
 
