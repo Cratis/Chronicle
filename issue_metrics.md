@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 260 |
+| Number of items that remain open | 261 |
 | Number of items closed | 608 |
-| Total number of items created | 868 |
+| Total number of items created | 869 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| All and Dictionaries | https://github.com/Cratis/Chronicle/issues/2464 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Generate TypeScript gRPC package | https://github.com/Cratis/Chronicle/issues/2437 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Add events in sequences page | https://github.com/Cratis/Chronicle/issues/2435 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Improve seed data and add editor | https://github.com/Cratis/Chronicle/issues/2433 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -334,5 +335,4 @@
 | Move away from Guid identifier for RulesFor | https://github.com/Cratis/Chronicle/issues/1203 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 22:25:09 | 36 days, 23:00:55 | None |
 | Consider moving away from Expando Object in favor of dynamically created CLR types internally | https://github.com/Cratis/Chronicle/issues/1202 | None | [einari](https://github.com/einari) | None | None | None |
 | Switch to NSubstitute - change everything away from Moq | https://github.com/Cratis/Chronicle/issues/1201 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 165 days, 22:48:12 | None |
-| Bring back Benchmark project | https://github.com/Cratis/Chronicle/issues/1200 | None | [einari](https://github.com/einari) | None | None | None |
-| Bring back specifications project | https://github.com/Cratis/Chron
+| Bring
