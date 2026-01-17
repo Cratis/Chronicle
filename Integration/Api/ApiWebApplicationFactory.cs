@@ -13,7 +13,10 @@ public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoo
         builder.ConfigureTestServices(services => services.Configure<ChronicleAspNetCoreOptions>(options =>
         {
             options.EventStore = Constants.EventStore;
-            options.ConnectionString = new ChronicleConnectionStringBuilder().WithTlsDisabled().Build();
+            options.ConnectionString = new ChronicleConnectionStringBuilder()
+                .WithTlsDisabled()
+                .WithCredentials("chronicle-dev-client", "chronicle-dev-secret")
+                .Build();
         }));
     }
 }
