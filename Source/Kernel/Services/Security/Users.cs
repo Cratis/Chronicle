@@ -81,7 +81,7 @@ internal sealed class Users(
         Username = user.Username,
         Email = user.Email ?? string.Empty,
         IsActive = user.IsActive,
-        CreatedAt = user.CreatedAt,
+        CreatedAt = user.CreatedAt!,
         LastModifiedAt = user.LastModifiedAt
     };
 }

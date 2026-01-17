@@ -81,7 +81,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
         Id = client.Id,
         ClientId = client.ClientId,
         IsActive = true,
-        CreatedAt = DateTimeOffset.UtcNow,
+        CreatedAt = DateTimeOffset.UtcNow!,
         LastModifiedAt = null
     };
 }
