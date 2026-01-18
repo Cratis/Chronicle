@@ -14,8 +14,8 @@ namespace Cratis.Chronicle.Integration.Api;
 public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessFixture
 {
     const string CertificatePassword = "TestPassword123";
-    const string DefaultClientId = "chronicle-dev-client";
-    const string DefaultClientSecret = "chronicle-dev-secret";
+    const string DefaultAdminUsername = "admin";
+    const string DefaultAdminPassword = "ChangeMeNow!";
 
     string? _accessToken;
 
@@ -58,9 +58,9 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 
         var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["grant_type"] = "client_credentials",
-            ["client_id"] = DefaultClientId,
-            ["client_secret"] = DefaultClientSecret
+            ["grant_type"] = "password",
+            ["username"] = DefaultAdminUsername,
+            ["password"] = DefaultAdminPassword
         });
 
         // Retry logic with exponential backoff
@@ -73,7 +73,11 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             try
             {
                 var response = await httpClient.PostAsync("https://localhost:8081/connect/token", tokenRequest);
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase}). Response: {errorContent}");
+                }
 
                 var tokenResponse = await response.Content.ReadFromJsonAsync<JsonElement>();
                 _accessToken = tokenResponse.GetProperty("access_token").GetString()!;

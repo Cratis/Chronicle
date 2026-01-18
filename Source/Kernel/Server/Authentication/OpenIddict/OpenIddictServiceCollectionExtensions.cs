@@ -50,6 +50,7 @@ public static class OpenIddictServiceCollectionExtensions
                     .AllowPasswordFlow()
                     .AllowClientCredentialsFlow()
                     .AllowRefreshTokenFlow()
+                    .AcceptAnonymousClients()
                     .DisableAccessTokenEncryption()
                     .AddDevelopmentEncryptionCertificate()
                        .AddDevelopmentSigningCertificate();
