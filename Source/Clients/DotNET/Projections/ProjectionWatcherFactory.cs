@@ -13,5 +13,5 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionWatcherFactory(IEventStore eventStore, JsonSerializerOptions jsonSerializerOptions) : IProjectionWatcherFactory
 {
     /// <inheritdoc/>
-    public IProjectionWatcher<TReadModel> Create<TReadModel>(Action stopped) => new ProjectionWatcher<TReadModel>(eventStore, () => { }, jsonSerializerOptions);
+    public IProjectionWatcher<TReadModel> Create<TReadModel>(Action stopped) => new ProjectionWatcher<TReadModel>(eventStore, stopped, jsonSerializerOptions);
 }
