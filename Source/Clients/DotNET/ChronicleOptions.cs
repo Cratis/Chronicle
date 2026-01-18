@@ -54,11 +54,17 @@ public class ChronicleOptions(
 
     /// <summary>
     /// Gets or sets the software version.
+    /// Defaults to the version of the entry assembly (your application), extracted from the
+    /// AssemblyInformationalVersion or AssemblyVersion attribute.
+    /// This is included in the root causation to track which version of your application is running.
     /// </summary>
     public string SoftwareVersion { get; set; } = VersionInformation.GetVersion();
 
     /// <summary>
-    /// Gets or sets the software commit.
+    /// Gets or sets the software commit SHA.
+    /// Defaults to the commit SHA from the entry assembly's (your application's)
+    /// AssemblyInformationalVersion metadata (the portion after the '+' separator).
+    /// This is included in the root causation to track which commit of your application is running.
     /// </summary>
     public string SoftwareCommit { get; set; } = VersionInformation.GetCommitSha();
 
