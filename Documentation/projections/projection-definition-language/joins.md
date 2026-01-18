@@ -302,12 +302,9 @@ Join with reference data like categories, types, or statuses:
 
 ```
 join Status on StatusId
-  with StatusCreated
-    StatusName = name
-    StatusColor = color
-  with StatusUpdated
-    StatusName = name
-    StatusColor = color
+  events StatusCreated, StatusUpdated
+  StatusName = name
+  StatusColor = color
 ```
 
 ### User Information
@@ -316,12 +313,9 @@ Enrich with user details:
 
 ```
 join User on UserId
-  with UserRegistered
-    UserName = name
-    UserAvatar = avatarUrl
-  with UserProfileUpdated
-    UserName = name
-    UserAvatar = avatarUrl
+  events UserRegistered, UserProfileUpdated
+  UserName = name
+  UserAvatar = avatarUrl
 ```
 
 ### Nested Relationships
@@ -334,8 +328,8 @@ children items identified by itemId
     ProductId = productId
 
   join Product on ProductId
-    with ProductCreated
-      ProductName = name
+    events ProductCreated
+    ProductName = name
 ```
 
 ## See Also

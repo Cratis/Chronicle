@@ -110,10 +110,17 @@ from PaymentReceived
 from PaymentRefunded
   subtract balance by amount
 
-// Join collection
+// Join collection (events shorthand)
 join orders on customerId
-  events OrderPlaced
-    totalOrders = $count
+  events OrderPlaced, OrderUpdated
+  totalOrders = count
+
+// Join collection (with blocks)
+join customer on customerId
+  with CustomerCreated
+    customerName = name
+  with CustomerUpdated
+    customerName = name
 
 // Child collection
 children items identified by itemId

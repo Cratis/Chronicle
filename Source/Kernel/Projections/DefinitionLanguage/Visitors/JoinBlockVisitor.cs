@@ -42,20 +42,87 @@ public class JoinBlockVisitor : IDirectiveVisitor
 
         var withBlocks = new List<WithEventBlock>();
 
-        // Parse all 'with' event blocks
-        while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
+        // Check for 'events' keyword shorthand syntax
+        if (context.Check(TokenType.Events))
         {
-            if (context.Check(TokenType.With))
+            context.Advance(); // Skip 'events'
+
+            // Parse comma-separated list of event types
+            var eventTypes = new List<TypeRef>();
+            var firstEventType = _typeRefs.Parse(context);
+            if (firstEventType is not null)
             {
-                var withBlock = ParseWithEventBlock(context);
-                if (withBlock is not null)
+                eventTypes.Add(firstEventType);
+
+                // Parse additional event types separated by commas
+                while (context.Check(TokenType.Comma))
                 {
-                    withBlocks.Add(withBlock);
+                    context.Advance(); // Skip comma
+                    var nextEventType = _typeRefs.Parse(context);
+                    if (nextEventType is not null)
+                    {
+                        eventTypes.Add(nextEventType);
+                    }
                 }
             }
-            else
+
+            // Parse shared mappings that apply to all events
+            if (context.Check(TokenType.NewLine)) context.Advance();
+
+            var autoMap = AutoMap.Inherit;
+            var mappings = new List<MappingOperation>();
+
+            // Parse mappings at the same indentation level
+            while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
             {
-                context.Advance(); // Skip unexpected tokens
+                if (context.Check(TokenType.AutoMap))
+                {
+                    context.Advance();
+                    autoMap = AutoMap.Enabled;
+                }
+                else if (context.Check(TokenType.No) && context.Peek().Type == TokenType.AutoMap)
+                {
+                    context.Advance(); // Skip 'no'
+                    context.Advance(); // Skip 'automap'
+                    autoMap = AutoMap.Disabled;
+                }
+                else
+                {
+                    var mapping = _mappingOperations.Parse(context);
+                    if (mapping is not null)
+                    {
+                        mappings.Add(mapping);
+                    }
+                    else
+                    {
+                        context.Advance();
+                    }
+                }
+            }
+
+            // Create a WithEventBlock for each event type with the same mappings
+            foreach (var eventType in eventTypes)
+            {
+                withBlocks.Add(new WithEventBlock(eventType, autoMap, mappings));
+            }
+        }
+        else
+        {
+            // Parse traditional 'with' event blocks
+            while (!context.Check(TokenType.Dedent) && !context.IsAtEnd)
+            {
+                if (context.Check(TokenType.With))
+                {
+                    var withBlock = ParseWithEventBlock(context);
+                    if (withBlock is not null)
+                    {
+                        withBlocks.Add(withBlock);
+                    }
+                }
+                else
+                {
+                    context.Advance(); // Skip unexpected tokens
+                }
             }
         }
 

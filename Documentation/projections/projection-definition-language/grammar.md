@@ -65,8 +65,11 @@ KeyInline       = "key", Expr ;
 
 JoinBlock       = "join", Ident, "on", Ident, NL,
                   INDENT,
-                    { WithEventBlock },
+                    ( EventsBlock | { WithEventBlock } ),
                   DEDENT ;
+
+EventsBlock     = "events", TypeRef, { ",", TypeRef }, NL,
+                  { MappingLine } ;
 
 WithEventBlock  = "with", TypeRef, NL,
                   [ INDENT,
@@ -245,18 +248,39 @@ EventSpec = TypeRef, [ "key", Expr ] ;
 
 ### Join Block
 
-Enrich with joined events:
+Enrich with joined events using either individual `with` blocks or the `events` shorthand:
 
 ```ebnf
 JoinBlock = "join", Ident, "on", Ident, NL,
             INDENT,
-              { WithEventBlock },
+              ( EventsBlock | { WithEventBlock } ),
             DEDENT ;
+
+EventsBlock = "events", TypeRef, { ",", TypeRef }, NL,
+              { MappingLine } ;
 
 WithEventBlock = "with", TypeRef, NL,
                  [ INDENT,
                      { MappingLine },
                    DEDENT ] ;
+```
+
+The `events` syntax provides a shorthand when multiple event types share the same mappings. Both syntaxes are supported:
+
+**With blocks (explicit):**
+```
+join Customer on CustomerId
+  with CustomerCreated
+    CustomerName = name
+  with CustomerUpdated
+    CustomerName = name
+```
+
+**Events shorthand (shared mappings):**
+```
+join Customer on CustomerId
+  events CustomerCreated, CustomerUpdated
+  CustomerName = name
 ```
 
 **Note:** AutoMap for join blocks is controlled at the projection or children level, not within individual with blocks.
