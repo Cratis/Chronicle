@@ -40,6 +40,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     /// Gets the bearer token for authenticating API requests.
     /// </summary>
     /// <returns>The access token.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when unable to retrieve the access token after multiple attempts.</exception>
     public async Task<string> GetAccessToken()
     {
         if (!string.IsNullOrEmpty(_accessToken))
@@ -53,6 +54,8 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 #pragma warning restore MA0039 // Do not write your own certificate validation method
 
         using var httpClient = new HttpClient(handler);
+        httpClient.Timeout = TimeSpan.FromSeconds(10);
+
         var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["grant_type"] = "client_credentials",
@@ -60,21 +63,43 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             ["client_secret"] = DefaultClientSecret
         });
 
-        var response = await httpClient.PostAsync("https://localhost:8081/connect/token", tokenRequest);
-        response.EnsureSuccessStatusCode();
+        // Retry logic with exponential backoff
+        const int maxRetries = 10;
+        var retryDelayMs = 500;
+        Exception? lastException = null;
 
-        var tokenResponse = await response.Content.ReadFromJsonAsync<JsonElement>();
-        _accessToken = tokenResponse.GetProperty("access_token").GetString()!;
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                var response = await httpClient.PostAsync("https://localhost:8081/connect/token", tokenRequest);
+                response.EnsureSuccessStatusCode();
 
-        return _accessToken;
+                var tokenResponse = await response.Content.ReadFromJsonAsync<JsonElement>();
+                _accessToken = tokenResponse.GetProperty("access_token").GetString()!;
+
+                return _accessToken;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt < maxRetries - 1)
+                {
+                    Console.WriteLine($"Failed to get access token (attempt {attempt + 1}/{maxRetries}): {ex.Message}. Retrying in {retryDelayMs}ms...");
+                    await Task.Delay(retryDelayMs);
+                    retryDelayMs *= 2;
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"Failed to get access token after {maxRetries} attempts. Last error: {lastException?.Message}", lastException);
     }
 
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
         var waitStrategy = Wait.ForUnixContainer()
-            .UntilInternalTcpPortIsAvailable(27017)
-            .UntilInternalTcpPortIsAvailable(8080);
+            .AddCustomWaitStrategy(new HttpsHealthWait(8080));
 
         var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
