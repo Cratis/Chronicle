@@ -32,7 +32,7 @@ export const TopBar = () => {
             <div className="flex-1 flex items-center justify-end px-5 gap-6">
                 <div className={css.versionInfo}>
                     <div className={css.version}>v{version.version}</div>
-                    <div className={css.commitSha}>{version.commitSha.substring(0, 7)}</div>
+                    <div className={css.commitSha}>{version.commitSha.length >= 7 ? version.commitSha.substring(0, 7) : version.commitSha}</div>
                 </div>
                 {/* <div>
                     <Connection />

@@ -41,7 +41,7 @@ public static class VersionInformation
         {
             var version = informationalVersion.InformationalVersion;
             var plusIndex = version.IndexOf('+');
-            if (plusIndex > 0 && plusIndex < version.Length - 1)
+            if (plusIndex >= 0 && plusIndex < version.Length - 1)
             {
                 return version[(plusIndex + 1)..];
             }
