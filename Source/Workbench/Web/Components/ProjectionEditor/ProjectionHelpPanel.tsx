@@ -65,7 +65,7 @@ export const ProjectionHelpPanel: React.FC = () => {
                     <div style={{ marginBottom: '5px' }}><strong>$eventContext.</strong> - Event metadata (occurred, sequenceNumber, correlationId, causationId, eventType, eventSourceId)</div>
                     <div style={{ marginBottom: '5px' }}><strong>property</strong> - Event property reference</div>
                     <div style={{ marginBottom: '5px' }}><strong>`template $&#123;expr&#125;`</strong> - Template strings with interpolation</div>
-                    <div style={{ marginBottom: '5px' }}><strong>Literals</strong> - true, false, null, numbers, "strings"</div>
+                    <div style={{ marginBottom: '5px' }}><strong>Literals</strong> - true, false, null, numbers, &ldquo;strings&rdquo;</div>
                 </div>
             </div>
 
