@@ -156,15 +156,12 @@ var app = builder.Build();
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
 
-// Initialize default admin user if authentication is enabled
-if (chronicleOptions.Authentication.Enabled)
-{
-    var authService = app.Services.GetRequiredService<IAuthenticationService>();
-    await authService.EnsureDefaultAdminUser();
+// Initialize default admin user and client credentials
+var authService = app.Services.GetRequiredService<IAuthenticationService>();
+await authService.EnsureDefaultAdminUser();
 #if DEVELOPMENT
-    await authService.EnsureDefaultClientCredentials();
+await authService.EnsureDefaultClientCredentials();
 #endif
-}
 
 app.UseRouting();
 
@@ -172,12 +169,9 @@ app.UseCratisArc();
 app.UseRouting();
 
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
-if (chronicleOptions.Authentication.Enabled)
-{
-    app.UseMiddleware<GrpcAuthenticationMiddleware>();
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
+app.UseMiddleware<GrpcAuthenticationMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (chronicleOptions.Features.Api)
 {
@@ -198,12 +192,9 @@ if (chronicleOptions.Features.Api)
 }
 
 // Map Identity API endpoints for SPA authentication - MUST be before MapControllers
-if (chronicleOptions.Authentication.Enabled)
-{
-    app.MapGroup("/identity")
-        .MapIdentityApi<ChronicleUser>()
-        .AllowAnonymous();
-}
+app.MapGroup("/identity")
+    .MapIdentityApi<ChronicleUser>()
+    .AllowAnonymous();
 
 // Map controllers for API and OAuth
 if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net.Http.Json;
+using System.Text.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -13,6 +15,10 @@ namespace Cratis.Chronicle.Integration.Api;
 public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessFixture
 {
     const string CertificatePassword = "TestPassword123";
+    const string DefaultClientId = "chronicle-dev-client";
+    const string DefaultClientSecret = "chronicle-dev-secret";
+
+    string? _accessToken;
 
     /// <summary>
     /// Gets the path to the certificate file.
@@ -31,6 +37,39 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
         TestCertificateGenerator.GenerateAndSaveCertificate(CertificatePath, CertificatePassword);
     }
 
+    /// <summary>
+    /// Gets the bearer token for authenticating API requests.
+    /// </summary>
+    /// <returns>The access token.</returns>
+    public async Task<string> GetAccessToken()
+    {
+        if (!string.IsNullOrEmpty(_accessToken))
+        {
+            return _accessToken;
+        }
+
+        using var handler = new HttpClientHandler();
+#pragma warning disable MA0039 // Do not write your own certificate validation method
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+#pragma warning restore MA0039 // Do not write your own certificate validation method
+
+        using var httpClient = new HttpClient(handler);
+        var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["grant_type"] = "client_credentials",
+            ["client_id"] = DefaultClientId,
+            ["client_secret"] = DefaultClientSecret
+        });
+
+        var response = await httpClient.PostAsync("https://localhost:8081/connect/token", tokenRequest);
+        response.EnsureSuccessStatusCode();
+
+        var tokenResponse = await response.Content.ReadFromJsonAsync<JsonElement>();
+        _accessToken = tokenResponse.GetProperty("access_token").GetString()!;
+
+        return _accessToken;
+    }
+
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
@@ -41,7 +80,6 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
         var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
-            .WithEnvironment("Cratis__Chronicle__Authentication__Enabled", "false")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)

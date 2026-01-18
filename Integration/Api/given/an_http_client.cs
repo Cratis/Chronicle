@@ -10,7 +10,7 @@ public class an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) 
 {
     protected HttpClient Client { get; private set; } = null!;
 
-    void Establish()
+    async Task Establish()
     {
         var handler = new HttpClientHandler();
         var certificate = X509CertificateLoader.LoadPkcs12FromFile(
@@ -40,5 +40,9 @@ public class an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) 
                 BaseAddress = new("https://localhost:8081")
             },
             handler);
+
+        // Add bearer token authentication
+        var accessToken = await fixture.GetAccessToken();
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
     }
 }

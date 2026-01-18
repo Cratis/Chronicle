@@ -19,7 +19,8 @@ public static class OpenIddictServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddOpenIddictIfEnabled(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
-        if (!chronicleOptions.Features.OAuthAuthority)
+        // Disable OpenIddict if using an external authority or if OAuthAuthority feature is disabled
+        if (!chronicleOptions.Features.OAuthAuthority || !chronicleOptions.Authentication.UseInternalAuthority)
         {
             return services;
         }
