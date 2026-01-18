@@ -53,7 +53,7 @@ public class ReadModelTypeCommands : ControllerBase
                     Generation = 1,
                 },
                 Name = command.Name,
-                Schema = schema.ToJson(),
+                Schema = command.Schema ?? schema.ToJson(),
                 Indexes = []
             }
         });
