@@ -310,6 +310,7 @@
                     "changePassword": {
                         "title": "Change Password",
                         "password": "New Password",
+                        "confirmPassword": "Confirm Password",
                         "generatePassword": "Generate password",
                         "showPassword": "Show password",
                         "hidePassword": "Hide password"
