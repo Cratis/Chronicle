@@ -55,11 +55,7 @@ internal sealed class Users(
             throw new PasswordConfirmationMismatch();
         }
 
-        var user = await storage.System.Users.GetById(command.UserId);
-        if (user is null)
-        {
-            throw new UserNotFound(command.UserId);
-        }
+        var user = await storage.System.Users.GetById(command.UserId) ?? throw new UserNotFound(command.UserId);
 
         if (user.PasswordHash is not null && HashHelper.Verify(command.Password, user.PasswordHash))
         {

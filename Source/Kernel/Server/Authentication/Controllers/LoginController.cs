@@ -56,7 +56,7 @@ public class LoginController(
 
         // Get the full user details to check RequiresPasswordChange
         var chronicleUser = await userStorage.GetById(user.Id);
-        
+
         return new LoginResponse
         {
             Success = true,
