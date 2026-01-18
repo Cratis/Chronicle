@@ -3,13 +3,13 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 285 days, 22:55:31 | 138 days, 3:31:08 | 826 days, 12:55:34 |
+| Time to close | 285 days, 12:09:34 | 137 days, 9:16:51 | 826 days, 7:55:29 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 261 |
-| Number of items closed | 608 |
+| Number of items that remain open | 260 |
+| Number of items closed | 609 |
 | Total number of items created | 869 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
@@ -21,7 +21,7 @@
 | Throttling for job system | https://github.com/Cratis/Chronicle/issues/2431 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Simplify TLS | https://github.com/Cratis/Chronicle/issues/2429 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Performance benchmarks | https://github.com/Cratis/Chronicle/issues/2427 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
-| Build statistics | https://github.com/Cratis/Chronicle/issues/2425 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Build statistics | https://github.com/Cratis/Chronicle/issues/2425 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 12 days, 18:37:18 | None |
 | Introduce tags support and wire up for event | https://github.com/Cratis/Chronicle/issues/2423 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Synchronization of CoPilot instructions | https://github.com/Cratis/Chronicle/issues/2421 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce Read Model and Event Type management in Workbench | https://github.com/Cratis/Chronicle/issues/2381 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -334,5 +334,4 @@
 | Fix all the specs after reorganizing / refactoring | https://github.com/Cratis/Chronicle/issues/1204 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 53 days, 19:25:41 | None |
 | Move away from Guid identifier for RulesFor | https://github.com/Cratis/Chronicle/issues/1203 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 22:25:09 | 36 days, 23:00:55 | None |
 | Consider moving away from Expando Object in favor of dynamically created CLR types internally | https://github.com/Cratis/Chronicle/issues/1202 | None | [einari](https://github.com/einari) | None | None | None |
-| Switch to NSubstitute - change everything away from Moq | https://github.com/Cratis/Chronicle/issues/1201 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 165 days, 22:48:12 | None |
-| Bring
+| Switch to NSubstitute - change everything away from Moq | https://github.com/Cratis/Chronicle/issues/1201 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 165 days, 22:48:12 | No
