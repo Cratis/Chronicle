@@ -20,4 +20,10 @@ public record ChangeUserPassword
     /// </summary>
     [ProtoMember(2)]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The confirmed new password.
+    /// </summary>
+    [ProtoMember(3)]
+    public string ConfirmedPassword { get; set; } = string.Empty;
 }

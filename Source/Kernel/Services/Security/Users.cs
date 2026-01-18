@@ -50,6 +50,22 @@ internal sealed class Users(
     /// <inheritdoc/>
     public async Task ChangePassword(ChangeUserPassword command)
     {
+        if (command.Password != command.ConfirmedPassword)
+        {
+            throw new PasswordConfirmationMismatch();
+        }
+
+        var user = await storage.System.Users.GetById(command.UserId);
+        if (user is null)
+        {
+            throw new UserNotFound(command.UserId);
+        }
+
+        if (user.PasswordHash is not null && HashHelper.Verify(command.Password, user.PasswordHash))
+        {
+            throw new NewPasswordMustBeDifferent();
+        }
+
         var passwordHash = HashHelper.Hash(command.Password);
 
         var @event = new UserPasswordChanged(passwordHash);

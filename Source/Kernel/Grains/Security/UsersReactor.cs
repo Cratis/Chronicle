@@ -31,6 +31,7 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
             PasswordHash = @event.PasswordHash,
             SecurityStamp = Guid.NewGuid().ToString(),
             IsActive = true,
+            RequiresPasswordChange = true,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModifiedAt = null
         };
@@ -62,6 +63,24 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
         {
             user.PasswordHash = @event.PasswordHash;
             user.SecurityStamp = Guid.NewGuid().ToString();
+            user.RequiresPasswordChange = false;
+            user.LastModifiedAt = DateTimeOffset.UtcNow;
+            await userStorage.Update(user);
+        }
+    }
+
+    /// <summary>
+    /// Handles when a user is required to change their password.
+    /// </summary>
+    /// <param name="event">The event containing the requirement information.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Await Task.</returns>
+    public async Task RequiresPasswordChange(UserRequiresPasswordChange @event, EventContext eventContext)
+    {
+        var user = await userStorage.GetById(eventContext.EventSourceId);
+        if (user is not null)
+        {
+            user.RequiresPasswordChange = @event.RequiresPasswordChange;
             user.LastModifiedAt = DateTimeOffset.UtcNow;
             await userStorage.Update(user);
         }

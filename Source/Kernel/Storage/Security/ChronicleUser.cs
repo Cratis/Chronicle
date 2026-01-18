@@ -49,4 +49,9 @@ public class ChronicleUser
     /// Gets or sets when the user was last modified.
     /// </summary>
     public DateTimeOffset? LastModifiedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user must change their password on next login.
+    /// </summary>
+    public bool RequiresPasswordChange { get; set; }
 }
