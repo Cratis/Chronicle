@@ -25,7 +25,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         IDisposable _observable;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
-        void Establish()
+        async Task Establish()
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
@@ -35,6 +35,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
                 WatchResult = result;
                 _tcs.SetResult();
             });
+            await Task.Delay(200); // Give some time for the watcher to start before appending events
         }
 
         async Task Because()
