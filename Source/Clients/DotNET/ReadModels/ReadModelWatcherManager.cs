@@ -9,8 +9,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IReadModelWatcherManager"/>.
 /// </summary>
 /// <param name="readModelWatcherFactory"><see cref="IReadModelWatcherFactory"/> for creating watchers.</param>
-/// <param name="eventStore"><see cref="IEventStore"/> the manager is for.</param>
-public class ReadModelWatcherManager(IReadModelWatcherFactory readModelWatcherFactory, IEventStore eventStore) : IReadModelWatcherManager
+public class ReadModelWatcherManager(IReadModelWatcherFactory readModelWatcherFactory) : IReadModelWatcherManager
 {
     readonly ConcurrentDictionary<Type, IReadModelWatcher> _watchers = [];
 
@@ -20,10 +19,11 @@ public class ReadModelWatcherManager(IReadModelWatcherFactory readModelWatcherFa
         if (!_watchers.TryGetValue(typeof(TReadModel), out var watcher))
         {
             watcher = _watchers[typeof(TReadModel)] = readModelWatcherFactory.Create<TReadModel>(() => _watchers.TryRemove(typeof(TReadModel), out _));
-            if (eventStore.Connection.Lifecycle.IsConnected)
-            {
-                watcher.Start();
-            }
+
+            // Always start the watcher immediately. If the connection is not established yet,
+            // calling Start() will trigger the connection through Services access.
+            // The OnConnected callback in ReadModelWatcher will handle re-starting if needed.
+            watcher.Start();
         }
 
         return (watcher as IReadModelWatcher<TReadModel>)!;

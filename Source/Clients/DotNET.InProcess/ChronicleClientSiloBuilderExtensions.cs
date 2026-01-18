@@ -131,13 +131,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 {
                     var options = sp.GetRequiredService<IOptions<ChronicleOrleansInProcessOptions>>().Value;
                     var client = sp.GetRequiredService<IChronicleClient>();
-                    var eventStore = client.GetEventStore(options.EventStoreName).GetAwaiter().GetResult();
-
-                    // For InProcess, we need to trigger the connection lifecycle after the event store is created
-                    // so that the OnConnected handlers (including RegisterAll) are invoked.
-                    eventStore.Connection.Lifecycle.Connected().GetAwaiter().GetResult();
-
-                    return eventStore;
+                    return client.GetEventStore(options.EventStoreName).GetAwaiter().GetResult();
                 }
             });
 

@@ -14,12 +14,13 @@ namespace Cratis.Chronicle.ReadModels;
 /// <typeparam name="TReadModel">Type of read model the watcher is for.</typeparam>
 public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisposable
 {
-    readonly ReplaySubject<ReadModelChangeset<TReadModel>> _observable;
+    readonly Subject<ReadModelChangeset<TReadModel>> _observable;
     readonly IEventStore _eventStore;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
+    bool _started;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelWatcher{TReadModel}"/> class.
@@ -29,7 +30,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     public ReadModelWatcher(IEventStore eventStore, Action stopped, JsonSerializerOptions jsonSerializerOptions)
     {
-        _observable = new ReplaySubject<ReadModelChangeset<TReadModel>>(1);
+        _observable = new Subject<ReadModelChangeset<TReadModel>>();
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventStore = eventStore;
         _stopped = stopped;
@@ -52,6 +53,13 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     /// <inheritdoc/>
     public void Start()
     {
+        if (_started)
+        {
+            return;
+        }
+
+        _started = true;
+
         var request = new ContractReadModels.WatchRequest
         {
             EventStore = _eventStore.Name,

@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
@@ -192,42 +191,39 @@ internal sealed class ReadModels(
     public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = WaitForReadModelDefinition(readModel, context.CancellationToken).GetAwaiter().GetResult();
 
-        if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
+        return Observable.Create<ReadModelChangeset>(async observer =>
         {
-            return Observable.Throw<ReadModelChangeset>(new NotSupportedException("Server-side reducer watching is not yet supported. Reducers typically run client-side."));
-        }
+            var definition = await WaitForReadModelDefinition(readModel, context.CancellationToken);
 
-        var streamProvider = clusterClient.GetStreamProvider(Grains.WellKnownStreamProviders.ProjectionChangesets);
-        var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
-        var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
-
-        // Use ReplaySubject to buffer the most recent changeset so it's not lost if it arrives
-        // before the gRPC client is fully subscribed
-        var subject = new ReplaySubject<ReadModelChangeset>(1);
-
-        // Subscribe to the Orleans stream synchronously before returning
-        var subscription = stream.SubscribeAsync((changeset, _) =>
-        {
-            subject.OnNext(new ReadModelChangeset
+            if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
-                Namespace = changeset.Namespace,
-                ModelKey = changeset.ReadModelKey,
-                ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions),
-                Removed = false
-            });
+                var streamProvider = clusterClient.GetStreamProvider(Grains.WellKnownStreamProviders.ProjectionChangesets);
+                var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
 
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
+                var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
 
-        context.CancellationToken.Register(() =>
-        {
-            subscription.UnsubscribeAsync().GetAwaiter().GetResult();
-            subject.OnCompleted();
+                var subscription = await stream.SubscribeAsync((changeset, _) =>
+                {
+                    observer.OnNext(new ReadModelChangeset
+                    {
+                        Namespace = changeset.Namespace,
+                        ModelKey = changeset.ReadModelKey,
+                        ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions),
+                        Removed = false
+                    });
+
+                    return Task.CompletedTask;
+                });
+
+                context.CancellationToken.Register(() => subscription.UnsubscribeAsync().GetAwaiter().GetResult());
+                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
+            else
+            {
+                observer.OnError(new NotSupportedException("Server-side reducer watching is not yet supported. Reducers typically run client-side."));
+            }
         });
-
-        return subject;
     }
 
     /// <inheritdoc/>
