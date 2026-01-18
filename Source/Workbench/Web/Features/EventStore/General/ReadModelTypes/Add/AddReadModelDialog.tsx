@@ -4,7 +4,6 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { CreateReadModel } from 'Api/ReadModelTypes';
 import { Dialog } from 'primereact/dialog';
-import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';

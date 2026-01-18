@@ -60,8 +60,8 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             generateModelBoundCode.dsl = value;
             const modelBoundResult = await generateModelBoundCode.execute();
 
-            const declCode = declarativeResult.response?.code || declarativeResult.code || '// Unable to generate code';
-            const modelCode = modelBoundResult.response?.code || modelBoundResult.code || '// Unable to generate code';
+            const declCode = declarativeResult.response?.code || '// Unable to generate code';
+            const modelCode = modelBoundResult.response?.code || '// Unable to generate code';
 
             setDeclarativeCode(declCode);
             setModelBoundCode(modelCode);
@@ -89,10 +89,14 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     // Update schema when it changes
     useEffect(() => {
         if (readModelSchemas) {
-            setReadModelSchemas(readModelSchemas as any);
+            const readModelInfos = readModelSchemas.map(schema => ({
+                displayName: schema.title || 'Unknown',
+                schema
+            }));
+            setReadModelSchemas(readModelInfos);
         }
         if (eventSchemas) {
-            setEventSchemas(eventSchemas as any);
+            setEventSchemas(eventSchemas);
         }
     }, [readModelSchemas, eventSchemas]);
 

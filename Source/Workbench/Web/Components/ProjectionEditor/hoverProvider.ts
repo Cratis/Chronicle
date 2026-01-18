@@ -1,24 +1,22 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import type { editor, languages, Position, IMarkdownString } from 'monaco-editor';
-import type { JsonSchema } from '../JsonSchema';
+import type { editor, languages, Position } from 'monaco-editor';
+import type { JsonSchema, JsonSchemaProperty } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 export class ProjectionDslHoverProvider implements languages.HoverProvider {
-    private readModels: ReadModelInfo[] = [];
+    private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 
+
     setReadModels(readModels: ReadModelInfo[]): void {
-        this.readModels = readModels || [];
+        this.readModelSchemas = (readModels || []).map(rm => rm.schema);
     }
 
     // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
-        this.readModels = schemas.map(schema => ({
-            displayName: this.getSchemaName(schema) || '',
-            schema
-        }));
+        this.readModelSchemas = schemas;
     }
 
     setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
@@ -45,11 +43,10 @@ export class ProjectionDslHoverProvider implements languages.HoverProvider {
         const word = model.getWordAtPosition(position);
         if (!word) return null;
 
-        const line = model.getLineContent(position.lineNumber);
         const wordText = word.word;
 
         // Check if it's a keyword
-        const keywordInfo = this.getKeywordInfo(wordText, line);
+        const keywordInfo = this.getKeywordInfo(wordText);
         if (keywordInfo) {
             return {
                 contents: [{ value: keywordInfo }],
@@ -143,7 +140,7 @@ export class ProjectionDslHoverProvider implements languages.HoverProvider {
         return null;
     }
 
-    private getKeywordInfo(word: string, line: string): string | null {
+    private getKeywordInfo(word: string): string | null {
         const keywords: Record<string, string> = {
             'projection': '**projection** *<ProjectionName>* **=>** *<ReadModelName>*\n\nDefines a projection that transforms events into a read model.',
             'from': '**from** *<EventType>*\n\nHandles specific event types and maps their properties to the read model.',
@@ -196,7 +193,7 @@ export class ProjectionDslHoverProvider implements languages.HoverProvider {
         if (readModel?.properties && readModel.properties[propertyName]) {
             const prop = readModel.properties[propertyName];
             const type = this.getPropertyTypeDescription(prop);
-            const description = (prop as any).description;
+            const description = prop.description;
 
             let content = `**Property:** \`${propertyName}\`\n\n**Type:** \`${type}\``;
             if (description) {
@@ -212,7 +209,7 @@ export class ProjectionDslHoverProvider implements languages.HoverProvider {
             if (eventSchema.properties && eventSchema.properties[propertyName]) {
                 const prop = eventSchema.properties[propertyName];
                 const type = this.getPropertyTypeDescription(prop);
-                const description = (prop as any).description;
+                const description = prop.description;
 
                 let content = `**Event Property:** \`${propertyName}\`\n\n**Type:** \`${type}\``;
                 if (description) {
@@ -237,17 +234,17 @@ export class ProjectionDslHoverProvider implements languages.HoverProvider {
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {
-        if ((schema as any).name) return (schema as any).name;
-        if ((schema as any).title) return (schema as any).title;
-        if (typeof (schema as any).$id === 'string') {
-            const parts = (schema as any).$id.split('/');
-            return parts[parts.length - 1] || (schema as any).$id;
+        if (schema.name) return schema.name;
+        if (schema.title) return schema.title;
+        if (typeof schema.$id === 'string') {
+            const parts = schema.$id.split('/');
+            return parts[parts.length - 1] || schema.$id;
         }
         return undefined;
     }
 
     private getSchemaDescription(schema: JsonSchema): string | undefined {
-        return (schema as any).description || undefined;
+        return schema.description || undefined;
     }
 
     private getSchemaProperties(schema: JsonSchema): Array<{ name: string; type: string }> {
@@ -259,7 +256,7 @@ export class ProjectionDslHoverProvider implements languages.HoverProvider {
         }));
     }
 
-    private getPropertyTypeDescription(propSchema: any): string {
+    private getPropertyTypeDescription(propSchema: JsonSchemaProperty): string {
         if (propSchema.type === 'array' && propSchema.items) {
             const itemType = propSchema.items.type || propSchema.items.$ref?.split('/').pop() || 'unknown';
             return `${itemType}[]`;

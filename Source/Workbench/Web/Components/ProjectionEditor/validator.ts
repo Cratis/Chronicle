@@ -188,7 +188,7 @@ export class ProjectionDslValidator {
                         markers.push(this.createWarning(lineNumber, col, col + propertyName.length, `Property '${propertyName}' is not a collection (array) type`));
                     } else {
                         // Push child schema onto context stack for validating nested properties
-                        const childSchema = prop.items || (prop as any).item;
+                        const childSchema = prop.items;
                         if (childSchema) {
                             contextStack.push(childSchema);
                             indentStack.push(currentIndent);
@@ -221,7 +221,7 @@ export class ProjectionDslValidator {
             if (keyMatch && activeSchema) {
                 const [, keyName] = keyMatch;
                 // Check if it's a composite key type (should exist in definitions or as a property)
-                const isInDefinitions = (activeSchema as any).definitions && (activeSchema as any).definitions[keyName];
+                const isInDefinitions = activeSchema.definitions && activeSchema.definitions[keyName];
                 const isProperty = activeSchema.properties && activeSchema.properties[keyName];
 
                 if (!isInDefinitions && !isProperty && !this.isBuiltInExpression(keyName)) {
@@ -270,11 +270,11 @@ export class ProjectionDslValidator {
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {
-        if ((schema as any).name) return (schema as any).name;
-        if ((schema as any).title) return (schema as any).title;
-        if (typeof (schema as any).$id === 'string') {
-            const parts = (schema as any).$id.split('/');
-            return parts[parts.length - 1] || (schema as any).$id;
+        if (schema.name) return schema.name;
+        if (schema.title) return schema.title;
+        if (typeof schema.$id === 'string') {
+            const parts = schema.$id.split('/');
+            return parts[parts.length - 1] || schema.$id;
         }
         return undefined;
     }

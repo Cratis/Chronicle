@@ -19,6 +19,7 @@ import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError, SaveProjection } from 'Api/Projections';
 import type { ReadModelSchema } from 'Api/ReadModels';
+import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog } from '@cratis/arc.react/dialogs';
 import { TimeMachineDialog, ReadModelInstances } from 'Components';
@@ -39,8 +40,7 @@ export const Projections = () => {
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
-    const [readModelInstances, setReadModelInstances] = useState<{ instance: unknown }[]>([]);
-    const [readModelSchema, setReadModelSchema] = useState<JsonSchema | null>(null);
+    const [readModelInstances, setReadModelInstances] = useState<ReadModelInstance[]>([]);
     const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDefinitionSyntaxError[]>([]);
 
     const [projections, refreshProjections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
@@ -117,7 +117,6 @@ export const Projections = () => {
                                         setSelectedProjection(null);
                                         setDslValue('');
                                         setReadModelInstances([]);
-                                        setReadModelSchema(null);
                                         setSyntaxErrors([]);
                                         setSelectedInstance(null);
                                         setPage(0);
@@ -145,9 +144,12 @@ export const Projections = () => {
                                         previewProjection.dsl = dslValue;
                                         const result = await previewProjection.execute();
 
-                                        const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => ({ instance: entry }));
+                                        const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
+                                            const instance = new ReadModelInstance();
+                                            instance.instance = entry as Record<string, unknown>;
+                                            return instance;
+                                        });
                                         setReadModelInstances(instances);
-                                        setReadModelSchema(result.response?.schema ?? null);
                                         setSyntaxErrors(result.response?.syntaxErrors ?? []);
                                         setSelectedInstance(null);
                                         setPage(0);

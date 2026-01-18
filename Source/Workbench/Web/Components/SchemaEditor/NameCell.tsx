@@ -43,8 +43,8 @@ export const NameCell = ({ rowData, isEditMode, onUpdate, validationError }: Nam
 
     return (
         <InputText
-            value={rowData.name}
-            onChange={(e) => onUpdate(rowData.name, 'name', e.target.value)}
+            value={rowData.name || ''}
+            onChange={(e) => onUpdate(rowData.name || '', 'name', e.target.value)}
             className={`w-full ${validationError ? 'p-invalid' : ''}`}
             data-pr-tooltip={validationError}
             data-pr-position="top"
