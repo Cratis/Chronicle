@@ -59,7 +59,7 @@ public class AuthenticationService(
             PasswordHash = passwordHash,
             SecurityStamp = Guid.NewGuid().ToString(),
             IsActive = true,
-            RequiresPasswordChange = false,
+            RequiresPasswordChange = true,
             CreatedAt = now,
             LastModifiedAt = null
         };
