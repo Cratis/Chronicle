@@ -17,9 +17,14 @@ interface CompletionContext {
 export class ProjectionDslCompletionProvider implements languages.CompletionItemProvider {
     private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
+    private eventSequences: string[] = [];
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels || [];
+    }
+
+    setEventSequences(sequences: string[]): void {
+        this.eventSequences = sequences || [];
     }
 
     // Keep for backwards compatibility
@@ -63,6 +68,8 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         // Determine what kind of completions to provide based on context
         if (context.lineNumber === 1) {
             this.addProjectionLineCompletions(suggestions, context);
+        } else if (this.isAfterKeyword(context, 'sequence')) {
+            this.addEventSequenceCompletions(suggestions, context);
         } else if (this.isAfterKeyword(context, 'from') || this.isAfterKeyword(context, 'every')) {
             this.addEventTypeCompletions(suggestions, context);
         } else if (this.isAfterKeyword(context, 'key')) {
@@ -179,6 +186,21 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         });
     }
 
+    private addEventSequenceCompletions(suggestions: languages.CompletionItem[], context: CompletionContext): void {
+        this.eventSequences.forEach((sequenceId) => {
+            if (!context.currentWord || sequenceId.startsWith(context.currentWord)) {
+                suggestions.push({
+                    label: sequenceId,
+                    kind: 13, // Value
+                    insertText: sequenceId,
+                    documentation: `Event sequence: ${sequenceId}`,
+                    detail: 'Event Sequence',
+                    range: this.getRangeForWord(context),
+                });
+            }
+        });
+    }
+
     private addKeyCompletions(suggestions: languages.CompletionItem[], context: CompletionContext, activeSchema?: JsonSchema): void {
         // Check if this might be a composite key (type reference)
         if (activeSchema?.definitions) {
@@ -261,6 +283,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
     private addStatementCompletions(suggestions: languages.CompletionItem[], context: CompletionContext, activeSchema?: JsonSchema): void {
         // Add all statement keywords
         const keywords = [
+            { label: 'sequence', insertText: 'sequence ', documentation: 'Specify which event sequence to use for this projection', detail: 'sequence <event-sequence-id>' },
             { label: 'from', insertText: 'from ', documentation: 'Handle specific event types', detail: 'from <EventType>' },
             { label: 'every', insertText: 'every', documentation: 'Handle all events for automatic mapping', detail: 'every' },
             { label: 'key', insertText: 'key ', documentation: 'Define the projection key', detail: 'key <expression>' },
