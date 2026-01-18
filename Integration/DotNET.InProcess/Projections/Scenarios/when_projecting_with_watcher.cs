@@ -34,7 +34,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
                 WatchResult = result;
                 _tcs.SetResult();
             });
-            await Task.Delay(100);
+            await Task.Delay(500);
         }
 
         async Task Because()
