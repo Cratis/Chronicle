@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image.
 ####################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble
 ARG VERSION
 ARG MONGO_VERSION=8.0.8
 ARG MONGO_PACKAGE=mongodb-org
