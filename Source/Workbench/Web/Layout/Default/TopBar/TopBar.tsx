@@ -5,6 +5,7 @@ import { useLayoutContext } from '../context/LayoutContext';
 import { Button } from 'primereact/button';
 import css from './TopBar.module.css';
 import { FaBars } from 'react-icons/fa6';
+import { version } from '../../../version';
 // import { Profile } from "./Profile";
 // import { Notifications } from './Notifications';
 // import { Connection } from './Connection';
@@ -29,6 +30,10 @@ export const TopBar = () => {
                 </div>
             </div>
             <div className="flex-1 flex items-center justify-end px-5 gap-6">
+                <div className={css.versionInfo}>
+                    <div className={css.version}>v{version.version}</div>
+                    <div className={css.commitSha}>{version.commitSha.substring(0, 7)}</div>
+                </div>
                 {/* <div>
                     <Connection />
                 </div>
@@ -42,3 +47,4 @@ export const TopBar = () => {
         </div>
     );
 };
+

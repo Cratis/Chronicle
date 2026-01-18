@@ -55,12 +55,12 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets or sets the software version.
     /// </summary>
-    public string SoftwareVersion { get; set; } = "0.0.0";
+    public string SoftwareVersion { get; set; } = VersionInformation.GetVersion();
 
     /// <summary>
     /// Gets or sets the software commit.
     /// </summary>
-    public string SoftwareCommit { get; set; } = "[N/A]";
+    public string SoftwareCommit { get; set; } = VersionInformation.GetCommitSha();
 
     /// <summary>
     /// Gets or sets the program identifier.
