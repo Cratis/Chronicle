@@ -21,6 +21,43 @@ public static class VersionInformation
     public static string GetVersion()
     {
         var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetCallingAssembly();
+        return GetVersionFromAssembly(assembly);
+    }
+
+    /// <summary>
+    /// Gets the commit SHA from the entry assembly's AssemblyInformationalVersion metadata.
+    /// The entry assembly is the application using Chronicle, not Chronicle itself.
+    /// Extracts the metadata portion after the '+' separator in the InformationalVersion attribute.
+    /// </summary>
+    /// <returns>The commit SHA if available, otherwise "[N/A]".</returns>
+    public static string GetCommitSha()
+    {
+        var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetCallingAssembly();
+        return GetCommitShaFromAssembly(assembly);
+    }
+
+    /// <summary>
+    /// Gets the version of the Chronicle .NET client library itself.
+    /// </summary>
+    /// <returns>The Chronicle client version string.</returns>
+    public static string GetChronicleClientVersion()
+    {
+        var assembly = typeof(VersionInformation).Assembly;
+        return GetVersionFromAssembly(assembly);
+    }
+
+    /// <summary>
+    /// Gets the commit SHA of the Chronicle .NET client library itself.
+    /// </summary>
+    /// <returns>The Chronicle client commit SHA if available, otherwise "[N/A]".</returns>
+    public static string GetChronicleClientCommitSha()
+    {
+        var assembly = typeof(VersionInformation).Assembly;
+        return GetCommitShaFromAssembly(assembly);
+    }
+
+    static string GetVersionFromAssembly(Assembly assembly)
+    {
         var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         if (informationalVersion is not null)
         {
@@ -33,15 +70,8 @@ public static class VersionInformation
         return assemblyVersion?.ToString() ?? "0.0.0";
     }
 
-    /// <summary>
-    /// Gets the commit SHA from the entry assembly's AssemblyInformationalVersion metadata.
-    /// The entry assembly is the application using Chronicle, not Chronicle itself.
-    /// Extracts the metadata portion after the '+' separator in the InformationalVersion attribute.
-    /// </summary>
-    /// <returns>The commit SHA if available, otherwise "[N/A]".</returns>
-    public static string GetCommitSha()
+    static string GetCommitShaFromAssembly(Assembly assembly)
     {
-        var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetCallingAssembly();
         var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         if (informationalVersion is not null)
         {
