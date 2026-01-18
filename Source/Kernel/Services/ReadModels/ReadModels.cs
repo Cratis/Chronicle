@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
@@ -191,39 +192,42 @@ internal sealed class ReadModels(
     public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
+        var definition = WaitForReadModelDefinition(readModel, context.CancellationToken).GetAwaiter().GetResult();
 
-        return Observable.Create<ReadModelChangeset>(async observer =>
+        if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
         {
-            var definition = await readModel.GetDefinition();
+            return Observable.Throw<ReadModelChangeset>(new NotSupportedException("Server-side reducer watching is not yet supported. Reducers typically run client-side."));
+        }
 
-            if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
+        var streamProvider = clusterClient.GetStreamProvider(Grains.WellKnownStreamProviders.ProjectionChangesets);
+        var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
+        var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
+
+        // Use ReplaySubject to buffer the most recent changeset so it's not lost if it arrives
+        // before the gRPC client is fully subscribed
+        var subject = new ReplaySubject<ReadModelChangeset>(1);
+
+        // Subscribe to the Orleans stream synchronously before returning
+        var subscription = stream.SubscribeAsync((changeset, _) =>
+        {
+            subject.OnNext(new ReadModelChangeset
             {
-                var streamProvider = clusterClient.GetStreamProvider(Grains.WellKnownStreamProviders.ProjectionChangesets);
-                var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
+                Namespace = changeset.Namespace,
+                ModelKey = changeset.ReadModelKey,
+                ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions),
+                Removed = false
+            });
 
-                var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
+            return Task.CompletedTask;
+        }).GetAwaiter().GetResult();
 
-                var subscription = await stream.SubscribeAsync((changeset, _) =>
-                {
-                    observer.OnNext(new ReadModelChangeset
-                    {
-                        Namespace = changeset.Namespace,
-                        ModelKey = changeset.ReadModelKey,
-                        ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions),
-                        Removed = false
-                    });
-
-                    return Task.CompletedTask;
-                });
-
-                context.CancellationToken.Register(() => subscription.UnsubscribeAsync().GetAwaiter().GetResult());
-                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            }
-            else
-            {
-                observer.OnError(new NotSupportedException("Server-side reducer watching is not yet supported. Reducers typically run client-side."));
-            }
+        context.CancellationToken.Register(() =>
+        {
+            subscription.UnsubscribeAsync().GetAwaiter().GetResult();
+            subject.OnCompleted();
         });
+
+        return subject;
     }
 
     /// <inheritdoc/>
@@ -249,6 +253,27 @@ internal sealed class ReadModels(
         {
             throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
         }
+    }
+
+    async Task<Concepts.ReadModels.ReadModelDefinition> WaitForReadModelDefinition(IReadModel readModel, CancellationToken cancellationToken)
+    {
+        const int maxRetries = 50;
+        const int delayMs = 100;
+
+        for (var i = 0; i < maxRetries; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var definition = await readModel.GetDefinition();
+            if (!string.IsNullOrEmpty(definition.ObserverIdentifier))
+            {
+                return definition;
+            }
+
+            await Task.Delay(delayMs, cancellationToken);
+        }
+
+        throw new InvalidOperationException($"Read model definition not registered within {maxRetries * delayMs}ms. Ensure the read model is registered before watching.");
     }
 
     async Task<IEnumerable<ReadModelSnapshot>> GetSnapshotsForProjection(
