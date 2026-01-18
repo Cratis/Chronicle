@@ -18,8 +18,8 @@
         <GenerateAssemblyDescriptionAttribute>true</GenerateAssemblyDescriptionAttribute>
 
         <!-- Versioning -->
-        <AssemblyVersion>$(Version)</AssemblyVersion>
-        <FileVersion>$(Version)</FileVersion>
+        <!-- AssemblyVersion and FileVersion must be numeric (major.minor.patch.revision) -->
+        <!-- InformationalVersion can include SemVer prerelease and metadata -->
         <InformationalVersion Condition="'$(SourceRevisionId)' != ''">$(Version)+$(SourceRevisionId)</InformationalVersion>
         <InformationalVersion Condition="'$(SourceRevisionId)' == ''">$(Version)</InformationalVersion>
 
