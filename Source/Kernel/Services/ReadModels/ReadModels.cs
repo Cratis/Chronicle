@@ -194,7 +194,7 @@ internal sealed class ReadModels(
 
         return Observable.Create<ReadModelChangeset>(async observer =>
         {
-            var definition = await readModel.GetDefinition();
+            var definition = await WaitForReadModelDefinition(readModel, context.CancellationToken);
 
             if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
@@ -249,6 +249,27 @@ internal sealed class ReadModels(
         {
             throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
         }
+    }
+
+    async Task<Concepts.ReadModels.ReadModelDefinition> WaitForReadModelDefinition(IReadModel readModel, CancellationToken cancellationToken)
+    {
+        const int maxRetries = 50;
+        const int delayMs = 100;
+
+        for (var i = 0; i < maxRetries; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var definition = await readModel.GetDefinition();
+            if (!string.IsNullOrEmpty(definition.ObserverIdentifier))
+            {
+                return definition;
+            }
+
+            await Task.Delay(delayMs, cancellationToken);
+        }
+
+        throw new InvalidOperationException($"Read model definition not registered within {maxRetries * delayMs}ms. Ensure the read model is registered before watching.");
     }
 
     async Task<IEnumerable<ReadModelSnapshot>> GetSnapshotsForProjection(

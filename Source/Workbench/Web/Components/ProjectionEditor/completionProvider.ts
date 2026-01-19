@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { editor, languages, IRange, Position } from 'monaco-editor';
-import type { JsonSchema } from '../JsonSchema';
+import type { JsonSchema, JsonSchemaProperty } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 interface CompletionContext {
@@ -76,7 +76,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         } else if (this.isAfterKeyword(context, 'with')) {
             this.addEventTypeCompletions(suggestions, context);
         } else if (this.isInAssignment(context)) {
-            this.addAssignmentValueCompletions(suggestions, context, model, position, activeSchema);
+            this.addAssignmentValueCompletions(suggestions, context, model, position);
         } else if (this.isPropertyDotAccess(context)) {
             this.addPropertyMemberCompletions(suggestions, context);
         } else if (this.isStartOfLine(context) || this.isAfterIndent(context)) {
@@ -312,8 +312,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         suggestions: languages.CompletionItem[],
         context: CompletionContext,
         model: editor.ITextModel,
-        position: Position,
-        activeSchema?: JsonSchema
+        position: Position
     ): void {
         // Get the event type from the current block
         const eventType = this.getCurrentEventType(model, position.lineNumber);
@@ -496,22 +495,22 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {
-        if ((schema as any).name) return (schema as any).name;
-        if ((schema as any).title) return (schema as any).title;
-        if (typeof (schema as any).$id === 'string') {
-            const parts = (schema as any).$id.split('/');
-            return parts[parts.length - 1] || (schema as any).$id;
+        if (schema.name) return schema.name;
+        if (schema.title) return schema.title;
+        if (typeof schema.$id === 'string') {
+            const parts = schema.$id.split('/');
+            return parts[parts.length - 1] || schema.$id;
         }
         return undefined;
     }
 
     private getSchemaDescription(schema: JsonSchema): string | undefined {
-        return (schema as any).description || undefined;
+        return schema.description || undefined;
     }
 
-    private getPropertyTypeDescription(propSchema: any): string {
+    private getPropertyTypeDescription(propSchema: JsonSchemaProperty): string {
         if (propSchema.type === 'array' && propSchema.items) {
-            const itemType = propSchema.items.type || propSchema.items.$ref?.split('/').pop() || 'unknown';
+            const itemType = propSchema.items.type || propSchema.items.$id?.split('/').pop() || 'unknown';
             return `${itemType}[]`;
         }
         return propSchema.type || propSchema.$ref?.split('/').pop() || 'unknown';

@@ -64,6 +64,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
+
+        var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
+        var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
+        var disableTls = options.Tls.IsDisabled || (string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls);
+
         _connection = new ChronicleConnection(
             options.ConnectionString,
             options.ConnectTimeout,
@@ -75,9 +80,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             options.LoggerFactory,
             CancellationToken.None,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
-            options.Tls.IsDisabled,
-            options.Tls.CertificatePath,
-            options.Tls.CertificatePassword,
+            disableTls,
+            certificatePath,
+            certificatePassword,
             tokenProvider);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }

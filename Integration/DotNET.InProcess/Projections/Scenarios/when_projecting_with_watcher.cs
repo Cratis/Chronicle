@@ -25,7 +25,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         IDisposable _observable;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
-        void Establish()
+        async Task Establish()
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
@@ -35,6 +35,13 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
                 WatchResult = result;
                 _tcs.SetResult();
             });
+
+            // Append the events after the watcher is ready
+            Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
+            await Projection.WaitTillActive();
+            var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);
+            await Projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
+            Result = await GetReadModel(EventSourceId);
         }
 
         async Task Because()

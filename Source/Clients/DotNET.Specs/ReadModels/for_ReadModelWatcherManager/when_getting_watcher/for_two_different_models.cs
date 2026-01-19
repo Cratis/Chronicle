@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelWatcherManager.when_getting_watcher;
 
-public class for_two_different_models_and_client_is_sconnected : given.a_projection_watcher_manager
+public class for_two_different_models : given.a_projection_watcher_manager
 {
     IReadModelWatcher<SomeModel> _expectedWatcherForSomeModel;
     IReadModelWatcher<SomeOtherModel> _expectedWatcherForSomeOtherModel;
@@ -12,8 +12,6 @@ public class for_two_different_models_and_client_is_sconnected : given.a_project
 
     void Establish()
     {
-        _lifecycle.IsConnected.Returns(true);
-
         _expectedWatcherForSomeModel = Substitute.For<IReadModelWatcher<SomeModel>>();
         _expectedWatcherForSomeOtherModel = Substitute.For<IReadModelWatcher<SomeOtherModel>>();
         _projectionWatcherFactory.Create<SomeModel>(Arg.Any<Action>()).Returns(_expectedWatcherForSomeModel);
@@ -30,6 +28,6 @@ public class for_two_different_models_and_client_is_sconnected : given.a_project
     [Fact] void should_return_watcher_for_some_other_model() => _watcherForSomeOtherModel.ShouldNotBeNull();
     [Fact] void should_return_expected_watcher_for_some_model() => _watcherForSomeModel.ShouldEqual(_expectedWatcherForSomeModel);
     [Fact] void should_return_expected_watcher_for_some_other_model() => _watcherForSomeOtherModel.ShouldEqual(_expectedWatcherForSomeOtherModel);
-    [Fact] void should_not_start_watcher_for_some_model() => _expectedWatcherForSomeModel.Received(1).Start();
-    [Fact] void should_not_start_watcher_for_some_other_model() => _expectedWatcherForSomeOtherModel.Received(1).Start();
+    [Fact] void should_start_watcher_for_some_model() => _expectedWatcherForSomeModel.Received(1).Start();
+    [Fact] void should_start_watcher_for_some_other_model() => _expectedWatcherForSomeOtherModel.Received(1).Start();
 }

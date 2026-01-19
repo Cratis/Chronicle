@@ -52,7 +52,7 @@ public class with_record_using_count_increment_and_decrement : given.a_model_bou
     {
         var eventType = event_types.GetEventTypeFor(typeof(TaskCreated)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(ProjectStatistics.TotalTasks)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class with_record_using_count_increment_and_decrement : given.a_model_bou
     {
         var eventType = event_types.GetEventTypeFor(typeof(TaskStarted)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(ProjectStatistics.ActiveTasks)];
-        expression.ShouldEqual($"{WellKnownExpressions.Increment}()");
+        expression.ShouldEqual(WellKnownExpressions.Increment);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class with_record_using_count_increment_and_decrement : given.a_model_bou
     {
         var eventType = event_types.GetEventTypeFor(typeof(TaskCompleted)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(ProjectStatistics.ActiveTasks)];
-        expression.ShouldEqual($"{WellKnownExpressions.Decrement}()");
+        expression.ShouldEqual(WellKnownExpressions.Decrement);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class with_record_using_count_increment_and_decrement : given.a_model_bou
     {
         var eventType = event_types.GetEventTypeFor(typeof(TaskCompleted)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(ProjectStatistics.CompletedTasks)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 }
 

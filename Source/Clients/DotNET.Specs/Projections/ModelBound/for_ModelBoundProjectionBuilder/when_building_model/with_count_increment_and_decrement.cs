@@ -53,7 +53,7 @@ public class with_count_increment_and_decrement : given.a_model_bound_projection
     {
         var eventType = event_types.GetEventTypeFor(typeof(PasswordChanged)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(UserStats.PasswordChangeCount)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class with_count_increment_and_decrement : given.a_model_bound_projection
     {
         var eventType = event_types.GetEventTypeFor(typeof(UserLoggedIn)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(UserStats.ActiveSessions)];
-        expression.ShouldEqual($"{WellKnownExpressions.Increment}()");
+        expression.ShouldEqual(WellKnownExpressions.Increment);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class with_count_increment_and_decrement : given.a_model_bound_projection
     {
         var eventType = event_types.GetEventTypeFor(typeof(UserLoggedOut)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(UserStats.ActiveSessions)];
-        expression.ShouldEqual($"{WellKnownExpressions.Decrement}()");
+        expression.ShouldEqual(WellKnownExpressions.Decrement);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class with_count_increment_and_decrement : given.a_model_bound_projection
     {
         var eventType = event_types.GetEventTypeFor(typeof(UserLoggedIn)).ToContract();
         var expression = _result.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value.Properties[nameof(UserStats.TotalLogins)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 }
 

@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image.
 ####################################
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble
 ARG VERSION
 ARG MONGO_VERSION=8.0.8
 ARG MONGO_PACKAGE=mongodb-org
@@ -82,7 +82,7 @@ RUN echo $PWD
 RUN ./copy-server-files.sh
 
 COPY ./Docker/Development/appsettings.json ./appsettings.json
-RUN rm appsettings.Development.json
+RUN rm -f appsettings.Development.json
 
 EXPOSE 8080 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

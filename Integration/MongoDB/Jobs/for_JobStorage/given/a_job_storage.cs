@@ -11,7 +11,7 @@ using NSubstitute;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Jobs.for_JobStorage.given;
 
-public class a_job_storage(ChronicleInProcessFixture fixture) : Specification(fixture)
+public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.given.a_mongo_client(fixture)
 {
     protected JobStorage _storage = default!;
     protected IJobTypes _jobTypes = default!;
@@ -21,9 +21,8 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Specification(fi
 
     async Task Establish()
     {
-        var client = new MongoClient($"mongodb://localhost:{XUnit.Integration.ChronicleFixture.MongoDBPort}");
         _databaseName = $"chronicle_job_storage_specs_{Guid.NewGuid():N}";
-        _mongoDatabase = client.GetDatabase(_databaseName);
+        _mongoDatabase = _client.GetDatabase(_databaseName);
 
         _database = Substitute.For<IEventStoreNamespaceDatabase>();
         _database.GetCollection<JobState>(WellKnownCollectionNames.Jobs)

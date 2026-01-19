@@ -102,11 +102,12 @@ public class ProjectionFactory(
             return merged;
         }
 
-        var existing = new HashSet<string>(merged.Select(_ => _.Key.LastSegment.Value), StringComparer.OrdinalIgnoreCase);
+        var existingReadModelProperties = new HashSet<string>(merged.Select(_ => _.Key.LastSegment.Value), StringComparer.OrdinalIgnoreCase);
+        var existingEventProperties = new HashSet<string>(merged.Select(_ => _.Value), StringComparer.OrdinalIgnoreCase);
 
         foreach (var eventProperty in eventSchema.Properties.Values)
         {
-            if (existing.Contains(eventProperty.Name))
+            if (existingReadModelProperties.Contains(eventProperty.Name) || existingEventProperties.Contains(eventProperty.Name))
             {
                 continue;
             }
@@ -117,7 +118,8 @@ public class ProjectionFactory(
             if (matchingReadModelProperty is not null)
             {
                 merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
-                existing.Add(matchingReadModelProperty.Name);
+                existingReadModelProperties.Add(matchingReadModelProperty.Name);
+                existingEventProperties.Add(eventProperty.Name);
             }
         }
 

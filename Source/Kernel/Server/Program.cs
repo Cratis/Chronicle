@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Reflection;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
@@ -25,9 +26,20 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
-ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 
+#pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+var logger = builder.Logging.Services
+    .BuildServiceProvider()
+    .GetRequiredService<ILoggerFactory>()
+    .CreateLogger<Kernel>();
+#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
+var assembly = Assembly.GetExecutingAssembly();
+logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
+
+var env = Environment.GetEnvironmentVariables();
+
+ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks()
@@ -42,6 +54,21 @@ if (chronicleOptions.Features.Api)
 }
 
 var serverCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+
+if (serverCertificate is not null)
+{
+    logger.TlsCertificateLoaded();
+}
+else
+{
+#if DEVELOPMENT
+    logger.TlsCertificateMissingDevelopment();
+#else
+    logger.TlsCertificateMissingProduction();
+#endif
+}
+
+logger.ServerListening(chronicleOptions.ManagementPort, chronicleOptions.Port);
 
 builder.WebHost.UseKestrel(options =>
 {
@@ -126,15 +153,15 @@ builder.Host
 
 var app = builder.Build();
 
-// Initialize default admin user if authentication is enabled
-if (chronicleOptions.Authentication.Enabled)
-{
-    var authService = app.Services.GetRequiredService<IAuthenticationService>();
-    await authService.EnsureDefaultAdminUser();
+logger = app.Services.GetRequiredService<ILogger<Kernel>>();
+logger.ServerConfigured();
+
+// Initialize default admin user and client credentials
+var authService = app.Services.GetRequiredService<IAuthenticationService>();
+await authService.EnsureDefaultAdminUser();
 #if DEVELOPMENT
-    await authService.EnsureDefaultClientCredentials();
+await authService.EnsureDefaultClientCredentials();
 #endif
-}
 
 app.UseRouting();
 
@@ -142,12 +169,9 @@ app.UseCratisArc();
 app.UseRouting();
 
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
-if (chronicleOptions.Authentication.Enabled)
-{
-    app.UseMiddleware<GrpcAuthenticationMiddleware>();
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
+app.UseMiddleware<GrpcAuthenticationMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (chronicleOptions.Features.Api)
 {
@@ -168,12 +192,9 @@ if (chronicleOptions.Features.Api)
 }
 
 // Map Identity API endpoints for SPA authentication - MUST be before MapControllers
-if (chronicleOptions.Authentication.Enabled)
-{
-    app.MapGroup("/identity")
-        .MapIdentityApi<ChronicleUser>()
-        .AllowAnonymous();
-}
+app.MapGroup("/identity")
+    .MapIdentityApi<ChronicleUser>()
+    .AllowAnonymous();
 
 // Map controllers for API and OAuth
 if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
@@ -197,10 +218,15 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
 {
+    logger.ServerShuttingDown();
     Console.WriteLine("******* SHUTTING DOWN CHRONICLE SERVER *******");
     cancellationToken.Cancel();
     eventArgs.Cancel = true;
 };
+
+logger.ServerStarted(
+    chronicleOptions.ManagementPort,
+    chronicleOptions.Port);
 
 await app.RunAsync(cancellationToken.Token);
 

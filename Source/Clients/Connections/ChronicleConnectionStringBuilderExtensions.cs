@@ -70,6 +70,20 @@ public static class ChronicleConnectionStringBuilderExtensions
     }
 
     /// <summary>
+    /// Configures the TLS certificate for the connection.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <param name="certificatePath">The path to the certificate file.</param>
+    /// <param name="certificatePassword">The password for the certificate file.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    public static ChronicleConnectionStringBuilder WithCertificate(this ChronicleConnectionStringBuilder builder, string certificatePath, string certificatePassword)
+    {
+        builder.CertificatePath = certificatePath;
+        builder.CertificatePassword = certificatePassword;
+        return builder;
+    }
+
+    /// <summary>
     /// Enables TLS for the connection (default behavior).
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
