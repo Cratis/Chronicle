@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelWatcherManager.when_getting_watcher;
 
-public class second_time_and_client_is_connected : given.a_projection_watcher_manager
+public class second_time : given.a_projection_watcher_manager
 {
     IReadModelWatcher<SomeModel> _expectedWatcher;
     IReadModelWatcher<SomeModel> _firstWatcher;
@@ -11,8 +11,6 @@ public class second_time_and_client_is_connected : given.a_projection_watcher_ma
 
     void Establish()
     {
-        _lifecycle.IsConnected.Returns(true);
-
         _expectedWatcher = Substitute.For<IReadModelWatcher<SomeModel>>();
         _projectionWatcherFactory.Create<SomeModel>(Arg.Any<Action>()).Returns(_expectedWatcher);
 
@@ -25,5 +23,5 @@ public class second_time_and_client_is_connected : given.a_projection_watcher_ma
     [Fact] void should_return_watcher_second_time() => _secondWatcher.ShouldNotBeNull();
     [Fact] void should_return_expected_watcher_first_time() => _firstWatcher.ShouldEqual(_expectedWatcher);
     [Fact] void should_return_expected_watcher_second_time() => _secondWatcher.ShouldEqual(_expectedWatcher);
-    [Fact] void should_not_start_watcher() => _expectedWatcher.Received(1).Start();
+    [Fact] void should_only_start_watcher_once() => _expectedWatcher.Received(1).Start();
 }
