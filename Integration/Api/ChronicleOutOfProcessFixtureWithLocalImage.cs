@@ -41,6 +41,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     /// </summary>
     /// <returns>The access token.</returns>
     /// <exception cref="InvalidOperationException">Thrown when unable to retrieve the access token after multiple attempts.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails.</exception>
     public async Task<string> GetAccessToken()
     {
         if (!string.IsNullOrEmpty(_accessToken))
