@@ -8,11 +8,13 @@ import {
     registerProjectionDslLanguage,
     setReadModelSchemas,
     setEventSchemas,
+    setEventSequences,
     languageId,
     disposeProjectionDslLanguage,
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionDefinitionSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode } from 'Api/Projections';
+import { AllEventSequences } from 'Api/EventSequences';
 import { Button } from 'primereact/button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
@@ -47,6 +49,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const [modelBoundCode, setModelBoundCode] = useState('');
     const [generateDeclarativeCode] = GenerateDeclarativeCode.use();
     const [generateModelBoundCode] = GenerateModelBoundCode.use();
+    const [allEventSequencesResult] = AllEventSequences.use(eventStore ? { eventStore } : undefined);
 
     const fetchCode = async () => {
         if (eventStore && namespace && value) {
@@ -99,6 +102,13 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             setEventSchemas(eventSchemas);
         }
     }, [readModelSchemas, eventSchemas]);
+
+    // Update event sequences when they're loaded
+    useEffect(() => {
+        if (allEventSequencesResult.data) {
+            setEventSequences(allEventSequencesResult.data);
+        }
+    }, [allEventSequencesResult.data]);
 
     // Update markers when errors change
     useEffect(() => {

@@ -146,6 +146,12 @@ export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, Json
     }
 }
 
+export function setEventSequences(sequences: string[]): void {
+    if (completionProvider) {
+        completionProvider.setEventSequences(sequences);
+    }
+}
+
 export function disposeProjectionDslLanguage(): void {
     disposables.forEach((d) => d.dispose());
     disposables = [];
