@@ -18,5 +18,7 @@
   href: hosting/toc.yml
 - name: Contributing
   href: contributing/toc.yml
+- name: Statistics
+  href: statistics/toc.yml
 - name: Api
   href: ../../api/chronicle/

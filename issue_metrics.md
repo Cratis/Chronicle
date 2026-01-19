@@ -3,24 +3,28 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 131 days, 18:38:37 | 4 days, 0:54:52 | 311 days, 3:11:17 |
-| Time to close | 285 days, 22:55:31 | 138 days, 3:31:08 | 826 days, 12:55:34 |
+| Time to close | 285 days, 12:09:34 | 137 days, 9:16:51 | 826 days, 7:55:29 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 260 |
-| Number of items closed | 608 |
-| Total number of items created | 868 |
+| Number of items that remain open | 263 |
+| Number of items closed | 609 |
+| Total number of items created | 872 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Ensure Monaco Language service has full support for the Projection Definition Language | https://github.com/Cratis/Chronicle/issues/2505 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Change password on first login | https://github.com/Cratis/Chronicle/issues/2503 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Versioning information | https://github.com/Cratis/Chronicle/issues/2501 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| All and Dictionaries | https://github.com/Cratis/Chronicle/issues/2464 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Generate TypeScript gRPC package | https://github.com/Cratis/Chronicle/issues/2437 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Add events in sequences page | https://github.com/Cratis/Chronicle/issues/2435 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Improve seed data and add editor | https://github.com/Cratis/Chronicle/issues/2433 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Throttling for job system | https://github.com/Cratis/Chronicle/issues/2431 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Simplify TLS | https://github.com/Cratis/Chronicle/issues/2429 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Performance benchmarks | https://github.com/Cratis/Chronicle/issues/2427 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
-| Build statistics | https://github.com/Cratis/Chronicle/issues/2425 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Build statistics | https://github.com/Cratis/Chronicle/issues/2425 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 12 days, 18:37:18 | None |
 | Introduce tags support and wire up for event | https://github.com/Cratis/Chronicle/issues/2423 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Synchronization of CoPilot instructions | https://github.com/Cratis/Chronicle/issues/2421 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Introduce Read Model and Event Type management in Workbench | https://github.com/Cratis/Chronicle/issues/2381 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -330,9 +334,4 @@
 | Remove ValidFrom as concept | https://github.com/Cratis/Chronicle/issues/1241 | None | [einari](https://github.com/einari) | None | 1 day, 4:25:53 | None |
 | Split the repository | https://github.com/Cratis/Chronicle/issues/1206 | None | [einari](https://github.com/einari) | None | None | None |
 | Add in-process Workbench | https://github.com/Cratis/Chronicle/issues/1205 | None | [einari](https://github.com/einari) | None | 140 days, 0:06:34 | None |
-| Fix all the specs after reorganizing / refactoring | https://github.com/Cratis/Chronicle/issues/1204 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 53 days, 19:25:41 | None |
-| Move away from Guid identifier for RulesFor | https://github.com/Cratis/Chronicle/issues/1203 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 22:25:09 | 36 days, 23:00:55 | None |
-| Consider moving away from Expando Object in favor of dynamically created CLR types internally | https://github.com/Cratis/Chronicle/issues/1202 | None | [einari](https://github.com/einari) | None | None | None |
-| Switch to NSubstitute - change everything away from Moq | https://github.com/Cratis/Chronicle/issues/1201 | [einari](https://github.com/einari) | [einari](https://github.com/einari) | None | 165 days, 22:48:12 | None |
-| Bring back Benchmark project | https://github.com/Cratis/Chronicle/issues/1200 | None | [einari](https://github.com/einari) | None | None | None |
-| Bring back specifications project | https://github.com/Cratis/Chron
+| Fix all the specs after reorganizing / refactoring | https://github.com/Cratis/Chronicle/issues/1204 | [einari](https://github.com/einari) | [ei
