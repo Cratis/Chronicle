@@ -146,7 +146,7 @@ jobs:
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
+          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/x64
         env:
           CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
           CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
@@ -178,7 +178,7 @@ jobs:
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
+          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/arm64
         env:
           CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
           CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
@@ -223,6 +223,9 @@ jobs:
         working-directory: ./Source/Workbench/Web
         run: |
           yarn build
+        env:
+          VITE_VERSION: ${{ needs.release.outputs.version }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
 
   dotnet:
     if: needs.release.outputs.publish == 'true'
@@ -253,10 +256,10 @@ jobs:
 
 
       - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }}
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
       - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -maxcpucount:1
         working-directory: ./Source/Clients
 
       - name: Create NuGet packages

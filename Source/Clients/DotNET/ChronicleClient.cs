@@ -21,6 +21,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
 {
     const string VersionMetadataKey = "softwareVersion";
     const string CommitMetadataKey = "softwareCommit";
+    const string DotNetClientVersionMetadataKey = ".NET Client Version";
+    const string DotNetClientCommitMetadataKey = ".NET Client Commit";
     const string ProgramIdentifierMetadataKey = "programIdentifier";
     const string OperatingSystemMetadataKey = "os";
     const string MachineNameMetadataKey = "machineName";
@@ -169,6 +171,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
         {
             { VersionMetadataKey, Options.SoftwareVersion },
             { CommitMetadataKey, Options.SoftwareCommit },
+            { DotNetClientVersionMetadataKey, VersionInformation.GetChronicleClientVersion() },
+            { DotNetClientCommitMetadataKey, VersionInformation.GetChronicleClientCommitSha() },
             { ProgramIdentifierMetadataKey, Options.ProgramIdentifier },
             { OperatingSystemMetadataKey, Environment.OSVersion.ToString() },
             { MachineNameMetadataKey, Environment.MachineName },
