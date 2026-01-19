@@ -57,7 +57,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
         using var httpClient = new HttpClient(handler);
         httpClient.Timeout = TimeSpan.FromSeconds(10);
 
-        var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
+        using var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["grant_type"] = "password",
             ["username"] = DefaultAdminUsername,
