@@ -6,8 +6,17 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Cratis.Chronicle.Integration.Api.given;
 
-public class an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) : Specification(fixture)
+public class an_http_client : Specification
 {
+    private readonly ChronicleOutOfProcessFixtureWithLocalImage _fixture;
+
+#pragma warning disable IDE0290 // Use primary constructor
+    public an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) : base(fixture)
+#pragma warning restore IDE0290 // Use primary constructor
+    {
+        _fixture = fixture;
+    }
+
     protected HttpClient Client { get; private set; } = null!;
 
     async Task Establish()
@@ -42,7 +51,7 @@ public class an_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) 
             handler);
 
         // Add bearer token authentication
-        var accessToken = await fixture.GetAccessToken();
+        var accessToken = await _fixture.GetAccessToken();
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
     }
 }
