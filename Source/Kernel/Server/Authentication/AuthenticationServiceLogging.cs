@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Server.Authentication;
 
+#pragma warning disable MA0182 // Unused internal type. This is used during DEVELOPMENT builds only.
 internal static partial class AuthenticationServiceLogging
 {
     [LoggerMessage(LogLevel.Information, "Checking for existing default client credentials with ClientId: {ClientId}")]
