@@ -219,6 +219,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         X509Certificate2? certificate = null;
         try
         {
+#pragma warning disable CA2000 // Certificate ownership is transferred to httpHandler.SslOptions.ClientCertificates
             certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
             var httpHandler = new SocketsHttpHandler
             {
@@ -233,6 +234,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
                 _logger.UsingClientCertificate(_certificatePath!);
             }
+#pragma warning restore CA2000
 
             if (!_disableTls)
             {
