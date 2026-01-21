@@ -75,12 +75,12 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <param name="event">The event containing the requirement information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
-    public async Task RequiresPasswordChange(UserRequiresPasswordChange @event, EventContext eventContext)
+    public async Task RequiresPasswordChange(PasswordChangeRequired @event, EventContext eventContext)
     {
         var user = await userStorage.GetById(eventContext.EventSourceId);
         if (user is not null)
         {
-            user.RequiresPasswordChange = @event.RequiresPasswordChange;
+            user.RequiresPasswordChange = true;
             user.LastModifiedAt = DateTimeOffset.UtcNow;
             await userStorage.Update(user);
         }

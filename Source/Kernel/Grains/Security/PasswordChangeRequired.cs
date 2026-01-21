@@ -8,6 +8,5 @@ namespace Cratis.Chronicle.Grains.Security;
 /// <summary>
 /// Represents the event for when a user is required to change their password.
 /// </summary>
-/// <param name="RequiresPasswordChange">Whether the user requires password change.</param>
 [EventType]
-public record UserRequiresPasswordChange(bool RequiresPasswordChange);
+public record PasswordChangeRequired();
