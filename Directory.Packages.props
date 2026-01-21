@@ -28,7 +28,7 @@
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.2.0" />
