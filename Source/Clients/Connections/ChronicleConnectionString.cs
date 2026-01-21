@@ -90,6 +90,16 @@ public class ChronicleConnectionString
     public bool DisableTls => _builder.DisableTls;
 
     /// <summary>
+    /// Gets the path to the certificate file for TLS.
+    /// </summary>
+    public string? CertificatePath => _builder.CertificatePath;
+
+    /// <summary>
+    /// Gets the password for the certificate file.
+    /// </summary>
+    public string? CertificatePassword => _builder.CertificatePassword;
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>

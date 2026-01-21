@@ -107,10 +107,6 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
         setPage(0);
     }, [navigationPath, setPage]);
 
-    const handleObjectClick = useCallback((value: Json) => {
-        setSelectedInstance(value);
-    }, [setSelectedInstance]);
-
     const columns = useMemo(() => {
         if (currentData.length === 0) return [];
 

@@ -47,14 +47,9 @@ public class ChronicleUserStore(IUserStorage userStorage) :
     public async Task<ChronicleUser?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
         // Identity normalizes usernames to uppercase, but we store them as-is
-        // Try exact match first, then case-insensitive
+        // Try exact match first, then lowercase version since Identity normalizes to uppercase
         var user = await userStorage.GetByUsername(normalizedUserName);
-
-        if (user is null && !normalizedUserName.Equals(normalizedUserName, StringComparison.InvariantCultureIgnoreCase))
-        {
-            // Try lowercase version
-            user = await userStorage.GetByUsername(normalizedUserName.ToLowerInvariant());
-        }
+        user ??= await userStorage.GetByUsername(normalizedUserName.ToLowerInvariant());
 
         return user;
     }
@@ -127,11 +122,7 @@ public class ChronicleUserStore(IUserStorage userStorage) :
         // If not found by email, try username (to support username-based login)
         // Try both the original value and lowercase version
         user ??= await userStorage.GetByUsername(normalizedEmail);
-
-        if (user is null && !normalizedEmail.Equals(normalizedEmail, StringComparison.InvariantCultureIgnoreCase))
-        {
-            user = await userStorage.GetByUsername(normalizedEmail.ToLowerInvariant());
-        }
+        user ??= await userStorage.GetByUsername(normalizedEmail.ToLowerInvariant());
 
         return user;
     }

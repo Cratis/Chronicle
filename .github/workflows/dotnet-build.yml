@@ -116,8 +116,8 @@ jobs:
           - 'for_JobsManager'
           - 'for_Reactors'
           - 'for_Reducers'
+          - 'Jobs'
           - 'Projections'
-          - 'AggregateRoots'
     continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}

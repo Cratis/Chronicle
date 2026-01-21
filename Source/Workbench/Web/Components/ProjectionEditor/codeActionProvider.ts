@@ -16,7 +16,7 @@ export class ProjectionDslCodeActionProvider {
     // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
         this.readModels = schemas.map(schema => ({
-            displayName: (schema as any).title || (schema as any).name || '',
+            displayName: schema.title || schema.name || '',
             schema
         }));
     }
@@ -25,17 +25,20 @@ export class ProjectionDslCodeActionProvider {
         this.onCreateReadModel = callback;
     }
 
+    invokeCreateReadModel(readModelName: string): void {
+        this.onCreateReadModel?.(readModelName);
+    }
+
     provideCodeActions(
-        model: Monaco.editor.ITextModel,
-        range: Monaco.Range,
-        context: Monaco.languages.CodeActionContext,
-        token: Monaco.CancellationToken
+        _model: Monaco.editor.ITextModel,
+        _range: Monaco.Range,
+        context: Monaco.languages.CodeActionContext
     ): Monaco.languages.ProviderResult<Monaco.languages.CodeActionList> {
         const actions: Monaco.languages.CodeAction[] = [];
 
         // Check if we have any diagnostics for undefined read models
         const diagnostics = context.markers.filter(
-            marker => marker.message.includes('not found in available schemas')
+            (marker: Monaco.editor.IMarkerData) => marker.message.includes('not found in available schemas')
         );
 
         if (diagnostics.length > 0) {
@@ -70,7 +73,7 @@ export class ProjectionDslCodeActionProvider {
 
         return {
             actions,
-            dispose: () => { }
+            dispose: () => { /* No cleanup needed */ }
         };
     }
 }

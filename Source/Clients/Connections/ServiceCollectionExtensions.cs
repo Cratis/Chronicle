@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         ChronicleConnectionString? connectionString = default,
         Func<IServiceProvider, ChronicleConnectionString>? connectionStringFactory = default,
-        bool disableTls = false,
+        bool? disableTls = null,
         string? certificatePath = null,
         string? certificatePassword = null)
     {
@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChronicleConnection>(sp =>
         {
             connectionString ??= connectionStringFactory?.Invoke(sp) ?? ChronicleConnectionString.Default;
-
+            disableTls ??= connectionString.DisableTls;
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
             logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", connectionString);
@@ -59,7 +59,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<ILoggerFactory>(),
                 lifetime.ApplicationStopping,
                 sp.GetRequiredService<ILogger<ChronicleConnection>>(),
-                disableTls,
+                disableTls.Value,
                 certificatePath,
                 certificatePassword);
         });

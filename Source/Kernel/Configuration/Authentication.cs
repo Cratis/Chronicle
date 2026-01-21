@@ -9,19 +9,14 @@ namespace Cratis.Chronicle.Configuration;
 public class Authentication
 {
     /// <summary>
-    /// Gets whether authentication is enabled.
-    /// </summary>
-    public bool Enabled { get; init; } = true; // Default to enabled
-
-    /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
     /// </summary>
     public string? Authority { get; init; }
 
     /// <summary>
-    /// Gets whether to use the internal OAuth authority.
+    /// Gets whether to use the internal OAuth authority. Returns true when Authority is not set.
     /// </summary>
-    public bool UseInternalAuthority { get; init; } = true;
+    public bool UseInternalAuthority => string.IsNullOrEmpty(Authority);
 
     /// <summary>
     /// Gets the default admin username.

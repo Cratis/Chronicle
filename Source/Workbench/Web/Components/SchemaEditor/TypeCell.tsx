@@ -127,7 +127,7 @@ export const TypeCell = ({
             <Dropdown
                 value={currentValue}
                 options={allTypeOptions}
-                onChange={(e) => handleTypeChange(e.value, rowData.name)}
+                onChange={(e) => handleTypeChange(e.value, rowData.name || '')}
                 className="flex-1"
             />
             {rowData.type === 'array' && rowData.items && (
@@ -136,37 +136,39 @@ export const TypeCell = ({
                     <Dropdown
                         value={rowData.items.type || 'string'}
                         options={allTypeOptions}
-                        onChange={(e) => handleTypeChange(e.value, rowData.name, true)}
+                        onChange={(e) => handleTypeChange(e.value, rowData.name || '', true)}
                         className="flex-1"
                     />
                 </>
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {rowData.type === 'array' && rowData.items?.type === 'object' && (
+                {rowData.type === 'array' && rowData.items?.type === 'object' && rowData.name && (
                     <Button
                         icon={<faIcons.FaArrowRight />}
                         className="p-button-text p-button-sm"
-                        onClick={() => onNavigateToArrayItems(rowData.name)}
+                        onClick={() => onNavigateToArrayItems(rowData.name!)}
                         tooltip={strings.components.schemaEditor.tooltips.navigateToItemDefinition}
                         tooltipOptions={{ position: 'top' }}
                     />
                 )}
-                {rowData.type === 'object' && (
+                {rowData.type === 'object' && rowData.name && (
                     <Button
                         icon={<faIcons.FaArrowRight />}
                         className="p-button-text p-button-sm"
-                        onClick={() => onNavigateToProperty(rowData.name)}
+                        onClick={() => onNavigateToProperty(rowData.name!)}
                         tooltip={strings.components.schemaEditor.tooltips.navigateToObjectProperties}
                         tooltipOptions={{ position: 'top' }}
                     />
                 )}
-                <Button
-                    icon={<faIcons.FaTrash />}
-                    className="p-button-text p-button-danger p-button-sm"
-                    onClick={() => onRemoveProperty(rowData.name)}
-                    tooltip={strings.components.schemaEditor.tooltips.deleteProperty}
-                    tooltipOptions={{ position: 'top' }}
-                />
+                {rowData.name && (
+                    <Button
+                        icon={<faIcons.FaTrash />}
+                        className="p-button-text p-button-danger p-button-sm"
+                        onClick={() => onRemoveProperty(rowData.name!)}
+                        tooltip={strings.components.schemaEditor.tooltips.deleteProperty}
+                        tooltipOptions={{ position: 'top' }}
+                    />
+                )}
             </div>
         </div>
     );

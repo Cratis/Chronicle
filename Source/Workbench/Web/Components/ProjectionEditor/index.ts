@@ -58,15 +58,15 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     disposables.push(codeActionDisposable);
 
     // Register command for creating read models
-    const commandDisposable = monaco.editor.registerCommand('projection-dsl.createReadModel', (_accessor, readModelName: string) => {
+    const commandDisposable = monaco.editor.registerCommand('projection-dsl.createReadModel', (_accessor: unknown, readModelName: string) => {
         if (codeActionProvider) {
-            (codeActionProvider as any).onCreateReadModel?.(readModelName);
+            codeActionProvider.invokeCreateReadModel(readModelName);
         }
     });
     disposables.push(commandDisposable);
 
     // Register validation on model change
-    const modelChangeDisposable = monaco.editor.onDidCreateModel((model) => {
+    const modelChangeDisposable = monaco.editor.onDidCreateModel((model: Monaco.editor.ITextModel) => {
         if (model.getLanguageId() === languageId) {
             validateModel(monaco, model);
 
@@ -80,7 +80,7 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     disposables.push(modelChangeDisposable);
 
     // Validate existing models
-    monaco.editor.getModels().forEach((model) => {
+    monaco.editor.getModels().forEach((model: Monaco.editor.ITextModel) => {
         if (model.getLanguageId() === languageId) {
             validateModel(monaco, model);
         }
@@ -126,7 +126,7 @@ export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, Json
             const out: Record<string, JsonSchema> = {};
             input.forEach((s, i) => {
                 if (!s) return;
-                const name = (s as any).title || (s as any).name || (typeof (s as any).$id === 'string' ? (s as any).$id.split('/').pop() : `Event${i + 1}`);
+                const name = s.title || s.name || (typeof s.$id === 'string' ? s.$id.split('/').pop() : undefined) || `Event${i + 1}`;
                 out[name] = s;
             });
             return out;
@@ -143,6 +143,12 @@ export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, Json
     }
     if (hoverProvider) {
         hoverProvider.setEventSchemas(normalized);
+    }
+}
+
+export function setEventSequences(sequences: string[]): void {
+    if (completionProvider) {
+        completionProvider.setEventSequences(sequences);
     }
 }
 

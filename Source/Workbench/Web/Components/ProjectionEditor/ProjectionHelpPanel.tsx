@@ -30,6 +30,7 @@ export const ProjectionHelpPanel: React.FC = () => {
                 <div style={{ fontSize: '13px' }}>
                     <div style={{ marginBottom: '5px' }}>• <strong>AutoMap enabled</strong> - Matching properties are automatically copied from events</div>
                     <div style={{ marginBottom: '5px' }}>• <strong>Key defaults to $eventSourceId</strong> - No explicit key mapping needed unless using a different property</div>
+                    <div style={{ marginBottom: '5px' }}>• <strong>Sequence defaults to event-log</strong> - No explicit sequence needed unless reading from a specific event sequence</div>
                     <div style={{ marginBottom: '5px' }}>• Use <strong style={{ color: '#569cd6' }}>no automap</strong> to disable automatic property mapping</div>
                 </div>
             </div>
@@ -40,6 +41,7 @@ export const ProjectionHelpPanel: React.FC = () => {
                 </h3>
                 <div style={{ fontSize: '13px' }}>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>projection</strong> - Define a projection and its target read model</div>
+                    <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>sequence</strong> - Specify which event sequence to use (defaults to event-log)</div>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>from</strong> - Specify event type to project from</div>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>every</strong> - Apply mappings to all events</div>
                     <div style={{ marginBottom: '5px' }}><strong style={{ color: '#569cd6' }}>key</strong> - Define the read model key (defaults to $eventSourceId)</div>
@@ -65,7 +67,7 @@ export const ProjectionHelpPanel: React.FC = () => {
                     <div style={{ marginBottom: '5px' }}><strong>$eventContext.</strong> - Event metadata (occurred, sequenceNumber, correlationId, causationId, eventType, eventSourceId)</div>
                     <div style={{ marginBottom: '5px' }}><strong>property</strong> - Event property reference</div>
                     <div style={{ marginBottom: '5px' }}><strong>`template $&#123;expr&#125;`</strong> - Template strings with interpolation</div>
-                    <div style={{ marginBottom: '5px' }}><strong>Literals</strong> - true, false, null, numbers, "strings"</div>
+                    <div style={{ marginBottom: '5px' }}><strong>Literals</strong> - true, false, null, numbers, &ldquo;strings&rdquo;</div>
                 </div>
             </div>
 

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { editor, languages, IRange, Position } from 'monaco-editor';
-import type { JsonSchema } from '../JsonSchema';
+import type { JsonSchema, JsonSchemaProperty } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 interface CompletionContext {
@@ -17,9 +17,14 @@ interface CompletionContext {
 export class ProjectionDslCompletionProvider implements languages.CompletionItemProvider {
     private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
+    private eventSequences: string[] = [];
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels || [];
+    }
+
+    setEventSequences(sequences: string[]): void {
+        this.eventSequences = sequences || [];
     }
 
     // Keep for backwards compatibility
@@ -63,6 +68,8 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         // Determine what kind of completions to provide based on context
         if (context.lineNumber === 1) {
             this.addProjectionLineCompletions(suggestions, context);
+        } else if (this.isAfterKeyword(context, 'sequence')) {
+            this.addEventSequenceCompletions(suggestions, context);
         } else if (this.isAfterKeyword(context, 'from') || this.isAfterKeyword(context, 'every')) {
             this.addEventTypeCompletions(suggestions, context);
         } else if (this.isAfterKeyword(context, 'key')) {
@@ -76,7 +83,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         } else if (this.isAfterKeyword(context, 'with')) {
             this.addEventTypeCompletions(suggestions, context);
         } else if (this.isInAssignment(context)) {
-            this.addAssignmentValueCompletions(suggestions, context, model, position, activeSchema);
+            this.addAssignmentValueCompletions(suggestions, context, model, position);
         } else if (this.isPropertyDotAccess(context)) {
             this.addPropertyMemberCompletions(suggestions, context);
         } else if (this.isStartOfLine(context) || this.isAfterIndent(context)) {
@@ -179,6 +186,21 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         });
     }
 
+    private addEventSequenceCompletions(suggestions: languages.CompletionItem[], context: CompletionContext): void {
+        this.eventSequences.forEach((sequenceId) => {
+            if (!context.currentWord || sequenceId.startsWith(context.currentWord)) {
+                suggestions.push({
+                    label: sequenceId,
+                    kind: 13, // Value
+                    insertText: sequenceId,
+                    documentation: `Event sequence: ${sequenceId}`,
+                    detail: 'Event Sequence',
+                    range: this.getRangeForWord(context),
+                });
+            }
+        });
+    }
+
     private addKeyCompletions(suggestions: languages.CompletionItem[], context: CompletionContext, activeSchema?: JsonSchema): void {
         // Check if this might be a composite key (type reference)
         if (activeSchema?.definitions) {
@@ -261,6 +283,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
     private addStatementCompletions(suggestions: languages.CompletionItem[], context: CompletionContext, activeSchema?: JsonSchema): void {
         // Add all statement keywords
         const keywords = [
+            { label: 'sequence', insertText: 'sequence ', documentation: 'Specify which event sequence to use for this projection', detail: 'sequence <event-sequence-id>' },
             { label: 'from', insertText: 'from ', documentation: 'Handle specific event types', detail: 'from <EventType>' },
             { label: 'every', insertText: 'every', documentation: 'Handle all events for automatic mapping', detail: 'every' },
             { label: 'key', insertText: 'key ', documentation: 'Define the projection key', detail: 'key <expression>' },
@@ -312,8 +335,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
         suggestions: languages.CompletionItem[],
         context: CompletionContext,
         model: editor.ITextModel,
-        position: Position,
-        activeSchema?: JsonSchema
+        position: Position
     ): void {
         // Get the event type from the current block
         const eventType = this.getCurrentEventType(model, position.lineNumber);
@@ -496,22 +518,22 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {
-        if ((schema as any).name) return (schema as any).name;
-        if ((schema as any).title) return (schema as any).title;
-        if (typeof (schema as any).$id === 'string') {
-            const parts = (schema as any).$id.split('/');
-            return parts[parts.length - 1] || (schema as any).$id;
+        if (schema.name) return schema.name;
+        if (schema.title) return schema.title;
+        if (typeof schema.$id === 'string') {
+            const parts = schema.$id.split('/');
+            return parts[parts.length - 1] || schema.$id;
         }
         return undefined;
     }
 
     private getSchemaDescription(schema: JsonSchema): string | undefined {
-        return (schema as any).description || undefined;
+        return schema.description || undefined;
     }
 
-    private getPropertyTypeDescription(propSchema: any): string {
+    private getPropertyTypeDescription(propSchema: JsonSchemaProperty): string {
         if (propSchema.type === 'array' && propSchema.items) {
-            const itemType = propSchema.items.type || propSchema.items.$ref?.split('/').pop() || 'unknown';
+            const itemType = propSchema.items.type || propSchema.items.$id?.split('/').pop() || 'unknown';
             return `${itemType}[]`;
         }
         return propSchema.type || propSchema.$ref?.split('/').pop() || 'unknown';

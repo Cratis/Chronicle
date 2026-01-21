@@ -23,7 +23,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             e.EventSourceId,
             e.EventTypeId,
             e.Content,
-            e.Tags?.Select(t => new Concepts.Events.Tag(t)) ?? [])).ToArray();
+            e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
         await grain.Seed(entries);
     }

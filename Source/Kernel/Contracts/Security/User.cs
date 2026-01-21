@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents a user in the Chronicle system.
 /// </summary>
 [ProtoContract]
-public record User
+public class User
 {
     /// <summary>
     /// The unique identifier for the user.
@@ -36,12 +36,12 @@ public record User
     /// <summary>
     /// When the user was created.
     /// </summary>
-    [ProtoMember(5)]
-    public DateTimeOffset CreatedAt { get; set; }
+    [ProtoMember(5, IsRequired = true)]
+    public SerializableDateTimeOffset CreatedAt { get; set; } = new();
 
     /// <summary>
     /// When the user was last modified.
     /// </summary>
     [ProtoMember(6)]
-    public DateTimeOffset? LastModifiedAt { get; set; }
+    public SerializableDateTimeOffset? LastModifiedAt { get; set; }
 }

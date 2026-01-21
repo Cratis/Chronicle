@@ -8,6 +8,7 @@ export const languageId = 'projection-dsl';
 // Keywords for the Chronicle Projection DSL
 const KEYWORDS = [
     'projection',
+    'sequence',
     'every',
     'on',
     'from',

@@ -6,12 +6,14 @@ import { Tag } from 'primereact/tag';
 import { ProgressBar } from 'primereact/progressbar';
 import { MdBolt, MdCheckCircle, MdEventAvailable, MdPeople, MdStorage, MdTimer, MdWaves } from 'react-icons/md';
 
+import type { ReactElement } from 'react';
+
 interface Metric {
     label: string;
     value: string;
     hint?: string;
     change?: string;
-    icon: JSX.Element;
+    icon: ReactElement;
     iconBg: string;
     showBar?: boolean;
 }

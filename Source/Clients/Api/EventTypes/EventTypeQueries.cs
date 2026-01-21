@@ -37,6 +37,15 @@ public class EventTypeQueries : ControllerBase
         (await _eventTypes.GetAll(new() { EventStore = eventStore })).ToApi();
 
     /// <summary>
+    /// Gets all event type registrations.
+    /// </summary>
+    /// <param name="eventStore">The event store to get event type registrations for.</param>
+    /// <returns>Collection of event type registrations.</returns>
+    [HttpGet("registrations")]
+    public async Task<IEnumerable<EventTypeRegistration>> AllEventTypeRegistrations([FromRoute] string eventStore) =>
+        (await _eventTypes.GetAllRegistrations(new() { EventStore = eventStore })).ToApi();
+
+    /// <summary>
     /// Gets all event types with schemas.
     /// </summary>
     /// <param name="eventStore">The event store to get event types for.</param>
