@@ -57,7 +57,12 @@ internal sealed class Users(
 
         var user = await storage.System.Users.GetById(command.UserId) ?? throw new UserNotFound(command.UserId);
 
-        if (user.PasswordHash is not null && HashHelper.Verify(command.Password, user.PasswordHash))
+        if (user.PasswordHash is null || !HashHelper.Verify(command.OldPassword, user.PasswordHash))
+        {
+            throw new InvalidOldPassword();
+        }
+
+        if (HashHelper.Verify(command.Password, user.PasswordHash))
         {
             throw new NewPasswordMustBeDifferent();
         }

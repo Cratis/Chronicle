@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Authorization;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -9,11 +10,16 @@ namespace Cratis.Chronicle.Api.Security;
 /// Represents the command for changing a user's password.
 /// </summary>
 /// <param name="UserId">The user's unique identifier.</param>
+/// <param name="oldPassword">The old password.</param>
 /// <param name="Password">The new password.</param>
+/// <param name="ConfirmedPassword">The confirmed new password.</param>
 [Command]
+[AllowAnonymous]
 public record ChangePasswordForUser(
     Guid UserId,
-    string Password)
+    string oldPassword,
+    string Password,
+    string ConfirmedPassword)
 {
     /// <summary>
     /// Handles the command.
@@ -24,7 +30,9 @@ public record ChangePasswordForUser(
         users.ChangePassword(new()
         {
             UserId = UserId,
-            Password = Password
+            OldPassword = oldPassword,
+            Password = Password,
+            ConfirmedPassword = ConfirmedPassword
         });
 }
 

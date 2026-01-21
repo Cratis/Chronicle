@@ -3,6 +3,7 @@
 
 import { injectable } from 'tsyringe';
 import { Guid } from '@cratis/fundamentals';
+import { ChangePasswordForUser } from 'Api/Security';
 
 @injectable()
 export class LoginViewModel {
@@ -14,6 +15,9 @@ export class LoginViewModel {
     errorMessage: string = '';
     requiresPasswordChange: boolean = false;
     userId: Guid | null = null;
+
+    constructor(readonly _changePassword: ChangePasswordForUser) {
+    }
 
     async login() {
         this.isLoggingIn = true;
@@ -99,40 +103,28 @@ export class LoginViewModel {
         this.isLoggingIn = true;
         this.errorMessage = '';
 
-        try {
-            const response = await fetch('/api/security/change-password-for-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId: this.userId,
-                    password: this.newPassword,
-                    confirmedPassword: this.confirmPassword,
-                }),
-                credentials: 'include',
-            });
-
-            if (response.ok) {
-                // Password changed successfully, now sign in with new password
+        this._changePassword.userId = this.userId!;
+        this._changePassword.oldPassword = this.password;
+        this._changePassword.password = this.newPassword;
+        this._changePassword.confirmedPassword = this.confirmPassword;
+        const result = await this._changePassword.execute();
+        result
+            .onSuccess(async () => {
                 this.password = this.newPassword;
                 await this.signInWithIdentityApi();
-            } else {
-                let errorDetail = 'Failed to change password';
-                try {
-                    const error = await response.json();
-                    errorDetail = error.detail || error.title || errorDetail;
-                } catch {
-                    errorDetail = response.statusText || `Error ${response.status}`;
-                }
-                this.errorMessage = errorDetail;
-            }
-        } catch (error) {
-            console.error('Password change error:', error);
-            this.errorMessage = 'An error occurred while changing password. Please try again.';
-        } finally {
-            this.isLoggingIn = false;
-        }
+            })
+            .onException((messages) => {
+                this.errorMessage = `Failed to change password: ${messages.join('; ')}`;
+            })
+            .onValidationFailure((validationResults) => {
+                const errors = validationResults.map(vr => vr.message);
+                this.errorMessage = `Password change validation failed: ${errors.join('; ')}`;
+            })
+            .onUnauthorized(() => {
+                this.errorMessage = 'You are not authorized to change the password.';
+            });
+
+        this.isLoggingIn = false;
     }
 
     cancelPasswordChange() {
@@ -140,6 +132,7 @@ export class LoginViewModel {
         this.newPassword = '';
         this.confirmPassword = '';
         this.userId = null;
+        this.errorMessage = '';
 
         if (typeof document !== 'undefined') {
             const activeElement = document.activeElement;
