@@ -77,6 +77,8 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                 onChange={(e) => viewModel.newPassword = e.target.value}
                                 className={css.input}
                                 inputClassName={css.passwordInput}
+                                panelClassName={css.passwordPanel}
+                                appendTo="self"
                                 placeholder="Enter new password"
                                 toggleMask
                                 autoFocus

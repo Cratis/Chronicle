@@ -81,6 +81,13 @@
     width: 100% !important;
 }
 
+.passwordPanel {
+    top: calc(100% + 0.25rem);
+    left: 0;
+    width: 100%;
+    z-index: 2;
+}
+
 .errorMessage {
     width: 100%;
     margin: 0;
