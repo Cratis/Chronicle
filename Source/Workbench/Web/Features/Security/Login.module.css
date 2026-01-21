@@ -18,6 +18,7 @@
     max-width: 420px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     border: 1px solid var(--surface-border);
+    overflow: hidden;
 }
 
 .loginHeader {
@@ -51,6 +52,51 @@
     gap: 1.5rem;
 }
 
+.formSlider {
+    position: relative;
+    width: calc(100% + 6rem);
+    margin-left: -3rem;
+    margin-right: -3rem;
+}
+
+.formTrack {
+    display: flex;
+    transition: transform 320ms ease-out;
+    transform: translateX(0);
+    will-change: transform;
+}
+
+.showChangePassword {}
+
+.showLogin {}
+
+.formSlider.showChangePassword .formTrack {
+    transform: translateX(-100%);
+}
+
+.formSlider.showLogin .formTrack {
+    transform: translateX(0);
+}
+
+.signInPane,
+.changePasswordPane {
+    flex: 0 0 100%;
+    width: 100%;
+    padding: 0 3rem;
+    box-sizing: border-box;
+    transition: opacity 220ms ease;
+}
+
+.formSlider.showChangePassword .signInPane {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+.formSlider.showLogin .changePasswordPane {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
 .formGroup {
     display: flex;
     flex-direction: column;
@@ -81,6 +127,13 @@
     width: 100% !important;
 }
 
+.passwordPanel {
+    top: calc(100% + 0.25rem);
+    left: 0;
+    width: 100%;
+    z-index: 2;
+}
+
 .errorMessage {
     width: 100%;
     margin: 0;
@@ -92,4 +145,15 @@
     font-size: 1rem;
     font-weight: 600;
     margin-top: 0.5rem;
+}
+
+.buttonGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.buttonGroup button {
+    width: 100%;
 }

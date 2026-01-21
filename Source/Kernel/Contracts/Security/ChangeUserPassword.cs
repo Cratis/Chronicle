@@ -16,8 +16,20 @@ public class ChangeUserPassword
     public Guid UserId { get; set; } = Guid.Empty;
 
     /// <summary>
-    /// The new password.
+    /// The old password for verification.
     /// </summary>
     [ProtoMember(2)]
+    public string OldPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The new password.
+    /// </summary>
+    [ProtoMember(3)]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The confirmed new password.
+    /// </summary>
+    [ProtoMember(4)]
+    public string ConfirmedPassword { get; set; } = string.Empty;
 }
