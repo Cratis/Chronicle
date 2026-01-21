@@ -32,7 +32,7 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
     public async Task RegisterSingle(ReadModelDefinition definition)
     {
         var readModels = State.ReadModels.ToList();
-        var existing = readModels.FirstOrDefault(_ => _.Identifier == definition.Identifier);
+        var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
         if (existing is not null)
         {
             readModels.Remove(existing);
@@ -50,7 +50,7 @@ public class ReadModelsManager : Grain<ReadModelsManagerState>, IReadModelsManag
     public async Task UpdateDefinition(ReadModelDefinition definition)
     {
         var readModels = State.ReadModels.ToList();
-        var existing = readModels.FirstOrDefault(_ => _.Identifier == definition.Identifier) ?? throw new ReadModelNotFound(definition.Identifier);
+        var existing = readModels.Find(_ => _.Identifier == definition.Identifier) ?? throw new ReadModelNotFound(definition.Identifier);
         readModels.Remove(existing);
         readModels.Add(definition);
         State.ReadModels = readModels;
