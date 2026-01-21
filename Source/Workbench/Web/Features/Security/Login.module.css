@@ -51,6 +51,48 @@
     gap: 1.5rem;
 }
 
+.formSlider {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+}
+
+.formTrack {
+    display: flex;
+    transition: transform 320ms ease;
+    transform: translateX(0);
+    will-change: transform;
+}
+
+.showChangePassword {}
+
+.showLogin {}
+
+.formSlider.showChangePassword .formTrack {
+    transform: translateX(-100%);
+}
+
+.formSlider.showLogin .formTrack {
+    transform: translateX(0);
+}
+
+.signInPane,
+.changePasswordPane {
+    flex: 0 0 100%;
+    width: 100%;
+    transition: opacity 220ms ease;
+}
+
+.formSlider.showChangePassword .signInPane {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+.formSlider.showLogin .changePasswordPane {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
 .formGroup {
     display: flex;
     flex-direction: column;

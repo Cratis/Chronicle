@@ -11,6 +11,8 @@ import css from './Login.module.css';
 import chronicleLogo from './chronicle.svg';
 
 export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
+    const sliderStateClass = viewModel.requiresPasswordChange ? css.showChangePassword : css.showLogin;
+
     return (
         <div className={css.loginContainer}>
             <div className={css.loginCard}>
@@ -21,112 +23,114 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                     </p>
                 </div>
 
-                {!viewModel.requiresPasswordChange ? (
-                    <form className={css.loginForm} onSubmit={(e) => { e.preventDefault(); viewModel.login(); }}>
-                        <div className={css.formGroup}>
-                            <label htmlFor="username" className={css.label}>Username</label>
-                            <InputText
-                                id="username"
-                                value={viewModel.username}
-                                onChange={(e) => viewModel.username = e.target.value}
-                                className={css.input}
-                                placeholder="Enter your username"
-                                autoFocus
-                                disabled={viewModel.isLoggingIn}
-                            />
-                        </div>
+                <div className={`${css.formSlider} ${sliderStateClass}`}>
+                    <div className={css.formTrack}>
+                        <form className={`${css.loginForm} ${css.signInPane}`} onSubmit={(e) => { e.preventDefault(); viewModel.login(); }}>
+                            <div className={css.formGroup}>
+                                <label htmlFor="username" className={css.label}>Username</label>
+                                <InputText
+                                    id="username"
+                                    value={viewModel.username}
+                                    onChange={(e) => viewModel.username = e.target.value}
+                                    className={css.input}
+                                    placeholder="Enter your username"
+                                    autoFocus={!viewModel.requiresPasswordChange}
+                                    disabled={viewModel.isLoggingIn}
+                                />
+                            </div>
 
-                        <div className={css.formGroup}>
-                            <label htmlFor="password" className={css.label}>Password</label>
-                            <Password
-                                id="password"
-                                value={viewModel.password}
-                                onChange={(e) => viewModel.password = e.target.value}
-                                className={css.input}
-                                inputClassName={css.passwordInput}
-                                placeholder="Enter your password"
-                                feedback={false}
-                                toggleMask
-                                disabled={viewModel.isLoggingIn}
-                            />
-                        </div>
+                            <div className={css.formGroup}>
+                                <label htmlFor="password" className={css.label}>Password</label>
+                                <Password
+                                    id="password"
+                                    value={viewModel.password}
+                                    onChange={(e) => viewModel.password = e.target.value}
+                                    className={css.input}
+                                    inputClassName={css.passwordInput}
+                                    placeholder="Enter your password"
+                                    feedback={false}
+                                    toggleMask
+                                    disabled={viewModel.isLoggingIn}
+                                />
+                            </div>
 
-                        {viewModel.errorMessage && (
-                            <Message
-                                severity="error"
-                                text={viewModel.errorMessage}
-                                className={css.errorMessage}
-                            />
-                        )}
+                            {viewModel.errorMessage && (
+                                <Message
+                                    severity="error"
+                                    text={viewModel.errorMessage}
+                                    className={css.errorMessage}
+                                />
+                            )}
 
-                        <Button
-                            type="submit"
-                            label={viewModel.isLoggingIn ? 'Signing in...' : 'Sign In'}
-                            className={css.loginButton}
-                            loading={viewModel.isLoggingIn}
-                            disabled={viewModel.isLoggingIn || !viewModel.username || !viewModel.password}
-                        />
-                    </form>
-                ) : (
-                    <form className={css.loginForm} onSubmit={(e) => { e.preventDefault(); viewModel.changePassword(); }}>
-                        <div className={css.formGroup}>
-                            <label htmlFor="newPassword" className={css.label}>New Password</label>
-                            <Password
-                                id="newPassword"
-                                value={viewModel.newPassword}
-                                onChange={(e) => viewModel.newPassword = e.target.value}
-                                className={css.input}
-                                inputClassName={css.passwordInput}
-                                panelClassName={css.passwordPanel}
-                                appendTo="self"
-                                placeholder="Enter new password"
-                                toggleMask
-                                autoFocus
-                                disabled={viewModel.isLoggingIn}
-                            />
-                        </div>
-
-                        <div className={css.formGroup}>
-                            <label htmlFor="confirmPassword" className={css.label}>Confirm Password</label>
-                            <Password
-                                id="confirmPassword"
-                                value={viewModel.confirmPassword}
-                                onChange={(e) => viewModel.confirmPassword = e.target.value}
-                                className={css.input}
-                                inputClassName={css.passwordInput}
-                                placeholder="Confirm new password"
-                                feedback={false}
-                                toggleMask
-                                disabled={viewModel.isLoggingIn}
-                            />
-                        </div>
-
-                        {viewModel.errorMessage && (
-                            <Message
-                                severity="error"
-                                text={viewModel.errorMessage}
-                                className={css.errorMessage}
-                            />
-                        )}
-
-                        <div className={css.buttonGroup}>
                             <Button
                                 type="submit"
-                                label={viewModel.isLoggingIn ? 'Changing...' : 'Change Password'}
+                                label={viewModel.isLoggingIn ? 'Signing in...' : 'Sign In'}
                                 className={css.loginButton}
                                 loading={viewModel.isLoggingIn}
-                                disabled={viewModel.isLoggingIn || !viewModel.newPassword || !viewModel.confirmPassword}
+                                disabled={viewModel.isLoggingIn || !viewModel.username || !viewModel.password}
                             />
-                            <Button
-                                type="button"
-                                label="Cancel"
-                                severity="secondary"
-                                onClick={() => viewModel.cancelPasswordChange()}
-                                disabled={viewModel.isLoggingIn}
-                            />
-                        </div>
-                    </form>
-                )}
+                        </form>
+
+                        <form className={`${css.loginForm} ${css.changePasswordPane}`} onSubmit={(e) => { e.preventDefault(); viewModel.changePassword(); }}>
+                            <div className={css.formGroup}>
+                                <label htmlFor="newPassword" className={css.label}>New Password</label>
+                                <Password
+                                    id="newPassword"
+                                    value={viewModel.newPassword}
+                                    onChange={(e) => viewModel.newPassword = e.target.value}
+                                    className={css.input}
+                                    inputClassName={css.passwordInput}
+                                    panelClassName={css.passwordPanel}
+                                    appendTo="self"
+                                    placeholder="Enter new password"
+                                    toggleMask
+                                    autoFocus={viewModel.requiresPasswordChange}
+                                    disabled={viewModel.isLoggingIn}
+                                />
+                            </div>
+
+                            <div className={css.formGroup}>
+                                <label htmlFor="confirmPassword" className={css.label}>Confirm Password</label>
+                                <Password
+                                    id="confirmPassword"
+                                    value={viewModel.confirmPassword}
+                                    onChange={(e) => viewModel.confirmPassword = e.target.value}
+                                    className={css.input}
+                                    inputClassName={css.passwordInput}
+                                    placeholder="Confirm new password"
+                                    feedback={false}
+                                    toggleMask
+                                    disabled={viewModel.isLoggingIn}
+                                />
+                            </div>
+
+                            {viewModel.errorMessage && (
+                                <Message
+                                    severity="error"
+                                    text={viewModel.errorMessage}
+                                    className={css.errorMessage}
+                                />
+                            )}
+
+                            <div className={css.buttonGroup}>
+                                <Button
+                                    type="submit"
+                                    label={viewModel.isLoggingIn ? 'Changing...' : 'Change Password'}
+                                    className={css.loginButton}
+                                    loading={viewModel.isLoggingIn}
+                                    disabled={viewModel.isLoggingIn || !viewModel.newPassword || !viewModel.confirmPassword}
+                                />
+                                <Button
+                                    type="button"
+                                    label="Cancel"
+                                    severity="secondary"
+                                    onClick={() => viewModel.cancelPasswordChange()}
+                                    disabled={viewModel.isLoggingIn}
+                                />
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     );

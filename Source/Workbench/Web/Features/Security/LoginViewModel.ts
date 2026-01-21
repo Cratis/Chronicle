@@ -140,5 +140,12 @@ export class LoginViewModel {
         this.newPassword = '';
         this.confirmPassword = '';
         this.userId = null;
+
+        if (typeof document !== 'undefined') {
+            const activeElement = document.activeElement;
+            if (activeElement instanceof HTMLElement) {
+                activeElement.blur();
+            }
+        }
     }
 }
