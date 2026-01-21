@@ -18,6 +18,7 @@
     max-width: 420px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     border: 1px solid var(--surface-border);
+    overflow: hidden;
 }
 
 .loginHeader {
@@ -53,13 +54,14 @@
 
 .formSlider {
     position: relative;
-    overflow: hidden;
-    width: 100%;
+    width: calc(100% + 6rem);
+    margin-left: -3rem;
+    margin-right: -3rem;
 }
 
 .formTrack {
     display: flex;
-    transition: transform 320ms ease;
+    transition: transform 320ms ease-out;
     transform: translateX(0);
     will-change: transform;
 }
@@ -80,6 +82,8 @@
 .changePasswordPane {
     flex: 0 0 100%;
     width: 100%;
+    padding: 0 3rem;
+    box-sizing: border-box;
     transition: opacity 220ms ease;
 }
 

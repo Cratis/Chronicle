@@ -34,7 +34,7 @@ export class LoginViewModel {
 
             if (response.ok) {
                 const result = await response.json();
-                
+
                 if (result.requiresPasswordChange) {
                     this.requiresPasswordChange = true;
                     this.userId = result.userId;
