@@ -30,7 +30,7 @@
         "recommendations": "Recommendations",
         "jobs": "Jobs",
         "sequences": "Sequences",
-        "pivot": "Pivot",
+        "pivot": "Pivot (experimental)",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
         "readModels": "Read Models",
