@@ -224,8 +224,8 @@ jobs:
         run: |
           yarn build
         env:
-          VITE_VERSION: ${{ needs.release.outputs.version }}
-          VITE_COMMIT_SHA: ${{ github.sha }}
+          CHRONICLE_VERSION: ${{ needs.release.outputs.version }}
+          CHRONICLE_COMMIT_SHA: ${{ github.sha }}
 
   dotnet:
     if: needs.release.outputs.publish == 'true'

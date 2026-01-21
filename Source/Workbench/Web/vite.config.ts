@@ -10,6 +10,7 @@ import { EmitMetadataPlugin } from '@cratis/arc.vite';
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+    envPrefix: 'CHRONICLE_',
     optimizeDeps: {
         exclude: ['tslib'],
     },

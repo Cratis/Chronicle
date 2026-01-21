@@ -6,6 +6,6 @@
  * This file is auto-generated during build. Do not edit manually.
  */
 export const version = {
-    version: import.meta.env.VITE_VERSION || '0.0.0-dev',
-    commitSha: import.meta.env.VITE_COMMIT_SHA || 'dev',
+    version: import.meta.env.CHRONICLE_VERSION || '0.0.0-dev',
+    commitSha: import.meta.env.CHRONICLE_COMMIT_SHA || 'dev',
 };
