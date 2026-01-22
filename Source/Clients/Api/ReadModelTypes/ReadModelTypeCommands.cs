@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Sinks;
 using NJsonSchema;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
@@ -30,7 +31,7 @@ public class ReadModelTypeCommands : ControllerBase
     /// <param name="eventStore">Name of the event store.</param>
     /// <param name="command">Command for creating the read model.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost]
+    [HttpPost("create")]
     public async Task CreateReadModel(
         [FromRoute] string eventStore,
         [FromBody] CreateReadModel command)
@@ -45,6 +46,7 @@ public class ReadModelTypeCommands : ControllerBase
         {
             EventStore = eventStore,
             Owner = Contracts.ReadModels.ReadModelOwner.Client,
+            Source = Contracts.ReadModels.ReadModelSource.User,
             ReadModel = new()
             {
                 Type = new()
@@ -53,6 +55,12 @@ public class ReadModelTypeCommands : ControllerBase
                     Generation = 1,
                 },
                 Name = command.Name,
+                DisplayName = command.Name,
+                Sink = new()
+                {
+                    TypeId = WellKnownSinkTypes.MongoDB.Value,
+                    ConfigurationId = Guid.Empty
+                },
                 Schema = command.Schema ?? schema.ToJson(),
                 Indexes = []
             }
@@ -65,7 +73,7 @@ public class ReadModelTypeCommands : ControllerBase
     /// <param name="eventStore">Name of the event store.</param>
     /// <param name="command">Command for updating the read model definition.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPut]
+    [HttpPost("update")]
     public Task UpdateReadModelDefinition(
         [FromRoute] string eventStore,
         [FromBody] UpdateReadModelDefinition command) =>

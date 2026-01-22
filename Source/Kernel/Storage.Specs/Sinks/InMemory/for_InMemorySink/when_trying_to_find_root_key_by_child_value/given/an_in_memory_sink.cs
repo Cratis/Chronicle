@@ -68,6 +68,7 @@ public class an_in_memory_sink : Specification
             "TestReadModel",
             "TestReadModel",
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,

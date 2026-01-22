@@ -30,6 +30,7 @@ public class a_language_service : Specification
             new ReadModelName(name),
             new ReadModelDisplayName(name),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(

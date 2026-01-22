@@ -30,6 +30,7 @@ public class with_type_mismatch_in_assignment : for_LanguageService.given.a_lang
             new ReadModelName("TestModel"),
             new ReadModelDisplayName("TestModel"),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(

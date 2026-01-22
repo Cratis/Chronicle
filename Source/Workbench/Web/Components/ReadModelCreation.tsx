@@ -56,7 +56,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label htmlFor="readModelName" style={{ fontWeight: 'bold' }}>
                     Read Model Name
@@ -71,8 +71,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
                 />
             </div>
 
-            <div style={{ flex: 1, minHeight: '400px' }}>
-                <h3 style={{ marginBottom: '10px' }}>Schema</h3>
+            <div style={{ flex: 1, minHeight: '250px', overflow: 'auto' }}>
                 <SchemaEditor
                     schema={schema}
                     onChange={handleSchemaChange}
@@ -82,7 +81,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
                 />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
                 <Button
                     label="Cancel"
                     icon="pi pi-times"

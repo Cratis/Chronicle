@@ -26,4 +26,11 @@ public class RegisterSingleRequest
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
     public ReadModelDefinition ReadModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source of the read model.
+    /// </summary>
+    [ProtoMember(4)]
+    [DefaultValue(ReadModelSource.Code)]
+    public ReadModelSource Source { get; set; } = ReadModelSource.Code;
 }

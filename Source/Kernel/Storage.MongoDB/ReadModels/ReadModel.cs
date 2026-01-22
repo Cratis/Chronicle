@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="Name">The friendly display name of the read model.</param>
 /// <param name="DisplayName">The display name of the read model.</param>
 /// <param name="Owner">The owner of the read model.</param>
+/// <param name="Source">The source of the read model.</param>
 /// <param name="ObserverType">The type of owner for the read model.</param>
 /// <param name="ObserverIdentifier">The observer identifier for the read model.</param>
 /// <param name="Sink">The sink definition for the read model.</param>
@@ -23,6 +24,7 @@ public record ReadModel(
     ReadModelName Name,
     ReadModelDisplayName DisplayName,
     ReadModelOwner Owner,
+    ReadModelSource Source,
     ReadModelObserverType ObserverType,
     ReadModelObserverIdentifier ObserverIdentifier,
     SinkDefinition Sink,

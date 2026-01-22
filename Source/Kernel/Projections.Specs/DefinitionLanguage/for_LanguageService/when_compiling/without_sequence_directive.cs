@@ -32,6 +32,7 @@ public class without_sequence_directive : for_LanguageService.given.a_language_s
             new ReadModelName("Simulation"),
             new ReadModelDisplayName("Simulation"),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(

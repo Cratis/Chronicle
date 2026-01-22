@@ -59,6 +59,7 @@ internal sealed class Reducers(
             ReadModelName.NotSet,
             ReadModelDisplayName.NotSet,
             ReadModelOwner.None,
+            ReadModelSource.Code,
             ReadModelObserverType.Reducer,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,

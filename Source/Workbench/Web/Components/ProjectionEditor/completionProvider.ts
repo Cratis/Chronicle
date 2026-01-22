@@ -147,7 +147,7 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
                 kind: 14, // Keyword
                 insertText: 'projection ',
                 documentation: 'Define a projection that transforms events into a read model',
-                detail: 'projection <ReadModelName>',
+                detail: 'projection <ProjectionName>',
                 range: this.getRangeForWord(context),
             });
         }

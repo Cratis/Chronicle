@@ -39,7 +39,7 @@ internal sealed class ReadModels(
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-        var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner)).ToArray();
+        var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner, request.Source)).ToArray();
         await readModelsManager.Register(readModelDefinitions);
     }
 
@@ -47,7 +47,7 @@ internal sealed class ReadModels(
     public async Task RegisterSingle(RegisterSingleRequest request, CallContext context = default)
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-        var readModelDefinition = request.ReadModel.ToChronicle(request.Owner);
+        var readModelDefinition = request.ReadModel.ToChronicle(request.Owner, request.Source);
         await readModelsManager.RegisterSingle(readModelDefinition);
     }
 
@@ -55,7 +55,7 @@ internal sealed class ReadModels(
     public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-        var readModelDefinition = request.ReadModel.ToChronicle(ReadModelOwner.None);
+        var readModelDefinition = request.ReadModel.ToChronicle(ReadModelOwner.None, ReadModelSource.User);
         await readModelsManager.UpdateDefinition(readModelDefinition);
     }
 

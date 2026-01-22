@@ -35,7 +35,7 @@ export const AddReadModelDialog = () => {
         <Dialog
             header={strings.eventStore.general.readModels.dialogs.addReadModel.title}
             visible={true}
-            style={{ width: '800px', height: '80vh' }}
+            style={{ width: '800px', maxHeight: '80vh' }}
             modal
             resizable={true}
             onHide={() => closeDialog(DialogResult.Cancelled)}>

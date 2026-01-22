@@ -79,6 +79,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integrat
             "TestReadModel",
             "TestReadModel",
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,

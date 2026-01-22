@@ -106,6 +106,7 @@
             "readModels": {
                 "title": "Read Model Types",
                 "empty": "No read models found",
+                "cannotEditReason": "Defined by code",
                 "actions": {
                     "create": "Create",
                     "edit": "Edit",
@@ -114,6 +115,8 @@
                 },
                 "columns": {
                     "name": "Name",
+                    "owner": "Owner",
+                    "source": "Source",
                     "generation": "Generation"
                 },
                 "schema": {
@@ -125,6 +128,16 @@
                         "title": "Add Read Model",
                         "name": "Name"
                     }
+                },
+                "owners": {
+                    "unknown": "Unknown",
+                    "client": "Client",
+                    "server": "Server"
+                },
+                "sources": {
+                    "unknown": "Unknown",
+                    "code": "Code",
+                    "user": "User"
                 }
             },
             "projections": {

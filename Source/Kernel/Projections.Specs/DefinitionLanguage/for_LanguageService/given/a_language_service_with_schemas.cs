@@ -71,6 +71,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             new ReadModelName(name),
             new ReadModelDisplayName(name),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(
