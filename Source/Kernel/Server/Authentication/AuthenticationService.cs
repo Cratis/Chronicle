@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Infrastructure.Security;
 using Microsoft.Extensions.Options;
-using OpenIddict.Abstractions;
 
 namespace Cratis.Chronicle.Server.Authentication;
 
@@ -12,16 +12,18 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Represents an implementation of <see cref="IAuthenticationService"/>.
 /// </summary>
 /// <param name="userStorage">The user storage.</param>
+/// <param name="users">The <see cref="IUsers"/> service.</param>
+/// <param name="applications">The <see cref="IApplications"/> service.</param>
 /// <param name="options">Chronicle options.</param>
-/// <param name="applicationManager">The OpenIddict application manager.</param>
 /// <param name="logger">The logger.</param>
 public class AuthenticationService(
     IUserStorage userStorage,
-    IOptions<Configuration.ChronicleOptions> options,
+    IUsers users,
 #pragma warning disable CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
-    IOpenIddictApplicationManager applicationManager,
-    ILogger<AuthenticationService> logger) : IAuthenticationService
+    IApplications applications,
 #pragma warning restore CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
+    IOptions<Configuration.ChronicleOptions> options,
+    ILogger<AuthenticationService> logger) : IAuthenticationService
 {
     readonly Configuration.ChronicleOptions _options = options.Value;
 
@@ -41,30 +43,27 @@ public class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureDefaultAdminUser()
     {
-        var adminUser = await userStorage.GetByUsername(_options.Authentication.DefaultAdminUsername);
-        if (adminUser is not null)
+        logger.CheckingForDefaultAdminUser();
+        var existingUsers = await users.GetAll();
+        if (existingUsers.Any(u => u.Username == _options.Authentication.DefaultAdminUsername))
         {
+            logger.DefaultAdminUserAlreadyExist();
             return;
         }
 
         var password = _options.Authentication.DefaultAdminPassword ?? "admin";
-        var passwordHash = HashHelper.Hash(password);
-        var now = DateTimeOffset.UtcNow;
 
-        var user = new ChronicleUser
+        logger.CreatingDefaultAdminUser();
+
+        await users.Add(new AddUser
         {
-            Id = Guid.NewGuid().ToString(),
+            UserId = Guid.NewGuid(),
             Username = _options.Authentication.DefaultAdminUsername,
-            Email = null,
-            PasswordHash = passwordHash,
-            SecurityStamp = Guid.NewGuid().ToString(),
-            IsActive = true,
-            RequiresPasswordChange = true,
-            CreatedAt = now,
-            LastModifiedAt = null
-        };
+            Email = string.Empty,
+            Password = password
+        });
 
-        await userStorage.Create(user);
+        logger.DefaultAdminUserAdded();
     }
 
 #if DEVELOPMENT
@@ -76,9 +75,8 @@ public class AuthenticationService(
 
         logger.CheckingForDefaultClientCredentials(defaultClientId);
 
-        // Check if already exists in OpenIddict
-        var existingClient = await applicationManager.FindByClientIdAsync(defaultClientId);
-        if (existingClient is not null)
+        var existingApplications = await applications.GetAll();
+        if (existingApplications.Any(a => a.ClientId == defaultClientId))
         {
             logger.DefaultClientCredentialsAlreadyExist(defaultClientId);
             return;
@@ -86,24 +84,13 @@ public class AuthenticationService(
 
         logger.CreatingDefaultClientCredentials(defaultClientId);
 
-        // Create the application using OpenIddict's manager
-        var descriptor = new OpenIddictApplicationDescriptor
+        await applications.Add(new AddApplication
         {
+            Id = Guid.NewGuid().ToString(),
             ClientId = defaultClientId,
-            ClientSecret = defaultClientSecret,  // OpenIddict will hash this
-            DisplayName = "Chronicle Development Client",
-            ClientType = OpenIddictConstants.ClientTypes.Confidential,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-                OpenIddictConstants.Permissions.GrantTypes.Password,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken
-            }
-        };
+            ClientSecret = defaultClientSecret
+        });
 
-        await applicationManager.CreateAsync(descriptor);
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif

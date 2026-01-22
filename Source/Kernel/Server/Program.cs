@@ -130,6 +130,7 @@ builder.Host
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
            .WithMongoDB(chronicleOptions))
+        .AddStartupTask<AuthenticationStartupTask>()
         .UseDashboard(options =>
         {
             options.Host = "*";
@@ -155,13 +156,6 @@ var app = builder.Build();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
-
-// Initialize default admin user and client credentials
-var authService = app.Services.GetRequiredService<IAuthenticationService>();
-await authService.EnsureDefaultAdminUser();
-#if DEVELOPMENT
-await authService.EnsureDefaultClientCredentials();
-#endif
 
 app.UseRouting();
 
