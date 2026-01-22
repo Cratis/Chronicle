@@ -55,6 +55,9 @@ public static class OpenIddictServiceCollectionExtensions
                     .AddDevelopmentEncryptionCertificate()
                        .AddDevelopmentSigningCertificate();
 
+                // Register custom client authentication handler
+                options.AddEventHandler(ClientAuthenticationHandler.Descriptor);
+
                 // Determine if we have a secure certificate configured
                 var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
 
