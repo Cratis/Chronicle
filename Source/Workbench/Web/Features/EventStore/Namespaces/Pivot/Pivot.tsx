@@ -28,12 +28,6 @@ const hourBucket = (isoDate: string) => {
 
 const dimensions: PivotDimension<AppendedEvent>[] = [
     {
-        key: 'sequence',
-        label: 'Sequence',
-        getValue: (item) => item.context.sequenceNumber.toString(),
-        sort: (a, b) => a.label.localeCompare(b.label),
-    },
-    {
         key: 'type',
         label: 'Event Type',
         getValue: (item) => item.context.eventType.id,
