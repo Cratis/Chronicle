@@ -34,6 +34,22 @@ public interface IUsers
     Task ChangePassword(ChangeUserPassword command);
 
     /// <summary>
+    /// Require a user to change their password.
+    /// </summary>
+    /// <param name="command">The <see cref="RequirePasswordChange"/> command.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task RequirePasswordChange(RequirePasswordChange command);
+
+    /// <summary>
+    /// Set the initial admin password.
+    /// </summary>
+    /// <param name="command">The <see cref="SetInitialAdminPassword"/> command.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task SetInitialAdminPassword(SetInitialAdminPassword command);
+
+    /// <summary>
     /// Gets all users.
     /// </summary>
     /// <returns><see cref="IList{T}"/> of <see cref="User"/>.</returns>

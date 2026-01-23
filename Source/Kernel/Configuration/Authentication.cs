@@ -22,9 +22,4 @@ public class Authentication
     /// Gets the default admin username.
     /// </summary>
     public string DefaultAdminUsername { get; init; } = "admin";
-
-    /// <summary>
-    /// Gets the default admin password.
-    /// </summary>
-    public string? DefaultAdminPassword { get; init; }
 }

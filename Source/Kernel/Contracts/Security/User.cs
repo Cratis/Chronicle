@@ -44,4 +44,10 @@ public class User
     /// </summary>
     [ProtoMember(6)]
     public SerializableDateTimeOffset? LastModifiedAt { get; set; }
+
+    /// <summary>
+    /// Whether the user has ever logged in and set their password.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool HasLoggedIn { get; set; }
 }

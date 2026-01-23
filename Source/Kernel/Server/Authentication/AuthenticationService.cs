@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// <param name="userStorage">The user storage.</param>
 /// <param name="users">The <see cref="IUsers"/> service.</param>
 /// <param name="applications">The <see cref="IApplications"/> service.</param>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="options">Chronicle options.</param>
 /// <param name="logger">The logger.</param>
 public class AuthenticationService(
@@ -22,6 +23,7 @@ public class AuthenticationService(
 #pragma warning disable CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
     IApplications applications,
 #pragma warning restore CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
+    IGrainFactory grainFactory,
     IOptions<Configuration.ChronicleOptions> options,
     ILogger<AuthenticationService> logger) : IAuthenticationService
 {
@@ -51,17 +53,15 @@ public class AuthenticationService(
             return;
         }
 
-        var password = _options.Authentication.DefaultAdminPassword ?? "admin";
-
         logger.CreatingDefaultAdminUser();
 
-        await users.Add(new AddUser
-        {
-            UserId = Guid.NewGuid(),
-            Username = _options.Authentication.DefaultAdminUsername,
-            Email = string.Empty,
-            Password = password
-        });
+        var userId = Guid.NewGuid();
+        var @event = new Grains.Security.InitialAdminUserAdded(
+            _options.Authentication.DefaultAdminUsername,
+            string.Empty);
+
+        var eventSequence = grainFactory.GetEventLog();
+        await eventSequence.Append(userId, @event);
 
         logger.DefaultAdminUserAdded();
     }
