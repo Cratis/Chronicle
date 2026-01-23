@@ -3,7 +3,7 @@
 
 import { injectable } from 'tsyringe';
 import { Guid } from '@cratis/fundamentals';
-import { ChangePasswordForUser } from 'Api/Security';
+import { ChangePasswordForUser, SetInitialAdminPassword } from 'Api/Security';
 
 @injectable()
 export class LoginViewModel {
@@ -14,9 +14,12 @@ export class LoginViewModel {
     isLoggingIn: boolean = false;
     errorMessage: string = '';
     requiresPasswordChange: boolean = false;
+    isInitialSetup: boolean = false;
     userId: Guid | null = null;
 
-    constructor(readonly _changePassword: ChangePasswordForUser) {
+    constructor(
+        readonly _changePassword: ChangePasswordForUser,
+        readonly _setInitialAdminPassword: SetInitialAdminPassword) {
     }
 
     async login() {
@@ -42,6 +45,11 @@ export class LoginViewModel {
                 if (result.requiresPasswordChange) {
                     this.requiresPasswordChange = true;
                     this.userId = result.userId;
+                    // Check if this is initial setup (user not successful login)
+                    if (!result.success) {
+                        this.isInitialSetup = true;
+                        this.password = '';
+                    }
                 } else {
                     // Successfully logged in without password change requirement, use Identity API
                     await this.signInWithIdentityApi();
@@ -95,7 +103,7 @@ export class LoginViewModel {
             return;
         }
 
-        if (this.newPassword === this.password) {
+        if (!this.isInitialSetup && this.newPassword === this.password) {
             this.errorMessage = 'New password must be different from your current password.';
             return;
         }
@@ -103,32 +111,58 @@ export class LoginViewModel {
         this.isLoggingIn = true;
         this.errorMessage = '';
 
-        this._changePassword.userId = this.userId!;
-        this._changePassword.oldPassword = this.password;
-        this._changePassword.password = this.newPassword;
-        this._changePassword.confirmedPassword = this.confirmPassword;
-        const result = await this._changePassword.execute();
-        result
-            .onSuccess(async () => {
-                this.password = this.newPassword;
-                await this.signInWithIdentityApi();
-            })
-            .onException((messages) => {
-                this.errorMessage = `Failed to change password: ${messages.join('; ')}`;
-            })
-            .onValidationFailure((validationResults) => {
-                const errors = validationResults.map(vr => vr.message);
-                this.errorMessage = `Password change validation failed: ${errors.join('; ')}`;
-            })
-            .onUnauthorized(() => {
-                this.errorMessage = 'You are not authorized to change the password.';
-            });
+        if (this.isInitialSetup) {
+            // Use SetInitialAdminPassword for initial setup
+            this._setInitialAdminPassword.userId = this.userId!;
+            this._setInitialAdminPassword.password = this.newPassword;
+            this._setInitialAdminPassword.confirmedPassword = this.confirmPassword;
+            const result = await this._setInitialAdminPassword.execute();
+            result
+                .onSuccess(async () => {
+                    // After setting initial password, sign in with the new credentials
+                    this.password = this.newPassword;
+                    await this.signInWithIdentityApi();
+                })
+                .onException((messages) => {
+                    this.errorMessage = `Failed to set password: ${messages.join('; ')}`;
+                })
+                .onValidationFailure((validationResults) => {
+                    const errors = validationResults.map(vr => vr.message);
+                    this.errorMessage = `Password validation failed: ${errors.join('; ')}`;
+                })
+                .onUnauthorized(() => {
+                    this.errorMessage = 'You are not authorized to set the password.';
+                });
+        } else {
+            // Use ChangePasswordForUser for regular password changes
+            this._changePassword.userId = this.userId!;
+            this._changePassword.oldPassword = this.password;
+            this._changePassword.password = this.newPassword;
+            this._changePassword.confirmedPassword = this.confirmPassword;
+            const result = await this._changePassword.execute();
+            result
+                .onSuccess(async () => {
+                    this.password = this.newPassword;
+                    await this.signInWithIdentityApi();
+                })
+                .onException((messages) => {
+                    this.errorMessage = `Failed to change password: ${messages.join('; ')}`;
+                })
+                .onValidationFailure((validationResults) => {
+                    const errors = validationResults.map(vr => vr.message);
+                    this.errorMessage = `Password change validation failed: ${errors.join('; ')}`;
+                })
+                .onUnauthorized(() => {
+                    this.errorMessage = 'You are not authorized to change the password.';
+                });
+        }
 
         this.isLoggingIn = false;
     }
 
     cancelPasswordChange() {
         this.requiresPasswordChange = false;
+        this.isInitialSetup = false;
         this.newPassword = '';
         this.confirmPassword = '';
         this.userId = null;

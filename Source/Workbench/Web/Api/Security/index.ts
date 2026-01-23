@@ -7,4 +7,6 @@ export * from './ChangeApplicationSecret';
 export * from './ChangePasswordForUser';
 export * from './RemoveApplication';
 export * from './RemoveUser';
+export * from './RequirePasswordChange';
+export * from './SetInitialAdminPassword';
 export * from './User';
