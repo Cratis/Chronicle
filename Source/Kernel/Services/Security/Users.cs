@@ -79,6 +79,44 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
+    public async Task RequirePasswordChange(RequirePasswordChange command)
+    {
+        var @event = new PasswordChangeRequired();
+        var eventSequence = grainFactory.GetEventLog();
+
+        await eventSequence.Append(
+            command.UserId,
+            @event);
+    }
+
+    /// <inheritdoc/>
+    public async Task SetInitialAdminPassword(SetInitialAdminPassword command)
+    {
+        if (command.Password != command.ConfirmedPassword)
+        {
+            throw new PasswordConfirmationMismatch();
+        }
+
+        var user = await storage.System.Users.GetById(command.UserId) ?? throw new UserNotFound(command.UserId);
+
+        // Ensure this is only for users who haven't logged in yet
+        if (user.HasLoggedIn)
+        {
+            throw new InvalidOperationException("Setting initial admin password is only allowed for users who haven't set their initial password.");
+        }
+
+        var passwordHash = HashHelper.Hash(command.Password);
+
+        var @event = new UserPasswordChanged(passwordHash);
+
+        var eventSequence = grainFactory.GetEventLog();
+
+        await eventSequence.Append(
+            command.UserId,
+            @event);
+    }
+
+    /// <inheritdoc/>
     public async Task<IList<User>> GetAll()
     {
         var users = await storage.System.Users.GetAll();
@@ -99,6 +137,7 @@ internal sealed class Users(
         Email = user.Email ?? string.Empty,
         IsActive = user.IsActive,
         CreatedAt = user.CreatedAt!,
-        LastModifiedAt = user.LastModifiedAt
+        LastModifiedAt = user.LastModifiedAt,
+        HasLoggedIn = user.HasLoggedIn
     };
 }

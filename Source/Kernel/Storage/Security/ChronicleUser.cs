@@ -54,4 +54,10 @@ public class ChronicleUser
     /// Gets or sets whether the user must change their password on next login.
     /// </summary>
     public bool RequiresPasswordChange { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user has ever logged in and set their password.
+    /// This is primarily used for the initial admin user who starts without a password.
+    /// </summary>
+    public bool HasLoggedIn { get; set; }
 }

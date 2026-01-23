@@ -44,6 +44,21 @@ public class LoginController(
             };
         }
 
+        // Get the full user details to check HasLoggedIn
+        var chronicleUser = await userStorage.GetById(user.Id);
+
+        // If the user hasn't logged in yet (e.g., initial admin user), they cannot authenticate with password
+        if (chronicleUser?.HasLoggedIn is false)
+        {
+            return new LoginResponse
+            {
+                Success = false,
+                RequiresPasswordChange = true,
+                UserId = Guid.Parse(user.Id.ToString()),
+                ErrorMessage = "Password must be set before logging in."
+            };
+        }
+
         var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
         if (!result.Succeeded)
         {
@@ -53,9 +68,6 @@ public class LoginController(
                 ErrorMessage = "Invalid username or password."
             };
         }
-
-        // Get the full user details to check RequiresPasswordChange
-        var chronicleUser = await userStorage.GetById(user.Id);
 
         return new LoginResponse
         {
