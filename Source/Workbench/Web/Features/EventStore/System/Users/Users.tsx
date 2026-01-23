@@ -84,7 +84,7 @@ export const Users = () => {
                     <MenuItem
                         id="requirePasswordChange"
                         label="Require Password Change"
-                        icon={faIcons.FaExclamationTriangle}
+                        icon={faIcons.FaTriangleExclamation}
                         disableOnUnselected
                         command={handleRequirePasswordChange} />
                     <MenuItem
