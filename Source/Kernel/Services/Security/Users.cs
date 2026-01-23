@@ -102,7 +102,7 @@ internal sealed class Users(
         // Ensure this is only for users who haven't logged in yet
         if (user.HasLoggedIn)
         {
-            throw new InvalidOperationException("This operation is only allowed for users who haven't set their initial password.");
+            throw new InvalidOperationException("Setting initial admin password is only allowed for users who haven't set their initial password.");
         }
 
         var passwordHash = HashHelper.Hash(command.Password);

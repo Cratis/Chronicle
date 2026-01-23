@@ -45,7 +45,7 @@ export class LoginViewModel {
                 if (result.requiresPasswordChange) {
                     this.requiresPasswordChange = true;
                     this.userId = result.userId;
-                    // Check if this is initial setup (user not successful login)
+                    // Check if this is initial setup (user has not successfully logged in)
                     if (!result.success) {
                         this.isInitialSetup = true;
                         this.password = '';
