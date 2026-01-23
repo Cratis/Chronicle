@@ -9,16 +9,33 @@ namespace Cratis.Chronicle.Storage.MongoDB.Seeding;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSeedingStorage"/> for MongoDB.
 /// </summary>
-/// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
-public class EventSeedingStorage(IEventStoreNamespaceDatabase database) : IEventSeedingStorage
+public class EventSeedingStorage : IEventSeedingStorage
 {
-    IMongoCollection<EventSeeds> Collection => database.GetCollection<EventSeeds>(WellKnownCollectionNames.EventSeeds);
+    readonly IMongoCollection<EventSeeds> _collection;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSeedingStorage"/> class for namespace-level storage.
+    /// </summary>
+    /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
+    public EventSeedingStorage(IEventStoreNamespaceDatabase database)
+    {
+        _collection = database.GetCollection<EventSeeds>(WellKnownCollectionNames.EventSeeds);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSeedingStorage"/> class for event store-level storage.
+    /// </summary>
+    /// <param name="database">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    public EventSeedingStorage(IEventStoreDatabase database)
+    {
+        _collection = database.GetCollection<EventSeeds>(WellKnownCollectionNames.EventSeeds);
+    }
 
     /// <inheritdoc/>
     public async Task<EventSeeds> Get()
     {
         var filter = CreateFilter();
-        using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        using var cursor = await _collection.FindAsync(filter).ConfigureAwait(false);
         return cursor.FirstOrDefault();
     }
 
@@ -26,7 +43,7 @@ public class EventSeedingStorage(IEventStoreNamespaceDatabase database) : IEvent
     public async Task Save(EventSeeds data)
     {
         var filter = CreateFilter();
-        await Collection.ReplaceOneAsync(filter, data, new ReplaceOptions { IsUpsert = true });
+        await _collection.ReplaceOneAsync(filter, data, new ReplaceOptions { IsUpsert = true });
     }
 
     static FilterDefinition<EventSeeds> CreateFilter() => Builders<EventSeeds>.Filter.Eq(new StringFieldDefinition<EventSeeds, int>("_id"), 0);

@@ -16,12 +16,14 @@ using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reactors;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
+using Cratis.Chronicle.Storage.MongoDB.Seeding;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -83,6 +85,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModelDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
