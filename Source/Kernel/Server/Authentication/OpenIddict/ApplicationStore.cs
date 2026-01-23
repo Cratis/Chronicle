@@ -95,8 +95,8 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Returns null to skip OpenIddict's built-in secret validation.
-    /// Secret validation is handled by <see cref="ClientAuthenticationHandler"/>.
+    /// Returns null so OpenIddict treats this as a public client and skips built-in secret validation.
+    /// Actual secret validation is handled by <see cref="ClientAuthenticationHandler"/> using HashHelper.
     /// </remarks>
     public ValueTask<string?> GetClientSecretAsync(Application application, CancellationToken cancellationToken)
     {
@@ -104,9 +104,13 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Returns "public" so OpenIddict doesn't require built-in secret validation.
+    /// Actual secret validation is handled by <see cref="ClientAuthenticationHandler"/>.
+    /// </remarks>
     public ValueTask<string?> GetClientTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Type?.Value);
+        return new(OpenIddictConstants.ClientTypes.Public);
     }
 
     /// <inheritdoc/>
