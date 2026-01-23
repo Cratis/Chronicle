@@ -23,11 +23,11 @@ public class PasswordHashingService
     {
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
         var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA512, HashSize);
-        
+
         var hashBytes = new byte[SaltSize + HashSize];
         Array.Copy(salt, 0, hashBytes, 0, SaltSize);
         Array.Copy(hash, 0, hashBytes, SaltSize, HashSize);
-        
+
         return Convert.ToBase64String(hashBytes);
     }
 
@@ -47,9 +47,9 @@ public class PasswordHashingService
         var hashBytes = Convert.FromBase64String(hash);
         var salt = new byte[SaltSize];
         Array.Copy(hashBytes, 0, salt, 0, SaltSize);
-        
+
         var hashToVerify = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA512, HashSize);
-        
+
         for (var i = 0; i < HashSize; i++)
         {
             if (hashBytes[i + SaltSize] != hashToVerify[i])
@@ -57,7 +57,7 @@ public class PasswordHashingService
                 return false;
             }
         }
-        
+
         return true;
     }
 }

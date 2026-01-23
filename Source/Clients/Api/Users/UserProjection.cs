@@ -14,14 +14,14 @@ public class UserProjection : IProjectionFor<User>
     public void Define(IProjectionBuilderFor<User> builder) => builder
         .From<InitialAdminUserAdded>(b => b
             .Set(m => m.Username).To(e => e.Username)
-            .Set(m => m.HasLoggedIn).To(false)
-            .Set(m => m.PasswordChangeRequired).To(true)
-            .Set(m => m.PasswordHash).To(string.Empty))
+            .Set(m => m.HasLoggedIn).ToValue(false)
+            .Set(m => m.PasswordChangeRequired).ToValue(true)
+            .Set(m => m.PasswordHash).ToValue(string.Empty))
         .From<PasswordChanged>(b => b
             .Set(m => m.PasswordHash).To(e => e.PasswordHash)
-            .Set(m => m.PasswordChangeRequired).To(false))
+            .Set(m => m.PasswordChangeRequired).ToValue(false))
         .From<PasswordChangeRequired>(b => b
-            .Set(m => m.PasswordChangeRequired).To(true))
+            .Set(m => m.PasswordChangeRequired).ToValue(true))
         .From<UserLoggedIn>(b => b
-            .Set(m => m.HasLoggedIn).To(true));
+            .Set(m => m.HasLoggedIn).ToValue(true));
 }
