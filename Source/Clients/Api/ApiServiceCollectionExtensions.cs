@@ -69,6 +69,7 @@ public static class ApiServiceCollectionExtensions
         services.AddCratisChronicleServices();
 
         services.AddSingleton<IControllerActivator, CustomControllerActivator>();
+        services.AddSingleton<Users.PasswordHashingService>();
 
         return services;
     }
