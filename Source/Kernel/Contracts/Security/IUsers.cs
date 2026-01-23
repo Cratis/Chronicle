@@ -63,4 +63,11 @@ public interface IUsers
     /// <returns>An observable of <see cref="IList{T}"/> of <see cref="User"/>.</returns>
     [Operation]
     IObservable<IList<User>> ObserveAll(CallContext context = default);
+
+    /// <summary>
+    /// Checks if initial admin password setup is required.
+    /// </summary>
+    /// <returns>The <see cref="InitialAdminPasswordSetupStatus"/>.</returns>
+    [Operation]
+    Task<InitialAdminPasswordSetupStatus> GetInitialAdminPasswordSetupStatus();
 }

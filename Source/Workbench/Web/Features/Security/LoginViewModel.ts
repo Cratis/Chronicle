@@ -3,7 +3,7 @@
 
 import { injectable } from 'tsyringe';
 import { Guid } from '@cratis/fundamentals';
-import { ChangePasswordForUser, SetInitialAdminPassword } from 'Api/Security';
+import { ChangePasswordForUser, GetStatus, SetInitialAdminPassword } from 'Api/Security';
 
 @injectable()
 export class LoginViewModel {
@@ -12,6 +12,7 @@ export class LoginViewModel {
     newPassword: string = '';
     confirmPassword: string = '';
     isLoggingIn: boolean = false;
+    isLoading: boolean = true;
     errorMessage: string = '';
     requiresPasswordChange: boolean = false;
     isInitialSetup: boolean = false;
@@ -19,7 +20,25 @@ export class LoginViewModel {
 
     constructor(
         readonly _changePassword: ChangePasswordForUser,
-        readonly _setInitialAdminPassword: SetInitialAdminPassword) {
+        readonly _setInitialAdminPassword: SetInitialAdminPassword,
+        readonly _getStatus: GetStatus) {
+    }
+
+    async checkInitialSetup() {
+        this.isLoading = true;
+        try {
+            const result = await this._getStatus.perform();
+            if (result.data?.isRequired) {
+                this.isInitialSetup = true;
+                this.requiresPasswordChange = true;
+                this.userId = result.data.adminUserId ?? null;
+                this.username = 'admin';
+            }
+        } catch (error) {
+            console.error('Failed to check initial setup status:', error);
+        } finally {
+            this.isLoading = false;
+        }
     }
 
     async login() {

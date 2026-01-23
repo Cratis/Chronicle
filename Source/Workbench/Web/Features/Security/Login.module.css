@@ -157,3 +157,11 @@
 .buttonGroup button {
     width: 100%;
 }
+
+.initialSetupMessage {
+    text-align: center;
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.5;
+}

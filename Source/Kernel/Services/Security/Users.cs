@@ -130,6 +130,19 @@ internal sealed class Users(
             .CompletedBy(context.CancellationToken)
             .Select(users => users.Select(ToContract).ToList());
 
+    /// <inheritdoc/>
+    public async Task<InitialAdminPasswordSetupStatus> GetInitialAdminPasswordSetupStatus()
+    {
+        var users = await storage.System.Users.GetAll();
+        var adminUser = users.FirstOrDefault(u => u.Username == "admin" && !u.HasLoggedIn);
+
+        return new InitialAdminPasswordSetupStatus
+        {
+            IsRequired = adminUser is not null,
+            AdminUserId = adminUser is not null ? (Guid)adminUser.Id : null
+        };
+    }
+
     static User ToContract(ChronicleUser user) => new()
     {
         Id = user.Id,
