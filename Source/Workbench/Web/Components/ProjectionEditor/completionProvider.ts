@@ -152,15 +152,34 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             });
         }
 
-        // After "projection ", suggest read model names
-        if (trimmed.startsWith('projection ')) {
-            const afterProjection = trimmed.substring('projection '.length);
+        // Check if cursor is after "=>" to suggest read model names
+        const arrowMatch = trimmed.match(/^projection\s+\w+\s*=>\s*(\w*)$/);
+        if (arrowMatch) {
+            const partialReadModel = arrowMatch[1] || '';
             this.readModels.forEach((readModel) => {
-                if (!afterProjection || readModel.displayName.startsWith(afterProjection)) {
+                if (!partialReadModel || readModel.displayName.toLowerCase().startsWith(partialReadModel.toLowerCase())) {
                     suggestions.push({
                         label: readModel.displayName,
                         kind: 6, // Class
-                        insertText: `${readModel.displayName} =>  ${readModel.displayName}`,
+                        insertText: readModel.displayName,
+                        documentation: `Read model: ${readModel.displayName}`,
+                        detail: this.getSchemaDescription(readModel.schema),
+                        range: this.getRangeForWord(context),
+                    });
+                }
+            });
+            return;
+        }
+
+        // After "projection ", suggest read model names (for quick completion of both projection name and read model)
+        if (trimmed.startsWith('projection ') && !trimmed.includes('=>')) {
+            const afterProjection = trimmed.substring('projection '.length);
+            this.readModels.forEach((readModel) => {
+                if (!afterProjection || readModel.displayName.toLowerCase().startsWith(afterProjection.toLowerCase())) {
+                    suggestions.push({
+                        label: readModel.displayName,
+                        kind: 6, // Class
+                        insertText: `${readModel.displayName} => ${readModel.displayName}`,
                         documentation: `Read model: ${readModel.displayName}`,
                         detail: this.getSchemaDescription(readModel.schema),
                         range: this.getRangeForWord(context),
