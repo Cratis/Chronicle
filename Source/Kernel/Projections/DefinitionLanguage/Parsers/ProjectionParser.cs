@@ -11,6 +11,27 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.Parsers;
 /// </summary>
 internal sealed class ProjectionParser
 {
+    static readonly TokenType[] _directiveKeywords =
+    [
+        TokenType.From,
+        TokenType.Every,
+        TokenType.Key,
+        TokenType.Parent,
+        TokenType.On,
+        TokenType.With,
+        TokenType.Join,
+        TokenType.Children,
+        TokenType.Remove,
+        TokenType.Increment,
+        TokenType.Decrement,
+        TokenType.Add,
+        TokenType.Subtract,
+        TokenType.Count,
+        TokenType.Sequence,
+        TokenType.No,
+        TokenType.AutoMap
+    ];
+
     readonly TypeRefParser _typeRefs = new();
     readonly ProjectionDirectiveParser _directives = new();
 
@@ -23,6 +44,16 @@ internal sealed class ProjectionParser
     {
         if (!context.Check(TokenType.Projection))
         {
+            // Check if this is a directive keyword that should be indented
+            if (IsDirectiveKeyword(context.Current.Type))
+            {
+                context.ReportError($"Directive '{context.Current.Value}' must be indented inside a projection block");
+
+                // Skip to end of line to recover
+                SkipToEndOfLine(context);
+                return null;
+            }
+
             context.ReportError("Expected 'projection'");
             return null;
         }
@@ -69,5 +100,17 @@ internal sealed class ProjectionParser
             Line = projectionToken.Line,
             Column = projectionToken.Column
         };
+    }
+
+    static bool IsDirectiveKeyword(TokenType type) => _directiveKeywords.Contains(type);
+
+    static void SkipToEndOfLine(IParsingContext context)
+    {
+        // Skip tokens until we hit end of input or a token on a new line
+        var currentLine = context.Current.Line;
+        while (!context.IsAtEnd && context.Current.Line == currentLine)
+        {
+            context.Advance();
+        }
     }
 }
