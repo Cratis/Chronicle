@@ -16,7 +16,8 @@ namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 /// OpenIddict application store backed by Chronicle's Security storage.
 /// </summary>
 /// <param name="applicationStorage">The application storage.</param>
-public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIddictApplicationStore<Application>
+public class ApplicationStore(
+    IApplicationStorage applicationStorage) : IOpenIddictApplicationStore<Application>
 {
     /// <inheritdoc/>
     public async ValueTask<long> CountAsync(CancellationToken cancellationToken)
@@ -94,23 +95,15 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Returns null so OpenIddict treats this as a public client and skips built-in secret validation.
-    /// Actual secret validation is handled by <see cref="ClientAuthenticationHandler"/> using HashHelper.
-    /// </remarks>
     public ValueTask<string?> GetClientSecretAsync(Application application, CancellationToken cancellationToken)
     {
-        return new((string?)null);
+        return new(application.ClientSecret?.Value);
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Returns "public" so OpenIddict doesn't require built-in secret validation.
-    /// Actual secret validation is handled by <see cref="ClientAuthenticationHandler"/>.
-    /// </remarks>
     public ValueTask<string?> GetClientTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(OpenIddictConstants.ClientTypes.Public);
+        return new(application.Type?.Value ?? OpenIddictConstants.ClientTypes.Public);
     }
 
     /// <inheritdoc/>

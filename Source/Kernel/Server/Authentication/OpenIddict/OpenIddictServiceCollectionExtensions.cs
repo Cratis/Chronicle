@@ -55,14 +55,14 @@ public static class OpenIddictServiceCollectionExtensions
                     .AddDevelopmentEncryptionCertificate()
                        .AddDevelopmentSigningCertificate();
 
-                // Register custom client authentication handler
-                options.AddEventHandler(ClientAuthenticationHandler.Descriptor);
-
                 // Determine if we have a secure certificate configured
                 var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
 
                 // In development without a certificate, allow HTTP connections
 #if DEVELOPMENT
+                // Register custom client authentication handler that uses Chronicle's hashing
+                options.AddEventHandler(ClientAuthenticationHandler.Descriptor);
+
                 if (!hasSecureCertificate)
                 {
                     options.UseAspNetCore()
