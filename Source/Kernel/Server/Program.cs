@@ -130,13 +130,7 @@ builder.Host
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
            .WithMongoDB(chronicleOptions))
-        .AddStartupTask<AuthenticationStartupTask>()
-        .UseDashboard(options =>
-        {
-            options.Host = "*";
-            options.Port = 8081;
-            options.HostSelf = true;
-        }))
+        .AddStartupTask<AuthenticationStartupTask>())
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();

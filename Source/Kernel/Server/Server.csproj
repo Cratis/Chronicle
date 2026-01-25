@@ -17,7 +17,7 @@
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
-        <PackageReference Include="OrleansDashboard" />
+
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
