@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
@@ -31,6 +34,21 @@ public static class OpenIddictServiceCollectionExtensions
         services.AddSingleton<IScopeStorage, ScopeStorage>();
         services.AddSingleton<ITokenStorage, TokenStorage>();
 
+        // Configure Data Protection with grain-based key storage for multi-instance support
+        services.AddSingleton<IXmlRepository, GrainBasedXmlRepository>();
+        var dataProtectionBuilder = services.AddDataProtection()
+            .SetApplicationName("Chronicle");
+
+        // If an encryption certificate is configured, use it for key protection
+        var encryptionCert = chronicleOptions.Authentication.EncryptionCertificate;
+        if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
+        {
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+                encryptionCert.CertificatePath!,
+                encryptionCert.CertificatePassword);
+            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+        }
+
         services.AddOpenIddict()
             .AddCore(options =>
             {
@@ -52,17 +70,13 @@ public static class OpenIddictServiceCollectionExtensions
                     .AllowRefreshTokenFlow()
                     .AcceptAnonymousClients()
                     .DisableAccessTokenEncryption()
-                    .AddDevelopmentEncryptionCertificate()
-                       .AddDevelopmentSigningCertificate();
+                    .UseDataProtection();
 
                 // Determine if we have a secure certificate configured
                 var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
 
                 // In development without a certificate, allow HTTP connections
 #if DEVELOPMENT
-                // Register custom client authentication handler that uses Chronicle's hashing
-                options.AddEventHandler(ClientAuthenticationHandler.Descriptor);
-
                 if (!hasSecureCertificate)
                 {
                     options.UseAspNetCore()
@@ -99,6 +113,7 @@ public static class OpenIddictServiceCollectionExtensions
             {
                 options.UseLocalServer();
                 options.UseAspNetCore();
+                options.UseDataProtection();
 
                 var authorityValue = chronicleOptions.Authentication.Authority;
                 string scheme;

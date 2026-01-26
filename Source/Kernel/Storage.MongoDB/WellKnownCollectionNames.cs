@@ -152,4 +152,9 @@ public static class WellKnownCollectionNames
     /// The collection that holds tokens.
     /// </summary>
     public const string Tokens = "tokens";
+
+    /// <summary>
+    /// The collection that holds data protection keys.
+    /// </summary>
+    public const string DataProtectionKeys = "data-protection-keys";
 }

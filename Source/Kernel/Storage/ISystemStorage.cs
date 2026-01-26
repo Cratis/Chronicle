@@ -19,4 +19,9 @@ public interface ISystemStorage
     /// Gets the application storage.
     /// </summary>
     IApplicationStorage Applications { get; }
+
+    /// <summary>
+    /// Gets the data protection key storage.
+    /// </summary>
+    IDataProtectionKeyStorage DataProtectionKeys { get; }
 }

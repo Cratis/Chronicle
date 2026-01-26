@@ -17,4 +17,7 @@ public class SystemStorage(IDatabase database) : ISystemStorage
 
     /// <inheritdoc/>
     public IApplicationStorage Applications { get; } = new ApplicationStorage(database);
+
+    /// <inheritdoc/>
+    public IDataProtectionKeyStorage DataProtectionKeys { get; } = new DataProtectionKeyStorage(database);
 }
