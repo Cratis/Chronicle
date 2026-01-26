@@ -9,5 +9,6 @@
       <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="Mono.Cecil" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+    <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 </Project>
