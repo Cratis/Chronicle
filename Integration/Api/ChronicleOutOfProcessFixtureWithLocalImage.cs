@@ -131,5 +131,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             .WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development")
             .WithBindMount(CertificatePath, "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", "/app/certs/chronicle.pfx")
-            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword);
+            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
+            .WithEnvironment("Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePath", "/app/certs/chronicle.pfx")
+            .WithEnvironment("Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePassword", CertificatePassword);
 }
