@@ -82,6 +82,10 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
             this.addJoinCompletions(suggestions, context, activeSchema);
         } else if (this.isAfterKeyword(context, 'with')) {
             this.addEventTypeCompletions(suggestions, context);
+        } else if (this.isAfterNumericOperationKeyword(context)) {
+            this.addNumericPropertyCompletions(suggestions, context, activeSchema);
+        } else if (this.isAfterAddOrSubtractBy(context)) {
+            this.addAssignmentValueCompletions(suggestions, context, model, position);
         } else if (this.isInAssignment(context)) {
             this.addAssignmentValueCompletions(suggestions, context, model, position);
         } else if (this.isPropertyDotAccess(context)) {
@@ -126,6 +130,32 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
 
     private isAfterKeyword(context: CompletionContext, keyword: string): boolean {
         const pattern = new RegExp(`\\b${keyword}\\s+\\w*$`);
+        return pattern.test(context.textBeforeCursor);
+    }
+
+    private isAfterNumericOperationKeyword(context: CompletionContext): boolean {
+        // Match: count, increment, decrement, add, subtract followed by optional word (but not "by")
+        // For add/subtract, we only match if "by" hasn't been typed yet
+        const countIncrDecrPattern = /\b(count|increment|decrement)\s+\w*$/;
+        const addSubtractPattern = /\b(add|subtract)\s+\w*$/;
+
+        // Check for count/increment/decrement first
+        if (countIncrDecrPattern.test(context.textBeforeCursor)) {
+            return true;
+        }
+
+        // For add/subtract, only match if "by" hasn't been typed yet
+        if (addSubtractPattern.test(context.textBeforeCursor)) {
+            // Make sure we're not after "by"
+            return !this.isAfterAddOrSubtractBy(context);
+        }
+
+        return false;
+    }
+
+    private isAfterAddOrSubtractBy(context: CompletionContext): boolean {
+        // Match: "add <property> by " or "subtract <property> by " followed by optional word
+        const pattern = /\b(add|subtract)\s+\w+\s+by\s+\w*$/;
         return pattern.test(context.textBeforeCursor);
     }
 
@@ -244,6 +274,49 @@ export class ProjectionDslCompletionProvider implements languages.CompletionItem
 
     private addParentCompletions(suggestions: languages.CompletionItem[], context: CompletionContext): void {
         this.addExpressionCompletions(suggestions, context);
+    }
+
+    private addNumericPropertyCompletions(suggestions: languages.CompletionItem[], context: CompletionContext, activeSchema?: JsonSchema): void {
+        // After "count ", "increment ", or "decrement ", suggest numeric properties from read model
+        if (activeSchema?.properties) {
+            Object.entries(activeSchema.properties).forEach(([propName, propSchema]) => {
+                // Suggest numeric properties (integer or number types)
+                const isNumeric = propSchema.type === 'integer' || propSchema.type === 'number';
+                if (isNumeric) {
+                    if (!context.currentWord || propName.startsWith(context.currentWord)) {
+                        suggestions.push({
+                            label: propName,
+                            kind: 9, // Property
+                            insertText: propName,
+                            documentation: `Numeric property: ${propName}`,
+                            detail: this.getPropertyTypeDescription(propSchema),
+                            range: this.getRangeForWord(context),
+                        });
+                    }
+                }
+            });
+        }
+
+        // Also check if "add" or "subtract" is being typed - need to handle "add <prop> by" pattern
+        const addSubtractMatch = context.textBeforeCursor.match(/\b(add|subtract)\s+(\w*)$/);
+        if (addSubtractMatch) {
+            const partialProp = addSubtractMatch[2] || '';
+            if (activeSchema?.properties) {
+                Object.entries(activeSchema.properties).forEach(([propName, propSchema]) => {
+                    const isNumeric = propSchema.type === 'integer' || propSchema.type === 'number';
+                    if (isNumeric && (!partialProp || propName.startsWith(partialProp))) {
+                        suggestions.push({
+                            label: propName,
+                            kind: 9, // Property
+                            insertText: `${propName} by `,
+                            documentation: `Numeric property: ${propName}`,
+                            detail: this.getPropertyTypeDescription(propSchema),
+                            range: this.getRangeForWord(context),
+                        });
+                    }
+                });
+            }
+        }
     }
 
     private addChildrenCompletions(suggestions: languages.CompletionItem[], context: CompletionContext, activeSchema?: JsonSchema): void {
