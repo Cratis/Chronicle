@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { AllReadModelDefinitions, CreateReadModel } from 'Api/ReadModelTypes';
-import { ReadModelOwner } from 'Api/ReadModels/ReadModelOwner';
+import { AllReadModelDefinitions, CreateReadModel, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionEditor, setCreateReadModelCallback } from 'Components/ProjectionEditor';
@@ -38,6 +37,7 @@ export const Projections = () => {
     const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
+    const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
@@ -70,7 +70,13 @@ export const Projections = () => {
     }, [readModelNameFromDsl, readModels.data]);
 
     const saveDisabledReason = useMemo(() => {
-        if (readModelFromDsl && readModelFromDsl.owner === ReadModelOwner.client) {
+        if (!dslValue.trim()) {
+            return strings.eventStore.general.projections.saveDisabledReasons.emptyContent;
+        }
+        if (hasValidationErrors) {
+            return strings.eventStore.general.projections.saveDisabledReasons.validationErrors;
+        }
+        if (readModelFromDsl && readModelFromDsl.source === ReadModelSource.code) {
             return strings.eventStore.general.projections.saveDisabledReasons.readModelOwnedByCode;
         }
         if (readModelFromDsl && !selectedProjection) {
@@ -84,7 +90,17 @@ export const Projections = () => {
             }
         }
         return null;
-    }, [readModelFromDsl, selectedProjection, projections.data, readModelNameFromDsl]);
+    }, [dslValue, hasValidationErrors, readModelFromDsl, selectedProjection, projections.data, readModelNameFromDsl]);
+
+    const previewDisabledReason = useMemo(() => {
+        if (!dslValue.trim()) {
+            return strings.eventStore.general.projections.previewDisabledReasons.emptyContent;
+        }
+        if (hasValidationErrors) {
+            return strings.eventStore.general.projections.previewDisabledReasons.validationErrors;
+        }
+        return null;
+    }, [dslValue, hasValidationErrors]);
 
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
@@ -181,7 +197,8 @@ export const Projections = () => {
                                 {
                                     label: strings.eventStore.general.projections.actions.preview,
                                     icon: <faIcons.FaEye className='mr-2' />,
-                                    command: async () => {
+                                    disabled: !!previewDisabledReason,
+                                    command: previewDisabledReason ? undefined : async () => {
                                         previewProjection.eventStore = params.eventStore!;
                                         previewProjection.namespace = params.namespace!;
                                         previewProjection.dsl = dslValue;
@@ -196,7 +213,18 @@ export const Projections = () => {
                                         setSyntaxErrors(result.response?.syntaxErrors ?? []);
                                         setSelectedInstance(null);
                                         setPage(0);
-                                    }
+                                    },
+                                    template: previewDisabledReason ? (item: MenuItem) => (
+                                        <div
+                                            className="p-menuitem-link p-disabled"
+                                            data-pr-tooltip={previewDisabledReason}
+                                            data-pr-position="bottom"
+                                            style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                                        >
+                                            {item.icon}
+                                            <span className="p-menuitem-text">{item.label}</span>
+                                        </div>
+                                    ) : undefined
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.timeMachine,
@@ -213,6 +241,7 @@ export const Projections = () => {
                             <ProjectionEditor
                                 value={dslValue}
                                 onChange={setDslValue}
+                                onValidationChange={setHasValidationErrors}
                                 readModelSchemas={readModelSchemas}
                                 eventSchemas={eventSchemas}
                                 errors={syntaxErrors}

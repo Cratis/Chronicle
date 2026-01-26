@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Editor, { OnMount, Monaco } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
+import type { editor, Uri } from 'monaco-editor';
 import {
     registerProjectionDslLanguage,
     setReadModelSchemas,
@@ -23,6 +23,7 @@ import Strings from 'Strings';
 export interface ProjectionEditorProps {
     value: string;
     onChange?: (value: string) => void;
+    onValidationChange?: (hasErrors: boolean) => void;
     readModelSchemas?: JsonSchema[],
     eventSchemas?: JsonSchema[],
     errors?: ProjectionDefinitionSyntaxError[];
@@ -34,6 +35,7 @@ export interface ProjectionEditorProps {
 export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     value,
     onChange,
+    onValidationChange,
     readModelSchemas,
     eventSchemas,
     errors,
@@ -75,6 +77,29 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         editorRef.current = editor;
         monacoRef.current = monacoInstance;
         registerProjectionDslLanguage(monacoInstance);
+
+        // Listen for marker changes to track validation state
+        const markerDisposable = monacoInstance.editor.onDidChangeMarkers((resources: readonly Uri[]) => {
+            const model = editor.getModel();
+            if (model && resources.some((r: Uri) => r.toString() === model.uri.toString())) {
+                const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
+                const hasErrors = markers.some((m: editor.IMarkerData) => m.severity === monacoInstance.MarkerSeverity.Error);
+                onValidationChange?.(hasErrors);
+            }
+        });
+
+        // Initial validation state
+        const model = editor.getModel();
+        if (model) {
+            const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
+            const hasErrors = markers.some((m: editor.IMarkerData) => m.severity === monacoInstance.MarkerSeverity.Error);
+            onValidationChange?.(hasErrors);
+        }
+
+        // Clean up on unmount
+        return () => {
+            markerDisposable.dispose();
+        };
     };
 
     useEffect(() => {
