@@ -39,15 +39,26 @@ public static class OpenIddictServiceCollectionExtensions
         var dataProtectionBuilder = services.AddDataProtection()
             .SetApplicationName("Chronicle");
 
-        // If an encryption certificate is configured, use it for key protection
+        // Configure key encryption with certificate
+        // In production, this certificate is required for secure key storage
+        // In development, it is optional for convenience
         var encryptionCert = chronicleOptions.Authentication.EncryptionCertificate;
         if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
         {
             var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-                encryptionCert.CertificatePath!,
+                encryptionCert.CertificatePath,
                 encryptionCert.CertificatePassword);
             dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
         }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException(
+                "An encryption certificate is required in production for Data Protection key security. " +
+                "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
+                "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
+        }
+#endif
 
         services.AddOpenIddict()
             .AddCore(options =>
