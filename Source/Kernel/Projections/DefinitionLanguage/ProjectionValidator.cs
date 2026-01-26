@@ -74,19 +74,35 @@ public class ProjectionValidator(
                 case ChildrenBlock childrenBlock:
                     ValidateChildrenBlock(childrenBlock, readModelSchema, errors);
                     break;
-                case JoinBlock:
+                case JoinBlock joinBlock:
+                    ValidateJoinBlock(joinBlock, readModelSchema, errors);
+                    break;
+                case RemoveWithDirective removeWith:
+                    ValidateEventTypeExists(removeWith.EventType, errors);
+                    break;
+                case RemoveWithJoinDirective removeWithJoin:
+                    ValidateEventTypeExists(removeWithJoin.EventType, errors);
+                    break;
                 case EveryBlock:
                 case KeyDirective:
                 case AutoMapDirective:
                 case NoAutoMapDirective:
-                case RemoveWithDirective:
-                case RemoveWithJoinDirective:
                     // These don't require validation at this stage
                     break;
                 case CompositeKeyDirective compositeKey:
                     ValidateCompositeKeyDirective(compositeKey, readModelSchema, errors);
                     break;
             }
+        }
+    }
+
+    void ValidateEventTypeExists(TypeRef eventTypeRef, CompilerErrors errors)
+    {
+        var eventType = EventType.Parse(eventTypeRef.Name);
+
+        if (!_eventTypeLookup.ContainsKey(eventType))
+        {
+            errors.Add($"Event type '{eventType}' not found", eventTypeRef.Line, eventTypeRef.Column);
         }
     }
 
@@ -107,6 +123,24 @@ public class ProjectionValidator(
         }
 
         ValidateMappings(fromEvent.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
+    }
+
+    void ValidateJoinBlock(JoinBlock joinBlock, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        // Validate each 'with' block's event type
+        foreach (var withBlock in joinBlock.WithBlocks)
+        {
+            var eventType = EventType.Parse(withBlock.EventType.Name);
+
+            if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            {
+                errors.Add($"Event type '{eventType}' not found", withBlock.Line, withBlock.Column);
+                continue;
+            }
+
+            // Validate mappings within the with block
+            ValidateMappings(withBlock.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
+        }
     }
 
     void ValidateChildrenBlock(ChildrenBlock childrenBlock, JsonSchema readModelSchema, CompilerErrors errors)
@@ -202,13 +236,44 @@ public class ProjectionValidator(
                 case AssignmentOperation assignment:
                     ValidateAssignmentOperation(assignment, targetSchema, eventSchema, errors);
                     break;
-                case AddOperation:
-                case IncrementOperation:
-                case DecrementOperation:
-                case SubtractOperation:
-                case CountOperation:
-                    // These operations are validated separately if needed
+                case CountOperation count:
+                    ValidatePropertyExists(count.PropertyName, targetSchema, errors, mapping);
                     break;
+                case IncrementOperation increment:
+                    ValidatePropertyExists(increment.PropertyName, targetSchema, errors, mapping);
+                    break;
+                case DecrementOperation decrement:
+                    ValidatePropertyExists(decrement.PropertyName, targetSchema, errors, mapping);
+                    break;
+                case AddOperation add:
+                    ValidatePropertyExists(add.PropertyName, targetSchema, errors, mapping);
+                    ValidateEventPropertyExists(add.Value, eventSchema, errors);
+                    break;
+                case SubtractOperation subtract:
+                    ValidatePropertyExists(subtract.PropertyName, targetSchema, errors, mapping);
+                    ValidateEventPropertyExists(subtract.Value, eventSchema, errors);
+                    break;
+            }
+        }
+    }
+
+    void ValidatePropertyExists(string propertyName, JsonSchema targetSchema, CompilerErrors errors, MappingOperation operation)
+    {
+        if (!TryResolveProperty(targetSchema, propertyName, out _))
+        {
+            errors.Add($"Read model property '{propertyName}' not found", operation.Line, operation.Column);
+        }
+    }
+
+    void ValidateEventPropertyExists(Expression value, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        if (value is EventDataExpression eventDataExpression)
+        {
+            var sourcePath = eventDataExpression.Path;
+
+            if (!TryResolveProperty(eventSchema, sourcePath, out _))
+            {
+                errors.Add($"Event property '{sourcePath}' not found", value.Line, value.Column);
             }
         }
     }
