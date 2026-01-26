@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class without_sequence_directive : for_LanguageService.given.a_language_service
 {
-    const string Definition = """
+    const string Declaration = """
         projection SimulationProjection => Simulation
             from SimulationAdded
                 key $eventSourceId
@@ -56,7 +56,7 @@ public class without_sequence_directive : for_LanguageService.given.a_language_s
     void Because()
     {
         var result = _languageService.Compile(
-            Definition,
+            Declaration,
             Concepts.Projections.ProjectionOwner.Client,
             [_readModelDefinition],
             [_eventTypeSchema]);

@@ -12,7 +12,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Generates a projection DSL string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
+/// Generates a projection declaration language string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
 /// </summary>
 public class Generator : IGenerator
 {
@@ -324,7 +324,7 @@ public class Generator : IGenerator
             return;
         }
 
-        // Parse the expression to determine the operation type from DSL
+        // Parse the expression to determine the operation type from projection declaration language
         if (normalizedExpression == WellKnownExpressions.Increment)
         {
             sb.AppendLine($"{Indent(indent)}increment {propertyName}");
@@ -381,7 +381,7 @@ public class Generator : IGenerator
             return WellKnownExpressions.CausedBy;
         }
 
-        // Convert C# boolean ToString() to DSL format
+        // Convert C# boolean ToString() to projection declaration language format
         if (normalizedExpression.Equals("True", StringComparison.Ordinal))
         {
             return "true";
@@ -391,7 +391,7 @@ public class Generator : IGenerator
             return "false";
         }
 
-        // Convert empty string (C# null representation) to DSL null
+        // Convert empty string (C# null representation) to projection declaration language null
         if (string.IsNullOrEmpty(normalizedExpression))
         {
             return "null";

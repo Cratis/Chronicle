@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class from_every_block : given.a_language_service_with_schemas<given.Model>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Test => Model
           every
             lastUpdated = $eventContext.occurred
@@ -21,7 +21,7 @@ public class from_every_block : given.a_language_service_with_schemas<given.Mode
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_every() => _result.FromEvery.ShouldNotBeNull();
     [Fact] void should_have_two_properties() => _result.FromEvery.Properties.Count.ShouldEqual(2);

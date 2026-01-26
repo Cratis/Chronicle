@@ -3,10 +3,10 @@
 
 import type * as Monaco from 'monaco-editor';
 import { configuration, languageId, monarchLanguage } from './language';
-import { ProjectionDslCompletionProvider } from './completionProvider';
-import { ProjectionDslValidator } from './validator';
-import { ProjectionDslHoverProvider } from './hoverProvider';
-import { ProjectionDslCodeActionProvider } from './codeActionProvider';
+import { ProjectionDefinitionLanguageCompletionProvider } from './ProjectionDefinitionLanguageCompletionProvider';
+import { ProjectionDefinitionLanguageValidator } from './ProjectionDefinitionLanguageValidator';
+import { ProjectionDefinitionLanguageHoverProvider } from './ProjectionDefinitionLanguageHoverProvider';
+import { ProjectionDefinitionLanguageCodeActionProvider } from './ProjectionDefinitionLanguageCodeActionProvider';
 import type { JsonSchema } from '../JsonSchema';
 
 export interface ReadModelInfo {
@@ -14,15 +14,23 @@ export interface ReadModelInfo {
     schema: JsonSchema;
 }
 
-let validator: ProjectionDslValidator;
-let completionProvider: ProjectionDslCompletionProvider;
-let hoverProvider: ProjectionDslHoverProvider;
-let codeActionProvider: ProjectionDslCodeActionProvider;
+let validator: ProjectionDefinitionLanguageValidator;
+let completionProvider: ProjectionDefinitionLanguageCompletionProvider;
+let hoverProvider: ProjectionDefinitionLanguageHoverProvider;
+let codeActionProvider: ProjectionDefinitionLanguageCodeActionProvider;
 let disposables: Monaco.IDisposable[] = [];
 
 export * from './ProjectionEditor';
 
-export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
+let isRegistered = false;
+
+export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): void {
+    // Prevent duplicate registration
+    if (isRegistered) {
+        return;
+    }
+    isRegistered = true;
+
     // Register the language
     monaco.languages.register({ id: languageId });
 
@@ -33,10 +41,10 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     monaco.languages.setMonarchTokensProvider(languageId, monarchLanguage);
 
     // Create validator, completion provider, and hover provider
-    validator = new ProjectionDslValidator();
-    completionProvider = new ProjectionDslCompletionProvider();
-    hoverProvider = new ProjectionDslHoverProvider();
-    codeActionProvider = new ProjectionDslCodeActionProvider();
+    validator = new ProjectionDefinitionLanguageValidator();
+    completionProvider = new ProjectionDefinitionLanguageCompletionProvider();
+    hoverProvider = new ProjectionDefinitionLanguageHoverProvider();
+    codeActionProvider = new ProjectionDefinitionLanguageCodeActionProvider();
 
     // Register completion provider with helpful trigger characters
     const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, {
@@ -58,7 +66,7 @@ export function registerProjectionDslLanguage(monaco: typeof Monaco): void {
     disposables.push(codeActionDisposable);
 
     // Register command for creating read models
-    const commandDisposable = monaco.editor.registerCommand('projection-dsl.createReadModel', (_accessor: unknown, readModelName: string) => {
+    const commandDisposable = monaco.editor.registerCommand('projection-declaration.createReadModel', (_accessor: unknown, readModelName: string) => {
         if (codeActionProvider) {
             codeActionProvider.invokeCreateReadModel(readModelName);
         }
@@ -152,15 +160,16 @@ export function setEventSequences(sequences: string[]): void {
     }
 }
 
-export function disposeProjectionDslLanguage(): void {
+export function disposeProjectionDefinitionLanguage(): void {
     disposables.forEach((d) => d.dispose());
     disposables = [];
+    isRegistered = false;
 }
 
 function validateModel(monaco: typeof Monaco, model: Monaco.editor.ITextModel): void {
-    if (validator) {
+    if (validator && model && !model.isDisposed()) {
         const markers = validator.validate(model);
-        monaco.editor.setModelMarkers(model, languageId, markers);
+        monaco.editor.setModelMarkers(model, 'projection-declaration-validator', markers);
     }
 }
 

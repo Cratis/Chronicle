@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class from_event_with_block_key : given.a_language_service_with_schemas<given.UserReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection User => UserReadModel
           automap
           from UserAssignedToGroup
@@ -22,7 +22,7 @@ public class from_event_with_block_key : given.a_language_service_with_schemas<g
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_user_assigned_to_group() => _result.From.ContainsKey((EventType)"UserAssignedToGroup").ShouldBeTrue();
     [Fact] void should_have_automap_enabled() => _result.AutoMap.ShouldEqual(AutoMap.Enabled);

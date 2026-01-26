@@ -4,8 +4,8 @@
 namespace Cratis.Chronicle.Api.Projections;
 
 /// <summary>
-/// Represents the result of generating C# code from DSL.
+/// Represents the result of generating C# code from projection declaration language.
 /// </summary>
 /// <param name="Code">The generated C# code.</param>
 /// <param name="Errors">Any syntax errors encountered during generation.</param>
-public record GeneratedCodeResult(string Code, IEnumerable<ProjectionDefinitionSyntaxError> Errors);
+public record GeneratedCodeResult(string Code, IEnumerable<ProjectionDeclarationSyntaxError> Errors);

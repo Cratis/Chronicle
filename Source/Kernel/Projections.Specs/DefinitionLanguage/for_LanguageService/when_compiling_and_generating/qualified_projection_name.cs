@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class qualified_projection_name : given.a_language_service_with_schemas<given.Simulation>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Core.Simulations.Simulation => Simulation
           from SimulationAdded
             key $eventSourceId
@@ -18,7 +18,7 @@ public class qualified_projection_name : given.a_language_service_with_schemas<g
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_simulation_added_event() => _result.From.ContainsKey((EventType)"SimulationAdded").ShouldBeTrue();
     [Fact] void should_not_have_key() => _result.From[(EventType)"SimulationAdded"].Key.IsSet().ShouldBeFalse();

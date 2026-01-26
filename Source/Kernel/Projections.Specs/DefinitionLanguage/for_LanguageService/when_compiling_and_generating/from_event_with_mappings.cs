@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class from_event_with_mappings : given.a_language_service_with_schemas<given.Model>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Test => Model
           from GenericEvent
             key userId
@@ -20,7 +20,7 @@ public class from_event_with_mappings : given.a_language_service_with_schemas<gi
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_event_type() => _result.From.ContainsKey((EventType)"GenericEvent").ShouldBeTrue();
     [Fact] void should_have_key() => _result.From[(EventType)"GenericEvent"].Key.ShouldNotBeNull();

@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents generated C# code from a projection DSL.
+/// Represents generated C# code from a projection declaration.
 /// </summary>
 [ProtoContract]
 public class GeneratedCode

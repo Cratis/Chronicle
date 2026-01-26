@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents the request for getting all projection DSLs.
+/// Represents the request for getting all projection declarations.
 /// </summary>
 [ProtoContract]
-public class GetAllDslsRequest
+public class GetAllDeclarationsRequest
 {
     /// <summary>
     /// Gets or sets the event store name.

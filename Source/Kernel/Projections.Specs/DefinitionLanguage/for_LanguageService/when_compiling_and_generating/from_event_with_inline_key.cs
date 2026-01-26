@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class from_event_with_inline_key : given.a_language_service_with_schemas<given.TransportRouteReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection TransportRoute => TransportRouteReadModel
           from HubRouteAddedToSimulationConfiguration
             key simulationConfigurationId
@@ -22,7 +22,7 @@ public class from_event_with_inline_key : given.a_language_service_with_schemas<
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_hub_route_added() => _result.From.ContainsKey((EventType)"HubRouteAddedToSimulationConfiguration").ShouldBeTrue();
     [Fact] void should_have_key() => _result.From[(EventType)"HubRouteAddedToSimulationConfiguration"].Key.ShouldNotBeNull();

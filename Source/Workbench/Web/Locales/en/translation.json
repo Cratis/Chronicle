@@ -388,8 +388,9 @@
     "components": {
         "projectionEditor": {
             "tooltips": {
-                "help": "Show Projection Definition Language help panel"
-            }
+                "help": "Show Projection Declaration Language help panel"
+            },
+            "languageReference": "Projection Declaration Language Reference"
         },
         "schemaEditor": {
             "columns": {

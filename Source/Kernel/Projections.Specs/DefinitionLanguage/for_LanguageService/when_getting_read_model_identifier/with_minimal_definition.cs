@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class with_minimal_definition : a_language_service
 {
-    const string Definition = """
+    const string Declaration = """
         projection MinimalProjection => MinimalReadModel
         """;
 
@@ -16,7 +16,7 @@ public class with_minimal_definition : a_language_service
 
     void Because()
     {
-        var result = _languageService.GetReadModelIdentifier(Definition);
+        var result = _languageService.GetReadModelIdentifier(Declaration);
         _result = result.Match(
             identifier => identifier,
             errors => throw new InvalidOperationException($"Failed to get read model identifier: {string.Join(", ", errors.Errors)}"));

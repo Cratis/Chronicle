@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.ReadModels;
 namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
-/// Represents a projection with its DSL representation.
+/// Represents a projection with its projection declaration language representation.
 /// </summary>
 /// <param name="Identifier">The projection identifier.</param>
 /// <param name="ReadModel">The read model the projection projects to.</param>
-/// <param name="Dsl">The projection DSL.</param>
-public record ProjectionWithDsl(ProjectionId Identifier, ReadModelName ReadModel, ProjectionDsl Dsl);
+/// <param name="Declaration">The projection definition as projection declaration language.</param>
+public record ProjectionWithDeclaration(ProjectionId Identifier, ReadModelName ReadModel, ProjectionDeclaration Declaration);

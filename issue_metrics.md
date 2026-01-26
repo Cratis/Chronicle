@@ -14,7 +14,7 @@
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Ensure Monaco Language service has full support for the Projection Definition Language | https://github.com/Cratis/Chronicle/issues/2505 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Ensure Monaco Language service has full support for the Projection Declaration Language | https://github.com/Cratis/Chronicle/issues/2505 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Change password on first login | https://github.com/Cratis/Chronicle/issues/2503 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Versioning information | https://github.com/Cratis/Chronicle/issues/2501 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | All and Dictionaries | https://github.com/Cratis/Chronicle/issues/2464 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |

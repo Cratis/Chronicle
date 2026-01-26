@@ -5,7 +5,7 @@ import type * as Monaco from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
-export class ProjectionDslCodeActionProvider {
+export class ProjectionDefinitionLanguageCodeActionProvider {
     private readModels: ReadModelInfo[] = [];
     private onCreateReadModel?: (readModelName: string) => void;
 
@@ -61,7 +61,7 @@ export class ProjectionDslCodeActionProvider {
                             edit: undefined, // No automatic edit - we'll show a dialog
                             isPreferred: true,
                             command: {
-                                id: 'projection-dsl.createReadModel',
+                                id: 'projection-declaration.createReadModel',
                                 title: `Create ${readModelName}`,
                                 arguments: [readModelName]
                             }

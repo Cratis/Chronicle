@@ -7,7 +7,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Tokenizer for the indentation-based projection DSL.
+/// Tokenizer for the indentation-based projection declaration language.
 /// </summary>
 public class Tokenizer
 {

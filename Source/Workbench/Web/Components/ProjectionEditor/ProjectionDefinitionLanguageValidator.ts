@@ -5,7 +5,7 @@ import type { editor } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
-export class ProjectionDslValidator {
+export class ProjectionDefinitionLanguageValidator {
     private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 
@@ -44,7 +44,8 @@ export class ProjectionDslValidator {
     validate(model: editor.ITextModel): editor.IMarkerData[] {
         const markers: editor.IMarkerData[] = [];
         const content = model.getValue();
-        const lines = content.split('\n');
+        // Normalize line endings and split
+        const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 
         if (lines.length === 0 || !lines[0].trim()) {
             markers.push(this.createError(1, 1, 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelName>"'));

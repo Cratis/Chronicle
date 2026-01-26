@@ -6,13 +6,13 @@ using Cratis.Chronicle.Contracts.Projections;
 namespace Cratis.Chronicle.Api.Projections;
 
 /// <summary>
-/// Represents a request to generate declarative C# projection code from DSL.
+/// Represents a request to generate declarative C# projection code from projection declaration languageL.
 /// </summary>
 /// <param name="EventStore">The event store the projection targets.</param>
 /// <param name="Namespace">The namespace the projection targets.</param>
-/// <param name="Dsl">The DSL representation of the projection.</param>
+/// <param name="Declaration">The projection declaration language representation of the projection.</param>
 [Command]
-public record GenerateDeclarativeCode(string EventStore, string Namespace, string Dsl)
+public record GenerateDeclarativeCode(string EventStore, string Namespace, string Declaration)
 {
     /// <summary>
     /// Handles the generate declarative code request.
@@ -25,18 +25,18 @@ public record GenerateDeclarativeCode(string EventStore, string Namespace, strin
         {
             EventStore = EventStore,
             Namespace = Namespace,
-            Dsl = Dsl
+            Declaration = Declaration
         };
 
-        var result = await projections.GenerateDeclarativeCodeFromDsl(request);
+        var result = await projections.GenerateDeclarativeCode(request);
 
         return result.Value switch
         {
             GeneratedCode code => new GeneratedCodeResult(code.Code, []),
-            ProjectionDefinitionParsingErrors errors => new GeneratedCodeResult(
+            ProjectionDeclarationParsingErrors errors => new GeneratedCodeResult(
                 string.Empty,
-                errors.Errors.Select(e => new ProjectionDefinitionSyntaxError(e.Message, e.Line, e.Column))),
-            _ => throw new InvalidOperationException("Unexpected result type from GenerateDeclarativeCodeFromDsl")
+                errors.Errors.Select(e => new ProjectionDeclarationSyntaxError(e.Message, e.Line, e.Column))),
+            _ => throw new InvalidOperationException("Unexpected result type from GenerateDeclarativeCode")
         };
     }
 }

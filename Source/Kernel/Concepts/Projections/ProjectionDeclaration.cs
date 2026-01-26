@@ -4,14 +4,14 @@
 namespace Cratis.Chronicle.Concepts.Projections;
 
 /// <summary>
-/// Represents the DSL string of a projection.
+/// Represents the projection declaration language string of a projection.
 /// </summary>
 /// <param name="Value">The inner value.</param>
-public record ProjectionDsl(string Value) : ConceptAs<string>(Value)
+public record ProjectionDeclaration(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
-    /// Implicitly convert from <see cref="string"/> to <see cref="ProjectionDsl"/>.
+    /// Implicitly convert from <see cref="string"/> to <see cref="ProjectionDeclaration"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> to convert from.</param>
-    public static implicit operator ProjectionDsl(string value) => new(value);
+    public static implicit operator ProjectionDeclaration(string value) => new(value);
 }

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class escaped_keywords : given.a_language_service_with_schemas<given.ModelWithKeywordProperties>
 {
-    const string Definition = """
+    const string Declaration = """
         projection MyProjection => ModelWithKeywordProperties
           no automap
           from UserRegisteredWithKeywordValues
@@ -23,7 +23,7 @@ public class escaped_keywords : given.a_language_service_with_schemas<given.Mode
 
     given.CompilerResult _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_one_from_definition() => _result.Definition.From.Count.ShouldEqual(1);
     [Fact] void should_have_from_user_registered() => _result.Definition.From.ContainsKey("UserRegisteredWithKeywordValues").ShouldBeTrue();
@@ -33,9 +33,9 @@ public class escaped_keywords : given.a_language_service_with_schemas<given.Mode
     [Fact] void should_map_key_property() => _result.Definition.From[(EventType)"UserRegisteredWithKeywordValues"].Properties[new PropertyPath("key")].ShouldEqual("key");
     [Fact] void should_map_join_property() => _result.Definition.From[(EventType)"UserRegisteredWithKeywordValues"].Properties[new PropertyPath("join")].ShouldEqual("join");
     [Fact] void should_map_children_property() => _result.Definition.From[(EventType)"UserRegisteredWithKeywordValues"].Properties[new PropertyPath("children")].ShouldEqual("children");
-    [Fact] void should_regenerate_with_escaped_from() => _result.GeneratedDsl.ShouldContain("@from");
-    [Fact] void should_regenerate_with_escaped_projection() => _result.GeneratedDsl.ShouldContain("@projection");
-    [Fact] void should_regenerate_with_escaped_key() => _result.GeneratedDsl.ShouldContain("@key");
-    [Fact] void should_regenerate_with_escaped_join() => _result.GeneratedDsl.ShouldContain("@join");
-    [Fact] void should_regenerate_with_escaped_children() => _result.GeneratedDsl.ShouldContain("@children");
+    [Fact] void should_regenerate_with_escaped_from() => _result.GeneratedDefinition.ShouldContain("@from");
+    [Fact] void should_regenerate_with_escaped_projection() => _result.GeneratedDefinition.ShouldContain("@projection");
+    [Fact] void should_regenerate_with_escaped_key() => _result.GeneratedDefinition.ShouldContain("@key");
+    [Fact] void should_regenerate_with_escaped_join() => _result.GeneratedDefinition.ShouldContain("@join");
+    [Fact] void should_regenerate_with_escaped_children() => _result.GeneratedDefinition.ShouldContain("@children");
 }

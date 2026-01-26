@@ -4,14 +4,14 @@
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents a collection of parsing errors for a projection definition.
+/// Represents a collection of parsing errors for a projection declaration.
 /// </summary>
 [ProtoContract]
-public class ProjectionDefinitionParsingErrors
+public class ProjectionDeclarationParsingErrors
 {
     /// <summary>
     /// Gets or sets the collection of syntax errors.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<ProjectionDefinitionSyntaxError> Errors { get; set; } = [];
+    public IEnumerable<ProjectionDeclarationSyntaxError> Errors { get; set; } = [];
 }

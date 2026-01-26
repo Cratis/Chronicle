@@ -5,13 +5,13 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class missing_projection_keyword : given.a_language_service_expecting_errors
 {
-    const string Definition = """
+    const string Declaration = """
         Account => AccountReadModel
           from AccountCreated
             key accountId
         """;
 
-    void Because() => Compile(Definition);
+    void Because() => Compile(Declaration);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
     [Fact] void should_report_expected_projection() => _errors.Errors.ShouldContain(e => e.Message.Contains("projection"));

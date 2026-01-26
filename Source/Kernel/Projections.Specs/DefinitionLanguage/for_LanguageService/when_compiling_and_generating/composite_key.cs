@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class composite_key : given.a_language_service_with_schemas<given.OrderReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Order => OrderReadModel
           from OrderCreated
             key OrderKey
@@ -23,7 +23,7 @@ public class composite_key : given.a_language_service_with_schemas<given.OrderRe
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_order_created() => _result.From.ContainsKey((EventType)"OrderCreated").ShouldBeTrue();
     [Fact] void should_have_composite_key() => _result.From[(EventType)"OrderCreated"].Key.Value.ShouldContain(WellKnownExpressions.Composite);

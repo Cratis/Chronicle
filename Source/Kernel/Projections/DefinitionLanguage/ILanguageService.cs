@@ -10,7 +10,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Defines a language service for parsing and generating projection DSL.
+/// Defines a language service for parsing and generating projection declaration language.
 /// </summary>
 public interface ILanguageService
 {

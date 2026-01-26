@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_with_default_automap : EventTypes.a_language_service_with_schemas<EventTypes.TransportRouteReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection TransportRoute => TransportRouteReadModel
             from HubRouteAdded key id
         """;
@@ -18,14 +18,14 @@ public class projection_with_default_automap : EventTypes.a_language_service_wit
 
     given.CompilerResult _compilerResult;
 
-    void Because() => _compilerResult = CompileGenerateAndRecompile(Definition);
+    void Because() => _compilerResult = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_hub_route_added() => _compilerResult.Definition.From.ContainsKey((EventType)"HubRouteAdded").ShouldBeTrue();
     [Fact] void should_have_automap_enabled() => _compilerResult.Definition.AutoMap.ShouldEqual(AutoMap.Enabled);
     [Fact] void should_not_have_any_property_mappings() => _compilerResult.Definition.From[(EventType)"HubRouteAdded"].Properties.Count.ShouldEqual(0);
-    [Fact] void should_not_generate_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("id = id");
-    [Fact] void should_not_generate_simulation_configuration_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
-    [Fact] void should_not_generate_transport_type_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("transportTypeId = transportTypeId");
-    [Fact] void should_not_generate_source_hub_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("sourceHubId = sourceHubId");
-    [Fact] void should_not_generate_destination_hub_id_mapping() => _compilerResult.GeneratedDsl.ShouldNotContain("destinationHubId = destinationHubId");
+    [Fact] void should_not_generate_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("id = id");
+    [Fact] void should_not_generate_simulation_configuration_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
+    [Fact] void should_not_generate_transport_type_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("transportTypeId = transportTypeId");
+    [Fact] void should_not_generate_source_hub_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("sourceHubId = sourceHubId");
+    [Fact] void should_not_generate_destination_hub_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("destinationHubId = destinationHubId");
 }

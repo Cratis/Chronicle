@@ -262,7 +262,7 @@ public class Compiler
 
     /// <summary>
     /// Process a child block and populate the appropriate dictionaries based on its type.
-    /// Children support 'every' blocks in the DSL for mapping all events to properties.
+    /// Children support 'every' blocks in the projection declaration language for mapping all events to properties.
     /// </summary>
     /// <param name="childBlock">The child block to process.</param>
     /// <param name="from">Dictionary of event type to from definitions.</param>

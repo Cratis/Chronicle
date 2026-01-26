@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class missing_by_keyword_in_add_directive : given.a_language_service_expecting_errors
 {
-    const string Definition = """
+    const string Declaration = """
         projection Account => AccountReadModel
           from AccountCreated
             key accountId
             add balance e.amount
         """;
 
-    void Because() => Compile(Definition);
+    void Because() => Compile(Declaration);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
 }

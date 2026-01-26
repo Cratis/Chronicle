@@ -14,7 +14,7 @@ interface CompletionContext {
     lineNumber: number;
 }
 
-export class ProjectionDslCompletionProvider implements languages.CompletionItemProvider {
+export class ProjectionDefinitionLanguageCompletionProvider implements languages.CompletionItemProvider {
     private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
     private eventSequences: string[] = [];

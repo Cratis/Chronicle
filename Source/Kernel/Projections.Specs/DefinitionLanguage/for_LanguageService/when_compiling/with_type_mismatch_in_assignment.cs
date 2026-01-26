@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class with_type_mismatch_in_assignment : for_LanguageService.given.a_language_service
 {
-    const string Definition = """
+    const string Declaration = """
         projection TestProjection => TestModel
             from TestEvent
                 key $eventSourceId
@@ -54,7 +54,7 @@ public class with_type_mismatch_in_assignment : for_LanguageService.given.a_lang
     void Because()
     {
         var result = _languageService.Compile(
-            Definition,
+            Declaration,
             Concepts.Projections.ProjectionOwner.Client,
             [_readModelDefinition],
             [_eventTypeSchema]);

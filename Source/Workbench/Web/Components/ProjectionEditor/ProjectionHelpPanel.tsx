@@ -7,7 +7,7 @@ export const ProjectionHelpPanel: React.FC = () => {
     return (
         <div style={{ padding: '20px', height: '100%', overflowY: 'auto', backgroundColor: '#1e1e1e', color: '#d4d4d4' }}>
             <h2 style={{ color: '#ffffff', fontWeight: 600, marginTop: 0, marginBottom: '20px' }}>
-                Projection DSL Quick Reference
+                Projection Declaration Language Quick Reference
             </h2>
 
             <div style={{ borderBottom: '1px solid #3e3e42', marginBottom: '20px' }} />

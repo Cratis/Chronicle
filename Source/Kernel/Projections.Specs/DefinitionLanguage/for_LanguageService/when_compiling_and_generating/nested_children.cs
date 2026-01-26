@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class nested_children : given.a_language_service_with_schemas<given.CompanyReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Company => CompanyReadModel
           children departments identified by departmentId
             from DepartmentCreated
@@ -31,7 +31,7 @@ public class nested_children : given.a_language_service_with_schemas<given.Compa
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition);
+        _result = CompileGenerateAndRecompile(Declaration);
         _departmentsDef = _result.Children[new PropertyPath("departments")];
         _employeesDef = _departmentsDef.Children[new PropertyPath("employees")];
     }

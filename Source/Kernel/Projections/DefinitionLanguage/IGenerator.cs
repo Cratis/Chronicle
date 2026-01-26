@@ -14,8 +14,8 @@ public interface IGenerator
     /// <summary>
     /// Generate language definition string for the supplied projection definition.
     /// </summary>
-    /// <param name="definition">Projection definition to generate DSL for.</param>
+    /// <param name="definition">Projection definition to generate projection declaration language for.</param>
     /// <param name="readModelDefinition">The read model definition the projection targets.</param>
-    /// <returns>Generated DSL string.</returns>
+    /// <returns>Generated projection declaration language string.</returns>
     string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition);
 }

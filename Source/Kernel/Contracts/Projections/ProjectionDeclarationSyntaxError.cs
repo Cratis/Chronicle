@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents a syntax error in the projection definition language.
+/// Represents a syntax error in the projection declaration language.
 /// </summary>
 [ProtoContract]
-public class ProjectionDefinitionSyntaxError
+public class ProjectionDeclarationSyntaxError
 {
     /// <summary>
     /// The error message.

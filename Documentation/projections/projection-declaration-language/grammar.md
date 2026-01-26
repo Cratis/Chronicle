@@ -1,6 +1,6 @@
 # Grammar (EBNF)
 
-This document provides the complete formal grammar for the Projection Definition Language using Extended Backus-Naur Form (EBNF) notation.
+This document provides the complete formal grammar for the Projection Declaration Language using Extended Backus-Naur Form (EBNF) notation.
 
 ## EBNF Notation
 

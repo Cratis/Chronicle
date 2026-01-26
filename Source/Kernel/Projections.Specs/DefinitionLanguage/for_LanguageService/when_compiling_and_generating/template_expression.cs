@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class template_expression : given.a_language_service_with_schemas<given.UserReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection User => UserReadModel
           from UserCreated
             key userId
@@ -20,7 +20,7 @@ public class template_expression : given.a_language_service_with_schemas<given.U
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
     [Fact] void should_have_full_name_property() => _result.From[(EventType)"UserCreated"].Properties.ContainsKey(new PropertyPath("fullName")).ShouldBeTrue();

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_level_remove_via_join : given.a_language_service_with_schemas<given.UserReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection User => UserReadModel
           from UserRegistered automap
 
@@ -25,7 +25,7 @@ public class projection_level_remove_via_join : given.a_language_service_with_sc
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition);
+        _result = CompileGenerateAndRecompile(Declaration);
         _removedWithJoinDef = _result.RemovedWithJoin.Values.FirstOrDefault();
     }
 

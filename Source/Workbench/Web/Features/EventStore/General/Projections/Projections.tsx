@@ -19,7 +19,7 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDsl, PreviewProjection, ProjectionDefinitionSyntaxError, SaveProjection } from 'Api/Projections';
+import { AllProjectionsWithDeclarations, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
 import type { ReadModelSchema } from 'Api/ReadModels';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
@@ -29,7 +29,7 @@ import { Json } from 'Features';
 
 export const Projections = () => {
 
-    const [dslValue, setDslValue] = useState('');
+    const [declarationValue, setDeclarationValue] = useState('');
     const [selectedProjection, setSelectedProjection] = useState<unknown>(null);
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
@@ -44,9 +44,9 @@ export const Projections = () => {
     const readModelSchemas = readModels.data?.map(readModel => JSON.parse(readModel.schema) as JsonSchema);
     const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
     const [readModelInstances, setReadModelInstances] = useState<ReadModelInstance[]>([]);
-    const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDefinitionSyntaxError[]>([]);
+    const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDeclarationSyntaxError[]>([]);
 
-    const [projections, refreshProjections] = AllProjectionsWithDsl.use({ eventStore: params.eventStore! });
+    const [projections, refreshProjections] = AllProjectionsWithDeclarations.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
     const [saveProjection] = SaveProjection.use();
     const [createReadModel] = CreateReadModel.use();
@@ -59,48 +59,48 @@ export const Projections = () => {
         return found;
     }, [selectedProjection, readModels.data]);
 
-    const readModelNameFromDsl = useMemo(() => {
-        const match = dslValue.match(/projection\s*->\s*(\w+)/i);
+    const readModelNameFromDeclaration = useMemo(() => {
+        const match = declarationValue.match(/projection\s+\w+\s*=>\s*(\w+)/i);
         return match ? match[1] : null;
-    }, [dslValue]);
+    }, [declarationValue]);
 
-    const readModelFromDsl = useMemo(() => {
-        if (!readModelNameFromDsl || !readModels.data) return null;
-        return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDsl}`) || rm.identifier === readModelNameFromDsl || rm.name === readModelNameFromDsl) || null;
-    }, [readModelNameFromDsl, readModels.data]);
+    const readModelFromDeclaration = useMemo(() => {
+        if (!readModelNameFromDeclaration || !readModels.data) return null;
+        return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDeclaration}`) || rm.identifier === readModelNameFromDeclaration || rm.name === readModelNameFromDeclaration) || null;
+    }, [readModelNameFromDeclaration, readModels.data]);
 
     const saveDisabledReason = useMemo(() => {
-        if (!dslValue.trim()) {
+        if (!declarationValue.trim()) {
             return strings.eventStore.general.projections.saveDisabledReasons.emptyContent;
         }
         if (hasValidationErrors) {
             return strings.eventStore.general.projections.saveDisabledReasons.validationErrors;
         }
-        if (readModelFromDsl && readModelFromDsl.source === ReadModelSource.code) {
+        if (readModelFromDeclaration && readModelFromDeclaration.source === ReadModelSource.code) {
             return strings.eventStore.general.projections.saveDisabledReasons.readModelOwnedByCode;
         }
-        if (readModelFromDsl && !selectedProjection) {
+        if (readModelFromDeclaration && !selectedProjection) {
             const existingProjection = projections.data?.find(p =>
-                p.readModel === readModelFromDsl.name ||
-                p.readModel === readModelNameFromDsl ||
-                readModelFromDsl.identifier.endsWith(`.${p.readModel}`)
+                p.readModel === readModelFromDeclaration.name ||
+                p.readModel === readModelNameFromDeclaration ||
+                readModelFromDeclaration.identifier.endsWith(`.${p.readModel}`)
             );
             if (existingProjection) {
                 return strings.eventStore.general.projections.saveDisabledReasons.projectionAlreadyExists;
             }
         }
         return null;
-    }, [dslValue, hasValidationErrors, readModelFromDsl, selectedProjection, projections.data, readModelNameFromDsl]);
+    }, [declarationValue, hasValidationErrors, readModelFromDeclaration, selectedProjection, projections.data, readModelNameFromDeclaration]);
 
     const previewDisabledReason = useMemo(() => {
-        if (!dslValue.trim()) {
+        if (!declarationValue.trim()) {
             return strings.eventStore.general.projections.previewDisabledReasons.emptyContent;
         }
         if (hasValidationErrors) {
             return strings.eventStore.general.projections.previewDisabledReasons.validationErrors;
         }
         return null;
-    }, [dslValue, hasValidationErrors]);
+    }, [declarationValue, hasValidationErrors]);
 
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
@@ -139,7 +139,7 @@ export const Projections = () => {
                             selection={selectedProjection as never}
                             onSelectionChange={(e) => {
                                 setSelectedProjection(e.value);
-                                setDslValue(e.value?.dsl ?? '');
+                                setDeclarationValue(e.value?.declaration ?? '');
                                 setReadModelInstances([]);
                                 setSelectedInstance(null);
                                 setPage(0);
@@ -162,7 +162,7 @@ export const Projections = () => {
                                     icon: <faIcons.FaPlus className='mr-2' />,
                                     command: () => {
                                         setSelectedProjection(null);
-                                        setDslValue('');
+                                        setDeclarationValue('');
                                         setReadModelInstances([]);
                                         setSyntaxErrors([]);
                                         setSelectedInstance(null);
@@ -176,7 +176,7 @@ export const Projections = () => {
                                     command: saveDisabledReason ? undefined : async () => {
                                         saveProjection.eventStore = params.eventStore!;
                                         saveProjection.namespace = params.namespace!;
-                                        saveProjection.dsl = dslValue;
+                                        saveProjection.declaration = declarationValue;
                                         const result = await saveProjection.execute();
                                         if (result.isSuccess) {
                                             refreshProjections();
@@ -201,7 +201,7 @@ export const Projections = () => {
                                     command: previewDisabledReason ? undefined : async () => {
                                         previewProjection.eventStore = params.eventStore!;
                                         previewProjection.namespace = params.namespace!;
-                                        previewProjection.dsl = dslValue;
+                                        previewProjection.declaration = declarationValue;
                                         const result = await previewProjection.execute();
 
                                         const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
@@ -239,8 +239,8 @@ export const Projections = () => {
 
                         <div className="pt-4" style={{ height: '500px', flexShrink: 0 }}>
                             <ProjectionEditor
-                                value={dslValue}
-                                onChange={setDslValue}
+                                value={declarationValue}
+                                onChange={setDeclarationValue}
                                 onValidationChange={setHasValidationErrors}
                                 readModelSchemas={readModelSchemas}
                                 eventSchemas={eventSchemas}

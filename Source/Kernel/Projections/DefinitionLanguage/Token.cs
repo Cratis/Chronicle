@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Represents a token in the projection DSL.
+/// Represents a token in the projection declaration language.
 /// </summary>
 /// <param name="Type">The type of the token.</param>
 /// <param name="Value">The value of the token.</param>

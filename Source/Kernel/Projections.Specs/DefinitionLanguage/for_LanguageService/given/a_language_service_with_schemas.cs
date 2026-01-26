@@ -48,7 +48,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             _eventTypeSchemas);
         var recompiledDefinition = recompileResult.Match(
             projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Re-compilation of generated DSL failed: {string.Join(", ", errors.Errors)}\n\nGenerated DSL was:\n{generated}"));
+            errors => throw new InvalidOperationException($"Re-compilation of generated projection declaration language failed: {string.Join(", ", errors.Errors)}\n\nGenerated projection declaration language was:\n{generated}"));
 
         return new CompilerResult(recompiledDefinition, generated);
     }

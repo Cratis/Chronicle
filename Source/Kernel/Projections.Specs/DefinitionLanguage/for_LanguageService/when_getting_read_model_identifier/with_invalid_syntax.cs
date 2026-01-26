@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class with_invalid_syntax : a_language_service
 {
-    const string Definition = """
+    const string Declaration = """
         projection MyProjection
           automap
           from MyEvent key id
@@ -17,7 +17,7 @@ public class with_invalid_syntax : a_language_service
 
     void Because()
     {
-        var result = _languageService.GetReadModelIdentifier(Definition);
+        var result = _languageService.GetReadModelIdentifier(Declaration);
         _errors = result.Match(
             identifier => throw new InvalidOperationException("Should have failed"),
             errors => errors);

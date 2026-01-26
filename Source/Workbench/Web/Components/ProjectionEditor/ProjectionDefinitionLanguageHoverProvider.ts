@@ -5,7 +5,7 @@ import type { editor, languages, Position } from 'monaco-editor';
 import type { JsonSchema, JsonSchemaProperty } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
-export class ProjectionDslHoverProvider implements languages.HoverProvider {
+export class ProjectionDefinitionLanguageHoverProvider implements languages.HoverProvider {
     private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
 

@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class complex_projection_with_shared_properties_and_add_operations : given.a_language_service_with_schemas<given.SimulatedOrderReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection SimulatedOrderProjection => SimulatedOrderReadModel
             from OrderPlaced key orderId
             from ItemLoadedOnTransport
@@ -31,7 +31,7 @@ public class complex_projection_with_shared_properties_and_add_operations : give
 
     given.CompilerResult _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_three_from_definitions() => _result.Definition.From.Count.ShouldEqual(3);
     [Fact] void should_have_from_order_placed() => _result.Definition.From.ContainsKey((EventType)"OrderPlaced").ShouldBeTrue();
@@ -48,25 +48,25 @@ public class complex_projection_with_shared_properties_and_add_operations : give
 
     [Fact] void should_have_four_add_operations_in_item_delivered() => _result.Definition.From[(EventType)"ItemDeliveredToDestination"].Properties.Count.ShouldEqual(4);
 
-    [Fact] void should_not_generate_order_id_mapping_in_order_placed() => _result.GeneratedDsl.ShouldNotContain("orderId = orderId");
-    [Fact] void should_not_generate_destination_postal_code_mapping_in_order_placed() => _result.GeneratedDsl.ShouldNotContain("destinationPostalCode = destinationPostalCode");
-    [Fact] void should_not_generate_order_date_mapping_in_order_placed() => _result.GeneratedDsl.ShouldNotContain("orderDate = orderDate");
-    [Fact] void should_not_generate_optimal_route_mapping_in_order_placed() => _result.GeneratedDsl.ShouldNotContain("optimalRoute = optimalRoute");
+    [Fact] void should_not_generate_order_id_mapping_in_order_placed() => _result.GeneratedDefinition.ShouldNotContain("orderId = orderId");
+    [Fact] void should_not_generate_destination_postal_code_mapping_in_order_placed() => _result.GeneratedDefinition.ShouldNotContain("destinationPostalCode = destinationPostalCode");
+    [Fact] void should_not_generate_order_date_mapping_in_order_placed() => _result.GeneratedDefinition.ShouldNotContain("orderDate = orderDate");
+    [Fact] void should_not_generate_optimal_route_mapping_in_order_placed() => _result.GeneratedDefinition.ShouldNotContain("optimalRoute = optimalRoute");
 
-    [Fact] void should_not_generate_order_id_mapping_in_item_loaded() => _result.GeneratedDsl.ShouldNotContain("orderId = orderId");
-    [Fact] void should_not_generate_simulation_id_mapping_in_item_loaded() => _result.GeneratedDsl.ShouldNotContain("simulationId = simulationId");
-    [Fact] void should_not_generate_simulation_configuration_id_mapping_in_item_loaded() => _result.GeneratedDsl.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
-    [Fact] void should_not_generate_simulation_run_id_mapping_in_item_loaded() => _result.GeneratedDsl.ShouldNotContain("simulationRunId = simulationRunId");
-    [Fact] void should_not_generate_timestamp_mapping_in_item_loaded() => _result.GeneratedDsl.ShouldNotContain("timestamp = timestamp");
+    [Fact] void should_not_generate_order_id_mapping_in_item_loaded() => _result.GeneratedDefinition.ShouldNotContain("orderId = orderId");
+    [Fact] void should_not_generate_simulation_id_mapping_in_item_loaded() => _result.GeneratedDefinition.ShouldNotContain("simulationId = simulationId");
+    [Fact] void should_not_generate_simulation_configuration_id_mapping_in_item_loaded() => _result.GeneratedDefinition.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
+    [Fact] void should_not_generate_simulation_run_id_mapping_in_item_loaded() => _result.GeneratedDefinition.ShouldNotContain("simulationRunId = simulationRunId");
+    [Fact] void should_not_generate_timestamp_mapping_in_item_loaded() => _result.GeneratedDefinition.ShouldNotContain("timestamp = timestamp");
 
-    [Fact] void should_not_generate_simulation_id_mapping_in_item_delivered() => _result.GeneratedDsl.ShouldNotContain("simulationId = simulationId");
-    [Fact] void should_not_generate_simulation_configuration_id_mapping_in_item_delivered() => _result.GeneratedDsl.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
-    [Fact] void should_not_generate_simulation_run_id_mapping_in_item_delivered() => _result.GeneratedDsl.ShouldNotContain("simulationRunId = simulationRunId");
-    [Fact] void should_not_generate_destination_postal_code_mapping_in_item_delivered() => _result.GeneratedDsl.ShouldNotContain("destinationPostalCode = destinationPostalCode");
-    [Fact] void should_not_generate_timestamp_mapping_in_item_delivered() => _result.GeneratedDsl.ShouldNotContain("timestamp = timestamp");
+    [Fact] void should_not_generate_simulation_id_mapping_in_item_delivered() => _result.GeneratedDefinition.ShouldNotContain("simulationId = simulationId");
+    [Fact] void should_not_generate_simulation_configuration_id_mapping_in_item_delivered() => _result.GeneratedDefinition.ShouldNotContain("simulationConfigurationId = simulationConfigurationId");
+    [Fact] void should_not_generate_simulation_run_id_mapping_in_item_delivered() => _result.GeneratedDefinition.ShouldNotContain("simulationRunId = simulationRunId");
+    [Fact] void should_not_generate_destination_postal_code_mapping_in_item_delivered() => _result.GeneratedDefinition.ShouldNotContain("destinationPostalCode = destinationPostalCode");
+    [Fact] void should_not_generate_timestamp_mapping_in_item_delivered() => _result.GeneratedDefinition.ShouldNotContain("timestamp = timestamp");
 
-    [Fact] void should_generate_add_total_distance() => _result.GeneratedDsl.ShouldContain("add totalDistance by distance");
-    [Fact] void should_generate_add_total_elapsed_time() => _result.GeneratedDsl.ShouldContain("add totalElapsedTime by elapsedTime");
-    [Fact] void should_generate_add_total_co2_foot_print() => _result.GeneratedDsl.ShouldContain("add totalCo2FootPrint by co2FootPrint");
-    [Fact] void should_generate_add_total_cost() => _result.GeneratedDsl.ShouldContain("add totalCost by cost");
+    [Fact] void should_generate_add_total_distance() => _result.GeneratedDefinition.ShouldContain("add totalDistance by distance");
+    [Fact] void should_generate_add_total_elapsed_time() => _result.GeneratedDefinition.ShouldContain("add totalElapsedTime by elapsedTime");
+    [Fact] void should_generate_add_total_co2_foot_print() => _result.GeneratedDefinition.ShouldContain("add totalCo2FootPrint by co2FootPrint");
+    [Fact] void should_generate_add_total_cost() => _result.GeneratedDefinition.ShouldContain("add totalCost by cost");
 }

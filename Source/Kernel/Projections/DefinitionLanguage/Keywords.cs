@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Defines the reserved keywords for the Projection Definition Language.
+/// Defines the reserved keywords for the Projection Declaration Language.
 /// </summary>
 public static class Keywords
 {

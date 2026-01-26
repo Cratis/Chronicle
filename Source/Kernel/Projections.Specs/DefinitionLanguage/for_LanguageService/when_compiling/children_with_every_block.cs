@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class children_with_every_block : for_LanguageService.given.a_language_service_with_schemas<for_LanguageService.given.GroupReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Group => GroupReadModel
           from GroupCreated
             name = name
@@ -26,7 +26,7 @@ public class children_with_every_block : for_LanguageService.given.a_language_se
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_children() => _result.Children.ShouldNotBeEmpty();
     [Fact] void should_have_members_children() => _result.Children.ContainsKey((PropertyPath)"members").ShouldBeTrue();
