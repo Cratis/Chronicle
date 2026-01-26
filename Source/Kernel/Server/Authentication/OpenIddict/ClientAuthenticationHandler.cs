@@ -70,7 +70,7 @@ public class ClientAuthenticationHandler(
 
         logger.ApplicationFound(clientId);
 
-        if (application.ClientSecret is null || !HashHelper.Verify(clientSecret, application.ClientSecret.Value))
+        if (application.ClientSecret is null || !SecretHasher.Verify(clientSecret, application.ClientSecret.Value))
         {
             logger.SecretVerificationFailed(clientId);
             context.Reject(

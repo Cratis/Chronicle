@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Security;
-using Cratis.Infrastructure.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server.Authentication;
@@ -28,6 +28,7 @@ public class AuthenticationService(
     IOptions<Configuration.ChronicleOptions> options,
     ILogger<AuthenticationService> logger) : IAuthenticationService
 {
+    static readonly PasswordHasher<object> _passwordHasher = new();
     readonly Configuration.ChronicleOptions _options = options.Value;
 
     /// <inheritdoc/>
@@ -39,8 +40,8 @@ public class AuthenticationService(
             return null;
         }
 
-        var isValid = HashHelper.Verify(password, user.PasswordHash);
-        return isValid ? user : null;
+        var result = _passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, password);
+        return result == PasswordVerificationResult.Success ? user : null;
     }
 
     /// <inheritdoc/>

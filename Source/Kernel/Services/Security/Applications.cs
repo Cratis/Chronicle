@@ -6,8 +6,8 @@ using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage;
-using Cratis.Infrastructure.Security;
 using Cratis.Reactive;
+using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -23,9 +23,12 @@ namespace Cratis.Chronicle.Services.Security;
 internal sealed class Applications(IGrainFactory grainFactory, IStorage storage) : IApplications
 {
     /// <inheritdoc/>
+    static readonly PasswordHasher<object> _passwordHasher = new();
+
+    /// <inheritdoc/>
     public async Task Add(AddApplication command)
     {
-        var clientSecret = HashHelper.Hash(command.ClientSecret);
+        var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
 
         var @event = new ApplicationAdded(
             command.ClientId,
@@ -52,7 +55,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     /// <inheritdoc/>
     public async Task ChangeSecret(ChangeApplicationSecret command)
     {
-        var clientSecret = HashHelper.Hash(command.ClientSecret);
+        var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
 
         var @event = new ApplicationSecretChanged(clientSecret);
 

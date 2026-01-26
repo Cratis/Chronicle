@@ -4,16 +4,16 @@
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Identity;
 
-namespace Cratis.Chronicle.Server.Authentication;
+namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
 /// <summary>
 /// Represents a user store for Chronicle users that implements ASP.NET Identity interfaces.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ChronicleUserStore"/> class.
+/// Initializes a new instance of the <see cref="UserStore"/> class.
 /// </remarks>
 /// <param name="userStorage">The user storage.</param>
-public class ChronicleUserStore(IUserStorage userStorage) :
+public class UserStore(IUserStorage userStorage) :
     IUserPasswordStore<ChronicleUser>,
     IUserEmailStore<ChronicleUser>,
     IUserSecurityStampStore<ChronicleUser>

@@ -27,8 +27,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
-        services.AddSingleton<IUserStore<ChronicleUser>, ChronicleUserStore>();
-        services.AddSingleton<IPasswordHasher<ChronicleUser>, ChroniclePasswordHasher>();
+        services.AddSingleton<IUserStore<ChronicleUser>, UserStore>();
+        services.AddSingleton<IPasswordHasher<ChronicleUser>, PasswordHasher<ChronicleUser>>();
 
         // Add ASP.NET Identity
         services.AddIdentityCore<ChronicleUser>(options =>
@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
                 options.Password.RequiredLength = 4;
                 options.User.RequireUniqueEmail = false;
             })
-            .AddUserStore<ChronicleUserStore>()
+            .AddUserStore<UserStore>()
             .AddSignInManager()
             .AddDefaultTokenProviders()
             .AddApiEndpoints();

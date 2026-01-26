@@ -7,8 +7,8 @@ using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
-using Cratis.Infrastructure.Security;
 using Cratis.Reactive;
+using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -22,10 +22,12 @@ internal sealed class Users(
     IGrainFactory grainFactory,
     IStorage storage) : IUsers
 {
+    static readonly PasswordHasher<object> _passwordHasher = new();
+
     /// <inheritdoc/>
     public async Task Add(AddUser command)
     {
-        var passwordHash = HashHelper.Hash(command.Password);
+        var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
 
         var @event = new UserAdded(
             command.Username,
@@ -57,17 +59,17 @@ internal sealed class Users(
 
         var user = await storage.System.Users.GetById(command.UserId) ?? throw new UserNotFound(command.UserId);
 
-        if (user.PasswordHash is null || !HashHelper.Verify(command.OldPassword, user.PasswordHash))
+        if (user.PasswordHash is null || _passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, command.OldPassword) != PasswordVerificationResult.Success)
         {
             throw new InvalidOldPassword();
         }
 
-        if (HashHelper.Verify(command.Password, user.PasswordHash))
+        if (_passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, command.Password) == PasswordVerificationResult.Success)
         {
             throw new NewPasswordMustBeDifferent();
         }
 
-        var passwordHash = HashHelper.Hash(command.Password);
+        var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
 
         var @event = new UserPasswordChanged(passwordHash);
 
@@ -105,7 +107,7 @@ internal sealed class Users(
             throw new InvalidOperationException("Setting initial admin password is only allowed for users who haven't set their initial password.");
         }
 
-        var passwordHash = HashHelper.Hash(command.Password);
+        var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
 
         var @event = new UserPasswordChanged(passwordHash);
 
