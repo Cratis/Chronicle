@@ -83,6 +83,35 @@ public static class OpenIddictServiceCollectionExtensions
                     .DisableAccessTokenEncryption()
                     .UseDataProtection();
 
+                // Configure encryption and signing keys
+                // If a certificate is configured, use it for encryption and signing
+                // In development without a certificate, use ephemeral keys for convenience
+                // In production, a certificate is required
+                var encryptionCertificate = chronicleOptions.Authentication.EncryptionCertificate;
+                if (encryptionCertificate.IsConfigured && File.Exists(encryptionCertificate.CertificatePath))
+                {
+                    var cert = X509CertificateLoader.LoadPkcs12FromFile(
+                        encryptionCertificate.CertificatePath!,
+                        encryptionCertificate.CertificatePassword);
+                    options.AddEncryptionCertificate(cert)
+                           .AddSigningCertificate(cert);
+                }
+#if DEVELOPMENT
+                else
+                {
+                    options.AddEphemeralEncryptionKey()
+                           .AddEphemeralSigningKey();
+                }
+#else
+                else
+                {
+                    throw new InvalidOperationException(
+                        "An encryption certificate is required in production for OpenIddict key security. " +
+                        "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
+                        "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
+                }
+#endif
+
                 // Determine if we have a secure certificate configured
                 var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
 
