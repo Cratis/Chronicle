@@ -148,6 +148,10 @@
                     "save": "Save",
                     "preview": "Preview",
                     "timeMachine": "Time Machine"
+                },
+                "saveDisabledReasons": {
+                    "readModelOwnedByCode": "Read model is defined by code",
+                    "projectionAlreadyExists": "A projection already exists for this read model"
                 }
             }
         },

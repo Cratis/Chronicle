@@ -3,13 +3,16 @@
 
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { AllReadModelDefinitions, CreateReadModel } from 'Api/ReadModelTypes';
+import { ReadModelOwner } from 'Api/ReadModels/ReadModelOwner';
 import { Page } from 'Components/Common/Page';
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionEditor, setCreateReadModelCallback } from 'Components/ProjectionEditor';
 import { ReadModelCreation } from 'Components/ReadModelCreation';
 import { Menubar } from 'primereact/menubar';
+import { Tooltip } from 'primereact/tooltip';
 import { Dialog } from 'primereact/dialog';
 import { useState, useEffect, useMemo } from 'react';
+import type { MenuItem } from 'primereact/menuitem';
 import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
@@ -55,6 +58,33 @@ export const Projections = () => {
         const found = readModels.data.find(rm => rm.identifier.endsWith(`.${projection.readModel}`) || rm.identifier === projection.readModel) || null;
         return found;
     }, [selectedProjection, readModels.data]);
+
+    const readModelNameFromDsl = useMemo(() => {
+        const match = dslValue.match(/projection\s*->\s*(\w+)/i);
+        return match ? match[1] : null;
+    }, [dslValue]);
+
+    const readModelFromDsl = useMemo(() => {
+        if (!readModelNameFromDsl || !readModels.data) return null;
+        return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDsl}`) || rm.identifier === readModelNameFromDsl || rm.name === readModelNameFromDsl) || null;
+    }, [readModelNameFromDsl, readModels.data]);
+
+    const saveDisabledReason = useMemo(() => {
+        if (readModelFromDsl && readModelFromDsl.owner === ReadModelOwner.client) {
+            return strings.eventStore.general.projections.saveDisabledReasons.readModelOwnedByCode;
+        }
+        if (readModelFromDsl && !selectedProjection) {
+            const existingProjection = projections.data?.find(p =>
+                p.readModel === readModelFromDsl.name ||
+                p.readModel === readModelNameFromDsl ||
+                readModelFromDsl.identifier.endsWith(`.${p.readModel}`)
+            );
+            if (existingProjection) {
+                return strings.eventStore.general.projections.saveDisabledReasons.projectionAlreadyExists;
+            }
+        }
+        return null;
+    }, [readModelFromDsl, selectedProjection, projections.data, readModelNameFromDsl]);
 
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
@@ -108,6 +138,7 @@ export const Projections = () => {
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
                     <div className="px-4 py-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Tooltip target="[data-pr-tooltip]" />
                         <Menubar
                             model={[
                                 {
@@ -125,7 +156,8 @@ export const Projections = () => {
                                 {
                                     label: strings.eventStore.general.projections.actions.save,
                                     icon: <faIcons.FaFloppyDisk className='mr-2' />,
-                                    command: async () => {
+                                    disabled: !!saveDisabledReason,
+                                    command: saveDisabledReason ? undefined : async () => {
                                         saveProjection.eventStore = params.eventStore!;
                                         saveProjection.namespace = params.namespace!;
                                         saveProjection.dsl = dslValue;
@@ -133,7 +165,18 @@ export const Projections = () => {
                                         if (result.isSuccess) {
                                             refreshProjections();
                                         }
-                                    }
+                                    },
+                                    template: saveDisabledReason ? (item: MenuItem) => (
+                                        <div
+                                            className="p-menuitem-link p-disabled"
+                                            data-pr-tooltip={saveDisabledReason}
+                                            data-pr-position="bottom"
+                                            style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                                        >
+                                            {item.icon}
+                                            <span className="p-menuitem-text">{item.label}</span>
+                                        </div>
+                                    ) : undefined
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.preview,
