@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.Security;
-using Cratis.Infrastructure.Security;
+using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Server.OpenIddictServerEvents;
@@ -13,13 +13,15 @@ namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
 /// <summary>
 /// Handles client authentication for OpenIddict during ProcessAuthentication phase.
-/// This handler validates client secrets using Chronicle's HashHelper and clears the
+/// This handler validates client secrets using ASP.NET Core PasswordHasher and clears the
 /// secret from the request to prevent OpenIddict's built-in PBKDF2 validation from running.
 /// </summary>
 /// <param name="applicationStorage">The application storage.</param>
+/// <param name="passwordHasher">The password hasher for verifying client secrets.</param>
 /// <param name="logger">The logger.</param>
 public class ClientAuthenticationHandler(
     IApplicationStorage applicationStorage,
+    IPasswordHasher<object> passwordHasher,
     ILogger<ClientAuthenticationHandler> logger) : IOpenIddictServerHandler<ProcessAuthenticationContext>
 {
     /// <summary>
@@ -70,7 +72,12 @@ public class ClientAuthenticationHandler(
 
         logger.ApplicationFound(clientId);
 
-        if (application.ClientSecret is null || !SecretHasher.Verify(clientSecret, application.ClientSecret.Value))
+        var verificationResult = passwordHasher.VerifyHashedPassword(
+            new object(),
+            application.ClientSecret?.Value ?? string.Empty,
+            clientSecret);
+
+        if (application.ClientSecret is null || verificationResult == PasswordVerificationResult.Failed)
         {
             logger.SecretVerificationFailed(clientId);
             context.Reject(
