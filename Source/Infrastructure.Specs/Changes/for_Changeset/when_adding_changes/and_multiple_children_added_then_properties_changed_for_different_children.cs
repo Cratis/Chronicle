@@ -93,12 +93,14 @@ public class and_multiple_children_added_then_properties_changed_for_different_c
     [Fact] void should_remove_all_properties_changed() => _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().ShouldBeEmpty();
     [Fact] void should_keep_both_child_added() => _changeset.Changes.OfType<ChildAdded>().Count().ShouldEqual(2);
     [Fact] void should_have_two_changes() => _changeset.Changes.Count().ShouldEqual(2);
-    [Fact] void should_apply_property_change_to_first_child()
+    [Fact]
+    void should_apply_property_change_to_first_child()
     {
         var child1Dict = (IDictionary<string, object?>)_child1;
         child1Dict["name"].ShouldEqual("Updated Name 1");
     }
-    [Fact] void should_apply_property_change_to_second_child()
+    [Fact]
+    void should_apply_property_change_to_second_child()
     {
         var child2Dict = (IDictionary<string, object?>)_child2;
         child2Dict["name"].ShouldEqual("Updated Name 2");

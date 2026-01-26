@@ -27,9 +27,9 @@ public class ChronicleOptions
     public int Port { get; init; } = 35000;
 
     /// <summary>
-    /// Gets the port for the REST API.
+    /// Gets the port for the Management API and well-known certificate endpoint.
     /// </summary>
-    public int ApiPort { get; init; } = 8080;
+    public int ManagementPort { get; init; } = 8080;
 
     /// <summary>
     /// Gets the health check endpoint.
@@ -55,6 +55,21 @@ public class ChronicleOptions
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
+
+    /// <summary>
+    /// Gets the jobs configuration.
+    /// </summary>
+    public Jobs Jobs { get; init; } = new Jobs();
+
+    /// <summary>
+    /// Gets the authentication configuration.
+    /// </summary>
+    public Authentication Authentication { get; init; } = new Authentication();
+
+    /// <summary>
+    /// Gets or inits the TLS configuration.
+    /// </summary>
+    public Tls Tls { get; init; } = new Tls();
 
     /// <summary>
     /// Adds the Chronicle configuration.

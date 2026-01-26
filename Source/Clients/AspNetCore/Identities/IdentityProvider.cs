@@ -10,9 +10,6 @@ namespace Cratis.Chronicle.AspNetCore.Identities;
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityProvider"/> for ASP.NET.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="IdentityProvider"/> class.
-/// </remarks>
 /// <param name="httpContextAccessor"><see cref="IHttpContextAccessor"/> for accessing the current <see cref="HttpContext"/>.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class IdentityProvider(IHttpContextAccessor httpContextAccessor, ILogger<IdentityProvider> logger) : BaseIdentityProvider

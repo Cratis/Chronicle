@@ -31,7 +31,8 @@ public class when_getting_event_source_id : Specification
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                []),
             new ExpandoObject());
         _valueProvider = EventValueProviders.EventSourceId;
     }

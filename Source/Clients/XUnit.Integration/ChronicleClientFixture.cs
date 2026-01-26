@@ -121,16 +121,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> ComplianceForPropertiesProviders => GetArtifactTypes(provider => provider.ComplianceForPropertiesProviders);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Rules => GetArtifactTypes(provider => provider.Rules);
-
-    /// <inheritdoc/>
     public virtual IEnumerable<Type> AdditionalEventInformationProviders => GetArtifactTypes(provider => provider.AdditionalEventInformationProviders);
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRoots => GetArtifactTypes(provider => provider.AggregateRoots);
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRootStateTypes => GetArtifactTypes(provider => provider.AggregateRootStateTypes);
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> ConstraintTypes => GetArtifactTypes(provider => provider.ConstraintTypes);
@@ -199,6 +190,23 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
     public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => _createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
+
+    /// <summary>
+    /// Create a new <see cref="HttpClient"/> instance.
+    /// </summary>
+    /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
+    /// <param name="handler">The <see cref="HttpMessageHandler"/> to use.</param>
+    /// <returns>A new <see cref="HttpClient"/> instance.</returns>
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options, HttpMessageHandler handler)
+    {
+        var client = CreateClient(options);
+        var newClient = new HttpClient(handler)
+        {
+            BaseAddress = client.BaseAddress
+        };
+        client.Dispose();
+        return newClient;
+    }
 
     /// <inheritdoc/>
     public virtual void Dispose()

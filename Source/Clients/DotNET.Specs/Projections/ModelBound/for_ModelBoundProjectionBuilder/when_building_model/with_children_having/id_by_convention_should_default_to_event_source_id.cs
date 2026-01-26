@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model.with_children_having;
 
@@ -23,19 +24,22 @@ public class id_by_convention_should_default_to_event_source_id : given.a_model_
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
 
-    [Fact] void should_have_children_for_vehicles()
+    [Fact]
+    void should_have_children_for_vehicles()
     {
         _result.Children.Keys.ShouldContain(nameof(VehicleFleet.Vehicles));
     }
 
-    [Fact] void should_have_from_definition_for_vehicle_registered()
+    [Fact]
+    void should_have_from_definition_for_vehicle_registered()
     {
         var eventType = event_types.GetEventTypeFor(typeof(VehicleRegistered)).ToContract();
         var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_map_id_property_to_event_source_id_by_default()
+    [Fact]
+    void should_map_id_property_to_event_source_id_by_default()
     {
         var eventType = event_types.GetEventTypeFor(typeof(VehicleRegistered)).ToContract();
         var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
@@ -44,15 +48,24 @@ public class id_by_convention_should_default_to_event_source_id : given.a_model_
         fromDef.Properties[nameof(Vehicle.Id)].ShouldEqual("$eventContext(EventSourceId)");
     }
 
-    [Fact] void should_auto_map_license_plate_property()
+    [Fact]
+    void should_not_auto_map_license_plate_property()
     {
         var eventType = event_types.GetEventTypeFor(typeof(VehicleRegistered)).ToContract();
         var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Vehicle.LicensePlate));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Vehicle.LicensePlate));
     }
 
-    [Fact] void should_apply_naming_policy_to_identified_by()
+    [Fact]
+    void should_have_auto_map_enabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
+    }
+
+    [Fact]
+    void should_apply_naming_policy_to_identified_by()
     {
         var childrenDef = _result.Children[nameof(VehicleFleet.Vehicles)];
         childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(Vehicle.Id))));

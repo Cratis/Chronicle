@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
-
 namespace Cratis.Chronicle.Api;
 
 /// <summary>
@@ -11,7 +9,7 @@ namespace Cratis.Chronicle.Api;
 public class ChronicleApiOptions
 {
     /// <summary>
-    /// Gets the port for the REST API.
+    /// Gets the port for the Management API.
     /// </summary>
-    public int ApiPort { get; init; } = 8080;
+    public int ManagementPort { get; init; } = 8080;
 }

@@ -3,7 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -11,13 +10,12 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// Represents the result of an <see cref="IImmediateProjection"/>.
 /// </summary>
 /// <param name="ReadModel">The Json representation of the read model.</param>
-/// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-public record ProjectionResult(JsonObject ReadModel, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber)
+public record ProjectionResult(JsonObject ReadModel, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber)
 {
     /// <summary>
     /// Represents an empty <see cref="ProjectionResult"/>.
     /// </summary>
-    public static readonly ProjectionResult Empty = new([], [], 0, EventSequenceNumber.Unavailable);
+    public static readonly ProjectionResult Empty = new([], 0, EventSequenceNumber.Unavailable);
 }

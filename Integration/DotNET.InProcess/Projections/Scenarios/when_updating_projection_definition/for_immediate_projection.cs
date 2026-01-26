@@ -28,7 +28,7 @@ public class for_immediate_projection(context context) : Given<context>(context)
 
         async Task Because()
         {
-            Result = (await EventStore.Projections.GetInstanceById<TestReadModel>(EventSourceId)).ReadModel;
+            Result = await EventStore.ReadModels.GetInstanceById<TestReadModel>(EventSourceId);
             ImmediateProjection.MapBothProperties = true;
 
             await EventStore.Projections.Discover();
@@ -40,7 +40,7 @@ public class for_immediate_projection(context context) : Given<context>(context)
 
             await Projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            ResultAfterUpdate = (await EventStore.Projections.GetInstanceById<TestReadModel>(EventSourceId)).ReadModel;
+            ResultAfterUpdate = await EventStore.ReadModels.GetInstanceById<TestReadModel>(EventSourceId);
         }
     }
 

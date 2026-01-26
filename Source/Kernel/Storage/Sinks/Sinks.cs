@@ -27,15 +27,12 @@ public class Sinks(
     readonly ConcurrentDictionary<SinkKey, ISink> _sinks = new();
 
     /// <inheritdoc/>
-    public ISink GetFor(
-        SinkTypeId typeId,
-        SinkConfigurationId configurationId,
-        ReadModelDefinition readModel)
+    public ISink GetFor(ReadModelDefinition readModel)
     {
-        ThrowIfUnknownSink(typeId);
-        var key = new SinkKey(typeId, configurationId, readModel.Name);
+        ThrowIfUnknownSink(readModel.Sink.Type);
+        var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.Name);
         if (_sinks.TryGetValue(key, out var store)) return store;
-        return _sinks[key] = _factories[typeId].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
+        return _sinks[key] = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
     }
 
     /// <inheritdoc/>

@@ -18,5 +18,5 @@ public class DecrementBuilder<TReadModel, TEvent, TProperty>(PropertyPath target
     public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
-    public string Build() => $"{WellKnownExpressions.Decrement}()";
+    public string Build() => WellKnownExpressions.Decrement;
 }

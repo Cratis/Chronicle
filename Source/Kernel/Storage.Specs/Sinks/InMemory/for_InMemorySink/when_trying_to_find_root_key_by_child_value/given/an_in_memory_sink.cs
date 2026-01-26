@@ -66,7 +66,12 @@ public class an_in_memory_sink : Specification
         var readModelDefinition = new ReadModelDefinition(
             "test-read-model",
             "TestReadModel",
+            "TestReadModel",
             ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, schema }

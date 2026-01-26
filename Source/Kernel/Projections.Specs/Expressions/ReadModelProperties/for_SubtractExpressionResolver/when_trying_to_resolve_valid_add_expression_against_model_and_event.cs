@@ -40,7 +40,8 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                []),
             content);
 
         _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();

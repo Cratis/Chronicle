@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Storage;
 public interface IStorage
 {
     /// <summary>
+    /// Gets the system storage.
+    /// </summary>
+    ISystemStorage System { get; }
+
+    /// <summary>
     /// Get all the <see cref="EventStoreName">event stores</see> available.
     /// </summary>
     /// <returns>Collection of <see cref="EventStoreName"/>.</returns>

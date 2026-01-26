@@ -57,6 +57,11 @@ public class Routing(
 
         logger.Entering();
 
+        if (observerKey.ObserverId == "Core.Simulations.Dashboard.SimulationDashboard")
+        {
+            Console.WriteLine("Hello");
+        }
+
         _tailEventSequenceNumber = await eventSequence.GetTailSequenceNumber();
         var getNextToHandleResult = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, _subscription.EventTypes.ToList());
         _nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);

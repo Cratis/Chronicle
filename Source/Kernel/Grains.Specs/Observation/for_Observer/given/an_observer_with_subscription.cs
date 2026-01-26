@@ -14,7 +14,7 @@ public class an_observer_with_subscription : an_observer
 
     void Establish()
     {
-        subscription = new (_observerId, _observerKey, [EventType.Unknown], typeof(ObserverSubscriber), SiloAddress.Zero, null);
+        subscription = new(_observerId, _observerKey, [EventType.Unknown], typeof(ObserverSubscriber), SiloAddress.Zero, null);
         _observer.SetSubscription(subscription);
         _observer.TransitionTo<Routing>();
 

@@ -47,4 +47,9 @@ public class ChildrenDefinition
     /// Gets or sets the property on model that identifies the unique object, typically the key - or id (event source id).
     /// </summary>
     public required string IdentifiedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Inherit;
 }

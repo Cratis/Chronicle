@@ -32,7 +32,7 @@ All clients share a set of foundational building blocks, used either directly or
 
 ### Connections
 
-The `Connections` project provides abstractions for managing connections to the Chronicle **Kernel** and maintaining their lifecycle. It also defines the `ChronicleUrl` type.
+The `Connections` project provides abstractions for managing connections to the Chronicle **Kernel** and maintaining their lifecycle. It also defines the `ChronicleConnectionString` type.
 
 ### Contracts
 

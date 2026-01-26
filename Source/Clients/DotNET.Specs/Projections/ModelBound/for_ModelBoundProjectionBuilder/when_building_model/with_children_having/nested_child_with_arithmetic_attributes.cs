@@ -28,13 +28,15 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
 
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
 
-    [Fact] void should_have_nested_children_for_products()
+    [Fact]
+    void should_have_nested_children_for_products()
     {
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
         storeChildren.Children.Keys.ShouldContain(nameof(Store.Products));
     }
 
-    [Fact] void should_have_from_definition_for_stock_received_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_stock_received_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(StockReceived)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
@@ -42,7 +44,8 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         productChildren.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_stock_sold_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_stock_sold_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(StockSold)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
@@ -50,7 +53,8 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         productChildren.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_price_adjusted_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_price_adjusted_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(PriceAdjusted)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
@@ -58,7 +62,8 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         productChildren.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_stock_count_updated_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_stock_count_updated_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(StockCountUpdated)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
@@ -66,7 +71,8 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         productChildren.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_add_stock_quantity_from_stock_received()
+    [Fact]
+    void should_add_stock_quantity_from_stock_received()
     {
         var eventType = event_types.GetEventTypeFor(typeof(StockReceived)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
@@ -77,7 +83,8 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         expression.ShouldContain(nameof(StockReceived.Quantity));
     }
 
-    [Fact] void should_subtract_stock_quantity_from_stock_sold()
+    [Fact]
+    void should_subtract_stock_quantity_from_stock_sold()
     {
         var eventType = event_types.GetEventTypeFor(typeof(StockSold)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
@@ -88,34 +95,37 @@ public class nested_child_with_arithmetic_attributes : given.a_model_bound_proje
         expression.ShouldContain(nameof(StockSold.Quantity));
     }
 
-    [Fact] void should_increment_price_changes_from_price_adjusted()
+    [Fact]
+    void should_increment_price_changes_from_price_adjusted()
     {
         var eventType = event_types.GetEventTypeFor(typeof(PriceAdjusted)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
         var productChildren = storeChildren.Children[nameof(Store.Products)];
         var fromDef = productChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Product.PriceChanges)];
-        expression.ShouldEqual($"{WellKnownExpressions.Increment}()");
+        expression.ShouldEqual(WellKnownExpressions.Increment);
     }
 
-    [Fact] void should_decrement_adjustments_remaining_from_price_adjusted()
+    [Fact]
+    void should_decrement_adjustments_remaining_from_price_adjusted()
     {
         var eventType = event_types.GetEventTypeFor(typeof(PriceAdjusted)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
         var productChildren = storeChildren.Children[nameof(Store.Products)];
         var fromDef = productChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Product.AdjustmentsRemaining)];
-        expression.ShouldEqual($"{WellKnownExpressions.Decrement}()");
+        expression.ShouldEqual(WellKnownExpressions.Decrement);
     }
 
-    [Fact] void should_count_stock_updates()
+    [Fact]
+    void should_count_stock_updates()
     {
         var eventType = event_types.GetEventTypeFor(typeof(StockCountUpdated)).ToContract();
         var storeChildren = _result.Children[nameof(RetailChain.Stores)];
         var productChildren = storeChildren.Children[nameof(Store.Products)];
         var fromDef = productChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Product.StockUpdateCount)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 }
 

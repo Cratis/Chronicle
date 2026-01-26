@@ -95,6 +95,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
@@ -104,6 +105,7 @@ public interface IEventSequence
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
@@ -115,6 +117,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
@@ -127,6 +130,7 @@ public interface IEventSequence
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
@@ -134,6 +138,7 @@ public interface IEventSequence
     /// </summary>
     /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScopes">Optional <see cref="IDictionary{TKey, TValue}"/> of <see cref="EventSourceId"/> and <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to an empty dictionary.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
@@ -142,6 +147,7 @@ public interface IEventSequence
     Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
 
     /// <summary>

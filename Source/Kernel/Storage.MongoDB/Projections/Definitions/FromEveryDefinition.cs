@@ -17,4 +17,9 @@ public class FromEveryDefinition
     /// Gets or sets whether to include event types from child projections.
     /// </summary>
     public bool IncludeChildren { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Inherit;
 }

@@ -13,7 +13,7 @@ public class when_asking_can_resolve_for_count_expression : Specification
 
     void Establish() => _resolver = new(new TypeFormats());
 
-    void Because() => _result = _resolver.CanResolve(string.Empty, $"{WellKnownExpressions.Count}()");
+    void Because() => _result = _resolver.CanResolve(string.Empty, WellKnownExpressions.Count);
 
     [Fact] void should_be_able_to_resolve() => _result.ShouldBeTrue();
 }

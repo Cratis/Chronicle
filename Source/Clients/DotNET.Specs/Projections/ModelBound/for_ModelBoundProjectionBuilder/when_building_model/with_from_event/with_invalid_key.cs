@@ -19,12 +19,14 @@ public class with_invalid_key : given.a_model_bound_projection_builder
 
     [Fact] void should_throw_invalid_property_for_type() => _exception.ShouldBeOfExactType<InvalidPropertyForType>();
 
-    [Fact] void should_indicate_property_name_in_exception_message()
+    [Fact]
+    void should_indicate_property_name_in_exception_message()
     {
         _exception.Message.ShouldContain("NonExistentProperty");
     }
 
-    [Fact] void should_indicate_event_type_in_exception_message()
+    [Fact]
+    void should_indicate_event_type_in_exception_message()
     {
         _exception.Message.ShouldContain(nameof(UserRegisteredWithCustomId));
     }

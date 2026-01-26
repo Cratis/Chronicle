@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,14 +21,14 @@ public class a_projection : Specification
         projection = new Projection(
             EventSequenceId.Log,
             "0b7325dd-7a25-4681-9ab7-c387a6073547",
-            SinkDefinition.None,
             new ExpandoObject(),
             string.Empty,
             string.Empty,
             string.Empty,
-            new ReadModelDefinition(string.Empty, string.Empty, ReadModelOwner.None, new Dictionary<ReadModelGeneration, JsonSchema>(), []),
+            new ReadModelDefinition(string.Empty, string.Empty, string.Empty, ReadModelOwner.None, ReadModelSource.Code, ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema>(), []),
             new JsonSchema(),
             true,
+            AutoMap.Enabled,
             []);
         keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
     }

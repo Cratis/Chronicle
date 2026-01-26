@@ -21,9 +21,7 @@ public interface ISinks
     /// <summary>
     /// Get a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/>.
     /// </summary>
-    /// <param name="typeId"><see cref="SinkTypeId"/> to get for.</param>
-    /// <param name="configurationId"><see cref="SinkConfigurationId"/> to get for.</param>
     /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
-    ISink GetFor(SinkTypeId typeId, SinkConfigurationId configurationId, ReadModelDefinition readModel);
+    ISink GetFor(ReadModelDefinition readModel);
 }

@@ -27,40 +27,46 @@ public class child_with_arithmetic_attributes : given.a_model_bound_projection_b
 
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
 
-    [Fact] void should_have_children_for_accounts()
+    [Fact]
+    void should_have_children_for_accounts()
     {
         _result.Children.Keys.ShouldContain(nameof(Bank.Accounts));
     }
 
-    [Fact] void should_have_from_definition_for_deposit_made()
+    [Fact]
+    void should_have_from_definition_for_deposit_made()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DepositMade)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_withdrawal_made()
+    [Fact]
+    void should_have_from_definition_for_withdrawal_made()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WithdrawalMade)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_transaction_recorded()
+    [Fact]
+    void should_have_from_definition_for_transaction_recorded()
     {
         var eventType = event_types.GetEventTypeFor(typeof(TransactionRecorded)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_interest_added()
+    [Fact]
+    void should_have_from_definition_for_interest_added()
     {
         var eventType = event_types.GetEventTypeFor(typeof(InterestAdded)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_add_balance_from_deposit_made()
+    [Fact]
+    void should_add_balance_from_deposit_made()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DepositMade)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
@@ -70,7 +76,8 @@ public class child_with_arithmetic_attributes : given.a_model_bound_projection_b
         expression.ShouldContain(nameof(DepositMade.Amount));
     }
 
-    [Fact] void should_subtract_balance_from_withdrawal_made()
+    [Fact]
+    void should_subtract_balance_from_withdrawal_made()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WithdrawalMade)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
@@ -80,25 +87,28 @@ public class child_with_arithmetic_attributes : given.a_model_bound_projection_b
         expression.ShouldContain(nameof(WithdrawalMade.Amount));
     }
 
-    [Fact] void should_increment_transaction_count_from_transaction_recorded()
+    [Fact]
+    void should_increment_transaction_count_from_transaction_recorded()
     {
         var eventType = event_types.GetEventTypeFor(typeof(TransactionRecorded)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Account.TransactionCount)];
-        expression.ShouldEqual($"{WellKnownExpressions.Increment}()");
+        expression.ShouldEqual(WellKnownExpressions.Increment);
     }
 
-    [Fact] void should_count_total_deposits()
+    [Fact]
+    void should_count_total_deposits()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DepositMade)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Account.TotalDeposits)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 
-    [Fact] void should_add_interest_total_from_interest_added()
+    [Fact]
+    void should_add_interest_total_from_interest_added()
     {
         var eventType = event_types.GetEventTypeFor(typeof(InterestAdded)).ToContract();
         var childrenDef = _result.Children[nameof(Bank.Accounts)];

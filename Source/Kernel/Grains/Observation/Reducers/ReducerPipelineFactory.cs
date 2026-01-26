@@ -28,7 +28,7 @@ public class ReducerPipelineFactory(
     {
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
-        var sink = namespaceStorage.Sinks.GetFor(definition.Sink.TypeId, definition.Sink.ConfigurationId, readModel);
+        var sink = namespaceStorage.Sinks.GetFor(readModel);
         return new ReducerPipeline(readModel, sink, objectComparer);
     }
 }

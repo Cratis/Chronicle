@@ -6,6 +6,7 @@
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building_model.with_children_having;
 
@@ -28,25 +29,29 @@ public class deeply_nested_children : given.a_model_bound_projection_builder
 
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
 
-    [Fact] void should_have_children_for_departments()
+    [Fact]
+    void should_have_children_for_departments()
     {
         _result.Children.Keys.ShouldContain(nameof(DeepCompany.Departments));
     }
 
-    [Fact] void should_have_nested_children_for_teams()
+    [Fact]
+    void should_have_nested_children_for_teams()
     {
         var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
         deptChildrenDef.Children.Keys.ShouldContain(nameof(DeepDepartment.Teams));
     }
 
-    [Fact] void should_have_deeply_nested_children_for_members()
+    [Fact]
+    void should_have_deeply_nested_children_for_members()
     {
         var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
         var teamChildrenDef = deptChildrenDef.Children[nameof(DeepDepartment.Teams)];
         teamChildrenDef.Children.Keys.ShouldContain(nameof(DeepTeam.Members));
     }
 
-    [Fact] void should_have_from_definition_for_member_added_in_deeply_nested_children()
+    [Fact]
+    void should_have_from_definition_for_member_added_in_deeply_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DeepMemberAdded)).ToContract();
         var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
@@ -55,14 +60,24 @@ public class deeply_nested_children : given.a_model_bound_projection_builder
         memberChildrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_auto_map_name_property_for_deeply_nested_child()
+    [Fact]
+    void should_not_auto_map_name_property_for_deeply_nested_child()
     {
         var eventType = event_types.GetEventTypeFor(typeof(DeepMemberAdded)).ToContract();
         var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
         var teamChildrenDef = deptChildrenDef.Children[nameof(DeepDepartment.Teams)];
         var memberChildrenDef = teamChildrenDef.Children[nameof(DeepTeam.Members)];
         var fromDef = memberChildrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(DeepMember.Name));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(DeepMember.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_deeply_nested_children()
+    {
+        var deptChildrenDef = _result.Children[nameof(DeepCompany.Departments)];
+        var teamChildrenDef = deptChildrenDef.Children[nameof(DeepDepartment.Teams)];
+        var memberChildrenDef = teamChildrenDef.Children[nameof(DeepTeam.Members)];
+        memberChildrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 }
 

@@ -21,6 +21,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
 {
     const string VersionMetadataKey = "softwareVersion";
     const string CommitMetadataKey = "softwareCommit";
+    const string DotNetClientVersionMetadataKey = ".NET Client Version";
+    const string DotNetClientCommitMetadataKey = ".NET Client Commit";
     const string ProgramIdentifierMetadataKey = "programIdentifier";
     const string OperatingSystemMetadataKey = "os";
     const string MachineNameMetadataKey = "machineName";
@@ -37,16 +39,16 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// </summary>
     /// <param name="connectionString">Connection string to use.</param>
     public ChronicleClient(string connectionString)
-        : this(new ChronicleUrl(connectionString))
+        : this(new ChronicleConnectionString(connectionString))
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
-    public ChronicleClient(ChronicleUrl url)
-        : this(ChronicleOptions.FromUrl(url))
+    /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    public ChronicleClient(ChronicleConnectionString url)
+        : this(ChronicleOptions.FromConnectionString(url))
     {
     }
 
@@ -62,17 +64,28 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
 
+        var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
+
+        var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
+        var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
+        var disableTls = options.Tls.IsDisabled || (string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls);
+
         _connection = new ChronicleConnection(
-            options.Url,
+            options.ConnectionString,
             options.ConnectTimeout,
             options.MaxReceiveMessageSize,
             options.MaxSendMessageSize,
             connectionLifecycle,
             new Tasks.TaskFactory(),
             options.CorrelationIdAccessor,
+            options.LoggerFactory,
+            CancellationToken.None,
             options.LoggerFactory.CreateLogger<ChronicleConnection>(),
-            CancellationToken.None);
+            disableTls,
+            certificatePath,
+            certificatePassword,
+            tokenProvider);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
@@ -158,6 +171,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
         {
             { VersionMetadataKey, Options.SoftwareVersion },
             { CommitMetadataKey, Options.SoftwareCommit },
+            { DotNetClientVersionMetadataKey, VersionInformation.GetChronicleClientVersion() },
+            { DotNetClientCommitMetadataKey, VersionInformation.GetChronicleClientCommitSha() },
             { ProgramIdentifierMetadataKey, Options.ProgramIdentifier },
             { OperatingSystemMetadataKey, Environment.OSVersion.ToString() },
             { MachineNameMetadataKey, Environment.MachineName },
@@ -173,6 +188,22 @@ public class ChronicleClient : IChronicleClient, IDisposable
         InitializeJsonSerializationOptions();
 
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
+    }
+
+    ITokenProvider CreateTokenProvider(ChronicleOptions options)
+    {
+        if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            return new OAuthTokenProvider(
+                options.ConnectionString.ServerAddress,
+                options.ConnectionString.Username ?? string.Empty,
+                options.ConnectionString.Password ?? string.Empty,
+                options.ManagementPort,
+                options.Tls.IsDisabled,
+                options.LoggerFactory.CreateLogger<OAuthTokenProvider>());
+        }
+
+        return new NoOpTokenProvider();
     }
 
     void InitializeJsonSerializationOptions()

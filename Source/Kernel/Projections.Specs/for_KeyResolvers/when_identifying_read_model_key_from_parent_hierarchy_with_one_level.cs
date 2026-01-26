@@ -45,7 +45,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                []),
             new ExpandoObject());
 
         _event = new(
@@ -61,7 +62,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                []),
             new
             {
                 parentId = ParentKey

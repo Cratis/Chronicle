@@ -13,7 +13,7 @@ You can configure the message sizes when creating a `ChronicleClient` or through
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = new ChronicleUrl("chronicle://localhost:35000"),
+    Url = new ChronicleConnectionString("chronicle://localhost:35000"),
     MaxReceiveMessageSize = 200 * 1024 * 1024, // 200 MB
     MaxSendMessageSize = 200 * 1024 * 1024      // 200 MB
 };

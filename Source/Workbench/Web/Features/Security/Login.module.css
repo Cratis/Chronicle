@@ -1,0 +1,167 @@
+.loginContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
+}
+
+.loginCard {
+    background: var(--surface-card);
+    border-radius: 12px;
+    padding: 3rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--surface-border);
+    overflow: hidden;
+}
+
+.loginHeader {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.loginLogo {
+    height: 6.5rem;
+    width: auto;
+    margin: 0 auto 0.5rem auto;
+    display: block;
+}
+
+.loginTitle {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0 0 0.5rem 0;
+}
+
+.loginSubtitle {
+    font-size: 1rem;
+    color: var(--text-color-secondary);
+    margin: 0;
+}
+
+.loginForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.formSlider {
+    position: relative;
+    width: calc(100% + 6rem);
+    margin-left: -3rem;
+    margin-right: -3rem;
+}
+
+.formTrack {
+    display: flex;
+    transition: transform 320ms ease-out;
+    transform: translateX(0);
+    will-change: transform;
+}
+
+.showChangePassword {}
+
+.showLogin {}
+
+.formSlider.showChangePassword .formTrack {
+    transform: translateX(-100%);
+}
+
+.formSlider.showLogin .formTrack {
+    transform: translateX(0);
+}
+
+.signInPane,
+.changePasswordPane {
+    flex: 0 0 100%;
+    width: 100%;
+    padding: 0 3rem;
+    box-sizing: border-box;
+    transition: opacity 220ms ease;
+}
+
+.formSlider.showChangePassword .signInPane {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+.formSlider.showLogin .changePasswordPane {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.input {
+    width: 100%;
+    display: block;
+}
+
+.input :global(.p-password) {
+    width: 100%;
+    display: block;
+}
+
+.input :global(.p-password > input) {
+    width: 100%;
+}
+
+.passwordInput {
+    width: 100% !important;
+}
+
+.passwordPanel {
+    top: calc(100% + 0.25rem);
+    left: 0;
+    width: 100%;
+    z-index: 2;
+}
+
+.errorMessage {
+    width: 100%;
+    margin: 0;
+}
+
+.loginButton {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.buttonGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.buttonGroup button {
+    width: 100%;
+}
+
+.initialSetupMessage {
+    text-align: center;
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.5;
+}

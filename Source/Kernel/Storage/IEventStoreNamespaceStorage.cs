@@ -10,6 +10,7 @@ using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
@@ -72,9 +73,9 @@ public interface IEventStoreNamespaceStorage
     ISinks Sinks { get; }
 
     /// <summary>
-    /// Gets the <see cref="IReplayedModelsStorage"/> for the event store namespace.
+    /// Gets the <see cref="IReplayedReadModelsStorage"/> for the event store namespace.
     /// </summary>
-    IReplayedModelsStorage ReplayedModels { get; }
+    IReplayedReadModelsStorage ReplayedReadModels { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventSeedingStorage"/> for the event store namespace.
