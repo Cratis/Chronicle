@@ -44,20 +44,40 @@ export class ProjectionDefinitionLanguageValidator {
     validate(model: editor.ITextModel): editor.IMarkerData[] {
         const markers: editor.IMarkerData[] = [];
         const content = model.getValue();
-        // Normalize line endings and split
-        const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 
-        if (lines.length === 0 || !lines[0].trim()) {
-            markers.push(this.createError(1, 1, 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelName>"'));
+        // Skip validation if content is empty or only whitespace
+        // This prevents spurious errors when the model is first created before content is loaded
+        if (!content.trim()) {
             return markers;
         }
 
-        // Validate first line - projection declaration
-        const firstLine = lines[0].trim();
+        // Normalize line endings and split
+        const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+        // Find the first non-empty, non-comment line
+        let firstNonEmptyLineIndex = 0;
+        let firstLine = '';
+        for (let i = 0; i < lines.length; i++) {
+            const trimmed = lines[i].trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                firstNonEmptyLineIndex = i;
+                firstLine = trimmed;
+                break;
+            }
+        }
+
+        if (!firstLine) {
+            // This should not happen since we already checked for empty content above,
+            // but if it does (content is all comments), just return without error
+            return markers;
+        }
+
+        // Validate first meaningful line - projection declaration
         const projectionMatch = firstLine.match(/^projection\s+(\w+)\s*=>\s*(\w+)\s*$/);
 
         if (!projectionMatch) {
-            markers.push(this.createError(1, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelName>"'));
+            const lineNumber = firstNonEmptyLineIndex + 1;
+            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelName>"'));
             return markers;
         }
 
