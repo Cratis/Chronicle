@@ -19,7 +19,7 @@ public class children_remove_and_join : given.a_language_service_with_schemas<gi
             with SettingsCreated
         """;
 
-    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded), typeof(given.UserRemoved)];
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded), typeof(given.UserRemoved), typeof(given.SettingsCreated)];
 
     ProjectionDefinition _result;
 

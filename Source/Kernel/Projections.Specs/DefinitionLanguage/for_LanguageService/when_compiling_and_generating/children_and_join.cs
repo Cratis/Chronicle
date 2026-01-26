@@ -17,7 +17,7 @@ public class children_and_join : given.a_language_service_with_schemas<given.Use
             with SettingsCreated
         """;
 
-    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded)];
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded), typeof(given.SettingsCreated)];
 
     ProjectionDefinition _result;
 

@@ -18,7 +18,7 @@ public class join_block : given.a_language_service_with_schemas<given.UserGroupR
               automap
         """;
 
-    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded)];
+    protected override IEnumerable<Type> EventTypes => [typeof(given.UserAdded), typeof(given.GroupCreated), typeof(given.GroupRenamed)];
 
     ProjectionDefinition _result;
 
