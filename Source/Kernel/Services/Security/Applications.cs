@@ -22,7 +22,6 @@ namespace Cratis.Chronicle.Services.Security;
 /// <param name="storage">The <see cref="IStorage"/> for working with applications.</param>
 internal sealed class Applications(IGrainFactory grainFactory, IStorage storage) : IApplications
 {
-    /// <inheritdoc/>
     static readonly PasswordHasher<object> _passwordHasher = new();
 
     /// <inheritdoc/>
