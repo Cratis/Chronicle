@@ -97,7 +97,7 @@ export class ProjectionDefinitionLanguageValidator {
         if (this.readModels.length > 0) {
             const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
             const isDraftReadModel = this.draftReadModel && this.draftReadModel.name === readModelName;
-            
+
             if (!readModelExists && !isDraftReadModel) {
                 const lineNumber = firstNonEmptyLineIndex + 1;
                 const col = firstLine.indexOf(readModelName) + 1;
@@ -119,7 +119,6 @@ export class ProjectionDefinitionLanguageValidator {
         const contextStack: JsonSchema[] = [activeSchema!];
         const indentStack: number[] = [0]; // Track indentation levels for context
         let lastIndent = 0;
-        let hasFromStatements = false;
 
         for (let i = 1; i < lines.length; i++) {
             const lineNumber = i + 1;
@@ -143,7 +142,6 @@ export class ProjectionDefinitionLanguageValidator {
             // Validate event types in from/every blocks
             const fromMatch = trimmed.match(/^from\s+(\w+)/);
             if (fromMatch) {
-                hasFromStatements = true;
                 const eventType = fromMatch[1];
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
                     const col = line.indexOf(eventType) + 1;

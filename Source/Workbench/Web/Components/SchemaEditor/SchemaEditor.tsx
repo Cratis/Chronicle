@@ -83,7 +83,7 @@ export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNo
     const [typeFormatsQuery] = AllTypeFormats.use();
 
     useEffect(() => {
-        if (typeFormatsQuery.data) {
+        if (typeFormatsQuery.data && typeFormatsQuery.data.length > 0) {
             setTypeFormats(typeFormatsQuery.data);
         }
     }, [typeFormatsQuery.data]);

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { AllReadModelDefinitions, CreateReadModel, ReadModelSource } from 'Api/ReadModelTypes';
+import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
@@ -194,7 +194,9 @@ export const Projections = () => {
                                         saveProjection.eventStore = params.eventStore!;
                                         saveProjection.namespace = params.namespace!;
                                         saveProjection.declaration = declarationValue;
-                                        saveProjection.draftReadModel = draftReadModel ?? undefined;
+                                        if (draftReadModel) {
+                                            saveProjection.draftReadModel = draftReadModel;
+                                        }
                                         const result = await saveProjection.execute();
                                         const errors = result.response?.errors ?? [];
                                         if (result.isSuccess && errors.length === 0) {
@@ -227,7 +229,9 @@ export const Projections = () => {
                                         previewProjection.eventStore = params.eventStore!;
                                         previewProjection.namespace = params.namespace!;
                                         previewProjection.declaration = declarationValue;
-                                        previewProjection.draftReadModel = draftReadModel ?? undefined;
+                                        if (draftReadModel) {
+                                            previewProjection.draftReadModel = draftReadModel;
+                                        }
                                         const result = await previewProjection.execute();
 
                                         const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {

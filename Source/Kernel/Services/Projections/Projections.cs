@@ -77,16 +77,13 @@ internal sealed class Projections(
             .GetNamespace(request.Namespace)
             .GetEventSequence(request.EventSequenceId);
 
-        var projectionId = ProjectionId.CreatePreviewId();
-        var projectionKey = new ProjectionKey(projectionId, request.EventStore);
-        var projection = grainFactory.GetGrain<IProjection>(projectionKey);
-
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
         // If a draft read model is provided, create a temporary read model definition for preview
+        Concepts.ReadModels.ReadModelDefinition? draftDefinition = null;
         if (request.DraftReadModel is not null)
         {
-            var draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
+            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
             allReadModels = allReadModels.Append(draftDefinition).ToList();
         }
 
@@ -101,12 +98,45 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                // Find the read model definition - need to handle potential empty schemas gracefully
+                var readModelDefinition = allReadModels.FirstOrDefault(r =>
+                {
+                    if (r.Schemas.Count == 0) return false;
+                    var schema = r.GetSchemaForLatestGeneration();
+                    return schema.Title == definition.ReadModel;
+                });
+
+                if (readModelDefinition is null)
+                {
+                    return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(
+                        new ContractProjectionDefinitionParsingErrors
+                        {
+                            Errors = [new ProjectionDeclarationSyntaxError
+                            {
+                                Line = 1,
+                                Column = 1,
+                                Message = $"Read model '{definition.ReadModel}' not found"
+                            }]
+                        });
+                }
+
                 definition = definition with { ReadModel = readModelDefinition.Identifier };
 
+                var projectionId = ProjectionId.CreatePreviewId();
+                var projectionKey = new ProjectionKey(projectionId, request.EventStore);
+                var projection = grainFactory.GetGrain<Grains.Projections.IProjection>(projectionKey);
                 await projection.SetDefinition(definition);
 
-                var eventTypes = await projection.GetEventTypes();
+                // Get event types - use preview method if we have a draft read model
+                IEnumerable<Concepts.Events.EventType> eventTypes;
+                if (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier)
+                {
+                    eventTypes = await projection.GetEventTypesForPreview(readModelDefinition);
+                }
+                else
+                {
+                    eventTypes = await projection.GetEventTypes();
+                }
 
                 // Fetch a limited number of events and group them by correlation id
                 const int defaultLimit = 1000;
@@ -118,7 +148,17 @@ internal sealed class Projections(
                     events.AddRange(cursor.Current);
                 }
 
-                var result = await projection.Process(request.Namespace, events);
+                // Process events - use preview method if we have a draft read model
+                IEnumerable<System.Dynamic.ExpandoObject> result;
+                if (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier)
+                {
+                    result = await projection.ProcessForPreview(request.Namespace, events, readModelDefinition);
+                }
+                else
+                {
+                    result = await projection.Process(request.Namespace, events);
+                }
+
                 var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
 
                 return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionPreview
@@ -184,7 +224,26 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                var readModelDefinition = allReadModels.FirstOrDefault(r =>
+                {
+                    if (r.Schemas.Count == 0) return false;
+                    var schema = r.GetSchemaForLatestGeneration();
+                    return schema.Title == definition.ReadModel;
+                });
+
+                if (readModelDefinition is null)
+                {
+                    return new SaveProjectionResult
+                    {
+                        Errors = [new ProjectionDeclarationSyntaxError
+                        {
+                            Line = 1,
+                            Column = 1,
+                            Message = $"Read model '{definition.ReadModel}' not found"
+                        }]
+                    };
+                }
+
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
 
                 var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
@@ -210,7 +269,27 @@ internal sealed class Projections(
         return compileResult.Match(
             definition =>
             {
-                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                var readModelDefinition = allReadModels.FirstOrDefault(r =>
+                {
+                    if (r.Schemas.Count == 0) return false;
+                    var schema = r.GetSchemaForLatestGeneration();
+                    return schema.Title == definition.ReadModel;
+                });
+
+                if (readModelDefinition is null)
+                {
+                    return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
+                        new ContractProjectionDefinitionParsingErrors
+                        {
+                            Errors = [new ProjectionDeclarationSyntaxError
+                            {
+                                Line = 1,
+                                Column = 1,
+                                Message = $"Read model '{definition.ReadModel}' not found"
+                            }]
+                        });
+                }
+
                 var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition);
 
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
@@ -234,7 +313,27 @@ internal sealed class Projections(
         return compileResult.Match(
             definition =>
             {
-                var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
+                var readModelDefinition = allReadModels.FirstOrDefault(r =>
+                {
+                    if (r.Schemas.Count == 0) return false;
+                    var schema = r.GetSchemaForLatestGeneration();
+                    return schema.Title == definition.ReadModel;
+                });
+
+                if (readModelDefinition is null)
+                {
+                    return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
+                        new ContractProjectionDefinitionParsingErrors
+                        {
+                            Errors = [new ProjectionDeclarationSyntaxError
+                            {
+                                Line = 1,
+                                Column = 1,
+                                Message = $"Read model '{definition.ReadModel}' not found"
+                            }]
+                        });
+                }
+
                 var code = languageService.GenerateModelBoundCode(definition, readModelDefinition);
 
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
@@ -245,14 +344,34 @@ internal sealed class Projections(
     static Concepts.ReadModels.ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
     {
         var identifier = $"draft-{Guid.NewGuid()}";
-        var schema = string.IsNullOrEmpty(draft.Schema)
-            ? new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name }
-            : JsonSchema.FromJsonAsync(draft.Schema).GetAwaiter().GetResult();
+        JsonSchema schema;
+
+        if (string.IsNullOrEmpty(draft.Schema))
+        {
+            schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name };
+        }
+        else
+        {
+            try
+            {
+                schema = JsonSchema.FromJsonAsync(draft.Schema).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Fallback to basic schema if parsing fails
+                schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name };
+            }
+        }
 
         if (string.IsNullOrEmpty(schema.Title))
         {
             schema.Title = draft.Name;
         }
+
+        var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
+        {
+            { Concepts.ReadModels.ReadModelGeneration.First, schema }
+        };
 
         return new Concepts.ReadModels.ReadModelDefinition(
             identifier,
@@ -263,7 +382,7 @@ internal sealed class Projections(
             Concepts.ReadModels.ReadModelObserverType.Projection,
             Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
-            new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema> { { Concepts.ReadModels.ReadModelGeneration.First, schema } },
+            schemas,
             []);
     }
 }
