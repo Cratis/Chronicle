@@ -1,5 +1,6 @@
 export * from './AllProjections';
 export * from './AllProjectionsWithDeclarations';
+export * from './DraftReadModel';
 export * from './GeneratedCodeResult';
 export * from './GenerateDeclarativeCode';
 export * from './GenerateModelBoundCode';

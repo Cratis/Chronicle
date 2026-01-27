@@ -13,10 +13,14 @@ using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
+using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
+using NJsonSchema;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
+using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
+using WellKnownSinkTypes = Cratis.Chronicle.Concepts.Sinks.WellKnownSinkTypes;
 
 namespace Cratis.Chronicle.Services.Projections;
 
@@ -78,6 +82,14 @@ internal sealed class Projections(
         var projection = grainFactory.GetGrain<IProjection>(projectionKey);
 
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+
+        // If a draft read model is provided, create a temporary read model definition for preview
+        if (request.DraftReadModel is not null)
+        {
+            var draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
+            allReadModels = allReadModels.Append(draftDefinition).ToList();
+        }
+
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
@@ -89,7 +101,6 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
                 var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
                 definition = definition with { ReadModel = readModelDefinition.Identifier };
 
@@ -124,6 +135,44 @@ internal sealed class Projections(
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+
+        // If a draft read model is provided, save it first
+        if (request.DraftReadModel is not null)
+        {
+            var readModelsService = serviceProvider.GetRequiredService<IReadModelsService>();
+            var identifier = Guid.NewGuid().ToString();
+            var schema = string.IsNullOrEmpty(request.DraftReadModel.Schema)
+                ? new JsonSchema { Type = JsonObjectType.Object }.ToJson()
+                : request.DraftReadModel.Schema;
+
+            await readModelsService.RegisterSingle(new()
+            {
+                EventStore = request.EventStore,
+                Owner = Contracts.ReadModels.ReadModelOwner.Client,
+                Source = Contracts.ReadModels.ReadModelSource.User,
+                ReadModel = new()
+                {
+                    Type = new()
+                    {
+                        Identifier = identifier,
+                        Generation = 1,
+                    },
+                    Name = request.DraftReadModel.Name.Pluralize(),
+                    DisplayName = request.DraftReadModel.Name,
+                    Sink = new()
+                    {
+                        TypeId = WellKnownSinkTypes.MongoDB.Value,
+                        ConfigurationId = Guid.Empty
+                    },
+                    Schema = schema,
+                    Indexes = []
+                }
+            });
+
+            // Refresh the read models list to include the newly created one
+            allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+        }
+
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
@@ -132,10 +181,9 @@ internal sealed class Projections(
             allReadModels,
             eventTypeSchemas);
 
-        return await compileResult.Match<Task<SaveProjectionResult>>(
+        return await compileResult.Match(
             async definition =>
             {
-                var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
                 var readModelDefinition = allReadModels.First(r => r.GetSchemaForLatestGeneration().Title! == definition.ReadModel);
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
 
@@ -192,5 +240,30 @@ internal sealed class Projections(
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },
             errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
+    }
+
+    static Concepts.ReadModels.ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
+    {
+        var identifier = $"draft-{Guid.NewGuid()}";
+        var schema = string.IsNullOrEmpty(draft.Schema)
+            ? new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name }
+            : JsonSchema.FromJsonAsync(draft.Schema).GetAwaiter().GetResult();
+
+        if (string.IsNullOrEmpty(schema.Title))
+        {
+            schema.Title = draft.Name;
+        }
+
+        return new Concepts.ReadModels.ReadModelDefinition(
+            identifier,
+            draft.Name.Pluralize(),
+            draft.Name,
+            Concepts.ReadModels.ReadModelOwner.Server,
+            Concepts.ReadModels.ReadModelSource.User,
+            Concepts.ReadModels.ReadModelObserverType.Projection,
+            Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
+            new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
+            new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema> { { Concepts.ReadModels.ReadModelGeneration.First, schema } },
+            []);
     }
 }

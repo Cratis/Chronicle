@@ -32,4 +32,11 @@ public class SaveProjectionRequest
     /// </summary>
     [ProtoMember(4)]
     public string Declaration { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional draft read model definition.
+    /// When provided, this will be saved as a new read model type before saving the projection.
+    /// </summary>
+    [ProtoMember(5)]
+    public DraftReadModelDefinition? DraftReadModel { get; set; }
 }

@@ -4,8 +4,8 @@
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { AllReadModelDefinitions, CreateReadModel, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
-import { JsonSchema } from 'Components/JsonSchema';
-import { ProjectionEditor, setCreateReadModelCallback } from 'Components/ProjectionEditor';
+import type { JsonSchema } from 'Components/JsonSchema';
+import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
 import { ReadModelCreation } from 'Components/ReadModelCreation';
 import { Menubar } from 'primereact/menubar';
 import { Tooltip } from 'primereact/tooltip';
@@ -19,7 +19,7 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDeclarations, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
+import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
 import type { ReadModelSchema } from 'Api/ReadModels';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
@@ -34,10 +34,12 @@ export const Projections = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
     const [newReadModelName, setNewReadModelName] = useState('');
+    const [initialReadModelSchema, setInitialReadModelSchema] = useState<JsonSchema | undefined>(undefined);
     const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
+    const [draftReadModel, setDraftReadModel] = useState<DraftReadModel | null>(null);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
@@ -49,7 +51,6 @@ export const Projections = () => {
     const [projections, refreshProjections] = AllProjectionsWithDeclarations.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
     const [saveProjection] = SaveProjection.use();
-    const [createReadModel] = CreateReadModel.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
 
     const selectedReadModel = useMemo(() => {
@@ -105,27 +106,43 @@ export const Projections = () => {
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
             setNewReadModelName(readModelName);
+            setInitialReadModelSchema(undefined);
+            setIsCreateReadModelDialogOpen(true);
+        });
+        setEditReadModelCallback((readModelName: string, currentSchema: JsonSchema) => {
+            setNewReadModelName(readModelName);
+            setInitialReadModelSchema(currentSchema);
             setIsCreateReadModelDialogOpen(true);
         });
     }, []);
 
-    const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
-        if (params.eventStore) {
-            createReadModel.eventStore = params.eventStore;
-            createReadModel.name = name;
-            createReadModel.schema = JSON.stringify(schema);
-            const result = await createReadModel.execute();
-            if (result.isSuccess) {
-                setIsCreateReadModelDialogOpen(false);
-                setNewReadModelName('');
-                refreshReadModels();
-            }
+    // Sync draft read model with the code action provider
+    useEffect(() => {
+        if (draftReadModel) {
+            setDraftReadModelInProvider({
+                name: draftReadModel.name,
+                schema: JSON.parse(draftReadModel.schema) as JsonSchema
+            });
+        } else {
+            setDraftReadModelInProvider(null);
         }
+    }, [draftReadModel]);
+
+    const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
+        // Save as draft read model - don't create on server yet
+        const draft = new DraftReadModel();
+        draft.name = name;
+        draft.schema = JSON.stringify(schema);
+        setDraftReadModel(draft);
+        setIsCreateReadModelDialogOpen(false);
+        setNewReadModelName('');
+        setInitialReadModelSchema(undefined);
     };
 
     const handleCancelReadModel = () => {
         setIsCreateReadModelDialogOpen(false);
         setNewReadModelName('');
+        setInitialReadModelSchema(undefined);
     };
 
     return (
@@ -177,11 +194,14 @@ export const Projections = () => {
                                         saveProjection.eventStore = params.eventStore!;
                                         saveProjection.namespace = params.namespace!;
                                         saveProjection.declaration = declarationValue;
+                                        saveProjection.draftReadModel = draftReadModel ?? undefined;
                                         const result = await saveProjection.execute();
                                         const errors = result.response?.errors ?? [];
                                         if (result.isSuccess && errors.length === 0) {
                                             refreshProjections();
+                                            refreshReadModels();
                                             setSyntaxErrors([]);
+                                            setDraftReadModel(null); // Clear draft after successful save
                                         } else {
                                             // Display server-side validation errors in the editor
                                             setSyntaxErrors(errors);
@@ -207,6 +227,7 @@ export const Projections = () => {
                                         previewProjection.eventStore = params.eventStore!;
                                         previewProjection.namespace = params.namespace!;
                                         previewProjection.declaration = declarationValue;
+                                        previewProjection.draftReadModel = draftReadModel ?? undefined;
                                         const result = await previewProjection.execute();
 
                                         const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
@@ -274,7 +295,7 @@ export const Projections = () => {
             </Allotment>
 
             <Dialog
-                header={'Create Read Model: ' + newReadModelName}
+                header={(initialReadModelSchema ? 'Edit' : 'Create') + ' Read Model: ' + newReadModelName}
                 visible={isCreateReadModelDialogOpen}
                 style={{ width: '800px', height: '80vh' }}
                 modal
@@ -282,6 +303,7 @@ export const Projections = () => {
                 onHide={handleCancelReadModel}>
                 <ReadModelCreation
                     initialName={newReadModelName}
+                    initialSchema={initialReadModelSchema}
                     onSave={handleSaveReadModel}
                     onCancel={handleCancelReadModel}
                 />

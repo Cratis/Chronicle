@@ -21,6 +21,7 @@ let codeActionProvider: ProjectionDefinitionLanguageCodeActionProvider;
 let disposables: Monaco.IDisposable[] = [];
 let monacoInstance: typeof Monaco | null = null;
 let pendingCreateReadModelCallback: ((readModelName: string) => void) | null = null;
+let pendingEditReadModelCallback: ((readModelName: string, currentSchema: JsonSchema) => void) | null = null;
 
 export * from './ProjectionEditor';
 
@@ -49,10 +50,14 @@ export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): voi
     hoverProvider = new ProjectionDefinitionLanguageHoverProvider();
     codeActionProvider = new ProjectionDefinitionLanguageCodeActionProvider();
 
-    // Apply pending callback if one was set before initialization
+    // Apply pending callbacks if they were set before initialization
     if (pendingCreateReadModelCallback) {
         codeActionProvider.setCreateReadModelCallback(pendingCreateReadModelCallback);
         pendingCreateReadModelCallback = null;
+    }
+    if (pendingEditReadModelCallback) {
+        codeActionProvider.setEditReadModelCallback(pendingEditReadModelCallback);
+        pendingEditReadModelCallback = null;
     }
 
     // Register completion provider with helpful trigger characters
@@ -83,6 +88,14 @@ export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): voi
         }
     });
     disposables.push(commandDisposable);
+
+    // Register command for editing read models
+    const editCommandDisposable = monaco.editor.registerCommand('projection-declaration.editReadModel', (_accessor: unknown, readModelName: string, currentSchema: JsonSchema) => {
+        if (codeActionProvider) {
+            codeActionProvider.invokeEditReadModel(readModelName, currentSchema);
+        }
+    });
+    disposables.push(editCommandDisposable);
 
     // Register validation on model change
     const modelChangeDisposable = monaco.editor.onDidCreateModel((model: Monaco.editor.ITextModel) => {
@@ -139,6 +152,22 @@ export function setCreateReadModelCallback(callback: (readModelName: string) => 
         // Store callback for later when the provider is initialized
         pendingCreateReadModelCallback = callback;
     }
+}
+
+export function setEditReadModelCallback(callback: (readModelName: string, currentSchema: JsonSchema) => void): void {
+    if (codeActionProvider) {
+        codeActionProvider.setEditReadModelCallback(callback);
+    } else {
+        // Store callback for later when the provider is initialized
+        pendingEditReadModelCallback = callback;
+    }
+}
+
+export function setDraftReadModel(draft: { name: string; schema: JsonSchema } | null): void {
+    if (codeActionProvider) {
+        codeActionProvider.setDraftReadModel(draft);
+    }
+    revalidateAllModels();
 }
 
 export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, JsonSchema>): void {

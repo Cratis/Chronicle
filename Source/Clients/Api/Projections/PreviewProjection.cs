@@ -12,8 +12,9 @@ namespace Cratis.Chronicle.Api.Projections;
 /// <param name="EventStore">The event store the projection targets.</param>
 /// <param name="Namespace">The namespace the projection targets.</param>
 /// <param name="Declaration">The projection declaration language representation of the projection.</param>
+/// <param name="DraftReadModel">Optional draft read model definition to use for preview.</param>
 [Command]
-public record PreviewProjection(string EventStore, string Namespace, string Declaration)
+public record PreviewProjection(string EventStore, string Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
 {
     /// <summary>
     /// Handles the preview projection request.
@@ -26,7 +27,14 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
         {
             EventStore = EventStore,
             Namespace = Namespace,
-            Declaration = Declaration
+            Declaration = Declaration,
+            DraftReadModel = DraftReadModel is not null
+                ? new DraftReadModelDefinition
+                {
+                    Name = DraftReadModel.Name,
+                    Schema = DraftReadModel.Schema
+                }
+                : null
         };
 
         var result = await projections.Preview(request);

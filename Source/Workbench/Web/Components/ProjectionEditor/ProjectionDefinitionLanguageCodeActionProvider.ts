@@ -5,12 +5,23 @@ import type * as Monaco from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
+export interface DraftReadModelInfo {
+    name: string;
+    schema: JsonSchema;
+}
+
 export class ProjectionDefinitionLanguageCodeActionProvider {
     private readModels: ReadModelInfo[] = [];
+    private draftReadModel: DraftReadModelInfo | null = null;
     private onCreateReadModel?: (readModelName: string) => void;
+    private onEditReadModel?: (readModelName: string, currentSchema: JsonSchema) => void;
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels;
+    }
+
+    setDraftReadModel(draft: DraftReadModelInfo | null): void {
+        this.draftReadModel = draft;
     }
 
     // Keep for backwards compatibility
@@ -25,8 +36,16 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
         this.onCreateReadModel = callback;
     }
 
+    setEditReadModelCallback(callback: (readModelName: string, currentSchema: JsonSchema) => void): void {
+        this.onEditReadModel = callback;
+    }
+
     invokeCreateReadModel(readModelName: string): void {
         this.onCreateReadModel?.(readModelName);
+    }
+
+    invokeEditReadModel(readModelName: string, currentSchema: JsonSchema): void {
+        this.onEditReadModel?.(readModelName, currentSchema);
     }
 
     provideCodeActions(
@@ -48,17 +67,35 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
                 if (match && match[1]) {
                     const readModelName = match[1];
 
-                    // Check if this read model already exists
-                    const exists = this.readModels.some(
+                    // Check if this is a draft read model (can be edited)
+                    const isDraft = this.draftReadModel && this.draftReadModel.name === readModelName;
+
+                    // Check if this read model already exists as a persisted read model
+                    const existsAsPersisted = this.readModels.some(
                         rm => rm.displayName === readModelName
                     );
 
-                    if (!exists && this.onCreateReadModel) {
+                    if (isDraft && this.onEditReadModel) {
+                        // Offer to edit the draft read model
+                        actions.push({
+                            title: `Edit read model '${readModelName}'`,
+                            diagnostics: [diagnostic],
+                            kind: 'quickfix',
+                            edit: undefined,
+                            isPreferred: true,
+                            command: {
+                                id: 'projection-declaration.editReadModel',
+                                title: `Edit ${readModelName}`,
+                                arguments: [readModelName, this.draftReadModel.schema]
+                            }
+                        });
+                    } else if (!existsAsPersisted && !isDraft && this.onCreateReadModel) {
+                        // Offer to create a new read model
                         actions.push({
                             title: `Create read model '${readModelName}'`,
                             diagnostics: [diagnostic],
                             kind: 'quickfix',
-                            edit: undefined, // No automatic edit - we'll show a dialog
+                            edit: undefined,
                             isPreferred: true,
                             command: {
                                 id: 'projection-declaration.createReadModel',

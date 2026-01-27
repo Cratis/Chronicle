@@ -11,8 +11,9 @@ namespace Cratis.Chronicle.Api.Projections;
 /// <param name="EventStore">The event store the projection targets.</param>
 /// <param name="Namespace">The namespace the projection targets.</param>
 /// <param name="Declaration">The projection declaration language representation of the projection.</param>
+/// <param name="DraftReadModel">Optional draft read model definition to save along with the projection.</param>
 [Command]
-public record SaveProjection(string EventStore, string Namespace, string Declaration)
+public record SaveProjection(string EventStore, string Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
 {
     /// <summary>
     /// Handles the save projection request.
@@ -25,7 +26,14 @@ public record SaveProjection(string EventStore, string Namespace, string Declara
         {
             EventStore = EventStore,
             Namespace = Namespace,
-            Declaration = Declaration
+            Declaration = Declaration,
+            DraftReadModel = DraftReadModel is not null
+                ? new DraftReadModelDefinition
+                {
+                    Name = DraftReadModel.Name,
+                    Schema = DraftReadModel.Schema
+                }
+                : null
         };
 
         return await projections.Save(request);

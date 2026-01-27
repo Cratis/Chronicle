@@ -32,4 +32,11 @@ public class PreviewProjectionRequest
     /// </summary>
     [ProtoMember(4)]
     public string Declaration { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional draft read model definition to use for preview.
+    /// When provided, this will be used instead of looking up an existing read model.
+    /// </summary>
+    [ProtoMember(5)]
+    public DraftReadModelDefinition? DraftReadModel { get; set; }
 }

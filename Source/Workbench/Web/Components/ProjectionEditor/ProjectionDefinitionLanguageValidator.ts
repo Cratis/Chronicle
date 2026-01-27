@@ -253,15 +253,6 @@ export class ProjectionDefinitionLanguageValidator {
             }
         }
 
-        // Validate read model has an identifier property, but only if there are from statements
-        if (hasFromStatements && activeSchema?.properties) {
-            const hasId = activeSchema.properties['id'] || activeSchema.properties['Id'];
-            if (!hasId) {
-                const col = firstLine.indexOf(readModelName) + 1;
-                markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' should have an 'id' or 'Id' property to serve as identifier`));
-            }
-        }
-
         return markers;
     }
 
