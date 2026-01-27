@@ -129,7 +129,7 @@ export class ProjectionDefinitionLanguageValidator {
                 const eventType = fromMatch[1];
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
                     const col = line.indexOf(eventType) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found in available schemas`));
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
                 }
             }
 
@@ -139,7 +139,7 @@ export class ProjectionDefinitionLanguageValidator {
                 const eventType = eventsMatch[1];
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
                     const col = line.indexOf(eventType) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found in available schemas`));
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
                 }
             }
 
@@ -148,7 +148,7 @@ export class ProjectionDefinitionLanguageValidator {
                 const eventType = removeWithMatch[1];
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
                     const col = line.indexOf(eventType) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found in available schemas`));
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
                 }
             }
 

@@ -38,13 +38,13 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
 
         // Check if we have any diagnostics for undefined read models
         const diagnostics = context.markers.filter(
-            (marker: Monaco.editor.IMarkerData) => marker.message.includes('not found in available schemas')
+            (marker: Monaco.editor.IMarkerData) => marker.message.includes("Read model") && marker.message.includes("not found")
         );
 
         if (diagnostics.length > 0) {
             for (const diagnostic of diagnostics) {
                 // Extract the read model name from the error message
-                const match = diagnostic.message.match(/['"](\w+)['"]/);
+                const match = diagnostic.message.match(/Read model ['"](\w+)['"]/);
                 if (match && match[1]) {
                     const readModelName = match[1];
 
