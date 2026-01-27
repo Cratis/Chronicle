@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Sinks;
+using Humanizer;
 using NJsonSchema;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
@@ -54,7 +55,7 @@ public class ReadModelTypeCommands : ControllerBase
                     Identifier = identifier,
                     Generation = 1,
                 },
-                Name = command.Name,
+                Name = command.Name.Pluralize(),
                 DisplayName = command.Name,
                 Sink = new()
                 {
