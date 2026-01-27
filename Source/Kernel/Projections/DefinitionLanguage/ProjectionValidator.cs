@@ -102,7 +102,7 @@ public class ProjectionValidator(
 
         if (!_eventTypeLookup.ContainsKey(eventType))
         {
-            errors.Add($"Event type '{eventType}' not found", eventTypeRef.Line, eventTypeRef.Column);
+            errors.Add($"Event type '{eventType.Id}' not found", eventTypeRef.Line, eventTypeRef.Column);
         }
     }
 
@@ -112,7 +112,7 @@ public class ProjectionValidator(
 
         if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
         {
-            errors.Add($"Event type '{eventType}' not found", fromEvent.Line, fromEvent.Column);
+            errors.Add($"Event type '{eventType.Id}' not found", fromEvent.EventType.Line, fromEvent.EventType.Column);
             return;
         }
 
@@ -134,7 +134,7 @@ public class ProjectionValidator(
 
             if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
             {
-                errors.Add($"Event type '{eventType}' not found", withBlock.Line, withBlock.Column);
+                errors.Add($"Event type '{eventType.Id}' not found", withBlock.EventType.Line, withBlock.EventType.Column);
                 continue;
             }
 
@@ -220,7 +220,7 @@ public class ProjectionValidator(
 
         if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
         {
-            errors.Add($"Event type '{eventType}' not found", childOnEvent.Line, childOnEvent.Column);
+            errors.Add($"Event type '{eventType.Id}' not found", childOnEvent.EventType.Line, childOnEvent.EventType.Column);
             return;
         }
 
