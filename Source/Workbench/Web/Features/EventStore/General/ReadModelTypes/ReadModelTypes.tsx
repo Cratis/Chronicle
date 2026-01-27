@@ -66,7 +66,13 @@ export const ReadModelTypes = () => {
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
-                    <Column field='name' header={strings.eventStore.general.readModels.columns.name} />
+                    <Column
+                        style={{ width: '300px' }}
+                        field='displayName' header={strings.eventStore.general.readModels.columns.name}
+                        />
+                    <Column
+                        field='name'
+                        header={strings.eventStore.general.readModels.columns.containerName} />
                     <Column
                         field='owner'
                         style={{ width: '100px' }}

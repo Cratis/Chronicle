@@ -115,6 +115,7 @@
                 },
                 "columns": {
                     "name": "Name",
+                    "containerName": "Container Name",
                     "owner": "Owner",
                     "source": "Source",
                     "generation": "Generation"
