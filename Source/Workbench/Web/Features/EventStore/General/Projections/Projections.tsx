@@ -178,8 +178,13 @@ export const Projections = () => {
                                         saveProjection.namespace = params.namespace!;
                                         saveProjection.declaration = declarationValue;
                                         const result = await saveProjection.execute();
-                                        if (result.isSuccess) {
+                                        const errors = result.response?.errors ?? [];
+                                        if (result.isSuccess && errors.length === 0) {
                                             refreshProjections();
+                                            setSyntaxErrors([]);
+                                        } else {
+                                            // Display server-side validation errors in the editor
+                                            setSyntaxErrors(errors);
                                         }
                                     },
                                     template: saveDisabledReason ? (item: MenuItem) => (

@@ -50,8 +50,8 @@ public interface IProjections
     /// </summary>
     /// <param name="request"><see cref="SaveProjectionRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Save(SaveProjectionRequest request, CallContext context = default);
+    /// <returns><see cref="SaveProjectionResult"/> containing any errors.</returns>
+    Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default);
 
     /// <summary>
     /// Generate declarative C# projection code from declaration.

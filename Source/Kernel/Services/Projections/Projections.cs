@@ -120,7 +120,7 @@ internal sealed class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task Save(SaveProjectionRequest request, CallContext context = default)
+    public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
@@ -132,7 +132,7 @@ internal sealed class Projections(
             allReadModels,
             eventTypeSchemas);
 
-        await compileResult.Match(
+        return await compileResult.Match<Task<SaveProjectionResult>>(
             async definition =>
             {
                 var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
@@ -141,9 +141,9 @@ internal sealed class Projections(
 
                 var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
                 await projectionsManager.Register([definition]);
-                return Task.CompletedTask;
+                return new SaveProjectionResult();
             },
-            errors => throw new InvalidOperationException($"Failed to save projection: {string.Join(", ", errors.Errors.Select(e => e.Message))}"));
+            errors => Task.FromResult(new SaveProjectionResult { Errors = errors.ToContract().Errors }));
     }
 
     /// <inheritdoc/>

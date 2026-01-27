@@ -203,7 +203,16 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     language={languageId}
                     value={value}
                     theme={theme}
-                    onChange={(newValue) => onChange?.(newValue || '')}
+                    onChange={(newValue) => {
+                        // Clear server-side validation errors when user edits
+                        if (editorRef.current && monacoRef.current) {
+                            const model = editorRef.current.getModel();
+                            if (model) {
+                                monacoRef.current.editor.setModelMarkers(model, 'projection-declaration-server', []);
+                            }
+                        }
+                        onChange?.(newValue || '');
+                    }}
                     onMount={handleEditorDidMount}
                     options={{
                         minimap: { enabled: false },

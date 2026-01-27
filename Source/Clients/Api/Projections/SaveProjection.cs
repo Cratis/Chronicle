@@ -18,8 +18,8 @@ public record SaveProjection(string EventStore, string Namespace, string Declara
     /// Handles the save projection request.
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
-    /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IProjections projections)
+    /// <returns>Result of saving the projection.</returns>
+    internal async Task<SaveProjectionResult> Handle(IProjections projections)
     {
         var request = new SaveProjectionRequest
         {
@@ -28,6 +28,6 @@ public record SaveProjection(string EventStore, string Namespace, string Declara
             Declaration = Declaration
         };
 
-        await projections.Save(request);
+        return await projections.Save(request);
     }
 }

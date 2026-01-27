@@ -87,8 +87,9 @@ export class ProjectionDefinitionLanguageValidator {
         if (this.readModels.length > 0) {
             const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
             if (!readModelExists) {
+                const lineNumber = firstNonEmptyLineIndex + 1;
                 const col = firstLine.indexOf(readModelName) + 1;
-                markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' not found in available schemas`));
+                markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
             }
         }
 

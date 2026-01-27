@@ -9,3 +9,4 @@ export * from './ProjectionDeclarationSyntaxError';
 export * from './ProjectionPreview';
 export * from './ProjectionWithDeclaration';
 export * from './SaveProjection';
+export * from './SaveProjectionResult';
