@@ -5,12 +5,22 @@ import type { editor } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
+export interface DraftReadModelInfo {
+    name: string;
+    schema: JsonSchema;
+}
+
 export class ProjectionDefinitionLanguageValidator {
     private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
+    private draftReadModel: DraftReadModelInfo | null = null;
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels || [];
+    }
+
+    setDraftReadModel(draft: DraftReadModelInfo | null): void {
+        this.draftReadModel = draft;
     }
 
     // Keep for backwards compatibility
@@ -83,19 +93,27 @@ export class ProjectionDefinitionLanguageValidator {
 
         const [, , readModelName] = projectionMatch;
 
-        // Validate read model exists in schemas
+        // Validate read model exists in schemas or is a draft
         if (this.readModels.length > 0) {
             const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
-            if (!readModelExists) {
+            const isDraftReadModel = this.draftReadModel && this.draftReadModel.name === readModelName;
+            
+            if (!readModelExists && !isDraftReadModel) {
                 const lineNumber = firstNonEmptyLineIndex + 1;
                 const col = firstLine.indexOf(readModelName) + 1;
                 markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
+            } else if (isDraftReadModel) {
+                // Show info marker for draft read models - they exist but haven't been saved yet
+                const lineNumber = firstNonEmptyLineIndex + 1;
+                const col = firstLine.indexOf(readModelName) + 1;
+                markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
             }
         }
 
-        // Get the active read model schema for property validation
-        const activeReadModel = this.readModels.find((rm) => rm.displayName === readModelName);
-        const activeSchema = activeReadModel?.schema;
+        // Get the active read model schema for property validation (check draft first)
+        const isDraft = this.draftReadModel && this.draftReadModel.name === readModelName;
+        const activeReadModel = isDraft ? null : this.readModels.find((rm) => rm.displayName === readModelName);
+        const activeSchema = isDraft ? this.draftReadModel!.schema : activeReadModel?.schema;
 
         // Validate subsequent lines
         const contextStack: JsonSchema[] = [activeSchema!];
@@ -274,6 +292,17 @@ export class ProjectionDefinitionLanguageValidator {
     private createWarning(line: number, startCol: number, endCol: number, message: string): editor.IMarkerData {
         return {
             severity: 4, // Warning
+            startLineNumber: line,
+            startColumn: startCol,
+            endLineNumber: line,
+            endColumn: endCol,
+            message,
+        };
+    }
+
+    private createInfo(line: number, startCol: number, endCol: number, message: string): editor.IMarkerData {
+        return {
+            severity: 2, // Info (hint) - shows as blue/green squiggly
             startLineNumber: line,
             startColumn: startCol,
             endLineNumber: line,

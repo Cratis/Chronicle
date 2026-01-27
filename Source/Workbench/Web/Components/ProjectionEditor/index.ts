@@ -167,6 +167,9 @@ export function setDraftReadModel(draft: { name: string; schema: JsonSchema } | 
     if (codeActionProvider) {
         codeActionProvider.setDraftReadModel(draft);
     }
+    if (validator) {
+        validator.setDraftReadModel(draft);
+    }
     revalidateAllModels();
 }
 
