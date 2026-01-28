@@ -1,15 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Security;
+#if DEVELOPMENT
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Server.OpenIddictServerEvents;
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
-
-#if DEVELOPMENT
 
 /// <summary>
 /// Handles client authentication for OpenIddict during ProcessAuthentication phase.
