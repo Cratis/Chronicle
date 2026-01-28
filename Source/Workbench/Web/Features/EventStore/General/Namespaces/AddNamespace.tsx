@@ -25,8 +25,13 @@ export const AddNamespace = () => {
 
     const customButtons = (
         <>
+            <Button
+                label={strings.general.buttons.ok}
+                icon="pi pi-check"
+                onClick={() => closeDialog(DialogResult.Ok, AddNamespaceResponse.Ok(name))}
+                disabled={!name.trim()}
+                autoFocus />
             <Button label={strings.general.buttons.cancel} icon="pi pi-times" className="p-button-text" onClick={() => closeDialog(DialogResult.Cancelled, AddNamespaceResponse.Canceled)} />
-            <Button label={strings.general.buttons.ok} icon="pi pi-check" onClick={() => closeDialog(DialogResult.Ok, AddNamespaceResponse.Ok(name))} autoFocus />
         </>
     );
 
