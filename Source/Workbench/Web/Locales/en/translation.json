@@ -41,7 +41,6 @@
             "readModelTypes": "Read Model Types",
             "readModels": "Read Models",
             "namespaces": "Namespaces",
-            "webhooks": "Webhooks",
             "sequences": "Sequences",
             "projections": "Projections",
             "reducers": "Reducers",
