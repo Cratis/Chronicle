@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { AddUser } from 'Api/Security';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
@@ -37,14 +37,30 @@ export const AddUserDialog = () => {
         }
     };
 
+    const customButtons = (
+        <>
+            <Button
+                label={strings.general.buttons.ok}
+                icon="pi pi-check"
+                onClick={handleOk}
+                disabled={!username || !password}
+                autoFocus
+            />
+            <Button
+                label={strings.general.buttons.cancel}
+                icon="pi pi-times"
+                onClick={() => closeDialog(DialogResult.Cancelled)}
+                outlined
+            />
+        </>
+    );
+
     return (
         <Dialog
-            header={strings.eventStore.system.users.dialogs.addUser.title}
-            visible={true}
-            style={{ width: '450px' }}
-            modal
-            resizable={false}
-            onHide={() => closeDialog(DialogResult.Cancelled)}>
+            title={strings.eventStore.system.users.dialogs.addUser.title}
+            onClose={closeDialog}
+            buttons={customButtons}
+            resizable={false}>
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">
@@ -97,22 +113,6 @@ export const AddUserDialog = () => {
                         tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}
                     />
                 </div>
-            </div>
-
-            <div className="card flex flex-wrap justify-content-center gap-3 mt-4">
-                <Button
-                    label={strings.general.buttons.ok}
-                    icon="pi pi-check"
-                    onClick={handleOk}
-                    disabled={!username || !password}
-                    autoFocus
-                />
-                <Button
-                    label={strings.general.buttons.cancel}
-                    icon="pi pi-times"
-                    severity='secondary'
-                    onClick={() => closeDialog(DialogResult.Cancelled)}
-                />
             </div>
         </Dialog>
     );

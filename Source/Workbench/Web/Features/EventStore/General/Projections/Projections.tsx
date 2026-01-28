@@ -61,7 +61,7 @@ export const Projections = () => {
     }, [selectedProjection, readModels.data]);
 
     const readModelNameFromDeclaration = useMemo(() => {
-        const match = declarationValue.match(/projection\s+\w+\s*=>\s*(\w+)/i);
+        const match = declarationValue.match(/projection\s+[\w.]+\s*=>\s*([\w.]+)/i);
         return match ? match[1] : null;
     }, [declarationValue]);
 
@@ -148,7 +148,7 @@ export const Projections = () => {
     return (
         <Page title='Projections'>
             <Allotment className="h-full" proportionalLayout={false}>
-                <Allotment.Pane preferredSize="270px">
+                <Allotment.Pane preferredSize="350px">
                     <div className="px-4 py-4">
                         <DataTable
                             value={projections.data}
@@ -165,6 +165,7 @@ export const Projections = () => {
                                 root: { className: 'rounded-lg overflow-hidden' }
                             }}>
 
+                            <Column field="identifier" header="Name" />
                             <Column field="readModel" header="Read Model" />
                         </DataTable>
                     </div>

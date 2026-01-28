@@ -94,18 +94,18 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
                 />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                <Button
-                    label="Cancel"
-                    icon="pi pi-times"
-                    onClick={onCancel}
-                    className="p-button-text"
-                />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-start', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
                 <Button
                     label="Save"
                     icon="pi pi-check"
                     onClick={handleSave}
                     disabled={!readModelName.trim()}
+                />
+                <Button
+                    label="Cancel"
+                    icon="pi pi-times"
+                    onClick={onCancel}
+                    outlined
                 />
             </div>
         </div>
