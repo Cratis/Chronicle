@@ -234,7 +234,9 @@ export const Projections = () => {
                                         const errors = result.response?.errors ?? [];
                                         if (result.isSuccess && errors.length === 0) {
                                             refreshProjections();
-                                            refreshReadModels();
+                                            if (draftReadModel) {
+                                                refreshReadModels(); // Only refresh read models if we created a new one
+                                            }
                                             setSyntaxErrors([]);
                                             setDraftReadModel(null); // Clear draft after successful save
                                             setOriginalDeclarationValue(declarationValue); // Reset original after successful save

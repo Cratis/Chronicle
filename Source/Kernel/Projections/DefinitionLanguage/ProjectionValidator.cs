@@ -43,6 +43,7 @@ public class ProjectionValidator(
 
         var readModelSchema = readModelDefinition.GetSchemaForLatestGeneration();
 
+        ValidateDuplicateEvents(projection.Directives, errors);
         ValidateDirectives(projection.Directives, readModelSchema, errors);
         return readModelSchema;
     }
@@ -54,6 +55,84 @@ public class ProjectionValidator(
             return value;
         }
         return char.ToLowerInvariant(value[0]) + value[1..];
+    }
+
+    void ValidateDuplicateEvents(IReadOnlyList<ProjectionDirective> directives, CompilerErrors errors)
+    {
+        var seenEvents = new Dictionary<string, TypeRef>();
+
+        foreach (var directive in directives)
+        {
+            switch (directive)
+            {
+                case FromEventBlock fromEvent:
+                    CheckDuplicateEvent(fromEvent.EventType, seenEvents, errors);
+                    break;
+                case MultiFromEventBlock multiFromEvent:
+                    foreach (var block in multiFromEvent.Blocks)
+                    {
+                        CheckDuplicateEvent(block.EventType, seenEvents, errors);
+                    }
+                    break;
+                case ChildrenBlock childrenBlock:
+                    ValidateDuplicateEventsInChildBlocks(childrenBlock.ChildBlocks, errors);
+                    break;
+                case JoinBlock joinBlock:
+                    ValidateDuplicateEventsInJoinBlock(joinBlock.WithBlocks, errors);
+                    break;
+                case RemoveWithDirective removeWith:
+                    CheckDuplicateEvent(removeWith.EventType, seenEvents, errors);
+                    break;
+                case RemoveWithJoinDirective removeWithJoin:
+                    CheckDuplicateEvent(removeWithJoin.EventType, seenEvents, errors);
+                    break;
+            }
+        }
+    }
+
+    void ValidateDuplicateEventsInChildBlocks(IReadOnlyList<ChildBlock> childBlocks, CompilerErrors errors)
+    {
+        var seenEvents = new Dictionary<string, TypeRef>();
+
+        foreach (var childBlock in childBlocks)
+        {
+            switch (childBlock)
+            {
+                case ChildOnEventBlock childOnEvent:
+                    CheckDuplicateEvent(childOnEvent.EventType, seenEvents, errors);
+                    break;
+                case NestedChildrenBlock nestedChildren:
+                    ValidateDuplicateEventsInChildBlocks(nestedChildren.ChildBlocks, errors);
+                    break;
+                case ChildJoinBlock childJoin:
+                    ValidateDuplicateEventsInJoinBlock(childJoin.WithBlocks, errors);
+                    break;
+                case ChildEveryBlock:
+                    break;
+            }
+        }
+    }
+
+    void ValidateDuplicateEventsInJoinBlock(IReadOnlyList<WithEventBlock> withBlocks, CompilerErrors errors)
+    {
+        var seenEvents = new Dictionary<string, TypeRef>();
+
+        foreach (var withBlock in withBlocks)
+        {
+            CheckDuplicateEvent(withBlock.EventType, seenEvents, errors);
+        }
+    }
+
+    void CheckDuplicateEvent(TypeRef eventType, Dictionary<string, TypeRef> seenEvents, CompilerErrors errors)
+    {
+        if (seenEvents.ContainsKey(eventType.Name))
+        {
+            errors.Add($"Duplicate event type '{eventType.Name}' - event types can only be used once at each level", eventType.Line, eventType.Column);
+        }
+        else
+        {
+            seenEvents[eventType.Name] = eventType;
+        }
     }
 
     void ValidateDirectives(IReadOnlyList<ProjectionDirective> directives, JsonSchema readModelSchema, CompilerErrors errors)

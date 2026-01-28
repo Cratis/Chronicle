@@ -121,6 +121,11 @@ export class ProjectionDefinitionLanguageValidator {
         const indentStack: number[] = [0]; // Track indentation levels for context
         let lastIndent = 0;
 
+        // Track event types at each context level to detect duplicates
+        // Each entry in the stack represents events seen at that context level
+        type EventInfo = { lineNumber: number; col: number };
+        const eventContextStack: Map<string, EventInfo>[] = [new Map()];
+
         for (let i = 1; i < lines.length; i++) {
             const lineNumber = i + 1;
             const line = lines[i];
@@ -136,17 +141,29 @@ export class ProjectionDefinitionLanguageValidator {
                 const poppedIndent = indentStack.pop();
                 if (poppedIndent !== undefined && currentIndent < poppedIndent) {
                     contextStack.pop();
+                    eventContextStack.pop();
                 }
             }
             lastIndent = currentIndent;
+
+            // Get the current event context (events seen at this level)
+            const currentEventContext = eventContextStack[eventContextStack.length - 1];
 
             // Validate event types in from/every blocks
             const fromMatch = trimmed.match(/^from\s+(\w+)/);
             if (fromMatch) {
                 const eventType = fromMatch[1];
+                const col = line.indexOf(eventType) + 1;
+
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
-                    const col = line.indexOf(eventType) + 1;
                     markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
+                }
+
+                // Check for duplicate events at this level
+                if (currentEventContext.has(eventType)) {
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Duplicate event type '${eventType}' - event types can only be used once at each level`));
+                } else {
+                    currentEventContext.set(eventType, { lineNumber, col });
                 }
             }
 
@@ -154,18 +171,34 @@ export class ProjectionDefinitionLanguageValidator {
             const eventsMatch = trimmed.match(/^events\s+(\w+)/);
             if (eventsMatch) {
                 const eventType = eventsMatch[1];
+                const col = line.indexOf(eventType) + 1;
+
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
-                    const col = line.indexOf(eventType) + 1;
                     markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
+                }
+
+                // Check for duplicate events at this level (within join blocks)
+                if (currentEventContext.has(eventType)) {
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Duplicate event type '${eventType}' - event types can only be used once at each level`));
+                } else {
+                    currentEventContext.set(eventType, { lineNumber, col });
                 }
             }
 
             const removeWithMatch = trimmed.match(/^remove\s+(?:with|via\s+join\s+on)\s+(\w+)/);
             if (removeWithMatch) {
                 const eventType = removeWithMatch[1];
+                const col = line.indexOf(eventType) + 1;
+
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
-                    const col = line.indexOf(eventType) + 1;
                     markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
+                }
+
+                // Check for duplicate events at this level
+                if (currentEventContext.has(eventType)) {
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Duplicate event type '${eventType}' - event types can only be used once at each level`));
+                } else {
+                    currentEventContext.set(eventType, { lineNumber, col });
                 }
             }
 
@@ -231,6 +264,8 @@ export class ProjectionDefinitionLanguageValidator {
                         if (childSchema) {
                             contextStack.push(childSchema);
                             indentStack.push(currentIndent);
+                            // Push a new event context for the children block
+                            eventContextStack.push(new Map());
                         }
                     }
                 }
@@ -253,6 +288,10 @@ export class ProjectionDefinitionLanguageValidator {
                     const col = line.indexOf(joinProperty, line.indexOf('on')) + 1;
                     markers.push(this.createWarning(lineNumber, col, col + joinProperty.length, `Property '${joinProperty}' not found in read model '${readModelName}'`));
                 }
+
+                // Push a new event context for the join block
+                eventContextStack.push(new Map());
+                indentStack.push(currentIndent);
             }
 
             // Validate key references for composite keys
