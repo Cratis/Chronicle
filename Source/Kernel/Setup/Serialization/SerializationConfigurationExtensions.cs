@@ -70,8 +70,23 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<AppendedEventSerializer>()
                 .AddCompleteSerializer<OneOfSerializer>()
                 .AddCompleteSerializer<ConcurrencyScopesSerializer>()
-                .AddCompleteSerializer<ExpandoObjectSerializer>();
+                .AddCompleteSerializer<ExpandoObjectSerializer>()
+                .AddLinqCollectionCopier();
         });
+        return services;
+    }
+
+    /// <summary>
+    /// Adds a copier for LINQ internal collection types.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddLinqCollectionCopier(this IServiceCollection services)
+    {
+        services.AddSingleton<LinqCollectionCopier>();
+        services.AddSingleton<IGeneralizedCopier, LinqCollectionCopier>();
+        services.AddSingleton<ITypeFilter, LinqCollectionCopier>();
+
         return services;
     }
 
