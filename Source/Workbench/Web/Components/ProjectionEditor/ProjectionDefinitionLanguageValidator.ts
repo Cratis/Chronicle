@@ -83,7 +83,8 @@ export class ProjectionDefinitionLanguageValidator {
         }
 
         // Validate first meaningful line - projection declaration
-        const projectionMatch = firstLine.match(/^projection\s+(\w+)\s*=>\s*(\w+)\s*$/);
+        // Support qualified names with dots (e.g., Namespace.ClassName)
+        const projectionMatch = firstLine.match(/^projection\s+([\w.]+)\s*=>\s*([\w.]+)\s*$/);
 
         if (!projectionMatch) {
             const lineNumber = firstNonEmptyLineIndex + 1;
