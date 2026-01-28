@@ -24,9 +24,10 @@ public class Generator : IGenerator
     {
         var sb = new StringBuilder();
         var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title;
+        var projectionName = definition.Identifier.Value;
 
-        // Projection declaration - use read model name since the original projection name is not stored in ProjectionDefinition
-        sb.AppendLine($"projection {readModelName}Projection => {readModelName}");
+        // Projection declaration - use the original projection name from the definition
+        sb.AppendLine($"projection {projectionName} => {readModelName}");
 
         // Sequence directive - only output if it's not the default (Log)
         if (definition.EventSequenceId != EventSequenceId.Log)
