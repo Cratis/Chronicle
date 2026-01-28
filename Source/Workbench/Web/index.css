@@ -149,3 +149,17 @@ h1 {
         box-shadow: none !important;
     }
 }
+
+/* Monaco Editor modified line decorations */
+.modified-line-decoration {
+    width: 3px !important;
+    margin-left: 3px;
+}
+
+.modified-line-decoration.modified-line {
+    background-color: #0c7d9d;
+}
+
+.modified-line-decoration.added-line {
+    background-color: #587c0c;
+}

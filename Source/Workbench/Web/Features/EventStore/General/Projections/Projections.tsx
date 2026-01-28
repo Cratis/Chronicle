@@ -306,6 +306,7 @@ export const Projections = () => {
                         <div className="pt-4" style={{ height: '500px', flexShrink: 0 }}>
                             <ProjectionEditor
                                 value={declarationValue}
+                                originalValue={originalDeclarationValue}
                                 onChange={setDeclarationValue}
                                 onValidationChange={setHasValidationErrors}
                                 readModelSchemas={readModelSchemas}

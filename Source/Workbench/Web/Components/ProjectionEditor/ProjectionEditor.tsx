@@ -22,6 +22,7 @@ import Strings from 'Strings';
 
 export interface ProjectionEditorProps {
     value: string;
+    originalValue?: string;
     onChange?: (value: string) => void;
     onValidationChange?: (hasErrors: boolean) => void;
     readModelSchemas?: JsonSchema[],
@@ -34,6 +35,7 @@ export interface ProjectionEditorProps {
 
 export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     value,
+    originalValue,
     onChange,
     onValidationChange,
     readModelSchemas,
@@ -45,6 +47,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
 }) => {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<Monaco | null>(null);
+    const decorationsRef = useRef<string[]>([]);
     const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
     const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
     const [declarativeCode, setDeclarativeCode] = useState('');
@@ -160,6 +163,68 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             monacoRef.current.editor.setModelMarkers(model, 'projection-declaration-server', []);
         }
     }, [errors]);
+
+    // Update modified line decorations when value or originalValue changes
+    useEffect(() => {
+        if (!editorRef.current || !monacoRef.current) return;
+
+        const editor = editorRef.current;
+        const model = editor.getModel();
+        if (!model) return;
+
+        // If no original value, clear decorations
+        if (originalValue === undefined || originalValue === value) {
+            decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
+            return;
+        }
+
+        // Calculate which lines have changed
+        const originalLines = originalValue.split('\n');
+        const currentLines = value.split('\n');
+        const decorations: editor.IModelDeltaDecoration[] = [];
+
+        const maxLines = Math.max(originalLines.length, currentLines.length);
+
+        for (let i = 0; i < maxLines; i++) {
+            const originalLine = originalLines[i] ?? '';
+            const currentLine = currentLines[i] ?? '';
+
+            if (i >= currentLines.length) {
+                // Line was deleted - we can't show decoration for non-existent lines
+                continue;
+            }
+
+            if (i >= originalLines.length) {
+                // New line added
+                decorations.push({
+                    range: { startLineNumber: i + 1, startColumn: 1, endLineNumber: i + 1, endColumn: 1 },
+                    options: {
+                        isWholeLine: true,
+                        linesDecorationsClassName: 'modified-line-decoration added-line',
+                        overviewRuler: {
+                            color: '#587c0c',
+                            position: monacoRef.current!.editor.OverviewRulerLane.Left
+                        }
+                    }
+                });
+            } else if (originalLine !== currentLine) {
+                // Line was modified
+                decorations.push({
+                    range: { startLineNumber: i + 1, startColumn: 1, endLineNumber: i + 1, endColumn: 1 },
+                    options: {
+                        isWholeLine: true,
+                        linesDecorationsClassName: 'modified-line-decoration modified-line',
+                        overviewRuler: {
+                            color: '#0c7d9d',
+                            position: monacoRef.current!.editor.OverviewRulerLane.Left
+                        }
+                    }
+                });
+            }
+        }
+
+        decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decorations);
+    }, [value, originalValue]);
 
     return (
         <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', overflow: 'hidden' }}>
