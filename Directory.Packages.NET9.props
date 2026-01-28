@@ -7,6 +7,7 @@
         <PackageVersion Update="Microsoft.Extensions.DependencyModel" Version="9.0.11" />
         <PackageVersion Update="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.11" />
         <PackageVersion Update="Microsoft.Extensions.Hosting" Version="9.0.11" />
+        <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
         <PackageVersion Update="Microsoft.Extensions.Logging" Version="9.0.11" />
         <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="9.0.11" />
         <PackageVersion Update="Microsoft.Extensions.Logging.Configuration" Version="9.0.11" />
