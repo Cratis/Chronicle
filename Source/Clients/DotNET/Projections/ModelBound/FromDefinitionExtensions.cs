@@ -77,7 +77,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Increment}()";
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Increment;
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Decrement}()";
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Decrement;
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Count}()";
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Count;
     }
 
     /// <summary>

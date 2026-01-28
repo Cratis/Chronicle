@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Column } from 'primereact/column';
-import { AllUsers, User, RemoveUser } from 'Api/Security';
+import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Api/Security';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
@@ -22,10 +22,26 @@ export const Users = () => {
     const [ChangePasswordWrapper, showChangePassword] = useDialog<ChangePasswordDialogProps>(ChangePasswordDialog);
     const [showConfirmation] = useConfirmationDialog();
     const [removeUser] = RemoveUser.use();
+    const [requirePasswordChange] = RequirePasswordChange.use();
 
     const handleChangePassword = () => {
         if (selectedUser) {
             showChangePassword({ userId: selectedUser.id });
+        }
+    };
+
+    const handleRequirePasswordChange = async () => {
+        if (selectedUser) {
+            const result = await showConfirmation(
+                'Require Password Change',
+                `Are you sure you want to require ${selectedUser.username} to change their password on next login?`,
+                DialogButtons.YesNo
+            );
+
+            if (result === DialogResult.Yes) {
+                requirePasswordChange.userId = selectedUser.id;
+                await requirePasswordChange.execute();
+            }
         }
     };
 
@@ -65,6 +81,12 @@ export const Users = () => {
                         icon={faIcons.FaKey}
                         disableOnUnselected
                         command={handleChangePassword} />
+                    <MenuItem
+                        id="requirePasswordChange"
+                        label="Require Password Change"
+                        icon={faIcons.FaTriangleExclamation}
+                        disableOnUnselected
+                        command={handleRequirePasswordChange} />
                     <MenuItem
                         id="remove"
                         label={strings.eventStore.system.users.actions.remove}

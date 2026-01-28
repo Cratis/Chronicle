@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ImmediateProjection(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection
+    ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection, INotifyProjectionDefinitionsChanged
 {
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
@@ -49,6 +49,26 @@ public class ImmediateProjection(
                                     .GetEventSequence(_projectionKey.EventSequenceId);
 
         _projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey.ProjectionId, _projectionKey.EventStore));
+        await _projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        if (_projection is not null)
+        {
+            await _projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
+    {
+        State = definition;
+        _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+        _initialState = null;
+        _readModelDefinition = null;
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

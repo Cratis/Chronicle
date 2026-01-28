@@ -67,3 +67,28 @@ public record OrderKey(string CustomerId, string OrderNumber);
 public record OrderReadModel(string Id, decimal Total, OrderKey? OrderKey);
 
 public record Users(string Name);
+
+public record ModelWithKeywordProperties(
+    string From,
+    string Projection,
+    string Key,
+    string Join,
+    string Children);
+
+public record KeywordKey(string From, string Projection, string Key, string Join, string Children);
+
+public record KeywordKeyReadModel(KeywordKey Key);
+
+public record SimulatedOrderReadModel(
+    string OrderId,
+    string SimulationId,
+    string SimulationConfigurationId,
+    string SimulationRunId,
+    string? DestinationPostalCode,
+    DateTimeOffset? OrderDate,
+    string? OptimalRoute,
+    decimal TotalDistance,
+    TimeSpan TotalElapsedTime,
+    decimal TotalCo2FootPrint,
+    decimal TotalCost,
+    DateTimeOffset? Timestamp);

@@ -34,17 +34,40 @@ public interface IUsers
     Task ChangePassword(ChangeUserPassword command);
 
     /// <summary>
+    /// Require a user to change their password.
+    /// </summary>
+    /// <param name="command">The <see cref="RequirePasswordChange"/> command.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task RequirePasswordChange(RequirePasswordChange command);
+
+    /// <summary>
+    /// Set the initial admin password.
+    /// </summary>
+    /// <param name="command">The <see cref="SetInitialAdminPassword"/> command.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task SetInitialAdminPassword(SetInitialAdminPassword command);
+
+    /// <summary>
     /// Gets all users.
     /// </summary>
-    /// <returns>Collection of <see cref="User"/>.</returns>
+    /// <returns><see cref="IList{T}"/> of <see cref="User"/>.</returns>
     [Operation]
-    Task<IEnumerable<User>> GetAll();
+    Task<IList<User>> GetAll();
 
     /// <summary>
     /// Observe all users.
     /// </summary>
     /// <param name="context">The gRPC <see cref="CallContext"/>.</param>
-    /// <returns>An observable of collection of <see cref="User"/>.</returns>
+    /// <returns>An observable of <see cref="IList{T}"/> of <see cref="User"/>.</returns>
     [Operation]
-    IObservable<IEnumerable<User>> ObserveAll(CallContext context = default);
+    IObservable<IList<User>> ObserveAll(CallContext context = default);
+
+    /// <summary>
+    /// Checks if initial admin password setup is required.
+    /// </summary>
+    /// <returns>The <see cref="InitialAdminPasswordSetupStatus"/>.</returns>
+    [Operation]
+    Task<InitialAdminPasswordSetupStatus> GetInitialAdminPasswordSetupStatus();
 }

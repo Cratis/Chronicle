@@ -24,6 +24,7 @@ public class a_resolver : Specification
             "Something",
             "Something",
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,

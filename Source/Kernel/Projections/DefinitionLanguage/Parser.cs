@@ -9,7 +9,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Parser for the indentation-based projection DSL that converts tokens into an AST.
+/// Parser for the indentation-based projection declaration language that converts tokens into an AST.
 /// </summary>
 /// <param name="tokens">The tokens to parse.</param>
 public class Parser(IEnumerable<Token> tokens) : IParsingContext
@@ -28,7 +28,7 @@ public class Parser(IEnumerable<Token> tokens) : IParsingContext
     public ParsingErrors Errors { get; } = new([]);
 
     /// <summary>
-    /// Parses the DSL into a Document AST.
+    /// Parses the projection declaration language into a Document AST.
     /// </summary>
     /// <returns>The parsed document or parsing errors.</returns>
     public Result<Document, ParsingErrors> Parse()

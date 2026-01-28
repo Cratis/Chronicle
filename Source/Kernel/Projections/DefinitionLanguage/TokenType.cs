@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Represents the different types of tokens in the projection DSL.
+/// Represents the different types of tokens in the projection definition.
 /// </summary>
 #pragma warning disable CA1027 // Mark enums with FlagsAttribute
 public enum TokenType

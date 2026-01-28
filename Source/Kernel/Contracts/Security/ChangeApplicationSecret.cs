@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents the command for changing application secret.
 /// </summary>
 [ProtoContract]
-public record ChangeApplicationSecret
+public class ChangeApplicationSecret
 {
     /// <summary>
     /// The unique identifier for the client.

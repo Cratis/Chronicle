@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class event_data_expressions : given.a_language_service_with_schemas<given.UserReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection User => UserReadModel
           from UserCreated
             key userId
@@ -22,7 +22,7 @@ public class event_data_expressions : given.a_language_service_with_schemas<give
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_user_created() => _result.From.ContainsKey((EventType)"UserCreated").ShouldBeTrue();
     [Fact] void should_have_three_properties() => _result.From[(EventType)"UserCreated"].Properties.Count.ShouldEqual(3);

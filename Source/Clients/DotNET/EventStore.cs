@@ -156,7 +156,7 @@ public class EventStore : IEventStore
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
         FailedPartitions = new FailedPartitions(this);
 
-        var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions), this);
+        var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
 
         ReadModels = new ReadModels.ReadModels(
             this,

@@ -16,7 +16,8 @@ namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 /// OpenIddict application store backed by Chronicle's Security storage.
 /// </summary>
 /// <param name="applicationStorage">The application storage.</param>
-public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIddictApplicationStore<Application>
+public class ApplicationStore(
+    IApplicationStorage applicationStorage) : IOpenIddictApplicationStore<Application>
 {
     /// <inheritdoc/>
     public async ValueTask<long> CountAsync(CancellationToken cancellationToken)
@@ -102,7 +103,7 @@ public class ApplicationStore(IApplicationStorage applicationStorage) : IOpenIdd
     /// <inheritdoc/>
     public ValueTask<string?> GetClientTypeAsync(Application application, CancellationToken cancellationToken)
     {
-        return new(application.Type?.Value);
+        return new(application.Type?.Value ?? OpenIddictConstants.ClientTypes.Public);
     }
 
     /// <inheritdoc/>

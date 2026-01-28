@@ -15,7 +15,7 @@ using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using ProtoBuf.Grpc;
-using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDefinitionParsingErrors;
+using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
 
 namespace Cratis.Chronicle.Services.Projections;
@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
-/// <param name="languageService"><see cref="ILanguageService"/> for handling projection definition language.</param>
+/// <param name="languageService"><see cref="ILanguageService"/> for handling projection declaration language.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
@@ -52,20 +52,20 @@ internal sealed class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<Contracts.Projections.ProjectionWithDsl>> GetAllDsls(GetAllDslsRequest request, CallContext context = default)
+    public async Task<IEnumerable<Contracts.Projections.ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default)
     {
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
-        var dsls = await projectionsManager.GetProjectionDsls();
-        return dsls.Select(p => new Contracts.Projections.ProjectionWithDsl
+        var definitions = await projectionsManager.GetProjectionDeclarations();
+        return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
         {
             Identifier = p.Identifier,
             ReadModel = p.ReadModel,
-            Dsl = p.Dsl
+            Declaration = p.Declaration
         }).ToArray();
     }
 
     /// <inheritdoc/>
-    public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> PreviewFromDsl(PreviewProjectionRequest request, CallContext context = default)
+    public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
@@ -81,7 +81,7 @@ internal sealed class Projections(
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
-            request.Dsl ?? string.Empty,
+            request.Declaration ?? string.Empty,
             Concepts.Projections.ProjectionOwner.Server,
             allReadModels,
             eventTypeSchemas);
@@ -120,19 +120,19 @@ internal sealed class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task SaveFromDsl(SaveProjectionRequest request, CallContext context = default)
+    public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
-            request.Dsl ?? string.Empty,
+            request.Declaration ?? string.Empty,
             Concepts.Projections.ProjectionOwner.Server,
             allReadModels,
             eventTypeSchemas);
 
-        await compileResult.Match(
+        return await compileResult.Match<Task<SaveProjectionResult>>(
             async definition =>
             {
                 var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
@@ -141,20 +141,20 @@ internal sealed class Projections(
 
                 var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
                 await projectionsManager.Register([definition]);
-                return Task.CompletedTask;
+                return new SaveProjectionResult();
             },
-            errors => throw new InvalidOperationException($"Failed to save projection: {string.Join(", ", errors.Errors.Select(e => e.Message))}"));
+            errors => Task.FromResult(new SaveProjectionResult { Errors = errors.ToContract().Errors }));
     }
 
     /// <inheritdoc/>
-    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCodeFromDsl(GenerateDeclarativeCodeRequest request, CallContext context = default)
+    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCode(GenerateDeclarativeCodeRequest request, CallContext context = default)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
-            request.Dsl ?? string.Empty,
+            request.Declaration ?? string.Empty,
             Concepts.Projections.ProjectionOwner.Server,
             allReadModels,
             eventTypeSchemas);
@@ -171,14 +171,14 @@ internal sealed class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCodeFromDsl(GenerateModelBoundCodeRequest request, CallContext context = default)
+    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCode(GenerateModelBoundCodeRequest request, CallContext context = default)
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
-            request.Dsl ?? string.Empty,
+            request.Declaration ?? string.Empty,
             Concepts.Projections.ProjectionOwner.Server,
             allReadModels,
             eventTypeSchemas);

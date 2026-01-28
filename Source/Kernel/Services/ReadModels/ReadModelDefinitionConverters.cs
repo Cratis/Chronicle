@@ -35,7 +35,9 @@ internal static class ReadModelDefinitionConverters
             Schema = latestSchema.ToJson(),
             Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList(),
             ObserverType = (Contracts.ReadModels.ReadModelObserverType)(int)definition.ObserverType,
-            ObserverIdentifier = definition.ObserverIdentifier
+            ObserverIdentifier = definition.ObserverIdentifier,
+            Owner = (Contracts.ReadModels.ReadModelOwner)(int)definition.Owner,
+            Source = (Contracts.ReadModels.ReadModelSource)(int)definition.Source
         };
     }
 
@@ -44,8 +46,9 @@ internal static class ReadModelDefinitionConverters
     /// </summary>
     /// <param name="contract">The <see cref="Contracts.ReadModels.ReadModelDefinition"/> to convert.</param>
     /// <param name="owner">The owner of the read model.</param>
+    /// <param name="source">The source of the read model.</param>
     /// <returns>The converted <see cref="ReadModelDefinition"/>.</returns>
-    public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner)
+    public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner, Contracts.ReadModels.ReadModelSource source)
     {
         var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
         var indexes = contract.Indexes
@@ -57,6 +60,7 @@ internal static class ReadModelDefinitionConverters
             contract.Name,
             contract.DisplayName,
             (ReadModelOwner)(int)owner,
+            (ReadModelSource)(int)source,
             (ReadModelObserverType)(int)contract.ObserverType,
             contract.ObserverIdentifier,
             contract.Sink.ToChronicle(),

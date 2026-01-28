@@ -9,7 +9,7 @@ public class ImmediateProjection : IProjectionFor<TestReadModel>
 
     public void Define(IProjectionBuilderFor<TestReadModel> builder)
     {
-        builder.Passive();
+        builder.Passive().NoAutoMap();
         if (MapBothProperties)
         {
             builder.From<TestEvent>(e => e

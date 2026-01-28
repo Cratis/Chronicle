@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class duplicate_key_directive : given.a_language_service_expecting_errors
 {
-    const string Definition = """
+    const string Declaration = """
         projection Account => AccountReadModel
           from AccountCreated
             key accountId
             key customerId
         """;
 
-    void Because() => Compile(Definition);
+    void Because() => Compile(Declaration);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
     [Fact] void should_report_duplicate_key() => _errors.Errors.ShouldContain(e => e.Message.Contains("key") || e.Message.Contains("duplicate") || e.Message.Contains("already"));

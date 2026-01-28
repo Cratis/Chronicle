@@ -191,6 +191,23 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
     public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => _createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
 
+    /// <summary>
+    /// Create a new <see cref="HttpClient"/> instance.
+    /// </summary>
+    /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
+    /// <param name="handler">The <see cref="HttpMessageHandler"/> to use.</param>
+    /// <returns>A new <see cref="HttpClient"/> instance.</returns>
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options, HttpMessageHandler handler)
+    {
+        var client = CreateClient(options);
+        var newClient = new HttpClient(handler)
+        {
+            BaseAddress = client.BaseAddress
+        };
+        client.Dispose();
+        return newClient;
+    }
+
     /// <inheritdoc/>
     public virtual void Dispose()
     {

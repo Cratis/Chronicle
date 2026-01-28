@@ -6,28 +6,28 @@ using Cratis.Chronicle.Contracts.Projections;
 namespace Cratis.Chronicle.Api.Projections;
 
 /// <summary>
-/// Represents a request to save a projection from its DSL representation.
+/// Represents a request to save a projection from its projection declaration language representation.
 /// </summary>
 /// <param name="EventStore">The event store the projection targets.</param>
 /// <param name="Namespace">The namespace the projection targets.</param>
-/// <param name="Dsl">The DSL representation of the projection.</param>
+/// <param name="Declaration">The projection declaration language representation of the projection.</param>
 [Command]
-public record SaveProjection(string EventStore, string Namespace, string Dsl)
+public record SaveProjection(string EventStore, string Namespace, string Declaration)
 {
     /// <summary>
     /// Handles the save projection request.
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
-    /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IProjections projections)
+    /// <returns>Result of saving the projection.</returns>
+    internal async Task<SaveProjectionResult> Handle(IProjections projections)
     {
         var request = new SaveProjectionRequest
         {
             EventStore = EventStore,
             Namespace = Namespace,
-            Dsl = Dsl
+            Declaration = Declaration
         };
 
-        await projections.SaveFromDsl(request);
+        return await projections.Save(request);
     }
 }

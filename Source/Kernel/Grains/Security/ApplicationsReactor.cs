@@ -30,7 +30,16 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
         {
             Id = eventContext.EventSourceId,
             ClientId = @event.ClientId,
-            ClientSecret = @event.ClientSecret
+            ClientSecret = @event.ClientSecret,
+            Type = "confidential",
+            ConsentType = "implicit",
+            Permissions =
+            [
+                "ept:token",
+                "gt:client_credentials",
+                "gt:password",
+                "gt:refresh_token"
+            ]
         };
 
         await applicationStorage.Create(application);

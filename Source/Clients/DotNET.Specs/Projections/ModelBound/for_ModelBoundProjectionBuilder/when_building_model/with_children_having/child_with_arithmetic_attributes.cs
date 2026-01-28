@@ -94,7 +94,7 @@ public class child_with_arithmetic_attributes : given.a_model_bound_projection_b
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Account.TransactionCount)];
-        expression.ShouldEqual($"{WellKnownExpressions.Increment}()");
+        expression.ShouldEqual(WellKnownExpressions.Increment);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class child_with_arithmetic_attributes : given.a_model_bound_projection_b
         var childrenDef = _result.Children[nameof(Bank.Accounts)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
         var expression = fromDef.Properties[nameof(Account.TotalDeposits)];
-        expression.ShouldEqual($"{WellKnownExpressions.Count}()");
+        expression.ShouldEqual(WellKnownExpressions.Count);
     }
 
     [Fact]

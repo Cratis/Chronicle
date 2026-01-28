@@ -6,7 +6,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 
 /// <summary>
-/// Represents the root of a projection DSL document.
+/// Represents the root of a projection definition document.
 /// </summary>
 /// <param name="Projections">Collection of projections defined in the document.</param>
 public record Document(IReadOnlyList<ProjectionNode> Projections) : AstNode

@@ -7,13 +7,13 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class with_empty_definition : a_language_service
 {
-    const string Definition = "";
+    const string Declaration = "";
 
     CompilerErrors _errors;
 
     void Because()
     {
-        var result = _languageService.GetReadModelIdentifier(Definition);
+        var result = _languageService.GetReadModelIdentifier(Declaration);
         _errors = result.Match(
             identifier => throw new InvalidOperationException("Should have failed"),
             errors => errors);

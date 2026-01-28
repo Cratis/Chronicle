@@ -31,6 +31,33 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
             PasswordHash = @event.PasswordHash,
             SecurityStamp = Guid.NewGuid().ToString(),
             IsActive = true,
+            RequiresPasswordChange = true,
+            HasLoggedIn = false,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastModifiedAt = null
+        };
+
+        await userStorage.Create(user);
+    }
+
+    /// <summary>
+    /// Handles the addition of the initial admin user without a password.
+    /// </summary>
+    /// <param name="event">The event containing the user information.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Await Task.</returns>
+    public async Task InitialAdminAdded(InitialAdminUserAdded @event, EventContext eventContext)
+    {
+        var user = new ChronicleUser
+        {
+            Id = eventContext.EventSourceId,
+            Username = @event.Username,
+            Email = @event.Email,
+            PasswordHash = null,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            IsActive = true,
+            RequiresPasswordChange = true,
+            HasLoggedIn = false,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModifiedAt = null
         };
@@ -62,6 +89,25 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
         {
             user.PasswordHash = @event.PasswordHash;
             user.SecurityStamp = Guid.NewGuid().ToString();
+            user.RequiresPasswordChange = false;
+            user.HasLoggedIn = true;
+            user.LastModifiedAt = DateTimeOffset.UtcNow;
+            await userStorage.Update(user);
+        }
+    }
+
+    /// <summary>
+    /// Handles when a user is required to change their password.
+    /// </summary>
+    /// <param name="event">The event containing the requirement information.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Await Task.</returns>
+    public async Task RequiresPasswordChange(PasswordChangeRequired @event, EventContext eventContext)
+    {
+        var user = await userStorage.GetById(eventContext.EventSourceId);
+        if (user is not null)
+        {
+            user.RequiresPasswordChange = true;
             user.LastModifiedAt = DateTimeOffset.UtcNow;
             await userStorage.Update(user);
         }

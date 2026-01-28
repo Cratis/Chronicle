@@ -11,9 +11,9 @@ namespace Cratis.Chronicle.Api.Projections;
 /// </summary>
 /// <param name="EventStore">The event store the projection targets.</param>
 /// <param name="Namespace">The namespace the projection targets.</param>
-/// <param name="Dsl">The DSL representation of the projection.</param>
+/// <param name="Declaration">The projection declaration language representation of the projection.</param>
 [Command]
-public record PreviewProjection(string EventStore, string Namespace, string Dsl)
+public record PreviewProjection(string EventStore, string Namespace, string Declaration)
 {
     /// <summary>
     /// Handles the preview projection request.
@@ -26,10 +26,10 @@ public record PreviewProjection(string EventStore, string Namespace, string Dsl)
         {
             EventStore = EventStore,
             Namespace = Namespace,
-            Dsl = Dsl
+            Declaration = Declaration
         };
 
-        var result = await projections.PreviewFromDsl(request);
+        var result = await projections.Preview(request);
 
         return result.Value switch
         {
@@ -38,12 +38,12 @@ public record PreviewProjection(string EventStore, string Namespace, string Dsl)
                 JsonNode.Parse(preview.ReadModel.Schema)!.AsObject(),
                 []),
 
-            ProjectionDefinitionParsingErrors errors => new ProjectionPreview(
+            ProjectionDeclarationParsingErrors errors => new ProjectionPreview(
                 [],
                 new JsonObject(),
-                errors.Errors.Select(e => new ProjectionDefinitionSyntaxError(e.Message, e.Line, e.Column))),
+                errors.Errors.Select(e => new ProjectionDeclarationSyntaxError(e.Message, e.Line, e.Column))),
 
-            _ => throw new InvalidOperationException("Unexpected result type from PreviewFromDsl")
+            _ => throw new InvalidOperationException("Unexpected result type from Preview")
         };
     }
 }

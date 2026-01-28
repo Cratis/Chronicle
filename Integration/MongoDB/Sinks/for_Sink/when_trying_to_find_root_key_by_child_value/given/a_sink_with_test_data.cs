@@ -12,7 +12,7 @@ using NSubstitute;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value.given;
 
-public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specification(fixture)
+public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integration.given.a_mongo_client(fixture)
 {
     protected Sink _sink;
     protected IMongoDatabase _database;
@@ -21,8 +21,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
 
     void Establish()
     {
-        var client = new MongoClient($"mongodb://localhost:{XUnit.Integration.ChronicleFixture.MongoDBPort}");
-        _database = client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
+        _database = _client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
         const string collectionName = "test_read_model";
         _collection = _database.GetCollection<BsonDocument>(collectionName);
 
@@ -80,6 +79,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
             "TestReadModel",
             "TestReadModel",
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_with_comments : given.a_language_service_with_schemas<given.UserReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         # This is a projection with comments
         projection User => UserReadModel
           # Handle user creation
@@ -21,7 +21,7 @@ public class projection_with_comments : given.a_language_service_with_schemas<gi
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_compile_successfully() => _result.ShouldNotBeNull();
     [Fact] void should_have_user_added_event() => _result.From.ContainsKey((EventType)"UserAdded").ShouldBeTrue();

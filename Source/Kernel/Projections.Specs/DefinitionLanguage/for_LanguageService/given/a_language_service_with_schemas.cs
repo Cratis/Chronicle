@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
 using NJsonSchema.Generation;
@@ -29,7 +28,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
         _eventTypeSchemas = CreateEventTypeSchemas(EventTypes).ToList();
     }
 
-    protected ProjectionDefinition CompileGenerateAndRecompile(string definition)
+    protected CompilerResult CompileGenerateAndRecompile(string definition)
     {
         var result = _languageService.Compile(
             definition,
@@ -47,9 +46,11 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             ProjectionOwner.Client,
             [_readModelDefinition],
             _eventTypeSchemas);
-        return recompileResult.Match(
+        var recompiledDefinition = recompileResult.Match(
             projectionDef => projectionDef,
-            errors => throw new InvalidOperationException($"Re-compilation of generated DSL failed: {string.Join(", ", errors.Errors)}\n\nGenerated DSL was:\n{generated}"));
+            errors => throw new InvalidOperationException($"Re-compilation of generated projection declaration language failed: {string.Join(", ", errors.Errors)}\n\nGenerated projection declaration language was:\n{generated}"));
+
+        return new CompilerResult(recompiledDefinition, generated);
     }
 
     static ReadModelDefinition CreateReadModelDefinition<T>()
@@ -70,6 +71,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
             new ReadModelName(name),
             new ReadModelDisplayName(name),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(

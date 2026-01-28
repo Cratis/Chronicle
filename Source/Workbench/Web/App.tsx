@@ -12,7 +12,7 @@ import { BusyIndicatorDialog, ConfirmationDialog } from 'Components/Dialogs';
 import { Arc } from '@cratis/arc.react';
 import { MVVM } from '@cratis/arc.react.mvvm';
 
-const isDevelopment = process.env.NODE_ENV === 'development';
+const isDevelopment = import.meta.env.MODE === 'development';
 
 function App() {
     const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;

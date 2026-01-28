@@ -37,3 +37,23 @@
 .hamburgerMenuButton:active {
   box-shadow: none !important;
 }
+
+.versionInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    line-height: 1.2;
+}
+
+.version {
+    font-weight: 500;
+}
+
+.commitSha {
+    font-family: monospace;
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+

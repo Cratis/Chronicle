@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Projections.DefinitionLanguage.AST;
 using Cratis.Chronicle.Projections.DefinitionLanguage.Visitors;
 
@@ -166,23 +167,23 @@ public class ExpressionParser
         // Simple parser for expressions within template
         exprText = exprText.Trim();
 
-        if (exprText.StartsWith("$eventContext."))
+        if (exprText.StartsWith($"{WellKnownExpressions.EventContext}."))
         {
             return new EventContextExpression(exprText.Substring(14));
         }
 
-        if (exprText == "$eventSourceId")
+        if (exprText == WellKnownExpressions.EventSourceId)
         {
             return new EventSourceIdExpression();
         }
 
-        if (exprText.StartsWith("$causedBy"))
+        if (exprText.StartsWith(WellKnownExpressions.CausedBy))
         {
-            if (exprText == "$causedBy")
+            if (exprText == WellKnownExpressions.CausedBy)
             {
                 return new CausedByExpression(null);
             }
-            if (exprText.StartsWith("$causedBy."))
+            if (exprText.StartsWith($"{WellKnownExpressions.CausedBy}."))
             {
                 var property = exprText.Substring(10);
                 return new CausedByExpression(property);

@@ -20,6 +20,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     readonly JsonSerializerOptions _jsonSerializerOptions;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
+    bool _started;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelWatcher{TReadModel}"/> class.
@@ -52,6 +53,13 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     /// <inheritdoc/>
     public void Start()
     {
+        if (_started)
+        {
+            return;
+        }
+
+        _started = true;
+
         var request = new ContractReadModels.WatchRequest
         {
             EventStore = _eventStore.Name,

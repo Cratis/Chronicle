@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// <param name="Name">Name of the model.</param>
 /// <param name="DisplayName">Display name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
+/// <param name="Source">The source of the read model.</param>
 /// <param name="ObserverType">The type of owner for the read model.</param>
 /// <param name="ObserverIdentifier">The observer identifier for the read model.</param>
 /// <param name="Sink">The <see cref="SinkDefinition"/> defining where to store the read model.</param>
@@ -25,6 +26,7 @@ public record ReadModelDefinition(
     ReadModelName Name,
     ReadModelDisplayName DisplayName,
     ReadModelOwner Owner,
+    ReadModelSource Source,
     ReadModelObserverType ObserverType,
     ReadModelObserverIdentifier ObserverIdentifier,
     SinkDefinition Sink,

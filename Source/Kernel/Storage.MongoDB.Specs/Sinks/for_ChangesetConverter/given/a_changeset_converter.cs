@@ -36,6 +36,7 @@ public class a_changeset_converter : Specification
             nameof(TestReadModel),
             nameof(TestReadModel),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,

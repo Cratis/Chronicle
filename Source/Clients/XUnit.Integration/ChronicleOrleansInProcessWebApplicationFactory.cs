@@ -40,11 +40,14 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
         var chronicleOptions = new Configuration.ChronicleOptions();
 
+        var mongoServer = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}/?directConnection=true";
+
         builder.AddCratisMongoDB(
             mongo =>
             {
-                mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}?directConnection=true";
+                mongo.Server = mongoServer;
                 mongo.Database = "orleans";
+                mongo.DirectConnection = true;
             },
             configureMongoDB);
         builder.ConfigureLogging(_ =>
@@ -73,7 +76,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
                         options => options.EventStoreName = Constants.EventStore,
-                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
+                        chronicleBuilder => chronicleBuilder.WithMongoDB(mongoServer, Constants.EventStore));
             })
             .UseConsoleLifetime();
 

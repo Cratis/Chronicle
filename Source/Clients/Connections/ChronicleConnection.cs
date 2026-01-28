@@ -218,72 +218,84 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     GrpcChannel CreateGrpcChannel()
     {
-        var certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
-        var httpHandler = new SocketsHttpHandler
+        X509Certificate2? certificate = null;
+        try
         {
-            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
-            EnableMultipleHttp2Connections = true
-        };
-
-        if (!_disableTls && certificate is not null)
-        {
-            httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
-            _logger.UsingClientCertificate(_certificatePath!);
-        }
-
-        if (!_disableTls)
-        {
-            httpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
+#pragma warning disable CA2000 // Certificate ownership is transferred to httpHandler.SslOptions.ClientCertificates
+            certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
+            var httpHandler = new SocketsHttpHandler
             {
-                if (sslPolicyErrors == SslPolicyErrors.None)
-                {
-                    return true;
-                }
-
-                if (cert is not null && certificate is not null)
-                {
-                    return cert.GetCertHashString() == certificate.GetCertHashString();
-                }
-
-                // For development: accept localhost certificates with name mismatches
-                return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                EnableMultipleHttp2Connections = true
             };
-        }
 
-        var scheme = _disableTls ? "http" : "https";
-        var address = $"{scheme}://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
-
-        var channel = GrpcChannel.ForAddress(
-            address,
-            new GrpcChannelOptions
+            if (!_disableTls && certificate is not null)
             {
-                HttpHandler = httpHandler,
-                MaxReceiveMessageSize = _maxReceiveMessageSize,
-                MaxSendMessageSize = _maxSendMessageSize,
-                ServiceConfig = new ServiceConfig
+                httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
+                _logger.UsingClientCertificate(_certificatePath!);
+            }
+#pragma warning restore CA2000
+
+            if (!_disableTls)
+            {
+                var certHashString = certificate?.GetCertHashString();
+                httpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
                 {
-                    MethodConfigs =
+                    if (sslPolicyErrors == SslPolicyErrors.None)
                     {
-                        new MethodConfig
+                        return true;
+                    }
+
+                    if (cert is not null && certHashString is not null)
+                    {
+                        return cert.GetCertHashString() == certHashString;
+                    }
+
+                    // For development: accept localhost certificates with name mismatches
+                    return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+                };
+            }
+
+            var scheme = _disableTls ? "http" : "https";
+            var address = $"{scheme}://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
+
+            var channel = GrpcChannel.ForAddress(
+                address,
+                new GrpcChannelOptions
+                {
+                    HttpHandler = httpHandler,
+                    MaxReceiveMessageSize = _maxReceiveMessageSize,
+                    MaxSendMessageSize = _maxSendMessageSize,
+                    ServiceConfig = new ServiceConfig
+                    {
+                        MethodConfigs =
                         {
-                            Names = { MethodName.Default },
-                            RetryPolicy = new RetryPolicy
+                            new MethodConfig
                             {
-                                MaxAttempts = 5,
-                                InitialBackoff = TimeSpan.FromSeconds(1),
-                                MaxBackoff = TimeSpan.FromSeconds(10),
-                                BackoffMultiplier = 1.5,
-                                RetryableStatusCodes = { StatusCode.Unavailable }
+                                Names = { MethodName.Default },
+                                RetryPolicy = new RetryPolicy
+                                {
+                                    MaxAttempts = 5,
+                                    InitialBackoff = TimeSpan.FromSeconds(1),
+                                    MaxBackoff = TimeSpan.FromSeconds(10),
+                                    BackoffMultiplier = 1.5,
+                                    RetryableStatusCodes = { StatusCode.Unavailable }
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
 
-        _logger.ChannelCreated(address);
-        return channel;
+            _logger.ChannelCreated(address);
+            return channel;
+        }
+        catch
+        {
+            certificate?.Dispose();
+            throw;
+        }
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)

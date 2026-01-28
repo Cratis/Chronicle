@@ -6,8 +6,8 @@ Chronicle supports three distinct approaches for defining projections, each desi
 
 ```mermaid
 graph TB
-    subgraph Input["Projection Definition Approaches"]
-        DSL["Projection Definition Language<br/>(DSL)"]
+    subgraph Input["Projection Declaration Approaches"]
+        PDL["Projection Declaration Language<br/>(Declaration)"]
         ModelBound["Model-Bound<br/>(C# Attributes)"]
         Declarative["Declarative<br/>(C# Fluent API)"]
     end
@@ -23,7 +23,7 @@ graph TB
         ReadModel["Read Model Storage"]
     end
 
-    DSL -->|Compiler| Definition
+    PDL -->|Compiler| Definition
     ModelBound -->|Reflection| Definition
     Declarative -->|Builder| Definition
 
@@ -32,15 +32,15 @@ graph TB
     Events --> Projector
     Projector --> ReadModel
 
-    style DSL fill:#e1f5ff
+    style PDL fill:#e1f5ff
     style ModelBound fill:#fff4e1
     style Declarative fill:#e8f5e9
     style Definition fill:#f3e5f5
 ```
 
-### 1. Projection Definition Language (DSL)
+### 1. Projection Declaration Language
 
-The DSL provides a concise, indentation-based syntax optimized for readability and quick authoring.
+The Projection Declaration Language provides a concise, indentation-based syntax optimized for readability and quick authoring.
 Typically available from the tooling like Workbench.
 
 **Example:**
@@ -61,7 +61,7 @@ projection MyModel
 - Building new projections
 - Prototyping and experimentation
 - Working with the Workbench UI
-- Team prefers concise syntax
+- Team prefers concise, declarative syntax
 
 ### 2. Model-Bound Projections
 
@@ -121,7 +121,7 @@ public class MyModelProjection : IProjectionDefinition
 **Use when:**
 - Complex business rules require code
 - Generating projections dynamically
-- Advanced scenarios beyond DSL capabilities
+- Advanced scenarios beyond declaration language capabilities
 - Need for custom extensions
 
 ## Architecture Components
@@ -153,7 +153,7 @@ graph LR
     end
 
     Workbench --> MonacoEditor
-    MonacoEditor --> |DSL Text| Tokenizer
+    MonacoEditor --> |Declaration Text| Tokenizer
     Tokenizer --> Parser
     Parser --> Validator
     Validator --> DefBuilder
@@ -175,7 +175,7 @@ graph LR
 **Workbench UI**: Web-based interface for creating, editing, and testing projections.
 
 **Monaco Editor with Language Service**: Provides rich editing experience with:
-- Syntax highlighting for all DSL keywords
+- Syntax highlighting for all declaration keywords
 - Context-sensitive auto-completion
 - Real-time validation with schema awareness
 - Hover documentation
@@ -183,7 +183,7 @@ graph LR
 
 ### Compilation Layer
 
-**Tokenizer**: Converts DSL text into tokens, handling:
+**Tokenizer**: Converts declaration text into tokens, handling:
 - Indentation-based structure
 - Keywords and identifiers
 - String literals and expressions
@@ -205,7 +205,7 @@ graph LR
 
 ### Core Layer
 
-**ProjectionDefinition**: Unified representation of projection logic, regardless of source (DSL, Model-Bound, or Declarative).
+**ProjectionDefinition**: Unified representation of projection logic, regardless of source (Projection Declaration, Model-Bound, or Declarative).
 
 **Projection Registry**: Manages all registered projections in the system.
 
@@ -234,7 +234,7 @@ sequenceDiagram
     participant Events as Event Stream
     participant Storage
 
-    User->>Editor: Write DSL
+    User->>Editor: Write Declaration
     Editor->>Editor: Syntax Highlight
     Editor->>Compiler: Compile on Change
     Compiler->>Editor: Return Errors/Warnings
@@ -252,8 +252,8 @@ sequenceDiagram
 
 ## Choosing an Approach
 
-| Criterion | DSL | Model-Bound | Declarative |
-|-----------|-----|-------------|-------------|
+| Criterion | Declaration | Model-Bound | Declarative |
+|-----------|-------------|-------------|-------------|
 | **Ease of Learning** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
 | **Type Safety** | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 | **Conciseness** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
@@ -262,7 +262,7 @@ sequenceDiagram
 | **Prototyping Speed** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
 | **Complex Logic** | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 
-**Recommendation**: Start with the **DSL** for rapid development and prototyping. Move to **Model-Bound** when type safety becomes critical. Use **Declarative** for advanced scenarios requiring programmatic control.
+**Recommendation**: Start with the **Projection Declaration Language** for rapid development and prototyping. Move to **Model-Bound** when type safety becomes critical. Use **Declarative** for advanced scenarios requiring programmatic control.
 
 ## Common Patterns Across All Approaches
 

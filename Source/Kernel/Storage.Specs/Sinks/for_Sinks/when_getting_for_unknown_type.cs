@@ -18,6 +18,7 @@ public class when_getting_for_unknown_type : Specification
         string.Empty,
         string.Empty,
         ReadModelOwner.None,
+        ReadModelSource.Code,
         ReadModelObserverType.Projection,
         ReadModelObserverIdentifier.Unspecified,
         null!,

@@ -8,8 +8,17 @@ import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
+import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
+import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
+import { QueryResultWithState } from '@cratis/arc/queries';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
+
+const ellipsis = (value: string) => {
+    const maxLength = 20;
+    return value.length > maxLength ? `${value.substring(0, maxLength)}...` : value;
+};
 
 const hourBucket = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -33,7 +42,7 @@ const dimensions: PivotDimension<AppendedEvent>[] = [
     {
         key: 'timeline-hour',
         label: 'Occurred (Hour)',
-        getValue: (item) => hourBucket(item.context.occurred.toLocaleDateString()),
+        getValue: (item) => hourBucket(item.context.occurred.toISOString()),
         formatValue: (value) => {
             if (typeof value !== 'string') {
                 return 'Unknown';
@@ -76,32 +85,18 @@ const filters: PivotFilter<AppendedEvent>[] = [
     },
 ];
 
-const cardRenderer = (event: AppendedEvent) => {
-    const properties: Array<[string, string]> = [
-        ['Type', event.context.eventType.id],
-        ['Occurred', event.context.occurred.toLocaleString()],
-        ['Correlation', event.context.correlationId.toString()]
-    ];
-
-    const limited = properties.slice(0, 3);
-    const hasMore = properties.length > 3;
+const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeRegistration[]>) => {
+    const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === event.context.eventType.id);
+    const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
+    const content = typeof event.content === 'string' ? JSON.parse(event.content) : event.content;
 
     return (
-        <div className="pv-card-body">
-            <div className="pv-card-title">{event.context.eventType.id}</div>
-            <dl>
-                {limited.map(([key, value]) => (
-                    <div key={key} className="pv-card-row">
-                        <dt>{key}</dt>
-                        <dd>{value}</dd>
-                    </div>
-                ))}
-                {hasMore && <div className="pv-card-more">…</div>}
-            </dl>
+        <div style={{ padding: '20px', height: '100%', overflow: 'auto' }}>
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--text-color)' }}>{event.context.eventType.id}</h2>
+            <ObjectContentViewer object={content} schema={schema} />
         </div>
     );
 };
-
 
 export const Pivot = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -113,21 +108,29 @@ export const Pivot = () => {
     };
 
     const [events] = AppendedEvents.use(queryArgs);
+    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
 
     return (
-        <Page title={strings.mainMenu.pivot}>
-            <div className="p-4 h-full">
+        <Page title={strings.mainMenu.pivot} noBackground noPadding>
+            <div className="p-4 h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
-                    data={events.data}
+                    data={events.data ?? []}
                     dimensions={dimensions}
                     filters={filters}
                     defaultDimensionKey="type"
-                    cardRenderer={cardRenderer}
-                    getItemId={(item) => item.context.sequenceNumber}
+                    cardRenderer={(event) => ({
+                        title: ellipsis(event.context.eventType.id),
+                        labels: ['Sequence #', 'Occurred'],
+                        values: [String(event.context.sequenceNumber), event.context.occurred.toLocaleString()],
+                    })}
+
+                    detailRenderer={(item) => detailRenderer(item, eventTypes)}
+                    getItemId={(item) => String(item.context.sequenceNumber)}
                     searchFields={[
-                        // 'context.eventType.id',
-                        // 'context.correlationId'
+                        (_) => _.context.eventType.id,
+                        (_) => _.context.correlationId.toString()
                     ]}
+                    className="flex-1 min-h-0"
                     emptyContent={<span>No events match the current filters.</span>}
                     isLoading={events.isPerforming}
                 />

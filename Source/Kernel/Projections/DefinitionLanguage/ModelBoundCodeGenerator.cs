@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
@@ -53,7 +54,7 @@ public class ModelBoundCodeGenerator
                 foreach (var prop in fromDef.Properties)
                 {
                     var propertyName = prop.Key.Path;
-                    var expression = prop.Value;
+                    var normalizedExpression = NormalizeExpression(prop.Value);
 
                     if (!propertyInfos.TryGetValue(propertyName, out var propInfo))
                     {
@@ -61,19 +62,19 @@ public class ModelBoundCodeGenerator
                         propertyInfos[propertyName] = propInfo;
                     }
 
-                    if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+                    if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                     {
-                        var innerExpr = expression.Substring(5, expression.Length - 6);
+                        var innerExpr = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
                         propInfo.AddFroms.Add((eventTypeName, GetEventPropertyName(innerExpr)));
                     }
-                    else if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+                    else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                     {
-                        var innerExpr = expression.Substring(10, expression.Length - 11);
+                        var innerExpr = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
                         propInfo.SubtractFroms.Add((eventTypeName, GetEventPropertyName(innerExpr)));
                     }
                     else
                     {
-                        propInfo.SetFroms.Add((eventTypeName, GetEventPropertyName(expression)));
+                        propInfo.SetFroms.Add((eventTypeName, GetEventPropertyName(normalizedExpression)));
                     }
                 }
             }
@@ -145,6 +146,21 @@ public class ModelBoundCodeGenerator
         return sb.ToString();
     }
 
+    static string NormalizeExpression(string expression)
+    {
+        if (expression.StartsWith("+=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
+        }
+
+        if (expression.StartsWith("-=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
+        }
+
+        return expression;
+    }
+
     static string GetCSharpType(JsonSchemaProperty propertySchema)
     {
         return propertySchema.Type switch
@@ -160,7 +176,7 @@ public class ModelBoundCodeGenerator
     static string GetEventPropertyName(string expression)
     {
         // Strip event source ID
-        if (expression == "$eventSourceId") return "Id";
+        if (expression == WellKnownExpressions.EventSourceId) return "Id";
 
         // Event property path
         return expression;

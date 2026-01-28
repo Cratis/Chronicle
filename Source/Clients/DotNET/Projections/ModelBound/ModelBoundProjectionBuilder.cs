@@ -223,7 +223,10 @@ internal class ModelBoundProjectionBuilder(
                 var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
                 var propertyToUse = eventPropertyName ?? parameter.Name!;
-                PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                if (attr is ICanMapToEventProperty)
+                {
+                    PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                }
                 mappingAction(targetFrom, eventType, propertyName, propertyToUse);
             }
         }
@@ -328,7 +331,10 @@ internal class ModelBoundProjectionBuilder(
                 var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
                 var propertyToUse = eventPropertyName ?? property.Name;
-                PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                if (attr is ICanMapToEventProperty)
+                {
+                    PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                }
                 mappingAction(targetFrom, eventType, propertyName, propertyToUse);
             }
         }

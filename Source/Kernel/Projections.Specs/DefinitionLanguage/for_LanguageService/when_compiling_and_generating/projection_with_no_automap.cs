@@ -9,17 +9,17 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_with_no_automap : EventTypes.a_language_service_with_schemas<EventTypes.TransportRouteReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection TransportRoute => TransportRouteReadModel
+            no automap
             from HubRouteAdded key id
-                no automap
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(EventTypes.HubRouteAdded)];
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_from_hub_route_added() => _result.From.ContainsKey((EventType)"HubRouteAdded").ShouldBeTrue();
     [Fact] void should_have_automap_disabled() => _result.AutoMap.ShouldEqual(AutoMap.Disabled);

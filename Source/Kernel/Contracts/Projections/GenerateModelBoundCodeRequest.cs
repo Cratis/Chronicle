@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents the request for generating model-bound C# read model code from DSL.
+/// Represents the request for generating model-bound C# read model code from projection declaration language.
 /// </summary>
 [ProtoContract]
 public class GenerateModelBoundCodeRequest
@@ -22,8 +22,8 @@ public class GenerateModelBoundCodeRequest
     public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the DSL representation of the projection.
+    /// Gets or sets the projection declaration language representation of the projection.
     /// </summary>
     [ProtoMember(3)]
-    public string Dsl { get; set; } = string.Empty;
+    public string Declaration { get; set; } = string.Empty;
 }

@@ -18,11 +18,13 @@ namespace Orleans.Hosting;
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
 /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
+/// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
     IReactors reactors,
+    IProjectionsServiceClient projectionsServiceClient,
     IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <inheritdoc/>
@@ -51,6 +53,9 @@ internal sealed class ChronicleServerStartupTask(
 
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await projectionsManager.Ensure();
+
+            var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
+            await projectionsServiceClient.Register(eventStore, projectionDefinitions);
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {

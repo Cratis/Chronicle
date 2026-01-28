@@ -16,6 +16,8 @@
 - Always respect the project's nullable reference type settings
 - Add `!` operator where nullability warnings occur
 - Use `is not null` checks before dereferencing potentially null values
+- Always reuse the active terminal for commands.
+- Do not create new terminals unless current one is busy or fails.
 
 ## Formatting
 

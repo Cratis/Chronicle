@@ -73,6 +73,13 @@ public record UserActivated(string UserId);
 
 public record UserRegistered(string UserId, string Name);
 
+public record UserRegisteredWithKeywordValues(
+    string From,
+    string Projection,
+    string Key,
+    string Join,
+    string Children);
+
 public record UserRemovedFromGroup(string UserId, string GroupId);
 
 public record UserDeleted(string UserId);
@@ -86,3 +93,9 @@ public record SettingsUpdated(string SettingsId);
 public record DepartmentCreated(string DepartmentId, string Name);
 
 public record EmployeeHired(string EmployeeId, string DepartmentId, string Name);
+
+public record OrderPlaced(string OrderId, string SimulationId, string SimulationConfigurationId, string SimulationRunId, string DestinationPostalCode, DateTimeOffset OrderDate, string OptimalRoute);
+
+public record ItemLoadedOnTransport(string OrderId, string SimulationId, string SimulationConfigurationId, string SimulationRunId, decimal Distance, TimeSpan ElapsedTime, decimal Co2FootPrint, decimal Cost, DateTimeOffset Timestamp);
+
+public record ItemDeliveredToDestination(string OrderId, string SimulationId, string SimulationConfigurationId, string SimulationRunId, string DestinationPostalCode, decimal Distance, TimeSpan ElapsedTime, decimal Co2FootPrint, decimal Cost, DateTimeOffset Timestamp);

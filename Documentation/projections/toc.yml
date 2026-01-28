@@ -10,8 +10,8 @@
   href: watching-projections.md
 - name: Categorizing Projections
   href: categorizing-projections.md
-- name: Projection Definition Language
-  href: projection-definition-language/toc.yml
+- name: Projection Declaration Language
+  href: projection-declaration-language/toc.yml
 - name: Model-Bound Projections
   href: model-bound/toc.yml
 - name: Declarative Projections

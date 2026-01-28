@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
-/// Represents the request for saving a projection from its DSL representation.
+/// Represents the request for saving a projection from its projection declaration language representation.
 /// </summary>
 [ProtoContract]
 public class SaveProjectionRequest
@@ -28,8 +28,8 @@ public class SaveProjectionRequest
     public string EventSequenceId { get; set; } = "event-log";
 
     /// <summary>
-    /// Gets or sets the DSL representation of the projection.
+    /// Gets or sets the projection declaration language representation of the projection.
     /// </summary>
     [ProtoMember(4)]
-    public string Dsl { get; set; } = string.Empty;
+    public string Declaration { get; set; } = string.Empty;
 }

@@ -15,7 +15,7 @@ internal static class ProjectionDefinitionSyntaxErrorConverters
     /// </summary>
     /// <param name="error"><see cref="SyntaxError"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Projections.ProjectionDefinitionSyntaxError ToContract(this SyntaxError error)
+    public static Contracts.Projections.ProjectionDeclarationSyntaxError ToContract(this SyntaxError error)
     {
         return new()
         {
@@ -30,7 +30,7 @@ internal static class ProjectionDefinitionSyntaxErrorConverters
     /// </summary>
     /// <param name="errors"><see cref="ParsingErrors"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Projections.ProjectionDefinitionParsingErrors ToContract(this ParsingErrors errors)
+    public static Contracts.Projections.ProjectionDeclarationParsingErrors ToContract(this ParsingErrors errors)
     {
         return new()
         {
@@ -43,11 +43,11 @@ internal static class ProjectionDefinitionSyntaxErrorConverters
     /// </summary>
     /// <param name="errors"><see cref="CompilerErrors"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Projections.ProjectionDefinitionParsingErrors ToContract(this CompilerErrors errors)
+    public static Contracts.Projections.ProjectionDeclarationParsingErrors ToContract(this CompilerErrors errors)
     {
         return new()
         {
-            Errors = errors.Errors.Select(e => new Contracts.Projections.ProjectionDefinitionSyntaxError
+            Errors = errors.Errors.Select(e => new Contracts.Projections.ProjectionDeclarationSyntaxError
             {
                 Message = e.Message,
                 Line = e.Line,

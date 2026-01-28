@@ -16,11 +16,6 @@ import { JsonSchema, JsonSchemaProperty, NavigationItem } from '../JsonSchema';
 import css from './SchemaEditor.module.css';
 import { MenuItem } from 'primereact/menuitem';
 
-export interface NavigationItem {
-    name: string;
-    path: string[];
-}
-
 export interface SchemaEditorProps {
     schema: JsonSchema;
     eventTypeName?: string;
@@ -74,6 +69,7 @@ export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNo
         const errors: Record<string, string> = {};
 
         properties.forEach(prop => {
+            if (!prop.name) return; // Skip properties without names
             const error = validatePropertyName(prop.name, prop.id!, properties);
             if (error) {
                 errors[prop.id!] = error;
@@ -102,13 +98,13 @@ export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNo
     }, [currentPath, currentSchema, isEditMode]);
 
     const loadPropertiesForCurrentPath = () => {
-        let targetSchema = currentSchema;
+        let targetSchema: JsonSchema | JsonSchemaProperty = currentSchema;
 
         for (const segment of currentPath) {
             if (targetSchema.type === 'array' && segment === '$items') {
                 targetSchema = targetSchema.items || {};
             } else if (targetSchema.properties && targetSchema.properties[segment]) {
-                targetSchema = targetSchema.properties[segment];
+                targetSchema = targetSchema.properties[segment] as JsonSchema | JsonSchemaProperty;
             } else {
                 return;
             }
@@ -126,7 +122,7 @@ export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNo
                     description: property.description,
                     items: property.items,
                     properties: property.properties,
-                    required: currentSchema.required?.includes(name) || false
+                    required: (currentSchema.required as string[] | undefined)?.includes(name) || false
                 });
             }
         }
@@ -320,13 +316,13 @@ export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNo
     };
 
     const getCurrentDescription = useCallback(() => {
-        let targetSchema = currentSchema;
+        let targetSchema: JsonSchema | JsonSchemaProperty = currentSchema;
 
         for (const segment of currentPath) {
             if (targetSchema.type === 'array' && segment === '$items') {
                 targetSchema = targetSchema.items || {};
             } else if (targetSchema.properties && targetSchema.properties[segment]) {
-                targetSchema = targetSchema.properties[segment];
+                targetSchema = targetSchema.properties[segment] as JsonSchema | JsonSchemaProperty;
             } else {
                 return undefined;
             }
@@ -437,10 +433,12 @@ export const SchemaEditor = ({ schema, eventTypeName = '', canEdit = true, canNo
                         onRowClick={(e) => {
                             if (!isEditMode) {
                                 const rowData = e.data as JsonSchemaProperty;
-                                if (rowData.type === 'object') {
-                                    navigateToProperty(rowData.name);
-                                } else if (rowData.type === 'array' && rowData.items?.type === 'object') {
-                                    navigateToArrayItems(rowData.name);
+                                if (rowData.name) {
+                                    if (rowData.type === 'object') {
+                                        navigateToProperty(rowData.name);
+                                    } else if (rowData.type === 'array' && rowData.items?.type === 'object') {
+                                        navigateToArrayItems(rowData.name);
+                                    }
                                 }
                             }
                         }}

@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class simple_projection : given.a_language_service_with_schemas<given.Users>
 {
-    const string Definition = """
+    const string Declaration = """
         projection MyProjection => Users
           from UserRegistered
             key $eventSourceId
@@ -20,7 +20,7 @@ public class simple_projection : given.a_language_service_with_schemas<given.Use
 
     ProjectionDefinition _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
     [Fact] void should_have_one_from_definition() => _result.From.Count.ShouldEqual(1);
     [Fact] void should_have_from_user_registered() => _result.From.ContainsKey("UserRegistered").ShouldBeTrue();

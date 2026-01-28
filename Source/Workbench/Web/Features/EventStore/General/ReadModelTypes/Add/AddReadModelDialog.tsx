@@ -4,7 +4,6 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { CreateReadModel } from 'Api/ReadModelTypes';
 import { Dialog } from 'primereact/dialog';
-import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -36,7 +35,7 @@ export const AddReadModelDialog = () => {
         <Dialog
             header={strings.eventStore.general.readModels.dialogs.addReadModel.title}
             visible={true}
-            style={{ width: '800px', height: '80vh' }}
+            style={{ width: '800px', maxHeight: '80vh' }}
             modal
             resizable={true}
             onHide={() => closeDialog(DialogResult.Cancelled)}>

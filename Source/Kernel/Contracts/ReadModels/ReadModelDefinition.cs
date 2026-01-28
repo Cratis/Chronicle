@@ -26,13 +26,13 @@ public class ReadModelDefinition
     /// <summary>
     /// Gets or sets the display name of the model.
     /// </summary>
-    [ProtoMember(9)]
+    [ProtoMember(3)]
     public string DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets the projection sink definition.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(4)]
     public SinkDefinition Sink { get; set; }
 
     /// <summary>
@@ -58,4 +58,16 @@ public class ReadModelDefinition
     /// </summary>
     [ProtoMember(8)]
     public string ObserverIdentifier { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the owner of the read model.
+    /// </summary>
+    [ProtoMember(9)]
+    public ReadModelOwner Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source of the read model.
+    /// </summary>
+    [ProtoMember(10)]
+    public ReadModelSource Source { get; set; }
 }

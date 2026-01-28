@@ -3,26 +3,27 @@
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
+#if DEVELOPMENT
+
+/// <summary>
+/// Logging extensions for <see cref="ClientAuthenticationHandler"/>.
+/// </summary>
 internal static partial class ClientAuthenticationHandlerLogging
 {
-    [LoggerMessage(LogLevel.Information, "ClientAuthenticationHandler: Handling token request for ClientId: {ClientId}")]
+    [LoggerMessage(LogLevel.Debug, "Handling token request for client '{ClientId}'")]
     internal static partial void HandlingTokenRequest(this ILogger<ClientAuthenticationHandler> logger, string? clientId);
 
-    [LoggerMessage(LogLevel.Warning, "ClientAuthenticationHandler: Missing client credentials in token request")]
-    internal static partial void MissingClientCredentials(this ILogger<ClientAuthenticationHandler> logger);
+    [LoggerMessage(LogLevel.Warning, "Application not found for client '{ClientId}'")]
+    internal static partial void ApplicationNotFound(this ILogger<ClientAuthenticationHandler> logger, string? clientId);
 
-    [LoggerMessage(LogLevel.Warning, "ClientAuthenticationHandler: Application not found for ClientId: {ClientId}")]
-    internal static partial void ApplicationNotFound(this ILogger<ClientAuthenticationHandler> logger, string clientId);
+    [LoggerMessage(LogLevel.Debug, "Application found for client '{ClientId}'")]
+    internal static partial void ApplicationFound(this ILogger<ClientAuthenticationHandler> logger, string? clientId);
 
-    [LoggerMessage(LogLevel.Information, "ClientAuthenticationHandler: Found application for ClientId: {ClientId}")]
-    internal static partial void ApplicationFound(this ILogger<ClientAuthenticationHandler> logger, string clientId);
+    [LoggerMessage(LogLevel.Warning, "Secret verification failed for client '{ClientId}'")]
+    internal static partial void SecretVerificationFailed(this ILogger<ClientAuthenticationHandler> logger, string? clientId);
 
-    [LoggerMessage(LogLevel.Warning, "ClientAuthenticationHandler: Secret verification failed for ClientId: {ClientId}")]
-    internal static partial void SecretVerificationFailed(this ILogger<ClientAuthenticationHandler> logger, string clientId);
-
-    [LoggerMessage(LogLevel.Information, "ClientAuthenticationHandler: Secret verification succeeded for ClientId: {ClientId}")]
-    internal static partial void SecretVerificationSucceeded(this ILogger<ClientAuthenticationHandler> logger, string clientId);
-
-    [LoggerMessage(LogLevel.Information, "ClientAuthenticationHandler: Not a client credentials grant type: {GrantType}")]
-    internal static partial void NotClientCredentialsGrant(this ILogger<ClientAuthenticationHandler> logger, string grantType);
+    [LoggerMessage(LogLevel.Debug, "Secret verification succeeded for client '{ClientId}'")]
+    internal static partial void SecretVerificationSucceeded(this ILogger<ClientAuthenticationHandler> logger, string? clientId);
 }
+
+#endif

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_level_remove_with : given.a_language_service_with_schemas<given.GroupReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Group => GroupReadModel
           from GroupCreated automap
 
@@ -21,7 +21,7 @@ public class projection_level_remove_with : given.a_language_service_with_schema
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition);
+        _result = CompileGenerateAndRecompile(Declaration);
         _removedWithDef = _result.RemovedWith.Values.FirstOrDefault();
     }
 

@@ -14,4 +14,4 @@ namespace Cratis.Chronicle.Api.Projections;
 public record ProjectionPreview(
     IEnumerable<JsonObject> ReadModelEntries,
     JsonObject Schema,
-    IEnumerable<ProjectionDefinitionSyntaxError> SyntaxErrors);
+    IEnumerable<ProjectionDeclarationSyntaxError> SyntaxErrors);

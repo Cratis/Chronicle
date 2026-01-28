@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class unclosed_children_block : given.a_language_service_expecting_errors
 {
-    const string Definition = """
+    const string Declaration = """
         projection Account => AccountReadModel
           from AccountCreated
             key accountId
@@ -14,7 +14,7 @@ public class unclosed_children_block : given.a_language_service_expecting_errors
                 key transactionId
         """;
 
-    void Because() => Compile(Definition);
+    void Because() => Compile(Declaration);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
     [Fact] void should_report_missing_child_property() => _errors.Errors.ShouldContain(e => e.Message.Contains("as") || e.Message.Contains("identifier") || e.Message.Contains("expect"));

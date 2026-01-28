@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Represents a syntax error in the projection DSL.
+/// Represents a syntax error in the projection declaration language.
 /// </summary>
 /// <param name="Message">The error message.</param>
 /// <param name="Line">The line number where the error occurred.</param>

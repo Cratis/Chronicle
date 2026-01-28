@@ -7,16 +7,18 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class projection_with_automap : given.a_language_service_with_schemas<given.UserReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection User => UserReadModel
           automap
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.UserCreated)];
 
-    ProjectionDefinition _result;
+    given.CompilerResult _result;
 
-    void Because() => _result = CompileGenerateAndRecompile(Definition);
+    void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
-    [Fact] void should_be_valid_definition() => _result.ShouldNotBeNull();
+    [Fact] void should_be_valid_definition() => _result.Definition.ShouldNotBeNull();
+    [Fact] void should_have_automap_enabled() => _result.Definition.AutoMap.ShouldEqual(AutoMap.Enabled);
+    [Fact] void should_not_contain_any_simple_mappings_in_generated_projection_definition_language() => _result.GeneratedDefinition.ShouldNotContain(" = ");
 }

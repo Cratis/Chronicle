@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class children_block : given.a_language_service_with_schemas<given.GroupReadModel>
 {
-    const string Definition = """
+    const string Declaration = """
         projection Group => GroupReadModel
           children members identified by userId
             automap
@@ -30,7 +30,7 @@ public class children_block : given.a_language_service_with_schemas<given.GroupR
 
     void Because()
     {
-        _result = CompileGenerateAndRecompile(Definition);
+        _result = CompileGenerateAndRecompile(Declaration);
         _childrenDef = _result.Children[new PropertyPath("members")];
     }
 

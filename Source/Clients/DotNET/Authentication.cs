@@ -9,12 +9,12 @@ namespace Cratis.Chronicle;
 public class Authentication
 {
     /// <summary>
-    /// Gets or sets whether authentication is enabled.
+    /// Gets or sets the authentication authority URL. If not configured, uses the internal OAuth authority.
     /// </summary>
     public string? Authority { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to use the internal OAuth authority.
+    /// Gets whether to use the internal OAuth authority. Returns true when Authority is not set.
     /// </summary>
-    public bool UseInternalAuthority { get; set; } = true;
+    public bool UseInternalAuthority => string.IsNullOrEmpty(Authority);
 }

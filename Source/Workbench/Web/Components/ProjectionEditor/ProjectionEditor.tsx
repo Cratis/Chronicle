@@ -3,16 +3,18 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Editor, { OnMount, Monaco } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
+import type { editor, Uri } from 'monaco-editor';
 import {
-    registerProjectionDslLanguage,
+    registerProjectionDefinitionLanguage,
     setReadModelSchemas,
     setEventSchemas,
+    setEventSequences,
     languageId,
-    disposeProjectionDslLanguage,
+    disposeProjectionDefinitionLanguage,
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionDefinitionSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode } from 'Api/Projections';
+import { AllEventSequences } from 'Api/EventSequences';
 import { Button } from 'primereact/button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
@@ -21,6 +23,7 @@ import Strings from 'Strings';
 export interface ProjectionEditorProps {
     value: string;
     onChange?: (value: string) => void;
+    onValidationChange?: (hasErrors: boolean) => void;
     readModelSchemas?: JsonSchema[],
     eventSchemas?: JsonSchema[],
     errors?: ProjectionDefinitionSyntaxError[];
@@ -32,6 +35,7 @@ export interface ProjectionEditorProps {
 export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     value,
     onChange,
+    onValidationChange,
     readModelSchemas,
     eventSchemas,
     errors,
@@ -47,21 +51,22 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const [modelBoundCode, setModelBoundCode] = useState('');
     const [generateDeclarativeCode] = GenerateDeclarativeCode.use();
     const [generateModelBoundCode] = GenerateModelBoundCode.use();
+    const [allEventSequencesResult] = AllEventSequences.use(eventStore ? { eventStore } : undefined);
 
     const fetchCode = async () => {
         if (eventStore && namespace && value) {
             generateDeclarativeCode.eventStore = eventStore;
             generateDeclarativeCode.namespace = namespace;
-            generateDeclarativeCode.dsl = value;
+            generateDeclarativeCode.definition = value;
             const declarativeResult = await generateDeclarativeCode.execute();
 
             generateModelBoundCode.eventStore = eventStore;
             generateModelBoundCode.namespace = namespace;
-            generateModelBoundCode.dsl = value;
+            generateModelBoundCode.definition = value;
             const modelBoundResult = await generateModelBoundCode.execute();
 
-            const declCode = declarativeResult.response?.code || declarativeResult.code || '// Unable to generate code';
-            const modelCode = modelBoundResult.response?.code || modelBoundResult.code || '// Unable to generate code';
+            const declCode = declarativeResult.response?.code || '// Unable to generate code';
+            const modelCode = modelBoundResult.response?.code || '// Unable to generate code';
 
             setDeclarativeCode(declCode);
             setModelBoundCode(modelCode);
@@ -71,7 +76,30 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
         editorRef.current = editor;
         monacoRef.current = monacoInstance;
-        registerProjectionDslLanguage(monacoInstance);
+        registerProjectionDefinitionLanguage(monacoInstance);
+
+        // Listen for marker changes to track validation state
+        const markerDisposable = monacoInstance.editor.onDidChangeMarkers((resources: readonly Uri[]) => {
+            const model = editor.getModel();
+            if (model && resources.some((r: Uri) => r.toString() === model.uri.toString())) {
+                const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
+                const hasErrors = markers.some((m: editor.IMarkerData) => m.severity === monacoInstance.MarkerSeverity.Error);
+                onValidationChange?.(hasErrors);
+            }
+        });
+
+        // Initial validation state
+        const model = editor.getModel();
+        if (model) {
+            const markers = monacoInstance.editor.getModelMarkers({ resource: model.uri });
+            const hasErrors = markers.some((m: editor.IMarkerData) => m.severity === monacoInstance.MarkerSeverity.Error);
+            onValidationChange?.(hasErrors);
+        }
+
+        // Clean up on unmount
+        return () => {
+            markerDisposable.dispose();
+        };
     };
 
     useEffect(() => {
@@ -82,19 +110,30 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
 
     useEffect(() => {
         return () => {
-            disposeProjectionDslLanguage();
+            disposeProjectionDefinitionLanguage();
         };
     }, []);
 
     // Update schema when it changes
     useEffect(() => {
         if (readModelSchemas) {
-            setReadModelSchemas(readModelSchemas as any);
+            const readModelInfos = readModelSchemas.map(schema => ({
+                displayName: schema.title || 'Unknown',
+                schema
+            }));
+            setReadModelSchemas(readModelInfos);
         }
         if (eventSchemas) {
-            setEventSchemas(eventSchemas as any);
+            setEventSchemas(eventSchemas);
         }
     }, [readModelSchemas, eventSchemas]);
+
+    // Update event sequences when they're loaded
+    useEffect(() => {
+        if (allEventSequencesResult.data) {
+            setEventSequences(allEventSequencesResult.data);
+        }
+    }, [allEventSequencesResult.data]);
 
     // Update markers when errors change
     useEffect(() => {
@@ -116,9 +155,9 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     message: error.message,
                 };
             });
-            monacoRef.current.editor.setModelMarkers(model, 'projection-dsl', markers);
+            monacoRef.current.editor.setModelMarkers(model, 'projection-declaration-server', markers);
         } else {
-            monacoRef.current.editor.setModelMarkers(model, 'projection-dsl', []);
+            monacoRef.current.editor.setModelMarkers(model, 'projection-declaration-server', []);
         }
     }, [errors]);
 
@@ -164,7 +203,16 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     language={languageId}
                     value={value}
                     theme={theme}
-                    onChange={(newValue) => onChange?.(newValue || '')}
+                    onChange={(newValue) => {
+                        // Clear server-side validation errors when user edits
+                        if (editorRef.current && monacoRef.current) {
+                            const model = editorRef.current.getModel();
+                            if (model) {
+                                monacoRef.current.editor.setModelMarkers(model, 'projection-declaration-server', []);
+                            }
+                        }
+                        onChange?.(newValue || '');
+                    }}
                     onMount={handleEditorDidMount}
                     options={{
                         minimap: { enabled: false },
@@ -203,7 +251,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                         minHeight: '60px',
                     }}
                 >
-                    <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem' }}>Projection DSL Reference</h3>
+                    <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem' }}>{Strings.components.projectionEditor.languageReference}</h3>
                     <Button
                         icon="pi pi-times"
                         onClick={() => setIsHelpPanelOpen(false)}

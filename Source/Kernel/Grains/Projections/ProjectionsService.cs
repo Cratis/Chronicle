@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections.Pipelines;
-using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Projections;
@@ -17,7 +16,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <param name="grainId"><see cref="GrainId"/> for the grain.</param>
 /// <param name="silo"><see cref="Silo"/> the grain belongs to.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="projections"><see cref="Chronicle.Projections.IProjectionsManager"/> for managing projections.</param>
 /// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -26,23 +24,10 @@ public class ProjectionsService(
     GrainId grainId,
     Silo silo,
     IGrainFactory grainFactory,
-    IStorage storage,
     Chronicle.Projections.IProjectionsManager projections,
     IProjectionPipelineManager projectionPipelines,
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
-    /// <inheritdoc/>
-    public override async Task Init(IServiceProvider serviceProvider)
-    {
-        var eventStores = await storage.GetEventStores();
-        foreach (var eventStore in eventStores)
-        {
-            var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
-            var definitions = await projectionsManager.GetProjectionDefinitions();
-            await Register(eventStore, definitions);
-        }
-    }
-
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {

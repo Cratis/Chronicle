@@ -18,17 +18,25 @@ export interface ChangePasswordDialogProps {
 export const ChangePasswordDialog = () => {
     const { request, closeDialog } = useDialogContext<ChangePasswordDialogProps>();
     const [password, setPassword] = useState(generatePassword());
+    const [confirmPassword, setConfirmPassword] = useState(generatePassword());
     const [showPassword, setShowPassword] = useState(false);
     const [changePassword] = ChangePasswordForUser.use();
 
     const handleGeneratePassword = () => {
-        setPassword(generatePassword());
+        const newPassword = generatePassword();
+        setPassword(newPassword);
+        setConfirmPassword(newPassword);
     };
 
     const handleOk = async () => {
+        if (password !== confirmPassword) {
+            return;
+        }
+        
         if (password && request.userId) {
             changePassword.userId = request.userId;
             changePassword.password = password;
+            changePassword.confirmedPassword = confirmPassword;
             const result = await changePassword.execute();
             if (result.isSuccess) {
                 closeDialog(DialogResult.Ok);
@@ -69,6 +77,20 @@ export const ChangePasswordDialog = () => {
                         tooltip={strings.eventStore.system.users.dialogs.changePassword.generatePassword}
                     />
                 </div>
+                <div className="p-inputgroup">
+                    <span className="p-inputgroup-addon">
+                        <i className="pi pi-lock"></i>
+                    </span>
+                    <InputText
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={strings.eventStore.system.users.dialogs.changePassword.confirmPassword}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                    />
+                </div>
+                {password !== confirmPassword && (
+                    <small className="p-error">Passwords do not match</small>
+                )}
             </div>
 
             <div className="flex flex-wrap justify-content-center gap-3 mt-4">
@@ -76,7 +98,7 @@ export const ChangePasswordDialog = () => {
                     label={strings.general.buttons.ok}
                     icon="pi pi-check"
                     onClick={handleOk}
-                    disabled={!password}
+                    disabled={!password || !confirmPassword || password !== confirmPassword}
                     autoFocus
                 />
                 <Button

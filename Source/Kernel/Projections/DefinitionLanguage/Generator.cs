@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -11,7 +12,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Generates a projection DSL string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
+/// Generates a projection declaration language string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
 /// </summary>
 public class Generator : IGenerator
 {
@@ -33,17 +34,10 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(1)}sequence {definition.EventSequenceId.Value}");
         }
 
-        // NoAutoMap directive at projection level - only output if disabled (since Disabled is the default)
-        // Do NOT output anything if AutoMap is enabled, as we want to show explicit mappings
+        // NoAutoMap directive at projection level - output if AutoMap is explicitly disabled
         if (definition.AutoMap == AutoMap.Disabled)
         {
-            // Only output if there are property mappings that would otherwise be auto-mapped
-            var hasAnyPropertyMappings = definition.From.Values.Any(f => f.Properties.Count > 0) ||
-                                       definition.Join.Values.Any(j => j.Properties.Count > 0);
-            if (!hasAnyPropertyMappings)
-            {
-                sb.AppendLine($"{Indent(1)}no automap");
-            }
+            sb.AppendLine($"{Indent(1)}no automap");
         }
 
         // FromEvery block - only output if it has meaningful content
@@ -58,7 +52,7 @@ public class Generator : IGenerator
         // On event blocks
         foreach (var kv in definition.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, definition.AutoMap, 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, 1);
         }
 
         // Join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -66,7 +60,7 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, definition.AutoMap, 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, 1);
         }
 
         // Children blocks
@@ -93,6 +87,22 @@ public class Generator : IGenerator
 
     static string Indent(int level) => string.Concat(Enumerable.Repeat(Tab, level));
 
+    static string EscapeIfKeyword(string identifier)
+    {
+        var lowerIdentifier = identifier.ToLowerInvariant();
+        return Keywords.All.Contains(lowerIdentifier) ? $"@{identifier}" : identifier;
+    }
+
+    static string EscapePropertyPath(string path)
+    {
+        var segments = path.Split('.');
+        for (var i = 0; i < segments.Length; i++)
+        {
+            segments[i] = EscapeIfKeyword(segments[i]);
+        }
+        return string.Join('.', segments);
+    }
+
     void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)
     {
         sb.AppendLine($"{Indent(indent)}every");
@@ -115,17 +125,13 @@ public class Generator : IGenerator
         }
     }
 
-    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, AutoMap parentAutoMap, int indent)
+    void GenerateOnEventBlock(StringBuilder sb, string eventTypeName, FromDefinition from, int indent)
     {
-        // Determine the effective AutoMap setting for this from block
-        // If parent has AutoMap enabled, this from block inherits it unless explicitly disabled
-        var effectiveAutoMap = parentAutoMap == AutoMap.Enabled ? AutoMap.Enabled : AutoMap.Disabled;
-
         // Determine if we should use inline key syntax or block key syntax
-        // Use inline syntax for simple keys when there are no other inline options (like automap)
+        // Use inline syntax for simple keys
         // Use block syntax for composite keys or when other content exists
-        var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith("$composite(") && from.Key.Value.EndsWith(')');
-        var isDefaultKey = from.Key.IsSet() && from.Key.Value == "$eventSourceId";
+        var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
+        var isDefaultKey = from.Key.IsSet() && from.Key.Value == WellKnownExpressions.EventSourceId;
         var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !isDefaultKey;
 
         // Build from statement with optional inline key (skip if it's the default $eventSourceId)
@@ -144,7 +150,7 @@ public class Generator : IGenerator
             var keyValue = from.Key.Value;
 
             // Parse composite key: $composite(TypeName, CustomerId=customerId, OrderNumber=orderNumber)
-            var innerContent = keyValue.Substring("$composite(".Length, keyValue.Length - "$composite(".Length - 1);
+            var innerContent = keyValue[(WellKnownExpressions.Composite.Length + 1)..^1];
             var parts = innerContent.Split(_compositeSeparator, StringSplitOptions.None);
 
             // Extract type name from first part
@@ -159,7 +165,7 @@ public class Generator : IGenerator
                 var equalsIndex = part.IndexOf('=');
                 if (equalsIndex > 0)
                 {
-                    var propertyName = part.Substring(0, equalsIndex);
+                    var propertyName = EscapePropertyPath(part.Substring(0, equalsIndex));
                     var expression = part.Substring(equalsIndex + 1);
                     sb.AppendLine($"{Indent(indent + 2)}{propertyName} = {ConvertExpressionForOutput(expression)}");
                 }
@@ -167,29 +173,21 @@ public class Generator : IGenerator
         }
 
         // Parent key if present (skip if it's the default $eventSourceId)
-        if (from.ParentKey?.IsSet() == true && from.ParentKey.Value != "$eventSourceId")
+        if (from.ParentKey?.IsSet() == true && from.ParentKey.Value != WellKnownExpressions.EventSourceId)
         {
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(from.ParentKey.Value)}");
         }
 
-        // Only generate property mappings if AutoMap is NOT enabled
-        // When AutoMap is enabled, properties are auto-mapped and should not be explicitly listed
-        if (effectiveAutoMap != AutoMap.Enabled)
+        // Property mappings - filter out redundant mappings when they would be handled by automap
+        // Only output explicit mappings where the target property name differs from the source expression
+        foreach (var kv in from.Properties)
         {
-            // Property mappings
-            foreach (var kv in from.Properties)
-            {
-                GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
-            }
+            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
         }
     }
 
-    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, AutoMap parentAutoMap, int indent)
+    void GenerateJoinBlock(StringBuilder sb, string joinName, string onProperty, List<KeyValuePair<EventType, JoinDefinition>> joins, int indent)
     {
-        // Determine the effective AutoMap setting for join blocks
-        // If parent has AutoMap enabled, join blocks inherit it unless explicitly disabled
-        var effectiveAutoMap = parentAutoMap == AutoMap.Enabled ? AutoMap.Enabled : AutoMap.Disabled;
-
         sb.AppendLine($"{Indent(indent)}join {joinName} on {onProperty}");
 
         foreach (var kv in joins)
@@ -199,14 +197,10 @@ public class Generator : IGenerator
 
             sb.AppendLine($"{Indent(indent + 1)}with {eventType}");
 
-            // Only generate property mappings if AutoMap is NOT enabled
-            // When AutoMap is enabled, properties are auto-mapped and should not be explicitly listed
-            if (effectiveAutoMap != AutoMap.Enabled)
+            // Property mappings - filter out redundant mappings when automap is enabled
+            foreach (var prop in join.Properties)
             {
-                foreach (var prop in join.Properties)
-                {
-                    GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
-                }
+                GeneratePropertyMapping(sb, prop.Key, prop.Value, indent + 2);
             }
         }
     }
@@ -239,7 +233,7 @@ public class Generator : IGenerator
         // Child on event blocks
         foreach (var kv in children.From)
         {
-            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, effectiveAutoMap, indent + 1);
+            GenerateOnEventBlock(sb, kv.Key.Id.Value, kv.Value, indent + 1);
         }
 
         // Child join blocks - need to group by OnProperty to reconstruct original join blocks
@@ -247,7 +241,7 @@ public class Generator : IGenerator
         {
             var joins = group.ToList();
 
-            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, effectiveAutoMap, indent + 1);
+            GenerateJoinBlock(sb, joins[0].Key.Id.Value, group.Key.Path, joins, indent + 1);
         }
 
         // Nested children
@@ -311,122 +305,149 @@ public class Generator : IGenerator
             return;
         }
 
+        var propertyName = EscapePropertyPath(property.Path);
+
+        var normalizedExpression = NormalizeExpression(expression);
+
         // Check for arithmetic operations from C# projections ($add, $subtract)
-        if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[5..^1];
-            sb.AppendLine($"{Indent(indent)}add {property.Path} by {ConvertExpressionForOutput(innerExpression)}");
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
+            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
             return;
         }
 
-        if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[10..^1];
-            sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(innerExpression)}");
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
+            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
             return;
         }
 
-        // Parse the expression to determine the operation type from DSL
-        if (expression.StartsWith("+="))
+        // Parse the expression to determine the operation type from projection declaration language
+        if (normalizedExpression == WellKnownExpressions.Increment)
         {
-            var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}add {property.Path} by {ConvertExpressionForOutput(value)}");
+            sb.AppendLine($"{Indent(indent)}increment {propertyName}");
         }
-        else if (expression.StartsWith("-="))
+        else if (normalizedExpression == WellKnownExpressions.Decrement)
         {
-            var value = expression[2..].Trim();
-            sb.AppendLine($"{Indent(indent)}subtract {property.Path} by {ConvertExpressionForOutput(value)}");
+            sb.AppendLine($"{Indent(indent)}decrement {propertyName}");
         }
-        else if (expression == "increment" || expression == "$increment")
+        else if (normalizedExpression == WellKnownExpressions.Count)
         {
-            sb.AppendLine($"{Indent(indent)}increment {property.Path}");
-        }
-        else if (expression == "decrement" || expression == "$decrement")
-        {
-            sb.AppendLine($"{Indent(indent)}decrement {property.Path}");
-        }
-        else if (expression == "count" || expression == "$count")
-        {
-            sb.AppendLine($"{Indent(indent)}count {property.Path}");
+            sb.AppendLine($"{Indent(indent)}count {propertyName}");
         }
         else
         {
-            // Simple assignment
-            sb.AppendLine($"{Indent(indent)}{property.Path} = {ConvertExpressionForOutput(expression)}");
+            sb.AppendLine($"{Indent(indent)}{propertyName} = {ConvertExpressionForOutput(normalizedExpression)}");
         }
     }
 
     string ConvertExpressionForOutput(string expression)
     {
+        var normalizedExpression = NormalizeExpression(expression);
+
         // Convert $add(expression) wrapper - this comes from C# projections
-        if (expression.StartsWith("$add(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[5..^1];
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
             return ConvertExpressionForOutput(innerExpression);
         }
 
         // Convert $subtract(expression) wrapper - this comes from C# projections
-        if (expression.StartsWith("$subtract(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var innerExpression = expression[10..^1];
+            var innerExpression = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
             return ConvertExpressionForOutput(innerExpression);
         }
 
         // Convert $eventContext(property) to $eventContext.property
-        if (expression.StartsWith("$eventContext(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var property = expression[14..^1];
-            return $"$eventContext.{property}";
+            var property = normalizedExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
+            return $"{WellKnownExpressions.EventContext}.{property}";
         }
 
         // Convert $causedBy(property) to $causedBy.property
-        if (expression.StartsWith("$causedBy(") && expression.EndsWith(')'))
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.CausedBy}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
-            var property = expression[10..^1];
-            return $"$causedBy.{property}";
+            var property = normalizedExpression[10..^1];
+            return $"{WellKnownExpressions.CausedBy}.{property}";
         }
 
         // Handle plain $causedBy
-        if (expression.Equals("$causedBy", StringComparison.Ordinal))
+        if (normalizedExpression.Equals(WellKnownExpressions.CausedBy, StringComparison.Ordinal))
         {
-            return "$causedBy";
+            return WellKnownExpressions.CausedBy;
         }
 
-        // Convert C# boolean ToString() to DSL format
-        if (expression.Equals("True", StringComparison.Ordinal))
+        // Convert C# boolean ToString() to projection declaration language format
+        if (normalizedExpression.Equals("True", StringComparison.Ordinal))
         {
             return "true";
         }
-        if (expression.Equals("False", StringComparison.Ordinal))
+        if (normalizedExpression.Equals("False", StringComparison.Ordinal))
         {
             return "false";
         }
 
-        // Convert empty string (C# null representation) to DSL null
-        if (string.IsNullOrEmpty(expression))
+        // Convert empty string (C# null representation) to projection declaration language null
+        if (string.IsNullOrEmpty(normalizedExpression))
         {
             return "null";
         }
 
         // String literals already have quotes from Compiler - return as-is
-        if (expression.StartsWith('\"') && expression.EndsWith('\"'))
+        if (normalizedExpression.StartsWith('\"') && normalizedExpression.EndsWith('\"'))
         {
-            return expression;
+            return normalizedExpression;
         }
 
         // Numeric literals
-        if (double.TryParse(expression, out _))
+        if (double.TryParse(normalizedExpression, out _))
         {
-            return expression;
+            return normalizedExpression;
         }
 
         // Event context, template expressions, etc.
-        if (expression.Contains('$') || expression.Contains('`'))
+        if (normalizedExpression.Contains('$') || normalizedExpression.Contains('`'))
         {
-            return expression;
+            return normalizedExpression;
         }
 
-        // Everything else (property paths, simple names) - return as-is
+        // Property paths and simple names - check if they're keywords and escape if needed
+        var parts = normalizedExpression.Split(['.']);
+        var escapedParts = parts.Select(part => Keywords.All.Contains(part.ToLowerInvariant()) ? $"@{part}" : part).ToArray();
+        return string.Join('.', escapedParts);
+    }
+
+    string NormalizeExpression(string expression)
+    {
+        if (expression.StartsWith("+=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
+        }
+
+        if (expression.StartsWith("-=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
+        }
+
+        if (expression.Equals("increment", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Increment;
+        }
+
+        if (expression.Equals("decrement", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Decrement;
+        }
+
+        if (expression.Equals("count", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Count;
+        }
+
         return expression;
     }
 }

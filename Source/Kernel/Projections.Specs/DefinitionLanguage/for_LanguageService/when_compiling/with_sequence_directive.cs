@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.wh
 
 public class with_sequence_directive : for_LanguageService.given.a_language_service
 {
-    const string Definition = """
+    const string Declaration = """
         projection SimulationProjection => Simulation
             sequence SomeNameOfSequence
             from SimulationAdded
@@ -32,6 +32,7 @@ public class with_sequence_directive : for_LanguageService.given.a_language_serv
             new ReadModelName("Simulation"),
             new ReadModelDisplayName("Simulation"),
             ReadModelOwner.Client,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(
@@ -55,7 +56,7 @@ public class with_sequence_directive : for_LanguageService.given.a_language_serv
     void Because()
     {
         var result = _languageService.Compile(
-            Definition,
+            Declaration,
             Concepts.Projections.ProjectionOwner.Client,
             [_readModelDefinition],
             [_eventTypeSchema]);

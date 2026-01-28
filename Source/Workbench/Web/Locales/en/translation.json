@@ -30,7 +30,7 @@
         "recommendations": "Recommendations",
         "jobs": "Jobs",
         "sequences": "Sequences",
-        "pivot": "Pivot",
+        "pivot": "Pivot (experimental)",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
         "readModels": "Read Models",
@@ -107,6 +107,7 @@
             "readModels": {
                 "title": "Read Model Types",
                 "empty": "No read models found",
+                "cannotEditReason": "Defined by code",
                 "actions": {
                     "create": "Create",
                     "edit": "Edit",
@@ -115,6 +116,9 @@
                 },
                 "columns": {
                     "name": "Name",
+                    "containerName": "Container Name",
+                    "owner": "Owner",
+                    "source": "Source",
                     "generation": "Generation"
                 },
                 "schema": {
@@ -126,6 +130,16 @@
                         "title": "Add Read Model",
                         "name": "Name"
                     }
+                },
+                "owners": {
+                    "unknown": "Unknown",
+                    "client": "Client",
+                    "server": "Server"
+                },
+                "sources": {
+                    "unknown": "Unknown",
+                    "code": "Code",
+                    "user": "User"
                 }
             },
             "projections": {
@@ -136,6 +150,16 @@
                     "save": "Save",
                     "preview": "Preview",
                     "timeMachine": "Time Machine"
+                },
+                "saveDisabledReasons": {
+                    "emptyContent": "Editor is empty",
+                    "validationErrors": "Fix validation errors first",
+                    "readModelOwnedByCode": "Read model is defined by code",
+                    "projectionAlreadyExists": "A projection already exists for this read model"
+                },
+                "previewDisabledReasons": {
+                    "emptyContent": "Editor is empty",
+                    "validationErrors": "Fix validation errors first"
                 }
             }
         },
@@ -311,6 +335,7 @@
                     "changePassword": {
                         "title": "Change Password",
                         "password": "New Password",
+                        "confirmPassword": "Confirm Password",
                         "generatePassword": "Generate password",
                         "showPassword": "Show password",
                         "hidePassword": "Hide password"
@@ -365,8 +390,9 @@
     "components": {
         "projectionEditor": {
             "tooltips": {
-                "help": "Show Projection Definition Language help panel"
-            }
+                "help": "Show Projection Declaration Language help panel"
+            },
+            "languageReference": "Projection Declaration Language Reference"
         },
         "schemaEditor": {
             "columns": {

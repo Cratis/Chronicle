@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Security;
-using Cratis.Infrastructure.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using OpenIddict.Abstractions;
 
 namespace Cratis.Chronicle.Server.Authentication;
 
@@ -12,17 +13,22 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Represents an implementation of <see cref="IAuthenticationService"/>.
 /// </summary>
 /// <param name="userStorage">The user storage.</param>
+/// <param name="users">The <see cref="IUsers"/> service.</param>
+/// <param name="applications">The <see cref="IApplications"/> service.</param>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="options">Chronicle options.</param>
-/// <param name="applicationManager">The OpenIddict application manager.</param>
 /// <param name="logger">The logger.</param>
 public class AuthenticationService(
     IUserStorage userStorage,
-    IOptions<Configuration.ChronicleOptions> options,
+    IUsers users,
 #pragma warning disable CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
-    IOpenIddictApplicationManager applicationManager,
-    ILogger<AuthenticationService> logger) : IAuthenticationService
+    IApplications applications,
 #pragma warning restore CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
+    IGrainFactory grainFactory,
+    IOptions<Configuration.ChronicleOptions> options,
+    ILogger<AuthenticationService> logger) : IAuthenticationService
 {
+    static readonly PasswordHasher<object> _passwordHasher = new();
     readonly Configuration.ChronicleOptions _options = options.Value;
 
     /// <inheritdoc/>
@@ -34,36 +40,32 @@ public class AuthenticationService(
             return null;
         }
 
-        var isValid = HashHelper.Verify(password, user.PasswordHash);
-        return isValid ? user : null;
+        var result = _passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, password);
+        return result == PasswordVerificationResult.Success ? user : null;
     }
 
     /// <inheritdoc/>
     public async Task EnsureDefaultAdminUser()
     {
-        var adminUser = await userStorage.GetByUsername(_options.Authentication.DefaultAdminUsername);
-        if (adminUser is not null)
+        logger.CheckingForDefaultAdminUser();
+        var existingUsers = await users.GetAll();
+        if (existingUsers.Any(u => u.Username == _options.Authentication.DefaultAdminUsername))
         {
+            logger.DefaultAdminUserAlreadyExist();
             return;
         }
 
-        var password = _options.Authentication.DefaultAdminPassword ?? "admin";
-        var passwordHash = HashHelper.Hash(password);
-        var now = DateTimeOffset.UtcNow;
+        logger.CreatingDefaultAdminUser();
 
-        var user = new ChronicleUser
-        {
-            Id = Guid.NewGuid().ToString(),
-            Username = _options.Authentication.DefaultAdminUsername,
-            Email = null,
-            PasswordHash = passwordHash,
-            SecurityStamp = Guid.NewGuid().ToString(),
-            IsActive = true,
-            CreatedAt = now,
-            LastModifiedAt = null
-        };
+        var userId = Guid.NewGuid();
+        var @event = new Grains.Security.InitialAdminUserAdded(
+            _options.Authentication.DefaultAdminUsername,
+            string.Empty);
 
-        await userStorage.Create(user);
+        var eventSequence = grainFactory.GetEventLog();
+        await eventSequence.Append(userId, @event);
+
+        logger.DefaultAdminUserAdded();
     }
 
 #if DEVELOPMENT
@@ -75,9 +77,8 @@ public class AuthenticationService(
 
         logger.CheckingForDefaultClientCredentials(defaultClientId);
 
-        // Check if already exists in OpenIddict
-        var existingClient = await applicationManager.FindByClientIdAsync(defaultClientId);
-        if (existingClient is not null)
+        var existingApplications = await applications.GetAll();
+        if (existingApplications.Any(a => a.ClientId == defaultClientId))
         {
             logger.DefaultClientCredentialsAlreadyExist(defaultClientId);
             return;
@@ -85,24 +86,13 @@ public class AuthenticationService(
 
         logger.CreatingDefaultClientCredentials(defaultClientId);
 
-        // Create the application using OpenIddict's manager
-        var descriptor = new OpenIddictApplicationDescriptor
+        await applications.Add(new AddApplication
         {
+            Id = Guid.NewGuid().ToString(),
             ClientId = defaultClientId,
-            ClientSecret = defaultClientSecret,  // OpenIddict will hash this
-            DisplayName = "Chronicle Development Client",
-            ClientType = OpenIddictConstants.ClientTypes.Confidential,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-                OpenIddictConstants.Permissions.GrantTypes.Password,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken
-            }
-        };
+            ClientSecret = defaultClientSecret
+        });
 
-        await applicationManager.CreateAsync(descriptor);
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif

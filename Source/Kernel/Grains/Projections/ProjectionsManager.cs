@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
-/// <param name="languageService"><see cref="Generator"/> for generating projection DSL strings.</param>
+/// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
@@ -61,7 +61,7 @@ public class ProjectionsManager(
     public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionWithDsl>> GetProjectionDsls()
+    public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()
     {
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
         return State.Projections
@@ -69,10 +69,10 @@ public class ProjectionsManager(
             {
                 var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
                 var readModelSchema = readModel.GetSchemaForLatestGeneration();
-                return new ProjectionWithDsl(
-                definition.Identifier,
-                readModelSchema.Title ?? readModel.Identifier,
-                languageService.Generate(definition, readModel));
+                return new ProjectionWithDeclaration(
+                    definition.Identifier,
+                    readModelSchema.Title ?? readModel.Identifier,
+                    languageService.Generate(definition, readModel));
             }).ToArray();
     }
 

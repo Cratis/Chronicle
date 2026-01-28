@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
 
 namespace Cratis.Chronicle.Contracts;
@@ -101,4 +102,14 @@ public interface IServices
     /// Gets the <see cref="IEventSeeding"/> service.
     /// </summary>
     IEventSeeding Seeding { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IUsers"/> service.
+    /// </summary>
+    IUsers Users { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IApplications"/> service.
+    /// </summary>
+    IApplications Applications { get; }
 }

@@ -25,15 +25,10 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
-        if (!chronicleOptions.Authentication.Enabled)
-        {
-            return services;
-        }
-
         services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
-        services.AddSingleton<IUserStore<ChronicleUser>, ChronicleUserStore>();
-        services.AddSingleton<IPasswordHasher<ChronicleUser>, ChroniclePasswordHasher>();
+        services.AddSingleton<IUserStore<ChronicleUser>, UserStore>();
+        services.AddSingleton<IPasswordHasher<ChronicleUser>, PasswordHasher<ChronicleUser>>();
 
         // Add ASP.NET Identity
         services.AddIdentityCore<ChronicleUser>(options =>
@@ -45,7 +40,7 @@ public static class ServiceCollectionExtensions
                 options.Password.RequiredLength = 4;
                 options.User.RequireUniqueEmail = false;
             })
-            .AddUserStore<ChronicleUserStore>()
+            .AddUserStore<UserStore>()
             .AddSignInManager()
             .AddDefaultTokenProviders()
             .AddApiEndpoints();
@@ -53,8 +48,7 @@ public static class ServiceCollectionExtensions
         // Add OpenIdDict if OAuth Authority feature is enabled
         services.AddOpenIddictIfEnabled(chronicleOptions);
 
-        var usingExternalAuthority = !string.IsNullOrEmpty(chronicleOptions.Authentication.Authority) && !chronicleOptions.Authentication.UseInternalAuthority;
-        var bearerScheme = usingExternalAuthority ? JwtBearerDefaults.AuthenticationScheme : OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        var bearerScheme = chronicleOptions.Authentication.UseInternalAuthority ? OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme : JwtBearerDefaults.AuthenticationScheme;
 
         // Use a policy scheme that tries cookie first, then bearer token
         var authBuilder = services.AddAuthentication(options =>
@@ -77,7 +71,7 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        if (usingExternalAuthority)
+        if (!chronicleOptions.Authentication.UseInternalAuthority)
         {
             authBuilder.AddJwtBearer();
         }

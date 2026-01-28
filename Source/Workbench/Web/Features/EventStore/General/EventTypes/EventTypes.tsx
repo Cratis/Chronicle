@@ -8,12 +8,13 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
-import { useDialog } from '@cratis/arc.react/dialogs';
+import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { AddEventTypeDialog } from './Add/AddEventTypeDialog';
 import { DataPage, MenuItem } from 'Components';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
 import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
+import { useState } from 'react';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -46,16 +47,24 @@ const renderOwner = (eventType: EventTypeRegistration) => {
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeWrapper, showAddEventType] = useDialog(AddEventTypeDialog);
+    // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const queryArgs: AllEventTypesParameters = {
         eventStore: params.eventStore!
     };
 
-
+    const handleAddEventType = async () => {
+        const [result] = await showAddEventType();
+        if (result === DialogResult.Ok) {
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+        }
+    };
 
     return (
         <>
             <DataPage
+                key={refreshTrigger}
                 title={strings.eventStore.general.eventTypes.title}
                 query={AllEventTypesWithSchemas}
                 queryArguments={queryArgs}
@@ -70,7 +79,7 @@ export const EventTypes = () => {
                         id='create'
                         label={strings.eventStore.general.eventTypes.actions.create}
                         icon={faIcons.FaPlus}
-                        command={() => showAddEventType()} />
+                        command={handleAddEventType} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>

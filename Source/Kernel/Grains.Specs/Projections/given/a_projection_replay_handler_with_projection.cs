@@ -23,6 +23,7 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
             _readModelName,
             new ReadModelDisplayName(_readModelName.Value),
             ReadModelOwner.None,
+            ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
