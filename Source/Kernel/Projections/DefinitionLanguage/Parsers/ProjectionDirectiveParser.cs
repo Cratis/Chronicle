@@ -18,6 +18,7 @@ public class ProjectionDirectiveParser
         new AutoMapDirectiveVisitor(),
         new NoAutoMapDirectiveVisitor(),
         new EveryBlockVisitor(),
+        new FromAllBlockVisitor(),
         new FromEventBlockVisitor(),
         new JoinBlockVisitor(),
         new ChildrenBlockVisitor(),
