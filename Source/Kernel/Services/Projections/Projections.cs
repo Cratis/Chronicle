@@ -103,7 +103,7 @@ internal sealed class Projections(
                 {
                     if (r.Schemas.Count == 0) return false;
                     var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title == definition.ReadModel;
+                    return schema.Title! == definition.ReadModel;
                 });
 
                 if (readModelDefinition is null)
@@ -124,11 +124,11 @@ internal sealed class Projections(
 
                 var projectionId = ProjectionId.CreatePreviewId();
                 var projectionKey = new ProjectionKey(projectionId, request.EventStore);
-                var projection = grainFactory.GetGrain<Grains.Projections.IProjection>(projectionKey);
+                var projection = grainFactory.GetGrain<IProjection>(projectionKey);
                 await projection.SetDefinition(definition);
 
                 // Get event types - use preview method if we have a draft read model
-                IEnumerable<Concepts.Events.EventType> eventTypes;
+                IEnumerable<EventType> eventTypes;
                 if (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier)
                 {
                     eventTypes = await projection.GetEventTypesForPreview(readModelDefinition);
@@ -228,7 +228,7 @@ internal sealed class Projections(
                 {
                     if (r.Schemas.Count == 0) return false;
                     var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title == definition.ReadModel;
+                    return schema.Title! == definition.ReadModel;
                 });
 
                 if (readModelDefinition is null)
@@ -246,7 +246,30 @@ internal sealed class Projections(
 
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
 
+                // Check if a projection with the same identifier already exists
                 var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
+                var existingProjections = await projectionsManager.GetProjectionDefinitions();
+                var existingProjection = existingProjections.FirstOrDefault(p => p.Identifier == definition.Identifier);
+
+                // If projection exists but targets a different read model, it's an update which is allowed
+                // If no projection exists with this name but one exists for the same read model, check for conflicts
+                if (existingProjection is null)
+                {
+                    var conflictingProjection = existingProjections.FirstOrDefault(p => p.ReadModel == definition.ReadModel);
+                    if (conflictingProjection is not null)
+                    {
+                        return new SaveProjectionResult
+                        {
+                            Errors = [new ProjectionDeclarationSyntaxError
+                            {
+                                Line = 1,
+                                Column = 1,
+                                Message = $"A projection for read model '{definition.ReadModel}' already exists with identifier '{conflictingProjection.Identifier}'"
+                            }]
+                        };
+                    }
+                }
+
                 await projectionsManager.Register([definition]);
                 return new SaveProjectionResult();
             },
@@ -273,7 +296,7 @@ internal sealed class Projections(
                 {
                     if (r.Schemas.Count == 0) return false;
                     var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title == definition.ReadModel;
+                    return schema.Title! == definition.ReadModel;
                 });
 
                 if (readModelDefinition is null)
@@ -317,7 +340,7 @@ internal sealed class Projections(
                 {
                     if (r.Schemas.Count == 0) return false;
                     var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title == definition.ReadModel;
+                    return schema.Title! == definition.ReadModel;
                 });
 
                 if (readModelDefinition is null)
