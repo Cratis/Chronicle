@@ -23,13 +23,14 @@ import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, Proj
 import type { ReadModelSchema } from 'Api/ReadModels';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
-import { useDialog } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { TimeMachineDialog, ReadModelInstances } from 'Components';
 import { Json } from 'Features';
 
 export const Projections = () => {
 
     const [declarationValue, setDeclarationValue] = useState('');
+    const [originalDeclarationValue, setOriginalDeclarationValue] = useState('');
     const [selectedProjection, setSelectedProjection] = useState<unknown>(null);
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
@@ -52,6 +53,7 @@ export const Projections = () => {
     const [previewProjection] = PreviewProjection.use();
     const [saveProjection] = SaveProjection.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [showConfirmation] = useConfirmationDialog();
 
     const selectedReadModel = useMemo(() => {
         if (!selectedProjection || !readModels.data) return null;
@@ -70,9 +72,16 @@ export const Projections = () => {
         return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDeclaration}`) || rm.identifier === readModelNameFromDeclaration || rm.name === readModelNameFromDeclaration) || null;
     }, [readModelNameFromDeclaration, readModels.data]);
 
+    const hasUnsavedChanges = useMemo(() => {
+        return declarationValue !== originalDeclarationValue;
+    }, [declarationValue, originalDeclarationValue]);
+
     const saveDisabledReason = useMemo(() => {
         if (!declarationValue.trim()) {
             return strings.eventStore.general.projections.saveDisabledReasons.emptyContent;
+        }
+        if (!hasUnsavedChanges) {
+            return strings.eventStore.general.projections.saveDisabledReasons.noChanges;
         }
         if (hasValidationErrors) {
             return strings.eventStore.general.projections.saveDisabledReasons.validationErrors;
@@ -154,9 +163,21 @@ export const Projections = () => {
                             value={projections.data}
                             selectionMode="single"
                             selection={selectedProjection as never}
-                            onSelectionChange={(e) => {
+                            onSelectionChange={async (e) => {
+                                if (hasUnsavedChanges) {
+                                    const result = await showConfirmation(
+                                        strings.eventStore.general.projections.dialogs.unsavedChanges.title,
+                                        strings.eventStore.general.projections.dialogs.unsavedChanges.message,
+                                        DialogButtons.YesNo
+                                    );
+                                    if (result !== DialogResult.Yes) {
+                                        return;
+                                    }
+                                }
                                 setSelectedProjection(e.value);
-                                setDeclarationValue(e.value?.declaration ?? '');
+                                const newDeclaration = e.value?.declaration ?? '';
+                                setDeclarationValue(newDeclaration);
+                                setOriginalDeclarationValue(newDeclaration);
                                 setReadModelInstances([]);
                                 setSelectedInstance(null);
                                 setPage(0);
@@ -178,9 +199,20 @@ export const Projections = () => {
                                 {
                                     label: strings.eventStore.general.projections.actions.new,
                                     icon: <faIcons.FaPlus className='mr-2' />,
-                                    command: () => {
+                                    command: async () => {
+                                        if (hasUnsavedChanges) {
+                                            const result = await showConfirmation(
+                                                strings.eventStore.general.projections.dialogs.unsavedChanges.title,
+                                                strings.eventStore.general.projections.dialogs.unsavedChanges.message,
+                                                DialogButtons.YesNo
+                                            );
+                                            if (result !== DialogResult.Yes) {
+                                                return;
+                                            }
+                                        }
                                         setSelectedProjection(null);
                                         setDeclarationValue('');
+                                        setOriginalDeclarationValue('');
                                         setReadModelInstances([]);
                                         setSyntaxErrors([]);
                                         setSelectedInstance(null);
@@ -205,6 +237,7 @@ export const Projections = () => {
                                             refreshReadModels();
                                             setSyntaxErrors([]);
                                             setDraftReadModel(null); // Clear draft after successful save
+                                            setOriginalDeclarationValue(declarationValue); // Reset original after successful save
                                         } else {
                                             // Display server-side validation errors in the editor
                                             setSyntaxErrors(errors);

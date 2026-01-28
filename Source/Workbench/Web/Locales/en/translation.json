@@ -152,6 +152,7 @@
                 },
                 "saveDisabledReasons": {
                     "emptyContent": "Editor is empty",
+                    "noChanges": "No changes to save",
                     "validationErrors": "Fix validation errors first",
                     "readModelOwnedByCode": "Read model is defined by code",
                     "projectionAlreadyExists": "A projection already exists for this read model"
@@ -159,6 +160,12 @@
                 "previewDisabledReasons": {
                     "emptyContent": "Editor is empty",
                     "validationErrors": "Fix validation errors first"
+                },
+                "dialogs": {
+                    "unsavedChanges": {
+                        "title": "Unsaved Changes",
+                        "message": "You have unsaved changes. Do you want to continue and discard them?"
+                    }
                 }
             }
         },
