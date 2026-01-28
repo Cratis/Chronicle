@@ -53,7 +53,24 @@ public class ProjectionsManager(
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
         await projectionsService.Register(_eventStoreName, definitions);
-        State.Projections = definitions;
+
+        // Merge new definitions with existing ones, replacing any with the same identifier
+        var existingProjections = State.Projections.ToList();
+        foreach (var newDefinition in definitions)
+        {
+            var existingIndex = existingProjections.FindIndex(p => p.Identifier == newDefinition.Identifier);
+            if (existingIndex >= 0)
+            {
+                existingProjections[existingIndex] = newDefinition;
+            }
+            else
+            {
+                existingProjections.Add(newDefinition);
+            }
+        }
+
+        State.Projections = existingProjections;
+        await WriteStateAsync();
         await SetDefinitionAndSubscribeForAllProjections();
     }
 
