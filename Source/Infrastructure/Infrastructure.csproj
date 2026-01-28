@@ -9,6 +9,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="System.Reactive" />

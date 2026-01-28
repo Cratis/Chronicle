@@ -15,17 +15,17 @@ import { GeneratedCodeResult } from './GeneratedCodeResult';
  * Represents a request to generate model-bound C# read model code from projection declaration language.
  */
 export interface IGenerateModelBoundCode {
-    
+
     /**
      * The projection declaration language representation of the projection.
      */
     declaration?: string;
-    
+
     /**
      * The event store the projection targets.
      */
     eventStore?: string;
-    
+
     /**
      * The namespace the projection targets.
      */

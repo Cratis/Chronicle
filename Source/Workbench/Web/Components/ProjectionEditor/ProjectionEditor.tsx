@@ -13,7 +13,7 @@ import {
     disposeProjectionDefinitionLanguage,
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
-import { ProjectionDefinitionSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode } from 'Api/Projections';
+import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode } from 'Api/Projections';
 import { AllEventSequences } from 'Api/EventSequences';
 import { Button } from 'primereact/button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
@@ -26,7 +26,7 @@ export interface ProjectionEditorProps {
     onValidationChange?: (hasErrors: boolean) => void;
     readModelSchemas?: JsonSchema[],
     eventSchemas?: JsonSchema[],
-    errors?: ProjectionDefinitionSyntaxError[];
+    errors?: ProjectionDeclarationSyntaxError[];
     theme?: string;
     eventStore?: string;
     namespace?: string;
@@ -57,12 +57,12 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         if (eventStore && namespace && value) {
             generateDeclarativeCode.eventStore = eventStore;
             generateDeclarativeCode.namespace = namespace;
-            generateDeclarativeCode.definition = value;
+            generateDeclarativeCode.declaration = value;
             const declarativeResult = await generateDeclarativeCode.execute();
 
             generateModelBoundCode.eventStore = eventStore;
             generateModelBoundCode.namespace = namespace;
-            generateModelBoundCode.definition = value;
+            generateModelBoundCode.declaration = value;
             const modelBoundResult = await generateModelBoundCode.execute();
 
             const declCode = declarativeResult.response?.code || '// Unable to generate code';

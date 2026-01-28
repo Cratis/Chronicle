@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
-
 #if DEVELOPMENT
+namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
 /// <summary>
 /// Logging extensions for <see cref="ClientAuthenticationHandler"/>.

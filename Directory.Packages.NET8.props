@@ -2,12 +2,14 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <ItemGroup>
         <PackageVersion Update="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.22" />
+        <PackageVersion Update="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.23" />
         <PackageVersion Update="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
         <PackageVersion Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
         <PackageVersion Update="Microsoft.Extensions.DependencyModel" Version="8.0.2" />
         <PackageVersion Update="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.22" />
         <PackageVersion Update="Microsoft.Extensions.Hosting" Version="8.0.1" />
         <PackageVersion Update="Microsoft.Extensions.Resilience" Version="8.10.0" />
+        <PackageVersion Update="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
         <PackageVersion Update="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
         <PackageVersion Update="Microsoft.Extensions.Telemetry.Abstractions" Version="8.10.0" />
         <PackageVersion Update="Microsoft.Extensions.Logging" Version="8.0.1" />

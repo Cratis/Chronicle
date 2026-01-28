@@ -15,7 +15,7 @@ import { Guid } from '@cratis/fundamentals';
  * Represents the command for removing application.
  */
 export interface IRemoveApplication {
-    
+
     /**
      * The application identifier.
      */

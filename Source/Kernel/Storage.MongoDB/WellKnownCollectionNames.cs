@@ -79,9 +79,14 @@ public static class WellKnownCollectionNames
     public const string Recommendations = "recommendations";
 
     /// <summary>
-    /// The collection that holds reducer definitions.
+    /// The collection that holds reactor definitions.
     /// </summary>
     public const string ReactorDefinitions = "reactors";
+
+    /// <summary>
+    /// The collection that holds webhook definitions.
+    /// </summary>
+    public const string WebhookDefinitions = "webhooks";
 
     /// <summary>
     /// The collection that holds reducer definitions.

@@ -15,22 +15,22 @@ import { Guid } from '@cratis/fundamentals';
  * Represents the command for changing a user's password.
  */
 export interface IChangePasswordForUser {
-    
+
     /**
      * The confirmed new password.
      */
     confirmedPassword?: string;
-    
+
     /**
      * The old password.
      */
     oldPassword?: string;
-    
+
     /**
      * The new password.
      */
     password?: string;
-    
+
     /**
      * The user's unique identifier.
      */

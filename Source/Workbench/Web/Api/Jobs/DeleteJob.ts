@@ -15,17 +15,17 @@ import { Guid } from '@cratis/fundamentals';
  * Delete a specific job.
  */
 export interface IDeleteJob {
-    
+
     /**
      * Name of the event store the job is for.
      */
     eventStore?: string;
-    
+
     /**
      * Identifier of the job to delete.
      */
     jobId?: Guid;
-    
+
     /**
      * Namespace within the event store the job is for.
      */

@@ -116,6 +116,7 @@ jobs:
           - 'for_JobsManager'
           - 'for_Reactors'
           - 'for_Reducers'
+          - 'for_Webhooks'
           - 'Jobs'
           - 'Projections'
     continue-on-error: true

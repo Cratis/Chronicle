@@ -14,17 +14,17 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Create a new read model type.
  */
 export interface ICreateReadModel {
-    
+
     /**
      * Name of the event store.
      */
     eventStore?: string;
-    
+
     /**
      * Name of the read model to create.
      */
     name?: string;
-    
+
     /**
      * Optional schema for the read model.
      */

@@ -14,17 +14,17 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Rewind a specific observer in an event store and specific namespace.
  */
 export interface IReplay {
-    
+
     /**
      * Name of the event store the observer is for.
      */
     eventStore?: string;
-    
+
     /**
      * Namespace within the event store the observer is for.
      */
     namespace?: string;
-    
+
     /**
      * Identifier of the observer to rewind.
      */

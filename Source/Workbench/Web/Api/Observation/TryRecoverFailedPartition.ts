@@ -14,22 +14,22 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Retry a specific partition in an event store and specific namespace.
  */
 export interface ITryRecoverFailedPartition {
-    
+
     /**
      * Name of the event store the observer is for.
      */
     eventStore?: string;
-    
+
     /**
      * Namespace within the event store the observer is for.
      */
     namespace?: string;
-    
+
     /**
      * Identifier of the observer to rewind.
      */
     observerId?: string;
-    
+
     /**
      * Partition to retry.
      */

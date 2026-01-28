@@ -8,9 +8,9 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 263 |
+| Number of items that remain open | 264 |
 | Number of items closed | 609 |
-| Total number of items created | 872 |
+| Total number of items created | 873 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |

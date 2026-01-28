@@ -11,6 +11,7 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Specs" />
     </ItemGroup>
 
     <ItemGroup>

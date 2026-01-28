@@ -15,7 +15,7 @@ import { Guid } from '@cratis/fundamentals';
  * Represents the command for removing a user.
  */
 export interface IRemoveUser {
-    
+
     /**
      * The unique identifier for the user.
      */

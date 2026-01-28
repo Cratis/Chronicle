@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
+using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -33,6 +34,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Reactors"><see cref="IReactors"/> instance.</param>
 /// <param name="Reducers"><see cref="IReducers"/> instance.</param>
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
+/// <param name="Webhooks"><see cref="IWebhooks"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
@@ -52,6 +54,7 @@ public sealed record Services(
     IReactors Reactors,
     IReducers Reducers,
     IProjections Projections,
+    IWebhooks Webhooks,
     IReadModels ReadModels,
     IJobs Jobs,
     IEventSeeding Seeding,

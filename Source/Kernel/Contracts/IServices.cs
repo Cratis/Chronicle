@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
+using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -81,6 +82,11 @@ public interface IServices
     /// Gets the <see cref="IProjections"/> service.
     /// </summary>
     IProjections Projections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IWebhooks"/> service.
+    /// </summary>
+    IWebhooks Webhooks { get; }
 
     /// <summary>
     /// Gets the <see cref="IReadModels"/> service.

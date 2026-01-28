@@ -15,17 +15,17 @@ import { ProjectionPreview } from './ProjectionPreview';
  * Represents a request to preview a projection.
  */
 export interface IPreviewProjection {
-    
+
     /**
      * The projection declaration language representation of the projection.
      */
     declaration?: string;
-    
+
     /**
      * The event store the projection targets.
      */
     eventStore?: string;
-    
+
     /**
      * The namespace the projection targets.
      */

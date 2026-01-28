@@ -17,52 +17,52 @@ import { Identity } from '../Identities/Identity';
  * Appends an event to the event log.
  */
 export interface IAppend {
-    
+
     /**
      * Optional Collection of .
      */
     causation?: Causation[];
-    
+
     /**
      * Optional  to identify the person, system or service that caused the event.
      */
     causedBy?: Identity;
-    
+
     /**
      * The content of the event represented as .
      */
     content?: Record<string, unknown>;
-    
+
     /**
      * The event sequence to append to.
      */
     eventSequenceId?: string;
-    
+
     /**
      * The event source identifier.
      */
     eventSourceId?: string;
-    
+
     /**
      * The event store to append for.
      */
     eventStore?: string;
-    
+
     /**
      * The event stream identifier.
      */
     eventStreamId?: string;
-    
+
     /**
      * The event stream type.
      */
     eventStreamType?: string;
-    
+
     /**
      * The  to append.
      */
     eventType?: EventType;
-    
+
     /**
      * The namespace to append to.
      */
