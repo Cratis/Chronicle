@@ -3,6 +3,7 @@
 
 #if DEVELOPMENT
 using Microsoft.AspNetCore.Identity;
+using Cratis.Chronicle.Storage.Security;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Server.OpenIddictServerEvents;
