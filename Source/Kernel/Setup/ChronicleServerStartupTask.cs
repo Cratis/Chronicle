@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Grains.EventTypes.Kernel;
+using Cratis.Chronicle.Grains.EventTypes;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
