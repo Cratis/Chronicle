@@ -7,12 +7,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventHashCalculator"/>.
 /// </summary>
+[Singleton]
 public class EventHashCalculator : IEventHashCalculator
 {
     static readonly JsonSerializerOptions _jsonSerializerOptions = new()
