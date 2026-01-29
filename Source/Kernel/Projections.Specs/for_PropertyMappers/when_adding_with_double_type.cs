@@ -33,7 +33,8 @@ public class when_adding_with_double_type : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         dynamic target = _result;

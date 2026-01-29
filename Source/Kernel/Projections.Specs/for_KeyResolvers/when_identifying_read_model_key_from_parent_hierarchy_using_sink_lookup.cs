@@ -54,7 +54,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new
             {
                 parentId = ParentKey,

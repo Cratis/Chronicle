@@ -51,7 +51,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_empty_st
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new
             {
                 parentId = ParentKey,

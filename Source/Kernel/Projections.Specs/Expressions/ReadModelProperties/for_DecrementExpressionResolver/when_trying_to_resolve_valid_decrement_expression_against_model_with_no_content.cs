@@ -34,7 +34,8 @@ public class when_trying_to_resolve_valid_decrement_expression_against_model_wit
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
         _resolver = new(new TypeFormats());
     }

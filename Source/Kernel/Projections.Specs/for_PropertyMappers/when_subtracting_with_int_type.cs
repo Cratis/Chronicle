@@ -33,7 +33,8 @@ public class when_subtracting_with_int_type : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         dynamic target = _result;
