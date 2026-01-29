@@ -14,7 +14,9 @@ public interface IEventHashCalculator
     /// <summary>
     /// Calculate a hash for the event content.
     /// </summary>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> of the event.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event.</param>
     /// <param name="content">The event content to hash.</param>
     /// <returns>The calculated <see cref="EventHash"/>.</returns>
-    EventHash Calculate(ExpandoObject content);
+    EventHash Calculate(EventTypeId eventTypeId, EventSourceId eventSourceId, ExpandoObject content);
 }

@@ -279,7 +279,7 @@ public class EventSequence(
             {
                 var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
                 constraintContexts.Add(constraintContext);
-                var eventHash = eventHashCalculator.Calculate(compliantEvent);
+                var eventHash = eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, compliantEvent);
 
                 eventsToAppend.Add(new EventToAppendToStorage(
                     State.SequenceNumber,
@@ -438,7 +438,7 @@ public class EventSequence(
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
 
             var identity = await IdentityStorage.GetFor(causedBy);
-            var eventHash = eventHashCalculator.Calculate(compliantEvent);
+            var eventHash = eventHashCalculator.Calculate(eventType.Id, eventSourceId, compliantEvent);
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);

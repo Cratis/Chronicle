@@ -24,10 +24,10 @@ public class EventHashCalculator : IEventHashCalculator
     };
 
     /// <inheritdoc/>
-    public EventHash Calculate(ExpandoObject content)
+    public EventHash Calculate(EventTypeId eventTypeId, EventSourceId eventSourceId, ExpandoObject content)
     {
-        var canonicalJson = GetCanonicalJson(content);
-        var bytes = Encoding.UTF8.GetBytes(canonicalJson);
+        var combinedData = $"{eventTypeId.Value}|{eventSourceId.Value}|{GetCanonicalJson(content)}";
+        var bytes = Encoding.UTF8.GetBytes(combinedData);
         var hashBytes = SHA256.HashData(bytes);
         return Convert.ToBase64String(hashBytes);
     }
