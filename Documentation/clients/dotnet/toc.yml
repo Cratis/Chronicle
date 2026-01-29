@@ -18,3 +18,5 @@
   href: events/projections.md
 - name: Constraints
   href: constraints.md
+- name: Code Analysis
+  href: code-analysis/toc.yml
