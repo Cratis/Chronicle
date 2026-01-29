@@ -43,7 +43,7 @@
     </Target>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>

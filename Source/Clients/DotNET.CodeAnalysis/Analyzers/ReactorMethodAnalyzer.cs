@@ -75,8 +75,9 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         }
 
         // Check if this could be an event handler method based on return type
+        var taskType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
         var validReturnType = methodSymbol.ReturnsVoid ||
-            (methodSymbol.ReturnType.Name == "Task" && methodSymbol.ReturnType is not INamedTypeSymbol { IsGenericType: true });
+            (taskType != null && SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, taskType));
 
         if (!validReturnType)
         {

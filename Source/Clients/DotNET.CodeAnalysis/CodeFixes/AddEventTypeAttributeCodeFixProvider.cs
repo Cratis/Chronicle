@@ -25,6 +25,7 @@ public class AddEventTypeAttributeCodeFixProvider : CodeFixProvider
     /// <inheritdoc/>
     public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(
         DiagnosticIds.EventTypeMustHaveAttributeWhenAppended,
+        DiagnosticIds.DeclarativeProjectionEventTypeMustHaveAttribute,
         DiagnosticIds.ModelBoundProjectionEventTypeMustHaveAttribute,
         DiagnosticIds.ReactorEventParameterMustHaveAttribute,
         DiagnosticIds.ReducerEventParameterMustHaveAttribute);
