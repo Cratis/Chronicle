@@ -9,22 +9,22 @@ namespace Cratis.Chronicle.Grains.Specs.EventSequences.for_EventHashCalculator;
 
 public class when_calculating_hash_with_empty_content : Specification
 {
-    EventHashCalculator calculator;
-    EventTypeId event_type_id;
-    EventSourceId event_source_id;
-    ExpandoObject content;
-    string hash;
+    EventHashCalculator _calculator;
+    EventTypeId _eventTypeId;
+    EventSourceId _eventSourceId;
+    ExpandoObject _content;
+    string _hash;
 
     void Establish()
     {
-        calculator = new EventHashCalculator();
-        event_type_id = Guid.NewGuid();
-        event_source_id = Guid.NewGuid();
-        content = new ExpandoObject();
+        _calculator = new EventHashCalculator();
+        _eventTypeId = Guid.NewGuid().ToString();
+        _eventSourceId = Guid.NewGuid().ToString();
+        _content = new ExpandoObject();
     }
 
-    void Because() => hash = calculator.Calculate(event_type_id, event_source_id, content);
+    void Because() => _hash = _calculator.Calculate(_eventTypeId, _eventSourceId, _content);
 
-    [Fact] void should_produce_a_hash() => hash.ShouldNotBeNull();
-    [Fact] void should_produce_non_empty_hash() => hash.ShouldNotBeEmpty();
+    [Fact] void should_produce_a_hash() => _hash.ShouldNotBeNull();
+    [Fact] void should_produce_non_empty_hash() => _hash.ShouldNotBeEmpty();
 }

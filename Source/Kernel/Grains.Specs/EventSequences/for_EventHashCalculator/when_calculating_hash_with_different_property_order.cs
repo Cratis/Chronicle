@@ -9,28 +9,28 @@ namespace Cratis.Chronicle.Grains.Specs.EventSequences.for_EventHashCalculator;
 
 public class when_calculating_hash_with_different_property_order : Specification
 {
-    EventHashCalculator calculator;
-    EventTypeId event_type_id;
-    EventSourceId event_source_id;
-    ExpandoObject first_content;
-    ExpandoObject second_content;
-    string first_hash;
-    string second_hash;
+    EventHashCalculator _calculator;
+    EventTypeId _eventTypeId;
+    EventSourceId _eventSourceId;
+    ExpandoObject _firstContent;
+    ExpandoObject _secondContent;
+    string _firstHash;
+    string _secondHash;
 
     void Establish()
     {
-        calculator = new EventHashCalculator();
-        event_type_id = Guid.NewGuid();
-        event_source_id = Guid.NewGuid();
+        _calculator = new EventHashCalculator();
+        _eventTypeId = Guid.NewGuid().ToString();
+        _eventSourceId = Guid.NewGuid().ToString();
 
-        first_content = new ExpandoObject();
-        var firstDict = (IDictionary<string, object>)first_content;
+        _firstContent = new ExpandoObject();
+        var firstDict = (IDictionary<string, object>)_firstContent!;
         firstDict["name"] = "John";
         firstDict["age"] = 42;
         firstDict["email"] = "john@example.com";
 
-        second_content = new ExpandoObject();
-        var secondDict = (IDictionary<string, object>)second_content;
+        _secondContent = new ExpandoObject();
+        var secondDict = (IDictionary<string, object>)_secondContent!;
         secondDict["email"] = "john@example.com";
         secondDict["name"] = "John";
         secondDict["age"] = 42;
@@ -38,9 +38,9 @@ public class when_calculating_hash_with_different_property_order : Specification
 
     void Because()
     {
-        first_hash = calculator.Calculate(event_type_id, event_source_id, first_content);
-        second_hash = calculator.Calculate(event_type_id, event_source_id, second_content);
+        _firstHash = _calculator.Calculate(_eventTypeId, _eventSourceId, _firstContent);
+        _secondHash = _calculator.Calculate(_eventTypeId, _eventSourceId, _secondContent);
     }
 
-    [Fact] void should_produce_identical_hashes() => first_hash.ShouldEqual(second_hash);
+    [Fact] void should_produce_identical_hashes() => _firstHash.ShouldEqual(_secondHash);
 }

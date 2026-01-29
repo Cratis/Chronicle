@@ -9,36 +9,36 @@ namespace Cratis.Chronicle.Grains.Specs.EventSequences.for_EventHashCalculator;
 
 public class when_calculating_hash_with_different_content : Specification
 {
-    EventHashCalculator calculator;
-    EventTypeId event_type_id;
-    EventSourceId event_source_id;
-    ExpandoObject first_content;
-    ExpandoObject second_content;
-    string first_hash;
-    string second_hash;
+    EventHashCalculator _calculator;
+    EventTypeId _eventTypeId;
+    EventSourceId _eventSourceId;
+    ExpandoObject _firstContent;
+    ExpandoObject _secondContent;
+    string _firstHash;
+    string _secondHash;
 
     void Establish()
     {
-        calculator = new EventHashCalculator();
-        event_type_id = Guid.NewGuid();
-        event_source_id = Guid.NewGuid();
+        _calculator = new EventHashCalculator();
+        _eventTypeId = Guid.NewGuid().ToString();
+        _eventSourceId = Guid.NewGuid().ToString();
 
-        first_content = new ExpandoObject();
-        var firstDict = (IDictionary<string, object>)first_content;
+        _firstContent = new ExpandoObject();
+        var firstDict = (IDictionary<string, object>)_firstContent!;
         firstDict["name"] = "John";
         firstDict["age"] = 42;
 
-        second_content = new ExpandoObject();
-        var secondDict = (IDictionary<string, object>)second_content;
+        _secondContent = new ExpandoObject();
+        var secondDict = (IDictionary<string, object>)_secondContent!;
         secondDict["name"] = "Jane";
         secondDict["age"] = 42;
     }
 
     void Because()
     {
-        first_hash = calculator.Calculate(event_type_id, event_source_id, first_content);
-        second_hash = calculator.Calculate(event_type_id, event_source_id, second_content);
+        _firstHash = _calculator.Calculate(_eventTypeId, _eventSourceId, _firstContent);
+        _secondHash = _calculator.Calculate(_eventTypeId, _eventSourceId, _secondContent);
     }
 
-    [Fact] void should_produce_different_hashes() => first_hash.ShouldNotEqual(second_hash);
+    [Fact] void should_produce_different_hashes() => _firstHash.ShouldNotEqual(_secondHash);
 }
