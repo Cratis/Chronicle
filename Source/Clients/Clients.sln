@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Embedded", "..\Workbench\Em
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "Api\Api.csproj", "{795FD6B5-B742-4D5A-BE0A-B819853A675B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET.CodeAnalysis", "DotNET.CodeAnalysis\DotNET.CodeAnalysis.csproj", "{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,18 @@ Global
 		{795FD6B5-B742-4D5A-BE0A-B819853A675B}.Release|x64.Build.0 = Release|Any CPU
 		{795FD6B5-B742-4D5A-BE0A-B819853A675B}.Release|x86.ActiveCfg = Release|Any CPU
 		{795FD6B5-B742-4D5A-BE0A-B819853A675B}.Release|x86.Build.0 = Release|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Debug|x64.Build.0 = Debug|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Debug|x86.Build.0 = Debug|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Release|x64.ActiveCfg = Release|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Release|x64.Build.0 = Release|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Release|x86.ActiveCfg = Release|Any CPU
+		{8FF25DD1-C274-4541-9E7C-23EB7BAAE72D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
