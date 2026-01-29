@@ -64,14 +64,15 @@ public class ClientAuthenticationHandler(
         }
 
         var application = await applicationStorage.GetByClientId(clientId);
+        var eventLog = grainFactory.GetEventLog();
+
         if (application is null)
         {
             logger.ApplicationNotFound(clientId);
 
             // Append event for unknown application login attempt
             var unknownAppEvent = new UnknownApplicationLoginAttempted(clientId);
-            var eventSequence = grainFactory.GetEventLog();
-            await eventSequence.Append(Guid.Empty, unknownAppEvent);
+            await eventLog.Append(Guid.Empty, unknownAppEvent);
 
             context.Reject(
                 error: OpenIddictConstants.Errors.InvalidClient,
@@ -93,8 +94,7 @@ public class ClientAuthenticationHandler(
 
             // Append event for invalid application credentials
             var invalidAppCredsEvent = new InvalidApplicationCredentialsProvided(clientId);
-            var invalidEventSequence = grainFactory.GetEventLog();
-            await invalidEventSequence.Append(application.Id.Value, invalidAppCredsEvent);
+            await eventLog.Append(application.Id.Value, invalidAppCredsEvent);
 
             context.Reject(
                 error: OpenIddictConstants.Errors.InvalidClient,

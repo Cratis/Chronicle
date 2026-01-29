@@ -57,14 +57,15 @@ public class AuthorizationController(
             // OpenIddict handles client validation automatically through ApplicationStore
             // We just need to create the claims identity
             var application = await applicationManager.FindByClientIdAsync(request.ClientId ?? string.Empty);
+            var eventLog = grainFactory.GetEventLog();
+
             if (application == null)
             {
                 logger.ApplicationNotFound(request.ClientId ?? string.Empty);
 
                 // Append event for unknown application login attempt
                 var unknownAppEvent = new UnknownApplicationLoginAttempted(request.ClientId ?? string.Empty);
-                var eventSequence = grainFactory.GetEventLog();
-                await eventSequence.Append(Guid.Empty, unknownAppEvent);
+                await eventLog.Append(Guid.Empty, unknownAppEvent);
 
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -94,9 +95,8 @@ public class AuthorizationController(
 
             // Append event for successful application authentication
             var appAuthEvent = new ApplicationAuthenticated(clientId ?? string.Empty);
-            var appEventSequence = grainFactory.GetEventLog();
             var appId = Guid.Parse(applicationId ?? Guid.Empty.ToString());
-            await appEventSequence.Append(appId, appAuthEvent);
+            await eventLog.Append(appId, appAuthEvent);
 
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
@@ -105,12 +105,13 @@ public class AuthorizationController(
         {
             logger.ProcessingPasswordGrant(request.Username ?? string.Empty);
             var user = await userManager.FindByNameAsync(request.Username ?? string.Empty);
+            var eventLog = grainFactory.GetEventLog();
+
             if (user == null)
             {
                 // Append event for unknown user login attempt
                 var unknownUserEvent = new UnknownUserLoginAttempted(request.Username ?? string.Empty);
-                var eventSequence = grainFactory.GetEventLog();
-                await eventSequence.Append(Guid.Empty, unknownUserEvent);
+                await eventLog.Append(Guid.Empty, unknownUserEvent);
 
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -129,8 +130,7 @@ public class AuthorizationController(
 
                 // Append event for invalid user credentials
                 var invalidCredsEvent = new InvalidUserCredentialsProvided(request.Username ?? string.Empty);
-                var invalidEventSequence = grainFactory.GetEventLog();
-                await invalidEventSequence.Append(user.Id, invalidCredsEvent);
+                await eventLog.Append(user.Id, invalidCredsEvent);
 
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -157,8 +157,7 @@ public class AuthorizationController(
 
             // Append event for successful user authentication
             var userAuthEvent = new UserAuthenticated(user.Username);
-            var userEventSequence = grainFactory.GetEventLog();
-            await userEventSequence.Append(user.Id, userAuthEvent);
+            await eventLog.Append(user.Id, userAuthEvent);
 
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
