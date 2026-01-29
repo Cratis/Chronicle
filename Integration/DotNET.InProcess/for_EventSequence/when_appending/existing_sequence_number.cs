@@ -37,6 +37,7 @@ public class existing_sequence_number(context context) : Given<context>(context)
                 Concepts.Events.EventStreamId.Default,
                 [],
                 new Dictionary<string, BsonDocument>() { { "1", FirstEvent.ToBsonDocument() } },
+                new Dictionary<string, string>() { { "1", EventHash.NotSet } },
                 []);
 
             await database.GetCollection<Event>(WellKnownCollectionNames.EventLog).InsertOneAsync(@event);

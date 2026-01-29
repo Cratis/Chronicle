@@ -28,6 +28,7 @@ public class when_round_tripping_event_context_conversion : Specification
             [new Causation(DateTimeOffset.UtcNow, "causationType", properties)],
             new Identity("TheSubject", "TheUserName"),
             [],
+            EventHash.NotSet,
             EventObservationState.Initial
         );
     }
