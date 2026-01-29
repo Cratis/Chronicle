@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
@@ -18,10 +20,12 @@ namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 /// </summary>
 /// <param name="applicationStorage">The application storage.</param>
 /// <param name="passwordHasher">The password hasher for verifying client secrets.</param>
+/// <param name="grainFactory">The grain factory.</param>
 /// <param name="logger">The logger.</param>
 public class ClientAuthenticationHandler(
     IApplicationStorage applicationStorage,
     IPasswordHasher<object> passwordHasher,
+    IGrainFactory grainFactory,
     ILogger<ClientAuthenticationHandler> logger) : IOpenIddictServerHandler<ProcessAuthenticationContext>
 {
     /// <summary>
@@ -63,6 +67,12 @@ public class ClientAuthenticationHandler(
         if (application is null)
         {
             logger.ApplicationNotFound(clientId);
+
+            // Append event for unknown application login attempt
+            var unknownAppEvent = new UnknownApplicationLoginAttempted(clientId);
+            var eventSequence = grainFactory.GetEventLog();
+            await eventSequence.Append(Guid.Empty, unknownAppEvent);
+
             context.Reject(
                 error: OpenIddictConstants.Errors.InvalidClient,
                 description: "The specified client credentials are invalid.",
@@ -80,6 +90,12 @@ public class ClientAuthenticationHandler(
         if (application.ClientSecret is null || verificationResult == PasswordVerificationResult.Failed)
         {
             logger.SecretVerificationFailed(clientId);
+
+            // Append event for invalid application credentials
+            var invalidAppCredsEvent = new InvalidApplicationCredentialsProvided(clientId);
+            var invalidEventSequence = grainFactory.GetEventLog();
+            await invalidEventSequence.Append(application.Id.Value, invalidAppCredsEvent);
+
             context.Reject(
                 error: OpenIddictConstants.Errors.InvalidClient,
                 description: "The specified client credentials are invalid.",

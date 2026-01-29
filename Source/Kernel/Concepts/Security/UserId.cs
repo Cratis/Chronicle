@@ -24,6 +24,13 @@ public record UserId(Guid Value) : ConceptAs<Guid>(Value)
     public static implicit operator UserId(EventSourceId eventSourceId) => new(Guid.Parse(eventSourceId.Value));
 
     /// <summary>
+    /// Implicitly converts from <see cref="UserId"/> to <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="userId">The <see cref="UserId"/> to convert.</param>
+    /// <returns>The converted <see cref="EventSourceId"/>.</returns>
+    public static implicit operator EventSourceId(UserId userId) => new(userId.Value.ToString());
+
+    /// <summary>
     /// Implicitly converts from <see cref="Guid"/> to <see cref="UserId"/>.
     /// </summary>
     /// <param name="value">The <see cref="Guid"/> to convert.</param>

@@ -3,6 +3,8 @@
 
 using System.Security.Claims;
 using Cratis.Arc;
+using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -21,6 +23,7 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 /// <param name="userManager">The user manager.</param>
 /// <param name="signInManager">The sign-in manager.</param>
 /// <param name="applicationManager">The OpenIddict application manager.</param>
+/// <param name="grainFactory">The grain factory.</param>
 /// <param name="logger">The logger.</param>
 [ApiController]
 [Route("connect")]
@@ -29,6 +32,7 @@ public class AuthorizationController(
     UserManager<ChronicleUser> userManager,
     SignInManager<ChronicleUser> signInManager,
     IOpenIddictApplicationManager applicationManager,
+    IGrainFactory grainFactory,
     ILogger<AuthorizationController> logger) : ControllerBase
 {
     /// <summary>
@@ -56,6 +60,12 @@ public class AuthorizationController(
             if (application == null)
             {
                 logger.ApplicationNotFound(request.ClientId ?? string.Empty);
+
+                // Append event for unknown application login attempt
+                var unknownAppEvent = new UnknownApplicationLoginAttempted(request.ClientId ?? string.Empty);
+                var eventSequence = grainFactory.GetEventLog();
+                await eventSequence.Append(Guid.Empty, unknownAppEvent);
+
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
@@ -81,6 +91,13 @@ public class AuthorizationController(
             identity.SetDestinations(GetDestinations);
 
             logger.ClientCredentialsValidated(clientId ?? string.Empty);
+
+            // Append event for successful application authentication
+            var appAuthEvent = new ApplicationAuthenticated(clientId ?? string.Empty);
+            var appEventSequence = grainFactory.GetEventLog();
+            var appId = Guid.Parse(applicationId ?? Guid.Empty.ToString());
+            await appEventSequence.Append(appId, appAuthEvent);
+
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
@@ -90,6 +107,11 @@ public class AuthorizationController(
             var user = await userManager.FindByNameAsync(request.Username ?? string.Empty);
             if (user == null)
             {
+                // Append event for unknown user login attempt
+                var unknownUserEvent = new UnknownUserLoginAttempted(request.Username ?? string.Empty);
+                var eventSequence = grainFactory.GetEventLog();
+                await eventSequence.Append(Guid.Empty, unknownUserEvent);
+
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
@@ -104,6 +126,12 @@ public class AuthorizationController(
             if (!result.Succeeded)
             {
                 logger.PasswordSignInFailed(request.Username ?? string.Empty);
+
+                // Append event for invalid user credentials
+                var invalidCredsEvent = new InvalidUserCredentialsProvided(request.Username ?? string.Empty);
+                var invalidEventSequence = grainFactory.GetEventLog();
+                await invalidEventSequence.Append(user.Id, invalidCredsEvent);
+
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
@@ -126,6 +154,12 @@ public class AuthorizationController(
             identity.SetDestinations(GetDestinations);
 
             logger.PasswordValidated(request.Username ?? string.Empty);
+
+            // Append event for successful user authentication
+            var userAuthEvent = new UserAuthenticated(user.Username);
+            var userEventSequence = grainFactory.GetEventLog();
+            await userEventSequence.Append(user.Id, userAuthEvent);
+
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
