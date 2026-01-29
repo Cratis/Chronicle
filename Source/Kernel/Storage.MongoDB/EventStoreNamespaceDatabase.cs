@@ -216,6 +216,15 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                         Background = true
                     }));
 
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending("ContentHashes"),
+                    new CreateIndexOptions
+                    {
+                        Name = "contentHashes",
+                        Background = true
+                    }));
+
             _indexedEventSequences.TryAdd(eventSequenceId, true);
         }
     }

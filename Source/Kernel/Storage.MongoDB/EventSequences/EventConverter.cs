@@ -44,6 +44,9 @@ public class EventConverter(
             content);
 
         var releasedContentAsExpandoObject = expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
+        var hash = @event.ContentHashes.TryGetValue(EventTypeGeneration.First.ToString(), out var hashValue)
+            ? new EventHash(hashValue)
+            : EventHash.NotSet;
 
         return new AppendedEvent(
             new(
@@ -59,7 +62,8 @@ public class EventConverter(
                 @event.CorrelationId,
                 @event.Causation,
                 await identityStorage.GetFor(@event.CausedBy),
-                @event.Tags.Select(_ => new Tag(_)).ToArray()),
+                @event.Tags.Select(_ => new Tag(_)).ToArray(),
+                hash),
             releasedContentAsExpandoObject);
     }
 }

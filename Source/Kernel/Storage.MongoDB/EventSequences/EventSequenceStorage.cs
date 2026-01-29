@@ -108,7 +108,8 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
-        ExpandoObject content)
+        ExpandoObject content,
+        EventHash hash)
     {
         try
         {
@@ -131,6 +132,10 @@ public class EventSequenceStorage(
                 {
                     { eventType.Generation.ToString(), document }
                 },
+                new Dictionary<string, string>
+                {
+                    { eventType.Generation.ToString(), hash.Value }
+                },
                 []);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
@@ -149,7 +154,8 @@ public class EventSequenceStorage(
                     correlationId,
                     causation,
                     await identityStorage.GetFor(causedByChain),
-                    tags),
+                    tags,
+                    hash),
                 content));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -205,6 +211,10 @@ public class EventSequenceStorage(
                     {
                         { eventToAppend.EventType.Generation.ToString(), document }
                     },
+                    new Dictionary<string, string>
+                    {
+                        { eventToAppend.EventType.Generation.ToString(), eventToAppend.Hash.Value }
+                    },
                     []);
 
                 eventsToInsert.Add(@event);
@@ -223,7 +233,8 @@ public class EventSequenceStorage(
                         eventToAppend.CorrelationId,
                         eventToAppend.Causation,
                         await identityStorage.GetFor(eventToAppend.CausedByChain),
-                        eventToAppend.Tags),
+                        eventToAppend.Tags,
+                        eventToAppend.Hash),
                     eventToAppend.Content));
             }
 

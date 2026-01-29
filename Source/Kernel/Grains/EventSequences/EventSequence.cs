@@ -40,6 +40,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
+/// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence(
@@ -49,6 +50,7 @@ public class EventSequence(
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
+    IEventHashCalculator eventHashCalculator,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     IEventSequenceStorage? _eventSequenceStorage;
@@ -277,6 +279,7 @@ public class EventSequence(
             {
                 var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
                 constraintContexts.Add(constraintContext);
+                var eventHash = eventHashCalculator.Calculate(compliantEvent);
 
                 eventsToAppend.Add(new EventToAppendToStorage(
                     State.SequenceNumber,
@@ -290,7 +293,8 @@ public class EventSequence(
                     identity,
                     eventToAppend.Tags,
                     DateTimeOffset.UtcNow,
-                    compliantEvent));
+                    compliantEvent,
+                    eventHash));
 
                 State.SequenceNumber = State.SequenceNumber.Next();
             }
@@ -434,6 +438,7 @@ public class EventSequence(
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
 
             var identity = await IdentityStorage.GetFor(causedBy);
+            var eventHash = eventHashCalculator.Calculate(compliantEvent);
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
@@ -458,7 +463,8 @@ public class EventSequence(
                     identity,
                     tags,
                     occurred,
-                    compliantEvent);
+                    compliantEvent,
+                    eventHash);
             }
             while (!appendResult.IsSuccess);
 
