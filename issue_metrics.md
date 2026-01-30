@@ -8,12 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 264 |
+| Number of items that remain open | 266 |
 | Number of items closed | 609 |
-| Total number of items created | 873 |
+| Total number of items created | 875 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Add static code analysis | https://github.com/Cratis/Chronicle/issues/2558 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add events for user and applications authenticated | https://github.com/Cratis/Chronicle/issues/2556 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Change behavior for default Admin user | https://github.com/Cratis/Chronicle/issues/2537 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Ensure Monaco Language service has full support for the Projection Definition Language | https://github.com/Cratis/Chronicle/issues/2505 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Change password on first login | https://github.com/Cratis/Chronicle/issues/2503 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -331,7 +333,4 @@
 | Formalize a main database for the event store to hold common data | https://github.com/Cratis/Chronicle/issues/1249 | None | [einari](https://github.com/einari) | None | 20 days, 5:59:58 | None |
 | Optimize the Projections storage provider to have a local cache for projection definitions it already has loaded | https://github.com/Cratis/Chronicle/issues/1248 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for an automatic namespace selection | https://github.com/Cratis/Chronicle/issues/1243 | None | [einari](https://github.com/einari) | None | 62 days, 9:00:02 | None |
-| Improve WebApplicationBuilder, ServiceCollection and HostBuilder extensions to allow for customization | https://github.com/Cratis/Chronicle/issues/1242 | None | [einari](https://github.com/einari) | None | 516 days, 1:39:00 | None |
-| Remove ValidFrom as concept | https://github.com/Cratis/Chronicle/issues/1241 | None | [einari](https://github.com/einari) | None | 1 day, 4:25:53 | None |
-| Split the repository | https://github.com/Cratis/Chronicle/issues/1206 | None | [einari](https://github.com/einari) | None | None | None |
-| Add in-process Workbench | https://github.com/Cratis/Chronicle/issues/120
+| Improve WebApplicationBuilder, ServiceCollection and HostBuilder extensions to allow for customization | https://github.com/Cratis/Chronicle/issues/1242
