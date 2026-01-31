@@ -43,7 +43,6 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
                     occurred: new Date(event.occurred),
                     content: event.content || {},
                 }));
-                console.log(mappedEvents);
 
                 const schema = JSON.parse(readModel.schema);
                 return {
