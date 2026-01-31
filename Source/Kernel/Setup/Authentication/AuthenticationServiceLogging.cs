@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Server.Authentication;
+using Microsoft.Extensions.Logging;
+
+namespace Cratis.Chronicle.Setup.Authentication;
 
 #pragma warning disable MA0182 // Unused internal type. This is used during DEVELOPMENT builds only.
 internal static partial class AuthenticationServiceLogging

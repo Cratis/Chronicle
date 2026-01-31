@@ -29,8 +29,8 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 [Route("connect")]
 [AllowAnonymous]
 public class AuthorizationController(
-    UserManager<ChronicleUser> userManager,
-    SignInManager<ChronicleUser> signInManager,
+    UserManager<User> userManager,
+    SignInManager<User> signInManager,
     IOpenIddictApplicationManager applicationManager,
     IGrainFactory grainFactory,
     ILogger<AuthorizationController> logger) : ControllerBase

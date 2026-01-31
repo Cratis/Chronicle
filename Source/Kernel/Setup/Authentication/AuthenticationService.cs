@@ -5,9 +5,10 @@ using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Chronicle.Server.Authentication;
+namespace Cratis.Chronicle.Setup.Authentication;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAuthenticationService"/>.
@@ -21,9 +22,9 @@ namespace Cratis.Chronicle.Server.Authentication;
 public class AuthenticationService(
     IUserStorage userStorage,
     IUsers users,
-#pragma warning disable CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
+#pragma warning disable CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
     IApplications applications,
-#pragma warning restore CS9113 // Parameters are unread - this is do to conditional compilation with the DEVELOPMENT preprocessor symbol
+#pragma warning restore CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
     IGrainFactory grainFactory,
     IOptions<Configuration.ChronicleOptions> options,
     ILogger<AuthenticationService> logger) : IAuthenticationService
@@ -32,7 +33,7 @@ public class AuthenticationService(
     readonly Configuration.ChronicleOptions _options = options.Value;
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> AuthenticateUser(string username, string password)
+    public async Task<Storage.Security.User?> AuthenticateUser(string username, string password)
     {
         var user = await userStorage.GetByUsername(username);
         if (user?.IsActive is not true || user.PasswordHash is null)

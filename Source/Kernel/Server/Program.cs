@@ -129,8 +129,7 @@ builder.Host
    .UseOrleans(_ => _
         .UseLocalhostClustering()
         .AddChronicleToSilo(_ => _
-           .WithMongoDB(chronicleOptions))
-        .AddStartupTask<AuthenticationStartupTask>())
+           .WithMongoDB(chronicleOptions)))
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();
@@ -181,7 +180,7 @@ if (chronicleOptions.Features.Api)
 
 // Map Identity API endpoints for SPA authentication - MUST be before MapControllers
 app.MapGroup("/identity")
-    .MapIdentityApi<ChronicleUser>()
+    .MapIdentityApi<User>()
     .AllowAnonymous();
 
 // Map controllers for API and OAuth

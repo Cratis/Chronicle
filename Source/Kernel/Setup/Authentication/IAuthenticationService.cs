@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Storage.Security;
 
-namespace Cratis.Chronicle.Server.Authentication;
+namespace Cratis.Chronicle.Setup.Authentication;
 
 /// <summary>
 /// Defines the authentication service for Chronicle.
@@ -16,7 +16,7 @@ public interface IAuthenticationService
     /// <param name="username">The username.</param>
     /// <param name="password">The password.</param>
     /// <returns>The authenticated user if successful, null otherwise.</returns>
-    Task<ChronicleUser?> AuthenticateUser(string username, string password);
+    Task<User?> AuthenticateUser(string username, string password);
 
     /// <summary>
     /// Ensures the default admin user exists.
