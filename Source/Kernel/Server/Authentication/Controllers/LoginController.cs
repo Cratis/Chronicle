@@ -20,8 +20,8 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 [Route("api/security")]
 [AllowAnonymous]
 public class LoginController(
-    UserManager<ChronicleUser> userManager,
-    SignInManager<ChronicleUser> signInManager,
+    UserManager<Storage.Security.User> userManager,
+    SignInManager<Storage.Security.User> signInManager,
     IUserStorage userStorage) : ControllerBase
 {
     /// <summary>
