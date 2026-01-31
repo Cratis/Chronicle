@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="options">Chronicle options.</param>
 /// <param name="logger">The logger.</param>
+[Singleton]
 public class AuthenticationService(
     IUserStorage userStorage,
     IUsers users,

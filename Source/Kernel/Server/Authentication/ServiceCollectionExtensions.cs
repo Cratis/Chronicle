@@ -26,7 +26,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         services.AddSingleton<IUserStorage, UserStorage>();
-        services.AddSingleton<Setup.Authentication.IAuthenticationService, Setup.Authentication.AuthenticationService>();
         services.AddSingleton<IUserStore<User>, UserStore>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
