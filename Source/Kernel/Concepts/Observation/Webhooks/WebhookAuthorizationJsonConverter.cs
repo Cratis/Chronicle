@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Concepts.Security;
 
 namespace Cratis.Chronicle.Concepts.Observation.Webhooks;
 

@@ -29,7 +29,7 @@ public enum ObserverType
     Reducer = 3,
 
     /// <summary>
-    /// Webhook type of observer.
+    /// External type of observer.
     /// </summary>
-    Webhook = 4,
+    External = 4,
 }

@@ -120,7 +120,7 @@ public class WebhooksManager(
         {
             logger.Subscribing(definition.Identifier, namespaceName);
             await observer.Subscribe<IWebhookObserverSubscriber>(
-                ObserverType.Webhook,
+                ObserverType.External,
                 definition.EventTypes.ToArray(),
                 localSiloDetails.SiloAddress);
             return;

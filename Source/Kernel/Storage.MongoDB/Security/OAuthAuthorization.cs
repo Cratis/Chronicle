@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
+namespace Cratis.Chronicle.Storage.MongoDB.Security;
 
 /// <summary>
-/// Represents OAuth authentication for a webhook.
+/// Represents OAuth authentication.
 /// </summary>
 public class OAuthAuthorization
 {
