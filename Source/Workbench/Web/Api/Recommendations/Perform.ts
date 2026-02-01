@@ -15,17 +15,17 @@ import { Guid } from '@cratis/fundamentals';
  * Perform a recommendation.
  */
 export interface IPerform {
-    
+
     /**
      * EventStore the recommendations are for.
      */
     eventStore?: string;
-    
+
     /**
      * Namespace the recommendations are for.
      */
     namespace?: string;
-    
+
     /**
      * The unique identifier of the recommendation to perform.
      */

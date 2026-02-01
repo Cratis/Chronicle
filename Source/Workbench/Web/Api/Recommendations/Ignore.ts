@@ -15,17 +15,17 @@ import { Guid } from '@cratis/fundamentals';
  * Ignore a recommendation.
  */
 export interface IIgnore {
-    
+
     /**
      * EventStore the recommendations are for.
      */
     eventStore?: string;
-    
+
     /**
      * Namespace the recommendations are for.
      */
     namespace?: string;
-    
+
     /**
      * The unique identifier of the recommendation to perform.
      */

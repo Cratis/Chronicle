@@ -16,42 +16,42 @@ import { Identity } from '../Identities/Identity';
  * Redact multiple events.
  */
 export interface IRedactMany {
-    
+
     /**
      * Collection of .
      */
     causation?: Causation[];
-    
+
     /**
      * to identify the person, system or service that caused the redaction.
      */
     causedBy?: Identity;
-    
+
     /**
      * The event sequence to redact for.
      */
     eventSequenceId?: string;
-    
+
     /**
      * The  to redact.
      */
     eventSourceId?: string;
-    
+
     /**
      * The event store to append for.
      */
     eventStore?: string;
-    
+
     /**
      * Any specific event types to redact. Can be empty.
      */
     eventTypes?: string[];
-    
+
     /**
      * The namespace to append to.
      */
     namespace?: string;
-    
+
     /**
      * Reason for redacting event.
      */

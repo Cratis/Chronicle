@@ -14,7 +14,7 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Add an event store.
  */
 export interface IAddEventStore {
-    
+
     /**
      * Name of the event store to add.
      */

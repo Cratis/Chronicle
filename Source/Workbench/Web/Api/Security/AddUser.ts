@@ -15,22 +15,22 @@ import { Guid } from '@cratis/fundamentals';
  * Represents the command for adding a user.
  */
 export interface IAddUser {
-    
+
     /**
      * The user's email address.
      */
     email?: string;
-    
+
     /**
      * The user's password.
      */
     password?: string;
-    
+
     /**
      * The user's unique identifier.
      */
     userId?: Guid;
-    
+
     /**
      * The user's username.
      */

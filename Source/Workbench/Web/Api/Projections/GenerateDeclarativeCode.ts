@@ -15,17 +15,17 @@ import { GeneratedCodeResult } from './GeneratedCodeResult';
  * Represents a request to generate declarative C# projection code from projection declaration languageL.
  */
 export interface IGenerateDeclarativeCode {
-    
+
     /**
      * The projection declaration language representation of the projection.
      */
     declaration?: string;
-    
+
     /**
      * The event store the projection targets.
      */
     eventStore?: string;
-    
+
     /**
      * The namespace the projection targets.
      */

@@ -15,12 +15,12 @@ import { Guid } from '@cratis/fundamentals';
  * Represents the command for changing application secret.
  */
 export interface IChangeApplicationSecret {
-    
+
     /**
      * The new client secret.
      */
     clientSecret?: string;
-    
+
     /**
      * The application identifier.
      */

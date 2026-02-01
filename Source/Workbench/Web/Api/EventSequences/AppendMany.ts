@@ -17,37 +17,37 @@ import { EventToAppend } from './EventToAppend';
  * Appends an event to the event log.
  */
 export interface IAppendMany {
-    
+
     /**
      * Optional Collection of .
      */
     causation?: Causation[];
-    
+
     /**
      * Optional  to identify the person, system or service that caused the events.
      */
     causedBy?: Identity;
-    
+
     /**
      * The events to append.
      */
     events?: EventToAppend[];
-    
+
     /**
      * The event sequence to append to.
      */
     eventSequenceId?: string;
-    
+
     /**
      * The event source id to append to.
      */
     eventSourceId?: string;
-    
+
     /**
      * The event store to append for.
      */
     eventStore?: string;
-    
+
     /**
      * The namespace to append to.
      */

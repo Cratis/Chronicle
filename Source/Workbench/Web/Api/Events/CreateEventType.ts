@@ -14,12 +14,12 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Create a new event type.
  */
 export interface ICreateEventType {
-    
+
     /**
      * Event store to create for.
      */
     eventStore?: string;
-    
+
     /**
      * Name of the event type to create.
      */

@@ -15,12 +15,12 @@ import { EventTypeRegistration } from './EventTypeRegistration';
  * Register schemas.
  */
 export interface IRegister {
-    
+
     /**
      * Event store to register for.
      */
     eventStore?: string;
-    
+
     /**
      * Collection of .
      */

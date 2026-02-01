@@ -12,6 +12,7 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Transactions;
+using Cratis.Chronicle.Webhooks;
 
 namespace Cratis.Chronicle.Testing.Events;
 
@@ -53,6 +54,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IProjections Projections => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public IWebhooks Webhooks => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IConstraints Constraints => throw new NotImplementedException();

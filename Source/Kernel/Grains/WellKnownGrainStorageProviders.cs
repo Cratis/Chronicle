@@ -39,7 +39,7 @@ public static class WellKnownGrainStorageProviders
     public const string Jobs = "jobs";
 
     /// <summary>
-    /// THe name of the storage provider used for jobs.
+    /// THe name of the storage provider used for job steps.
     /// </summary>
     public const string JobSteps = "job-steps";
 
@@ -64,9 +64,19 @@ public static class WellKnownGrainStorageProviders
     public const string ProjectionFutures = "projection-futures";
 
     /// <summary>
-    /// The name of the storage provider used for reducers.
+    /// The name of the storage provider used for reactors.
     /// </summary>
     public const string Reactors = "reactors";
+
+    /// <summary>
+    /// The name of the storage provider used for webhooks.
+    /// </summary>
+    public const string Webhooks = "webhooks";
+
+    /// <summary>
+    /// The name of the storage provider used for webhooks manager.
+    /// </summary>
+    public const string WebhooksManager = "webhooks-manager";
 
     /// <summary>
     /// The name of the storage provider used for reducers.

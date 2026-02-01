@@ -14,12 +14,12 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Ensure a namespace exists.
  */
 export interface IEnsureNamespace {
-    
+
     /**
      * Name of the event store.
      */
     eventStore?: string;
-    
+
     /**
      * Namespace to ensure.
      */

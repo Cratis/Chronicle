@@ -16,37 +16,37 @@ import { Identity } from '../Identities/Identity';
  * Redact a specific single event by its sequence number.
  */
 export interface IRedact {
-    
+
     /**
      * Collection of .
      */
     causation?: Causation[];
-    
+
     /**
      * to identify the person, system or service that caused the redaction.
      */
     causedBy?: Identity;
-    
+
     /**
      * The event sequence to redact for.
      */
     eventSequenceId?: string;
-    
+
     /**
      * The event store to append for.
      */
     eventStore?: string;
-    
+
     /**
      * The namespace to append to.
      */
     namespace?: string;
-    
+
     /**
      * Reason for redacting event.
      */
     reason?: string;
-    
+
     /**
      * The event sequence number to redact.
      */

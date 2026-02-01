@@ -15,17 +15,17 @@ import { Guid } from '@cratis/fundamentals';
  * Stop a specific job.
  */
 export interface IStopJob {
-    
+
     /**
      * Name of the event store the job is for.
      */
     eventStore?: string;
-    
+
     /**
      * Identifier of the job to stop.
      */
     jobId?: Guid;
-    
+
     /**
      * Namespace within the event store the job is for.
      */

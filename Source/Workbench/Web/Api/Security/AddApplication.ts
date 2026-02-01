@@ -14,17 +14,17 @@ import { PropertyDescriptor } from '@cratis/arc/reflection';
  * Represents the command for adding application.
  */
 export interface IAddApplication {
-    
+
     /**
      * The application's client identifier.
      */
     clientId?: string;
-    
+
     /**
      * The application's client secret.
      */
     clientSecret?: string;
-    
+
     /**
      * The application identifier.
      */

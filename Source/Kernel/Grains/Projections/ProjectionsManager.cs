@@ -75,10 +75,7 @@ public class ProjectionsManager(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions()
-    {
-        return Task.FromResult(State.Projections);
-    }
+    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()

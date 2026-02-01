@@ -16,12 +16,12 @@ import { SaveProjectionResult } from './SaveProjectionResult';
  * Represents a request to save a projection from its projection declaration language representation.
  */
 export interface ISaveProjection {
-    
+
     /**
      * The projection declaration language representation of the projection.
      */
     declaration?: string;
-    
+
     /**
      * Optional draft read model definition to save along with the projection.
      */
@@ -31,7 +31,7 @@ export interface ISaveProjection {
      * The event store the projection targets.
      */
     eventStore?: string;
-    
+
     /**
      * The namespace the projection targets.
      */
