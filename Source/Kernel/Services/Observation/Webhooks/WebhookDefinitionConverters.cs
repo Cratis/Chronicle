@@ -6,6 +6,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Concepts.Security;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Services.Observation.Webhooks;
@@ -51,9 +52,9 @@ internal static class WebhookDefinitionConverters
         var authorization = target.Authorization switch
         {
             null => WebhookAuthorization.None,
-            var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
-            var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
-            var auth when auth.Value2 is not null => new OAuthAuthorization(
+            var auth when auth.Value0 is not null => new Concepts.Security.BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
+            var auth when auth.Value1 is not null => new Concepts.Security.BearerTokenAuthorization(auth.Value1.Token),
+            var auth when auth.Value2 is not null => new Concepts.Security.OAuthAuthorization(
                 auth.Value2.Authority,
                 auth.Value2.ClientId,
                 auth.Value2.ClientSecret),
@@ -74,16 +75,16 @@ internal static class WebhookDefinitionConverters
         };
 
         target.Authorization.Switch(
-            basic => contractTarget.Authorization = new(new Contracts.Observation.Webhooks.BasicAuthorization
+            basic => contractTarget.Authorization = new(new Contracts.Security.BasicAuthorization
             {
                 Username = basic.Username,
                 Password = basic.Password
             }),
-            bearer => contractTarget.Authorization = new(new Contracts.Observation.Webhooks.BearerTokenAuthorization
+            bearer => contractTarget.Authorization = new(new Contracts.Security.BearerTokenAuthorization
             {
                 Token = bearer.Token
             }),
-            oauth => contractTarget.Authorization = new(new Contracts.Observation.Webhooks.OAuthAuthorization
+            oauth => contractTarget.Authorization = new(new Contracts.Security.OAuthAuthorization
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,

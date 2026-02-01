@@ -1,10 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Webhooks;
+namespace Cratis.Chronicle.Storage.MongoDB.Security;
 
 /// <summary>
 /// Represents bearer token authentication for a webhook.
 /// </summary>
-/// <param name="Token">The bearer token.</param>
-public record BearerTokenAuthorization(string Token);
+public class BearerTokenAuthorization
+{
+    /// <summary>
+    /// Gets or sets the bearer token.
+    /// </summary>
+    public string Token { get; set; } = string.Empty;
+}

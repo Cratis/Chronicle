@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Webhooks;
 
@@ -35,16 +36,16 @@ internal static class WebhookDefinitionConverter
         };
 
         target.Authorization.Switch(
-            basic => contractTarget.Authorization = new(new Contracts.Observation.Webhooks.BasicAuthorization
+            basic => contractTarget.Authorization = new(new Contracts.Security.BasicAuthorization
             {
                 Username = basic.Username,
                 Password = basic.Password
             }),
-            bearer => contractTarget.Authorization = new(new Contracts.Observation.Webhooks.BearerTokenAuthorization
+            bearer => contractTarget.Authorization = new(new Contracts.Security.BearerTokenAuthorization
             {
                 Token = bearer.Token
             }),
-            oauth => contractTarget.Authorization = new(new Contracts.Observation.Webhooks.OAuthAuthorization
+            oauth => contractTarget.Authorization = new(new Contracts.Security.OAuthAuthorization
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,

@@ -5,6 +5,8 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Storage.MongoDB.Security;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 
@@ -52,15 +54,15 @@ public static class WebhookDefinitionConverters
 
         if (target.BasicAuthorization is not null)
         {
-            authorization = new Concepts.Observation.Webhooks.BasicAuthorization(target.BasicAuthorization.Username, target.BasicAuthorization.Password);
+            authorization = new Concepts.Security.BasicAuthorization(target.BasicAuthorization.Username, target.BasicAuthorization.Password);
         }
         else if (target.BearerTokenAuthorization is not null)
         {
-            authorization = new Concepts.Observation.Webhooks.BearerTokenAuthorization(target.BearerTokenAuthorization.Token);
+            authorization = new Concepts.Security.BearerTokenAuthorization(target.BearerTokenAuthorization.Token);
         }
         else if (target.OAuthAuthorization is not null)
         {
-            authorization = new Concepts.Observation.Webhooks.OAuthAuthorization(
+            authorization = new Concepts.Security.OAuthAuthorization(
                 target.OAuthAuthorization.Authority,
                 target.OAuthAuthorization.ClientId,
                 target.OAuthAuthorization.ClientSecret);
@@ -85,16 +87,16 @@ public static class WebhookDefinitionConverters
         };
 
         target.Authorization.Switch(
-            basic => mongoTarget.BasicAuthorization = new BasicAuthorization
+            basic => mongoTarget.BasicAuthorization = new MongoDB.Security.BasicAuthorization
             {
                 Username = basic.Username,
                 Password = basic.Password
             },
-            bearer => mongoTarget.BearerTokenAuthorization = new BearerTokenAuthorization
+            bearer => mongoTarget.BearerTokenAuthorization = new MongoDB.Security.BearerTokenAuthorization
             {
                 Token = bearer.Token
             },
-            oauth => mongoTarget.OAuthAuthorization = new OAuthAuthorization
+            oauth => mongoTarget.OAuthAuthorization = new MongoDB.Security.OAuthAuthorization
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
