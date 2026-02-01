@@ -112,7 +112,7 @@ public static class TagExtensions
             Concepts.Observation.ObserverType.Reactor => "Reactor",
             Concepts.Observation.ObserverType.Projection => "Projection",
             Concepts.Observation.ObserverType.Reducer => "Reducer",
-            Concepts.Observation.ObserverType.Webhook => "Webhook",
+            Concepts.Observation.ObserverType.External => "External",
             _ => "Unknown"
         };
         activity.SetTag(ObserverType, observerTypeTag);
