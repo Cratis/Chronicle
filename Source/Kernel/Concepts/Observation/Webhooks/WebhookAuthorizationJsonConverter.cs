@@ -52,24 +52,24 @@ public class WebhookAuthorizationJsonConverter : JsonConverter<WebhookAuthorizat
             {
                 writer.WriteStartObject();
                 writer.WriteString("type", "basic");
-                writer.WriteString("username", basic.Username.Value);
-                writer.WriteString("password", basic.Password.Value);
+                writer.WriteString("username", basic.Username);
+                writer.WriteString("password", basic.Password);
                 writer.WriteEndObject();
             },
             bearer =>
             {
                 writer.WriteStartObject();
                 writer.WriteString("type", "bearer");
-                writer.WriteString("token", bearer.Token.Value);
+                writer.WriteString("token", bearer.Token);
                 writer.WriteEndObject();
             },
             oauth =>
             {
                 writer.WriteStartObject();
                 writer.WriteString("type", "oauth");
-                writer.WriteString("authority", oauth.Authority.Value);
-                writer.WriteString("clientId", oauth.ClientId.Value);
-                writer.WriteString("clientSecret", oauth.ClientSecret.Value);
+                writer.WriteString("authority", oauth.Authority);
+                writer.WriteString("clientId", oauth.ClientId);
+                writer.WriteString("clientSecret", oauth.ClientSecret);
                 writer.WriteEndObject();
             },
             none =>

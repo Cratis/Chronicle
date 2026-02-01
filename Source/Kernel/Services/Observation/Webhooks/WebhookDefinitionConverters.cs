@@ -77,18 +77,18 @@ internal static class WebhookDefinitionConverters
         target.Authorization.Switch(
             basic => contractTarget.Authorization = new(new Contracts.Security.BasicAuthorization
             {
-                Username = basic.Username.Value,
-                Password = basic.Password.Value
+                Username = basic.Username,
+                Password = basic.Password
             }),
             bearer => contractTarget.Authorization = new(new Contracts.Security.BearerTokenAuthorization
             {
-                Token = bearer.Token.Value
+                Token = bearer.Token
             }),
             oauth => contractTarget.Authorization = new(new Contracts.Security.OAuthAuthorization
             {
-                Authority = oauth.Authority.Value,
-                ClientId = oauth.ClientId.Value,
-                ClientSecret = oauth.ClientSecret.Value
+                Authority = oauth.Authority,
+                ClientId = oauth.ClientId,
+                ClientSecret = oauth.ClientSecret
             }),
             none => { });
 
