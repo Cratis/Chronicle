@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Storage.MongoDB.Security;
 
 /// <summary>
-/// Represents OAuth authentication for a webhook.
+/// Represents OAuth authentication.
 /// </summary>
 public class OAuthAuthorization
 {

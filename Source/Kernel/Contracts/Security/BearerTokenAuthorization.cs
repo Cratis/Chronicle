@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Security;
 
 /// <summary>
-/// Represents bearer token authentication for a webhook.
+/// Represents bearer token authentication.
 /// </summary>
 [ProtoContract]
 public class BearerTokenAuthorization

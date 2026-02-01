@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Storage.MongoDB.Security;
 
 /// <summary>
-/// Represents bearer token authentication for a webhook.
+/// Represents bearer token authentication.
 /// </summary>
 public class BearerTokenAuthorization
 {

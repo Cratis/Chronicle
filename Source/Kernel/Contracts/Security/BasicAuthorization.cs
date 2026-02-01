@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Security;
 
 /// <summary>
-/// Represents basic authentication for a webhook.
+/// Represents basic authentication.
 /// </summary>
 [ProtoContract]
 public class BasicAuthorization

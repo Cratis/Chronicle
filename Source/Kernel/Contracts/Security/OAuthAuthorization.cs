@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Security;
 
 /// <summary>
-/// Represents OAuth authentication for a webhook.
+/// Represents OAuth authentication.
 /// </summary>
 [ProtoContract]
 public class OAuthAuthorization

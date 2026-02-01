@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents OAuth authentication for a webhook.
+/// Represents OAuth authentication.
 /// </summary>
 /// <param name="Authority">The OAuth authority.</param>
 /// <param name="ClientId">The OAuth client ID.</param>

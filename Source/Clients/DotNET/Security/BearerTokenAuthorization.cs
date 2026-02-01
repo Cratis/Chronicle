@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents bearer token authentication for a webhook.
+/// Represents bearer token authentication.
 /// </summary>
 /// <param name="Token">The bearer token.</param>
 public record BearerTokenAuthorization(string Token);

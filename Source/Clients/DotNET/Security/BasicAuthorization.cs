@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents basic authentication for a webhook.
+/// Represents basic authentication.
 /// </summary>
 /// <param name="Username">The username.</param>
 /// <param name="Password">The password.</param>
