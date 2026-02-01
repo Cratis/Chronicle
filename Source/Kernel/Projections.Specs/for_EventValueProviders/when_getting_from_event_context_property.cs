@@ -33,7 +33,8 @@ public class when_getting_from_event_context_property : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
         _valueProvider = EventValueProviders.EventContext("occurred");
     }

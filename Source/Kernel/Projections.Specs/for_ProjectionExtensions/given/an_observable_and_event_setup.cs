@@ -37,7 +37,8 @@ public class an_observable_and_event_setup : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         _initialState = new();

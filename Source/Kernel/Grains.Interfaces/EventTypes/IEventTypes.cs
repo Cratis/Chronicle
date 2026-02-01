@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Grains.EventTypes.Kernel;
+namespace Cratis.Chronicle.Grains.EventTypes;
 
 /// <summary>
 /// Represents the event types in the system.

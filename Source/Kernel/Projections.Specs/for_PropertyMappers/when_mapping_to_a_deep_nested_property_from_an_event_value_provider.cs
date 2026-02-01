@@ -32,7 +32,8 @@ public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         _propertyMapper = PropertyMappers.FromEventValueProvider("deep.nested.property", _ =>

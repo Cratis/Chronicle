@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { SchemaEditor } from './SchemaEditor/SchemaEditor';
@@ -11,6 +11,7 @@ interface ReadModelCreationProps {
     onSave: (name: string, schema: JsonSchema) => void;
     onCancel: () => void;
     initialName?: string;
+    initialSchema?: JsonSchema;
     editMode?: boolean;
     saveDisabled?: boolean;
     cancelDisabled?: boolean;
@@ -20,14 +21,26 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
     onSave,
     onCancel,
     initialName = '',
+    initialSchema,
 }) => {
     const [readModelName, setReadModelName] = useState(initialName);
-    const [schema, setSchema] = useState<JsonSchema>({
+    const [schema, setSchema] = useState<JsonSchema>(initialSchema ?? {
         title: initialName,
         type: 'object',
         properties: {},
         required: []
     });
+
+    // Reset state when initial values change (e.g., when dialog reopens)
+    useEffect(() => {
+        setReadModelName(initialName);
+        setSchema(initialSchema ?? {
+            title: initialName,
+            type: 'object',
+            properties: {},
+            required: []
+        });
+    }, [initialName, initialSchema]);
 
     const handleSave = () => {
         if (!readModelName.trim()) {
@@ -81,18 +94,18 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
                 />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                <Button
-                    label="Cancel"
-                    icon="pi pi-times"
-                    onClick={onCancel}
-                    className="p-button-text"
-                />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-start', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
                 <Button
                     label="Save"
                     icon="pi pi-check"
                     onClick={handleSave}
                     disabled={!readModelName.trim()}
+                />
+                <Button
+                    label="Cancel"
+                    icon="pi pi-times"
+                    onClick={onCancel}
+                    outlined
                 />
             </div>
         </div>

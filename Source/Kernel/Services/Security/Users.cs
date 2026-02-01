@@ -6,7 +6,6 @@ using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Security;
 using Cratis.Reactive;
 using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
@@ -119,14 +118,14 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task<IList<User>> GetAll()
+    public async Task<IList<Contracts.Security.User>> GetAll()
     {
         var users = await storage.System.Users.GetAll();
         return users.Select(ToContract).ToList();
     }
 
     /// <inheritdoc/>
-    public IObservable<IList<User>> ObserveAll(CallContext context = default) =>
+    public IObservable<IList<Contracts.Security.User>> ObserveAll(CallContext context = default) =>
         storage.System.Users
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
@@ -145,7 +144,7 @@ internal sealed class Users(
         };
     }
 
-    static User ToContract(ChronicleUser user) => new()
+    static Contracts.Security.User ToContract(Storage.Security.User user) => new()
     {
         Id = user.Id,
         Username = user.Username,

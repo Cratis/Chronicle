@@ -43,6 +43,7 @@ public class with_non_null_result : given.a_reducer_handler
                 [],
                 Identities.Identity.NotSet,
                 [],
+                EventHash.NotSet,
                 EventObservationState.Initial),
             new { });
     }

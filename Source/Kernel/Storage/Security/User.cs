@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.Security;
 /// <summary>
 /// Represents a user in the Chronicle system.
 /// </summary>
-public class ChronicleUser
+public class User
 {
     /// <summary>
     /// Gets or sets the unique identifier for the user.

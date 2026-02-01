@@ -19,6 +19,9 @@ let completionProvider: ProjectionDefinitionLanguageCompletionProvider;
 let hoverProvider: ProjectionDefinitionLanguageHoverProvider;
 let codeActionProvider: ProjectionDefinitionLanguageCodeActionProvider;
 let disposables: Monaco.IDisposable[] = [];
+let monacoInstance: typeof Monaco | null = null;
+let pendingCreateReadModelCallback: ((readModelName: string) => void) | null = null;
+let pendingEditReadModelCallback: ((readModelName: string, currentSchema: JsonSchema) => void) | null = null;
 
 export * from './ProjectionEditor';
 
@@ -30,6 +33,7 @@ export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): voi
         return;
     }
     isRegistered = true;
+    monacoInstance = monaco;
 
     // Register the language
     monaco.languages.register({ id: languageId });
@@ -45,6 +49,16 @@ export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): voi
     completionProvider = new ProjectionDefinitionLanguageCompletionProvider();
     hoverProvider = new ProjectionDefinitionLanguageHoverProvider();
     codeActionProvider = new ProjectionDefinitionLanguageCodeActionProvider();
+
+    // Apply pending callbacks if they were set before initialization
+    if (pendingCreateReadModelCallback) {
+        codeActionProvider.setCreateReadModelCallback(pendingCreateReadModelCallback);
+        pendingCreateReadModelCallback = null;
+    }
+    if (pendingEditReadModelCallback) {
+        codeActionProvider.setEditReadModelCallback(pendingEditReadModelCallback);
+        pendingEditReadModelCallback = null;
+    }
 
     // Register completion provider with helpful trigger characters
     const completionDisposable = monaco.languages.registerCompletionItemProvider(languageId, {
@@ -62,6 +76,8 @@ export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): voi
     // Register code action provider
     const codeActionDisposable = monaco.languages.registerCodeActionProvider(languageId, {
         provideCodeActions: codeActionProvider.provideCodeActions.bind(codeActionProvider),
+    }, {
+        providedCodeActionKinds: ['quickfix']
     });
     disposables.push(codeActionDisposable);
 
@@ -72,6 +88,14 @@ export function registerProjectionDefinitionLanguage(monaco: typeof Monaco): voi
         }
     });
     disposables.push(commandDisposable);
+
+    // Register command for editing read models
+    const editCommandDisposable = monaco.editor.registerCommand('projection-declaration.editReadModel', (_accessor: unknown, readModelName: string, currentSchema: JsonSchema) => {
+        if (codeActionProvider) {
+            codeActionProvider.invokeEditReadModel(readModelName, currentSchema);
+        }
+    });
+    disposables.push(editCommandDisposable);
 
     // Register validation on model change
     const modelChangeDisposable = monaco.editor.onDidCreateModel((model: Monaco.editor.ITextModel) => {
@@ -118,12 +142,35 @@ export function setReadModelSchemas(readModels: ReadModelInfo[]): void {
     if (codeActionProvider) {
         codeActionProvider.setReadModels(readModels);
     }
+    revalidateAllModels();
 }
 
 export function setCreateReadModelCallback(callback: (readModelName: string) => void): void {
     if (codeActionProvider) {
         codeActionProvider.setCreateReadModelCallback(callback);
+    } else {
+        // Store callback for later when the provider is initialized
+        pendingCreateReadModelCallback = callback;
     }
+}
+
+export function setEditReadModelCallback(callback: (readModelName: string, currentSchema: JsonSchema) => void): void {
+    if (codeActionProvider) {
+        codeActionProvider.setEditReadModelCallback(callback);
+    } else {
+        // Store callback for later when the provider is initialized
+        pendingEditReadModelCallback = callback;
+    }
+}
+
+export function setDraftReadModel(draft: { name: string; schema: JsonSchema } | null): void {
+    if (codeActionProvider) {
+        codeActionProvider.setDraftReadModel(draft);
+    }
+    if (validator) {
+        validator.setDraftReadModel(draft);
+    }
+    revalidateAllModels();
 }
 
 export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, JsonSchema>): void {
@@ -152,6 +199,7 @@ export function setEventSchemas(eventSchemas: JsonSchema[] | Record<string, Json
     if (hoverProvider) {
         hoverProvider.setEventSchemas(normalized);
     }
+    revalidateAllModels();
 }
 
 export function setEventSequences(sequences: string[]): void {
@@ -164,12 +212,23 @@ export function disposeProjectionDefinitionLanguage(): void {
     disposables.forEach((d) => d.dispose());
     disposables = [];
     isRegistered = false;
+    monacoInstance = null;
 }
 
 function validateModel(monaco: typeof Monaco, model: Monaco.editor.ITextModel): void {
     if (validator && model && !model.isDisposed()) {
         const markers = validator.validate(model);
         monaco.editor.setModelMarkers(model, 'projection-declaration-validator', markers);
+    }
+}
+
+function revalidateAllModels(): void {
+    if (monacoInstance) {
+        monacoInstance.editor.getModels().forEach((model: Monaco.editor.ITextModel) => {
+            if (model.getLanguageId() === languageId) {
+                validateModel(monacoInstance!, model);
+            }
+        });
     }
 }
 

@@ -183,7 +183,7 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
         }
 
         // Check if cursor is after "=>" to suggest read model names
-        const arrowMatch = trimmed.match(/^projection\s+\w+\s*=>\s*(\w*)$/);
+        const arrowMatch = trimmed.match(/^projection\s+[\w.]+\s*=>\s*([\w.]*)$/);
         if (arrowMatch) {
             const partialReadModel = arrowMatch[1] || '';
             this.readModels.forEach((readModel) => {

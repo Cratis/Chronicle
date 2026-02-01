@@ -35,7 +35,8 @@ public class when_getting_complex_object_from_event_content_accessed_by_root_pro
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
         _valueProvider = EventValueProviders.EventContent("complex_object");
     }

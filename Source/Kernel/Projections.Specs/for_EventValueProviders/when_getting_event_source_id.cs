@@ -32,7 +32,8 @@ public class when_getting_event_source_id : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
         _valueProvider = EventValueProviders.EventSourceId;
     }

@@ -35,7 +35,8 @@ public class when_getting_from_event_content_nested_property : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
         _valueProvider = EventValueProviders.EventContent("Nested.SourceString");
     }

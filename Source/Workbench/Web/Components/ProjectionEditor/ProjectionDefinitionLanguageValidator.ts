@@ -5,12 +5,22 @@ import type { editor } from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
+export interface DraftReadModelInfo {
+    name: string;
+    schema: JsonSchema;
+}
+
 export class ProjectionDefinitionLanguageValidator {
     private readModels: ReadModelInfo[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
+    private draftReadModel: DraftReadModelInfo | null = null;
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels || [];
+    }
+
+    setDraftReadModel(draft: DraftReadModelInfo | null): void {
+        this.draftReadModel = draft;
     }
 
     // Keep for backwards compatibility
@@ -73,7 +83,8 @@ export class ProjectionDefinitionLanguageValidator {
         }
 
         // Validate first meaningful line - projection declaration
-        const projectionMatch = firstLine.match(/^projection\s+(\w+)\s*=>\s*(\w+)\s*$/);
+        // Support qualified names with dots (e.g., Namespace.ClassName)
+        const projectionMatch = firstLine.match(/^projection\s+([\w.]+)\s*=>\s*([\w.]+)\s*$/);
 
         if (!projectionMatch) {
             const lineNumber = firstNonEmptyLineIndex + 1;
@@ -83,25 +94,37 @@ export class ProjectionDefinitionLanguageValidator {
 
         const [, , readModelName] = projectionMatch;
 
-        // Validate read model exists in schemas
+        // Validate read model exists in schemas or is a draft
         if (this.readModels.length > 0) {
             const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
-            if (!readModelExists) {
+            const isDraftReadModel = this.draftReadModel && this.draftReadModel.name === readModelName;
+
+            if (!readModelExists && !isDraftReadModel) {
                 const lineNumber = firstNonEmptyLineIndex + 1;
                 const col = firstLine.indexOf(readModelName) + 1;
                 markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
+            } else if (isDraftReadModel) {
+                // Show info marker for draft read models - they exist but haven't been saved yet
+                const lineNumber = firstNonEmptyLineIndex + 1;
+                const col = firstLine.indexOf(readModelName) + 1;
+                markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
             }
         }
 
-        // Get the active read model schema for property validation
-        const activeReadModel = this.readModels.find((rm) => rm.displayName === readModelName);
-        const activeSchema = activeReadModel?.schema;
+        // Get the active read model schema for property validation (check draft first)
+        const isDraft = this.draftReadModel && this.draftReadModel.name === readModelName;
+        const activeReadModel = isDraft ? null : this.readModels.find((rm) => rm.displayName === readModelName);
+        const activeSchema = isDraft ? this.draftReadModel!.schema : activeReadModel?.schema;
 
         // Validate subsequent lines
         const contextStack: JsonSchema[] = [activeSchema!];
         const indentStack: number[] = [0]; // Track indentation levels for context
         let lastIndent = 0;
-        let hasFromStatements = false;
+
+        // Track event types at each context level to detect duplicates
+        // Each entry in the stack represents events seen at that context level
+        type EventInfo = { lineNumber: number; col: number };
+        const eventContextStack: Map<string, EventInfo>[] = [new Map()];
 
         for (let i = 1; i < lines.length; i++) {
             const lineNumber = i + 1;
@@ -118,18 +141,29 @@ export class ProjectionDefinitionLanguageValidator {
                 const poppedIndent = indentStack.pop();
                 if (poppedIndent !== undefined && currentIndent < poppedIndent) {
                     contextStack.pop();
+                    eventContextStack.pop();
                 }
             }
             lastIndent = currentIndent;
 
+            // Get the current event context (events seen at this level)
+            const currentEventContext = eventContextStack[eventContextStack.length - 1];
+
             // Validate event types in from/every blocks
             const fromMatch = trimmed.match(/^from\s+(\w+)/);
             if (fromMatch) {
-                hasFromStatements = true;
                 const eventType = fromMatch[1];
+                const col = line.indexOf(eventType) + 1;
+
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
-                    const col = line.indexOf(eventType) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found in available schemas`));
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
+                }
+
+                // Check for duplicate events at this level
+                if (currentEventContext.has(eventType)) {
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Duplicate event type '${eventType}' - event types can only be used once at each level`));
+                } else {
+                    currentEventContext.set(eventType, { lineNumber, col });
                 }
             }
 
@@ -137,18 +171,34 @@ export class ProjectionDefinitionLanguageValidator {
             const eventsMatch = trimmed.match(/^events\s+(\w+)/);
             if (eventsMatch) {
                 const eventType = eventsMatch[1];
+                const col = line.indexOf(eventType) + 1;
+
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
-                    const col = line.indexOf(eventType) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found in available schemas`));
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
+                }
+
+                // Check for duplicate events at this level (within join blocks)
+                if (currentEventContext.has(eventType)) {
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Duplicate event type '${eventType}' - event types can only be used once at each level`));
+                } else {
+                    currentEventContext.set(eventType, { lineNumber, col });
                 }
             }
 
             const removeWithMatch = trimmed.match(/^remove\s+(?:with|via\s+join\s+on)\s+(\w+)/);
             if (removeWithMatch) {
                 const eventType = removeWithMatch[1];
+                const col = line.indexOf(eventType) + 1;
+
                 if (Object.keys(this.eventSchemas).length > 0 && !this.eventSchemas[eventType]) {
-                    const col = line.indexOf(eventType) + 1;
-                    markers.push(this.createWarning(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found in available schemas`));
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Event type '${eventType}' not found`));
+                }
+
+                // Check for duplicate events at this level
+                if (currentEventContext.has(eventType)) {
+                    markers.push(this.createError(lineNumber, col, col + eventType.length, `Duplicate event type '${eventType}' - event types can only be used once at each level`));
+                } else {
+                    currentEventContext.set(eventType, { lineNumber, col });
                 }
             }
 
@@ -214,6 +264,8 @@ export class ProjectionDefinitionLanguageValidator {
                         if (childSchema) {
                             contextStack.push(childSchema);
                             indentStack.push(currentIndent);
+                            // Push a new event context for the children block
+                            eventContextStack.push(new Map());
                         }
                     }
                 }
@@ -236,6 +288,10 @@ export class ProjectionDefinitionLanguageValidator {
                     const col = line.indexOf(joinProperty, line.indexOf('on')) + 1;
                     markers.push(this.createWarning(lineNumber, col, col + joinProperty.length, `Property '${joinProperty}' not found in read model '${readModelName}'`));
                 }
+
+                // Push a new event context for the join block
+                eventContextStack.push(new Map());
+                indentStack.push(currentIndent);
             }
 
             // Validate key references for composite keys
@@ -250,15 +306,6 @@ export class ProjectionDefinitionLanguageValidator {
                     const col = line.indexOf(keyName) + 1;
                     markers.push(this.createWarning(lineNumber, col, col + keyName.length, `Composite key type '${keyName}' not found in read model schema`));
                 }
-            }
-        }
-
-        // Validate read model has an identifier property, but only if there are from statements
-        if (hasFromStatements && activeSchema?.properties) {
-            const hasId = activeSchema.properties['id'] || activeSchema.properties['Id'];
-            if (!hasId) {
-                const col = firstLine.indexOf(readModelName) + 1;
-                markers.push(this.createWarning(1, col, col + readModelName.length, `Read model '${readModelName}' should have an 'id' or 'Id' property to serve as identifier`));
             }
         }
 
@@ -283,6 +330,17 @@ export class ProjectionDefinitionLanguageValidator {
     private createWarning(line: number, startCol: number, endCol: number, message: string): editor.IMarkerData {
         return {
             severity: 4, // Warning
+            startLineNumber: line,
+            startColumn: startCol,
+            endLineNumber: line,
+            endColumn: endCol,
+            message,
+        };
+    }
+
+    private createInfo(line: number, startCol: number, endCol: number, message: string): editor.IMarkerData {
+        return {
+            severity: 2, // Info (hint) - shows as blue/green squiggly
             startLineNumber: line,
             startColumn: startCol,
             endLineNumber: line,

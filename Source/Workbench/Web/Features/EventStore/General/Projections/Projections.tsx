@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { AllReadModelDefinitions, CreateReadModel, ReadModelSource } from 'Api/ReadModelTypes';
+import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
-import { JsonSchema } from 'Components/JsonSchema';
-import { ProjectionEditor, setCreateReadModelCallback } from 'Components/ProjectionEditor';
+import type { JsonSchema } from 'Components/JsonSchema';
+import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
 import { ReadModelCreation } from 'Components/ReadModelCreation';
 import { Menubar } from 'primereact/menubar';
 import { Tooltip } from 'primereact/tooltip';
@@ -19,25 +19,28 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDeclarations, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
+import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
 import type { ReadModelSchema } from 'Api/ReadModels';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
-import { useDialog } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { TimeMachineDialog, ReadModelInstances } from 'Components';
 import { Json } from 'Features';
 
 export const Projections = () => {
 
     const [declarationValue, setDeclarationValue] = useState('');
+    const [originalDeclarationValue, setOriginalDeclarationValue] = useState('');
     const [selectedProjection, setSelectedProjection] = useState<unknown>(null);
     const params = useParams<EventStoreAndNamespaceParams>();
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
     const [newReadModelName, setNewReadModelName] = useState('');
+    const [initialReadModelSchema, setInitialReadModelSchema] = useState<JsonSchema | undefined>(undefined);
     const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
+    const [draftReadModel, setDraftReadModel] = useState<DraftReadModel | null>(null);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
@@ -49,8 +52,8 @@ export const Projections = () => {
     const [projections, refreshProjections] = AllProjectionsWithDeclarations.use({ eventStore: params.eventStore! });
     const [previewProjection] = PreviewProjection.use();
     const [saveProjection] = SaveProjection.use();
-    const [createReadModel] = CreateReadModel.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [showConfirmation] = useConfirmationDialog();
 
     const selectedReadModel = useMemo(() => {
         if (!selectedProjection || !readModels.data) return null;
@@ -60,7 +63,7 @@ export const Projections = () => {
     }, [selectedProjection, readModels.data]);
 
     const readModelNameFromDeclaration = useMemo(() => {
-        const match = declarationValue.match(/projection\s+\w+\s*=>\s*(\w+)/i);
+        const match = declarationValue.match(/projection\s+[\w.]+\s*=>\s*([\w.]+)/i);
         return match ? match[1] : null;
     }, [declarationValue]);
 
@@ -69,9 +72,16 @@ export const Projections = () => {
         return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDeclaration}`) || rm.identifier === readModelNameFromDeclaration || rm.name === readModelNameFromDeclaration) || null;
     }, [readModelNameFromDeclaration, readModels.data]);
 
+    const hasUnsavedChanges = useMemo(() => {
+        return declarationValue !== originalDeclarationValue;
+    }, [declarationValue, originalDeclarationValue]);
+
     const saveDisabledReason = useMemo(() => {
         if (!declarationValue.trim()) {
             return strings.eventStore.general.projections.saveDisabledReasons.emptyContent;
+        }
+        if (!hasUnsavedChanges) {
+            return strings.eventStore.general.projections.saveDisabledReasons.noChanges;
         }
         if (hasValidationErrors) {
             return strings.eventStore.general.projections.saveDisabledReasons.validationErrors;
@@ -105,41 +115,69 @@ export const Projections = () => {
     useEffect(() => {
         setCreateReadModelCallback((readModelName: string) => {
             setNewReadModelName(readModelName);
+            setInitialReadModelSchema(undefined);
+            setIsCreateReadModelDialogOpen(true);
+        });
+        setEditReadModelCallback((readModelName: string, currentSchema: JsonSchema) => {
+            setNewReadModelName(readModelName);
+            setInitialReadModelSchema(currentSchema);
             setIsCreateReadModelDialogOpen(true);
         });
     }, []);
 
-    const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
-        if (params.eventStore) {
-            createReadModel.eventStore = params.eventStore;
-            createReadModel.name = name;
-            createReadModel.schema = JSON.stringify(schema);
-            const result = await createReadModel.execute();
-            if (result.isSuccess) {
-                setIsCreateReadModelDialogOpen(false);
-                setNewReadModelName('');
-                refreshReadModels();
-            }
+    // Sync draft read model with the code action provider
+    useEffect(() => {
+        if (draftReadModel) {
+            setDraftReadModelInProvider({
+                name: draftReadModel.name,
+                schema: JSON.parse(draftReadModel.schema) as JsonSchema
+            });
+        } else {
+            setDraftReadModelInProvider(null);
         }
+    }, [draftReadModel]);
+
+    const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
+        // Save as draft read model - don't create on server yet
+        const draft = new DraftReadModel();
+        draft.name = name;
+        draft.schema = JSON.stringify(schema);
+        setDraftReadModel(draft);
+        setIsCreateReadModelDialogOpen(false);
+        setNewReadModelName('');
+        setInitialReadModelSchema(undefined);
     };
 
     const handleCancelReadModel = () => {
         setIsCreateReadModelDialogOpen(false);
         setNewReadModelName('');
+        setInitialReadModelSchema(undefined);
     };
 
     return (
         <Page title='Projections'>
             <Allotment className="h-full" proportionalLayout={false}>
-                <Allotment.Pane preferredSize="270px">
+                <Allotment.Pane preferredSize="350px">
                     <div className="px-4 py-4">
                         <DataTable
                             value={projections.data}
                             selectionMode="single"
                             selection={selectedProjection as never}
-                            onSelectionChange={(e) => {
+                            onSelectionChange={async (e) => {
+                                if (hasUnsavedChanges) {
+                                    const result = await showConfirmation(
+                                        strings.eventStore.general.projections.dialogs.unsavedChanges.title,
+                                        strings.eventStore.general.projections.dialogs.unsavedChanges.message,
+                                        DialogButtons.YesNo
+                                    );
+                                    if (result !== DialogResult.Yes) {
+                                        return;
+                                    }
+                                }
                                 setSelectedProjection(e.value);
-                                setDeclarationValue(e.value?.declaration ?? '');
+                                const newDeclaration = e.value?.declaration ?? '';
+                                setDeclarationValue(newDeclaration);
+                                setOriginalDeclarationValue(newDeclaration);
                                 setReadModelInstances([]);
                                 setSelectedInstance(null);
                                 setPage(0);
@@ -148,6 +186,7 @@ export const Projections = () => {
                                 root: { className: 'rounded-lg overflow-hidden' }
                             }}>
 
+                            <Column field="identifier" header="Name" />
                             <Column field="readModel" header="Read Model" />
                         </DataTable>
                     </div>
@@ -160,9 +199,20 @@ export const Projections = () => {
                                 {
                                     label: strings.eventStore.general.projections.actions.new,
                                     icon: <faIcons.FaPlus className='mr-2' />,
-                                    command: () => {
+                                    command: async () => {
+                                        if (hasUnsavedChanges) {
+                                            const result = await showConfirmation(
+                                                strings.eventStore.general.projections.dialogs.unsavedChanges.title,
+                                                strings.eventStore.general.projections.dialogs.unsavedChanges.message,
+                                                DialogButtons.YesNo
+                                            );
+                                            if (result !== DialogResult.Yes) {
+                                                return;
+                                            }
+                                        }
                                         setSelectedProjection(null);
                                         setDeclarationValue('');
+                                        setOriginalDeclarationValue('');
                                         setReadModelInstances([]);
                                         setSyntaxErrors([]);
                                         setSelectedInstance(null);
@@ -177,11 +227,19 @@ export const Projections = () => {
                                         saveProjection.eventStore = params.eventStore!;
                                         saveProjection.namespace = params.namespace!;
                                         saveProjection.declaration = declarationValue;
+                                        if (draftReadModel) {
+                                            saveProjection.draftReadModel = draftReadModel;
+                                        }
                                         const result = await saveProjection.execute();
                                         const errors = result.response?.errors ?? [];
                                         if (result.isSuccess && errors.length === 0) {
                                             refreshProjections();
+                                            if (draftReadModel) {
+                                                refreshReadModels(); // Only refresh read models if we created a new one
+                                            }
                                             setSyntaxErrors([]);
+                                            setDraftReadModel(null); // Clear draft after successful save
+                                            setOriginalDeclarationValue(declarationValue); // Reset original after successful save
                                         } else {
                                             // Display server-side validation errors in the editor
                                             setSyntaxErrors(errors);
@@ -207,6 +265,9 @@ export const Projections = () => {
                                         previewProjection.eventStore = params.eventStore!;
                                         previewProjection.namespace = params.namespace!;
                                         previewProjection.declaration = declarationValue;
+                                        if (draftReadModel) {
+                                            previewProjection.draftReadModel = draftReadModel;
+                                        }
                                         const result = await previewProjection.execute();
 
                                         const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
@@ -245,6 +306,7 @@ export const Projections = () => {
                         <div className="pt-4" style={{ height: '500px', flexShrink: 0 }}>
                             <ProjectionEditor
                                 value={declarationValue}
+                                originalValue={originalDeclarationValue}
                                 onChange={setDeclarationValue}
                                 onValidationChange={setHasValidationErrors}
                                 readModelSchemas={readModelSchemas}
@@ -274,7 +336,7 @@ export const Projections = () => {
             </Allotment>
 
             <Dialog
-                header={'Create Read Model: ' + newReadModelName}
+                header={(initialReadModelSchema ? 'Edit' : 'Create') + ' Read Model: ' + newReadModelName}
                 visible={isCreateReadModelDialogOpen}
                 style={{ width: '800px', height: '80vh' }}
                 modal
@@ -282,6 +344,7 @@ export const Projections = () => {
                 onHide={handleCancelReadModel}>
                 <ReadModelCreation
                     initialName={newReadModelName}
+                    initialSchema={initialReadModelSchema}
                     onSave={handleSaveReadModel}
                     onCancel={handleCancelReadModel}
                 />

@@ -27,7 +27,8 @@ public class when_accessing_event_source_id : Specification
                     CorrelationId.New(),
                     [],
                     Identity.System,
-                    []),
+                    [],
+                EventHash.NotSet),
                 new ExpandoObject());
 
     void Because() => _result = EventValueProviders.EventSourceId(_event);

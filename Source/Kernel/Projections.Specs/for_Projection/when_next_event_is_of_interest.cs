@@ -52,7 +52,8 @@ public class when_next_event_is_of_interest : given.a_projection
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         _firstChangeset = new(_objectsComparer, _firstEvent, new());
@@ -71,7 +72,8 @@ public class when_next_event_is_of_interest : given.a_projection
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         _secondChangeset = new(_objectsComparer, _secondEvent, _initialState);

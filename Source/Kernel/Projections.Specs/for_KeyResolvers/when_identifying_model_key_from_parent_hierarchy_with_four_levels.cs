@@ -61,7 +61,8 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content.AsExpandoObject());
     }
 

@@ -49,7 +49,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         // Child event appended to the SAME EventSourceId as parent (ParentKey)
@@ -68,7 +69,8 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new
             {
                 // Note: no "id" property - only childId and name

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -12,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Cratis.Chronicle.Grains.EventTypes.Kernel;
+namespace Cratis.Chronicle.Grains.EventTypes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/> for managing kernel event types.
@@ -69,10 +70,25 @@ public class EventTypes : IEventTypes
         var eventStores = await _storage.GetEventStores();
         foreach (var eventStore in eventStores)
         {
+            var isSystemEventStore = eventStore == EventStoreName.System;
             _logger.DiscoveringAndRegistering(eventStore, eventTypes.Length);
 
             foreach (var eventType in eventTypes)
             {
+                var isForAllEventStores = eventType.IsForAllEventStores();
+
+                // Skip event types for the System event store that are for all event stores
+                if (isSystemEventStore && isForAllEventStores)
+                {
+                    continue;
+                }
+
+                // Skip system-only event types for non-System event stores
+                if (!isSystemEventStore && !isForAllEventStores)
+                {
+                    continue;
+                }
+
                 var schema = _jsonSchemaGenerator.Generate(eventType);
                 ForceSchemaToBeCamelCase(schema);
                 _schemaByType[eventType] = schema;

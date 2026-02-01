@@ -1,5 +1,3 @@
-// Type alias for read model schema - it's a JsonSchema
-export type { JsonSchema as ReadModelSchema } from '../../Components/JsonSchema';
 export * from './AllSnapshotsForReadModel';
 export * from './Event';
 export * from './ReadModelInstance';

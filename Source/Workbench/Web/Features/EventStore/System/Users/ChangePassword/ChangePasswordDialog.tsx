@@ -4,7 +4,7 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { ChangePasswordForUser } from 'Api/Security';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
@@ -32,7 +32,7 @@ export const ChangePasswordDialog = () => {
         if (password !== confirmPassword) {
             return;
         }
-        
+
         if (password && request.userId) {
             changePassword.userId = request.userId;
             changePassword.password = password;
@@ -44,13 +44,30 @@ export const ChangePasswordDialog = () => {
         }
     };
 
+    const customButtons = (
+        <>
+            <Button
+                label={strings.general.buttons.save}
+                icon="pi pi-check"
+                onClick={handleOk}
+                disabled={!password || !confirmPassword || password !== confirmPassword}
+                autoFocus
+            />
+            <Button
+                label={strings.general.buttons.cancel}
+                icon="pi pi-times"
+                onClick={() => closeDialog(DialogResult.Cancelled)}
+                outlined
+            />
+        </>
+    );
+
     return (
         <Dialog
-            header={strings.eventStore.system.users.dialogs.changePassword.title}
-            visible={true}
-            style={{ width: '30vw' }}
-            modal
-            onHide={() => closeDialog(DialogResult.Cancelled)}>
+            title={strings.eventStore.system.users.dialogs.changePassword.title}
+            onClose={closeDialog}
+            buttons={customButtons}
+            width="30vw">
             <div className="flex flex-column gap-3">
                 <div className="p-inputgroup">
                     <span className="p-inputgroup-addon">
@@ -91,22 +108,6 @@ export const ChangePasswordDialog = () => {
                 {password !== confirmPassword && (
                     <small className="p-error">Passwords do not match</small>
                 )}
-            </div>
-
-            <div className="flex flex-wrap justify-content-center gap-3 mt-4">
-                <Button
-                    label={strings.general.buttons.ok}
-                    icon="pi pi-check"
-                    onClick={handleOk}
-                    disabled={!password || !confirmPassword || password !== confirmPassword}
-                    autoFocus
-                />
-                <Button
-                    label={strings.general.buttons.cancel}
-                    icon="pi pi-times"
-                    severity='secondary'
-                    onClick={() => closeDialog(DialogResult.Cancelled)}
-                />
             </div>
         </Dialog>
     );

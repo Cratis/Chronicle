@@ -20,7 +20,7 @@ public static class OpenIddictServiceCollectionExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="chronicleOptions">The Chronicle options.</param>
     /// <returns>The service collection for chaining.</returns>
-    /// <exception cref="InvalidOperationException">If not development environment this exception will be thrown when the encryption certificate is not configured.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when required certificates are not configured in production.</exception>
     public static IServiceCollection AddOpenIddictIfEnabled(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         // Disable OpenIddict if using an external authority or if OAuthAuthority feature is disabled

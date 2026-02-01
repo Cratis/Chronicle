@@ -34,7 +34,8 @@ public class when_getting_boolean_true_value_from_event_content : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
         _valueProvider = EventValueProviders.EventContent("PropertySet");
     }

@@ -41,7 +41,8 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
 
         _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();

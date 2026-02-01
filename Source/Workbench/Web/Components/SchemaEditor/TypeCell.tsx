@@ -34,10 +34,20 @@ export const TypeCell = ({
     onNavigateToArrayItems,
     onRemoveProperty
 }: TypeCellProps) => {
-    const formatOptions = typeFormats.map(tf => {
-        const format = (!tf.format || tf.format === '' ? tf.jsonType : tf.format);
-        return { label: format, value: format };
-    });
+    // Default type options when typeFormats is not yet loaded
+    const DEFAULT_TYPE_OPTIONS = [
+        { label: 'string', value: 'string' },
+        { label: 'integer', value: 'integer' },
+        { label: 'number', value: 'number' },
+        { label: 'boolean', value: 'boolean' }
+    ];
+
+    const formatOptions = typeFormats.length > 0
+        ? typeFormats.map(tf => {
+            const format = (!tf.format || tf.format === '' ? tf.jsonType : tf.format);
+            return { label: format, value: format };
+        })
+        : DEFAULT_TYPE_OPTIONS;
 
     const allTypeOptions = [
         ...formatOptions,
@@ -75,6 +85,13 @@ export const TypeCell = ({
                         // It's a jsonType-only value (format is null/empty) - set type and clear format
                         onUpdateProperty(propertyName, 'type', typeFormat.jsonType, { format: undefined });
                     }
+                }
+            } else {
+                // Fallback when typeFormats is not loaded - use the value directly as the type
+                if (isArrayItem) {
+                    onUpdateArrayItemType(propertyName, value);
+                } else {
+                    onUpdateProperty(propertyName, 'type', value, { format: undefined });
                 }
             }
         }

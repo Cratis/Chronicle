@@ -35,7 +35,8 @@ public class when_adding_to_a_deep_nested_property_with_existing_value_from_an_e
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         dynamic target = _result;

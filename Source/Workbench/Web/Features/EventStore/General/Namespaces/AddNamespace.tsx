@@ -3,7 +3,7 @@
 
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
@@ -23,8 +23,20 @@ export const AddNamespace = () => {
     const [name, setName] = useState('');
     const { closeDialog } = useDialogContext<AddNamespaceRequest, AddNamespaceResponse>();
 
+    const customButtons = (
+        <>
+            <Button
+                label={strings.general.buttons.ok}
+                icon="pi pi-check"
+                onClick={() => closeDialog(DialogResult.Ok, AddNamespaceResponse.Ok(name))}
+                disabled={!name.trim()}
+                autoFocus />
+            <Button label={strings.general.buttons.cancel} icon="pi pi-times" className="p-button-text" onClick={() => closeDialog(DialogResult.Cancelled, AddNamespaceResponse.Canceled)} />
+        </>
+    );
+
     return (
-        <Dialog header={strings.eventStore.general.namespaces.dialogs.addNamespace.title} visible={true} style={{ width: '20vw' }} modal onHide={() => closeDialog(DialogResult.Cancelled, AddNamespaceResponse.Canceled)}>
+        <Dialog title={strings.eventStore.general.namespaces.dialogs.addNamespace.title} onClose={(result) => closeDialog(result, result === DialogResult.Ok ? AddNamespaceResponse.Ok(name) : AddNamespaceResponse.Canceled)} buttons={customButtons} width="20vw">
             <div className="card flex flex-column md:flex-row gap-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">
@@ -32,11 +44,6 @@ export const AddNamespace = () => {
                     </span>
                     <InputText placeholder={strings.eventStore.general.namespaces.dialogs.addNamespace.name} value={name} onChange={e => setName(e.target.value)} />
                 </div>
-            </div>
-
-            <div className="card flex flex-wrap justify-content-center gap-3 mt-8">
-                <Button label={strings.general.buttons.ok} icon="pi pi-check" onClick={() => closeDialog(DialogResult.Ok, AddNamespaceResponse.Ok(name))} autoFocus />
-                <Button label={strings.general.buttons.cancel} icon="pi pi-times" severity='secondary' onClick={() => closeDialog(DialogResult.Cancelled, AddNamespaceResponse.Canceled)} />
             </div>
         </Dialog>
     );

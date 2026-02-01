@@ -34,7 +34,8 @@ public class when_subtracting_a_deep_nested_property_without_existing_value_from
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         _propertyMapper = PropertyMappers.SubtractWithEventValueProvider(new TypeFormats(), "deep.nested.property", new JsonSchemaProperty { Type = JsonObjectType.Integer }, _ =>

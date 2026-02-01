@@ -4,7 +4,7 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { CreateEventType } from 'Api/Events';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
@@ -28,14 +28,30 @@ export const AddEventTypeDialog = () => {
         }
     };
 
+    const customButtons = (
+        <>
+            <Button
+                label={strings.general.buttons.ok}
+                icon="pi pi-check"
+                onClick={handleOk}
+                disabled={!name}
+                autoFocus
+            />
+            <Button
+                label={strings.general.buttons.cancel}
+                icon="pi pi-times"
+                onClick={() => closeDialog(DialogResult.Cancelled)}
+                outlined
+            />
+        </>
+    );
+
     return (
         <Dialog
-            header={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
-            visible={true}
-            style={{ width: '450px' }}
-            modal
-            resizable={false}
-            onHide={() => closeDialog(DialogResult.Cancelled)}>
+            title={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
+            onClose={closeDialog}
+            buttons={customButtons}
+            resizable={false}>
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">
@@ -47,22 +63,6 @@ export const AddEventTypeDialog = () => {
                         onChange={e => setName(e.target.value)}
                     />
                 </div>
-            </div>
-
-            <div className="card flex flex-wrap justify-content-center gap-3 mt-4">
-                <Button
-                    label={strings.general.buttons.ok}
-                    icon="pi pi-check"
-                    onClick={handleOk}
-                    disabled={!name}
-                    autoFocus
-                />
-                <Button
-                    label={strings.general.buttons.cancel}
-                    icon="pi pi-times"
-                    severity='secondary'
-                    onClick={() => closeDialog(DialogResult.Cancelled)}
-                />
             </div>
         </Dialog>
     );

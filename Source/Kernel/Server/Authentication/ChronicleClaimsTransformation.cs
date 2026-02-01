@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Transforms claims to include Chronicle-specific claims like the user ID as the "sub" claim.
 /// </summary>
 /// <param name="userManager">The user manager.</param>
-public class ChronicleClaimsTransformation(UserManager<ChronicleUser> userManager) : IClaimsTransformation
+public class ChronicleClaimsTransformation(UserManager<User> userManager) : IClaimsTransformation
 {
     /// <inheritdoc/>
     public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)

@@ -37,7 +37,8 @@ public class an_appended_event : Specification
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
     }
 }

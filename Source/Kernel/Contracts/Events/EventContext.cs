@@ -95,4 +95,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(14, IsRequired = true)]
     public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the hash of the event content.
+    /// </summary>
+    [ProtoMember(15)]
+    public string Hash { get; set; } = string.Empty;
 }

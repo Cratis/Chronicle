@@ -5,12 +5,23 @@ import type * as Monaco from 'monaco-editor';
 import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
+export interface DraftReadModelInfo {
+    name: string;
+    schema: JsonSchema;
+}
+
 export class ProjectionDefinitionLanguageCodeActionProvider {
     private readModels: ReadModelInfo[] = [];
+    private draftReadModel: DraftReadModelInfo | null = null;
     private onCreateReadModel?: (readModelName: string) => void;
+    private onEditReadModel?: (readModelName: string, currentSchema: JsonSchema) => void;
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels;
+    }
+
+    setDraftReadModel(draft: DraftReadModelInfo | null): void {
+        this.draftReadModel = draft;
     }
 
     // Keep for backwards compatibility
@@ -25,8 +36,16 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
         this.onCreateReadModel = callback;
     }
 
+    setEditReadModelCallback(callback: (readModelName: string, currentSchema: JsonSchema) => void): void {
+        this.onEditReadModel = callback;
+    }
+
     invokeCreateReadModel(readModelName: string): void {
         this.onCreateReadModel?.(readModelName);
+    }
+
+    invokeEditReadModel(readModelName: string, currentSchema: JsonSchema): void {
+        this.onEditReadModel?.(readModelName, currentSchema);
     }
 
     provideCodeActions(
@@ -36,37 +55,63 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
     ): Monaco.languages.ProviderResult<Monaco.languages.CodeActionList> {
         const actions: Monaco.languages.CodeAction[] = [];
 
-        // Check if we have any diagnostics for undefined read models
-        const diagnostics = context.markers.filter(
-            (marker: Monaco.editor.IMarkerData) => marker.message.includes('not found in available schemas')
+        // Check for diagnostics about undefined read models (errors)
+        const notFoundDiagnostics = context.markers.filter(
+            (marker: Monaco.editor.IMarkerData) => marker.message.includes("Read model") && marker.message.includes("not found")
         );
 
-        if (diagnostics.length > 0) {
-            for (const diagnostic of diagnostics) {
-                // Extract the read model name from the error message
-                const match = diagnostic.message.match(/['"](\w+)['"]/);
-                if (match && match[1]) {
-                    const readModelName = match[1];
+        // Check for diagnostics about draft read models (info markers)
+        const draftDiagnostics = context.markers.filter(
+            (marker: Monaco.editor.IMarkerData) => marker.message.includes("Read model") && marker.message.includes("is a draft")
+        );
 
-                    // Check if this read model already exists
-                    const exists = this.readModels.some(
-                        rm => rm.displayName === readModelName
-                    );
+        // Handle "not found" errors - offer to create
+        for (const diagnostic of notFoundDiagnostics) {
+            const match = diagnostic.message.match(/Read model ['"](\w+)['"]/);
+            if (match && match[1]) {
+                const readModelName = match[1];
 
-                    if (!exists && this.onCreateReadModel) {
-                        actions.push({
-                            title: `Create read model '${readModelName}'`,
-                            diagnostics: [diagnostic],
-                            kind: 'quickfix',
-                            edit: undefined, // No automatic edit - we'll show a dialog
-                            isPreferred: true,
-                            command: {
-                                id: 'projection-declaration.createReadModel',
-                                title: `Create ${readModelName}`,
-                                arguments: [readModelName]
-                            }
-                        });
-                    }
+                // Check if this read model already exists as a persisted read model
+                const existsAsPersisted = this.readModels.some(
+                    rm => rm.displayName === readModelName
+                );
+
+                if (!existsAsPersisted && this.onCreateReadModel) {
+                    actions.push({
+                        title: `Create read model '${readModelName}'`,
+                        diagnostics: [diagnostic],
+                        kind: 'quickfix',
+                        edit: undefined,
+                        isPreferred: true,
+                        command: {
+                            id: 'projection-declaration.createReadModel',
+                            title: `Create ${readModelName}`,
+                            arguments: [readModelName]
+                        }
+                    });
+                }
+            }
+        }
+
+        // Handle draft read model info markers - offer to edit
+        for (const diagnostic of draftDiagnostics) {
+            const match = diagnostic.message.match(/Read model ['"](\w+)['"]/);
+            if (match && match[1]) {
+                const readModelName = match[1];
+
+                if (this.draftReadModel && this.draftReadModel.name === readModelName && this.onEditReadModel) {
+                    actions.push({
+                        title: `Edit read model '${readModelName}'`,
+                        diagnostics: [diagnostic],
+                        kind: 'quickfix',
+                        edit: undefined,
+                        isPreferred: true,
+                        command: {
+                            id: 'projection-declaration.editReadModel',
+                            title: `Edit ${readModelName}`,
+                            arguments: [readModelName, this.draftReadModel.schema]
+                        }
+                    });
                 }
             }
         }

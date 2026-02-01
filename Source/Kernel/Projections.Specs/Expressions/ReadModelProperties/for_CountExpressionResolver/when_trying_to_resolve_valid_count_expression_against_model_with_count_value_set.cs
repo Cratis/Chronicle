@@ -35,7 +35,8 @@ public class when_trying_to_resolve_valid_count_expression_against_model_with_co
                 CorrelationId.New(),
                 [],
                 Identity.System,
-                []),
+                [],
+                EventHash.NotSet),
             content);
         _resolver = new(new TypeFormats());
     }
