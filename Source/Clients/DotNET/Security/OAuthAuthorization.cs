@@ -9,4 +9,4 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Authority">The OAuth authority.</param>
 /// <param name="ClientId">The OAuth client ID.</param>
 /// <param name="ClientSecret">The OAuth client secret.</param>
-public record OAuthAuthorization(string Authority, string ClientId, string ClientSecret);
+public record OAuthAuthorization(Authority Authority, ClientId ClientId, ClientSecret ClientSecret);

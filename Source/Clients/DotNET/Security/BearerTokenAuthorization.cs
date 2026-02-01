@@ -7,4 +7,4 @@ namespace Cratis.Chronicle.Security;
 /// Represents bearer token authentication.
 /// </summary>
 /// <param name="Token">The bearer token.</param>
-public record BearerTokenAuthorization(string Token);
+public record BearerTokenAuthorization(Token Token);

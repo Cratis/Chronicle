@@ -89,18 +89,18 @@ public static class WebhookDefinitionConverters
         target.Authorization.Switch(
             basic => mongoTarget.BasicAuthorization = new MongoDB.Security.BasicAuthorization
             {
-                Username = basic.Username,
-                Password = basic.Password
+                Username = basic.Username.Value,
+                Password = basic.Password.Value
             },
             bearer => mongoTarget.BearerTokenAuthorization = new MongoDB.Security.BearerTokenAuthorization
             {
-                Token = bearer.Token
+                Token = bearer.Token.Value
             },
             oauth => mongoTarget.OAuthAuthorization = new MongoDB.Security.OAuthAuthorization
             {
-                Authority = oauth.Authority,
-                ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                Authority = oauth.Authority.Value,
+                ClientId = oauth.ClientId.Value,
+                ClientSecret = oauth.ClientSecret.Value
             },
             none => { });
 

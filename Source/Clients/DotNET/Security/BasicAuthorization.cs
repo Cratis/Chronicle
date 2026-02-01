@@ -8,4 +8,4 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <param name="Username">The username.</param>
 /// <param name="Password">The password.</param>
-public record BasicAuthorization(string Username, string Password);
+public record BasicAuthorization(Username Username, Password Password);
