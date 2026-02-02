@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { AddUser } from 'Api/Security';
 import { Button } from 'primereact/button';
 import { Dialog } from 'Components/Dialogs';
