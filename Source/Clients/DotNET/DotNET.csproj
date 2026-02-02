@@ -43,6 +43,10 @@
     </Target>
 
     <ItemGroup>
+        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
