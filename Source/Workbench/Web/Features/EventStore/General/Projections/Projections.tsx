@@ -163,6 +163,7 @@ export const Projections = () => {
                             value={projections.data}
                             selectionMode="single"
                             selection={selectedProjection as never}
+                            emptyMessage={strings.eventStore.general.projections.empty}
                             onSelectionChange={async (e) => {
                                 if (hasUnsavedChanges) {
                                     const result = await showConfirmation(
