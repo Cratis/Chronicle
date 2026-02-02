@@ -371,7 +371,7 @@ export const Projections = () => {
                 {selectedReadModel && selectedInstance && (
                     <TimeMachineDialogWrapper
                         readModel={selectedReadModel}
-                        readModelKey={typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance ? selectedInstance.id as string : ''}
+                        readModelKey={typeof selectedInstance === 'object' && 'id' in selectedInstance ? selectedInstance.id as string : ''}
                     />
                 )}
             </>
