@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// <param name="options">Chronicle options.</param>
 /// <param name="logger">The logger.</param>
 [Singleton]
-internal class AuthenticationService(
+internal sealed class AuthenticationService(
     IUserStorage userStorage,
     IUsers users,
 #pragma warning disable CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
