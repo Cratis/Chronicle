@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// <summary>
 /// Defines the authentication service for Chronicle.
 /// </summary>
-internal interface IAuthenticationService
+public interface IAuthenticationService
 {
     /// <summary>
     /// Authenticates a user with username and password.

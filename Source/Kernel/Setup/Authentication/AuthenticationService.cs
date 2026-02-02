@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.DependencyInjection;
@@ -16,17 +15,15 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// Represents an implementation of <see cref="IAuthenticationService"/>.
 /// </summary>
 /// <param name="userStorage">The user storage.</param>
-/// <param name="users">The <see cref="IUsers"/> service.</param>
-/// <param name="applications">The <see cref="IApplications"/> service.</param>
+/// <param name="applicationStorage">The <see cref="IApplicationStorage"/> service.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="options">Chronicle options.</param>
 /// <param name="logger">The logger.</param>
 [Singleton]
-internal sealed class AuthenticationService(
+public sealed class AuthenticationService(
     IUserStorage userStorage,
-    IUsers users,
 #pragma warning disable CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
-    IApplications applications,
+    IApplicationStorage applicationStorage,
 #pragma warning restore CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
     IGrainFactory grainFactory,
     IOptions<Configuration.ChronicleOptions> options,
@@ -36,7 +33,7 @@ internal sealed class AuthenticationService(
     readonly Configuration.ChronicleOptions _options = options.Value;
 
     /// <inheritdoc/>
-    public async Task<Storage.Security.User?> AuthenticateUser(Username username, Password password)
+    public async Task<User?> AuthenticateUser(Username username, Password password)
     {
         var user = await userStorage.GetByUsername(username);
         if (user?.IsActive is not true || user.PasswordHash is null)
@@ -52,7 +49,7 @@ internal sealed class AuthenticationService(
     public async Task EnsureDefaultAdminUser()
     {
         logger.CheckingForDefaultAdminUser();
-        var existingUsers = await users.GetAll();
+        var existingUsers = await userStorage.GetAll();
         if (existingUsers.Any(u => u.Username == _options.Authentication.DefaultAdminUsername))
         {
             logger.DefaultAdminUserAlreadyExist();
@@ -81,7 +78,7 @@ internal sealed class AuthenticationService(
 
         logger.CheckingForDefaultClientCredentials(defaultClientId);
 
-        var existingApplications = await applications.GetAll();
+        var existingApplications = await applicationStorage.GetAll();
         if (existingApplications.Any(a => a.ClientId == defaultClientId))
         {
             logger.DefaultClientCredentialsAlreadyExist(defaultClientId);
@@ -90,12 +87,14 @@ internal sealed class AuthenticationService(
 
         logger.CreatingDefaultClientCredentials(defaultClientId);
 
-        await applications.Add(new AddApplication
+        var application = new Application
         {
             Id = Guid.NewGuid().ToString(),
             ClientId = defaultClientId,
             ClientSecret = defaultClientSecret
-        });
+        };
+
+        await applicationStorage.Create(application);
 
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
