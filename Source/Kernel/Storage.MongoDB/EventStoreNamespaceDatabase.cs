@@ -223,7 +223,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
             collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Wildcard("contentHashes.$**"),
+                    Builders<Event>.IndexKeys.Wildcard(_ => _.ContentHashes),
                     new CreateIndexOptions
                     {
                         Name = "contentHashes",
