@@ -35,6 +35,10 @@
     </ItemGroup>
     <ItemGroup>
         <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
+        <DoNotInternalize Include="Cratis.Chronicle.Contracts.dll" />
+    </ItemGroup>
+    <ItemGroup>
+        <AssemblyToExcludeFromMerge Include="Cratis.Chronicle.DotNET.CodeAnalysis.dll" />
     </ItemGroup>
 
     <Target Name="GrpcClients" BeforeTargets="PerformRepackaging" Condition=" '$(TargetFramework)' != '' ">
@@ -43,7 +47,7 @@
     </Target>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>
