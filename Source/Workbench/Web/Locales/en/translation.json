@@ -399,7 +399,18 @@
             "tooltips": {
                 "help": "Show Projection Declaration Language help panel"
             },
-            "languageReference": "Projection Declaration Language Reference"
+            "languageReference": "Projection Declaration Language Reference",
+            "hover": {
+                "projectionName": "The name of the projection",
+                "projectionKeyword": "Defines a projection that transforms events into a read model",
+                "readModel": "Read Model",
+                "readModelDraft": "Read Model (Draft)",
+                "eventType": "Event Type",
+                "properties": "Properties",
+                "property": "Property",
+                "eventProperty": "Event Property",
+                "type": "Type"
+            }
         },
         "schemaEditor": {
             "columns": {

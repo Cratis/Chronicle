@@ -4,10 +4,12 @@
 import type { editor, languages, Position } from 'monaco-editor';
 import type { JsonSchema, JsonSchemaProperty } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
+import strings from '../../Strings';
 
 export class ProjectionDefinitionLanguageHoverProvider implements languages.HoverProvider {
     private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
+    private draftReadModel: { name: string; schema: JsonSchema } | null = null;
 
 
     setReadModels(readModels: ReadModelInfo[]): void {
@@ -39,11 +41,30 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         this.eventSchemas = schemas || {};
     }
 
+    setDraftReadModel(draft: { name: string; schema: JsonSchema } | null): void {
+        this.draftReadModel = draft;
+    }
+
     provideHover(model: editor.ITextModel, position: Position): languages.ProviderResult<languages.Hover> {
         const word = model.getWordAtPosition(position);
         if (!word) return null;
 
         const wordText = word.word;
+
+        // Check if we're on the projection name (before '=>')
+        const lineContent = model.getLineContent(position.lineNumber);
+        const projectionNameMatch = this.getProjectionNameAtPosition(lineContent, position.column);
+        if (projectionNameMatch) {
+            return {
+                contents: [{ value: strings.components.projectionEditor.hover.projectionName }],
+                range: {
+                    startLineNumber: position.lineNumber,
+                    startColumn: word.startColumn,
+                    endLineNumber: position.lineNumber,
+                    endColumn: word.endColumn,
+                },
+            };
+        }
 
         // Check if it's a keyword
         const keywordInfo = this.getKeywordInfo(wordText);
@@ -79,12 +100,36 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
             const description = this.getSchemaDescription(schema);
             const properties = this.getSchemaProperties(schema);
 
-            let content = `**Event Type:** \`${wordText}\`\n\n`;
+            let content = `**${strings.components.projectionEditor.hover.eventType}:** \`${wordText}\`\n\n`;
             if (description) {
                 content += `${description}\n\n`;
             }
             if (properties.length > 0) {
-                content += `**Properties:**\n\n${properties.map(p => `- \`${p.name}\`: ${p.type}`).join('\n')}`;
+                content += `**${strings.components.projectionEditor.hover.properties}:**\n\n${properties.map(p => `- \`${p.name}\`: ${p.type}`).join('\n')}`;
+            }
+
+            return {
+                contents: [{ value: content }],
+                range: {
+                    startLineNumber: position.lineNumber,
+                    startColumn: word.startColumn,
+                    endLineNumber: position.lineNumber,
+                    endColumn: word.endColumn,
+                },
+            };
+        }
+
+        // Check if it's a draft read model
+        if (this.draftReadModel && this.draftReadModel.name === wordText) {
+            const description = this.getSchemaDescription(this.draftReadModel.schema);
+            const properties = this.getSchemaProperties(this.draftReadModel.schema);
+
+            let content = `**${strings.components.projectionEditor.hover.readModelDraft}:** \`${wordText}\`\n\n`;
+            if (description) {
+                content += `${description}\n\n`;
+            }
+            if (properties.length > 0) {
+                content += `**${strings.components.projectionEditor.hover.properties}:**\n\n${properties.map(p => `- \`${p.name}\`: ${p.type}`).join('\n')}`;
             }
 
             return {
@@ -104,12 +149,12 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
             const description = this.getSchemaDescription(readModel);
             const properties = this.getSchemaProperties(readModel);
 
-            let content = `**Read Model:** \`${wordText}\`\n\n`;
+            let content = `**${strings.components.projectionEditor.hover.readModel}:** \`${wordText}\`\n\n`;
             if (description) {
                 content += `${description}\n\n`;
             }
             if (properties.length > 0) {
-                content += `**Properties:**\n\n${properties.map(p => `- \`${p.name}\`: ${p.type}`).join('\n')}`;
+                content += `**${strings.components.projectionEditor.hover.properties}:**\n\n${properties.map(p => `- \`${p.name}\`: ${p.type}`).join('\n')}`;
             }
 
             return {
@@ -142,7 +187,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
 
     private getKeywordInfo(word: string): string | null {
         const keywords: Record<string, string> = {
-            'projection': '**projection** *<ProjectionName>* **=>** *<ReadModelName>*\n\nDefines a projection that transforms events into a read model.',
+            'projection': `**projection** - ${strings.components.projectionEditor.hover.projectionKeyword}`,
             'from': '**from** *<EventType>*\n\nHandles specific event types and maps their properties to the read model.',
             'every': '**every**\n\nHandles all events with automatic property mapping.',
             'key': '**key** *<expression>*\n\nDefines the projection key or composite key type.',
@@ -195,7 +240,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
             const type = this.getPropertyTypeDescription(prop);
             const description = prop.description;
 
-            let content = `**Property:** \`${propertyName}\`\n\n**Type:** \`${type}\``;
+            let content = `**${strings.components.projectionEditor.hover.property}:** \`${propertyName}\`\n\n**${strings.components.projectionEditor.hover.type}:** \`${type}\``;
             if (description) {
                 content += `\n\n${description}`;
             }
@@ -211,7 +256,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
                 const type = this.getPropertyTypeDescription(prop);
                 const description = prop.description;
 
-                let content = `**Event Property:** \`${propertyName}\`\n\n**Type:** \`${type}\``;
+                let content = `**${strings.components.projectionEditor.hover.eventProperty}:** \`${propertyName}\`\n\n**${strings.components.projectionEditor.hover.type}:** \`${type}\``;
                 if (description) {
                     content += `\n\n${description}`;
                 }
@@ -231,6 +276,20 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
             }
         }
         return null;
+    }
+
+    private getProjectionNameAtPosition(lineContent: string, column: number): boolean {
+        // Check if we're on line 1 (projection declaration line)
+        const projectionMatch = lineContent.match(/^\s*projection\s+(\S+)\s*=>/);
+        if (!projectionMatch) return false;
+
+        const projectionName = projectionMatch[1];
+        const projectionKeywordEnd = lineContent.indexOf('projection') + 'projection'.length;
+        const arrowStart = lineContent.indexOf('=>');
+
+        // Check if cursor is between 'projection' keyword and '=>'
+        // and is on the projection name itself
+        return column > projectionKeywordEnd && column <= arrowStart;
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {
