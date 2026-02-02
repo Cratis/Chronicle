@@ -29,11 +29,7 @@ public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixtur
         InvokedWebhooks = new();
 
         // Override the IHttpClientFactory to use TestServer's handler
-        services.AddTransient<IHttpClientFactory>(_ =>
-        {
-            var factory = new TestHttpClientFactory(CreateClient());
-            return factory;
-        });
+        services.AddTransient<IHttpClientFactory>(_ => new TestHttpClientFactory(CreateClient()));
     }
 
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
