@@ -9,12 +9,4 @@
     <ItemGroup>
         <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Cratis.Specifications" />
-        <PackageReference Include="Cratis.Specifications.XUnit" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="xunit" />
-        <PackageReference Include="xunit.runner.visualstudio" />
-    </ItemGroup>
 </Project>
