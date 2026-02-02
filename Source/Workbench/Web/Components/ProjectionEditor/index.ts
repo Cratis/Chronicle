@@ -170,6 +170,9 @@ export function setDraftReadModel(draft: { name: string; schema: JsonSchema } | 
     if (validator) {
         validator.setDraftReadModel(draft);
     }
+    if (hoverProvider) {
+        hoverProvider.setDraftReadModel(draft);
+    }
     revalidateAllModels();
 }
 
