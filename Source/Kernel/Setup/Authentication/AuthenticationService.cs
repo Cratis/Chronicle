@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage.Security;
@@ -35,7 +36,7 @@ internal sealed class AuthenticationService(
     readonly Configuration.ChronicleOptions _options = options.Value;
 
     /// <inheritdoc/>
-    public async Task<Storage.Security.User?> AuthenticateUser(string username, string password)
+    public async Task<Storage.Security.User?> AuthenticateUser(Username username, Password password)
     {
         var user = await userStorage.GetByUsername(username);
         if (user?.IsActive is not true || user.PasswordHash is null)

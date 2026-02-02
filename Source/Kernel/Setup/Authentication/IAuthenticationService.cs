@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
 
 namespace Cratis.Chronicle.Setup.Authentication;
@@ -8,7 +9,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// <summary>
 /// Defines the authentication service for Chronicle.
 /// </summary>
-public interface IAuthenticationService
+internal interface IAuthenticationService
 {
     /// <summary>
     /// Authenticates a user with username and password.
@@ -16,7 +17,7 @@ public interface IAuthenticationService
     /// <param name="username">The username.</param>
     /// <param name="password">The password.</param>
     /// <returns>The authenticated user if successful, null otherwise.</returns>
-    Task<User?> AuthenticateUser(string username, string password);
+    Task<User?> AuthenticateUser(Username username, Password password);
 
     /// <summary>
     /// Ensures the default admin user exists.
