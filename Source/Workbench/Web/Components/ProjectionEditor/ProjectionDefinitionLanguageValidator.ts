@@ -48,7 +48,7 @@ export class ProjectionDefinitionLanguageValidator {
             return;
         }
 
-        this.eventSchemas = schemas || {};
+        this.eventSchemas = schemas;
     }
 
     validate(model: editor.ITextModel): editor.IMarkerData[] {
