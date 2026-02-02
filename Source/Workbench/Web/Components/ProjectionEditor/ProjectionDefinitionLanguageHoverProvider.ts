@@ -38,7 +38,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
             return;
         }
 
-        this.eventSchemas = schemas || {};
+        this.eventSchemas = schemas;
     }
 
     setDraftReadModel(draft: { name: string; schema: JsonSchema } | null): void {
