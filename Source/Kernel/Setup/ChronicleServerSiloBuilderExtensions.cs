@@ -67,6 +67,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddWebhookObserverHttpClient()
             .ConfigureSerialization();
 
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
         builder.Services.AddChronicleMeters();
