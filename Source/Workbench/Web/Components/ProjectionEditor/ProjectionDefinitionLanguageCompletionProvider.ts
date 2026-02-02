@@ -52,7 +52,7 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
             return;
         }
 
-        this.eventSchemas = schemas || {};
+        this.eventSchemas = schemas;
     }
 
     provideCompletionItems(
