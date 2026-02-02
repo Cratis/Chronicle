@@ -247,7 +247,8 @@
                     "unknown": "Unknown",
                     "reactor": "Reactor",
                     "projection": "Projection",
-                    "reducer": "Reducer"
+                    "reducer": "Reducer",
+                    "external": "External"
                 },
                 "owners": {
                     "none": "None",

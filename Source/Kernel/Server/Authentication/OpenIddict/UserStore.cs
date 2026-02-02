@@ -14,26 +14,26 @@ namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 /// </remarks>
 /// <param name="userStorage">The user storage.</param>
 public class UserStore(IUserStorage userStorage) :
-    IUserPasswordStore<ChronicleUser>,
-    IUserEmailStore<ChronicleUser>,
-    IUserSecurityStampStore<ChronicleUser>
+    IUserPasswordStore<User>,
+    IUserEmailStore<User>,
+    IUserSecurityStampStore<User>
 {
     /// <inheritdoc/>
-    public async Task<IdentityResult> CreateAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public async Task<IdentityResult> CreateAsync(User user, CancellationToken cancellationToken)
     {
         await userStorage.Create(user);
         return IdentityResult.Success;
     }
 
     /// <inheritdoc/>
-    public async Task<IdentityResult> DeleteAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public async Task<IdentityResult> DeleteAsync(User user, CancellationToken cancellationToken)
     {
         await userStorage.Delete(user.Id);
         return IdentityResult.Success;
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> FindByIdAsync(string userId, CancellationToken cancellationToken)
+    public async Task<User?> FindByIdAsync(string userId, CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(userId, out var userIdAsGuid))
         {
@@ -44,7 +44,7 @@ public class UserStore(IUserStorage userStorage) :
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
+    public async Task<User?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
         // Identity normalizes usernames to uppercase, but we store them as-is
         // Try exact match first, then lowercase version since Identity normalizes to uppercase
@@ -55,65 +55,65 @@ public class UserStore(IUserStorage userStorage) :
     }
 
     /// <inheritdoc/>
-    public Task<string?> GetNormalizedUserNameAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string?> GetNormalizedUserNameAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult<string?>(user.Username.Value.ToUpperInvariant());
     }
 
     /// <inheritdoc/>
-    public Task<string> GetUserIdAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string> GetUserIdAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(user.Id.ToString());
     }
 
     /// <inheritdoc/>
-    public Task<string?> GetUserNameAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string?> GetUserNameAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult<string?>(user.Username);
     }
 
     /// <inheritdoc/>
-    public Task SetNormalizedUserNameAsync(ChronicleUser user, string? normalizedName, CancellationToken cancellationToken)
+    public Task SetNormalizedUserNameAsync(User user, string? normalizedName, CancellationToken cancellationToken)
     {
         // We store usernames as-is and normalize on query
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task SetUserNameAsync(ChronicleUser user, string? userName, CancellationToken cancellationToken)
+    public Task SetUserNameAsync(User user, string? userName, CancellationToken cancellationToken)
     {
         user.Username = userName ?? string.Empty;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task<IdentityResult> UpdateAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public async Task<IdentityResult> UpdateAsync(User user, CancellationToken cancellationToken)
     {
         await userStorage.Update(user);
         return IdentityResult.Success;
     }
 
     /// <inheritdoc/>
-    public Task<string?> GetPasswordHashAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string?> GetPasswordHashAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(user.PasswordHash?.Value);
     }
 
     /// <inheritdoc/>
-    public Task<bool> HasPasswordAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<bool> HasPasswordAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash?.Value));
     }
 
     /// <inheritdoc/>
-    public Task SetPasswordHashAsync(ChronicleUser user, string? passwordHash, CancellationToken cancellationToken)
+    public Task SetPasswordHashAsync(User user, string? passwordHash, CancellationToken cancellationToken)
     {
         user.PasswordHash = passwordHash ?? string.Empty;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+    public async Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
         // The normalizedEmail parameter contains the value entered by the user (not actually normalized in our case)
         // Try to find by email first (in case user entered an email)
@@ -128,51 +128,51 @@ public class UserStore(IUserStorage userStorage) :
     }
 
     /// <inheritdoc/>
-    public Task<string?> GetEmailAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string?> GetEmailAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(user.Email?.Value);
     }
 
     /// <inheritdoc/>
-    public Task<bool> GetEmailConfirmedAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<bool> GetEmailConfirmedAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(true); // Email confirmation not implemented yet
     }
 
     /// <inheritdoc/>
-    public Task<string?> GetNormalizedEmailAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string?> GetNormalizedEmailAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(user.Email?.Value.ToUpperInvariant());
     }
 
     /// <inheritdoc/>
-    public Task SetEmailAsync(ChronicleUser user, string? email, CancellationToken cancellationToken)
+    public Task SetEmailAsync(User user, string? email, CancellationToken cancellationToken)
     {
         user.Email = email ?? string.Empty;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task SetEmailConfirmedAsync(ChronicleUser user, bool confirmed, CancellationToken cancellationToken)
+    public Task SetEmailConfirmedAsync(User user, bool confirmed, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task SetNormalizedEmailAsync(ChronicleUser user, string? normalizedEmail, CancellationToken cancellationToken)
+    public Task SetNormalizedEmailAsync(User user, string? normalizedEmail, CancellationToken cancellationToken)
     {
         // We normalize on query
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<string?> GetSecurityStampAsync(ChronicleUser user, CancellationToken cancellationToken)
+    public Task<string?> GetSecurityStampAsync(User user, CancellationToken cancellationToken)
     {
         return Task.FromResult(user.SecurityStamp?.Value);
     }
 
     /// <inheritdoc/>
-    public Task SetSecurityStampAsync(ChronicleUser user, string stamp, CancellationToken cancellationToken)
+    public Task SetSecurityStampAsync(User user, string stamp, CancellationToken cancellationToken)
     {
         user.SecurityStamp = stamp;
         return Task.CompletedTask;

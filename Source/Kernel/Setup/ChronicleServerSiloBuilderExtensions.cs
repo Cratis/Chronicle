@@ -64,6 +64,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddStreaming()
             .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
+            .AddWebhookObserverHttpClient()
             .ConfigureSerialization();
 
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
@@ -102,6 +103,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
                 projections,
+                new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),

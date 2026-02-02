@@ -119,7 +119,21 @@ public static class SerializationConfigurationExtensions
         services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || _ == typeof(JsonSchema) || (_.Namespace?.StartsWith("Cratis") ?? false),
+            type =>
+            {
+                // Check if type inherits from OneOfBase - if so, exclude it from JSON serialization
+                var current = type;
+                while (current != typeof(object) && current is not null)
+                {
+                    if (current.IsGenericType && current.GetGenericTypeDefinition().Name.Contains("OneOfBase"))
+                    {
+                        return false;
+                    }
+                    current = current.BaseType!;
+                }
+
+                return type == typeof(JsonObject) || type == typeof(JsonSchema) || (type.Namespace?.StartsWith("Cratis") ?? false);
+            },
             options));
     }
 

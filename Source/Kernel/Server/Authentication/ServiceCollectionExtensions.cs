@@ -26,12 +26,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         services.AddSingleton<IUserStorage, UserStorage>();
-        services.AddSingleton<IAuthenticationService, AuthenticationService>();
-        services.AddSingleton<IUserStore<ChronicleUser>, UserStore>();
-        services.AddSingleton<IPasswordHasher<ChronicleUser>, PasswordHasher<ChronicleUser>>();
+        services.AddSingleton<IUserStore<User>, UserStore>();
+        services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
         // Add ASP.NET Identity
-        services.AddIdentityCore<ChronicleUser>(options =>
+        services.AddIdentityCore<User>(options =>
             {
                 options.Password.RequireDigit = false;
                 options.Password.RequireLowercase = false;

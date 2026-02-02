@@ -28,7 +28,7 @@ public class when_accessing_event_source_id : Specification
                     [],
                     Identity.System,
                     [],
-                EventHash.NotSet),
+                    EventHash.NotSet),
                 new ExpandoObject());
 
     void Because() => _result = EventValueProviders.EventSourceId(_event);

@@ -10,4 +10,3 @@ namespace Cratis.Chronicle.Api.Projections;
 /// <param name="Line">The line number where the error occurred.</param>
 /// <param name="Column">The column number where the error occurred.</param>
 public record ProjectionDeclarationSyntaxError(string Message, int Line, int Column);
-

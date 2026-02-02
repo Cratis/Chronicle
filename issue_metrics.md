@@ -8,12 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 264 |
+| Number of items that remain open | 266 |
 | Number of items closed | 609 |
-| Total number of items created | 873 |
+| Total number of items created | 875 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Add static code analysis | https://github.com/Cratis/Chronicle/issues/2558 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add events for user and applications authenticated | https://github.com/Cratis/Chronicle/issues/2556 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Change behavior for default Admin user | https://github.com/Cratis/Chronicle/issues/2537 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Ensure Monaco Language service has full support for the Projection Definition Language | https://github.com/Cratis/Chronicle/issues/2505 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Change password on first login | https://github.com/Cratis/Chronicle/issues/2503 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |

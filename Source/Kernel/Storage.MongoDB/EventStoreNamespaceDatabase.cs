@@ -218,7 +218,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
             collection.Indexes.CreateOne(
                 new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending("ContentHashes"),
+                    Builders<Event>.IndexKeys.Ascending(x => x.Tags),
+                    new CreateIndexOptions { Name = "tags" }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Wildcard("contentHashes.$**"),
                     new CreateIndexOptions
                     {
                         Name = "contentHashes",

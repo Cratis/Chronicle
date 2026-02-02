@@ -12,45 +12,45 @@ namespace Cratis.Chronicle.Storage.Security;
 public interface IUserStorage
 {
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="ChronicleUser"/>.
+    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="User"/>.
     /// </summary>
-    /// <returns>An observable of collection of <see cref="ChronicleUser"/>.</returns>
-    ISubject<IEnumerable<ChronicleUser>> ObserveAll();
+    /// <returns>An observable of collection of <see cref="User"/>.</returns>
+    ISubject<IEnumerable<User>> ObserveAll();
 
     /// <summary>
     /// Gets a user by their unique identifier.
     /// </summary>
     /// <param name="id">The user ID.</param>
     /// <returns>The user if found, null otherwise.</returns>
-    Task<ChronicleUser?> GetById(UserId id);
+    Task<User?> GetById(UserId id);
 
     /// <summary>
     /// Gets a user by their username.
     /// </summary>
     /// <param name="username">The username.</param>
     /// <returns>The user if found, null otherwise.</returns>
-    Task<ChronicleUser?> GetByUsername(Username username);
+    Task<User?> GetByUsername(Username username);
 
     /// <summary>
     /// Gets a user by their email address.
     /// </summary>
     /// <param name="email">The email address.</param>
     /// <returns>The user if found, null otherwise.</returns>
-    Task<ChronicleUser?> GetByEmail(UserEmail email);
+    Task<User?> GetByEmail(UserEmail email);
 
     /// <summary>
     /// Creates a new user.
     /// </summary>
     /// <param name="user">The user to create.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task Create(ChronicleUser user);
+    Task Create(User user);
 
     /// <summary>
     /// Updates an existing user.
     /// </summary>
     /// <param name="user">The user to update.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task Update(ChronicleUser user);
+    Task Update(User user);
 
     /// <summary>
     /// Deletes a user.
@@ -63,5 +63,5 @@ public interface IUserStorage
     /// Gets all users.
     /// </summary>
     /// <returns>All users in the system.</returns>
-    Task<IEnumerable<ChronicleUser>> GetAll();
+    Task<IEnumerable<User>> GetAll();
 }

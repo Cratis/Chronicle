@@ -281,6 +281,12 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     protected abstract IAsyncDisposable CreateWebApplicationFactory();
 
     /// <summary>
+    /// Configure the WebHostBuilder.
+    /// </summary>
+    /// <param name="builder">The builder for continuation.</param>
+    protected abstract void ConfigureWebHostBuilder(IWebHostBuilder builder);
+
+    /// <summary>
     /// Ensures that the event store is built.
     /// </summary>
     protected void EnsureBuilt()
@@ -318,7 +324,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
             _servicesProperty = webApplicationFactoryType.GetProperty(nameof(WebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
             _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
             _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
-
             _isInitialized = true;
         }
     }
@@ -366,11 +371,8 @@ public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChro
         return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
     }
 
-    /// <summary>
-    /// Configures the <see cref="IWebHostBuilder"/>.
-    /// </summary>
-    /// <param name="builder">The <see cref="IWebHostBuilder"/> to configure.</param>
-    protected virtual void ConfigureWebHostBuilder(IWebHostBuilder builder)
+    /// <inheritdoc/>
+    protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
     }
 }

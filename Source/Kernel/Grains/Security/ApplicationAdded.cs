@@ -12,5 +12,4 @@ namespace Cratis.Chronicle.Grains.Security;
 /// <param name="ClientId">The client identifier.</param>
 /// <param name="ClientSecret">The hashed client secret.</param>
 [EventType]
-[AllEventStores]
 public record ApplicationAdded(ClientId ClientId, ClientSecret ClientSecret);

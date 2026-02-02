@@ -20,16 +20,16 @@ public class UserStorage(IDatabase database) : IUserStorage
 {
     const string CollectionName = WellKnownCollectionNames.Users;
     static readonly Collation _collation = new("en", caseLevel: false, strength: CollationStrength.Primary);
-    static readonly FindOptions<ChronicleUser> _findOptions = new() { Collation = _collation };
+    static readonly FindOptions<User> _findOptions = new() { Collation = _collation };
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<ChronicleUser>> ObserveAll() =>
-        new TransformingSubject<IEnumerable<ChronicleUser>, IEnumerable<ChronicleUser>>(
+    public ISubject<IEnumerable<User>> ObserveAll() =>
+        new TransformingSubject<IEnumerable<User>, IEnumerable<User>>(
             GetCollection().Observe(),
             users => users);
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> GetById(UserId id)
+    public async Task<User?> GetById(UserId id)
     {
         var collection = GetCollection();
         using var cursor = await collection.FindAsync(u => u.Id == id);
@@ -37,7 +37,7 @@ public class UserStorage(IDatabase database) : IUserStorage
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> GetByUsername(Username username)
+    public async Task<User?> GetByUsername(Username username)
     {
         var collection = GetCollection();
         using var cursor = await collection.FindAsync(u => u.Username == username, _findOptions);
@@ -45,7 +45,7 @@ public class UserStorage(IDatabase database) : IUserStorage
     }
 
     /// <inheritdoc/>
-    public async Task<ChronicleUser?> GetByEmail(UserEmail email)
+    public async Task<User?> GetByEmail(UserEmail email)
     {
         if (string.IsNullOrEmpty(email))
         {
@@ -58,14 +58,14 @@ public class UserStorage(IDatabase database) : IUserStorage
     }
 
     /// <inheritdoc/>
-    public async Task Create(ChronicleUser user)
+    public async Task Create(User user)
     {
         var collection = GetCollection();
         await collection.InsertOneAsync(user);
     }
 
     /// <inheritdoc/>
-    public async Task Update(ChronicleUser user)
+    public async Task Update(User user)
     {
         var collection = GetCollection();
         await collection.ReplaceOneAsync(
@@ -82,15 +82,15 @@ public class UserStorage(IDatabase database) : IUserStorage
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ChronicleUser>> GetAll()
+    public async Task<IEnumerable<User>> GetAll()
     {
         var collection = GetCollection();
         using var cursor = await collection.FindAsync(_ => true);
         return await cursor.ToListAsync();
     }
 
-    IMongoCollection<ChronicleUser> GetCollection()
+    IMongoCollection<User> GetCollection()
     {
-        return database.GetCollection<ChronicleUser>(CollectionName);
+        return database.GetCollection<User>(CollectionName);
     }
 }

@@ -23,7 +23,7 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task Added(UserAdded @event, EventContext eventContext)
     {
-        var user = new ChronicleUser
+        var user = new User
         {
             Id = eventContext.EventSourceId,
             Username = @event.Username,
@@ -48,7 +48,7 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task InitialAdminAdded(InitialAdminUserAdded @event, EventContext eventContext)
     {
-        var user = new ChronicleUser
+        var user = new User
         {
             Id = eventContext.EventSourceId,
             Username = @event.Username,
