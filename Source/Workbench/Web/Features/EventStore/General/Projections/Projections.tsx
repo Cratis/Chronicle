@@ -234,13 +234,23 @@ export const Projections = () => {
                                         const result = await saveProjection.execute();
                                         const errors = result.response?.errors ?? [];
                                         if (result.isSuccess && errors.length === 0) {
-                                            refreshProjections();
+                                            const updatedProjections = await refreshProjections();
                                             if (draftReadModel) {
                                                 refreshReadModels(); // Only refresh read models if we created a new one
                                             }
                                             setSyntaxErrors([]);
                                             setDraftReadModel(null); // Clear draft after successful save
                                             setOriginalDeclarationValue(declarationValue); // Reset original after successful save
+                                            
+                                            // Update selected projection with the refreshed data to maintain selection
+                                            if (updatedProjections?.data) {
+                                                const updatedSelection = updatedProjections.data.find((p: { declaration?: string }) => 
+                                                    p.declaration === declarationValue
+                                                );
+                                                if (updatedSelection) {
+                                                    setSelectedProjection(updatedSelection);
+                                                }
+                                            }
                                         } else {
                                             // Display server-side validation errors in the editor
                                             setSyntaxErrors(errors);
