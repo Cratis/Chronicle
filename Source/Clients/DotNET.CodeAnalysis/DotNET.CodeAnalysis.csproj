@@ -1,8 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.CodeAnalysis</AssemblyName>
         <RootNamespace>Cratis.Chronicle.CodeAnalysis</RootNamespace>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
         <IsRoslynComponent>true</IsRoslynComponent>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <DevelopmentDependency>true</DevelopmentDependency>
@@ -11,15 +13,21 @@
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
-        <NoWarn>NU5128</NoWarn>
+        <NuGetAuditMode>direct</NuGetAuditMode>
+        <NoWarn>$(NoWarn);NU5128;NU1507</NoWarn>
     </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     </ItemGroup>
-
     <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <PackageReference Remove="Cratis.Fundamentals" />
+        <PackageReference Remove="System.Text.Json" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="$(OutputPath)\$(AssemblyName).dll"
+              Pack="true"
+              PackagePath="analyzers/dotnet/cs"
+              Visible="false" />
     </ItemGroup>
 </Project>
