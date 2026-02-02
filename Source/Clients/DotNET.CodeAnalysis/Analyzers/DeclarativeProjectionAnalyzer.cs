@@ -45,8 +45,7 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var methodSymbol = context.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
-        if (methodSymbol is null)
+        if (!(context.SemanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol methodSymbol))
         {
             return;
         }
