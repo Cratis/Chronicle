@@ -187,13 +187,19 @@ public class HandleEventsForPartition(
                             failed = true;
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
-                            lastEventSequenceNumberAttempted = eventObserverResult.HandledAnyEvents
-                                ? handledEvents.First(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation).Context.SequenceNumber
-                                : handledEvents[0].Context.SequenceNumber;
                             if (eventObserverResult.HandledAnyEvents)
                             {
+                                var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
+                                lastEventSequenceNumberAttempted = failedEvent is not null
+                                    ? failedEvent.Context.SequenceNumber
+                                    : eventObserverResult.LastSuccessfulObservation.Next();
+
                                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                            }
+                            else
+                            {
+                                lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                             }
 
                             logger.FailedHandlingEvents(currentState.Partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
