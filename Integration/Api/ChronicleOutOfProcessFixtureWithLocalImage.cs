@@ -153,8 +153,10 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             }
         }
 
-        // Check if password is already set
-        if (existingUser.Contains("passwordHash") && !string.IsNullOrEmpty(existingUser["passwordHash"].AsString))
+        // Check if password is already set (handle BsonNull case)
+        if (existingUser.Contains("passwordHash") &&
+            existingUser["passwordHash"] is not BsonNull &&
+            !string.IsNullOrEmpty(existingUser["passwordHash"].AsString))
         {
             _logger.LogAdminUserAlreadyHasPassword();
             return;
@@ -173,7 +175,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             .Set("passwordHash", passwordHash)
             .Set("isActive", true)
             .Set("requiresPasswordChange", false)
-            .Set("lastModifiedAt", DateTimeOffset.UtcNow);
+            .Set("lastModifiedAt", new BsonDateTime(DateTime.UtcNow));
 
         var result = await usersCollection.UpdateOneAsync(
             new BsonDocument("username", DefaultAdminUsername),
