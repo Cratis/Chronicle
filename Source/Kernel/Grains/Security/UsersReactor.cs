@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage.Security;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Security;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Grains.Security;
 /// Represents a reactor that handles user events.
 /// </summary>
 /// <param name="userStorage">The <see cref="IUserStorage"/> for managing users.</param>
-public class UsersReactor(IUserStorage userStorage) : Reactor
+/// <param name="logger">The <see cref="ILogger{UsersReactor}"/> for logging.</param>
+public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger) : Reactor
 {
     /// <summary>
     /// Handles the addition of a user.
@@ -23,6 +25,8 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task Added(UserAdded @event, EventContext eventContext)
     {
+        logger.AddingUser(eventContext.EventSourceId, @event.Username);
+
         var user = new User
         {
             Id = eventContext.EventSourceId,
@@ -38,6 +42,8 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
         };
 
         await userStorage.Create(user);
+
+        logger.UserAdded(eventContext.EventSourceId);
     }
 
     /// <summary>
@@ -48,11 +54,13 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task InitialAdminAdded(InitialAdminUserAdded @event, EventContext eventContext)
     {
+        logger.AddingInitialAdminUser(eventContext.EventSourceId, @event.Username ?? "[not set]");
+
         var user = new User
         {
             Id = eventContext.EventSourceId,
-            Username = @event.Username,
-            Email = @event.Email,
+            Username = @event.Username ?? string.Empty,
+            Email = @event.Email ?? string.Empty,
             PasswordHash = null,
             SecurityStamp = Guid.NewGuid().ToString(),
             IsActive = true,
@@ -63,6 +71,8 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
         };
 
         await userStorage.Create(user);
+
+        logger.InitialAdminUserAdded(eventContext.EventSourceId);
     }
 
     /// <summary>
@@ -73,7 +83,11 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task Removed(UserRemoved @event, EventContext eventContext)
     {
+        logger.RemovingUser(eventContext.EventSourceId);
+
         await userStorage.Delete(eventContext.EventSourceId);
+
+        logger.UserRemoved(eventContext.EventSourceId);
     }
 
     /// <summary>
@@ -84,6 +98,8 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task PasswordChanged(UserPasswordChanged @event, EventContext eventContext)
     {
+        logger.ChangingPassword(eventContext.EventSourceId);
+
         var user = await userStorage.GetById(eventContext.EventSourceId);
         if (user is not null)
         {
@@ -93,6 +109,12 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
             user.HasLoggedIn = true;
             user.LastModifiedAt = DateTimeOffset.UtcNow;
             await userStorage.Update(user);
+
+            logger.PasswordChanged(eventContext.EventSourceId);
+        }
+        else
+        {
+            logger.UserNotFoundWhenChangingPassword(eventContext.EventSourceId);
         }
     }
 
@@ -104,12 +126,20 @@ public class UsersReactor(IUserStorage userStorage) : Reactor
     /// <returns>Await Task.</returns>
     public async Task RequiresPasswordChange(PasswordChangeRequired @event, EventContext eventContext)
     {
+        logger.SettingPasswordChangeRequirement(eventContext.EventSourceId);
+
         var user = await userStorage.GetById(eventContext.EventSourceId);
         if (user is not null)
         {
             user.RequiresPasswordChange = true;
             user.LastModifiedAt = DateTimeOffset.UtcNow;
             await userStorage.Update(user);
+
+            logger.PasswordChangeRequirementSet(eventContext.EventSourceId);
+        }
+        else
+        {
+            logger.UserNotFoundWhenSettingPasswordChangeRequirement(eventContext.EventSourceId);
         }
     }
 }
