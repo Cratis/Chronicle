@@ -111,6 +111,7 @@ public static class SerializationConfigurationExtensions
     {
         var options = new JsonSerializerOptions
         {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
         ApplyConverters(options);
