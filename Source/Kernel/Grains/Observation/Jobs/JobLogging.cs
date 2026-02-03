@@ -15,6 +15,6 @@ internal static partial class JobLogging
     [LoggerMessage(LogLevel.Warning, "Not all events were handled after performing '{JobName}' job. The last handled event sequence number was {LastSequenceNumber}")]
     internal static partial void NotAllEventsWereHandled(this ILogger<IJob> logger, string jobName, EventSequenceNumber lastSequenceNumber);
 
-    [LoggerMessage(LogLevel.Warning, "No  were handled after performing '{JobName}' job")]
+    [LoggerMessage(LogLevel.Warning, "No events were handled after performing '{JobName}' job")]
     internal static partial void NoEventsWereHandled(this ILogger<IJob> logger, string jobName);
 }
