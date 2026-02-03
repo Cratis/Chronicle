@@ -114,7 +114,7 @@ public static class SerializationConfigurationExtensions
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
         ApplyConverters(options);
-
+        services.AddSingleton(options);
         services.AddConceptSerializer();
         services.AddCustomSerializers();
         services.AddSerializer(
