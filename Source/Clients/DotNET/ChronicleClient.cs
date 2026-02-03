@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
@@ -208,7 +210,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     void InitializeJsonSerializationOptions()
     {
-        Options.JsonSerializerOptions.PropertyNamingPolicy = Options.NamingPolicy.JsonPropertyNamingPolicy;
+        Options.JsonSerializerOptions = new JsonSerializerOptions(Options.JsonSerializerOptions)
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false
+        };
         Options.JsonSerializerOptions.Converters.Add(new EnumConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableConceptAsJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
