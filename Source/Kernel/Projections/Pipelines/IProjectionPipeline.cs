@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.ReadModels;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
@@ -31,6 +31,18 @@ public interface IProjectionPipeline
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>Awaitable task.</returns>
     Task EndReplay(ReplayContext context);
+
+    /// <summary>
+    /// Begin bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task BeginBulk();
+
+    /// <summary>
+    /// End bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task EndBulk();
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

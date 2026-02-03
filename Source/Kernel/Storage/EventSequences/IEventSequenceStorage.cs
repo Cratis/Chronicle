@@ -48,8 +48,10 @@ public interface IEventSequenceStorage
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
+    /// <param name="tags">Collection of tags associated with the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event.</param>
+    /// <param name="hash">The <see cref="EventHash"/> of the event content.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
@@ -61,8 +63,17 @@ public interface IEventSequenceStorage
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
         DateTimeOffset occurred,
-        ExpandoObject content);
+        ExpandoObject content,
+        EventHash hash);
+
+    /// <summary>
+    /// Append multiple events to the event store transactional.
+    /// </summary>
+    /// <param name="events">Collection of events to append.</param>
+    /// <returns>Result with appended events or duplicate sequence number error.</returns>
+    Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -206,4 +217,24 @@ public interface IEventSequenceStorage
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get events with a limit starting from a specific sequence number.
+    /// </summary>
+    /// <param name="start">The starting <see cref="EventSequenceNumber"/>.</param>
+    /// <param name="limit">The maximum number of events to retrieve.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to filter for.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to filter for.</param>
+    /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns><see cref="IEventCursor"/>.</returns>
+    Task<IEventCursor> GetEventsWithLimit(
+        EventSequenceNumber start,
+        int limit,
+        EventSourceId? eventSourceId = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        CancellationToken cancellationToken = default);
 }

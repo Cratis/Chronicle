@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -25,6 +26,7 @@ public record ProjectionEventContext(
     bool NeedsInitialState)
 {
     readonly List<ProjectionFuture> _deferredFutures = [];
+    readonly List<FailedPartition> _failedPartitions = [];
 
     /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
@@ -35,6 +37,11 @@ public record ProjectionEventContext(
     /// Gets whether this event has been deferred (has futures that couldn't be resolved).
     /// </summary>
     public bool IsDeferred => _deferredFutures.Count > 0;
+
+    /// <summary>
+    /// Gets the collection of failed partitions from bulk operations.
+    /// </summary>
+    public IEnumerable<FailedPartition> FailedPartitions => _failedPartitions;
 
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
@@ -75,6 +82,12 @@ public record ProjectionEventContext(
 
         _deferredFutures.Add(future);
     }
+
+    /// <summary>
+    /// Adds a failed partition to the context.
+    /// </summary>
+    /// <param name="failedPartition">The <see cref="FailedPartition"/> to add.</param>
+    public void AddFailedPartition(FailedPartition failedPartition) => _failedPartitions.Add(failedPartition);
 
     /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and

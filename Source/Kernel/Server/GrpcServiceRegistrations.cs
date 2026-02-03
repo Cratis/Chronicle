@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
+using ProtoBuf.Grpc.Server;
 
 namespace Cratis.Chronicle.Server;
 
@@ -17,7 +17,8 @@ public static class GrpcServiceRegistrations
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
-        services.AddGrpc(options => options.Interceptors.Add<CorrelationIdServerInterceptor>());
+        services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
+
         services.AddSingleton<Contracts.IEventStores, Services.EventStores>();
         services.AddSingleton<Contracts.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
@@ -30,10 +31,13 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.IFailedPartitions, Services.Observation.FailedPartitions>();
         services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
+        services.AddSingleton<Contracts.Observation.Webhooks.IWebhooks, Services.Observation.Webhooks.Webhooks>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
         services.AddSingleton<Contracts.Seeding.IEventSeeding, Services.Seeding.EventSeeding>();
+        services.AddSingleton<Contracts.Security.IUsers, Services.Security.Users>();
+        services.AddSingleton<Contracts.Security.IApplications, Services.Security.Applications>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
 
         return services;
@@ -64,6 +68,8 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.Jobs.Jobs>();
             _.MapGrpcService<Services.Seeding.EventSeeding>();
+            _.MapGrpcService<Services.Security.Users>();
+            _.MapGrpcService<Services.Security.Applications>();
             _.MapGrpcService<Services.Host.Server>();
         });
 

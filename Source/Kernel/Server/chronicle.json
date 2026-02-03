@@ -1,6 +1,10 @@
 {
-    "apiPort": 8080,
+    "managementPort": 8080,
     "port": 35000,
+    "authentication": {
+        "enabled": true,
+        "defaultAdminPassword": "ChangeMeNow!"
+    },
     "features": {
         "api": true,
         "workbench": true,

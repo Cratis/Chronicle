@@ -35,4 +35,16 @@ public interface ITypeFormats
     /// <param name="type">CLR type.</param>
     /// <returns>Known format.</returns>
     string GetFormatForType(Type type);
+
+    /// <summary>
+    /// Get all supported type formats.
+    /// </summary>
+    /// <returns>Dictionary of type to format mappings.</returns>
+    IReadOnlyDictionary<Type, string> GetAllFormats();
+
+    /// <summary>
+    /// Get all supported type formats with full metadata.
+    /// </summary>
+    /// <returns>Collection of type format metadata.</returns>
+    IEnumerable<TypeFormatMetadata> GetAllFormatsMetadata();
 }

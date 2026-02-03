@@ -89,7 +89,7 @@ public class ChangesetConverter(
                     break;
 
                 case Joined joined:
-                    PerformJoined(key, updateDefinitionBuilder, joinTasks, joined, eventSequenceNumber);
+                    joinTasks.Add(PerformJoined(key, updateDefinitionBuilder, joined, eventSequenceNumber));
                     break;
 
                 case ResolvedJoin resolvedJoined:
@@ -191,14 +191,14 @@ public class ChangesetConverter(
             : updateDefinitionBuilder.Pull(property, bsonValue);
     }
 
-    void PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, List<Task> joinTasks, Joined joined, EventSequenceNumber eventSequenceNumber)
+    async Task PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, Joined joined, EventSequenceNumber eventSequenceNumber)
     {
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
         var collection = collections.GetCollection();
 
         var joinArrayFiltersForDocument = new ArrayFilters();
-        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber).Wait();
+        await ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber);
 
         if (!hasJoinChanges)
         {
@@ -206,14 +206,14 @@ public class ChangesetConverter(
         }
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
         var filter = CreateJoinedFilterDefinition(key, joined);
-        joinTasks.Add(collection.UpdateManyAsync(
+        await collection.UpdateManyAsync(
             filter,
             joinUpdateBuilder,
             new UpdateOptions
             {
                 IsUpsert = false,
                 ArrayFilters = [.. joinArrayFiltersForDocument]
-            }));
+            });
     }
 
     FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)

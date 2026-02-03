@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Grains.Observation.Jobs;
 
@@ -35,7 +33,7 @@ internal static partial class HandleEventsForPartitionLogging
     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} successfully handled {EventCount} events. Last handled event sequence number is {LastHandledEventSequenceNumber}")]
     internal static partial void SuccessfullyHandledEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventCount eventCount, EventSequenceNumber lastHandledEventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} successfully handled {EventCount} events, but failed handling {FailedEventSequenceNumber}. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} successfully handled {EventCount} events, but failed handling event at event sequence number {FailedEventSequenceNumber}. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
     internal static partial void FailedHandlingEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventCount eventCount, EventSequenceNumber failedEventSequenceNumber, EventSequenceNumber lastHandledEventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} failed handling events due to disconnection. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
@@ -61,18 +59,4 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]
     internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
-}
-
-internal static class HandleEventsForPartitionScopes
-{
-    internal static IDisposable? BeginObserverScope(this ILogger<HandleEventsForPartition> logger, ObserverKey observerKey, JobId jobId, JobStepId jobStepId) =>
-        logger.BeginScope(new
-        {
-            observerKey.ObserverId,
-            observerKey.EventStore,
-            observerKey.Namespace,
-            observerKey.EventSequenceId,
-            JobId = jobId,
-            JobStepId = jobStepId
-        });
 }

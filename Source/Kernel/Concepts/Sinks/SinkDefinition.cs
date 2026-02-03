@@ -6,9 +6,9 @@ namespace Cratis.Chronicle.Concepts.Sinks;
 /// <summary>
 /// Represents the definition of where to store results from a projection.
 /// </summary>
-/// <param name="ConfigurationId">Unique <see cref="SinkConfigurationId"/> for the configuration.</param>
-/// <param name="TypeId">Type of store.</param>
-public record SinkDefinition(SinkConfigurationId ConfigurationId, SinkTypeId TypeId)
+/// <param name="Configuration">Unique <see cref="SinkConfigurationId"/> for the configuration.</param>
+/// <param name="Type">Type of store.</param>
+public record SinkDefinition(SinkConfigurationId Configuration, SinkTypeId Type)
 {
     /// <summary>
     /// Gets the none representation of <see cref="SinkDefinition"/>.

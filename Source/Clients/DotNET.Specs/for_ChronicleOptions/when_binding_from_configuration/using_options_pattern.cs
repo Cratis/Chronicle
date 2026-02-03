@@ -15,7 +15,7 @@ public class using_options_pattern : Specification
     {
         var configuration = new Dictionary<string, string?>
         {
-            ["Chronicle:Url"] = "chronicle://options-server:7070"
+            ["Chronicle:ConnectionString"] = "chronicle://options-server:7070"
         };
 
         var configurationRoot = new ConfigurationBuilder()
@@ -29,7 +29,7 @@ public class using_options_pattern : Specification
         _result = serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value;
     }
 
-    [Fact] void should_bind_url_property() => _result.Url.ShouldNotBeNull();
-    [Fact] void should_have_correct_host() => _result.Url.ServerAddress.Host.ShouldEqual("options-server");
-    [Fact] void should_have_correct_port() => _result.Url.ServerAddress.Port.ShouldEqual(7070);
+    [Fact] void should_bind_url_property() => _result.ConnectionString.ShouldNotBeNull();
+    [Fact] void should_have_correct_host() => _result.ConnectionString.ServerAddress.Host.ShouldEqual("options-server");
+    [Fact] void should_have_correct_port() => _result.ConnectionString.ServerAddress.Port.ShouldEqual(7070);
 }

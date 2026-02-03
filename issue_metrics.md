@@ -333,4 +333,7 @@
 | Formalize a main database for the event store to hold common data | https://github.com/Cratis/Chronicle/issues/1249 | None | [einari](https://github.com/einari) | None | 20 days, 5:59:58 | None |
 | Optimize the Projections storage provider to have a local cache for projection definitions it already has loaded | https://github.com/Cratis/Chronicle/issues/1248 | None | [einari](https://github.com/einari) | None | None | None |
 | Add support for an automatic namespace selection | https://github.com/Cratis/Chronicle/issues/1243 | None | [einari](https://github.com/einari) | None | 62 days, 9:00:02 | None |
-| Improve WebApplicationBuilder, ServiceCollection and HostBuilder extensions to allow for customization | https://github.com/Cratis/Chronicle/issues/1242
+| Improve WebApplicationBuilder, ServiceCollection and HostBuilder extensions to allow for customization | https://github.com/Cratis/Chronicle/issues/1242 | None | [einari](https://github.com/einari) | None | 516 days, 1:39:00 | None |
+| Remove ValidFrom as concept | https://github.com/Cratis/Chronicle/issues/1241 | None | [einari](https://github.com/einari) | None | 1 day, 4:25:53 | None |
+| Split the repository | https://github.com/Cratis/Chronicle/issues/1206 | None | [einari](https://github.com/einari) | None | None | None |
+| Add in-process Workbench | https://github.com/Cratis/Chronicle/issues/120

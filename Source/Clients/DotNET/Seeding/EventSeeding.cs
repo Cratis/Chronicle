@@ -46,7 +46,9 @@ public class EventSeeding(
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
         foreach (var @event in events)
         {
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event));
+            var eventType_clrType = @event.GetType();
+            var staticTags = eventType_clrType.GetTags().Select(t => (Tag)t);
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags));
         }
         return this;
     }
@@ -57,7 +59,8 @@ public class EventSeeding(
         foreach (var @event in events)
         {
             var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event));
+            var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
+            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags));
         }
         return this;
     }
@@ -87,10 +90,12 @@ public class EventSeeding(
         foreach (var entry in _entries)
         {
             var content = await _eventSerializer.Serialize(entry.Event);
+            var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
             serializedEntries.Add(new SerializedSeedingEntry(
                 entry.EventSourceId.Value,
                 entry.EventTypeId.Value,
-                JsonSerializer.Serialize(content)));
+                JsonSerializer.Serialize(content),
+                tags));
         }
 
         await servicesAccessor.Services.Seeding.Seed(
@@ -102,13 +107,14 @@ public class EventSeeding(
                 {
                     EventSourceId = e.EventSourceId,
                     EventTypeId = e.EventTypeId,
-                    Content = e.Content
+                    Content = e.Content,
+                    Tags = e.Tags
                 })
             });
 
         _entries.Clear();
     }
 
-    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event);
-    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content);
+    record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags);
+    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content, IList<string> Tags);
 }

@@ -7,6 +7,7 @@ env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
+  DOTNET_NUGET_CACHE: "dotnet-nuget-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
@@ -45,6 +46,7 @@ jobs:
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
 
     steps:
       - name: Checkout code
@@ -143,7 +145,12 @@ jobs:
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/x64
+        run: |
+          dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/x64
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+          CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
+
 
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
@@ -170,7 +177,12 @@ jobs:
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true --self-contained -o out/arm64
+        run: |
+          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/arm64
+        env:
+          CHRONICLE_CERT_BASE64: ${{ secrets.CHRONICLE_CERT_BASE64 }}
+          CHRONICLE_CERT_PASSWORD: ${{ secrets.CHRONICLE_CERT_PASSWORD }}
+
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -211,8 +223,11 @@ jobs:
         working-directory: ./Source/Workbench/Web
         run: |
           yarn build
+        env:
+          CHRONICLE_VERSION: ${{ needs.release.outputs.version }}
+          CHRONICLE_COMMIT_SHA: ${{ github.sha }}
 
-  publish-nuget-packages:
+  dotnet:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     needs: [release, workbench]
@@ -237,14 +252,118 @@ jobs:
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
+
+
+
       - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }}
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
+
       - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -maxcpucount:1
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:Publish=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -maxcpucount:1
         working-directory: ./Source/Clients
 
       - name: Create NuGet packages
         run: dotnet pack -p:IsPackaging=true --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+
+      - uses: actions/cache@v3
+        id: nuget-packages-output
+        with:
+          path: ${{ env.NUGET_OUTPUT }}
+          key: ${{ env.DOTNET_NUGET_CACHE }}
+
+  dotnet-x64-development:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-development-output
+        with:
+          path: ./Source/Kernel/Server/out/development/x64
+          key: ${{ env.DOTNET_X64_CACHE }}-development
+
+      - name: Build development x64 Kernel (DEVELOPMENT symbol)
+        working-directory: ./Source/Kernel/Server
+        run: |
+          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/development/x64
+
+
+      - name: Upload development outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-development-out
+          path: ./Source/Kernel/Server/out/development
+
+  dotnet-arm64-development:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-24.04-arm
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-arm64-development-output
+        with:
+          path: ./Source/Kernel/Server/out/development/arm64
+          key: ${{ env.DOTNET_ARM64_CACHE }}-development
+
+      - name: Build development arm64 Kernel (DEVELOPMENT symbol)
+        working-directory: ./Source/Kernel/Server
+        run: |
+          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/development/arm64
+
+
+      - name: Upload development outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-development-out
+          path: ./Source/Kernel/Server/out/development
+
+  publish-nuget-packages:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release, dotnet]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v3
+        id: nuget-packages-output
+        with:
+          path: ${{ env.NUGET_OUTPUT }}
+          key: ${{ env.DOTNET_NUGET_CACHE }}
+          fail-on-cache-miss: true
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
 
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
@@ -263,6 +382,7 @@ jobs:
         with:
           path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: dotnet-arm64-output
@@ -291,6 +411,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build Production Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -299,9 +430,7 @@ jobs:
           file: ./Docker/Production/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            cratis/chronicle:${{ needs.release.outputs.version }}
-            cratis/chronicle:latest
+          tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -319,6 +448,7 @@ jobs:
         with:
           path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
+          fail-on-cache-miss: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -335,6 +465,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}-workbench"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest-workbench"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build Workbench Image
         uses: docker/build-push-action@v5
         with:
@@ -342,9 +483,7 @@ jobs:
           context: .
           file: ./Docker/Workbench/Dockerfile
           push: true
-          tags: |
-            cratis/chronicle:${{ needs.release.outputs.version }}-workbench
-            cratis/chronicle:latest-workbench
+          tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
@@ -362,12 +501,14 @@ jobs:
         with:
           path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: dotnet-arm64-output
         with:
           path: ./Source/Kernel/Server/out/arm64
           key: ${{ env.DOTNET_ARM64_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: workbench-output
@@ -390,6 +531,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}-development"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest-development"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Build Development Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -398,9 +550,7 @@ jobs:
           file: ./Docker/Development/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            cratis/chronicle:${{ needs.release.outputs.version }}-development
-            cratis/chronicle:latest-development
+          tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 

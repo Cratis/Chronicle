@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -39,7 +41,7 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
+    public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
@@ -61,7 +63,7 @@ public class EventTypesStorage(
             }
         }
 
-        var eventSchema = new EventTypeSchema(type, schema);
+        var eventSchema = new EventTypeSchema(type, owner, source, schema);
         if (_eventTypes.Any(_ => _.Id == type.Id))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
@@ -82,6 +84,12 @@ public class EventTypesStorage(
         var schemas = result.ToList();
         return schemas.Select(_ => _.ToKernel());
     }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() =>
+        new TransformingSubject<IEnumerable<EventType>, IEnumerable<EventTypeSchema>>(
+            GetCollection().Observe(),
+            _ => _.Select(_ => _.ToKernel()));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)

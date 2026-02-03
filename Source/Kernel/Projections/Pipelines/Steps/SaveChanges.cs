@@ -34,7 +34,18 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
         logger.SavingResult(context.Event.Context.SequenceNumber);
 
         // TODO: Return the number of affected records and pass this along to the changeset storage
-        await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
+        var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
+
+        if (failedPartitions.Any())
+        {
+            foreach (var failedPartition in failedPartitions)
+            {
+                context.AddFailedPartition(failedPartition);
+            }
+
+            return context;
+        }
+
         await changesetStorage.Save(
             projection.ReadModel.Name,
             context.Key,

@@ -18,18 +18,34 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReplayObserver"/> class.
 /// </remarks>
+/// <param name="catchupServiceClient"><see cref="IObserverServiceClient"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
 public class CatchUpObserver(
+    IObserverServiceClient catchupServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
     /// <inheritdoc/>
+    protected override async Task OnBeforeStartingJobSteps()
+    {
+        await catchupServiceClient.BeginCatchupFor(State.ObserverDetails);
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnBeforeResumingJobSteps()
+    {
+        await catchupServiceClient.ResumeCatchupFor(State.ObserverDetails);
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
+        await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
+
         if (!AllStepsCompletedSuccessfully)
         {
             if (State.LastHandledEventSequenceNumber.IsActualValue)

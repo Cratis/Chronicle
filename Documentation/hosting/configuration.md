@@ -8,13 +8,14 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 
 ```json
 {
-    "apiPort": 8080,
+    "managementPort": 8080,
     "port": 35000,
     "healthCheckEndpoint": "/health",
     "features": {
         "api": true,
         "workbench": true,
-        "changesetStorage": false
+        "changesetStorage": false,
+        "oAuthAuthority": true
     },
     "storage": {
         "type": "MongoDB",
@@ -29,6 +30,11 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
     },
     "events": {
         "queues": 8
+    },
+    "authentication": {
+        "authority": null,
+        "defaultAdminUsername": "admin",
+        "defaultAdminPassword": "admin"
     }
 }
 ```
@@ -39,7 +45,7 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 
 | Property           | Type   | Default  | Description                                      |
 |--------------------|--------|----------|--------------------------------------------------|
-| apiPort            | number | 8080     | Port for the REST API server and Workbench      |
+| managementPort     | number | 8080     | Port for the Management API, Workbench, and well-known endpoints |
 | port               | number | 35000    | Main gRPC service port                           |
 | healthCheckEndpoint| string | /health  | Health check endpoint path                       |
 
@@ -50,8 +56,9 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 | api              | boolean | true    | Enable REST API endpoint                       |
 | workbench        | boolean | true    | Enable web-based management interface          |
 | changesetStorage | boolean | false   | Enable changeset storage functionality         |
+| oAuthAuthority   | boolean | true    | Enable internal OpenIdDict-based OAuth authority |
 
-> **Note**: If the API is disabled, the Workbench is also disabled as it depends on the API.
+> **Note**: If the API is disabled, the Workbench is also disabled as it depends on the API. The OAuth authority is automatically disabled when an external authority is configured via the `authentication.authority` setting.
 
 #### Storage Configuration
 
@@ -76,6 +83,16 @@ Chronicle looks for a `chronicle.json` file in the application root directory. H
 |----------|--------|---------|--------------------------------------|
 | queues   | number | 8       | Number of appended event queues to use |
 
+#### Authentication Configuration
+
+| Property | Type   | Default | Description                                           |
+|----------|--------|---------|-------------------------------------------------------|
+| authority | string | null   | External OAuth authority URL. When not set, uses internal OpenIdDict-based authority |
+| defaultAdminUsername | string | "admin" | Default admin username created on first startup |
+| defaultAdminPassword | string | "admin" | Default admin password (should be changed in production) |
+
+> **Note**: Authentication is always enabled. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
+
 ## Environment Variables
 
 All configuration options can be set using environment variables with the prefix `Cratis__Chronicle__`. Use double underscores (`__`) to represent nested configuration sections.
@@ -86,8 +103,8 @@ All configuration options can be set using environment variables with the prefix
 # gRPC port (default: 35000)
 Cratis__Chronicle__Port=35000
 
-# REST API port (default: 8080)
-Cratis__Chronicle__ApiPort=8080
+# Management API port (default: 8080)
+Cratis__Chronicle__ManagementPort=8080
 ```
 
 ### Health Check Endpoint
@@ -108,6 +125,10 @@ Cratis__Chronicle__Features__Workbench=true
 
 # Enable/disable Changeset Storage (default: false)
 Cratis__Chronicle__Features__ChangesetStorage=false
+
+# Enable/disable internal OAuth authority (default: true)
+# Automatically disabled when external authority is configured
+Cratis__Chronicle__Features__OAuthAuthority=true
 ```
 
 ### Storage
@@ -146,6 +167,21 @@ Cratis__Chronicle__Observers__MaximumBackoffDelay=600
 Cratis__Chronicle__Events__Queues=8
 ```
 
+### Authentication
+
+```bash
+# External OAuth authority URL (optional)
+# When not set, uses internal OpenIdDict-based authority
+Cratis__Chronicle__Authentication__Authority=https://your-oauth-provider.com
+
+# Default admin username (default: "admin")
+Cratis__Chronicle__Authentication__DefaultAdminUsername=admin
+
+# Default admin password (default: "admin")
+# Should be changed in production
+Cratis__Chronicle__Authentication__DefaultAdminPassword=your-secure-password
+```
+
 ## Docker Configuration
 
 When running Chronicle in Docker, you can configure it using either mounted configuration files or environment variables.
@@ -171,7 +207,7 @@ Pass configuration via environment variables using the `-e` flag:
 docker run -d \
   --name chronicle \
   -e Cratis__Chronicle__Port=35000 \
-  -e Cratis__Chronicle__ApiPort=8080 \
+  -e Cratis__Chronicle__ManagementPort=8080 \
   -e Cratis__Chronicle__HealthCheckEndpoint=/health \
   -e Cratis__Chronicle__Storage__Type=MongoDB \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongo:27017 \
@@ -193,15 +229,17 @@ services:
     image: cratis/chronicle:latest
     environment:
       - Cratis__Chronicle__Port=35000
-      - Cratis__Chronicle__ApiPort=8080
+      - Cratis__Chronicle__ManagementPort=8080
       - Cratis__Chronicle__HealthCheckEndpoint=/health
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017
       - Cratis__Chronicle__Features__Api=true
       - Cratis__Chronicle__Features__Workbench=true
+      - Cratis__Chronicle__Features__OAuthAuthority=true
       - Cratis__Chronicle__Observers__SubscriberTimeout=10
       - Cratis__Chronicle__Observers__MaxRetryAttempts=5
       - Cratis__Chronicle__Events__Queues=8
+      - Cratis__Chronicle__Authentication__DefaultAdminPassword=change-me-in-production
     ports:
       - "8080:8080"
       - "35000:35000"
@@ -248,7 +286,7 @@ Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | API Server        | REST API for client interactions         |
+| 8080  | Management API    | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | Primary Chronicle gRPC service port      |

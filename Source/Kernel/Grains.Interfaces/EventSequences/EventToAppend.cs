@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// <param name="eventStreamType">the <see cref="EventStreamType"/> to append to.</param>
 /// <param name="eventStreamId">The <see cref="EventStreamId"/> to append to.</param>
 /// <param name="EventType">The <see cref="EventType">type of event</see> to append.</param>
+/// <param name="Tags">Collection of tags associated with the event.</param>
 /// <param name="Content">The JSON payload of the event.</param>
 public record EventToAppend(
     EventSourceType EventSourceType,
@@ -21,4 +22,5 @@ public record EventToAppend(
     EventStreamType eventStreamType,
     EventStreamId eventStreamId,
     EventType EventType,
+    IEnumerable<Tag> Tags,
     JsonObject Content);

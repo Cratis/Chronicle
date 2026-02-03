@@ -28,7 +28,7 @@ public class without_identified_by_specified(context context) : Given<context>(c
         }
 
         void Because()
-       {
+        {
             var children = Result.Children.ToArray();
             FirstChild = children[0];
             SecondChild = children[1];

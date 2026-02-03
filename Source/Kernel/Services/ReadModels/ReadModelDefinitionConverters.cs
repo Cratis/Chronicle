@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Services.Sinks;
 using NJsonSchema;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -23,11 +24,20 @@ internal static class ReadModelDefinitionConverters
         var latestSchema = definition.GetSchemaForLatestGeneration();
         return new()
         {
-            Identifier = definition.Identifier,
+            Type = new Contracts.ReadModels.ReadModelType
+            {
+                Identifier = definition.Identifier,
+                Generation = latestGeneration.Value
+            },
             Name = definition.Name,
-            Generation = latestGeneration.Value,
+            DisplayName = definition.DisplayName,
+            Sink = definition.Sink.ToContract(),
             Schema = latestSchema.ToJson(),
-            Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList()
+            Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList(),
+            ObserverType = (Contracts.ReadModels.ReadModelObserverType)(int)definition.ObserverType,
+            ObserverIdentifier = definition.ObserverIdentifier,
+            Owner = (Contracts.ReadModels.ReadModelOwner)(int)definition.Owner,
+            Source = (Contracts.ReadModels.ReadModelSource)(int)definition.Source
         };
     }
 
@@ -36,8 +46,9 @@ internal static class ReadModelDefinitionConverters
     /// </summary>
     /// <param name="contract">The <see cref="Contracts.ReadModels.ReadModelDefinition"/> to convert.</param>
     /// <param name="owner">The owner of the read model.</param>
+    /// <param name="source">The source of the read model.</param>
     /// <returns>The converted <see cref="ReadModelDefinition"/>.</returns>
-    public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner)
+    public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner, Contracts.ReadModels.ReadModelSource source)
     {
         var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
         var indexes = contract.Indexes
@@ -45,12 +56,17 @@ internal static class ReadModelDefinitionConverters
             .ToArray();
 
         return new(
-            contract.Identifier,
+            contract.Type.Identifier,
             contract.Name,
+            contract.DisplayName,
             (ReadModelOwner)(int)owner,
+            (ReadModelSource)(int)source,
+            (ReadModelObserverType)(int)contract.ObserverType,
+            contract.ObserverIdentifier,
+            contract.Sink.ToChronicle(),
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { (ReadModelGeneration)contract.Generation, schema }
+                { (ReadModelGeneration)contract.Type.Generation, schema }
             },
             indexes
         );

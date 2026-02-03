@@ -32,44 +32,63 @@ public class with_auto_map : given.a_model_bound_projection_builder
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
     [Fact] void should_have_children_for_items() => _result.Children.Keys.ShouldContain(nameof(OrderWithAutoMappedChildren.Items));
 
-    [Fact] void should_have_from_definition_for_line_item_added()
+    [Fact]
+    void should_have_from_definition_for_line_item_added()
     {
         var eventType = event_types.GetEventTypeFor(typeof(LineItemAdded)).ToContract();
         var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
         childrenDef.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_auto_map_product_name()
+    [Fact]
+    void should_not_auto_map_product_name()
     {
         var eventType = event_types.GetEventTypeFor(typeof(LineItemAdded)).ToContract();
         var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(OrderLineItem.ProductName));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(OrderLineItem.ProductName));
     }
 
-    [Fact] void should_auto_map_quantity()
+    [Fact]
+    void should_not_auto_map_quantity()
     {
         var eventType = event_types.GetEventTypeFor(typeof(LineItemAdded)).ToContract();
         var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(OrderLineItem.Quantity));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(OrderLineItem.Quantity));
     }
 
-    [Fact] void should_auto_map_price()
+    [Fact]
+    void should_not_auto_map_price()
     {
         var eventType = event_types.GetEventTypeFor(typeof(LineItemAdded)).ToContract();
         var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(OrderLineItem.Price));
+        fromDef.Properties.Keys.ShouldNotContain(nameof(OrderLineItem.Price));
     }
 
-    [Fact] void should_apply_naming_policy_to_identified_by()
+    [Fact]
+    void should_have_auto_map_enabled_on_children()
+    {
+        var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
+        childrenDef.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_projection()
+    {
+        _result.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
+    }
+
+    [Fact]
+    void should_apply_naming_policy_to_identified_by()
     {
         var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];
         childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(OrderLineItem.Id))));
     }
 
-    [Fact] void should_apply_naming_policy_to_key()
+    [Fact]
+    void should_apply_naming_policy_to_key()
     {
         var eventType = event_types.GetEventTypeFor(typeof(LineItemAdded)).ToContract();
         var childrenDef = _result.Children[nameof(OrderWithAutoMappedChildren.Items)];

@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
 using Cratis.Reflection;
 using Cratis.Types;
@@ -66,7 +67,7 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;
@@ -75,15 +76,21 @@ public class InMemorySink(
         if (changeset.HasBeenRemoved())
         {
             collection.Remove(keyValue);
-            return Task.CompletedTask;
+            return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
 
-        return Task.CompletedTask;
+        return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)
@@ -132,6 +139,14 @@ public class InMemorySink(
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var instances = Collection.Values.Skip(skip).Take(take);
+        var totalCount = Collection.Count;
+        return Task.FromResult(new ReadModelInstances(instances, totalCount));
+    }
 
     /// <inheritdoc/>
     public void Dispose()

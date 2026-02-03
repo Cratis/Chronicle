@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Grains.EventTypes.Kernel;
+using Cratis.Chronicle.Grains.EventTypes;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 
 namespace Orleans.Hosting;
@@ -18,12 +19,16 @@ namespace Orleans.Hosting;
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
 /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
+/// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
     IReactors reactors,
-    IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
+    IProjectionsServiceClient projectionsServiceClient,
+    IGrainFactory grainFactory,
+    IAuthenticationService authenticationService) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
@@ -52,6 +57,9 @@ internal sealed class ChronicleServerStartupTask(
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await projectionsManager.Ensure();
 
+            var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
+            await projectionsServiceClient.Register(eventStore, projectionDefinitions);
+
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
                 await reactors.DiscoverAndRegister(eventStore, namespaceName);
@@ -61,5 +69,10 @@ internal sealed class ChronicleServerStartupTask(
             });
             await Task.WhenAll(rehydrateAll);
         }
+
+        await authenticationService.EnsureDefaultAdminUser();
+#if DEVELOPMENT
+        await authenticationService.EnsureDefaultClientCredentials();
+#endif
     }
 }

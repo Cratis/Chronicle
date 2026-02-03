@@ -1,3 +1,5 @@
+- name: Connection Strings
+  href: connection-strings.md
 - name: Namespaces
   href: namespaces.md
 - name: Events
@@ -16,3 +18,5 @@
   href: events/projections.md
 - name: Constraints
   href: constraints.md
+- name: Code Analysis
+  href: code-analysis/toc.yml

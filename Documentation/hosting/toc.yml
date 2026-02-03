@@ -2,3 +2,7 @@
   href: production.md
 - name: Configuration
   href: configuration.md
+- name: Local Certificates
+  href: local-certificates.md
+- name: Data Protection Key Encryption
+  href: encryption-certificate.md

@@ -17,6 +17,12 @@
         <GenerateAssemblyTitleAttribute>true</GenerateAssemblyTitleAttribute>
         <GenerateAssemblyDescriptionAttribute>true</GenerateAssemblyDescriptionAttribute>
 
+        <!-- Versioning -->
+        <!-- AssemblyVersion and FileVersion must be numeric (major.minor.patch.revision) -->
+        <!-- InformationalVersion can include SemVer prerelease and metadata -->
+        <InformationalVersion Condition="'$(SourceRevisionId)' != ''">$(Version)+$(SourceRevisionId)</InformationalVersion>
+        <InformationalVersion Condition="'$(SourceRevisionId)' == ''">$(Version)</InformationalVersion>
+
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <IsTestProject>false</IsTestProject>
@@ -50,7 +56,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
         <PackageReference Include="Cratis.Fundamentals" />
-        <PackageReference Include="System.Private.Uri" />
     </ItemGroup>
 
     <ItemGroup>
