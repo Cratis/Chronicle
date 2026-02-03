@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="OrleansTestKit" />
+        <PackageReference Include="OrleansTestKit10" />
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 

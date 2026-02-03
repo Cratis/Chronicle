@@ -51,7 +51,7 @@
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.0.0" />
-    <PackageVersion Include="OrleansTestKit" Version="9.0.0" />
+    <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.15.0" />
