@@ -29,6 +29,8 @@ public class Reactor : IReactor
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events)
     {
+        var lastSuccessfullyHandledSequenceNumber = EventSequenceNumber.Unavailable;
+
         foreach (var @event in events)
         {
             if (_eventMethodsByEventType.TryGetValue(@event.Context.EventType.Id, out var method))
@@ -38,12 +40,13 @@ public class Reactor : IReactor
                     var content = _eventSerializer.Deserialize(@event);
                     var task = (method.Invoke(this, [content, @event.Context]) as Task)!;
                     await task;
+                    lastSuccessfullyHandledSequenceNumber = @event.Context.SequenceNumber;
                 }
                 catch (Exception exception)
                 {
                     return new(
                         ObserverSubscriberState.Failed,
-                        @event.Context.SequenceNumber,
+                        lastSuccessfullyHandledSequenceNumber,
                         exception.GetAllMessages(),
                         exception.StackTrace ?? string.Empty);
                 }
