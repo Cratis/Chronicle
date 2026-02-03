@@ -6,8 +6,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grains.EventTypes;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Properties;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Grains.EventSequences;
 
@@ -16,24 +14,13 @@ namespace Cratis.Chronicle.Grains.EventSequences;
 /// </summary>
 /// <param name="eventTypes">The <see cref="IEventTypes"/> for working with event types.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
+/// <param name="serializerOptions">The <see cref="JsonSerializerOptions"/> to use.</param>
 public class EventSerializer(
     IEventTypes eventTypes,
-    IExpandoObjectConverter expandoObjectConverter) : IEventSerializer
+    IExpandoObjectConverter expandoObjectConverter,
+    JsonSerializerOptions serializerOptions) : IEventSerializer
 {
-    static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerOptions.Web)
-    {
-        Converters =
-        {
-            new EnumConverterFactory(),
-            new EnumerableConceptAsJsonConverterFactory(),
-            new ConceptAsJsonConverterFactory(),
-            new DateOnlyJsonConverter(),
-            new TimeOnlyJsonConverter(),
-            new TypeJsonConverter(),
-            new UriJsonConverter(),
-            new PropertyPathJsonConverter()
-        }
-    };
+    readonly JsonSerializerOptions _serializerOptions = serializerOptions;
 
     /// <inheritdoc/>
     public object Deserialize(Type type, JsonObject json) =>

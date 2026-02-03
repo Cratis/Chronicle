@@ -212,7 +212,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         Options.JsonSerializerOptions = new JsonSerializerOptions(Options.JsonSerializerOptions)
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNamingPolicy = Options.NamingPolicy.JsonPropertyNamingPolicy,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             WriteIndented = false
         };

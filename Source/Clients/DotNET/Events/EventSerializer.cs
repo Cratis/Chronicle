@@ -31,6 +31,7 @@ public class EventSerializer : IEventSerializer
     {
         _serializerOptions = new JsonSerializerOptions(serializerOptions)
         {
+            PropertyNameCaseInsensitive = true,
             Converters =
             {
                 new EventRedactedConverters(eventTypes)
