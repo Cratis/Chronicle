@@ -64,6 +64,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Observation.FailedPartitions>();
             _.MapGrpcService<Services.Observation.Reactors.Reactors>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
+            _.MapGrpcService<Services.Observation.Webhooks.Webhooks>();
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.Jobs.Jobs>();
