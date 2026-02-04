@@ -91,7 +91,16 @@ internal sealed class AuthenticationService(
         {
             Id = Guid.NewGuid().ToString(),
             ClientId = defaultClientId,
-            ClientSecret = defaultClientSecret
+            ClientSecret = defaultClientSecret,
+            Type = "confidential",
+            ConsentType = "implicit",
+            Permissions =
+            [
+                "ept:token",
+                "gt:client_credentials",
+                "gt:password",
+                "gt:refresh_token"
+            ]
         };
 
         await applicationStorage.Create(application);
