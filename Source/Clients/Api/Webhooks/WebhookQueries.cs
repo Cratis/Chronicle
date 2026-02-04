@@ -48,11 +48,11 @@ public class WebhookQueries : ControllerBase
     static string GetAuthorizationType(Contracts.Observation.Webhooks.WebhookTarget target)
     {
         if (target.Authorization is null) return "None";
-        
+
         if (target.Authorization.Value0 is not null) return "Basic";
         if (target.Authorization.Value1 is not null) return "Bearer";
         if (target.Authorization.Value2 is not null) return "OAuth";
-        
+
         return "None";
     }
 }

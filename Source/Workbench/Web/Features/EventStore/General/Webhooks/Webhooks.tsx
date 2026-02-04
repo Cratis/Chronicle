@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DataTable } from '@cratis/arc.react/primereact';
+import { DataTable } from 'primereact/datatable';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { GetWebhooks, type WebhookDefinition } from 'Api/Webhooks';
 import { Column } from 'primereact/column';
-import { Button } from '@cratis/arc.react/button';
+import { Button } from 'primereact/button';
 import { useDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 import { AddWebhookDialog } from './Add/AddWebhookDialog';
