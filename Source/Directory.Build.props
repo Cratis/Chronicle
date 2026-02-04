@@ -70,6 +70,7 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(IsTestProject)'=='true'">
+        <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="NSubstitute" />
         <PackageReference Include="xunit" />
