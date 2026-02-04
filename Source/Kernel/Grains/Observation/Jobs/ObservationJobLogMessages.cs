@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 #pragma warning disable MA0048 // File name must match type name
 #pragma warning disable SA1402 // File may only contain a single type
 
-internal static partial class JobLogging
+internal static partial class ObservationJobLogMessages
 {
     [LoggerMessage(LogLevel.Warning, "Not all events were handled after performing '{JobName}' job. The last handled event sequence number was {LastSequenceNumber}")]
     internal static partial void NotAllEventsWereHandled(this ILogger<IJob> logger, string jobName, EventSequenceNumber lastSequenceNumber);
