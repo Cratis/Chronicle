@@ -56,7 +56,7 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
                   --argjson timestamp "$timestamp" '
     # Update timestamp
     .lastUpdate = $timestamp |
-    
+
     # Process each assembly
     ($summary[0].coverage.assemblies // [] | map(
         select(
@@ -77,7 +77,7 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
             )
         }
     )) as $assemblies |
-    
+
     # Update entries for each assembly
     reduce $assemblies[] as $assembly (
         .;
@@ -87,10 +87,10 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
         else
             .
         end |
-        
+
         # Check if entry exists for this week
         ((.entries[$assembly.name] // []) | map(select(.week == $week)) | length) as $exists |
-        
+
         if $exists == 0 then
             # Add new entry
             .entries[$assembly.name] += [{
@@ -102,7 +102,7 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
             }]
         else
             # Update existing entry
-            .entries[$assembly.name] = [.entries[$assembly.name][] | 
+            .entries[$assembly.name] = [.entries[$assembly.name][] |
                 if .week == $week then
                     .lineCoverage = $assembly.coverage |
                     .version = $version |
@@ -113,7 +113,7 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
             ]
         end
     ) |
-    
+
     # Keep only last 52 weeks of data per project
     .entries = (.entries | with_entries(
         .value |= (sort_by(.date) | reverse | .[0:52])
