@@ -192,7 +192,7 @@ Ensure you have configured the certificate path and password as described above.
 
 ## Next Steps
 
-- [Local Certificates](hosting/local-certificates.md) - TLS certificate setup for development
-- [Production Hosting](hosting/production.md) - Production deployment requirements
-- [Configuration](hosting/configuration.md) - Complete configuration reference
+- [Local Certificates](local-certificates.md) - TLS certificate setup for development
+- [Production Hosting](production.md) - Production deployment requirements
+- [Configuration](configuration.md) - Complete configuration reference
 

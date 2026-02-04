@@ -35,7 +35,7 @@ As with singular purpose, nullables means its up for interpretation and logic ne
 for every observers and consumers of the event.
 
 > Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
-> For instance, a person might not have a middle name. Recommend reading up on [concepts and nullability](../../Fundamentals/csharp/concepts.md)
+> For instance, a person might not have a middle name.
 
 ## Cohesion
 

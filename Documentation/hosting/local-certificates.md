@@ -246,5 +246,5 @@ If the client cannot connect:
 
 ## Next Steps
 
-- [Production Hosting](hosting/production.md) - Learn about production certificate requirements
-- [Configuration](hosting/configuration.md) - Complete configuration reference
+- [Production Hosting](production.md) - Learn about production certificate requirements
+- [Configuration](configuration.md) - Complete configuration reference
