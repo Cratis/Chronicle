@@ -36,7 +36,15 @@ discover and register everything automatically.
 
 The following snippet configures the minimum and discovers everything for you:
 
-{{snippet:Quickstart-Console-Setup}}
+```csharp
+using Cratis.Chronicle;
+
+// Explicitly use the Chronicle Options to set the naming policy to camelCase for the projection/reducer sinks
+using var client = new ChronicleClient(ChronicleOptions.FromUrl("http://localhost:35000").WithCamelCaseNamingPolicy());
+var eventStore = await client.GetEventStore("Quickstart");
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Console/Program.cs#L11-L15)
 
 [!INCLUDE [common](./common.md)]
 
@@ -44,4 +52,11 @@ The following snippet configures the minimum and discovers everything for you:
 
 With this you can query the collections as expected using the **MongoDB.Driver**:
 
-{{snippet:Quickstart-Books}}
+```csharp
+public class Books(IMongoCollection<Book> collection)
+{
+    public IEnumerable<Book> GetAll() => collection.Find(Builders<Book>.Filter.Empty).ToList();
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Books.cs#L9-L12)

@@ -40,4 +40,25 @@ automatically discovered and registered with Chronicle.
 
 A more concrete example of a projection with one-to-one relationship:
 
-{{snippet:Quickstart-BorrowedBooksProjection}}
+```csharp
+using Cratis.Chronicle.Projections;
+
+namespace Quickstart.Common;
+
+public class BorrowedBooksProjection : IProjectionFor<BorrowedBook>
+{
+    public void Define(IProjectionBuilderFor<BorrowedBook> builder) => builder
+        .From<BookBorrowed>(from => from
+            .Set(m => m.UserId).To(e => e.UserId)
+            .Set(m => m.Borrowed).ToEventContextProperty(c => c.Occurred))
+        .Join<BookAddedToInventory>(bookBuilder => bookBuilder
+            .On(m => m.Id)
+            .Set(m => m.Title).To(e => e.Title))
+        .Join<UserOnboarded>(userBuilder => userBuilder
+            .On(m => m.UserId)
+            .Set(m => m.User).To(e => e.Name))
+        .RemovedWith<BookReturned>();
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/BorrowedBooksProjection.cs#L5-L22)

@@ -42,4 +42,17 @@ If there is no instance, this value will be null.
 
 A concrete example of a reducer:
 
-{{snippet:Quickstart-BooksReducer}}
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reducers;
+
+namespace Quickstart.Common;
+
+public class BooksReducer : IReducerFor<Book>
+{
+    public Task<Book> Added(BookAddedToInventory @event, Book? initialState, EventContext context) =>
+         Task.FromResult(new Book(Guid.Parse(@context.EventSourceId), @event.Title, @event.Author, @event.ISBN));
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/BooksReducer.cs#L5-L14)
