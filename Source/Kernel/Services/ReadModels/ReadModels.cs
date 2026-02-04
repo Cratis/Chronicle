@@ -188,6 +188,65 @@ internal sealed class ReadModels(
     }
 
     /// <inheritdoc/>
+    public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
+    {
+        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
+        var definition = await readModel.GetDefinition();
+
+        if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
+        {
+            throw new NotSupportedException("GetAllInstances is only supported for projections (immediate projections).");
+        }
+
+        var eventSequenceStorage = storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace)
+            .GetEventSequence(request.EventSequenceId);
+
+        var readModelDefinition = await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.Identifier);
+        var projectionKey = new ProjectionKey((ProjectionId)definition.ObserverIdentifier.Value, request.EventStore);
+        var projection = grainFactory.GetGrain<IProjection>(projectionKey);
+        var eventTypes = await projection.GetEventTypes();
+
+        // Get events from the beginning, optionally limited by event count
+        var events = new List<AppendedEvent>();
+
+        if (request.EventCount == ulong.MaxValue)
+        {
+            // Get all events
+            var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: null, eventTypes: eventTypes);
+            while (await cursor.MoveNext())
+            {
+                if (!cursor.Current.Any())
+                {
+                    break;
+                }
+                events.AddRange(cursor.Current);
+            }
+            cursor.Dispose();
+        }
+        else
+        {
+            // Get limited number of events
+            using var cursor = await eventSequenceStorage.GetEventsWithLimit(EventSequenceNumber.First, (int)request.EventCount, eventTypes: eventTypes);
+            while (await cursor.MoveNext())
+            {
+                events.AddRange(cursor.Current);
+            }
+        }
+
+        // Process events to get all instances grouped by event source ID
+        var result = await projection.Process(request.Namespace, events);
+        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+
+        return new GetAllInstancesResponse
+        {
+            Instances = readModels,
+            ProcessedEventsCount = (ulong)events.Count
+        };
+    }
+
+    /// <inheritdoc/>
     public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
