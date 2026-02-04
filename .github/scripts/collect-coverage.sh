@@ -33,6 +33,30 @@ fi
 
 echo "Processing coverage report: $summary_file"
 
+# Validate the JSON file first
+if ! jq empty "$summary_file" 2>/dev/null; then
+    echo "Error: Invalid JSON in $summary_file"
+    echo "Content of file:"
+    cat "$summary_file"
+    echo ""
+    echo "Attempting to fix common issues..."
+    
+    # Try to fix common JSON issues (NaN, Infinity, etc.)
+    # Replace NaN and Infinity with null or 0
+    tmp_file=$(mktemp)
+    sed 's/: NaN/: 0/g; s/: Infinity/: 100/g; s/: -Infinity/: 0/g' "$summary_file" > "$tmp_file"
+    
+    if jq empty "$tmp_file" 2>/dev/null; then
+        echo "Successfully fixed JSON issues"
+        mv "$tmp_file" "$summary_file"
+    else
+        echo "Could not fix JSON issues. File content:"
+        cat "$tmp_file"
+        rm -f "$tmp_file"
+        exit 1
+    fi
+fi
+
 # Get current date and week
 current_date=$(date +%Y-%m-%d)
 year=$(date +%Y)
@@ -67,12 +91,15 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
             (.name | test("^coverlet") | not)
         ) | {
             name: .name,
-            # Check if coverage is a decimal < 1 (needs multiplying by 100) or already a percentage
+            # Handle coverage value - ensure it is a valid number and convert to percentage
             coverage: (
-                if (.coverage // 0) < 1 then
-                    ((.coverage // 0) * 100 * 100 | round / 100)
+                (.coverage // 0) as $cov |
+                if ($cov | type) != "number" then
+                    0
+                elif $cov < 1 then
+                    (($cov * 100 * 100) | floor / 100)
                 else
-                    ((.coverage // 0) * 100 | round / 100)
+                    (($cov * 100) | floor / 100)
                 end
             )
         }

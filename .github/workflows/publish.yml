@@ -98,6 +98,10 @@ jobs:
             -targetdir:"./coverage-reports" \
             -reporttypes:"JsonSummary" \
             -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"
+          
+          # Debug: Show the generated file
+          echo "Generated Summary.json:"
+          cat ./coverage-reports/Summary.json || echo "File not found"
 
       - name: Collect coverage statistics
         run: |
