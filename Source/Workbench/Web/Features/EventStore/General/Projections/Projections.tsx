@@ -248,8 +248,8 @@ export const Projections = () => {
                                             saveProjection.draftReadModel = draftReadModel;
                                         }
                                         const result = await saveProjection.execute();
-                                        const errors = result.response?.errors ?? [];
-                                        if (result.isSuccess) {
+                                        const errors = result.response ?? [];
+                                        if (result.isSuccess && errors.length === 0) {
                                             await refreshProjections({ eventStore: params.eventStore! });
                                             if (draftReadModel) {
                                                 refreshReadModels({ eventStore: params.eventStore! }); // Only refresh read models if we created a new one
