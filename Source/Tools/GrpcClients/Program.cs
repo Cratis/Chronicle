@@ -19,7 +19,7 @@ var assemblyPath = args[0];
 var outputAssemblyName = args[1];
 var outputAssemblyPath = $"{Path.GetDirectoryName(assemblyPath)}/{outputAssemblyName}.dll";
 var assembly = Assembly.LoadFrom(assemblyPath);
-var services = assembly.ExportedTypes.Where(_ => _.IsInterface).ToArray();
+var services = assembly.ExportedTypes.Where(_ => _.IsInterface && Attribute.IsDefined(_, typeof(ServiceAttribute))).ToArray();
 
 var assemblyBuilder = new PersistedAssemblyBuilder(new(outputAssemblyName), typeof(void).Assembly);
 var moduleBuilder = assemblyBuilder.DefineDynamicModule("DynamicModule");
