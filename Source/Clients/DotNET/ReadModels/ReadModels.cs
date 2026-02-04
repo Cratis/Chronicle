@@ -183,6 +183,34 @@ public class ReadModels(
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
+    {
+        var readModelType = typeof(TReadModel);
+
+        // Validate that the read model is known by projections (immediate projections only)
+        if (!projections.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        var readModelIdentifier = readModelType.GetReadModelIdentifier();
+        var eventCountValue = eventCount ?? EventCount.Unlimited;
+
+        var request = new GetAllInstancesRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ReadModelIdentifier = readModelIdentifier,
+            EventSequenceId = EventSequenceId.Log,
+            EventCount = eventCountValue.Value
+        };
+
+        var response = await _chronicleServicesAccessor.Services.ReadModels.GetAllInstances(request);
+
+        return response.Instances.Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
         // Check for projection first
