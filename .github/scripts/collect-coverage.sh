@@ -40,12 +40,12 @@ if ! jq empty "$summary_file" 2>/dev/null; then
     cat "$summary_file"
     echo ""
     echo "Attempting to fix common issues..."
-    
+
     # Try to fix common JSON issues (NaN, Infinity, etc.)
     # Replace NaN and Infinity with null or 0
     tmp_file=$(mktemp)
     sed 's/: NaN/: 0/g; s/: Infinity/: 100/g; s/: -Infinity/: 0/g' "$summary_file" > "$tmp_file"
-    
+
     if jq empty "$tmp_file" 2>/dev/null; then
         echo "Successfully fixed JSON issues"
         mv "$tmp_file" "$summary_file"
