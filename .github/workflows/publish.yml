@@ -253,8 +253,6 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
-
-
       - name: Build
         run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
