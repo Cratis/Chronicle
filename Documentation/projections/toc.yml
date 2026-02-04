@@ -2,8 +2,6 @@
   href: index.md
 - name: Architecture
   href: architecture.md
-- name: Immediate Projections
-  href: immediate-projections.md
 - name: Eventual Consistency
   href: eventual-consistency.md
 - name: Watching Projections
