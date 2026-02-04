@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint/main/schema/markdownlint-config-schema.json",
+  "default": true,
+  "MD013": false,
+  "MD033": {
+    "allowed_elements": ["antml:function_calls", "antml:invoke", "antml:parameter", "a"]
+  },
+  "MD041": false,
+  "MD012": {
+    "maximum": 3
+  },
+  "MD024": {
+    "siblings_only": true
+  },
+  "MD032": false,
+  "MD060": false
+}
