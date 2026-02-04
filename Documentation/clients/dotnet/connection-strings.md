@@ -309,7 +309,7 @@ var options = new ChronicleOptions
 };
 ```
 
-See the [TLS Configuration](../../tls-configuration.md) documentation for more details on certificate setup.
+See the [TLS Configuration](../../tls-hosting/configuration.md) documentation for more details on certificate setup.
 
 ## Best Practices
 
@@ -378,6 +378,6 @@ If you encounter TLS errors:
 
 ## See Also
 
-- [TLS Configuration](../../tls-configuration.md)
+- [TLS Configuration](../../tls-hosting/configuration.md)
 - [Namespaces](namespaces.md)
 - [Getting Started](../../get-started/index.md)
