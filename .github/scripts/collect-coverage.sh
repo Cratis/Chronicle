@@ -47,21 +47,18 @@ commit_short="${COMMIT_SHA:0:7}"
 # Get timestamp
 timestamp=$(date +%s%3N)
 
-# Read the summary file and parse it
-coverage_json=$(cat "$summary_file")
-
 # Process assemblies and update the data structure
-result_json=$(echo "$existing_json" | jq --arg week "$current_week" \
+result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
+                  --arg week "$current_week" \
                   --arg date "$current_date" \
                   --arg version "$VERSION" \
                   --arg commit "$commit_short" \
-                  --argjson timestamp "$timestamp" \
-                  --argjson summary "$coverage_json" '
+                  --argjson timestamp "$timestamp" '
     # Update timestamp
     .lastUpdate = $timestamp |
     
     # Process each assembly
-    ($summary.coverage.assemblies // [] | map(
+    ($summary[0].coverage.assemblies // [] | map(
         select(
             (.name | test("\\.Specs$") | not) and
             (.name | test("^xunit") | not) and
