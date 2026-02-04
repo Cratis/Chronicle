@@ -18,25 +18,31 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// Initializes a new instance of the <see cref="WebhookObserverSubscriber"/> class.
 /// </remarks>
 /// <param name="webhookMediator">The <see cref="IWebhookMediator"/>.</param>
+/// <param name="oAuthClient">The <see cref="IOAuthClient"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class WebhookObserverSubscriber(
     IWebhookMediator webhookMediator,
+    IOAuthClient oAuthClient,
     ILogger<WebhookObserverSubscriber> logger) : Grain<WebhookDefinition>, IWebhookObserverSubscriber, INotifyWebhookDefinitionsChanged
 {
     ObserverKey _key = ObserverKey.NotSet;
+    AccessTokenInfo _accessTokenInfo = AccessTokenInfo.Empty;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
-        return Task.CompletedTask;
+        await EnsureAuthorized();
     }
 
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events);
+        await EnsureAuthorized();
+
+        var accessToken = _accessTokenInfo.IsExpired ? null : _accessTokenInfo.AccessToken;
+        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events, accessToken);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)
@@ -56,5 +62,39 @@ public class WebhookObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public Task OnWebhookDefinitionsChanged() => ReadStateAsync();
+    public async Task OnWebhookDefinitionsChanged()
+    {
+        await ReadStateAsync();
+        _accessTokenInfo = AccessTokenInfo.Empty;
+        await EnsureAuthorized();
+    }
+
+    async Task EnsureAuthorized()
+    {
+        if (_accessTokenInfo.IsExpired)
+        {
+            _accessTokenInfo = await State.Target.Authorization.Match(
+                basic => Task.FromResult(AccessTokenInfo.Empty),
+                bearer => Task.FromResult(AccessTokenInfo.Empty),
+                async oAuth =>
+                {
+                    var tokenInfo = await oAuthClient.AcquireToken(oAuth);
+                    SetGrainLifetime(tokenInfo);
+                    return tokenInfo;
+                },
+                none => Task.FromResult(AccessTokenInfo.Empty));
+        }
+    }
+
+    void SetGrainLifetime(AccessTokenInfo tokenInfo)
+    {
+        if (!tokenInfo.IsExpired && tokenInfo.ExpiresAt != DateTimeOffset.MinValue)
+        {
+            var idleTime = tokenInfo.ExpiresAt - DateTimeOffset.UtcNow;
+            if (idleTime > TimeSpan.Zero)
+            {
+                DelayDeactivation(idleTime);
+            }
+        }
+    }
 }

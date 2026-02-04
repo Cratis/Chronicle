@@ -18,7 +18,7 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IW
     public const string HttpClientName = "webhook";
 
     /// <inheritdoc/>
-    public HttpClient Create(WebhookTarget webhookTarget)
+    public HttpClient Create(WebhookTarget webhookTarget, string? accessToken = null)
     {
         var client = httpClientFactory.CreateClient(HttpClientName);
 
@@ -34,7 +34,13 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IW
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", value);
             },
             bearer => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Token),
-            oAuth => throw new NotImplementedException(),
+            oAuth =>
+            {
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                }
+            },
             none => { });
 
         foreach (var header in webhookTarget.Headers)
