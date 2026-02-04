@@ -35,7 +35,7 @@ public record GenerateDeclarativeCode(string EventStore, string Namespace, strin
             GeneratedCode code => new GeneratedCodeResult(code.Code, []),
             ProjectionDeclarationParsingErrors errors => new GeneratedCodeResult(
                 string.Empty,
-                errors.Errors.Select(e => new ProjectionDeclarationSyntaxError(e.Message, e.Line, e.Column))),
+                errors.Errors.ToApi()),
             _ => throw new InvalidOperationException("Unexpected result type from GenerateDeclarativeCode")
         };
     }

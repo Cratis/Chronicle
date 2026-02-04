@@ -49,7 +49,7 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
             ProjectionDeclarationParsingErrors errors => new ProjectionPreview(
                 [],
                 new JsonObject(),
-                errors.Errors.Select(e => new ProjectionDeclarationSyntaxError(e.Message, e.Line, e.Column))),
+                errors.Errors.ToApi()),
 
             _ => throw new InvalidOperationException("Unexpected result type from Preview")
         };
