@@ -96,7 +96,7 @@ In production environments (Release builds), TLS is required. If no certificate 
 
 **Important**: If TLS is enabled (`disable: false`) but no certificate is provided, the server will fail to start with an error message:
 
-```
+```bash
 TLS is enabled but no certificate is configured. Please provide a certificate path in configuration or disable TLS.
 ```
 
@@ -183,6 +183,8 @@ services:
 **Error**: "No TLS certificate is configured"
 
 **Solution**: This error occurs in production builds. Provide a certificate path in the configuration:
+
+
 ```json
 {
     "tls": {

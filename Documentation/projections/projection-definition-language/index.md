@@ -26,20 +26,20 @@ The PDL allows you to:
 
 Every projection definition starts with a projection declaration and contains one or more directives or blocks:
 
-```
+```pdl
 projection {Name} => {ReadModelType}
   {directives and blocks}
-```
+```pdl
 
 Example:
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     Name = name
     Email = email
     IsActive = true
-```
+```pdl
 
 ## Key Features
 
@@ -72,7 +72,7 @@ projection User => UserReadModel
 
 Here's a comprehensive example demonstrating multiple features:
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     Name = name
@@ -98,7 +98,7 @@ projection Group => GroupReadModel
       parent groupId
 
   remove with GroupDeleted
-```
+```pdl
 
 This projection:
 - Creates a group from `GroupCreated` events

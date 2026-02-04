@@ -48,7 +48,7 @@ Chronicle__MaxSendMessageSize=209715200
 
 If you encounter an error like:
 
-```
+```env
 Status(StatusCode="ResourceExhausted", Detail="Received message exceeds the maximum configured message size.")
 ```
 

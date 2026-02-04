@@ -23,6 +23,7 @@ public class GroupProjection : IProjectionFor<Group>
                 .UsingKey(e => e.UserId))
             .RemovedWith<UserRemovedFromGroup>(e => e.UserId));
 }
+
 ```
 
 ## Read model with children
@@ -38,6 +39,7 @@ public record Group(
 public record GroupMember(
     string UserId,
     string Role);
+
 ```
 
 ## Event definitions
@@ -56,6 +58,7 @@ public record UserRoleChanged(string UserId, string NewRole);
 
 [EventType]
 public record UserRemovedFromGroup(string UserId);
+
 ```
 
 ## How children work
@@ -81,11 +84,15 @@ In most scenarios, you don't need to specify the parent key explicitly:
     .From<UserAddedToGroup>(b => b
         .UsingKey(e => e.UserId)))
     // No UsingParentKey needed - uses EventSourceId by default
+
 ```
 
 When you append the event:
+
+
 ```csharp
 await EventStore.EventLog.Append(groupId, new UserAddedToGroup(userId, role));
+
 ```
 
 The `groupId` (EventSourceId) is automatically used to find the parent `Group`.
@@ -101,11 +108,16 @@ If your event contains the parent key as a property (instead of using EventSourc
     .From<UserAddedToGroup>(b => b
         .UsingParentKey(e => e.GroupId)  // Extract from event content
         .UsingKey(e => e.UserId)))
+
 ```
 
+
+
 When you append the event:
+
 ```csharp
 await EventStore.EventLog.Append(userId, new UserAddedToGroup(userId, groupId, role));
+
 ```
 
 The `groupId` property from the event content is used to find the parent `Group`.
@@ -121,6 +133,7 @@ In some advanced scenarios, you might want to explicitly indicate that the Event
     .From<UserAddedToGroup>(b => b
         .UsingParentKeyFromContext(ctx => ctx.EventSourceId)  // Explicit
         .UsingKey(e => e.UserId)))
+
 ```
 
 This is functionally equivalent to not specifying the parent key at all, but can make the intent clearer in complex projections.
@@ -146,6 +159,7 @@ The `RemovedWith<>()` method specifies how to remove child items from collection
     .IdentifiedBy(e => e.UserId)
     .From<UserAddedToGroup>(_ => /* ... */)
     .RemovedWith<UserRemovedFromGroup>(e => e.UserId))
+
 ```
 
 When a `UserRemovedFromGroup` event is processed:
@@ -170,6 +184,7 @@ A single projection can have multiple child collections:
     .IdentifiedBy(e => e.TaskId)
     .AutoMap()
     .From<TaskAssignedToGroup>(_ => /* ... */));
+
 ```
 
 This pattern allows you to build rich, hierarchical read models from events.

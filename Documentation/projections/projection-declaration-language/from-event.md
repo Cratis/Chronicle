@@ -4,20 +4,20 @@ The `from` directive defines a rule that triggers when a specific event occurs. 
 
 ## Basic Syntax
 
-```
+```pdl
 from {EventType}
   {mappings and operations}
-```
+```pdl
 
 ## Simple Example
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     Name = name
     Email = email
     IsActive = true
-```
+```pdl
 
 When a `UserRegistered` event occurs, it creates or updates a `UserReadModel` instance with the specified properties.
 
@@ -25,38 +25,38 @@ When a `UserRegistered` event occurs, it creates or updates a `UserReadModel` in
 
 You can define multiple events on the same line separated by commas when they share the same mappings and configuration:
 
-```
+```pdl
 projection TransportRoute => TransportRouteReadModel
   automap
   from HubRouteAdded key id, WarehouseRouteAdded key id
-```
+```pdl
 
 This is equivalent to:
 
-```
+```pdl
 projection TransportRoute => TransportRouteReadModel
   automap
   from HubRouteAdded key id
   from WarehouseRouteAdded key id
-```
+```pdl
 
 Each event can have its own inline key specification:
 
-```
+```pdl
 from EventA key idA, EventB key idB, EventC
   automap
   Property = value
-```
+```pdl
 
 ## With Keys
 
 Specify which property identifies the projection instance:
 
-```
+```pdl
 from UserAssignedToGroup key userId
   GroupId = $eventContext.eventSourceId
   AssignedAt = $eventContext.occurred
-```
+```pdl
 
 See [Keys](keys.md) for more details on key handling.
 
@@ -64,10 +64,10 @@ See [Keys](keys.md) for more details on key handling.
 
 Automatically map matching properties:
 
-```
+```pdl
 from UserRegistered automap
   IsActive = true
-```
+```pdl
 
 AutoMap copies properties with matching names from the event to the read model, then applies any explicit mappings.
 
@@ -77,7 +77,7 @@ See [Auto-Map](auto-map.md) for more details.
 
 A projection can have multiple `from` blocks for different events:
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     Name = name
@@ -91,18 +91,18 @@ projection User => UserReadModel
   from UserDeactivated
     IsActive = false
     DeactivatedAt = $eventContext.occurred
-```
+```pdl
 
 ## With Parent Key
 
 When used within [Children](children.md) blocks, you can specify the parent relationship:
 
-```
+```pdl
 children members id userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role
-```
+```pdl
 
 ## Operations
 
@@ -119,12 +119,12 @@ Within a `from` block, you can use:
 
 Access event metadata using `$eventContext`:
 
-```
+```pdl
 from UserLoggedIn
   LastLogin = $eventContext.occurred
   LastSequenceNumber = $eventContext.sequenceNumber
   count LoginCount
-```
+```pdl
 
 See [Event Context](event-context.md) for available properties.
 
@@ -132,51 +132,51 @@ See [Event Context](event-context.md) for available properties.
 
 All mappings and operations within a `from` block must be indented:
 
-```
+```pdl
 from UserCreated
   Name = name          # Indented
   Email = email        # Indented
   IsActive = true      # Indented
-```
+```pdl
 
 ## Examples
 
 ### Simple Property Mapping
 
-```
+```pdl
 from OrderPlaced
   CustomerId = customerId
   Total = total
   Status = "Pending"
-```
+```pdl
 
 ### Using Templates
 
-```
+```pdl
 from PersonRegistered
   FullName = `${firstName} ${lastName}`
   Email = email
-```
+```pdl
 
 ### Counter Operations
 
-```
+```pdl
 from PageViewed
   count ViewCount
   LastViewedAt = $eventContext.occurred
-```
+```pdl
 
 ### Arithmetic Operations
 
-```
+```pdl
 from PaymentReceived
   add Balance by amount
   LastPaymentDate = $eventContext.occurred
-```
+```pdl
 
 ### Complex Example
 
-```
+```pdl
 from OrderPlaced key orderId
   CustomerId = customerId
   OrderNumber = orderNumber
@@ -184,4 +184,4 @@ from OrderPlaced key orderId
   Status = "Pending"
   PlacedAt = $eventContext.occurred
   increment TotalOrders
-```
+```pdl

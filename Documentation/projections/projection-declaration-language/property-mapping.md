@@ -6,11 +6,11 @@ Property mapping assigns values from events to read model properties. Mappings u
 
 Map an event property to a read model property:
 
-```
+```pdl
 from UserRegistered
   Name = name
   Email = email
-```
+```pdl
 
 This maps the `name` and `email` properties from the `UserRegistered` event to the corresponding properties on the read model.
 
@@ -18,25 +18,25 @@ This maps the `name` and `email` properties from the `UserRegistered` event to t
 
 Access nested properties using dot notation:
 
-```
+```pdl
 from UserRegistered
   Email = contactInfo.email
   Phone = contactInfo.phone
   City = address.city
-```
+```pdl
 
 ## Literal Values
 
 Assign literal values:
 
-```
+```pdl
 from UserRegistered
   Name = name
   IsActive = true
   Status = "Pending"
   Priority = 5
   CreatedAt = null
-```
+```pdl
 
 Supported literal types:
 - **Boolean**: `true`, `false`
@@ -48,11 +48,11 @@ Supported literal types:
 
 Create formatted strings using template literals:
 
-```
+```pdl
 from PersonRegistered
   FullName = `${firstName} ${lastName}`
   DisplayInfo = `${name} (${email})`
-```
+```pdl
 
 Template syntax:
 - Wrap in backticks: `` `template` ``
@@ -63,23 +63,23 @@ Template syntax:
 
 The special identifier `$eventSourceId` provides the event source ID:
 
-```
+```pdl
 from UserAssignedToGroup
   GroupId = $eventContext.eventSourceId
   UserId = $eventSourceId
-```
+```pdl
 
 ## Event Context
 
 Access event metadata:
 
-```
+```pdl
 from UserRegistered
   Name = name
   CreatedAt = $eventContext.occurred
   SequenceNumber = $eventContext.sequenceNumber
   CorrelationId = $eventContext.correlationId
-```
+```pdl
 
 See [Event Context](event-context.md) for all available properties.
 
@@ -87,7 +87,7 @@ See [Event Context](event-context.md) for all available properties.
 
 Define multiple mappings in a single `from` block:
 
-```
+```pdl
 from OrderPlaced
   OrderNumber = orderNumber
   CustomerId = customerId
@@ -95,37 +95,37 @@ from OrderPlaced
   Status = "New"
   PlacedAt = $eventContext.occurred
   TaxRate = 0.08
-```
+```pdl
 
 ## Property Types
 
 The read model property type determines what values are valid:
 
-```
+```pdl
 from ProductCreated
   Name = name              # string
   Price = price            # decimal/number
   IsAvailable = true       # boolean
   Stock = 0                # integer
   Category = null          # nullable
-```
+```pdl
 
 ## Examples
 
 ### User Profile
 
-```
+```pdl
 from UserProfileUpdated
   FirstName = firstName
   LastName = lastName
   Email = email
   Bio = bio
   UpdatedAt = $eventContext.occurred
-```
+```pdl
 
 ### Order with Calculated Fields
 
-```
+```pdl
 from OrderPlaced
   OrderId = orderId
   CustomerId = customerId
@@ -135,11 +135,11 @@ from OrderPlaced
   Status = "Pending"
   Reference = `ORD-${orderNumber}`
   PlacedAt = $eventContext.occurred
-```
+```pdl
 
 ### Nested Data
 
-```
+```pdl
 from CompanyRegistered
   CompanyName = name
   Email = contactInfo.email
@@ -148,11 +148,11 @@ from CompanyRegistered
   City = address.city
   State = address.state
   ZipCode = address.zipCode
-```
+```pdl
 
 ### With Literals and Context
 
-```
+```pdl
 from AccountCreated
   AccountNumber = accountNumber
   Balance = 0.0
@@ -160,7 +160,7 @@ from AccountCreated
   AccountType = "Standard"
   OpenedAt = $eventContext.occurred
   OpenedBy = $eventContext.eventSourceId
-```
+```pdl
 
 ## Best Practices
 

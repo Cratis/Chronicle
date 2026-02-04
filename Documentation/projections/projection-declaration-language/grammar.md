@@ -12,8 +12,8 @@ EBNF is a notation for formally describing syntax. Here are the key elements use
 | `;` | End of rule | `Rule = "value" ;` |
 | `{ }` | Zero or more | `{ "item" }` matches "", "item", "itemitem", etc. |
 | `[ ]` | Optional (zero or one) | `[ "optional" ]` matches "" or "optional" |
-| `( )` | Grouping | `( "a" | "b" )` matches "a" or "b" |
-| `|` | Alternative (or) | `"a" | "b"` matches either "a" or "b" |
+| `( )` | Grouping | `( "a" \| "b" )` matches "a" or "b" |
+| `\|` | Alternative (or) | `"a" \| "b"` matches either "a" or "b" |
 | `" "` | Terminal (literal) | `"keyword"` matches the text "keyword" |
 | `,` | Sequence | `"a", "b"` matches "a" followed by "b" |
 
@@ -158,7 +158,7 @@ Ident           = Letter, { Letter | Digit | "_" } ;
 Letter          = "A" | "B" | ... | "Z" | "a" | "b" | ... | "z" ;
 Digit           = "0" | "1" | "2" | ... | "9" ;
 StringChar      = (* any character except " and newline *) ;
-```
+```pdl
 
 ## Grammar Breakdown
 
@@ -168,7 +168,7 @@ A document contains one or more projections:
 
 ```ebnf
 Document = { Projection } ;
-```
+```pdl
 
 ### Projection
 
@@ -179,14 +179,14 @@ Projection = "projection", Ident, "=>", TypeRef, NL,
              INDENT,
                { ProjDirective | Block },
              DEDENT ;
-```
+```pdl
 
 **Example:**
-```
+```pdl
 projection User => UserReadModel
   from UserCreated
     Name = name
-```
+```pdl
 
 **Note:** AutoMap is enabled by default. Use `no automap` to disable it.
 
@@ -198,7 +198,7 @@ Projection-level directives:
 ProjDirective = "no", "automap", NL
               | KeyDecl
               | CompositeKeyDecl ;
-```
+```pdl
 
 ### Blocks
 
@@ -211,7 +211,7 @@ Block = EveryBlock
       | ChildrenBlock
       | RemoveWithBlock
       | RemoveWithJoinBlock ;
-```
+```pdl
 
 ### Every Block
 
@@ -224,7 +224,7 @@ EveryBlock = "every", NL,
                { MappingLine },
                [ "exclude", "children", NL ],
              DEDENT ;
-```
+```pdl
 
 ### From Event Block
 
@@ -239,7 +239,7 @@ FromEventBlock = "from", EventSpec, { ",", EventSpec },
                  DEDENT ] ;
 
 EventSpec = TypeRef, [ "key", Expr ] ;
-```
+```pdl
 
 **Note:** AutoMap for from blocks is controlled at the projection or children level, not within individual from blocks.
 
@@ -257,7 +257,7 @@ WithEventBlock = "with", TypeRef, NL,
                  [ INDENT,
                      { MappingLine },
                    DEDENT ] ;
-```
+```pdl
 
 **Note:** AutoMap for join blocks is controlled at the projection or children level, not within individual with blocks.
 
@@ -284,7 +284,7 @@ ChildEveryBlock = "every", NL,
                     [ "no", "automap", NL ],
                     { MappingLine },
                   DEDENT ;
-```
+```pdl
 
 **Note:** `ChildEveryBlock` applies mappings to all events within the children collection. Unlike the top-level `EveryBlock`, it does not support the `exclude children` directive as it operates within a children context.
 
@@ -299,7 +299,7 @@ RemoveWithBlock = "remove", "with", TypeRef, [ KeyInline ], NL,
                     DEDENT ] ;
 
 RemoveWithJoinBlock = "remove", "via", "join", "on", TypeRef, [ KeyInline ], NL ;
-```
+```pdl
 
 ### Key Declarations
 
@@ -315,7 +315,7 @@ CompositeKeyDecl = "key", TypeRef, "{", NL,
                    "}", NL ;
 
 KeyPart = Ident, "=", Expr ;
-```
+```pdl
 
 ### Mapping Lines
 
@@ -335,7 +335,7 @@ DecLine = "decrement", Ident, NL ;
 CountLine = "count", Ident, NL ;
 AddLine = "add", Ident, "by", Expr, NL ;
 SubLine = "subtract", Ident, "by", Expr, NL ;
-```
+```pdl
 
 ### Expressions
 
@@ -358,7 +358,7 @@ Literal = BoolLiteral
         | StringLiteral
         | NumberLiteral
         | NullLiteral ;
-```
+```pdl
 
 ## Indentation Rules
 
@@ -370,13 +370,13 @@ The grammar uses indentation to define structure:
 4. **Block Structure**: Each block's content must be indented from its declaration
 
 **Example:**
-```
+```pdl
 projection User => UserReadModel    # Level 0
   from UserCreated                  # Level 1 (INDENT)
     Name = name                     # Level 2 (INDENT)
     Email = email                   # Level 2
                                     # (DEDENT, DEDENT)
-```
+```pdl
 
 ## Validation Rules
 
@@ -404,7 +404,7 @@ While not enforced by the grammar, these conventions improve readability:
 
 This example demonstrates how various grammar rules combine:
 
-```
+```pdl
 projection Order => OrderReadModel
   every
     LastUpdated = $eventContext.occurred
@@ -438,7 +438,7 @@ projection Order => OrderReadModel
       parent orderId
 
   remove with OrderCancelled
-```
+```pdl
 
 This projection uses:
 - Projection declaration

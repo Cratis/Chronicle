@@ -3,7 +3,7 @@
 Defining an event is straightforward. You can use either a C# `class` or a `record` type.
 We recommend using a `record` type because records are immutable, which aligns with the nature of an [event](../concepts/event.md).
 
-To define an event type, simply add the `[EventType]` attribute to the new type. This attribute allows the discovery system to automatically detect all event types. You can read more about event types [here](../concepts/event-type.md).
+To define an event type, simply add the `[EventType]` attribute to the new type. This attribute allows the discovery system to automatically detect all event types. You can read more about event types [see documentation](../concepts/event-type.md).
 
 Below is a set of events we will use for our library sample.
 
@@ -63,7 +63,7 @@ which is included in the Chronicle development image. Open your browser and navi
 
 Then, go to the **Quickstart** event store and select **Sequences**. You should now be able to see the events:
 
-![](workbench.png)
+![Chronicle Workbench showing events](workbench.png)
 
 ## Creating read state
 
@@ -129,7 +129,7 @@ Task <MethodName>(EventType @event, EventContext context);
 
 Opening your database client, you should be able to see the users:
 
-![](./mongodb-users.png)
+![MongoDB showing users collection](./mongodb-users.png)
 
 ### Reducer
 
@@ -180,7 +180,7 @@ Task<ReadModel> <MethodName>(EventType @event, ReadModel? initialState, EventCon
 
 Opening your database client, you should be able to see the books:
 
-![](./mongodb-books.png)
+![MongoDB showing books collection](./mongodb-books.png)
 
 ### Projections
 
@@ -242,4 +242,4 @@ eventLog.Append("92ac7c15-d04b-4d2b-b5b6-641ab681afe7", new BookBorrowed(Guid.Pa
 
 Running this and opening your database client, you should be able to see the borrowed books:
 
-![](./mongodb-borrowed-books.png)
+![MongoDB showing borrowed books collection](./mongodb-borrowed-books.png)

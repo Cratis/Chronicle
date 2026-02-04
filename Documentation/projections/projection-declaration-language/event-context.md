@@ -6,9 +6,9 @@ Event context provides access to metadata about the event itself, such as when i
 
 Access event context properties using the `$eventContext.` prefix:
 
-```
+```pdl
 $eventContext.{property}
-```
+```pdl
 
 ## Available Properties
 
@@ -16,50 +16,50 @@ $eventContext.{property}
 
 The timestamp when the event occurred:
 
-```
+```pdl
 from UserRegistered
   Name = name
   CreatedAt = $eventContext.occurred
-```
+```pdl
 
 ### sequenceNumber
 
 The sequence number of the event in its stream:
 
-```
+```pdl
 from EventProcessed
   LastSequenceNumber = $eventContext.sequenceNumber
-```
+```pdl
 
 ### correlationId
 
 The correlation ID associated with the event:
 
-```
+```pdl
 from OrderPlaced
   OrderId = orderId
   CorrelationId = $eventContext.correlationId
-```
+```pdl
 
 ### eventSourceId
 
 The event source ID (also available as shorthand `$eventSourceId`):
 
-```
+```pdl
 from UserAssignedToGroup
   GroupId = $eventContext.eventSourceId
   # or
   GroupId = $eventSourceId
-```
+```pdl
 
 ## Event Source ID Shorthand
 
 The `$eventSourceId` is a shorthand for `$eventContext.eventSourceId`:
 
-```
+```pdl
 from UserCreated key $eventSourceId
   Name = name
-```
+```pdl
 
 ## Common Patterns
 
@@ -67,7 +67,7 @@ from UserCreated key $eventSourceId
 
 Track when things happen:
 
-```
+```pdl
 from RecordCreated
   Name = name
   CreatedAt = $eventContext.occurred
@@ -75,47 +75,47 @@ from RecordCreated
 from RecordUpdated
   Name = name
   UpdatedAt = $eventContext.occurred
-```
+```pdl
 
 ### Correlation Tracking
 
 Link related operations:
 
-```
+```pdl
 from OrderPlaced
   OrderNumber = orderNumber
   CorrelationId = $eventContext.correlationId
   PlacedAt = $eventContext.occurred
-```
+```pdl
 
 ### Sequence Tracking
 
 Track event order:
 
-```
+```pdl
 from StateChanged
   CurrentState = state
   SequenceNumber = $eventContext.sequenceNumber
   ChangedAt = $eventContext.occurred
-```
+```pdl
 
 ### Parent-Child Relationships
 
 Use event source ID for relationships:
 
-```
+```pdl
 children members id userId
   from UserAddedToGroup key userId
     parent $eventContext.eventSourceId
     Role = role
     AddedAt = $eventContext.occurred
-```
+```pdl
 
 ## In Composite Keys
 
 Event context can be used in composite keys:
 
-```
+```pdl
 from EventProcessed
   key ProcessingKey {
     EventId = eventId
@@ -123,23 +123,23 @@ from EventProcessed
     CorrelationId = $eventContext.correlationId
   }
   ProcessedAt = $eventContext.occurred
-```
+```pdl
 
 ## In Templates
 
 Event context works in string templates:
 
-```
+```pdl
 from OrderShipped
   TrackingInfo = `Shipped at ${$eventContext.occurred}`
   Reference = `${orderNumber}-${$eventContext.sequenceNumber}`
-```
+```pdl
 
 ## Examples
 
 ### User Activity Log
 
-```
+```pdl
 projection UserActivity => UserActivityReadModel
   from UserLoggedIn
     LastLogin = $eventContext.occurred
@@ -150,11 +150,11 @@ projection UserActivity => UserActivityReadModel
     LastAction = actionType
     LastActionTime = $eventContext.occurred
     LastCorrelation = $eventContext.correlationId
-```
+```pdl
 
 ### Versioned Document
 
-```
+```pdl
 projection Document => DocumentReadModel
   from DocumentCreated
     Title = title
@@ -166,11 +166,11 @@ projection Document => DocumentReadModel
     Content = content
     Version = $eventContext.sequenceNumber
     UpdatedAt = $eventContext.occurred
-```
+```pdl
 
 ### Group Membership with Audit
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     Name = name
@@ -184,11 +184,11 @@ projection Group => GroupReadModel
       Role = role
       AddedAt = $eventContext.occurred
       AddedSequence = $eventContext.sequenceNumber
-```
+```pdl
 
 ### Order Processing
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -201,7 +201,7 @@ projection Order => OrderReadModel
     ShippedAt = $eventContext.occurred
     ShipmentSequence = $eventContext.sequenceNumber
     Status = "Shipped"
-```
+```pdl
 
 ## Best Practices
 

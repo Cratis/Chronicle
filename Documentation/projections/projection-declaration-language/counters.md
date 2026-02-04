@@ -6,17 +6,17 @@ Counters track how many times events occur or increment/decrement numeric values
 
 The `count` operation increments a property by 1 each time an event occurs:
 
-```
+```pdl
 count {Property}
-```
+```pdl
 
 ### Example
 
-```
+```pdl
 from PageViewed
   count ViewCount
   LastViewedAt = $eventContext.occurred
-```
+```pdl
 
 Each `PageViewed` event increases `ViewCount` by 1.
 
@@ -24,33 +24,33 @@ Each `PageViewed` event increases `ViewCount` by 1.
 
 The `increment` operation increases a property by 1:
 
-```
+```pdl
 increment {Property}
-```
+```pdl
 
 ### Example
 
-```
+```pdl
 from UserLoggedIn
   increment LoginCount
   LastLogin = $eventContext.occurred
-```
+```pdl
 
 ## Decrement
 
 The `decrement` operation decreases a property by 1:
 
-```
+```pdl
 decrement {Property}
-```
+```pdl
 
 ### Example
 
-```
+```pdl
 from ItemConsumed
   decrement RemainingStock
   LastConsumed = $eventContext.occurred
-```
+```pdl
 
 ## Difference Between Count and Increment
 
@@ -65,18 +65,18 @@ In practice, they behave identically but express different intent.
 
 You can use multiple counter operations in the same event:
 
-```
+```pdl
 from OrderPlaced
   increment TotalOrders
   count OrderCount
   add TotalRevenue by total
-```
+```pdl
 
 ## Examples
 
 ### User Activity Tracking
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     Name = name
@@ -88,11 +88,11 @@ projection User => UserReadModel
 
   from UserProfileViewed
     increment ProfileViewCount
-```
+```pdl
 
 ### Inventory Management
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     Name = name
@@ -108,11 +108,11 @@ projection Product => ProductReadModel
   from ItemReturned
     increment StockLevel
     decrement SalesCount
-```
+```pdl
 
 ### Blog Post Engagement
 
-```
+```pdl
 projection BlogPost => BlogPostReadModel
   from PostPublished
     Title = title
@@ -129,11 +129,11 @@ projection BlogPost => BlogPostReadModel
 
   from CommentAdded
     count CommentCount
-```
+```pdl
 
 ### Account Balance (Alternative to Arithmetic)
 
-```
+```pdl
 projection Account => AccountReadModel
   from AccountOpened
     AccountNumber = accountNumber
@@ -146,11 +146,11 @@ projection Account => AccountReadModel
   from WithdrawalMade
     increment TransactionCount
     subtract Balance by amount
-```
+```pdl
 
 ### Forum User Reputation
 
-```
+```pdl
 projection ForumUser => ForumUserReadModel
   from UserJoined
     Username = username
@@ -166,11 +166,11 @@ projection ForumUser => ForumUserReadModel
 
   from DownvoteReceived
     decrement Reputation
-```
+```pdl
 
 ### Task Completion Tracking
 
-```
+```pdl
 projection Project => ProjectReadModel
   from ProjectCreated
     Name = name
@@ -184,7 +184,7 @@ projection Project => ProjectReadModel
 
   from TaskAdded
     increment RemainingTasks
-```
+```pdl
 
 ## Property Requirements
 
@@ -208,7 +208,7 @@ public class UserReadModel
     public int LoginCount { get; set; } = 0;  // Initialize to 0
     public int ProfileViews { get; set; } = 0;
 }
-```
+```pdl
 
 ## Best Practices
 

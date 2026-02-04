@@ -4,17 +4,17 @@ Joins allow you to enrich a projection with data from related events that share 
 
 ## Basic Syntax
 
-```
+```pdl
 join {Name} on {Property}
   with {EventType}
     {mappings}
   with {EventType}
     {mappings}
-```
+```pdl
 
 ## Simple Example
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -27,7 +27,7 @@ projection Order => OrderReadModel
     with CustomerUpdated
       CustomerName = name
       CustomerEmail = email
-```
+```pdl
 
 When a `CustomerCreated` or `CustomerUpdated` event occurs with a matching `CustomerId`, the projection updates with customer information.
 
@@ -35,19 +35,19 @@ When a `CustomerCreated` or `CustomerUpdated` event occurs with a matching `Cust
 
 Automatically map matching properties from joined events:
 
-```
+```pdl
 join Group on GroupId
   with GroupCreated
     automap
   with GroupRenamed
     automap
-```
+```pdl
 
 ## Multiple Mappings
 
 Apply multiple mappings within a join:
 
-```
+```pdl
 join Product on ProductId
   with ProductCreated
     ProductName = name
@@ -59,13 +59,13 @@ join Product on ProductId
     ProductDescription = description
     ProductPrice = price
     LastProductUpdate = $eventContext.occurred
-```
+```pdl
 
 ## Multiple Events
 
 Join multiple event types that share the same key:
 
-```
+```pdl
 join Customer on CustomerId
   with CustomerRegistered
     CustomerName = name
@@ -74,13 +74,13 @@ join Customer on CustomerId
     CustomerName = name
   with CustomerVerified
     IsVerified = verified
-```
+```pdl
 
 ## Join with From Events
 
 Combine joins with regular from events:
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -96,13 +96,13 @@ projection Order => OrderReadModel
       CustomerName = name
     with CustomerUpdated
       CustomerName = name
-```
+```pdl
 
 ## Multiple Joins
 
 A projection can have multiple joins:
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -117,13 +117,13 @@ projection Order => OrderReadModel
     with ProductCreated
       ProductName = name
       ProductPrice = price
-```
+```pdl
 
 ## Joins in Children
 
 Joins can be used within children blocks:
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     Name = name
@@ -140,13 +140,13 @@ projection Group => GroupReadModel
       with UserUpdated
         UserName = name
         UserEmail = email
-```
+```pdl
 
 ## Examples
 
 ### Order with Customer Details
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -156,7 +156,7 @@ projection Order => OrderReadModel
 
 ### Product with Category Information
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     ProductId = productId
@@ -170,11 +170,11 @@ projection Product => ProductReadModel
     with CategoryRenamed
       CategoryName = name
       CategoryDescription = description
-```
+```pdl
 
 ### User Profile with Organization
 
-```
+```pdl
 projection UserProfile => UserProfileReadModel
   from ProfileCreated
     UserId = userId
@@ -192,11 +192,11 @@ projection UserProfile => UserProfileReadModel
     with OrganizationRenamed
       OrganizationName = name
       OrganizationType = type
-```
+```pdl
 
 ### Task with Assignee Details
 
-```
+```pdl
 projection Task => TaskReadModel
   from TaskCreated
     Title = title
@@ -214,11 +214,11 @@ projection Task => TaskReadModel
     with UserUpdated
       AssigneeName = name
       AssigneeEmail = email
-```
+```pdl
 
 ### Reservation with Room and Guest
 
-```
+```pdl
 projection Reservation => ReservationReadModel
   from ReservationMade
     ReservationNumber = number
@@ -246,11 +246,11 @@ projection Reservation => ReservationReadModel
       GuestName = name
       GuestEmail = email
       GuestPhone = phone
-```
+```pdl
 
 ### Children with Join
 
-```
+```pdl
 projection Project => ProjectReadModel
   from ProjectCreated
     Name = name
@@ -270,7 +270,7 @@ projection Project => ProjectReadModel
         AssigneeName = name
       with UserUpdated
         AssigneeName = name
-```
+```pdl
 
 ## How Joins Work
 
@@ -300,7 +300,7 @@ projection Project => ProjectReadModel
 
 Join with reference data like categories, types, or statuses:
 
-```
+```pdl
 join Status on StatusId
   with StatusCreated
     StatusName = name
@@ -308,13 +308,13 @@ join Status on StatusId
   with StatusUpdated
     StatusName = name
     StatusColor = color
-```
+```pdl
 
 ### User Information
 
 Enrich with user details:
 
-```
+```pdl
 join User on UserId
   with UserRegistered
     UserName = name
@@ -322,13 +322,13 @@ join User on UserId
   with UserProfileUpdated
     UserName = name
     UserAvatar = avatarUrl
-```
+```pdl
 
 ### Nested Relationships
 
 Join within children for nested enrichment:
 
-```
+```pdl
 children items identified by itemId
   from ItemAdded
     ProductId = productId
@@ -336,7 +336,7 @@ children items identified by itemId
   join Product on ProductId
     with ProductCreated
       ProductName = name
-```
+```pdl
 
 ## See Also
 
