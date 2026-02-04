@@ -199,7 +199,7 @@ if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 {
     app.UseDefaultFiles();
     app.UseStaticFiles();
-    app.MapFallbackToFile("index.html");
+    app.MapFallbackToFile("index.html").AllowAnonymous();
 }
 
 using var cancellationToken = new CancellationTokenSource();
