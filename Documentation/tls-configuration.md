@@ -78,7 +78,7 @@ var options = new ChronicleOptions
 };
 ```
 
-You can also enable TLS for development to test TLS-related functionality. See [Local Certificate Setup](local-certificates.md) for guidance on generating and configuring development certificates.
+You can also enable TLS for development to test TLS-related functionality. See [Local Certificate Setup](hosting/local-certificates.md) for guidance on generating and configuring development certificates.
 
 ### Production
 
@@ -117,8 +117,8 @@ For production environments, obtain certificates from:
 
 For development environments, generate self-signed certificates:
 
-- Using the [.NET CLI](local-certificates.md#option-1-using-net-cli-recommended-for-net-developers)
-- Using [OpenSSL](local-certificates.md#option-2-using-openssl)
+- Using the [.NET CLI](hosting/local-certificates.md#option-1-using-net-cli-recommended-for-net-developers)
+- Using [OpenSSL](hosting/local-certificates.md#option-2-using-openssl)
 
 ## Connection String Configuration
 
@@ -216,7 +216,7 @@ For development, use a Debug build which allows running without a certificate.
 
 ## See Also
 
-- [Local Certificate Setup](local-certificates.md) - Generate and configure development certificates
-- [Production Hosting](production.md) - Production deployment guidance
-- [Configuration](configuration.md) - Complete configuration reference
+- [Local Certificate Setup](hosting/local-certificates.md) - Generate and configure development certificates
+- [Production Hosting](hosting/production.md) - Production deployment guidance
+- [Configuration](hosting/configuration.md) - Complete configuration reference
 
