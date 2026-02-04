@@ -87,11 +87,14 @@ internal sealed class AuthenticationService(
 
         logger.CreatingDefaultClientCredentials(defaultClientId);
 
+        // Hash the secret to match how other application secrets are stored
+        var hashedSecret = _passwordHasher.HashPassword(null!, defaultClientSecret);
+
         var application = new Application
         {
             Id = Guid.NewGuid().ToString(),
             ClientId = defaultClientId,
-            ClientSecret = defaultClientSecret,
+            ClientSecret = hashedSecret,
             Type = "confidential",
             ConsentType = "implicit",
             Permissions =
