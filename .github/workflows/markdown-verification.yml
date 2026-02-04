@@ -1,0 +1,42 @@
+name: Markdown Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "Documentation/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Documentation/**"
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: 'Documentation/**/*.md'
+
+  link-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check links in Documentation
+        uses: JustinBeckwith/linkinator-action@v1
+        with:
+          paths: 'Documentation/**/*.md'
+          markdown: true
+          recurse: true
