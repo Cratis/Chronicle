@@ -155,6 +155,13 @@ app.UseRouting();
 app.UseCratisArc();
 app.UseRouting();
 
+// Map workbench static files BEFORE authentication so they are publicly accessible
+if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
 app.UseMiddleware<GrpcAuthenticationMiddleware>();
 app.UseAuthentication();
@@ -194,11 +201,9 @@ app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
 
-// Map workbench static files and fallback AFTER API endpoints to avoid conflicts
+// Map workbench fallback route AFTER API endpoints to avoid conflicts
 if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 {
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
     app.MapFallbackToFile("index.html").AllowAnonymous();
 }
 
