@@ -289,13 +289,13 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-x64-development-output
         with:
-          path: ./Source/Kernel/Server/out/development/x64
+          path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}-development
 
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/development/x64
+          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/x64
 
   dotnet-arm64-development:
     if: needs.release.outputs.publish == 'true'
@@ -317,13 +317,13 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-arm64-development-output
         with:
-          path: ./Source/Kernel/Server/out/development/arm64
+          path: ./Source/Kernel/Server/out/arm64
           key: ${{ env.DOTNET_ARM64_CACHE }}-development
 
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/development/arm64
+          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/arm64
 
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
@@ -483,14 +483,14 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-x64-development-output
         with:
-          path: ./Source/Kernel/Server/out/development/x64
+          path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}-development
           fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: dotnet-arm64-development-output
         with:
-          path: ./Source/Kernel/Server/out/development/arm64
+          path: ./Source/Kernel/Server/out/arm64
           key: ${{ env.DOTNET_ARM64_CACHE }}-development
           fail-on-cache-miss: true
 
