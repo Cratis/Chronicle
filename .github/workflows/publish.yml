@@ -328,6 +328,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release, dotnet]
     permissions:
+      # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
 
     steps:
@@ -349,6 +350,8 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      # Uses NuGet trusted publishing with OIDC authentication
+      # No API key needed - authentication is handled via OIDC token
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --source https://api.nuget.org/v3/index.json
 
