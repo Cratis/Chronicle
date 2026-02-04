@@ -25,7 +25,12 @@ summary_file="$COVERAGE_REPORT_PATH/Summary.json"
 if [ ! -f "$summary_file" ]; then
     echo "Warning: No Summary.json found in $COVERAGE_REPORT_PATH"
     # Still update the timestamp
-    timestamp=$(date +%s%3N)
+    if command -v python3 >/dev/null 2>&1; then
+        timestamp=$(python3 -c "import time; print(int(time.time() * 1000))")
+    else
+        # Fallback: use seconds if Python is not available
+        timestamp=$(($(date +%s) * 1000))
+    fi
     echo "window.COVERAGE_DATA = $(echo "$existing_json" | jq --argjson ts "$timestamp" '.lastUpdate = $ts');" > "$OUTPUT_PATH"
     echo "Updated timestamp in coverage data (no coverage report found)"
     exit 0
@@ -68,8 +73,13 @@ current_week="${year}-M${month}-W${week_of_month}"
 # Extract commit hash (first 7 chars)
 commit_short="${COMMIT_SHA:0:7}"
 
-# Get timestamp
-timestamp=$(date +%s%3N)
+# Get timestamp - use Python if available for cross-platform millisecond precision
+if command -v python3 >/dev/null 2>&1; then
+    timestamp=$(python3 -c "import time; print(int(time.time() * 1000))")
+else
+    # Fallback: use seconds if Python is not available
+    timestamp=$(($(date +%s) * 1000))
+fi
 
 # Process assemblies and update the data structure
 result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
