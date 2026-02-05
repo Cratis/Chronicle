@@ -71,55 +71,6 @@ public class WebhookCommands : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Test a webhook configuration.
-    /// </summary>
-    /// <param name="command">Command for testing the webhook.</param>
-    /// <returns>Result of the test.</returns>
-    [HttpPost("test")]
-    public async Task<IActionResult> TestWebhook([FromBody] TestWebhook command)
-    {
-        try
-        {
-            using var httpClient = new HttpClient();
-            if (Uri.TryCreate(command.Url, UriKind.Absolute, out var uri))
-            {
-                httpClient.BaseAddress = uri;
-            }
-
-            if (command.AuthorizationType.Equals("basic", StringComparison.OrdinalIgnoreCase))
-            {
-                var value = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{command.BasicUsername}:{command.BasicPassword}"));
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", value);
-            }
-            else if (command.AuthorizationType.Equals("bearer", StringComparison.OrdinalIgnoreCase))
-            {
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", command.BearerToken);
-            }
-
-            foreach (var header in command.Headers)
-            {
-                httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
-            }
-
-            var testPayload = new
-            {
-                test = true,
-                message = "This is a test webhook call",
-                timestamp = DateTimeOffset.UtcNow
-            };
-
-            var response = await httpClient.PostAsJsonAsync(string.Empty, testPayload);
-            response.EnsureSuccessStatusCode();
-
-            return Ok(new { success = true, message = "Webhook test successful" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { success = false, message = ex.Message });
-        }
-    }
-
     static OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? CreateAuthorization(CreateWebhook command)
     {
         if (command.AuthorizationType.Equals("basic", StringComparison.OrdinalIgnoreCase))

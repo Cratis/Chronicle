@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import { CreateWebhook, TestWebhook } from 'Api/Webhooks';
+import { CreateWebhook } from 'Api/Webhooks';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
@@ -11,13 +11,11 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Checkbox } from 'primereact/checkbox';
-import { Message } from 'primereact/message';
 
 export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext();
     const [createWebhook] = CreateWebhook.use();
-    const [testWebhook] = TestWebhook.use();
 
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
@@ -30,7 +28,6 @@ export const AddWebhookDialog = () => {
     const [oauthClientSecret, setOauthClientSecret] = useState('');
     const [isActive, setIsActive] = useState(true);
     const [isReplayable, setIsReplayable] = useState(true);
-    const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
     const authTypes = [
         { label: 'None', value: 'None' },
@@ -38,28 +35,6 @@ export const AddWebhookDialog = () => {
         { label: 'Bearer Token', value: 'Bearer' },
         { label: 'OAuth (Client Credentials)', value: 'OAuth' }
     ];
-
-    const handleTest = async () => {
-        try {
-            testWebhook.url = url;
-            testWebhook.authorizationType = authType;
-            testWebhook.basicUsername = basicUsername;
-            testWebhook.basicPassword = basicPassword;
-            testWebhook.bearerToken = bearerToken;
-            testWebhook.OAuthAuthority = oauthAuthority;
-            testWebhook.OAuthClientId = oauthClientId;
-            testWebhook.OAuthClientSecret = oauthClientSecret;
-
-            const result = await testWebhook.execute();
-            if (result.isSuccess) {
-                setTestResult({ success: true, message: 'Webhook test successful!' });
-            } else {
-                setTestResult({ success: false, message: 'Test failed' });
-            }
-        } catch (error) {
-            setTestResult({ success: false, message: String(error) });
-        }
-    };
 
     const handleSave = async () => {
         if (name && url && params.eventStore) {
@@ -165,20 +140,9 @@ export const AddWebhookDialog = () => {
                     <label htmlFor="isReplayable">Replayable</label>
                 </div>
 
-                {testResult && (
-                    <Message
-                        severity={testResult.success ? 'success' : 'error'}
-                        text={testResult.message}
-                        className="mb-3"
-                    />
-                )}
-
-                <div className="flex justify-content-between mt-4">
-                    <Button label="Test" icon="pi pi-check-circle" onClick={handleTest} className="p-button-secondary" />
-                    <div>
-                        <Button label="Cancel" icon="pi pi-times" onClick={handleCancel} className="p-button-text mr-2" />
-                        <Button label="Save" icon="pi pi-check" onClick={handleSave} />
-                    </div>
+                <div className="flex justify-content-end mt-4">
+                    <Button label="Cancel" icon="pi pi-times" onClick={handleCancel} className="p-button-text mr-2" />
+                    <Button label="Save" icon="pi pi-check" onClick={handleSave} />
                 </div>
             </div>
         </Dialog>
