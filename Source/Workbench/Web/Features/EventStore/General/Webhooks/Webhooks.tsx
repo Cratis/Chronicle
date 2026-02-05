@@ -8,20 +8,17 @@ import { GetWebhooks, type WebhookDefinition } from 'Api/Webhooks';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
 import { useDialog } from '@cratis/arc.react/dialogs';
-import strings from 'Strings';
 import { AddWebhookDialog } from './Add/AddWebhookDialog';
 
 export const Webhooks = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [getWebhooks] = GetWebhooks.use();
+    const [webhooks, performQuery] = GetWebhooks.use({ eventStore: params.eventStore! });
     const [AddWebhookWrapper, showAddWebhook] = useDialog(AddWebhookDialog);
-
-    getWebhooks.eventStore = params.eventStore!;
 
     const handleAddWebhook = async () => {
         const [result] = await showAddWebhook();
         if (result) {
-            await getWebhooks.execute();
+            performQuery({ eventStore: params.eventStore! });
         }
     };
 
@@ -32,12 +29,12 @@ export const Webhooks = () => {
                 <Button
                     label="Add Webhook"
                     icon="pi pi-plus"
-                    command={handleAddWebhook} />
+                    onClick={handleAddWebhook} />
             </div>
 
             <DataTable
-                value={getWebhooks.data}
-                loading={getWebhooks.isLoading}
+                value={webhooks.data}
+                loading={webhooks.isPerforming}
                 emptyMessage="No webhooks configured">
                 <Column field="name" header="Name" />
                 <Column field="url" header="URL" />

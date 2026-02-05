@@ -8,14 +8,13 @@ import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelCreation } from 'Components/ReadModelCreation';
-import type { ReadModelSchema } from 'Api/ReadModels';
 
 export const AddReadModelDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext();
     const [createReadModel] = CreateReadModel.use();
 
-    const handleSave = async (name: string, schema: ReadModelSchema) => {
+    const handleSave = async (name: string, schema: unknown) => {
         if (name && params.eventStore) {
             createReadModel.eventStore = params.eventStore;
             createReadModel.name = name;

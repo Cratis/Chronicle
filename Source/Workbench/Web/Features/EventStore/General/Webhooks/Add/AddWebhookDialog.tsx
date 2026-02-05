@@ -46,15 +46,15 @@ export const AddWebhookDialog = () => {
             testWebhook.basicUsername = basicUsername;
             testWebhook.basicPassword = basicPassword;
             testWebhook.bearerToken = bearerToken;
-            testWebhook.oAuthAuthority = oauthAuthority;
-            testWebhook.oAuthClientId = oauthClientId;
-            testWebhook.oAuthClientSecret = oauthClientSecret;
+            testWebhook.OAuthAuthority = oauthAuthority;
+            testWebhook.OAuthClientId = oauthClientId;
+            testWebhook.OAuthClientSecret = oauthClientSecret;
 
             const result = await testWebhook.execute();
-            if (result.isSuccess && result.data) {
+            if (result.isSuccess) {
                 setTestResult({ success: true, message: 'Webhook test successful!' });
             } else {
-                setTestResult({ success: false, message: result.error || 'Test failed' });
+                setTestResult({ success: false, message: 'Test failed' });
             }
         } catch (error) {
             setTestResult({ success: false, message: String(error) });
@@ -70,9 +70,9 @@ export const AddWebhookDialog = () => {
             createWebhook.basicUsername = basicUsername;
             createWebhook.basicPassword = basicPassword;
             createWebhook.bearerToken = bearerToken;
-            createWebhook.oAuthAuthority = oauthAuthority;
-            createWebhook.oAuthClientId = oauthClientId;
-            createWebhook.oAuthClientSecret = oauthClientSecret;
+            createWebhook.OAuthAuthority = oauthAuthority;
+            createWebhook.OAuthClientId = oauthClientId;
+            createWebhook.OAuthClientSecret = oauthClientSecret;
             createWebhook.isActive = isActive;
             createWebhook.isReplayable = isReplayable;
             createWebhook.eventTypes = {};
