@@ -387,7 +387,7 @@ internal sealed class ReadModels(
             {
                 ReadModel = readModel,
                 Events = orderedEvents.ToContract(jsonSerializerOptions),
-                Occurred = firstOccurred,
+                Occurred = firstOccurred!,
                 CorrelationId = correlationId
             });
         }

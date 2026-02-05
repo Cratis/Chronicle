@@ -27,7 +27,7 @@ public class ReadModelSnapshot
     /// Gets or sets when the snapshot occurred.
     /// </summary>
     [ProtoMember(3)]
-    public DateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; }
 
     /// <summary>
     /// Gets or sets the correlation identifier.

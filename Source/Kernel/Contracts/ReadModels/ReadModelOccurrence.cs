@@ -19,7 +19,7 @@ public class ReadModelOccurrence
     /// Gets or sets when the occurrence happened.
     /// </summary>
     [ProtoMember(2)]
-    public DateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; }
 
     /// <summary>
     /// Gets or sets the <see cref="ReadModelType"/> of the read model.
