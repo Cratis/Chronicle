@@ -1,12 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography.X509Certificates;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Validation.AspNetCore;
 
@@ -28,6 +32,34 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IUserStore<User>, UserStore>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+
+        // Configure Data Protection (required for webhook secret encryption)
+        // This is set up here to ensure it's available even when OpenIddict is disabled
+        services.AddSingleton<IXmlRepository, GrainBasedXmlRepository>();
+        var dataProtectionBuilder = services.AddDataProtection()
+            .SetApplicationName("Chronicle");
+
+        // Configure key encryption with certificate if available
+        var encryptionCert = chronicleOptions.Authentication.EncryptionCertificate;
+        if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
+        {
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+                encryptionCert.CertificatePath,
+                encryptionCert.CertificatePassword);
+            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+        }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException(
+                "An encryption certificate is required in production for Data Protection key security. " +
+                "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
+                "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
+        }
+#endif
+
+        // Register webhook secret encryption service (depends on Data Protection)
+        services.AddSingleton<Grains.Observation.Webhooks.IWebhookSecretEncryption, Storage.MongoDB.Observation.Webhooks.WebhookSecretEncryption>();
 
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
