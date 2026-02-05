@@ -20,7 +20,7 @@ internal static class ReadModelOccurrenceConverters
         return new Contracts.ReadModels.ReadModelOccurrence
         {
             ObserverId = occurrence.ObserverId.Value,
-            Occurred = occurrence.Occurred,
+            Occurred = occurrence.Occurred!,
             Type = new Contracts.ReadModels.ReadModelType
             {
                 Identifier = occurrence.Type.Identifier,
