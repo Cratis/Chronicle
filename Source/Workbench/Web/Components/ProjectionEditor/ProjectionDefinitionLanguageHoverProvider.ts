@@ -283,6 +283,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         const projectionMatch = lineContent.match(/^\s*projection\s+(\S+)\s*=>/);
         if (!projectionMatch) return false;
 
+        const projectionName = projectionMatch[1];
         const projectionKeywordEnd = lineContent.indexOf('projection') + 'projection'.length;
         const arrowStart = lineContent.indexOf('=>');
 
