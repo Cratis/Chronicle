@@ -43,7 +43,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
     /// </summary>
-    public ChronicleOptions() : this(ChronicleConnectionString.Default)
+    public ChronicleOptions() : this(ChronicleConnectionString.Development)
     {
     }
 
@@ -175,4 +175,14 @@ public class ChronicleOptions(
     {
         Authentication = new Authentication()
     };
+
+    /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> from the development connection string.
+    /// </summary>
+    /// <returns>A new <see cref="ChronicleOptions"/> configured for development.</returns>
+    /// <remarks>
+    /// This is a convenience method for quickly creating options for development purposes. It uses the default development connection string which points to localhost with the default development credentials.
+    /// This is not intended for production use and should only be used for local development and testing. For production scenarios, it's recommended to explicitly configure the connection string and other options as needed.
+    /// </remarks>
+    public static ChronicleOptions FromDevelopmentConnectionString() => FromConnectionString(ChronicleConnectionString.Development);
 }

@@ -13,8 +13,9 @@ namespace Cratis.Chronicle.Connections;
 /// Supports parsing and building Chronicle connection strings in the format:
 /// chronicle://[username:password@]host[:port][/?options].
 /// </remarks>
-[SuppressMessage("Design", "CA1010:Collections should implement generic interface", Justification = "Inheriting from DbConnectionStringBuilder")]
+#pragma warning disable CA1010 // Generic interface should also be implemented
 public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
+#pragma warning restore CA1010 // Generic interface should also be implemented
 {
     const string HostKey = "Host";
     const string PortKey = "Port";
@@ -112,6 +113,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Gets the authentication mode based on the configured credentials.
     /// </summary>
     /// <exception cref="AmbiguousAuthenticationMode">Thrown when both client credentials and API key are specified.</exception>
+    /// <exception cref="MissingAuthentication">Thrown when no authentication method is specified.</exception>
     public AuthenticationMode AuthenticationMode
     {
         get
@@ -134,7 +136,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 return AuthenticationMode.ApiKey;
             }
 
-            return AuthenticationMode.None;
+            throw new MissingAuthentication();
         }
     }
 
