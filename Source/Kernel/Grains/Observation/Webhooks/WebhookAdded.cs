@@ -10,19 +10,19 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <summary>
 /// Represents the event for a webhook that has been added.
 /// </summary>
-/// <param name="Identifier">The webhook identifier.</param>
 /// <param name="Owner">The owner of the webhook.</param>
 /// <param name="EventSequenceId">The event sequence identifier.</param>
 /// <param name="EventTypes">The event types the webhook observes.</param>
-/// <param name="Target">The webhook target.</param>
+/// <param name="TargetUrl">The webhook target URL.</param>
+/// <param name="TargetHeaders">The webhook target headers.</param>
 /// <param name="IsReplayable">Whether the webhook is replayable.</param>
 /// <param name="IsActive">Whether the webhook is active.</param>
 [EventType]
 public record WebhookAdded(
-    WebhookId Identifier,
     WebhookOwner Owner,
     EventSequenceId EventSequenceId,
     IEnumerable<EventType> EventTypes,
-    WebhookTarget Target,
+    WebhookTargetUrl TargetUrl,
+    IReadOnlyDictionary<string, string> TargetHeaders,
     bool IsReplayable,
     bool IsActive);

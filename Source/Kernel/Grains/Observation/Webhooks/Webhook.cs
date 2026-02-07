@@ -37,7 +37,7 @@ public class Webhook(
         State = definition;
         await WriteStateAsync();
 
-        if (compareResult == WebhookDefinitionCompareResult.Different)
+        if (compareResult.Result == WebhookDefinitionCompareResult.Different)
         {
             logger.WebhookHasChanged(key.WebhookId);
             await _definitionObservers.Notify(notifier => notifier.OnWebhookDefinitionsChanged());

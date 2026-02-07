@@ -24,11 +24,11 @@ public class with_webhook_ids : given.a_webhooks_service_grain
         };
     }
 
-    async Task Because() => await _webhooks.Unregister(_request);
+    async Task Because() => await _webhooks.Remove(_request);
 
     [Fact] void should_get_webhooks_manager_for_event_store() =>
         _grainFactory.Received(1).GetGrain<IWebhooksManager>(_request.EventStore);
 
-    [Fact] void should_unregister_webhooks_on_manager() =>
-        _grainManager.Received(1).Unregister(Arg.Any<IEnumerable<WebhookId>>());
+    [Fact] void should_remove_webhooks_on_manager() =>
+        _grainManager.Received().Remove(Arg.Any<WebhookId>());
 }

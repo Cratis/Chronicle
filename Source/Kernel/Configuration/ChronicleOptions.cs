@@ -67,6 +67,12 @@ public class ChronicleOptions
     public Authentication Authentication { get; init; } = new Authentication();
 
     /// <summary>
+    /// Gets the encryption certificate configuration for Data Protection keys.
+    /// When not configured, keys are auto-generated and stored in the database.
+    /// </summary>
+    public EncryptionCertificate EncryptionCertificate { get; init; } = new();
+
+    /// <summary>
     /// Gets or inits the TLS configuration.
     /// </summary>
     public Tls Tls { get; init; } = new Tls();

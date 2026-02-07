@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
             .SetApplicationName("Chronicle");
 
         // Configure key encryption with certificate if available
-        var encryptionCert = chronicleOptions.Authentication.EncryptionCertificate;
+        var encryptionCert = chronicleOptions.EncryptionCertificate;
         if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
         {
             var certificate = X509CertificateLoader.LoadPkcs12FromFile(
@@ -52,7 +52,7 @@ public static class ServiceCollectionExtensions
         {
             throw new InvalidOperationException(
                 "An encryption certificate is required in production for Data Protection key security. " +
-                "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
+                "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
                 "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
         }
 #endif

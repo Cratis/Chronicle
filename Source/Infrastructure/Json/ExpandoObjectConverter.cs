@@ -146,10 +146,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (jsonNode is JsonArray array)
         {
-            return array.Select(_ =>
-            {
-                return ConvertFromJsonNode(_!, schemaProperty.Item!);
-            }).ToArray();
+            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item!)).ToArray();
         }
 
         if (typeFormats.IsKnown(schemaProperty.Format!))

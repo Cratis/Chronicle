@@ -32,11 +32,11 @@ public class with_valid_webhook_definition : given.a_webhooks_service_grain
         };
     }
 
-    async Task Because() => await _webhooks.Register(_request);
+    async Task Because() => await _webhooks.Add(_request);
 
     [Fact] void should_get_webhooks_manager_for_event_store() =>
         _grainFactory.Received(1).GetGrain<IWebhooksManager>(_request.EventStore);
 
-    [Fact] void should_register_webhook_on_manager() =>
-        _grainManager.Received(1).Register(Arg.Is<DomainWebhookDefinition[]>(w => w.Length == 1));
+    [Fact] void should_add_webhook_to_manager() =>
+        _grainManager.Received().Add(Arg.Any<DomainWebhookDefinition>());
 }

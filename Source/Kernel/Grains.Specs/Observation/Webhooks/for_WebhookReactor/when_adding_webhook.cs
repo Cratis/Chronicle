@@ -19,14 +19,15 @@ public class when_adding_webhook : given.a_webhook_reactor
         const WebhookOwner owner = WebhookOwner.Client;
         var eventSequenceId = new EventSequenceId(Guid.NewGuid().ToString());
         var eventTypes = new[] { new EventType("TestEvent", 1) };
-        var target = new WebhookTarget(new WebhookTargetUrl("https://example.com/webhook"), WebhookAuthorization.None, new Dictionary<string, string>());
+        var targetUrl = new WebhookTargetUrl("https://example.com/webhook");
+        var targetHeaders = new Dictionary<string, string>();
 
         _event = new WebhookAdded(
-            webhookId,
             owner,
             eventSequenceId,
             eventTypes,
-            target,
+            targetUrl,
+            targetHeaders,
             true,
             true);
 
@@ -49,11 +50,12 @@ public class when_adding_webhook : given.a_webhook_reactor
 
     [Fact] void should_add_webhook_definition_to_manager() =>
         _webhooksManager.Received(1).Add(Arg.Is<WebhookDefinition>(def =>
-            def.Identifier == _event.Identifier &&
+            def.Identifier == new WebhookId(_eventContext.EventSourceId.Value) &&
             def.Owner == _event.Owner &&
             def.EventSequenceId == _event.EventSequenceId &&
             def.EventTypes.SequenceEqual(_event.EventTypes) &&
-            def.Target == _event.Target &&
+            def.Target.Url == _event.TargetUrl &&
+            def.Target.Headers.SequenceEqual(_event.TargetHeaders) &&
             def.IsReplayable == _event.IsReplayable &&
             def.IsActive == _event.IsActive));
 }

@@ -62,7 +62,7 @@ public static class OpenIddictServiceCollectionExtensions
                 // If a certificate is configured, use it for encryption and signing
                 // In development without a certificate, use ephemeral keys for convenience
                 // In production, a certificate is required
-                var encryptionCertificate = chronicleOptions.Authentication.EncryptionCertificate;
+                var encryptionCertificate = chronicleOptions.EncryptionCertificate;
                 if (encryptionCertificate.IsConfigured && File.Exists(encryptionCertificate.CertificatePath))
                 {
                     var cert = X509CertificateLoader.LoadPkcs12FromFile(
@@ -82,7 +82,7 @@ public static class OpenIddictServiceCollectionExtensions
                 {
                     throw new InvalidOperationException(
                         "An encryption certificate is required in production for OpenIddict key security. " +
-                        "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
+                        "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
                         "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
                 }
 #endif

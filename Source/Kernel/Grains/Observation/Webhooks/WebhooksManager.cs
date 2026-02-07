@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Grains.Namespaces;
@@ -49,6 +50,22 @@ public class WebhooksManager(
     }
 
     /// <inheritdoc/>
+    public async Task Update(WebhookDefinition definition)
+    {
+        var webhooks = State.Webhooks.ToList();
+        var index = webhooks.FindIndex(w => w.Identifier == definition.Identifier);
+        if (index >= 0)
+        {
+            webhooks[index] = definition;
+            State.Webhooks = webhooks;
+            await WriteStateAsync();
+
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            await SetDefinitionAndSubscribe(namespaces, definition);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task Remove(WebhookId webhookId)
     {
         var webhooks = State.Webhooks.ToList();
@@ -58,6 +75,76 @@ public class WebhooksManager(
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         await Unsubscribe(namespaces, webhookId);
+    }
+
+    /// <inheritdoc/>
+    public async Task SetAuthorization(WebhookId webhookId, WebhookAuthorization authorization)
+    {
+        var webhooks = State.Webhooks.ToList();
+        var index = webhooks.FindIndex(w => w.Identifier == webhookId);
+        if (index >= 0)
+        {
+            var definition = webhooks[index];
+            var updatedTarget = new WebhookTarget(definition.Target.Url, authorization, definition.Target.Headers);
+            webhooks[index] = definition with { Target = updatedTarget };
+            State.Webhooks = webhooks;
+            await WriteStateAsync();
+
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            await SetDefinitionAndSubscribe(namespaces, webhooks[index]);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SetEventTypes(WebhookId webhookId, IEnumerable<EventType> eventTypes)
+    {
+        var webhooks = State.Webhooks.ToList();
+        var index = webhooks.FindIndex(w => w.Identifier == webhookId);
+        if (index >= 0)
+        {
+            webhooks[index] = webhooks[index] with { EventTypes = eventTypes };
+            State.Webhooks = webhooks;
+            await WriteStateAsync();
+
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            await SetDefinitionAndSubscribe(namespaces, webhooks[index]);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SetTargetUrl(WebhookId webhookId, WebhookTargetUrl targetUrl)
+    {
+        var webhooks = State.Webhooks.ToList();
+        var index = webhooks.FindIndex(w => w.Identifier == webhookId);
+        if (index >= 0)
+        {
+            var definition = webhooks[index];
+            var updatedTarget = new WebhookTarget(targetUrl, definition.Target.Authorization, definition.Target.Headers);
+            webhooks[index] = definition with { Target = updatedTarget };
+            State.Webhooks = webhooks;
+            await WriteStateAsync();
+
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            await SetDefinitionAndSubscribe(namespaces, webhooks[index]);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SetTargetHeaders(WebhookId webhookId, IReadOnlyDictionary<string, string> headers)
+    {
+        var webhooks = State.Webhooks.ToList();
+        var index = webhooks.FindIndex(w => w.Identifier == webhookId);
+        if (index >= 0)
+        {
+            var definition = webhooks[index];
+            var updatedTarget = new WebhookTarget(definition.Target.Url, definition.Target.Authorization, headers);
+            webhooks[index] = definition with { Target = updatedTarget };
+            State.Webhooks = webhooks;
+            await WriteStateAsync();
+
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            await SetDefinitionAndSubscribe(namespaces, webhooks[index]);
+        }
     }
 
     /// <inheritdoc/>
