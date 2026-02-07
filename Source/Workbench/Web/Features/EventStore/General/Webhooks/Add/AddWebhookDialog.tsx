@@ -47,7 +47,20 @@ export const AddWebhookDialog = () => {
 
     const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
 
-    const isValid = name.trim() !== '' && url.trim() !== '' && eventSequence.trim() !== '';
+    const isUrlValid = (urlString: string): boolean => {
+        try {
+            new URL(urlString);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
+    const isValid = name.trim() !== '' &&
+                    url.trim() !== '' &&
+                    isUrlValid(url) &&
+                    eventSequence.trim() !== '' &&
+                    selectedEventTypes.length > 0;
 
     const handleSave = async () => {
         if (name && url && eventSequence && params.eventStore) {

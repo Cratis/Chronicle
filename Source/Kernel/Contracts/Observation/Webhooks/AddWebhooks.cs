@@ -4,10 +4,10 @@
 namespace Cratis.Chronicle.Contracts.Observation.Webhooks;
 
 /// <summary>
-/// Represents the payload for unregistering a webhook.
+/// Represents the payload for registering an observer.
 /// </summary>
 [ProtoContract]
-public class UnregisterWebhook
+public class AddWebhooks
 {
     /// <summary>
     /// Gets or sets the event store name.
@@ -16,8 +16,14 @@ public class UnregisterWebhook
     public string EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the collection of webhook ids to unregister.
+    /// Gets or sets the <see cref="ObserverOwner"/>.
+    /// </summary>
+    [ProtoMember(2)]
+    public ObserverOwner Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the collection of  <see cref="WebhookDefinition"/> instances to register.
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
-    public IList<string> Webhooks { get; set; } = [];
+    public IList<WebhookDefinition> Webhooks { get; set; } = [];
 }

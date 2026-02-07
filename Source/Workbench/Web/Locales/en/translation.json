@@ -145,7 +145,8 @@
                 "title": "Webhooks",
                 "empty": "No webhooks found",
                 "actions": {
-                    "add": "Add"
+                    "add": "Add",
+                    "remove": "Remove"
                 },
                 "columns": {
                     "name": "Name",
@@ -170,6 +171,10 @@
                         "oauthClientSecret": "Client Secret",
                         "isActive": "Active",
                         "isReplayable": "Replayable"
+                    },
+                    "removeWebhook": {
+                        "title": "Remove Webhook",
+                        "message": "Are you sure you want to remove the webhook '{name}'?"
                     }
                 },
                 "authTypes": {

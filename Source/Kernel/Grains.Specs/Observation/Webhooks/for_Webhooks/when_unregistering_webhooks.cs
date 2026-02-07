@@ -10,14 +10,14 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.when_unregis
 public class with_webhook_ids : given.a_webhooks_service_grain
 {
     IWebhooksManager _grainManager;
-    Contracts.Observation.Webhooks.UnregisterWebhook _request;
+    Contracts.Observation.Webhooks.RemoveWebhooks _request;
 
     void Establish()
     {
         _grainManager = Substitute.For<IWebhooksManager>();
         _grainFactory.GetGrain<IWebhooksManager>(Arg.Any<string>()).Returns(_grainManager);
 
-        _request = new Contracts.Observation.Webhooks.UnregisterWebhook
+        _request = new Contracts.Observation.Webhooks.RemoveWebhooks
         {
             EventStore = "test-event-store",
             Webhooks = ["webhook-1", "webhook-2"]

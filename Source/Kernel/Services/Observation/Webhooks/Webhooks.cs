@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -19,20 +19,36 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 internal sealed class Webhooks(IGrainFactory grainFactory, IStorage storage) : IWebhooks
 {
     /// <inheritdoc/>
-    public async Task Register(RegisterWebhook request, CallContext context = default)
+    public async Task Add(AddWebhooks request, CallContext context = default)
     {
-        var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooksManager>(request.EventStore);
-        var webhooks = request.Webhooks.Select(w => w.ToChronicle()).ToArray();
+        var eventSequence = grainFactory.GetEventLog();
 
-        await webhooksManager.Register(webhooks);
+        foreach (var webhook in request.Webhooks)
+        {
+            var chronicleWebhook = webhook.ToChronicle();
+            var @event = new Grains.Observation.Webhooks.WebhookAdded(
+                chronicleWebhook.Identifier,
+                chronicleWebhook.Owner,
+                chronicleWebhook.EventSequenceId,
+                chronicleWebhook.EventTypes,
+                chronicleWebhook.Target,
+                chronicleWebhook.IsReplayable,
+                chronicleWebhook.IsActive);
+
+            await eventSequence.Append(webhook.Identifier, @event);
+        }
     }
 
     /// <inheritdoc/>
-    public async Task Unregister(UnregisterWebhook request, CallContext context = default)
+    public async Task Remove(RemoveWebhooks request, CallContext context = default)
     {
-        var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooksManager>(request.EventStore);
+        var eventSequence = grainFactory.GetEventLog();
 
-        await webhooksManager.Unregister(request.Webhooks.Select(id => new WebhookId(id)));
+        foreach (var webhookId in request.Webhooks)
+        {
+            var @event = new Grains.Observation.Webhooks.WebhookRemoved();
+            await eventSequence.Append(webhookId, @event);
+        }
     }
 
     /// <inheritdoc/>

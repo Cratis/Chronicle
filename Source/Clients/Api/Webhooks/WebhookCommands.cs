@@ -47,7 +47,7 @@ public class WebhookCommands : ControllerBase
             Headers = headers
         };
 
-        await _webhooks.Register(new RegisterWebhook
+        await _webhooks.Add(new Contracts.Observation.Webhooks.AddWebhooks
         {
             EventStore = eventStore,
             Owner = Contracts.Observation.ObserverOwner.Client,
@@ -67,6 +67,24 @@ public class WebhookCommands : ControllerBase
                     IsActive = command.IsActive
                 }
             ]
+        });
+    }
+
+    /// <summary>
+    /// Remove a webhook.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store.</param>
+    /// <param name="command">Command for removing the webhook.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("remove")]
+    public async Task RemoveWebHook(
+        [FromRoute] string eventStore,
+        [FromBody] RemoveWebhook command)
+    {
+        await _webhooks.Remove(new RemoveWebhooks
+        {
+            EventStore = eventStore,
+            Webhooks = [command.WebhookId]
         });
     }
 

@@ -10,22 +10,22 @@ namespace Cratis.Chronicle.Contracts.Observation.Webhooks;
 public interface IWebhooks
 {
     /// <summary>
-    /// Register projections.
+    /// Add projections.
     /// </summary>
-    /// <param name="request">The <see cref="RegisterWebhook"/> holding the registration.</param>
+    /// <param name="request">The <see cref="AddWebhooks"/> holding the registration.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task Register(RegisterWebhook request, CallContext context = default);
+    Task Add(AddWebhooks request, CallContext context = default);
 
     /// <summary>
-    /// Unregister projections.
+    /// Remove projections.
     /// </summary>
-    /// <param name="request">The <see cref="UnregisterWebhook"/> request.</param>
+    /// <param name="request">The <see cref="RemoveWebhooks"/> request.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>Awaitable task.</returns>
     [Operation]
-    Task Unregister(UnregisterWebhook request, CallContext context = default);
+    Task Remove(RemoveWebhooks request, CallContext context = default);
 
     /// <summary>
     /// Gets all webhooks.

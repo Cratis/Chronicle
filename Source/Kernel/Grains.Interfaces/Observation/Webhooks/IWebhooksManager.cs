@@ -23,16 +23,16 @@ public interface IWebhooksManager : IGrainWithStringKey
     Task<IEnumerable<WebhookDefinition>> GetWebhookDefinitions();
 
     /// <summary>
-    /// Register a set of <see cref="WebhookDefinition"/> for the event store it belongs to.
+    /// Add a <see cref="WebhookDefinition"/> for the event store it belongs to.
     /// </summary>
-    /// <param name="definitions">A collection of <see cref="WebhookDefinition"/>.</param>
+    /// <param name="definition">The <see cref="WebhookDefinition"/> to add.</param>
     /// <returns>Awaitable task.</returns>
-    Task Register(IEnumerable<WebhookDefinition> definitions);
+    Task Add(WebhookDefinition definition);
 
     /// <summary>
-    /// Unregister a set of <see cref="WebhookId"/> for the event store it belongs to.
+    /// Remove a <see cref="WebhookId"/> for the event store it belongs to.
     /// </summary>
-    /// <param name="webhookIds">A collection of <see cref="WebhookId"/>.</param>
+    /// <param name="webhookId">The <see cref="WebhookId"/> to remove.</param>
     /// <returns>Awaitable task.</returns>
-    Task Unregister(IEnumerable<WebhookId> webhookIds);
+    Task Remove(WebhookId webhookId);
 }

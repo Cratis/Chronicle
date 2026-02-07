@@ -11,14 +11,14 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.when_registe
 public class with_valid_webhook_definition : given.a_webhooks_service_grain
 {
     IWebhooksManager _grainManager;
-    Contracts.Observation.Webhooks.RegisterWebhook _request;
+    Contracts.Observation.Webhooks.AddWebhooks _request;
 
     void Establish()
     {
         _grainManager = Substitute.For<IWebhooksManager>();
         _grainFactory.GetGrain<IWebhooksManager>(Arg.Any<string>()).Returns(_grainManager);
 
-        _request = new Contracts.Observation.Webhooks.RegisterWebhook
+        _request = new Contracts.Observation.Webhooks.AddWebhooks
         {
             EventStore = "test-event-store",
             Webhooks =

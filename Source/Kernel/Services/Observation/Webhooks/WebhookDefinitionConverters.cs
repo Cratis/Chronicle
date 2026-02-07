@@ -26,7 +26,7 @@ internal static class WebhookDefinitionConverters
             webhookDefinition.Identifier,
             WebhookOwner.Client,
             string.IsNullOrEmpty(webhookDefinition.EventSequenceId) ? EventSequenceId.Log : webhookDefinition.EventSequenceId,
-            webhookDefinition.EventTypes.Select(_ => _.ToChronicle()),
+            webhookDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             webhookDefinition.Target.ToChronicle(),
             webhookDefinition.IsReplayable,
             webhookDefinition.IsActive);
@@ -52,9 +52,9 @@ internal static class WebhookDefinitionConverters
         var authorization = target.Authorization switch
         {
             null => WebhookAuthorization.None,
-            var auth when auth.Value0 is not null => new Concepts.Security.BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
-            var auth when auth.Value1 is not null => new Concepts.Security.BearerTokenAuthorization(auth.Value1.Token),
-            var auth when auth.Value2 is not null => new Concepts.Security.OAuthAuthorization(
+            var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
+            var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
+            var auth when auth.Value2 is not null => new OAuthAuthorization(
                 auth.Value2.Authority,
                 auth.Value2.ClientId,
                 auth.Value2.ClientSecret),

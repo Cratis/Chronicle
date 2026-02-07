@@ -6,6 +6,7 @@ using Cratis.Chronicle.Grains.EventTypes;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Grains.Observation.Webhooks;
 using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
@@ -56,6 +57,9 @@ internal sealed class ChronicleServerStartupTask(
 
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await projectionsManager.Ensure();
+
+            var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventStore);
+            await webhooksManager.Ensure();
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
             await projectionsServiceClient.Register(eventStore, projectionDefinitions);

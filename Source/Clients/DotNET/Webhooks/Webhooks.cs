@@ -29,13 +29,13 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
             definition.Identifier,
             definition.EventSequenceId);
 
-        var registration = new RegisterWebhook
+        var request = new AddWebhooks
         {
             EventStore = eventStore.Name,
             Owner = ObserverOwner.Client,
             Webhooks = [definition.ToContract()]
         };
 
-        await _servicesAccessor.Services.Webhooks.Register(registration);
+        await _servicesAccessor.Services.Webhooks.Add(request);
     }
 }

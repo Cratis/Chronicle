@@ -13,7 +13,7 @@ using IWebhooks = Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks;
 
 namespace Cratis.Chronicle.Specs.Webhooks.for_Webhooks;
 
-public class when_registering_webhook : Specification
+public class when_adding_webhook : Specification
 {
     IChronicleConnection _chronicleConnection;
     IEventStore _eventStore;
@@ -46,7 +46,7 @@ public class when_registering_webhook : Specification
 
     [Fact]
     void should_call_register_on_services_with_webhook() => _serviceAccessor.Services.Webhooks.Received(1)
-        .Register(Arg.Is<RegisterWebhook>(w =>
+        .Add(Arg.Is<AddWebhooks>(w =>
             w.EventStore == _eventStore.Name &&
             w.Owner == ObserverOwner.Client &&
             w.Webhooks.Count == 1));
