@@ -34,6 +34,76 @@ var connectionString = "chronicle://server.example.com:35000/?apiKey=your-api-ke
 var connectionString = "chronicle://localhost:35000/?disableTls=true";
 ```
 
+## Development Connection String
+
+Chronicle provides a built-in development connection string for local development and testing. This connection string is configured to work out-of-the-box with a local Chronicle server running on the default development port.
+
+### ChronicleConnectionString.Development
+
+The `ChronicleConnectionString.Development` constant provides a pre-configured connection string:
+
+```csharp
+// Manually using the development connection string
+var options = ChronicleOptions.FromConnectionString(ChronicleConnectionString.Development);
+var client = new ChronicleClient(options);
+```
+
+### Default Constructor Behavior
+
+When you create instances of `ChronicleOptions` or `ChronicleClient` using their default constructors, they automatically use the development connection string with default development client credentials:
+
+```csharp
+// Both of these use ChronicleConnectionString.Development by default
+var options = new ChronicleOptions();
+var client = new ChronicleClient();
+```
+
+This is equivalent to:
+
+```csharp
+var options = ChronicleOptions.FromDevelopmentConnectionString();
+var client = new ChronicleClient(ChronicleConnectionString.Development);
+```
+
+### FromDevelopmentConnectionString()
+
+For explicit clarity in your code, you can use the `FromDevelopmentConnectionString()` factory method:
+
+```csharp
+var options = ChronicleOptions.FromDevelopmentConnectionString();
+var client = new ChronicleClient(options);
+```
+
+### What's Included
+
+The development connection string includes:
+
+- **Host**: `localhost`
+- **Port**: `35000` (default Chronicle port)
+- **Authentication**: Default development client credentials pre-configured
+- **TLS**: Disabled by default for easier local development
+
+### Production Warning
+
+> **Important**: The development connection string and default constructors are intended **only for local development and testing**. Never use these defaults in production environments. Always explicitly configure connection strings with appropriate credentials and TLS enabled for production deployments.
+
+For production, use one of these approaches:
+
+```csharp
+// From configuration
+builder.Services.AddChronicle(); // Reads from appsettings.json
+
+// Explicit connection string
+var options = ChronicleOptions.FromConnectionString("chronicle://clientId:secret@prod.example.com:35000");
+
+// Or using builder
+var connectionString = new ChronicleConnectionStringBuilder()
+    .WithHost("prod.example.com")
+    .WithCredentials("clientId", "clientSecret")
+    .Build();
+var options = ChronicleOptions.FromConnectionString(connectionString);
+```
+
 ## Using Connection Strings
 
 ### From Configuration

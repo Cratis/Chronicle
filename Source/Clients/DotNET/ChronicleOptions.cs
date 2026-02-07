@@ -14,6 +14,11 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents the settings for connecting to Chronicle.
 /// </summary>
+/// <remarks>
+/// Using the default constructor initializes the options with the development connection string
+/// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
+/// client credentials. This is intended for local development and testing only.
+/// </remarks>
 /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to use.</param>
 /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
@@ -43,6 +48,11 @@ public class ChronicleOptions(
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
     /// </summary>
+    /// <remarks>
+    /// This initializes the options with the development connection string
+    /// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
+    /// client credentials.
+    /// </remarks>
     public ChronicleOptions() : this(ChronicleConnectionString.Development)
     {
     }
@@ -181,8 +191,11 @@ public class ChronicleOptions(
     /// </summary>
     /// <returns>A new <see cref="ChronicleOptions"/> configured for development.</returns>
     /// <remarks>
-    /// This is a convenience method for quickly creating options for development purposes. It uses the default development connection string which points to localhost with the default development credentials.
-    /// This is not intended for production use and should only be used for local development and testing. For production scenarios, it's recommended to explicitly configure the connection string and other options as needed.
+    /// This is a convenience method for quickly creating options for development purposes. It uses the
+    /// default development connection string which points to localhost with the default development
+    /// client credentials. This is not intended for production use and should only be used for local
+    /// development and testing. For production scenarios, it's recommended to explicitly configure the
+    /// connection string and other options as needed.
     /// </remarks>
     public static ChronicleOptions FromDevelopmentConnectionString() => FromConnectionString(ChronicleConnectionString.Development);
 }
