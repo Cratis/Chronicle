@@ -9,17 +9,12 @@ namespace Cratis.Chronicle.Connections;
 public enum AuthenticationMode
 {
     /// <summary>
-    /// No authentication.
-    /// </summary>
-    None = 0,
-
-    /// <summary>
     /// Client credentials authentication.
     /// </summary>
-    ClientCredentials = 1,
+    ClientCredentials = 0,
 
     /// <summary>
     /// API key authentication.
     /// </summary>
-    ApiKey = 2,
+    ApiKey = 1,
 }
