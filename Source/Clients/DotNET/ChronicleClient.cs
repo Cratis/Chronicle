@@ -40,7 +40,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
     /// <remarks>
-    /// This initializes the client with the development connection string (<see cref="ChronicleConnectionString.Development"/>).
+    /// This initializes the client with the development connection string
+    /// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
+    /// client credentials.
     /// </remarks>
     public ChronicleClient()
         : this(ChronicleConnectionString.Development)
