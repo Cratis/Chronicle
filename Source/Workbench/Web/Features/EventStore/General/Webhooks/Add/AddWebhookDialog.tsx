@@ -109,7 +109,7 @@ export const AddWebhookDialog = () => {
                         value={eventSequence}
                         options={eventSequenceOptions}
                         onChange={(e) => setEventSequence(e.value)}
-                        placeholder="Select event sequence"
+                    placeholder="Select event sequence"
                     />
                 </div>
 
