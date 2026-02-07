@@ -16,9 +16,11 @@ export interface DialogProps {
     children: ReactNode;
     width?: string;
     resizable?: boolean;
+    isValid?: boolean;
 }
 
-export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false }: DialogProps) => {
+export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false, isValid }: DialogProps) => {
+    const isDialogValid = isValid !== false;
     const headerElement = (
         <div className="inline-flex align-items-center justify-content-center gap-2">
             <span className="font-bold white-space-nowrap">{title}</span>
@@ -27,27 +29,27 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
 
     const okFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} autoFocus />
+            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
         </>
     );
 
     const okCancelFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} autoFocus />
+            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
             <Button label="Cancel" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.Cancelled)} />
         </>
     );
 
     const yesNoFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} autoFocus />
+            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
             <Button label="No" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.No)} />
         </>
     );
 
     const yesNoCancelFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} autoFocus />
+            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
             <Button label="No" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.No)} />
             <Button label="Cancel" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.Cancelled)} />
         </>
