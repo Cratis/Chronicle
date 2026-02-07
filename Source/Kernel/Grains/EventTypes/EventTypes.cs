@@ -102,14 +102,44 @@ public class EventTypes : IEventTypes
             schema.Properties.Add(kvp);
         }
 
+        foreach (var property in schema.Properties.Values)
+        {
+            ForceSchemaToBeCamelCase(property);
+        }
+
+        if (schema.Item != null)
+        {
+            ForceSchemaToBeCamelCase(schema.Item);
+        }
+
         foreach (var allOfSchema in schema.AllOf)
         {
             ForceSchemaToBeCamelCase(allOfSchema);
         }
 
+        foreach (var anyOfSchema in schema.AnyOf)
+        {
+            ForceSchemaToBeCamelCase(anyOfSchema);
+        }
+
+        foreach (var oneOfSchema in schema.OneOf)
+        {
+            ForceSchemaToBeCamelCase(oneOfSchema);
+        }
+
         if (schema.HasReference)
         {
             ForceSchemaToBeCamelCase(schema.Reference!);
+        }
+
+        if (schema.AdditionalPropertiesSchema != null)
+        {
+            ForceSchemaToBeCamelCase(schema.AdditionalPropertiesSchema);
+        }
+
+        foreach (var definition in schema.Definitions.Values)
+        {
+            ForceSchemaToBeCamelCase(definition);
         }
     }
 }
