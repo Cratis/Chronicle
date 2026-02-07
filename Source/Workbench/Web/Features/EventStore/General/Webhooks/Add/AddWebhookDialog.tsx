@@ -3,9 +3,12 @@
 
 import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { AddWebHook } from 'Api/Webhooks';
+import { AllEventSequences } from 'Api/EventSequences';
+import { AllEventTypes } from 'Api/EventTypes';
 import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
+import { MultiSelect } from 'primereact/multiselect';
 import { InputSwitch } from 'primereact/inputswitch';
 import { useState } from 'react';
 import strings from 'Strings';
@@ -17,8 +20,13 @@ export const AddWebhookDialog = () => {
     const { closeDialog } = useDialogContext();
     const [addWebhook] = AddWebHook.use();
 
+    const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
+    const [allEventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
+
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
+    const [eventSequence, setEventSequence] = useState('event-log');
+    const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
     const [authType, setAuthType] = useState('None');
     const [basicUsername, setBasicUsername] = useState('');
     const [basicPassword, setBasicPassword] = useState('');
@@ -36,13 +44,18 @@ export const AddWebhookDialog = () => {
         { label: strings.eventStore.general.webhooks.authTypes.oauth, value: 'OAuth' }
     ];
 
-    const isValid = name.trim() !== '' && url.trim() !== '';
+    const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
+    const eventTypeOptions = allEventTypes.data.map(et => ({ label: et.id, value: et.id }));
+
+    const isValid = name.trim() !== '' && url.trim() !== '' && eventSequence.trim() !== '';
 
     const handleSave = async () => {
-        if (name && url && params.eventStore) {
+        if (name && url && eventSequence && params.eventStore) {
             addWebhook.eventStore = params.eventStore;
             addWebhook.name = name;
             addWebhook.url = url;
+            addWebhook.eventSequenceId = eventSequence;
+            addWebhook.eventTypeIds = selectedEventTypes;
             addWebhook.authorizationType = authType;
             addWebhook.basicUsername = basicUsername;
             addWebhook.basicPassword = basicPassword;
@@ -87,6 +100,29 @@ export const AddWebhookDialog = () => {
                 <div className="field mb-3">
                     <label htmlFor="url">{strings.eventStore.general.webhooks.dialogs.addWebhook.url}</label>
                     <InputText id="url" value={url} onChange={(e) => setUrl(e.target.value)} />
+                </div>
+
+                <div className="field mb-3">
+                    <label htmlFor="eventSequence">{strings.eventStore.general.webhooks.dialogs.addWebhook.eventSequence}</label>
+                    <Dropdown
+                        id="eventSequence"
+                        value={eventSequence}
+                        options={eventSequenceOptions}
+                        onChange={(e) => setEventSequence(e.value)}
+                        placeholder="Select event sequence"
+                    />
+                </div>
+
+                <div className="field mb-3">
+                    <label htmlFor="eventTypes">{strings.eventStore.general.webhooks.dialogs.addWebhook.eventTypes}</label>
+                    <MultiSelect
+                        id="eventTypes"
+                        value={selectedEventTypes}
+                        options={eventTypeOptions}
+                        onChange={(e) => setSelectedEventTypes(e.value)}
+                        placeholder="Select event types"
+                        display="chip"
+                    />
                 </div>
 
                 <div className="field mb-3">

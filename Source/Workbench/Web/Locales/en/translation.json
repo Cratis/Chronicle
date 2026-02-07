@@ -159,6 +159,8 @@
                         "title": "Add Webhook",
                         "name": "Name",
                         "url": "Webhook URL",
+                        "eventSequence": "Event Sequence",
+                        "eventTypes": "Event Types",
                         "authType": "Authorization Type",
                         "basicUsername": "Username",
                         "basicPassword": "Password",

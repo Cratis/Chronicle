@@ -19,6 +19,16 @@ public class AddWebhook
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the event sequence ID.
+    /// </summary>
+    public string EventSequenceId { get; set; } = "event-log";
+
+    /// <summary>
+    /// Gets or sets the event type IDs.
+    /// </summary>
+    public IEnumerable<string> EventTypeIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the event types and their key expressions.
     /// </summary>
     public IDictionary<string, string> EventTypes { get; set; } = new Dictionary<string, string>();

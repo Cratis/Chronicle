@@ -55,11 +55,11 @@ public class WebhookCommands : ControllerBase
             [
                 new Contracts.Observation.Webhooks.WebhookDefinition
                 {
-                    EventSequenceId = "event-log",
+                    EventSequenceId = command.EventSequenceId,
                     Identifier = command.Name,
-                    EventTypes = command.EventTypes.Select(et => new Contracts.Events.EventType
+                    EventTypes = command.EventTypeIds.Select(id => new Contracts.Events.EventType
                     {
-                        Id = et.Key,
+                        Id = id,
                         Generation = 1
                     }).ToList(),
                     Target = webhookTarget,
