@@ -51,7 +51,7 @@ public static class ChronicleConnectionStringBuilderExtensions
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
     /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
-    public static ChronicleConnectionStringBuilder WithDevelopmentCredentials(this ChronicleConnectionStringBuilder builder
+    public static ChronicleConnectionStringBuilder WithDevelopmentCredentials(this ChronicleConnectionStringBuilder builder)
     {
         builder.Username = ChronicleConnectionString.DevelopmentClient;
         builder.Password = ChronicleConnectionString.DevelopmentClientSecret;
