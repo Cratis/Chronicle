@@ -24,14 +24,14 @@ public class AddWebhook
     public string EventSequenceId { get; set; } = "event-log";
 
     /// <summary>
-    /// Gets or sets the event type IDs.
+    /// Gets or sets the event types.
     /// </summary>
-    public IEnumerable<string> EventTypeIds { get; set; } = [];
+    public IEnumerable<Events.EventType> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the event types and their key expressions.
     /// </summary>
-    public IDictionary<string, string> EventTypes { get; set; } = new Dictionary<string, string>();
+    public IDictionary<string, string> EventTypeKeyExpressions { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the authorization type (None, Basic, Bearer, OAuth).

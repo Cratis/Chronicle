@@ -57,10 +57,10 @@ public class WebhookCommands : ControllerBase
                 {
                     EventSequenceId = command.EventSequenceId,
                     Identifier = command.Name,
-                    EventTypes = command.EventTypeIds.Select(id => new Contracts.Events.EventType
+                    EventTypes = command.EventTypes.Select(et => new Contracts.Events.EventType
                     {
-                        Id = id,
-                        Generation = 1
+                        Id = et.Id,
+                        Generation = et.Generation
                     }).ToList(),
                     Target = webhookTarget,
                     IsReplayable = command.IsReplayable,

@@ -5,6 +5,7 @@ import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react
 import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
+import { EventType } from 'Api/Events';
 import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
@@ -26,7 +27,7 @@ export const AddWebhookDialog = () => {
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
     const [eventSequence, setEventSequence] = useState('event-log');
-    const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
+    const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
     const [authType, setAuthType] = useState('None');
     const [basicUsername, setBasicUsername] = useState('');
     const [basicPassword, setBasicPassword] = useState('');
@@ -45,7 +46,6 @@ export const AddWebhookDialog = () => {
     ];
 
     const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
-    const eventTypeOptions = allEventTypes.data.map(et => ({ label: et.id, value: et.id }));
 
     const isValid = name.trim() !== '' && url.trim() !== '' && eventSequence.trim() !== '';
 
@@ -55,7 +55,7 @@ export const AddWebhookDialog = () => {
             addWebhook.name = name;
             addWebhook.url = url;
             addWebhook.eventSequenceId = eventSequence;
-            addWebhook.eventTypeIds = selectedEventTypes;
+            addWebhook.eventTypes = selectedEventTypes;
             addWebhook.authorizationType = authType;
             addWebhook.basicUsername = basicUsername;
             addWebhook.basicPassword = basicPassword;
@@ -65,7 +65,7 @@ export const AddWebhookDialog = () => {
             addWebhook.OAuthClientSecret = oauthClientSecret;
             addWebhook.isActive = isActive;
             addWebhook.isReplayable = isReplayable;
-            addWebhook.eventTypes = {};
+            addWebhook.eventTypeKeyExpressions = {};
             addWebhook.headers = {};
 
             const result = await addWebhook.execute();
@@ -118,8 +118,10 @@ export const AddWebhookDialog = () => {
                     <MultiSelect
                         id="eventTypes"
                         value={selectedEventTypes}
-                        options={eventTypeOptions}
+                        options={allEventTypes.data}
                         onChange={(e) => setSelectedEventTypes(e.value)}
+                        optionLabel="id"
+                        dataKey="id"
                         placeholder="Select event types"
                         display="chip"
                     />
