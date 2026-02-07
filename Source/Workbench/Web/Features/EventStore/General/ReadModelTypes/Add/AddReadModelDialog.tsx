@@ -3,19 +3,23 @@
 
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { CreateReadModel } from 'Api/ReadModelTypes';
-import { Dialog } from 'primereact/dialog';
+import { Dialog } from 'Components/Dialogs';
+import { Button } from 'primereact/button';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelCreation } from 'Components/ReadModelCreation';
-import type { ReadModelSchema } from 'Api/ReadModels';
+import { type JsonSchema } from 'Components/JsonSchema';
+import { useRef } from 'react';
 
 export const AddReadModelDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext();
     const [createReadModel] = CreateReadModel.use();
+    const savedDataRef = useRef<{ name: string; schema: JsonSchema } | null>(null);
 
-    const handleSave = async (name: string, schema: ReadModelSchema) => {
+    const handleSave = async (name: string, schema: JsonSchema) => {
+        savedDataRef.current = { name, schema };
         if (name && params.eventStore) {
             createReadModel.eventStore = params.eventStore;
             createReadModel.name = name;
@@ -27,19 +31,32 @@ export const AddReadModelDialog = () => {
         }
     };
 
-    const handleCancel = () => {
-        closeDialog(DialogResult.Cancelled);
-    };
+    const customButtons = (
+        <>
+            <Button
+                label={strings.general.buttons.ok}
+                icon="pi pi-check"
+                onClick={() => savedDataRef.current && handleSave(savedDataRef.current.name, savedDataRef.current.schema)}
+                disabled={!savedDataRef.current?.name}
+                autoFocus
+            />
+            <Button
+                label={strings.general.buttons.cancel}
+                icon="pi pi-times"
+                onClick={() => closeDialog(DialogResult.Cancelled)}
+                outlined
+            />
+        </>
+    );
 
     return (
         <Dialog
-            header={strings.eventStore.general.readModels.dialogs.addReadModel.title}
-            visible={true}
-            style={{ width: '800px', maxHeight: '80vh' }}
-            modal
-            resizable={true}
-            onHide={() => closeDialog(DialogResult.Cancelled)}>
-            <ReadModelCreation onSave={handleSave} onCancel={handleCancel} />
+            title={strings.eventStore.general.readModels.dialogs.addReadModel.title}
+            onClose={closeDialog}
+            buttons={customButtons}
+            width="800px"
+            resizable={true}>
+            <ReadModelCreation onSave={handleSave} onCancel={() => closeDialog(DialogResult.Cancelled)} />
         </Dialog>
     );
 };

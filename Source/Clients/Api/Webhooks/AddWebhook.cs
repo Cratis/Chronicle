@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Api.Webhooks;
 /// <summary>
 /// Represents a command to create a webhook.
 /// </summary>
-public class CreateWebhook
+public class AddWebhook
 {
     /// <summary>
     /// Gets or sets the name of the webhook.

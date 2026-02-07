@@ -26,22 +26,21 @@ public class WebhookCommands : ControllerBase
     }
 
     /// <summary>
-    /// Create a new webhook.
+    /// Add a new webhook.
     /// </summary>
     /// <param name="eventStore">Name of the event store.</param>
-    /// <param name="command">Command for creating the webhook.</param>
+    /// <param name="command">Command for adding the webhook.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("create")]
-    public async Task CreateWebhook(
+    [HttpPost("add")]
+    public async Task AddWebHook(
         [FromRoute] string eventStore,
-        [FromBody] CreateWebhook command)
+        [FromBody] AddWebhook command)
     {
-        var webhookId = Guid.NewGuid().ToString();
         var headers = command.Headers.ToDictionary(h => h.Key, h => h.Value);
 
         var authorization = CreateAuthorization(command);
 
-        var webhookTarget = new Contracts.Observation.Webhooks.WebhookTarget
+        var webhookTarget = new WebhookTarget
         {
             Url = command.Url,
             Authorization = authorization,
@@ -57,7 +56,7 @@ public class WebhookCommands : ControllerBase
                 new Contracts.Observation.Webhooks.WebhookDefinition
                 {
                     EventSequenceId = "event-log",
-                    Identifier = webhookId,
+                    Identifier = command.Name,
                     EventTypes = command.EventTypes.Select(et => new Contracts.Events.EventType
                     {
                         Id = et.Key,
@@ -71,7 +70,7 @@ public class WebhookCommands : ControllerBase
         });
     }
 
-    static OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? CreateAuthorization(CreateWebhook command)
+    static OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? CreateAuthorization(AddWebhook command)
     {
         if (command.AuthorizationType.Equals("basic", StringComparison.OrdinalIgnoreCase))
         {

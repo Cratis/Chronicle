@@ -141,6 +141,42 @@
                     "user": "User"
                 }
             },
+            "webhooks": {
+                "title": "Webhooks",
+                "empty": "No webhooks found",
+                "actions": {
+                    "add": "Add"
+                },
+                "columns": {
+                    "name": "Name",
+                    "url": "URL",
+                    "authorization": "Authorization",
+                    "active": "Active",
+                    "replayable": "Replayable"
+                },
+                "dialogs": {
+                    "addWebhook": {
+                        "title": "Add Webhook",
+                        "name": "Name",
+                        "url": "Webhook URL",
+                        "authType": "Authorization Type",
+                        "basicUsername": "Username",
+                        "basicPassword": "Password",
+                        "bearerToken": "Bearer Token",
+                        "oauthAuthority": "OAuth Authority URL",
+                        "oauthClientId": "Client ID",
+                        "oauthClientSecret": "Client Secret",
+                        "isActive": "Active",
+                        "isReplayable": "Replayable"
+                    }
+                },
+                "authTypes": {
+                    "none": "None",
+                    "basic": "Basic",
+                    "bearer": "Bearer Token",
+                    "oauth": "OAuth (Client Credentials)"
+                }
+            },
             "projections": {
                 "title": "Projections",
                 "empty": "No projections",

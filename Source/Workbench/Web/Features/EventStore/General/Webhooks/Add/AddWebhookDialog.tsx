@@ -1,21 +1,21 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import { CreateWebhook } from 'Api/Webhooks';
-import { Dialog } from 'primereact/dialog';
+import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { AddWebHook } from 'Api/Webhooks';
+import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
-import { Button } from 'primereact/button';
+import { InputSwitch } from 'primereact/inputswitch';
 import { useState } from 'react';
+import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { Checkbox } from 'primereact/checkbox';
 
 export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext();
-    const [createWebhook] = CreateWebhook.use();
+    const [addWebhook] = AddWebHook.use();
 
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
@@ -30,60 +30,67 @@ export const AddWebhookDialog = () => {
     const [isReplayable, setIsReplayable] = useState(true);
 
     const authTypes = [
-        { label: 'None', value: 'None' },
-        { label: 'Basic', value: 'Basic' },
-        { label: 'Bearer Token', value: 'Bearer' },
-        { label: 'OAuth (Client Credentials)', value: 'OAuth' }
+        { label: strings.eventStore.general.webhooks.authTypes.none, value: 'None' },
+        { label: strings.eventStore.general.webhooks.authTypes.basic, value: 'Basic' },
+        { label: strings.eventStore.general.webhooks.authTypes.bearer, value: 'Bearer' },
+        { label: strings.eventStore.general.webhooks.authTypes.oauth, value: 'OAuth' }
     ];
+
+    const isValid = name.trim() !== '' && url.trim() !== '';
 
     const handleSave = async () => {
         if (name && url && params.eventStore) {
-            createWebhook.eventStore = params.eventStore;
-            createWebhook.name = name;
-            createWebhook.url = url;
-            createWebhook.authorizationType = authType;
-            createWebhook.basicUsername = basicUsername;
-            createWebhook.basicPassword = basicPassword;
-            createWebhook.bearerToken = bearerToken;
-            createWebhook.OAuthAuthority = oauthAuthority;
-            createWebhook.OAuthClientId = oauthClientId;
-            createWebhook.OAuthClientSecret = oauthClientSecret;
-            createWebhook.isActive = isActive;
-            createWebhook.isReplayable = isReplayable;
-            createWebhook.eventTypes = {};
-            createWebhook.headers = {};
+            addWebhook.eventStore = params.eventStore;
+            addWebhook.name = name;
+            addWebhook.url = url;
+            addWebhook.authorizationType = authType;
+            addWebhook.basicUsername = basicUsername;
+            addWebhook.basicPassword = basicPassword;
+            addWebhook.bearerToken = bearerToken;
+            addWebhook.OAuthAuthority = oauthAuthority;
+            addWebhook.OAuthClientId = oauthClientId;
+            addWebhook.OAuthClientSecret = oauthClientSecret;
+            addWebhook.isActive = isActive;
+            addWebhook.isReplayable = isReplayable;
+            addWebhook.eventTypes = {};
+            addWebhook.headers = {};
 
-            const result = await createWebhook.execute();
+            const result = await addWebhook.execute();
             if (result.isSuccess) {
                 closeDialog(DialogResult.Ok);
             }
         }
     };
 
-    const handleCancel = () => {
-        closeDialog(DialogResult.Cancelled);
+    const handleClose = (result: DialogResult) => {
+        if (result === DialogResult.Ok) {
+            handleSave();
+        } else {
+            closeDialog(result);
+        }
     };
 
     return (
         <Dialog
-            header="Add Webhook"
-            visible={true}
-            style={{ width: '600px' }}
-            modal
-            onHide={() => closeDialog(DialogResult.Cancelled)}>
+            title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
+            onClose={handleClose}
+            buttons={DialogButtons.OkCancel}
+            width="600px"
+            resizable={true}
+            isValid={isValid}>
             <div className="p-fluid">
-                <div className="field">
-                    <label htmlFor="name">Name</label>
+                <div className="field mb-3">
+                    <label htmlFor="name">{strings.eventStore.general.webhooks.dialogs.addWebhook.name}</label>
                     <InputText id="name" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
 
-                <div className="field">
-                    <label htmlFor="url">Webhook URL</label>
+                <div className="field mb-3">
+                    <label htmlFor="url">{strings.eventStore.general.webhooks.dialogs.addWebhook.url}</label>
                     <InputText id="url" value={url} onChange={(e) => setUrl(e.target.value)} />
                 </div>
 
-                <div className="field">
-                    <label htmlFor="authType">Authorization Type</label>
+                <div className="field mb-3">
+                    <label htmlFor="authType">{strings.eventStore.general.webhooks.dialogs.addWebhook.authType}</label>
                     <Dropdown
                         id="authType"
                         value={authType}
@@ -95,54 +102,49 @@ export const AddWebhookDialog = () => {
 
                 {authType === 'Basic' && (
                     <>
-                        <div className="field">
-                            <label htmlFor="basicUsername">Username</label>
+                        <div className="field mb-3">
+                            <label htmlFor="basicUsername">{strings.eventStore.general.webhooks.dialogs.addWebhook.basicUsername}</label>
                             <InputText id="basicUsername" value={basicUsername} onChange={(e) => setBasicUsername(e.target.value)} />
                         </div>
-                        <div className="field">
-                            <label htmlFor="basicPassword">Password</label>
+                        <div className="field mb-3">
+                            <label htmlFor="basicPassword">{strings.eventStore.general.webhooks.dialogs.addWebhook.basicPassword}</label>
                             <InputText id="basicPassword" type="password" value={basicPassword} onChange={(e) => setBasicPassword(e.target.value)} />
                         </div>
                     </>
                 )}
 
                 {authType === 'Bearer' && (
-                    <div className="field">
-                        <label htmlFor="bearerToken">Bearer Token</label>
+                    <div className="field mb-3">
+                        <label htmlFor="bearerToken">{strings.eventStore.general.webhooks.dialogs.addWebhook.bearerToken}</label>
                         <InputText id="bearerToken" value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} />
                     </div>
                 )}
 
                 {authType === 'OAuth' && (
                     <>
-                        <div className="field">
-                            <label htmlFor="oauthAuthority">OAuth Authority URL</label>
+                        <div className="field mb-3">
+                            <label htmlFor="oauthAuthority">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthAuthority}</label>
                             <InputText id="oauthAuthority" value={oauthAuthority} onChange={(e) => setOauthAuthority(e.target.value)} />
                         </div>
-                        <div className="field">
-                            <label htmlFor="oauthClientId">Client ID</label>
+                        <div className="field mb-3">
+                            <label htmlFor="oauthClientId">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientId}</label>
                             <InputText id="oauthClientId" value={oauthClientId} onChange={(e) => setOauthClientId(e.target.value)} />
                         </div>
-                        <div className="field">
-                            <label htmlFor="oauthClientSecret">Client Secret</label>
+                        <div className="field mb-3">
+                            <label htmlFor="oauthClientSecret">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientSecret}</label>
                             <InputText id="oauthClientSecret" type="password" value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} />
                         </div>
                     </>
                 )}
 
-                <div className="field-checkbox">
-                    <Checkbox inputId="isActive" checked={isActive} onChange={(e) => setIsActive(e.checked || false)} />
-                    <label htmlFor="isActive">Active</label>
+                <div className="field flex align-items-center gap-2 mb-3">
+                    <label htmlFor="isActive">{strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}</label>
+                    <InputSwitch inputId="isActive" checked={isActive} onChange={(e) => setIsActive(e.value)} />
                 </div>
 
-                <div className="field-checkbox">
-                    <Checkbox inputId="isReplayable" checked={isReplayable} onChange={(e) => setIsReplayable(e.checked || false)} />
-                    <label htmlFor="isReplayable">Replayable</label>
-                </div>
-
-                <div className="flex justify-content-end mt-4">
-                    <Button label="Cancel" icon="pi pi-times" onClick={handleCancel} className="p-button-text mr-2" />
-                    <Button label="Save" icon="pi pi-check" onClick={handleSave} />
+                <div className="field flex align-items-center gap-2">
+                    <label htmlFor="isReplayable">{strings.eventStore.general.webhooks.dialogs.addWebhook.isReplayable}</label>
+                    <InputSwitch inputId="isReplayable" checked={isReplayable} onChange={(e) => setIsReplayable(e.value)} />
                 </div>
             </div>
         </Dialog>
