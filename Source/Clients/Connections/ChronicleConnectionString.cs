@@ -37,6 +37,11 @@ public class ChronicleConnectionString
     /// </summary>
     public static readonly ChronicleConnectionString Default = new("chronicle://localhost:35000");
 
+    /// <summary>
+    /// The development <see cref="ChronicleConnectionString"/> pointing to localhost configured with the default dev credentials.
+    /// </summary>
+    public static readonly ChronicleConnectionString Development = new("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
+
     readonly ChronicleConnectionStringBuilder _builder;
 
     /// <summary>
