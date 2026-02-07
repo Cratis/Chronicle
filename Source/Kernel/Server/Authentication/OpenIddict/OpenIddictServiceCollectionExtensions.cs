@@ -4,8 +4,6 @@
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.Repositories;
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
@@ -37,7 +35,6 @@ public static class OpenIddictServiceCollectionExtensions
 
         // Note: Data Protection is configured in AddChronicleAuthentication
         // and will be reused here for OpenIddict
-
         services.AddOpenIddict()
             .AddCore(options =>
             {
@@ -69,7 +66,7 @@ public static class OpenIddictServiceCollectionExtensions
                 if (encryptionCertificate.IsConfigured && File.Exists(encryptionCertificate.CertificatePath))
                 {
                     var cert = X509CertificateLoader.LoadPkcs12FromFile(
-                        encryptionCertificate.CertificatePath!,
+                        encryptionCertificate.CertificatePath,
                         encryptionCertificate.CertificatePassword);
                     options.AddEncryptionCertificate(cert)
                            .AddSigningCertificate(cert);
