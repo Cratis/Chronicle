@@ -32,7 +32,9 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
                 ? new DraftReadModelDefinition
                 {
                     ContainerName = DraftReadModel.ContainerName,
-                    Schema = DraftReadModel.Schema
+                    Schema = DraftReadModel.Schema,
+                    Identifier = DraftReadModel.Identifier,
+                    DisplayName = DraftReadModel.DisplayName
                 }
                 : null
         };

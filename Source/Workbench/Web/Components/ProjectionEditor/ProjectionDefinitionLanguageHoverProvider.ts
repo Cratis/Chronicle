@@ -7,17 +7,24 @@ import type { ReadModelInfo } from './index';
 import strings from '../../Strings';
 
 export class ProjectionDefinitionLanguageHoverProvider implements languages.HoverProvider {
+    private readModels: ReadModelInfo[] = [];
     private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
-    private draftReadModel: { containerName: string; schema: JsonSchema } | null = null;
+    private draftReadModel: { identifier: string; displayName: string; containerName: string; schema: JsonSchema } | null = null;
 
 
     setReadModels(readModels: ReadModelInfo[]): void {
+        this.readModels = readModels || [];
         this.readModelSchemas = (readModels || []).map(rm => rm.schema);
     }
 
     // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
+        this.readModels = schemas.map(schema => ({
+            identifier: this.getSchemaName(schema) || '',
+            displayName: this.getSchemaName(schema) || '',
+            schema
+        }));
         this.readModelSchemas = schemas;
     }
 
@@ -41,7 +48,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         this.eventSchemas = schemas;
     }
 
-    setDraftReadModel(draft: { containerName: string; schema: JsonSchema } | null): void {
+    setDraftReadModel(draft: { identifier: string; displayName: string; containerName: string; schema: JsonSchema } | null): void {
         this.draftReadModel = draft;
     }
 
@@ -120,11 +127,13 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         }
 
         // Check if it's a draft read model
-        if (this.draftReadModel && this.draftReadModel.containerName === wordText) {
+        if (this.isDraftReadModel(wordText)) {
             const description = this.getSchemaDescription(this.draftReadModel.schema);
             const properties = this.getSchemaProperties(this.draftReadModel.schema);
+            const identifier = this.draftReadModel.identifier;
+            const displayName = this.draftReadModel.displayName;
 
-            let content = `**${strings.components.projectionEditor.hover.readModelDraft}:** \`${wordText}\`\n\n`;
+            let content = `**${strings.components.projectionEditor.hover.readModelDraft}:** \`${displayName}\`\n\n**Identifier:** \`${identifier}\`\n\n`;
             if (description) {
                 content += `${description}\n\n`;
             }
@@ -144,12 +153,12 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         }
 
         // Check if it's a read model
-        const readModel = this.readModelSchemas.find(s => this.getSchemaName(s) === wordText);
+        const readModel = this.resolveReadModelInfo(wordText);
         if (readModel) {
-            const description = this.getSchemaDescription(readModel);
-            const properties = this.getSchemaProperties(readModel);
+            const description = this.getSchemaDescription(readModel.schema);
+            const properties = this.getSchemaProperties(readModel.schema);
 
-            let content = `**${strings.components.projectionEditor.hover.readModel}:** \`${wordText}\`\n\n`;
+            let content = `**${strings.components.projectionEditor.hover.readModel}:** \`${readModel.displayName}\`\n\n**Identifier:** \`${readModel.identifier}\`\n\n`;
             if (description) {
                 content += `${description}\n\n`;
             }
@@ -229,14 +238,16 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
     private getPropertyInfo(model: editor.ITextModel, position: Position, propertyName: string): string | null {
         // Try to find the active read model
         const firstLine = model.getLineContent(1).trim();
-        const match = firstLine.match(/^projection\s+\w+\s*=>\s*(\w+)/);
+        const match = firstLine.match(/^projection\s+[\w.]+\s*=>\s*([\w.]+)/);
         if (!match) return null;
 
         const readModelName = match[1];
-        const readModel = this.readModelSchemas.find(s => this.getSchemaName(s) === readModelName);
+        const draftMatch = this.isDraftReadModel(readModelName) ? this.draftReadModel : null;
+        const resolvedReadModel = draftMatch ? null : this.resolveReadModelInfo(readModelName);
+        const activeSchema = draftMatch?.schema || resolvedReadModel?.schema;
 
-        if (readModel?.properties && readModel.properties[propertyName]) {
-            const prop = readModel.properties[propertyName];
+        if (activeSchema?.properties && activeSchema.properties[propertyName]) {
+            const prop = activeSchema.properties[propertyName];
             const type = this.getPropertyTypeDescription(prop);
             const description = prop.description;
 
@@ -265,6 +276,14 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         }
 
         return null;
+    }
+
+    private resolveReadModelInfo(readModelToken: string): ReadModelInfo | null {
+        return this.readModels.find(rm => rm.identifier === readModelToken || rm.displayName === readModelToken) || null;
+    }
+
+    private isDraftReadModel(readModelToken: string): boolean {
+        return !!this.draftReadModel && (this.draftReadModel.identifier === readModelToken || this.draftReadModel.displayName === readModelToken);
     }
 
     private getCurrentEventType(model: editor.ITextModel, lineNumber: number): string | null {

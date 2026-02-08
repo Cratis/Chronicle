@@ -31,7 +31,9 @@ public record SaveProjection(string EventStore, string Namespace, string Declara
                 ? new DraftReadModelDefinition
                 {
                     ContainerName = DraftReadModel.ContainerName,
-                    Schema = DraftReadModel.Schema
+                    Schema = DraftReadModel.Schema,
+                    Identifier = DraftReadModel.Identifier,
+                    DisplayName = DraftReadModel.DisplayName
                 }
                 : null
         };

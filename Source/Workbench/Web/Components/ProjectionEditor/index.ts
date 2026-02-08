@@ -10,6 +10,7 @@ import { ProjectionDefinitionLanguageCodeActionProvider } from './ProjectionDefi
 import type { JsonSchema } from '../JsonSchema';
 
 export interface ReadModelInfo {
+    identifier: string;
     displayName: string;
     schema: JsonSchema;
 }
@@ -163,7 +164,7 @@ export function setEditReadModelCallback(callback: (readModelName: string, curre
     }
 }
 
-export function setDraftReadModel(draft: { containerName: string; schema: JsonSchema } | null): void {
+export function setDraftReadModel(draft: { identifier: string; displayName: string; containerName: string; schema: JsonSchema } | null): void {
     if (codeActionProvider) {
         codeActionProvider.setDraftReadModel(draft);
     }

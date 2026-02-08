@@ -13,7 +13,6 @@ using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
-using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using NJsonSchema;
 using ProtoBuf.Grpc;
@@ -99,14 +98,9 @@ internal sealed class Projections(
             async definition =>
             {
                 // Find the read model definition - need to handle potential empty schemas gracefully
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(
                         new ContractProjectionDefinitionParsingErrors
@@ -180,7 +174,12 @@ internal sealed class Projections(
         if (request.DraftReadModel is not null)
         {
             var readModelsService = serviceProvider.GetRequiredService<IReadModelsService>();
-            var identifier = Guid.NewGuid().ToString();
+            var identifier = string.IsNullOrWhiteSpace(request.DraftReadModel.Identifier)
+                ? $"draft-{Guid.NewGuid()}"
+                : request.DraftReadModel.Identifier;
+            var displayName = string.IsNullOrWhiteSpace(request.DraftReadModel.DisplayName)
+                ? request.DraftReadModel.ContainerName
+                : request.DraftReadModel.DisplayName;
             var schema = string.IsNullOrEmpty(request.DraftReadModel.Schema)
                 ? new JsonSchema { Type = JsonObjectType.Object }.ToJson()
                 : request.DraftReadModel.Schema;
@@ -197,8 +196,8 @@ internal sealed class Projections(
                         Identifier = identifier,
                         Generation = 1,
                     },
-                    ContainerName = request.DraftReadModel.ContainerName.Pluralize(),
-                    DisplayName = request.DraftReadModel.ContainerName,
+                    ContainerName = request.DraftReadModel.ContainerName,
+                    DisplayName = displayName,
                     Sink = new()
                     {
                         TypeId = WellKnownSinkTypes.MongoDB.Value,
@@ -224,14 +223,9 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new SaveProjectionResult
                     {
@@ -292,14 +286,9 @@ internal sealed class Projections(
         return compileResult.Match(
             definition =>
             {
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
                         new ContractProjectionDefinitionParsingErrors
@@ -336,14 +325,9 @@ internal sealed class Projections(
         return compileResult.Match(
             definition =>
             {
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
                         new ContractProjectionDefinitionParsingErrors
@@ -366,12 +350,17 @@ internal sealed class Projections(
 
     static Concepts.ReadModels.ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
     {
-        var identifier = $"draft-{Guid.NewGuid()}";
+        var identifier = string.IsNullOrWhiteSpace(draft.Identifier)
+            ? $"draft-{Guid.NewGuid()}"
+            : draft.Identifier;
+        var displayName = string.IsNullOrWhiteSpace(draft.DisplayName)
+            ? draft.ContainerName
+            : draft.DisplayName;
         JsonSchema schema;
 
         if (string.IsNullOrEmpty(draft.Schema))
         {
-            schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.ContainerName };
+            schema = new JsonSchema { Type = JsonObjectType.Object, Title = displayName };
         }
         else
         {
@@ -382,13 +371,13 @@ internal sealed class Projections(
             catch
             {
                 // Fallback to basic schema if parsing fails
-                schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.ContainerName };
+                schema = new JsonSchema { Type = JsonObjectType.Object, Title = displayName };
             }
         }
 
         if (string.IsNullOrEmpty(schema.Title))
         {
-            schema.Title = draft.ContainerName;
+            schema.Title = displayName;
         }
 
         var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
@@ -398,8 +387,8 @@ internal sealed class Projections(
 
         return new Concepts.ReadModels.ReadModelDefinition(
             identifier,
-            draft.ContainerName.Pluralize(),
             draft.ContainerName,
+            displayName,
             Concepts.ReadModels.ReadModelOwner.Server,
             Concepts.ReadModels.ReadModelSource.User,
             Concepts.ReadModels.ReadModelObserverType.Projection,

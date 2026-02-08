@@ -15,10 +15,10 @@ export const AddReadModelDialog = () => {
     const { closeDialog } = useDialogContext();
     const [createReadModel] = CreateReadModel.use();
 
-    const handleSave = async (name: string, schema: ReadModelSchema) => {
-        if (name && params.eventStore) {
+    const handleSave = async (_displayName: string, _identifier: string, containerName: string, schema: ReadModelSchema) => {
+        if (containerName && params.eventStore) {
             createReadModel.eventStore = params.eventStore;
-            createReadModel.containerName = name;
+            createReadModel.containerName = containerName;
             createReadModel.schema = JSON.stringify(schema);
             const result = await createReadModel.execute();
             if (result.isSuccess) {

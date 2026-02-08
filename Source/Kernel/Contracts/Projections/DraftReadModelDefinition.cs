@@ -21,4 +21,16 @@ public class DraftReadModelDefinition
     /// </summary>
     [ProtoMember(2)]
     public string Schema { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the identifier of the read model.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Identifier { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the display name of the read model.
+    /// </summary>
+    [ProtoMember(4)]
+    public string DisplayName { get; set; } = string.Empty;
 }

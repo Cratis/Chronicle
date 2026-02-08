@@ -128,7 +128,13 @@
                 "dialogs": {
                     "addReadModel": {
                         "title": "Add Read Model",
-                        "name": "Name"
+                        "name": "Name",
+                        "displayNameLabel": "Display Name",
+                        "displayNamePlaceholder": "Enter display name (e.g., Order, Customer)",
+                        "identifierLabel": "Read Model Identifier",
+                        "identifierPlaceholder": "Enter identifier (e.g., Sales.Order - prefixed with module it belongs to)",
+                        "containerNameLabel": "Container Name",
+                        "containerNamePlaceholder": "Enter container name (e.g., orders, customers) - typically the name of the database table or collection"
                     }
                 },
                 "owners": {

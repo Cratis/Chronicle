@@ -7,6 +7,8 @@ namespace Cratis.Chronicle.Api.Projections;
 /// Represents a draft read model definition that can be used for preview/save operations
 /// before the read model type is actually created.
 /// </summary>
+/// <param name="Identifier">Identifier of the read model.</param>
+/// <param name="DisplayName">Display name of the read model.</param>
 /// <param name="ContainerName">Container name of the read model (collection, table, etc.).</param>
 /// <param name="Schema">JSON schema for the read model.</param>
-public record DraftReadModel(string ContainerName, string Schema);
+public record DraftReadModel(string Identifier, string DisplayName, string ContainerName, string Schema);

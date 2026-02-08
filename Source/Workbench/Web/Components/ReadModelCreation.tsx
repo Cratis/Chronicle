@@ -2,15 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import React, { useState, useEffect } from 'react';
+import pluralize from 'pluralize';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { SchemaEditor } from './SchemaEditor/SchemaEditor';
 import { JsonSchema } from 'Components/JsonSchema';
+import strings from 'Strings';
 
 interface ReadModelCreationProps {
-    onSave: (name: string, schema: JsonSchema) => void;
+    onSave: (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => void;
     onCancel: () => void;
-    initialName?: string;
+    initialDisplayName?: string;
+    initialIdentifier?: string;
+    initialContainerName?: string;
     initialSchema?: JsonSchema;
     editMode?: boolean;
     saveDisabled?: boolean;
@@ -20,12 +24,20 @@ interface ReadModelCreationProps {
 export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
     onSave,
     onCancel,
-    initialName = '',
+    initialDisplayName = '',
+    initialIdentifier = '',
+    initialContainerName = '',
     initialSchema,
+    saveDisabled = false,
+    cancelDisabled = false,
 }) => {
-    const [containerName, setContainerName] = useState(initialName);
+    const [displayName, setDisplayName] = useState(initialDisplayName);
+    const [identifier, setIdentifier] = useState(initialIdentifier || initialDisplayName);
+    const [containerName, setContainerName] = useState(initialContainerName || pluralize(initialDisplayName));
+    const [containerNameEdited, setContainerNameEdited] = useState(false);
+    const [identifierEdited, setIdentifierEdited] = useState(false);
     const [schema, setSchema] = useState<JsonSchema>(initialSchema ?? {
-        title: initialName,
+        title: initialDisplayName,
         type: 'object',
         properties: {},
         required: []
@@ -33,54 +45,106 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
 
     // Reset state when initial values change (e.g., when dialog reopens)
     useEffect(() => {
-        setContainerName(initialName);
+        setDisplayName(initialDisplayName);
+        setIdentifier(initialIdentifier || initialDisplayName);
+        setContainerName(initialContainerName || pluralize(initialDisplayName));
+        setContainerNameEdited(false);
+        setIdentifierEdited(false);
         setSchema(initialSchema ?? {
-            title: initialName,
+            title: initialDisplayName,
             type: 'object',
             properties: {},
             required: []
         });
-    }, [initialName, initialSchema]);
+    }, [initialDisplayName, initialIdentifier, initialContainerName, initialSchema]);
 
     const handleSave = () => {
-        if (!containerName.trim()) {
+        if (!displayName.trim() || !identifier.trim() || !containerName.trim()) {
             return;
         }
 
         const updatedSchema = {
             ...schema,
-            title: containerName
+            title: displayName
         };
 
-        onSave(containerName, updatedSchema);
+        onSave(displayName, identifier, containerName, updatedSchema);
     };
 
     const handleSchemaChange = (newSchema: JsonSchema) => {
         setSchema(newSchema);
     };
 
-    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newName = e.target.value;
-        setContainerName(newName);
+    const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDisplayName = e.target.value;
+        setDisplayName(newDisplayName);
+        if (!identifierEdited) {
+            setIdentifier(newDisplayName);
+        }
+        if (!containerNameEdited) {
+            setContainerName(pluralize(newDisplayName));
+        }
         setSchema(prev => ({
             ...prev,
-            title: newName
+            title: newDisplayName
         }));
     };
+
+    const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setIdentifier(e.target.value);
+        setIdentifierEdited(true);
+    };
+
+    const handleContainerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setContainerName(e.target.value);
+        setContainerNameEdited(true);
+    };
+
+    const isSaveDisabled =
+        !!saveDisabled ||
+        !displayName.trim() ||
+        !identifier.trim() ||
+        !containerName.trim();
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label htmlFor="displayName" style={{ fontWeight: 'bold' }}>
+                    {strings.eventStore.general.readModels.dialogs.addReadModel.displayNameLabel}
+                </label>
+                <InputText
+                    id="displayName"
+                    value={displayName}
+                    onChange={handleDisplayNameChange}
+                    placeholder={strings.eventStore.general.readModels.dialogs.addReadModel.displayNamePlaceholder}
+                    style={{ width: '100%' }}
+                    autoFocus
+                />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label htmlFor="identifier" style={{ fontWeight: 'bold' }}>
+                    {strings.eventStore.general.readModels.dialogs.addReadModel.identifierLabel}
+                </label>
+                <InputText
+                    id="identifier"
+                    value={identifier}
+                    onChange={handleIdentifierChange}
+                    placeholder={strings.eventStore.general.readModels.dialogs.addReadModel.identifierPlaceholder}
+                    style={{ width: '100%' }}
+                />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label htmlFor="containerName" style={{ fontWeight: 'bold' }}>
-                    Container Name
+                    {strings.eventStore.general.readModels.dialogs.addReadModel.containerNameLabel}
                 </label>
                 <InputText
                     id="containerName"
                     value={containerName}
-                    onChange={handleNameChange}
-                    placeholder="Enter container name (e.g., orders, customers)"
+                    onChange={handleContainerNameChange}
+                    placeholder={strings.eventStore.general.readModels.dialogs.addReadModel.containerNamePlaceholder}
                     style={{ width: '100%' }}
-                    autoFocus
                 />
             </div>
 
@@ -96,16 +160,17 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-start', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
                 <Button
-                    label="Save"
+                    label={strings.eventStore.general.readModels.actions.save}
                     icon="pi pi-check"
                     onClick={handleSave}
-                    disabled={!containerName.trim()}
+                    disabled={isSaveDisabled}
                 />
                 <Button
-                    label="Cancel"
+                    label={strings.general.buttons.cancel}
                     icon="pi pi-times"
                     onClick={onCancel}
                     outlined
+                    disabled={cancelDisabled}
                 />
             </div>
         </div>
