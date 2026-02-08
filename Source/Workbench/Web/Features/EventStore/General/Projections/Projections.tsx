@@ -154,6 +154,15 @@ export const Projections = () => {
         }
         if (readModelFromDeclaration && !selectedProjection) {
             const existingProjection = projections.data?.find(p =>
+                p.containerName === readModelFromDeclaration.containerName
+            );
+            if (existingProjection) {
+                return strings.eventStore.general.projections.saveDisabledReasons.projectionAlreadyExists;
+            }
+        }
+        return null;
+    }, [declarationValue, hasUnsavedChanges, hasValidationErrors, readModelFromDeclaration, selectedProjection, projections.data, draftReadModel, selectedReadModel]);
+
     const previewDisabledReason = useMemo(() => {
         if (!declarationValue.trim()) {
             return strings.eventStore.general.projections.previewDisabledReasons.emptyContent;
