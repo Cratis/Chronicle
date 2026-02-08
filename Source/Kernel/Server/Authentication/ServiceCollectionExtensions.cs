@@ -26,6 +26,9 @@ public static class ServiceCollectionExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="chronicleOptions">The Chronicle options.</param>
     /// <returns>The service collection for chaining.</returns>
+#if !DEVELOPMENT
+    /// <exception cref="InvalidOperationException">Thrown if an encryption certificate is not configured in production.</exception>
+#endif
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         services.AddSingleton<IUserStorage, UserStorage>();
