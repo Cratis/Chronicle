@@ -14,7 +14,7 @@ public static class ReplayContextConverters
     /// <param name="context">The <see cref="ReplayContext"/> to convert.</param>
     /// <returns>The converted <see cref="Chronicle.Storage.ReadModels.ReplayContext"/>.</returns>
     public static Chronicle.Storage.ReadModels.ReplayContext ToChronicle(this ReplayContext context) =>
-        new(new(context.ReadModel, context.Generation), context.ReadModelName, context.RevertReadModelName, context.Started);
+        new(new(context.ReadModel, context.Generation), context.ContainerName, context.RevertContainerName, context.Started);
 
     /// <summary>
     /// Convert a <see cref="Chronicle.Storage.ReadModels.ReplayContext"/> to a <see cref="ReplayContext"/>.
@@ -22,5 +22,5 @@ public static class ReplayContextConverters
     /// <param name="context">The <see cref="Chronicle.Storage.ReadModels.ReplayContext"/> to convert.</param>
     /// <returns>The converted <see cref="ReplayContext"/>.</returns>
     public static ReplayContext ToMongoDB(this Chronicle.Storage.ReadModels.ReplayContext context) =>
-        new(context.Type.Identifier, context.Type.Generation, context.ReadModel, context.RevertReadModel, context.Started);
+        new(context.Type.Identifier, context.Type.Generation, context.ContainerName, context.RevertContainerName, context.Started);
 }

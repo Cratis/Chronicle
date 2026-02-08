@@ -29,7 +29,7 @@ public class without_sequence_directive : for_LanguageService.given.a_language_s
         schema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
         _readModelDefinition = new ReadModelDefinition(
             new ReadModelIdentifier("Simulation"),
-            new ReadModelName("Simulation"),
+            new ReadModelContainerName("Simulation"),
             new ReadModelDisplayName("Simulation"),
             ReadModelOwner.Client,
             ReadModelSource.Code,

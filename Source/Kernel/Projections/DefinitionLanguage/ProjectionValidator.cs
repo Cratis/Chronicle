@@ -22,7 +22,7 @@ public class ProjectionValidator(
     IEnumerable<ReadModelDefinition> readModelDefinitions,
     IEnumerable<EventTypeSchema> eventTypeSchemas)
 {
-    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.ToDictionary(_ => (ReadModelIdentifier)(_.GetSchemaForLatestGeneration().Title ?? _.Identifier));
+    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.ToDictionary(_ => _.Identifier);
     readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
 
     /// <summary>

@@ -6,7 +6,9 @@ import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 export interface DraftReadModelInfo {
-    name: string;
+    identifier: string;
+    displayName: string;
+    containerName: string;
     schema: JsonSchema;
 }
 
@@ -26,6 +28,7 @@ export class ProjectionDefinitionLanguageValidator {
     // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
         this.readModels = schemas.map(schema => ({
+            identifier: this.getSchemaName(schema) || '',
             displayName: this.getSchemaName(schema) || '',
             schema
         }));
@@ -88,7 +91,7 @@ export class ProjectionDefinitionLanguageValidator {
 
         if (!projectionMatch) {
             const lineNumber = firstNonEmptyLineIndex + 1;
-            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelName>"'));
+            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelIdentifier>"'));
             return markers;
         }
 
@@ -96,24 +99,25 @@ export class ProjectionDefinitionLanguageValidator {
 
         // Validate read model exists in schemas or is a draft
         if (this.readModels.length > 0) {
-            const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
-            const isDraftReadModel = this.draftReadModel && this.draftReadModel.name === readModelName;
+            const readModelExists = this.resolveReadModelIdentifier(readModelName) !== null;
+            const isDraftReadModel = this.isDraftReadModel(readModelName);
+            const readModelStartColumn = this.getReadModelStartColumn(firstLine, readModelName);
 
             if (!readModelExists && !isDraftReadModel) {
                 const lineNumber = firstNonEmptyLineIndex + 1;
-                const col = firstLine.indexOf(readModelName) + 1;
+                const col = readModelStartColumn;
                 markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
             } else if (isDraftReadModel) {
                 // Show info marker for draft read models - they exist but haven't been saved yet
                 const lineNumber = firstNonEmptyLineIndex + 1;
-                const col = firstLine.indexOf(readModelName) + 1;
+                const col = readModelStartColumn;
                 markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
             }
         }
 
         // Get the active read model schema for property validation (check draft first)
-        const isDraft = this.draftReadModel && this.draftReadModel.name === readModelName;
-        const activeReadModel = isDraft ? null : this.readModels.find((rm) => rm.displayName === readModelName);
+        const isDraft = this.isDraftReadModel(readModelName);
+        const activeReadModel = isDraft ? null : this.resolveReadModelInfo(readModelName);
         const activeSchema = isDraft ? this.draftReadModel!.schema : activeReadModel?.schema;
 
         // Validate subsequent lines
@@ -310,6 +314,31 @@ export class ProjectionDefinitionLanguageValidator {
         }
 
         return markers;
+    }
+
+    private resolveReadModelInfo(readModelToken: string): ReadModelInfo | null {
+        return this.readModels.find(rm => rm.identifier === readModelToken || rm.displayName === readModelToken) || null;
+    }
+
+    private getReadModelStartColumn(firstLine: string, readModelName: string): number {
+        const prefixMatch = firstLine.match(/^\s*projection\s+[\w.]+\s*=>\s*/);
+        if (!prefixMatch) {
+            const fallbackIndex = firstLine.lastIndexOf(readModelName);
+            return (fallbackIndex >= 0 ? fallbackIndex : 0) + 1;
+        }
+        return prefixMatch[0].length + 1;
+    }
+
+    private resolveReadModelIdentifier(readModelToken: string): string | null {
+        if (this.isDraftReadModel(readModelToken)) {
+            return this.draftReadModel!.identifier;
+        }
+        const readModel = this.resolveReadModelInfo(readModelToken);
+        return readModel?.identifier ?? null;
+    }
+
+    private isDraftReadModel(readModelToken: string): boolean {
+        return !!this.draftReadModel && (this.draftReadModel.identifier === readModelToken || this.draftReadModel.displayName === readModelToken);
     }
 
     private isBuiltInExpression(text: string): boolean {

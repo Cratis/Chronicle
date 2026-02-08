@@ -90,7 +90,7 @@ internal sealed class ReadModels(
         var sink = sinks.GetFor(definition);
         var skip = request.Page * request.PageSize;
 
-        Concepts.ReadModels.ReadModelName? occurrence = null;
+        Concepts.ReadModels.ReadModelContainerName? occurrence = null;
         if (!string.IsNullOrEmpty(request.Occurrence))
         {
             occurrence = request.Occurrence;

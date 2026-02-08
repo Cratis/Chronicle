@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.ReadModels.for_ReplayContexts;
 public class when_establishing : Specification
 {
     ReadModelType _readModelType = new("SomeModelId", ReadModelGeneration.First);
-    ReadModelName _readModelName = "SomeModel";
+    ReadModelContainerName _readModelName = "SomeModel";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
     ReplayContext _context;

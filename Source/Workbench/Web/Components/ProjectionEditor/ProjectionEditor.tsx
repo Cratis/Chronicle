@@ -19,18 +19,21 @@ import { Button } from 'primereact/button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
 import Strings from 'Strings';
+import type { ReadModelDefinition } from 'Api/ReadModelTypes';
 
 export interface ProjectionEditorProps {
     value: string;
     originalValue?: string;
     onChange?: (value: string) => void;
     onValidationChange?: (hasErrors: boolean) => void;
-    readModelSchemas?: JsonSchema[],
+    readModels?: ReadModelDefinition[];
+    readModelSchemas?: JsonSchema[];
     eventSchemas?: JsonSchema[],
     errors?: ProjectionDeclarationSyntaxError[];
     theme?: string;
     eventStore?: string;
     namespace?: string;
+    normalizeDeclarationForRequests?: (declaration: string) => string;
 }
 
 export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
@@ -38,12 +41,14 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     originalValue,
     onChange,
     onValidationChange,
+    readModels,
     readModelSchemas,
     eventSchemas,
     errors,
     theme = 'vs-dark',
     eventStore,
     namespace,
+    normalizeDeclarationForRequests,
 }) => {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<Monaco | null>(null);
@@ -58,14 +63,15 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
 
     const fetchCode = async () => {
         if (eventStore && namespace && value) {
+            const declaration = normalizeDeclarationForRequests ? normalizeDeclarationForRequests(value) : value;
             generateDeclarativeCode.eventStore = eventStore;
             generateDeclarativeCode.namespace = namespace;
-            generateDeclarativeCode.declaration = value;
+            generateDeclarativeCode.declaration = declaration;
             const declarativeResult = await generateDeclarativeCode.execute();
 
             generateModelBoundCode.eventStore = eventStore;
             generateModelBoundCode.namespace = namespace;
-            generateModelBoundCode.declaration = value;
+            generateModelBoundCode.declaration = declaration;
             const modelBoundResult = await generateModelBoundCode.execute();
 
             const declCode = declarativeResult.response?.code || '// Unable to generate code';
@@ -119,8 +125,16 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
 
     // Update schema when it changes
     useEffect(() => {
-        if (readModelSchemas) {
+        if (readModels) {
+            const readModelInfos = readModels.map(readModel => ({
+                identifier: readModel.identifier,
+                displayName: readModel.displayName,
+                schema: JSON.parse(readModel.schema) as JsonSchema
+            }));
+            setReadModelSchemas(readModelInfos);
+        } else if (readModelSchemas) {
             const readModelInfos = readModelSchemas.map(schema => ({
+                identifier: schema.title || 'Unknown',
                 displayName: schema.title || 'Unknown',
                 schema
             }));
@@ -129,7 +143,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         if (eventSchemas) {
             setEventSchemas(eventSchemas);
         }
-    }, [readModelSchemas, eventSchemas]);
+    }, [readModels, readModelSchemas, eventSchemas]);
 
     // Update event sequences when they're loaded
     useEffect(() => {

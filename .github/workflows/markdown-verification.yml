@@ -42,3 +42,4 @@ jobs:
           recurse: true
           redirects: allow
           statusCodes: '403:ok'
+          linksToSkip: '^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)'

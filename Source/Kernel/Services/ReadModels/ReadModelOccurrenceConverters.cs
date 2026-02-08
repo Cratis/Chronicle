@@ -26,8 +26,8 @@ internal static class ReadModelOccurrenceConverters
                 Identifier = occurrence.Type.Identifier,
                 Generation = occurrence.Type.Generation.Value
             },
-            ReadModel = occurrence.ReadModel.Value,
-            RevertModel = occurrence.RevertModel.Value
+            ContainerName = occurrence.ContainerName.Value,
+            RevertContainerName = occurrence.RevertContainerName.Value
         };
     }
 }

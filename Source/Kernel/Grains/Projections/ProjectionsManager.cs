@@ -84,13 +84,21 @@ public class ProjectionsManager(
         return State.Projections
             .Select(definition =>
             {
-                var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
-                var readModelSchema = readModel.GetSchemaForLatestGeneration();
+                var readModel = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+                if (readModel is null)
+                {
+                    logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                    return null;
+                }
+
                 return new ProjectionWithDeclaration(
                     definition.Identifier,
-                    readModelSchema.Title ?? readModel.Identifier,
+                    readModel.ContainerName,
                     languageService.Generate(definition, readModel));
-            }).ToArray();
+            })
+            .Where(_ => _ is not null)
+            .Select(_ => _!)
+            .ToArray();
     }
 
     /// <inheritdoc/>
@@ -113,7 +121,14 @@ public class ProjectionsManager(
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
             await projection.SetDefinition(projectionDefinition);
-            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinitions.Single(rm => rm.Identifier == projectionDefinition.ReadModel), added.Namespace);
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == projectionDefinition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
+                continue;
+            }
+
+            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace);
         }
     }
 
@@ -124,7 +139,14 @@ public class ProjectionsManager(
 
         foreach (var definition in State.Projections)
         {
-            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel));
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                continue;
+            }
+
+            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition);
         }
     }
 

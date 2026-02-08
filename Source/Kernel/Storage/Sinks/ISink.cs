@@ -113,9 +113,9 @@ public interface ISink
     /// <summary>
     /// Get instances from the sink.
     /// </summary>
-    /// <param name="occurrence">Optional <see cref="ReadModelName"/> of the occurrence to get instances from. If not provided, gets from the default/current model.</param>
+    /// <param name="occurrence">Optional <see cref="ReadModelContainerName"/> of the occurrence to get instances from. If not provided, gets from the default/current model.</param>
     /// <param name="skip">Number of instances to skip.</param>
     /// <param name="take">Number of instances to take.</param>
     /// <returns>A tuple containing the collection of instances and the total count.</returns>
-    Task<ReadModelInstances> GetInstances(ReadModelName? occurrence = null, int skip = 0, int take = 50);
+    Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50);
 }

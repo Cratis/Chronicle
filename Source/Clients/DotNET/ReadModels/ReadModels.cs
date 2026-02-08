@@ -71,7 +71,7 @@ public class ReadModels(
                     Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
+                ContainerName = namingPolicy.GetReadModelName(readModel.ReadModelType),
                 DisplayName = readModel.ReadModelType.Name,
                 Sink = new()
                 {
@@ -127,7 +127,7 @@ public class ReadModels(
                     Identifier = typeof(TReadModel).GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                ContainerName = namingPolicy.GetReadModelName(typeof(TReadModel)),
                 DisplayName = typeof(TReadModel).Name,
                 Sink = new()
                 {

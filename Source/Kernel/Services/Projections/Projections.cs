@@ -4,22 +4,22 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains.Projections;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
-using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using NJsonSchema;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
-using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 using WellKnownSinkTypes = Cratis.Chronicle.Concepts.Sinks.WellKnownSinkTypes;
 
 namespace Cratis.Chronicle.Services.Projections;
@@ -63,7 +63,7 @@ internal sealed class Projections(
         return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
         {
             Identifier = p.Identifier,
-            ReadModel = p.ReadModel,
+            ContainerName = p.ContainerName.Value,
             Declaration = p.Declaration
         }).ToArray();
     }
@@ -84,7 +84,10 @@ internal sealed class Projections(
         if (request.DraftReadModel is not null)
         {
             draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
-            allReadModels = allReadModels.Append(draftDefinition).ToList();
+            allReadModels = allReadModels
+                .Where(_ => _.Identifier != draftDefinition.Identifier)
+                .Append(draftDefinition)
+                .ToList();
         }
 
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
@@ -99,14 +102,9 @@ internal sealed class Projections(
             async definition =>
             {
                 // Find the read model definition - need to handle potential empty schemas gracefully
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(
                         new ContractProjectionDefinitionParsingErrors
@@ -176,41 +174,15 @@ internal sealed class Projections(
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
-        // If a draft read model is provided, save it first
+        // If a draft read model is provided, include a temporary definition for compilation
+        Concepts.ReadModels.ReadModelDefinition? draftDefinition = null;
         if (request.DraftReadModel is not null)
         {
-            var readModelsService = serviceProvider.GetRequiredService<IReadModelsService>();
-            var identifier = Guid.NewGuid().ToString();
-            var schema = string.IsNullOrEmpty(request.DraftReadModel.Schema)
-                ? new JsonSchema { Type = JsonObjectType.Object }.ToJson()
-                : request.DraftReadModel.Schema;
-
-            await readModelsService.RegisterSingle(new()
-            {
-                EventStore = request.EventStore,
-                Owner = Contracts.ReadModels.ReadModelOwner.Client,
-                Source = Contracts.ReadModels.ReadModelSource.User,
-                ReadModel = new()
-                {
-                    Type = new()
-                    {
-                        Identifier = identifier,
-                        Generation = 1,
-                    },
-                    Name = request.DraftReadModel.Name.Pluralize(),
-                    DisplayName = request.DraftReadModel.Name,
-                    Sink = new()
-                    {
-                        TypeId = WellKnownSinkTypes.MongoDB.Value,
-                        ConfigurationId = Guid.Empty
-                    },
-                    Schema = schema,
-                    Indexes = []
-                }
-            });
-
-            // Refresh the read models list to include the newly created one
-            allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
+            allReadModels = allReadModels
+                .Where(_ => _.Identifier != draftDefinition.Identifier)
+                .Append(draftDefinition)
+                .ToList();
         }
 
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
@@ -224,14 +196,9 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new SaveProjectionResult
                     {
@@ -245,6 +212,17 @@ internal sealed class Projections(
                 }
 
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
+
+                if (request.DraftReadModel is not null && draftDefinition is not null)
+                {
+                    var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
+                    var definitionToSave = draftDefinition with
+                    {
+                        ObserverIdentifier = definition.Identifier.Value,
+                        ObserverType = ReadModelObserverType.Projection
+                    };
+                    await readModelsManager.RegisterSingle(definitionToSave);
+                }
 
                 // Check if a projection with the same identifier already exists
                 var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
@@ -292,14 +270,9 @@ internal sealed class Projections(
         return compileResult.Match(
             definition =>
             {
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
                         new ContractProjectionDefinitionParsingErrors
@@ -336,14 +309,9 @@ internal sealed class Projections(
         return compileResult.Match(
             definition =>
             {
-                var readModelDefinition = allReadModels.FirstOrDefault(r =>
-                {
-                    if (r.Schemas.Count == 0) return false;
-                    var schema = r.GetSchemaForLatestGeneration();
-                    return schema.Title! == definition.ReadModel;
-                });
+                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                if (readModelDefinition is null)
+                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
                         new ContractProjectionDefinitionParsingErrors
@@ -366,12 +334,17 @@ internal sealed class Projections(
 
     static Concepts.ReadModels.ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
     {
-        var identifier = $"draft-{Guid.NewGuid()}";
+        var identifier = string.IsNullOrWhiteSpace(draft.Identifier)
+            ? $"draft-{Guid.NewGuid()}"
+            : draft.Identifier;
+        var displayName = string.IsNullOrWhiteSpace(draft.DisplayName)
+            ? draft.ContainerName
+            : draft.DisplayName;
         JsonSchema schema;
 
         if (string.IsNullOrEmpty(draft.Schema))
         {
-            schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name };
+            schema = new JsonSchema { Type = JsonObjectType.Object, Title = displayName };
         }
         else
         {
@@ -382,13 +355,13 @@ internal sealed class Projections(
             catch
             {
                 // Fallback to basic schema if parsing fails
-                schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name };
+                schema = new JsonSchema { Type = JsonObjectType.Object, Title = displayName };
             }
         }
 
         if (string.IsNullOrEmpty(schema.Title))
         {
-            schema.Title = draft.Name;
+            schema.Title = displayName;
         }
 
         var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
@@ -398,8 +371,8 @@ internal sealed class Projections(
 
         return new Concepts.ReadModels.ReadModelDefinition(
             identifier,
-            draft.Name.Pluralize(),
-            draft.Name,
+            draft.ContainerName,
+            displayName,
             Concepts.ReadModels.ReadModelOwner.Server,
             Concepts.ReadModels.ReadModelSource.User,
             Concepts.ReadModels.ReadModelObserverType.Projection,

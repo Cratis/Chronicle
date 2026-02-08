@@ -10,12 +10,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.ReadModels;
 /// </summary>
 /// <param name="ReadModel">The read model type.</param>
 /// <param name="Generation">The read model generation.</param>
-/// <param name="ReadModelName">The read model name.</param>
-/// <param name="RevertReadModelName">The revert read model name.</param>
+/// <param name="ContainerName">The container name of the read model (collection, table, etc.).</param>
+/// <param name="RevertContainerName">The container name of the revert read model (collection, table, etc.).</param>
 /// <param name="Started">The started date and time.</param>
 public record ReplayContext(
     ReadModelIdentifier ReadModel,
     ReadModelGeneration Generation,
-    ReadModelName ReadModelName,
-    ReadModelName RevertReadModelName,
+    ReadModelContainerName ContainerName,
+    ReadModelContainerName RevertContainerName,
     DateTimeOffset Started);

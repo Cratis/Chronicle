@@ -88,3 +88,13 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
         </Dialog>
     );
 };
+
+
+/*
+at System.Collections.Generic.Dictionary\u00602.Add(TKey key, TValue value)\n
+at System.Linq.Enumerable.SpanToDictionary[TSource,TKey](ReadOnlySpan\u00601 source, Func\u00602 keySelector, IEqualityComparer\u00601 comparer)\n
+at System.Linq.Enumerable.ToDictionary[TSource,TKey](IEnumerable\u00601 source, Func\u00602 keySelector, IEqualityComparer\u00601 comparer)\n
+at Cratis.Chronicle.Projections.DefinitionLanguage.ProjectionValidator..ctor(IEnumerable\u00601 readModelDefinitions, IEnumerable\u00601 eventTypeSchemas) in /Volumes/Code/Cratis/Chronicle/Source/Kernel/Projections/DefinitionLanguage/ProjectionValidator.cs:line 25\n
+at Cratis.Chronicle.Projections.DefinitionLanguage.Compiler.Compile(Document document, ProjectionOwner owner, IEnumerable\u00601 readModelDefinitions, IEnumerable\u00601 eventTypeSchemas) in /Volumes/Code/Cratis/Chronicle/Source/Kernel/Projections/DefinitionLanguage/Compiler.cs:line 75\n   at Cratis.Chronicle.Projections.DefinitionLanguage.LanguageService.\u003C\u003Ec__DisplayClass4_0.\u003CCompile\u003Eb__2(Document document) in /Volumes/Code/Cratis/Chronicle/Source/Kernel/Projections/DefinitionLanguage/LanguageService.cs:line 43\n   at OneOf.OneOfBase\u00602.Match[TResult](Func\u00602 f0, Func\u00602 f1)\n   at Cratis.Chronicle.Projections.DefinitionLanguage.LanguageService.\u003C\u003Ec__DisplayClass4_0.\u003CCompile\u003Eb__0(IEnumerable\u00601 tokens) in /Volumes/Code/Cratis/Chronicle/Source/Kernel/Projections/DefinitionLanguage/LanguageService.cs:line 39\n   at OneOf.OneOfBase\u00602.Match[TResult](Func\u00602 f0, Func\u00602 f1)\n   at Cratis.Chronicle.Projections.DefinitionLanguage.LanguageService.Compile(String definition, ProjectionOwner owner, IEnumerable\u00601 readModelDefinitions, IEnumerable\u00601 eventTypeSchemas) in /Volumes/Code/Cratis/Chronicle/Source/Kernel/Projections/DefinitionLanguage/LanguageService.cs:line 33\n   at Cratis.Chronicle.Services.Projections.Projections.Preview(PreviewProjectionRequest request, CallContext context) in /Volumes/Code/Cratis/Chronicle/Source/Kernel/Services/Projections/Projections.cs:line 92\n   at Cratis.Chronicle.Api.Projections.PreviewProjection.Handle(IProjections projections)\n   at Cratis.Tasks.AwaitableHelpers.AwaitIfNeeded(Object maybeAwaitable)\n   at Cratis.Arc.Commands.ModelBound.ModelBoundCommandHandler.Handle(CommandContext commandContext)\n   at Cratis.Arc.Commands.CommandPipeline.Execute(Object command, IServiceProvider serviceProvider)",
+
+    */

@@ -10,6 +10,6 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// Represents a projection with its projection declaration language representation.
 /// </summary>
 /// <param name="Identifier">The projection identifier.</param>
-/// <param name="ReadModel">The read model the projection projects to.</param>
+/// <param name="ContainerName">The container name of the read model the projection projects to.</param>
 /// <param name="Declaration">The projection definition as projection declaration language.</param>
-public record ProjectionWithDeclaration(ProjectionId Identifier, ReadModelName ReadModel, ProjectionDeclaration Declaration);
+public record ProjectionWithDeclaration(ProjectionId Identifier, ReadModelContainerName ContainerName, ProjectionDeclaration Declaration);
