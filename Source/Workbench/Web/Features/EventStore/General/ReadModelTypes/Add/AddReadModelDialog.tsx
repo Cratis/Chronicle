@@ -8,7 +8,7 @@ import { Button } from 'primereact/button';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { ReadModelCreation } from 'Components/ReadModelCreation';
+import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { type JsonSchema } from 'Components/JsonSchema';
 import { useRef } from 'react';
 
@@ -19,7 +19,6 @@ export const AddReadModelDialog = () => {
     const savedDataRef = useRef<{ name: string; schema: JsonSchema } | null>(null);
 
     const handleSave = async (name: string, schema: JsonSchema) => {
-        savedDataRef.current = { name, schema };
         if (name && params.eventStore) {
             createReadModel.eventStore = params.eventStore;
             createReadModel.name = name;
@@ -29,6 +28,15 @@ export const AddReadModelDialog = () => {
                 closeDialog(DialogResult.Ok);
             }
         }
+    };
+
+    const handleChanged = (name: string, schema: JsonSchema) => {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            savedDataRef.current = null;
+            return;
+        }
+        savedDataRef.current = { name: trimmedName, schema };
     };
 
     const customButtons = (
@@ -56,7 +64,7 @@ export const AddReadModelDialog = () => {
             buttons={customButtons}
             width="800px"
             resizable={true}>
-            <ReadModelCreation onSave={handleSave} onCancel={() => closeDialog(DialogResult.Cancelled)} />
+            <ReadModelTypeEditor onChanged={handleChanged} />
         </Dialog>
     );
 };

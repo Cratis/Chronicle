@@ -1,61 +1,46 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { InputText } from 'primereact/inputtext';
-import { SchemaEditor } from './SchemaEditor/SchemaEditor';
+import { SchemaEditor } from '../SchemaEditor/SchemaEditor';
 import { JsonSchema } from 'Components/JsonSchema';
 
-interface ReadModelCreationProps {
-    onSave: (name: string, schema: JsonSchema) => void;
-    onCancel: () => void;
+interface ReadModelTypeEditorProps {
+    onChanged: (name: string, schema: JsonSchema) => void;
     initialName?: string;
     initialSchema?: JsonSchema;
-    editMode?: boolean;
-    saveDisabled?: boolean;
-    cancelDisabled?: boolean;
 }
 
-export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
-    onSave,
-    onCancel,
+const createDefaultSchema = (name: string) => ({
+    title: name,
+    type: 'object',
+    properties: {},
+    required: []
+});
+
+export const ReadModelTypeEditor: React.FC<ReadModelTypeEditorProps> = ({
+    onChanged,
     initialName = '',
     initialSchema,
 }) => {
     const [readModelName, setReadModelName] = useState(initialName);
-    const [schema, setSchema] = useState<JsonSchema>(initialSchema ?? {
-        title: initialName,
-        type: 'object',
-        properties: {},
-        required: []
-    });
+    const [schema, setSchema] = useState<JsonSchema>(initialSchema ?? createDefaultSchema(initialName));
 
-    // Reset state when initial values change (e.g., when dialog reopens)
     useEffect(() => {
         setReadModelName(initialName);
-        setSchema(initialSchema ?? {
-            title: initialName,
-            type: 'object',
-            properties: {},
-            required: []
-        });
+        setSchema(initialSchema ?? createDefaultSchema(initialName));
     }, [initialName, initialSchema]);
 
-    const handleSave = () => {
-        if (!readModelName.trim()) {
-            return;
-        }
-
-        const updatedSchema = {
-            ...schema,
-            title: readModelName
-        };
-
-        onSave(readModelName, updatedSchema);
-    };
+    useEffect(() => {
+        onChanged(readModelName, schema);
+    }, [onChanged, readModelName, schema]);
 
     const handleSchemaChange = (newSchema: JsonSchema) => {
-        setSchema(newSchema);
+        setSchema({
+            ...newSchema,
+            title: readModelName
+        });
     };
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {

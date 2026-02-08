@@ -6,7 +6,7 @@ import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
-import { ReadModelCreation } from 'Components/ReadModelCreation';
+import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { Menubar } from 'primereact/menubar';
 import { Tooltip } from 'primereact/tooltip';
 import { Dialog } from 'primereact/dialog';
@@ -153,15 +153,16 @@ export const Projections = () => {
         }
     }, [projections.data]);
 
-    const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
-        // Save as draft read model - don't create on server yet
+    const handleReadModelChanged = (name: string, schema: ReadModelSchema) => {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            setDraftReadModel(null);
+            return;
+        }
         const draft = new DraftReadModel();
-        draft.name = name;
+        draft.name = trimmedName;
         draft.schema = JSON.stringify(schema);
         setDraftReadModel(draft);
-        setIsCreateReadModelDialogOpen(false);
-        setNewReadModelName('');
-        setInitialReadModelSchema(undefined);
     };
 
     const handleCancelReadModel = () => {
@@ -359,11 +360,10 @@ export const Projections = () => {
                 modal
                 resizable={true}
                 onHide={handleCancelReadModel}>
-                <ReadModelCreation
+                <ReadModelTypeEditor
                     initialName={newReadModelName}
                     initialSchema={initialReadModelSchema}
-                    onSave={handleSaveReadModel}
-                    onCancel={handleCancelReadModel}
+                    onChanged={handleReadModelChanged}
                 />
             </Dialog>
 
