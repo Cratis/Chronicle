@@ -81,7 +81,7 @@ const ReadModelsContent = () => {
     }, []);
 
     const occurrenceOptions = useMemo(() => {
-        let options = occurrences.data.map(occ => ({
+        let options = (occurrences.data ?? []).map(occ => ({
             label: occ.revertContainerName === 'Default'
                 ? `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`
                 : `${new Date(occ.occurred).toLocaleString()} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`,
