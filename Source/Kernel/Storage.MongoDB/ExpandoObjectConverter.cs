@@ -59,6 +59,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var name = GetNameForPropertyInExpandoObject(element);
 
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
+            if (schemaProperty is null && name == "id")
+            {
+                schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
+            }
+
             if (schemaProperty is null)
             {
                 value = ConvertUnknownSchemaTypeToClrType(element.Value);
