@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <param name="TargetHeaders">The webhook target headers.</param>
 /// <param name="IsReplayable">Whether the webhook is replayable.</param>
 /// <param name="IsActive">Whether the webhook is active.</param>
-[EventType]
+[EventType, AllEventStores]
 public record WebhookAdded(
     WebhookOwner Owner,
     EventSequenceId EventSequenceId,

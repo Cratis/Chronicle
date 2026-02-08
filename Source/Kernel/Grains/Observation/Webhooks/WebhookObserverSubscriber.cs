@@ -1,10 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net.Http.Json;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Orleans.Providers;
@@ -14,16 +17,15 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <summary>
 /// Represents an implementation of <see cref="IWebhookObserverSubscriber"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="WebhookObserverSubscriber"/> class.
-/// </remarks>
-/// <param name="webhookMediator">The <see cref="IWebhookMediator"/>.</param>
+/// <param name="webhookHttpClientFactory">The <see cref="IWebhookHttpClientFactory"/>.</param>
 /// <param name="oAuthClient">The <see cref="IOAuthClient"/>.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class WebhookObserverSubscriber(
-    IWebhookMediator webhookMediator,
+    IWebhookHttpClientFactory webhookHttpClientFactory,
     IOAuthClient oAuthClient,
+    JsonSerializerOptions jsonSerializerOptions,
     ILogger<WebhookObserverSubscriber> logger) : Grain<WebhookDefinition>, IWebhookObserverSubscriber, INotifyWebhookDefinitionsChanged
 {
     ObserverKey _key = ObserverKey.NotSet;
@@ -42,7 +44,7 @@ public class WebhookObserverSubscriber(
         await EnsureAuthorized();
 
         var accessToken = _accessTokenInfo.IsExpired ? null : _accessTokenInfo.AccessToken;
-        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events, accessToken);
+        var onNextResult = await CallTarget(State.Target, partition, events, accessToken);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)
@@ -67,6 +69,23 @@ public class WebhookObserverSubscriber(
         await ReadStateAsync();
         _accessTokenInfo = AccessTokenInfo.Empty;
         await EnsureAuthorized();
+    }
+
+    async Task<Catch> CallTarget(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null)
+    {
+        try
+        {
+            var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
+            await httpClient.PostAsJsonAsync(
+                string.Empty,
+                new EventsToObserve(partition.ToString(), events.ToArray()),
+                jsonSerializerOptions);
+            return Catch.Success();
+        }
+        catch (Exception e)
+        {
+            return Catch.Failed(e);
+        }
     }
 
     async Task EnsureAuthorized()

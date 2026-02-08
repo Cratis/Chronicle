@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
+import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
 import strings from 'Strings';
 import { AllEventTypesParameters, AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -15,9 +15,12 @@ import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
 import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { useState } from 'react';
+import { Dropdown } from 'primereact/dropdown';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
+    owner: { value: null, matchMode: FilterMatchMode.EQUALS },
+    source: { value: null, matchMode: FilterMatchMode.EQUALS }
 };
 
 const renderTombstone = () => {
@@ -43,6 +46,40 @@ const renderOwner = (eventType: EventTypeRegistration) => {
     }
     return strings.eventStore.general.eventTypes.owners.unknown;
 };
+
+const ownerFilterOptions = [
+    { label: strings.eventStore.general.eventTypes.owners.client, value: EventTypeOwner.client },
+    { label: strings.eventStore.general.eventTypes.owners.server, value: EventTypeOwner.server }
+];
+
+const sourceFilterOptions = [
+    { label: strings.eventStore.general.eventTypes.sources.code, value: EventTypeSource.code },
+    { label: strings.eventStore.general.eventTypes.sources.user, value: EventTypeSource.user }
+];
+
+const ownerFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
+    <Dropdown
+        value={options.value}
+        options={ownerFilterOptions}
+        onChange={(e) => options.filterCallback(e.value)}
+        optionLabel='label'
+        placeholder='All'
+        showClear
+        className='p-column-filter'
+    />
+);
+
+const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
+    <Dropdown
+        value={options.value}
+        options={sourceFilterOptions}
+        onChange={(e) => options.filterCallback(e.value)}
+        optionLabel='label'
+        placeholder='All'
+        showClear
+        className='p-column-filter'
+    />
+);
 
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -71,6 +108,7 @@ export const EventTypes = () => {
                 dataKey='type.id'
                 defaultFilters={defaultFilters}
                 globalFilterFields={['tombstone']}
+                clientFiltering
                 emptyMessage={strings.eventStore.general.eventTypes.empty}
                 detailsComponent={TypeDetails}>
 
@@ -89,11 +127,21 @@ export const EventTypes = () => {
                         field='owner'
                         style={{ width: '100px' }}
                         header={strings.eventStore.general.eventTypes.columns.owner}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='owner'
+                        filterElement={ownerFilterTemplate}
                         body={renderOwner} />
                     <Column
                         field='source'
                         style={{ width: '100px' }}
                         header={strings.eventStore.general.eventTypes.columns.source}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='source'
+                        filterElement={sourceFilterTemplate}
                         body={renderSource} />
                     <Column
                         field='type.generation'

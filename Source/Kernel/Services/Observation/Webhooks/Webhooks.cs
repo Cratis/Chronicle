@@ -33,7 +33,7 @@ internal sealed class Webhooks(
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)
     {
-        var eventSequence = grainFactory.GetEventLog();
+        var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
         var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(request.EventStore);
 
         foreach (var webhook in request.Webhooks)
@@ -96,7 +96,7 @@ internal sealed class Webhooks(
     /// <inheritdoc/>
     public async Task Remove(RemoveWebhooks request, CallContext context = default)
     {
-        var eventSequence = grainFactory.GetEventLog();
+        var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
 
         foreach (var webhookId in request.Webhooks)
         {

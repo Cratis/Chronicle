@@ -24,7 +24,7 @@ public class WebhooksManager(
     ILogger<WebhooksManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager, IOnBroadcastChannelSubscribed, IRemindable
 {
     const string SubscriptionReminderPrefix = "webhook-subscribe:";
-    static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.Zero;
+    static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);
     static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
 
     EventStoreName _eventStoreName = EventStoreName.NotSet;

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="logger">The <see cref="ILogger{WebhookReactor}"/> for logging.</param>
+[Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: false, defaultNamespaceOnly: true)]
 public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> logger) : Reactor
 {
     /// <summary>

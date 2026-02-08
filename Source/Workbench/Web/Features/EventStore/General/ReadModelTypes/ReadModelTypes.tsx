@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
+import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
 import strings from 'Strings';
 import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModelSource } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -12,6 +12,9 @@ import { DataPage, MenuItem } from 'Components';
 import { ReadModelDetails } from './ReadModelDetails';
 import * as faIcons from 'react-icons/fa6';
 import { useState } from 'react';
+import { Dropdown } from 'primereact/dropdown';
+import { DataTableFilterMeta } from 'primereact/datatable';
+import { FilterMatchMode } from 'primereact/api';
 
 const renderSource = (readModel: ReadModelDefinition) => {
     switch (readModel.source) {
@@ -39,6 +42,45 @@ export const ReadModelTypes = () => {
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    const filters: DataTableFilterMeta = {
+        owner: { value: null, matchMode: FilterMatchMode.EQUALS },
+        source: { value: null, matchMode: FilterMatchMode.EQUALS }
+    };
+
+    const ownerFilterOptions = [
+        { label: strings.eventStore.general.readModels.owners.client, value: ReadModelOwner.client },
+        { label: strings.eventStore.general.readModels.owners.server, value: ReadModelOwner.server }
+    ];
+
+    const sourceFilterOptions = [
+        { label: strings.eventStore.general.readModels.sources.code, value: ReadModelSource.code },
+        { label: strings.eventStore.general.readModels.sources.user, value: ReadModelSource.user }
+    ];
+
+    const ownerFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
+        <Dropdown
+            value={options.value}
+            options={ownerFilterOptions}
+            onChange={(e) => options.filterCallback(e.value)}
+            optionLabel='label'
+            placeholder='All'
+            showClear
+            className='p-column-filter'
+        />
+    );
+
+    const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
+        <Dropdown
+            value={options.value}
+            options={sourceFilterOptions}
+            onChange={(e) => options.filterCallback(e.value)}
+            optionLabel='label'
+            placeholder='All'
+            showClear
+            className='p-column-filter'
+        />
+    );
+
     const handleAddReadModel = async () => {
         const [result] = await showAddReadModel();
         if (result === DialogResult.Ok) {
@@ -55,6 +97,8 @@ export const ReadModelTypes = () => {
                 queryArguments={{ eventStore: params.eventStore! }}
                 dataKey='identifier'
                 emptyMessage={strings.eventStore.general.readModels.empty}
+                defaultFilters={filters}
+                clientFiltering
                 detailsComponent={ReadModelDetails}>
 
                 <DataPage.MenuItems>
@@ -81,11 +125,21 @@ export const ReadModelTypes = () => {
                         field='owner'
                         style={{ width: '100px' }}
                         header={strings.eventStore.general.readModels.columns.owner}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='owner'
+                        filterElement={ownerFilterTemplate}
                         body={renderOwner} />
                     <Column
                         field='source'
                         style={{ width: '100px' }}
                         header={strings.eventStore.general.readModels.columns.source}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='source'
+                        filterElement={sourceFilterTemplate}
                         body={renderSource} />
                     <Column
                         field='generation'

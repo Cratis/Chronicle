@@ -8,5 +8,5 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <summary>
 /// Represents the event for a webhook that has been removed.
 /// </summary>
-[EventType]
+[EventType, AllEventStores]
 public record WebhookRemoved;
