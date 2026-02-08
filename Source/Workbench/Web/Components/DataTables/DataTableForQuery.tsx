@@ -58,6 +58,11 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
      * Default filters to use
      */
     defaultFilters?: DataTableFilterMeta;
+
+    /**
+     * Enable client-side filtering for the data table
+     */
+    clientFiltering?: boolean;
 }
 
 const paging = new Paging(0, 20);
@@ -69,8 +74,11 @@ const paging = new Paging(0, 20);
  */
 export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataTableForQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
+    const [filteredTotal, setFilteredTotal] = useState<number | undefined>(undefined);
     const [result, , , setPage] = useQueryWithPaging(props.query, paging, props.queryArguments);
     const containerRef = useRef<HTMLDivElement>(null);
+    const isClientFiltering = props.clientFiltering === true;
+    const totalRecords = isClientFiltering && filteredTotal !== undefined ? filteredTotal : result.paging.totalItems;
 
     return (
         <div
@@ -86,16 +94,22 @@ export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 <DataTable
                     value={result.data as any}
-                    lazy
+                    lazy={!isClientFiltering}
                     rows={paging.pageSize}
-                    totalRecords={result.paging.totalItems}
+                    totalRecords={totalRecords}
                     selectionMode='single'
                     selection={props.selection}
                     onSelectionChange={props.onSelectionChange}
                     dataKey={props.dataKey}
                     filters={filters}
                     filterDisplay='menu'
-                    onFilter={(e) => setFilters(e.filters)}
+                    onFilter={(e) => {
+                        setFilters(e.filters);
+                        if (isClientFiltering) {
+                            const filteredValue = e.filteredValue as unknown[] | undefined;
+                            setFilteredTotal(filteredValue ? filteredValue.length : undefined);
+                        }
+                    }}
                     globalFilterFields={props.globalFilterFields}
                     emptyMessage={props.emptyMessage}
                     style={{ minWidth: '100%' }}

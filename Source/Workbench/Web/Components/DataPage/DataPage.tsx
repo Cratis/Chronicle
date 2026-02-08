@@ -155,6 +155,11 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
      * Default filters to use
      */
     defaultFilters?: DataTableFilterMeta;
+
+    /**
+     * Enable client-side filtering for the data table
+     */
+    clientFiltering?: boolean;
 }
 
 /**

@@ -58,6 +58,11 @@ export interface DataTableForObservableQueryProps<TQuery extends IObservableQuer
      * Default filters to use
      */
     defaultFilters?: DataTableFilterMeta;
+
+    /**
+     * Enable client-side filtering for the data table
+     */
+    clientFiltering?: boolean;
 }
 
 const paging = new Paging(0, 20);
@@ -69,10 +74,13 @@ const paging = new Paging(0, 20);
  */
 export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataTableForObservableQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
+    const [filteredTotal, setFilteredTotal] = useState<number | undefined>(undefined);
     const [result, , setPage] = useObservableQueryWithPaging(props.query, paging, props.queryArguments);
     const containerRef = useRef<HTMLDivElement>(null);
     const [tableHeight, setTableHeight] = useState<number>(600);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const isClientFiltering = props.clientFiltering === true;
+    const totalRecords = isClientFiltering && filteredTotal !== undefined ? filteredTotal : result.paging.totalItems;
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -125,9 +133,9 @@ export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<T
             <div style={{ height: `${tableHeight}px`, overflow: 'hidden' }}>
                 <DataTable
                     value={result.data as any}
-                    lazy
+                    lazy={!isClientFiltering}
                     rows={paging.pageSize}
-                    totalRecords={result.paging.totalItems}
+                    totalRecords={totalRecords}
                     scrollable
                     scrollHeight='100%'
                     selectionMode='single'
@@ -136,7 +144,13 @@ export const DataTableForObservableQuery = <TQuery extends IObservableQueryFor<T
                     dataKey={props.dataKey}
                     filters={filters}
                     filterDisplay='menu'
-                    onFilter={(e) => setFilters(e.filters)}
+                    onFilter={(e) => {
+                        setFilters(e.filters);
+                        if (isClientFiltering) {
+                            const filteredValue = e.filteredValue as unknown[] | undefined;
+                            setFilteredTotal(filteredValue ? filteredValue.length : undefined);
+                        }
+                    }}
                     globalFilterFields={props.globalFilterFields}
                     emptyMessage={props.emptyMessage}>
                     {props.children}
