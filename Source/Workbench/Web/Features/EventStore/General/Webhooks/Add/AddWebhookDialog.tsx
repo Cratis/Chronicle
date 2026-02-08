@@ -6,6 +6,7 @@ import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
+import { AuthorizationType } from 'Api/Security';
 import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
@@ -29,7 +30,7 @@ export const AddWebhookDialog = () => {
     const [url, setUrl] = useState('');
     const [eventSequence, setEventSequence] = useState('event-log');
     const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
-    const [authType, setAuthType] = useState('None');
+    const [authType, setAuthType] = useState(AuthorizationType.none);
     const [basicUsername, setBasicUsername] = useState('');
     const [basicPassword, setBasicPassword] = useState('');
     const [bearerToken, setBearerToken] = useState('');
@@ -41,10 +42,10 @@ export const AddWebhookDialog = () => {
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     const authTypes = [
-        { label: strings.eventStore.general.webhooks.authTypes.none, value: 'None' },
-        { label: strings.eventStore.general.webhooks.authTypes.basic, value: 'Basic' },
-        { label: strings.eventStore.general.webhooks.authTypes.bearer, value: 'Bearer' },
-        { label: strings.eventStore.general.webhooks.authTypes.oauth, value: 'OAuth' }
+        { label: strings.eventStore.general.webhooks.authTypes.none, value: AuthorizationType.none },
+        { label: strings.eventStore.general.webhooks.authTypes.basic, value: AuthorizationType.basic },
+        { label: strings.eventStore.general.webhooks.authTypes.bearer, value: AuthorizationType.bearer },
+        { label: strings.eventStore.general.webhooks.authTypes.oauth, value: AuthorizationType.OAuth }
     ];
 
     const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
@@ -163,7 +164,7 @@ export const AddWebhookDialog = () => {
                     />
                 </div>
 
-                {authType === 'Basic' && (
+                {authType === AuthorizationType.basic && (
                     <>
                         <div className="field mb-3">
                             <label htmlFor="basicUsername">{strings.eventStore.general.webhooks.dialogs.addWebhook.basicUsername}</label>
@@ -176,14 +177,14 @@ export const AddWebhookDialog = () => {
                     </>
                 )}
 
-                {authType === 'Bearer' && (
+                {authType === AuthorizationType.bearer && (
                     <div className="field mb-3">
                         <label htmlFor="bearerToken">{strings.eventStore.general.webhooks.dialogs.addWebhook.bearerToken}</label>
                         <InputText id="bearerToken" value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} />
                     </div>
                 )}
 
-                {authType === 'OAuth' && (
+                {authType === AuthorizationType.OAuth && (
                     <>
                         <div className="field mb-3">
                             <label htmlFor="oauthAuthority">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthAuthority}</label>

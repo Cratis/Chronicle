@@ -20,7 +20,9 @@ internal class AddWebhookValidator : CommandValidator<AddWebhook>
     /// <param name="webhooks"><see cref="IWebhooks"/> for working with webhooks.</param>
     public AddWebhookValidator(IWebhooks webhooks)
     {
-        When(_ => _.AuthorizationType.Equals("oauth", StringComparison.OrdinalIgnoreCase), () =>
+        _webhooks = webhooks;
+
+        When(_ => _.AuthorizationType == Security.AuthorizationType.OAuth, () =>
         {
             RuleFor(_ => _.OAuthAuthority)
                 .NotEmpty()
@@ -38,12 +40,15 @@ internal class AddWebhookValidator : CommandValidator<AddWebhook>
         RuleFor(_ => _)
             .MustAsync(BeValidOAuthConfiguration)
             .WithMessage("Unable to acquire a valid OAuth token.");
-        _webhooks = webhooks;
+
+        RuleFor(_ => _)
+            .MustAsync(NotHaveDuplicateName)
+            .WithMessage("A webhook with the same name already exists.");
     }
 
     async Task<bool> BeValidOAuthConfiguration(AddWebhook command, CancellationToken cancellationToken)
     {
-        if (!command.AuthorizationType.Equals("oauth", StringComparison.OrdinalIgnoreCase))
+        if (command.AuthorizationType != Security.AuthorizationType.OAuth)
         {
             return true;
         }
@@ -58,5 +63,16 @@ internal class AddWebhookValidator : CommandValidator<AddWebhook>
             cancellationToken);
 
         return result.Success;
+    }
+
+    async Task<bool> NotHaveDuplicateName(AddWebhook command, CancellationToken cancellationToken)
+    {
+        var existingWebhooks = await _webhooks.GetWebhooks(
+            new GetWebhooksRequest
+            {
+                EventStore = command.EventStore
+            });
+
+        return !existingWebhooks.Any(_ => _.Identifier == command.Name);
     }
 }

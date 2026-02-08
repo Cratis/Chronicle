@@ -8,7 +8,7 @@
         <ResourceNamespace>$(RootNamespace)</ResourceNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-        <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
+        <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001;MA0182</NoWarn>
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
 

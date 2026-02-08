@@ -15,10 +15,10 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@cratis/arc": "^18.7.21",
-        "@cratis/arc.react": "^18.7.21",
-        "@cratis/arc.react.mvvm": "^18.7.21",
-        "@cratis/arc.vite": "^18.7.21",
+        "@cratis/arc": "^19.0.2",
+        "@cratis/arc.react": "^19.0.2",
+        "@cratis/arc.react.mvvm": "^19.0.2",
+        "@cratis/arc.vite": "^19.0.2",
         "@cratis/components": "^0.1.18",
         "@monaco-editor/react": "^4.7.0",
         "allotment": "^1.20.5",

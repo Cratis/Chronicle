@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.ModelBinding;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Security;
@@ -28,13 +29,11 @@ public class WebhookCommands : ControllerBase
     /// <summary>
     /// Add a new webhook.
     /// </summary>
-    /// <param name="eventStore">Name of the event store.</param>
     /// <param name="command">Command for adding the webhook.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("add")]
     public async Task AddWebHook(
-        [FromRoute] string eventStore,
-        [FromBody] AddWebhook command)
+        [FromRequest] AddWebhook command)
     {
         var headers = command.Headers.ToDictionary(h => h.Key, h => h.Value);
 
@@ -49,7 +48,7 @@ public class WebhookCommands : ControllerBase
 
         await _webhooks.Add(new AddWebhooks
         {
-            EventStore = eventStore,
+            EventStore = command.EventStore,
             Owner = Contracts.Observation.ObserverOwner.Client,
             Webhooks =
             [
@@ -90,7 +89,7 @@ public class WebhookCommands : ControllerBase
 
     static OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? CreateAuthorization(AddWebhook command)
     {
-        if (command.AuthorizationType.Equals("basic", StringComparison.OrdinalIgnoreCase))
+        if (command.AuthorizationType == Security.AuthorizationType.Basic)
         {
             return new(new BasicAuthorization
             {
@@ -99,7 +98,7 @@ public class WebhookCommands : ControllerBase
             });
         }
 
-        if (command.AuthorizationType.Equals("bearer", StringComparison.OrdinalIgnoreCase))
+        if (command.AuthorizationType == Security.AuthorizationType.Bearer)
         {
             return new(new BearerTokenAuthorization
             {
@@ -107,7 +106,7 @@ public class WebhookCommands : ControllerBase
             });
         }
 
-        if (command.AuthorizationType.Equals("oauth", StringComparison.OrdinalIgnoreCase))
+        if (command.AuthorizationType == Security.AuthorizationType.OAuth)
         {
             return new(new OAuthAuthorization
             {

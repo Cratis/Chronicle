@@ -4,6 +4,7 @@
 import { Column } from 'primereact/column';
 import strings from 'Strings';
 import { GetWebhooks, RemoveWebHook, type WebhookDefinition } from 'Api/Webhooks';
+import { AuthorizationType } from 'Api/Security';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -14,8 +15,18 @@ import { useState } from 'react';
 import { WebhookDetails } from './WebhookDetails';
 
 const renderAuthorizationType = (webhook: WebhookDefinition) => {
-    const authType = webhook.authorizationType?.toLowerCase() || 'none';
-    return strings.eventStore.general.webhooks.authTypes[authType as keyof typeof strings.eventStore.general.webhooks.authTypes] || webhook.authorizationType || 'None';
+    switch (webhook.authorizationType) {
+        case AuthorizationType.none:
+            return strings.eventStore.general.webhooks.authTypes.none;
+        case AuthorizationType.basic:
+            return strings.eventStore.general.webhooks.authTypes.basic;
+        case AuthorizationType.bearer:
+            return strings.eventStore.general.webhooks.authTypes.bearer;
+        case AuthorizationType.OAuth:
+            return strings.eventStore.general.webhooks.authTypes.oauth;
+        default:
+            return strings.eventStore.general.webhooks.authTypes.none;
+    }
 };
 
 const renderBoolean = (value: boolean) => {

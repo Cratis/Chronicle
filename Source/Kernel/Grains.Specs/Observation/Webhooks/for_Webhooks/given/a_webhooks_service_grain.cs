@@ -13,6 +13,7 @@ public class a_webhooks_service_grain : Specification
     protected IStorage _storage;
     protected IWebhookDefinitionComparer _webhookDefinitionComparer;
     protected IEncryption _encryption;
+    protected IOAuthClient _oauthClient;
 
     void Establish()
     {
@@ -20,6 +21,7 @@ public class a_webhooks_service_grain : Specification
         _storage = Substitute.For<IStorage>();
         _webhookDefinitionComparer = Substitute.For<IWebhookDefinitionComparer>();
         _encryption = Substitute.For<IEncryption>();
-        _webhooks = new Services.Observation.Webhooks.Webhooks(_grainFactory, _storage, _webhookDefinitionComparer, _encryption);
+        _oauthClient = Substitute.For<IOAuthClient>();
+        _webhooks = new Services.Observation.Webhooks.Webhooks(_grainFactory, _storage, _webhookDefinitionComparer, _encryption, _oauthClient);
     }
 }

@@ -31,7 +31,7 @@ public class WebhookDefinition
     /// <summary>
     /// Gets or sets the authorization type.
     /// </summary>
-    public string AuthorizationType { get; set; } = "None";
+    public Security.AuthorizationType AuthorizationType { get; set; } = Security.AuthorizationType.None;
 
     /// <summary>
     /// Gets or sets additional headers.

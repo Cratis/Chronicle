@@ -45,14 +45,14 @@ public class WebhookQueries : ControllerBase
         });
     }
 
-    static string GetAuthorizationType(Contracts.Observation.Webhooks.WebhookTarget target)
+    static Security.AuthorizationType GetAuthorizationType(WebhookTarget target)
     {
-        if (target.Authorization is null) return "None";
+        if (target.Authorization is null) return Security.AuthorizationType.None;
 
-        if (target.Authorization.Value0 is not null) return "Basic";
-        if (target.Authorization.Value1 is not null) return "Bearer";
-        if (target.Authorization.Value2 is not null) return "OAuth";
+        if (target.Authorization.Value0 is not null) return Security.AuthorizationType.Basic;
+        if (target.Authorization.Value1 is not null) return Security.AuthorizationType.Bearer;
+        if (target.Authorization.Value2 is not null) return Security.AuthorizationType.OAuth;
 
-        return "None";
+        return Security.AuthorizationType.None;
     }
 }

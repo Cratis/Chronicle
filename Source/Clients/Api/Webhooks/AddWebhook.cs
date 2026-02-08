@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Api.Webhooks;
 public class AddWebhook
 {
     /// <summary>
+    /// Gets or sets the event store name.
+    /// </summary>
+    [FromRoute]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the name of the webhook.
     /// </summary>
     public string Name { get; set; } = string.Empty;
@@ -36,7 +42,7 @@ public class AddWebhook
     /// <summary>
     /// Gets or sets the authorization type (None, Basic, Bearer, OAuth).
     /// </summary>
-    public string AuthorizationType { get; set; } = "None";
+    public Security.AuthorizationType AuthorizationType { get; set; } = Security.AuthorizationType.None;
 
     /// <summary>
     /// Gets or sets the username for Basic authorization.

@@ -56,7 +56,8 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
 
         if (!string.IsNullOrEmpty(type))
         {
-            authorizations = authorizations.Where(a => a.Type == type);
+            var authType = type.ToAuthorizationType();
+            authorizations = authorizations.Where(a => a.Type == authType);
         }
 
         if (scopes.HasValue && scopes.Value.Length > 0)
@@ -123,14 +124,14 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
 
     /// <inheritdoc/>
     public ValueTask<string?> GetTypeAsync(Authorization authorization, CancellationToken cancellationToken) =>
-        new(authorization.Type?.Value);
+        new(authorization.Type.ToTypeString());
 
     /// <inheritdoc/>
     public ValueTask<Authorization> InstantiateAsync(CancellationToken cancellationToken) => new(new Authorization(
         Id: Guid.NewGuid(),
         ApplicationId: string.Empty,
         Subject: string.Empty,
-        Type: OpenIddictConstants.AuthorizationTypes.Permanent,
+        Type: OpenIddictConstants.AuthorizationTypes.Permanent.ToAuthorizationType(),
         Status: OpenIddictConstants.Statuses.Valid,
         Scopes: [],
         CreationDate: DateTimeOffset.UtcNow,
@@ -180,7 +181,8 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
 
         if (!string.IsNullOrEmpty(type))
         {
-            authorizations = authorizations.Where(a => a.Type == type);
+            var authType = type.ToAuthorizationType();
+            authorizations = authorizations.Where(a => a.Type == authType);
         }
 
         var count = 0L;
@@ -248,7 +250,7 @@ public class AuthorizationStore(IAuthorizationStorage authorizationStorage) : IO
 
     /// <inheritdoc/>
     public async ValueTask SetTypeAsync(Authorization authorization, string? type, CancellationToken cancellationToken) =>
-        await authorizationStorage.Update(authorization with { Type = type ?? default! });
+        await authorizationStorage.Update(authorization with { Type = type.ToAuthorizationType() });
 
     /// <inheritdoc/>
     public async ValueTask UpdateAsync(Authorization authorization, CancellationToken cancellationToken) =>
