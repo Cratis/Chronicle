@@ -101,7 +101,7 @@ When you configure camel case naming policy, Chronicle uses this policy when bui
 
 ### Read Models
 
-The naming policy affects the name of the read model name, which affects the name of the collection / table / file that it
+The naming policy affects the read model container name, which affects the name of the collection / table / file that it
 ends up being persisted as.
 
 When projections project to read models, the property names used will follow the configured naming policy. For example:

@@ -30,7 +30,7 @@ public record SaveProjection(string EventStore, string Namespace, string Declara
             DraftReadModel = DraftReadModel is not null
                 ? new DraftReadModelDefinition
                 {
-                    Name = DraftReadModel.Name,
+                    ContainerName = DraftReadModel.ContainerName,
                     Schema = DraftReadModel.Schema
                 }
                 : null

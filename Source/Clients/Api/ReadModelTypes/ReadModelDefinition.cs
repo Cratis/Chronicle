@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Api.ReadModelTypes;
 /// </summary>
 /// <param name="Identifier">Identifier of the read model.</param>
 /// <param name="Generation">Generation of the read model.</param>
-/// <param name="Name">Name of the read model.</param>
+/// <param name="ContainerName">Container name of the read model (collection, table, etc.).</param>
 /// <param name="DisplayName">Display name of the read model.</param>
 /// <param name="Owner">The owner of the read model.</param>
 /// <param name="Source">The source of the read model.</param>
@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Api.ReadModelTypes;
 public record ReadModelDefinition(
     string Identifier,
     ulong Generation,
-    string Name,
+    string ContainerName,
     string DisplayName,
     ReadModelOwner Owner,
     ReadModelSource Source,
@@ -44,7 +44,7 @@ public record ReadModelDefinition(
         return response.ReadModels.Select(rm => new ReadModelDefinition(
             rm.Type.Identifier,
             rm.Type.Generation,
-            rm.Name,
+            rm.ContainerName,
             rm.DisplayName,
             (ReadModelOwner)(int)rm.Owner,
             (ReadModelSource)(int)rm.Source,

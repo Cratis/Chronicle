@@ -114,6 +114,7 @@
                     "save": "Save"
                 },
                 "columns": {
+                    "fullName": "id",
                     "name": "Name",
                     "containerName": "Container Name",
                     "owner": "Owner",

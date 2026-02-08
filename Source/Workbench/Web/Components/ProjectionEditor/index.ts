@@ -163,7 +163,7 @@ export function setEditReadModelCallback(callback: (readModelName: string, curre
     }
 }
 
-export function setDraftReadModel(draft: { name: string; schema: JsonSchema } | null): void {
+export function setDraftReadModel(draft: { containerName: string; schema: JsonSchema } | null): void {
     if (codeActionProvider) {
         codeActionProvider.setDraftReadModel(draft);
     }

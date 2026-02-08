@@ -18,10 +18,10 @@ public class ReadModelDefinition
     public ReadModelType Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the model.
+    /// Gets or sets the container name of the model (collection, table, etc.).
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string ContainerName { get; set; }
 
     /// <summary>
     /// Gets or sets the display name of the model.

@@ -29,7 +29,7 @@ internal static class ReadModelDefinitionConverters
                 Identifier = definition.Identifier,
                 Generation = latestGeneration.Value
             },
-            Name = definition.Name,
+            ContainerName = definition.ContainerName,
             DisplayName = definition.DisplayName,
             Sink = definition.Sink.ToContract(),
             Schema = latestSchema.ToJson(),
@@ -57,7 +57,7 @@ internal static class ReadModelDefinitionConverters
 
         return new(
             contract.Type.Identifier,
-            contract.Name,
+            contract.ContainerName,
             contract.DisplayName,
             (ReadModelOwner)(int)owner,
             (ReadModelSource)(int)source,

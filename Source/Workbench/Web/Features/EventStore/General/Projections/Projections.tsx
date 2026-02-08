@@ -57,8 +57,8 @@ export const Projections = () => {
 
     const selectedReadModel = useMemo(() => {
         if (!selectedProjection || !readModels.data) return null;
-        const projection = selectedProjection as { readModel: string };
-        const found = readModels.data.find(rm => rm.identifier.endsWith(`.${projection.readModel}`) || rm.identifier === projection.readModel) || null;
+        const projection = selectedProjection as { containerName: string };
+        const found = readModels.data.find(rm => rm.containerName === projection.containerName) || null;
         return found;
     }, [selectedProjection, readModels.data]);
 
@@ -69,7 +69,7 @@ export const Projections = () => {
 
     const readModelFromDeclaration = useMemo(() => {
         if (!readModelNameFromDeclaration || !readModels.data) return null;
-        return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDeclaration}`) || rm.identifier === readModelNameFromDeclaration || rm.name === readModelNameFromDeclaration) || null;
+        return readModels.data.find(rm => rm.identifier.endsWith(`.${readModelNameFromDeclaration}`) || rm.identifier === readModelNameFromDeclaration || rm.containerName === readModelNameFromDeclaration) || null;
     }, [readModelNameFromDeclaration, readModels.data]);
 
     const hasUnsavedChanges = useMemo(() => {
@@ -94,9 +94,9 @@ export const Projections = () => {
         }
         if (readModelFromDeclaration && !selectedProjection) {
             const existingProjection = projections.data?.find(p =>
-                p.readModel === readModelFromDeclaration.name ||
-                p.readModel === readModelNameFromDeclaration ||
-                readModelFromDeclaration.identifier.endsWith(`.${p.readModel}`)
+                p.containerName === readModelFromDeclaration.containerName ||
+                p.containerName === readModelNameFromDeclaration ||
+                readModelFromDeclaration.identifier.endsWith(`.${p.containerName}`)
             );
             if (existingProjection) {
                 return strings.eventStore.general.projections.saveDisabledReasons.projectionAlreadyExists;
@@ -132,7 +132,7 @@ export const Projections = () => {
     useEffect(() => {
         if (draftReadModel) {
             setDraftReadModelInProvider({
-                name: draftReadModel.name,
+                containerName: draftReadModel.containerName,
                 schema: JSON.parse(draftReadModel.schema) as JsonSchema
             });
         } else {
@@ -156,7 +156,7 @@ export const Projections = () => {
     const handleSaveReadModel = async (name: string, schema: ReadModelSchema) => {
         // Save as draft read model - don't create on server yet
         const draft = new DraftReadModel();
-        draft.name = name;
+        draft.containerName = name;
         draft.schema = JSON.stringify(schema);
         setDraftReadModel(draft);
         setIsCreateReadModelDialogOpen(false);
@@ -204,7 +204,7 @@ export const Projections = () => {
                             }}>
 
                             <Column field="identifier" header="Name" />
-                            <Column field="readModel" header="Read Model" />
+                            <Column field="containerName" header="Container Name" />
                         </DataTable>
                     </div>
                 </Allotment.Pane>

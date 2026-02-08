@@ -28,14 +28,14 @@ public class ReadModelOccurrence
     public ReadModelType Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the read model.
+    /// Gets or sets the container name of the read model (collection, table, etc.).
     /// </summary>
     [ProtoMember(4)]
-    public string ReadModel { get; set; }
+    public string ContainerName { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the revert read model.
+    /// Gets or sets the container name of the revert read model (collection, table, etc.).
     /// </summary>
     [ProtoMember(5)]
-    public string RevertModel { get; set; }
+    public string RevertContainerName { get; set; }
 }

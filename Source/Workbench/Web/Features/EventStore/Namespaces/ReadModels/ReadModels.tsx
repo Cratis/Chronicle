@@ -82,10 +82,10 @@ const ReadModelsContent = () => {
 
     const occurrenceOptions = useMemo(() => {
         let options = occurrences.data.map(occ => ({
-            label: occ.revertModel === 'Default'
+            label: occ.revertContainerName === 'Default'
                 ? `${strings.eventStore.namespaces.readModels.labels.default} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`
                 : `${new Date(occ.occurred).toLocaleString()} (${strings.eventStore.namespaces.readModels.labels.generation} ${occ.generation})`,
-            value: occ.revertModel
+            value: occ.revertContainerName
         }));
 
         // Ensure Default is always present
@@ -196,7 +196,7 @@ const ReadModelsContent = () => {
                                 value={selectedReadModel}
                                 options={allReadModels.data || []}
                                 onChange={(e) => handleReadModelChange(e.value)}
-                                optionLabel="name"
+                                optionLabel="containerName"
                                 placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
                                 className="w-full"
                             />

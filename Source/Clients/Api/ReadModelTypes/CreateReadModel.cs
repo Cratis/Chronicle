@@ -6,6 +6,6 @@ namespace Cratis.Chronicle.Api.ReadModelTypes;
 /// <summary>
 /// Represents the command for creating a read model.
 /// </summary>
-/// <param name="Name">Name of the read model to create.</param>
+/// <param name="ContainerName">Container name of the read model to create (collection, table, etc.).</param>
 /// <param name="Schema">Optional schema for the read model.</param>
-public record CreateReadModel(string Name, string? Schema = null);
+public record CreateReadModel(string ContainerName, string? Schema = null);

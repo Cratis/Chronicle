@@ -6,7 +6,7 @@ import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 export interface DraftReadModelInfo {
-    name: string;
+    containerName: string;
     schema: JsonSchema;
 }
 
@@ -88,7 +88,7 @@ export class ProjectionDefinitionLanguageValidator {
 
         if (!projectionMatch) {
             const lineNumber = firstNonEmptyLineIndex + 1;
-            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelName>"'));
+            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelContainerName>"'));
             return markers;
         }
 
@@ -97,7 +97,7 @@ export class ProjectionDefinitionLanguageValidator {
         // Validate read model exists in schemas or is a draft
         if (this.readModels.length > 0) {
             const readModelExists = this.readModels.some((rm) => rm.displayName === readModelName);
-            const isDraftReadModel = this.draftReadModel && this.draftReadModel.name === readModelName;
+            const isDraftReadModel = this.draftReadModel && this.draftReadModel.containerName === readModelName;
 
             if (!readModelExists && !isDraftReadModel) {
                 const lineNumber = firstNonEmptyLineIndex + 1;
@@ -112,7 +112,7 @@ export class ProjectionDefinitionLanguageValidator {
         }
 
         // Get the active read model schema for property validation (check draft first)
-        const isDraft = this.draftReadModel && this.draftReadModel.name === readModelName;
+        const isDraft = this.draftReadModel && this.draftReadModel.containerName === readModelName;
         const activeReadModel = isDraft ? null : this.readModels.find((rm) => rm.displayName === readModelName);
         const activeSchema = isDraft ? this.draftReadModel!.schema : activeReadModel?.schema;
 

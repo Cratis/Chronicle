@@ -6,7 +6,7 @@ import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 export interface DraftReadModelInfo {
-    name: string;
+    containerName: string;
     schema: JsonSchema;
 }
 
@@ -99,7 +99,7 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
             if (match && match[1]) {
                 const readModelName = match[1];
 
-                if (this.draftReadModel && this.draftReadModel.name === readModelName && this.onEditReadModel) {
+                if (this.draftReadModel && this.draftReadModel.containerName === readModelName && this.onEditReadModel) {
                     actions.push({
                         title: `Edit read model '${readModelName}'`,
                         diagnostics: [diagnostic],

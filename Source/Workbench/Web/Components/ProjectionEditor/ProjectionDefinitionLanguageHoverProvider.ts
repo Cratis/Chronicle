@@ -9,7 +9,7 @@ import strings from '../../Strings';
 export class ProjectionDefinitionLanguageHoverProvider implements languages.HoverProvider {
     private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
-    private draftReadModel: { name: string; schema: JsonSchema } | null = null;
+    private draftReadModel: { containerName: string; schema: JsonSchema } | null = null;
 
 
     setReadModels(readModels: ReadModelInfo[]): void {
@@ -41,7 +41,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         this.eventSchemas = schemas;
     }
 
-    setDraftReadModel(draft: { name: string; schema: JsonSchema } | null): void {
+    setDraftReadModel(draft: { containerName: string; schema: JsonSchema } | null): void {
         this.draftReadModel = draft;
     }
 
@@ -120,7 +120,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         }
 
         // Check if it's a draft read model
-        if (this.draftReadModel && this.draftReadModel.name === wordText) {
+        if (this.draftReadModel && this.draftReadModel.containerName === wordText) {
             const description = this.getSchemaDescription(this.draftReadModel.schema);
             const properties = this.getSchemaProperties(this.draftReadModel.schema);
 

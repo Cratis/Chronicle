@@ -11,10 +11,10 @@ namespace Cratis.Chronicle.Contracts.Projections;
 public class DraftReadModelDefinition
 {
     /// <summary>
-    /// Gets or sets the name of the read model.
+    /// Gets or sets the container name of the read model (collection, table, etc.).
     /// </summary>
     [ProtoMember(1)]
-    public string Name { get; set; } = string.Empty;
+    public string ContainerName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the JSON schema for the read model.

@@ -51,9 +51,9 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TReadModel> ReadModelName(string readModelName)
+    public IProjectionBuilderFor<TReadModel> ContainerName(string containerName)
     {
-        _readModelIdentifier = readModelName;
+        _readModelIdentifier = containerName;
         return this;
     }
 

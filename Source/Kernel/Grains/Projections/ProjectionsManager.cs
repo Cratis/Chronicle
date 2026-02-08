@@ -85,10 +85,9 @@ public class ProjectionsManager(
             .Select(definition =>
             {
                 var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
-                var readModelSchema = readModel.GetSchemaForLatestGeneration();
                 return new ProjectionWithDeclaration(
                     definition.Identifier,
-                    readModelSchema.Title ?? readModel.Identifier,
+                    readModel.ContainerName,
                     languageService.Generate(definition, readModel));
             }).ToArray();
     }

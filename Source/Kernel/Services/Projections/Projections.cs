@@ -63,7 +63,7 @@ internal sealed class Projections(
         return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
         {
             Identifier = p.Identifier,
-            ReadModel = p.ReadModel,
+            ContainerName = p.ContainerName.Value,
             Declaration = p.Declaration
         }).ToArray();
     }
@@ -197,8 +197,8 @@ internal sealed class Projections(
                         Identifier = identifier,
                         Generation = 1,
                     },
-                    Name = request.DraftReadModel.Name.Pluralize(),
-                    DisplayName = request.DraftReadModel.Name,
+                    ContainerName = request.DraftReadModel.ContainerName.Pluralize(),
+                    DisplayName = request.DraftReadModel.ContainerName,
                     Sink = new()
                     {
                         TypeId = WellKnownSinkTypes.MongoDB.Value,
@@ -371,7 +371,7 @@ internal sealed class Projections(
 
         if (string.IsNullOrEmpty(draft.Schema))
         {
-            schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name };
+            schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.ContainerName };
         }
         else
         {
@@ -382,13 +382,13 @@ internal sealed class Projections(
             catch
             {
                 // Fallback to basic schema if parsing fails
-                schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.Name };
+                schema = new JsonSchema { Type = JsonObjectType.Object, Title = draft.ContainerName };
             }
         }
 
         if (string.IsNullOrEmpty(schema.Title))
         {
-            schema.Title = draft.Name;
+            schema.Title = draft.ContainerName;
         }
 
         var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
@@ -398,8 +398,8 @@ internal sealed class Projections(
 
         return new Concepts.ReadModels.ReadModelDefinition(
             identifier,
-            draft.Name.Pluralize(),
-            draft.Name,
+            draft.ContainerName.Pluralize(),
+            draft.ContainerName,
             Concepts.ReadModels.ReadModelOwner.Server,
             Concepts.ReadModels.ReadModelSource.User,
             Concepts.ReadModels.ReadModelObserverType.Projection,

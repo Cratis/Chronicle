@@ -47,7 +47,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
         }
 
         await changesetStorage.Save(
-            projection.ReadModel.Name,
+            projection.ReadModel.ContainerName,
             context.Key,
             context.Event.Context.EventType,
             context.Event.Context.SequenceNumber,

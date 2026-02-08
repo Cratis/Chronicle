@@ -55,8 +55,8 @@ public class ReadModelTypeCommands : ControllerBase
                     Identifier = identifier,
                     Generation = 1,
                 },
-                Name = command.Name.Pluralize(),
-                DisplayName = command.Name,
+                ContainerName = command.ContainerName.Pluralize(),
+                DisplayName = command.ContainerName,
                 Sink = new()
                 {
                     TypeId = WellKnownSinkTypes.MongoDB.Value,
@@ -88,7 +88,7 @@ public class ReadModelTypeCommands : ControllerBase
                     Identifier = command.Identifier,
                     Generation = command.Generation
                 },
-                Name = command.Name,
+                ContainerName = command.ContainerName,
                 Schema = command.Schema,
                 Indexes = command.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i }).ToList()
             }

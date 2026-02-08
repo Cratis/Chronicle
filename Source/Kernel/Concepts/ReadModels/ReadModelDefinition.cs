@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// Represents the model used by a projection to project to.
 /// </summary>
 /// <param name="Identifier">Unique identifier of the model.</param>
-/// <param name="Name">Name of the model.</param>
+/// <param name="ContainerName">Container name of the read model (collection, table, etc.).</param>
 /// <param name="DisplayName">Display name of the model.</param>
 /// <param name="Owner">The owner of the read model.</param>
 /// <param name="Source">The source of the read model.</param>
@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 [Alias(nameof(ReadModelDefinition))]
 public record ReadModelDefinition(
     ReadModelIdentifier Identifier,
-    ReadModelName Name,
+    ReadModelContainerName ContainerName,
     ReadModelDisplayName DisplayName,
     ReadModelOwner Owner,
     ReadModelSource Source,
@@ -47,7 +47,7 @@ public record ReadModelDefinition(
     {
         if (Schemas.Count == 0)
         {
-            throw new MissingSchemaForReadModel(Name);
+            throw new MissingSchemaForReadModel(ContainerName);
         }
 
         var latestGeneration = Schemas.Keys.Max()!;

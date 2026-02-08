@@ -13,7 +13,7 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
     protected Chronicle.Projections.IProjection _projection;
     protected ReadModelDefinition _readModel;
     protected ReadModelType _readModelType = new("TheReadModelType", ReadModelGeneration.First);
-    protected ReadModelName _readModelName = "TheReadModel";
+    protected ReadModelContainerName _readModelName = "TheReadModel";
 
     void Establish()
     {

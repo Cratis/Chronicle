@@ -22,7 +22,7 @@ export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefiniti
     const handleSave = async () => {
         updateReadModelDefinition.eventStore = params.eventStore!;
         updateReadModelDefinition.identifier = props.item.identifier;
-        updateReadModelDefinition.name = props.item.name;
+        updateReadModelDefinition.containerName = props.item.containerName;
         updateReadModelDefinition.generation = props.item.generation;
         updateReadModelDefinition.schema = JSON.stringify(schema, null, 2);
         updateReadModelDefinition.indexes = Array.from(props.item.indexes);
@@ -40,7 +40,7 @@ export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefiniti
         <div className="read-model-details" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <SchemaEditor
                 schema={schema}
-                eventTypeName={props.item.name}
+                eventTypeName={props.item.containerName}
                 canEdit={canEdit}
                 canNotEditReason={canEditReason}
                 onChange={handleSchemaChange}

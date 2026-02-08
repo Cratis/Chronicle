@@ -228,7 +228,7 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task<ReadModelInstances> GetInstances(ReadModelName? occurrence = null, int skip = 0, int take = 50)
+    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
         var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
         var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);

@@ -9,10 +9,10 @@ namespace Cratis.Chronicle.Api.ReadModels;
 /// Represents an occurrence of a replayed read model.
 /// </summary>
 /// <param name="Occurred">When the occurrence happened.</param>
-/// <param name="RevertModel">Name of the revert read model.</param>
+/// <param name="RevertContainerName">Container name of the revert read model (collection, table, etc.).</param>
 /// <param name="Generation">The generation of the read model.</param>
 [ReadModel]
-public record ReadModelOccurrence(DateTimeOffset Occurred, string RevertModel, ulong Generation)
+public record ReadModelOccurrence(DateTimeOffset Occurred, string RevertContainerName, ulong Generation)
 {
     /// <summary>
     /// Gets all read model occurrences for a given read model.
@@ -37,6 +37,6 @@ public record ReadModelOccurrence(DateTimeOffset Occurred, string RevertModel, u
                 Identifier = readModel
             }
         });
-        return response.Occurrences.Select(o => new ReadModelOccurrence(o.Occurred, o.RevertModel, o.Type.Generation));
+        return response.Occurrences.Select(o => new ReadModelOccurrence(o.Occurred, o.RevertContainerName, o.Type.Generation));
     }
 }

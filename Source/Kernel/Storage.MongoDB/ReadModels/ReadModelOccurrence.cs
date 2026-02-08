@@ -12,11 +12,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.ReadModels;
 /// <param name="ObserverId">The <see cref="ObserverId"/> for the observer that owned the occurrence.</param>
 /// <param name="Occurred"><see cref="DateTimeOffset"/> for when it occurred.</param>
 /// <param name="Generation">The <see cref="ReadModelGeneration"/> of the read model.</param>
-/// <param name="ReadModel">Name of the read model.</param>
-/// <param name="RevertReadModel">Name of the revert read model.</param>
+/// <param name="ContainerName">Container name of the read model (collection, table, etc.).</param>
+/// <param name="RevertContainerName">Container name of the revert read model (collection, table, etc.).</param>
 public record ReadModelOccurrence(
     ObserverId ObserverId,
     DateTimeOffset Occurred,
     ReadModelGeneration Generation,
-    ReadModelName ReadModel,
-    ReadModelName RevertReadModel);
+    ReadModelContainerName ContainerName,
+    ReadModelContainerName RevertContainerName);

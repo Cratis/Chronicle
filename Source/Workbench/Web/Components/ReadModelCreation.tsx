@@ -23,7 +23,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
     initialName = '',
     initialSchema,
 }) => {
-    const [readModelName, setReadModelName] = useState(initialName);
+    const [containerName, setContainerName] = useState(initialName);
     const [schema, setSchema] = useState<JsonSchema>(initialSchema ?? {
         title: initialName,
         type: 'object',
@@ -33,7 +33,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
 
     // Reset state when initial values change (e.g., when dialog reopens)
     useEffect(() => {
-        setReadModelName(initialName);
+        setContainerName(initialName);
         setSchema(initialSchema ?? {
             title: initialName,
             type: 'object',
@@ -43,16 +43,16 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
     }, [initialName, initialSchema]);
 
     const handleSave = () => {
-        if (!readModelName.trim()) {
+        if (!containerName.trim()) {
             return;
         }
 
         const updatedSchema = {
             ...schema,
-            title: readModelName
+            title: containerName
         };
 
-        onSave(readModelName, updatedSchema);
+        onSave(containerName, updatedSchema);
     };
 
     const handleSchemaChange = (newSchema: JsonSchema) => {
@@ -61,7 +61,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newName = e.target.value;
-        setReadModelName(newName);
+        setContainerName(newName);
         setSchema(prev => ({
             ...prev,
             title: newName
@@ -71,14 +71,14 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="readModelName" style={{ fontWeight: 'bold' }}>
-                    Read Model Name
+                <label htmlFor="containerName" style={{ fontWeight: 'bold' }}>
+                    Container Name
                 </label>
                 <InputText
-                    id="readModelName"
-                    value={readModelName}
+                    id="containerName"
+                    value={containerName}
                     onChange={handleNameChange}
-                    placeholder="Enter read model name (e.g., Order, Customer)"
+                    placeholder="Enter container name (e.g., orders, customers)"
                     style={{ width: '100%' }}
                     autoFocus
                 />
@@ -99,7 +99,7 @@ export const ReadModelCreation: React.FC<ReadModelCreationProps> = ({
                     label="Save"
                     icon="pi pi-check"
                     onClick={handleSave}
-                    disabled={!readModelName.trim()}
+                    disabled={!containerName.trim()}
                 />
                 <Button
                     label="Cancel"

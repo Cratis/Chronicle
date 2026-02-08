@@ -56,7 +56,7 @@ internal sealed class Reducers(
         // The read model definition will be populated once the reducer is registered.
         var model = new ReadModelDefinition(
             ReadModelIdentifier.NotSet,
-            ReadModelName.NotSet,
+            ReadModelContainerName.NotSet,
             ReadModelDisplayName.NotSet,
             ReadModelOwner.None,
             ReadModelSource.Code,

@@ -16,9 +16,9 @@ public interface IReplayContexts
     /// Establish a <see cref="ReplayContext"/> for a given <see cref="ReadModelDefinition"/> and <see cref="ObserverKey"/> .
     /// </summary>
     /// <param name="type">The <see cref="ReadModelType"/> of the read model being replayed.</param>
-    /// <param name="readModelName">The <see cref="ReadModelName"/> the context is for.</param>
+    /// <param name="containerName">The <see cref="ReadModelContainerName"/> the context is for.</param>
     /// <returns>A <see cref="ReplayContext"/> for the model.</returns>
-    Task<ReplayContext> Establish(ReadModelType type, ReadModelName readModelName);
+    Task<ReplayContext> Establish(ReadModelType type, ReadModelContainerName containerName);
 
     /// <summary>
     /// Establish a <see cref="ReplayContext"/> for a given <see cref="ReadModelDefinition"/>.

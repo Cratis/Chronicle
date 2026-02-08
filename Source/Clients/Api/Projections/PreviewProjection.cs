@@ -31,7 +31,7 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
             DraftReadModel = DraftReadModel is not null
                 ? new DraftReadModelDefinition
                 {
-                    Name = DraftReadModel.Name,
+                    ContainerName = DraftReadModel.ContainerName,
                     Schema = DraftReadModel.Schema
                 }
                 : null
