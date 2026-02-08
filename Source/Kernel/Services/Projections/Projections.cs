@@ -4,9 +4,11 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Grains.Projections;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Services.Events;
@@ -18,7 +20,6 @@ using NJsonSchema;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
-using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 using WellKnownSinkTypes = Cratis.Chronicle.Concepts.Sinks.WellKnownSinkTypes;
 
 namespace Cratis.Chronicle.Services.Projections;
@@ -173,46 +174,15 @@ internal sealed class Projections(
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
-        // If a draft read model is provided, save it first
+        // If a draft read model is provided, include a temporary definition for compilation
+        Concepts.ReadModels.ReadModelDefinition? draftDefinition = null;
         if (request.DraftReadModel is not null)
         {
-            var readModelsService = serviceProvider.GetRequiredService<IReadModelsService>();
-            var identifier = string.IsNullOrWhiteSpace(request.DraftReadModel.Identifier)
-                ? $"draft-{Guid.NewGuid()}"
-                : request.DraftReadModel.Identifier;
-            var displayName = string.IsNullOrWhiteSpace(request.DraftReadModel.DisplayName)
-                ? request.DraftReadModel.ContainerName
-                : request.DraftReadModel.DisplayName;
-            var schema = string.IsNullOrEmpty(request.DraftReadModel.Schema)
-                ? new JsonSchema { Type = JsonObjectType.Object }.ToJson()
-                : request.DraftReadModel.Schema;
-
-            await readModelsService.RegisterSingle(new()
-            {
-                EventStore = request.EventStore,
-                Owner = Contracts.ReadModels.ReadModelOwner.Client,
-                Source = Contracts.ReadModels.ReadModelSource.User,
-                ReadModel = new()
-                {
-                    Type = new()
-                    {
-                        Identifier = identifier,
-                        Generation = 1,
-                    },
-                    ContainerName = request.DraftReadModel.ContainerName,
-                    DisplayName = displayName,
-                    Sink = new()
-                    {
-                        TypeId = WellKnownSinkTypes.MongoDB.Value,
-                        ConfigurationId = Guid.Empty
-                    },
-                    Schema = schema,
-                    Indexes = []
-                }
-            });
-
-            // Refresh the read models list to include the newly created one
-            allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
+            allReadModels = allReadModels
+                .Where(_ => _.Identifier != draftDefinition.Identifier)
+                .Append(draftDefinition)
+                .ToList();
         }
 
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
@@ -242,6 +212,17 @@ internal sealed class Projections(
                 }
 
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
+
+                if (request.DraftReadModel is not null && draftDefinition is not null)
+                {
+                    var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
+                    var definitionToSave = draftDefinition with
+                    {
+                        ObserverIdentifier = definition.Identifier.Value,
+                        ObserverType = ReadModelObserverType.Projection
+                    };
+                    await readModelsManager.RegisterSingle(definitionToSave);
+                }
 
                 // Check if a projection with the same identifier already exists
                 var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
