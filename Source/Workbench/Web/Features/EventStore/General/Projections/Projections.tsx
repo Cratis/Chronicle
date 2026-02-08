@@ -20,7 +20,6 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
-import type { ReadModelSchema } from 'Api/ReadModels';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -229,7 +228,7 @@ export const Projections = () => {
         }
     }, [selectedProjection, readModels.data]);
 
-    const handleSaveReadModel = async (displayName: string, identifier: string, containerName: string, schema: ReadModelSchema) => {
+    const handleSaveReadModel = async (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
         // Save as draft read model - don't create on server yet
         const draft = new DraftReadModel();
         draft.displayName = displayName;
@@ -332,7 +331,7 @@ export const Projections = () => {
                                             draftReadModel: draftReadModel ?? undefined
                                         });
                                         const result = await saveProjection.execute();
-                                        const errors = result.response ?? [];
+                                        const errors = (result.response ?? []) as ProjectionDeclarationSyntaxError[];
                                         if (result.isSuccess && errors.length === 0) {
                                             await refreshProjections({ eventStore: params.eventStore! });
                                             if (draftReadModel) {

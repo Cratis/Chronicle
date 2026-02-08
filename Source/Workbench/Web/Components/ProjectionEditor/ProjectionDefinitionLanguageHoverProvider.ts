@@ -8,14 +8,12 @@ import strings from '../../Strings';
 
 export class ProjectionDefinitionLanguageHoverProvider implements languages.HoverProvider {
     private readModels: ReadModelInfo[] = [];
-    private readModelSchemas: JsonSchema[] = [];
     private eventSchemas: Record<string, JsonSchema> = {};
     private draftReadModel: { identifier: string; displayName: string; containerName: string; schema: JsonSchema } | null = null;
 
 
     setReadModels(readModels: ReadModelInfo[]): void {
         this.readModels = readModels || [];
-        this.readModelSchemas = (readModels || []).map(rm => rm.schema);
     }
 
     // Keep for backwards compatibility
@@ -25,7 +23,6 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
             displayName: this.getSchemaName(schema) || '',
             schema
         }));
-        this.readModelSchemas = schemas;
     }
 
     setEventSchemas(schemas: Record<string, JsonSchema> | JsonSchema[]): void {
@@ -128,10 +125,10 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
 
         // Check if it's a draft read model
         if (this.isDraftReadModel(wordText)) {
-            const description = this.getSchemaDescription(this.draftReadModel.schema);
-            const properties = this.getSchemaProperties(this.draftReadModel.schema);
-            const identifier = this.draftReadModel.identifier;
-            const displayName = this.draftReadModel.displayName;
+            const description = this.getSchemaDescription(this.draftReadModel!.schema);
+            const properties = this.getSchemaProperties(this.draftReadModel!.schema);
+            const identifier = this.draftReadModel!.identifier;
+            const displayName = this.draftReadModel!.displayName;
 
             let content = `**${strings.components.projectionEditor.hover.readModelDraft}:** \`${displayName}\`\n\n**Identifier:** \`${identifier}\`\n\n`;
             if (description) {
