@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import { AddWebHook } from 'Api/Webhooks';
+import { AddWebHook, TestOAuthAuthorization } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
@@ -11,6 +11,7 @@ import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
 import { InputSwitch } from 'primereact/inputswitch';
+import { Message } from 'primereact/message';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -20,6 +21,7 @@ export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext();
     const [addWebhook] = AddWebHook.use();
+    const [testOAuthAuthorization] = TestOAuthAuthorization.use();
 
     const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
     const [allEventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
@@ -37,6 +39,7 @@ export const AddWebhookDialog = () => {
     const [oauthClientSecret, setOauthClientSecret] = useState('');
     const [isActive, setIsActive] = useState(true);
     const [isReplayable, setIsReplayable] = useState(true);
+    const [oauthTestError, setOauthTestError] = useState('');
 
     const authTypes = [
         { label: strings.eventStore.general.webhooks.authTypes.none, value: 'None' },
@@ -64,6 +67,21 @@ export const AddWebhookDialog = () => {
 
     const handleSave = async () => {
         if (name && url && eventSequence && params.eventStore) {
+            // Test OAuth authorization if using OAuth
+            if (authType === 'OAuth') {
+                setOauthTestError('');
+                testOAuthAuthorization.eventStore = params.eventStore;
+                testOAuthAuthorization.OAuthAuthority = oauthAuthority;
+                testOAuthAuthorization.OAuthClientId = oauthClientId;
+                testOAuthAuthorization.OAuthClientSecret = oauthClientSecret;
+
+                const testResult = await testOAuthAuthorization.execute();
+                if (!testResult.isSuccess || !testResult.response?.success) {
+                    setOauthTestError(testResult.response?.errorMessage || 'OAuth authorization test failed');
+                    return;
+                }
+            }
+
             addWebhook.eventStore = params.eventStore;
             addWebhook.name = name;
             addWebhook.url = url;
@@ -185,6 +203,11 @@ export const AddWebhookDialog = () => {
                             <label htmlFor="oauthClientSecret">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientSecret}</label>
                             <InputText id="oauthClientSecret" type="password" value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} />
                         </div>
+                        {oauthTestError && (
+                            <div className="field mb-3">
+                                <Message severity="error" text={oauthTestError} />
+                            </div>
+                        )}
                     </>
                 )}
 

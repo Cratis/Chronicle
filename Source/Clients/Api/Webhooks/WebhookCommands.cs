@@ -88,6 +88,31 @@ public class WebhookCommands : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Test OAuth authorization.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store.</param>
+    /// <param name="command">Command for testing OAuth authorization.</param>
+    /// <returns>Result of the OAuth authorization test.</returns>
+    [HttpPost("test-oauth")]
+    public async Task<TestOAuthAuthorizationResult> TestOAuthAuthorization(
+        [FromRoute] string eventStore,
+        [FromBody] TestOAuthAuthorization command)
+    {
+        var result = await _webhooks.TestOAuthAuthorization(new Contracts.Observation.Webhooks.TestOAuthAuthorizationRequest
+        {
+            Authority = command.OAuthAuthority,
+            ClientId = command.OAuthClientId,
+            ClientSecret = command.OAuthClientSecret
+        });
+
+        return new TestOAuthAuthorizationResult
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
+        };
+    }
+
     static OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? CreateAuthorization(AddWebhook command)
     {
         if (command.AuthorizationType.Equals("basic", StringComparison.OrdinalIgnoreCase))

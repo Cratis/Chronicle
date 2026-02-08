@@ -43,4 +43,13 @@ public interface IWebhooks
     /// <returns><see cref="IObservable{T}"/> of <see cref="IEnumerable{T}"/> of <see cref="WebhookDefinition"/>.</returns>
     [Operation]
     IObservable<IEnumerable<WebhookDefinition>> ObserveWebhooks(GetWebhooksRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Test OAuth authorization.
+    /// </summary>
+    /// <param name="request"><see cref="TestOAuthAuthorizationRequest"/>.</param>
+    /// <param name="context"><see cref="CallContext"/>.</param>
+    /// <returns><see cref="TestOAuthAuthorizationResponse"/>.</returns>
+    [Operation]
+    Task<TestOAuthAuthorizationResponse> TestOAuthAuthorization(TestOAuthAuthorizationRequest request, CallContext context = default);
 }

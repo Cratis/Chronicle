@@ -22,11 +22,13 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// <param name="storage"><see cref="IStorage"/> for getting webhook definitions.</param>
 /// <param name="webhookDefinitionComparer"><see cref="IWebhookDefinitionComparer"/> for comparing webhook definitions.</param>
 /// <param name="encryption"><see cref="IEncryption"/> for encrypting sensitive data.</param>
+/// <param name="oauthClient"><see cref="IOAuthClient"/> for testing OAuth authorization.</param>
 internal sealed class Webhooks(
     IGrainFactory grainFactory,
     IStorage storage,
     IWebhookDefinitionComparer webhookDefinitionComparer,
-    IEncryption encryption) : IWebhooks
+    IEncryption encryption,
+    IOAuthClient oauthClient) : IWebhooks
 {
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)
@@ -117,6 +119,33 @@ internal sealed class Webhooks(
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
             .Select(definitions => definitions.Select(definition => definition.ToContract()).ToList());
+
+    /// <inheritdoc/>
+    public async Task<TestOAuthAuthorizationResponse> TestOAuthAuthorization(TestOAuthAuthorizationRequest request, CallContext context = default)
+    {
+        var authorization = new OAuthAuthorization(
+            new Authority(request.Authority),
+            new ClientId(request.ClientId),
+            new ClientSecret(request.ClientSecret));
+
+        try
+        {
+            var tokenInfo = await oauthClient.AcquireToken(authorization);
+            return new TestOAuthAuthorizationResponse
+            {
+                Success = !string.IsNullOrEmpty(tokenInfo.AccessToken),
+                ErrorMessage = string.IsNullOrEmpty(tokenInfo.AccessToken) ? "Failed to acquire access token" : string.Empty
+            };
+        }
+        catch (Exception ex)
+        {
+            return new TestOAuthAuthorizationResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
 
     Concepts.Observation.Webhooks.WebhookDefinition EncryptWebhookSecrets(Concepts.Observation.Webhooks.WebhookDefinition definition)
     {
