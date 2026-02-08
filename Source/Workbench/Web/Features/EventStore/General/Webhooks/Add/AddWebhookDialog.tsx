@@ -208,13 +208,13 @@ export const AddWebhookDialog = () => {
                     </div>
                 )}
 
-                <div className="field flex align-items-center gap-2 mb-3">
-                    <label htmlFor="isActive">{strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}</label>
+                <div className="field flex align-items-center mb-3">
+                    <label htmlFor="isActive" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}</label>
                     <InputSwitch inputId="isActive" checked={isActive} onChange={(e) => setIsActive(e.value)} />
                 </div>
 
-                <div className="field flex align-items-center gap-2">
-                    <label htmlFor="isReplayable">{strings.eventStore.general.webhooks.dialogs.addWebhook.isReplayable}</label>
+                <div className="field flex align-items-center">
+                    <label htmlFor="isReplayable" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isReplayable}</label>
                     <InputSwitch inputId="isReplayable" checked={isReplayable} onChange={(e) => setIsReplayable(e.value)} />
                 </div>
             </div>
