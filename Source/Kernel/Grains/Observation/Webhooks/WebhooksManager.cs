@@ -21,8 +21,12 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.WebhooksManager)]
 public class WebhooksManager(
     ILocalSiloDetails localSiloDetails,
-    ILogger<WebhooksManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager, IOnBroadcastChannelSubscribed
+    ILogger<WebhooksManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager, IOnBroadcastChannelSubscribed, IRemindable
 {
+    const string SubscriptionReminderPrefix = "webhook-subscribe:";
+    static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.Zero;
+    static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
+
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
@@ -45,8 +49,7 @@ public class WebhooksManager(
         State.Webhooks = webhooks;
         await WriteStateAsync();
 
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        await SetDefinitionAndSubscribe(namespaces, definition);
+        await ScheduleSubscriptionReminder(definition.Identifier);
     }
 
     /// <inheritdoc/>
@@ -60,8 +63,7 @@ public class WebhooksManager(
             State.Webhooks = webhooks;
             await WriteStateAsync();
 
-            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-            await SetDefinitionAndSubscribe(namespaces, definition);
+            await ScheduleSubscriptionReminder(definition.Identifier);
         }
     }
 
@@ -151,6 +153,26 @@ public class WebhooksManager(
     public Task<IEnumerable<WebhookDefinition>> GetWebhookDefinitions() => Task.FromResult(State.Webhooks);
 
     /// <inheritdoc/>
+    public async Task ReceiveReminder(string reminderName, TickStatus status)
+    {
+        if (!TryGetWebhookIdFromReminder(reminderName, out var webhookId))
+        {
+            return;
+        }
+
+        var definition = State.Webhooks.FirstOrDefault(_ => _.Identifier == webhookId);
+        if (definition is null)
+        {
+            await RemoveReminder(reminderName);
+            return;
+        }
+
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        await SetDefinitionAndSubscribe(namespaces, definition);
+        await RemoveReminder(reminderName);
+    }
+
+    /// <inheritdoc/>
     public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
     {
         var eventStore = streamSubscription.ChannelId.GetKeyAsString();
@@ -229,4 +251,40 @@ public class WebhooksManager(
 
     IObserver GetObserver(WebhookDefinition definition, EventStoreNamespaceName namespaceName) =>
         GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
+
+    Task<IGrainReminder> ScheduleSubscriptionReminder(WebhookId webhookId)
+    {
+        var reminderName = GetSubscriptionReminderName(webhookId);
+        return this.RegisterOrUpdateReminder(reminderName, _subscriptionReminderDelay, _subscriptionReminderPeriod);
+    }
+
+    async Task RemoveReminder(string reminderName)
+    {
+        var reminder = await this.GetReminder(reminderName);
+        if (reminder is not null)
+        {
+            await this.UnregisterReminder(reminder);
+        }
+    }
+
+    bool TryGetWebhookIdFromReminder(string reminderName, out WebhookId webhookId)
+    {
+        if (!reminderName.StartsWith(SubscriptionReminderPrefix, StringComparison.Ordinal))
+        {
+            webhookId = WebhookId.Unspecified;
+            return false;
+        }
+
+        var id = reminderName[SubscriptionReminderPrefix.Length..];
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            webhookId = WebhookId.Unspecified;
+            return false;
+        }
+
+        webhookId = new WebhookId(id);
+        return true;
+    }
+
+    string GetSubscriptionReminderName(WebhookId webhookId) => $"{SubscriptionReminderPrefix}{webhookId.Value}";
 }
