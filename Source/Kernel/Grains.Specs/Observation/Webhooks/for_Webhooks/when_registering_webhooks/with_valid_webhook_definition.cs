@@ -6,8 +6,6 @@ using DomainWebhookDefinition = Cratis.Chronicle.Concepts.Observation.Webhooks.W
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.when_registering_webhooks;
 
-#pragma warning disable SA1649 // File name should match first type name
-
 public class with_valid_webhook_definition : given.a_webhooks_service_grain
 {
     IWebhooksManager _grainManager;

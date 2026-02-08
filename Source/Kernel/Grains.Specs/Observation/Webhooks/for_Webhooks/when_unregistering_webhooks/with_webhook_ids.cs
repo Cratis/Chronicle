@@ -5,8 +5,6 @@ using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.when_unregistering_webhooks;
 
-#pragma warning disable SA1649 // File name should match first type name
-
 public class with_webhook_ids : given.a_webhooks_service_grain
 {
     IWebhooksManager _grainManager;

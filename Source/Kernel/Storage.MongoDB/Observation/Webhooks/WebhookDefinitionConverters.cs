@@ -20,9 +20,8 @@ public static class WebhookDefinitionConverters
     /// Converts a Kernel <see cref="Concepts.Observation.Reactors.ReactorDefinition"/> to a MongoDB <see cref="WebhookDefinition"/>.
     /// </summary>
     /// <param name="definition">The Kernel reactor definition.</param>
-    /// <param name="encryption">The encryption service for secrets.</param>
     /// <returns>The MongoDB reactor definition.</returns>
-    public static WebhookDefinition ToMongoDB(this Concepts.Observation.Webhooks.WebhookDefinition definition, IWebhookSecretEncryption encryption) =>
+    public static WebhookDefinition ToMongoDB(this Concepts.Observation.Webhooks.WebhookDefinition definition) =>
         new()
         {
             Id = definition.Identifier,
@@ -31,7 +30,7 @@ public static class WebhookDefinitionConverters
             EventTypes = definition.EventTypes.ToDictionary(
                 et => et.ToString(),
                 et => "$eventSourceId"),
-            Target = definition.Target.ToMongoDB(encryption),
+            Target = definition.Target.ToMongoDB(),
             IsReplayable = definition.IsReplayable,
             IsActive = definition.IsActive
         };
@@ -40,38 +39,34 @@ public static class WebhookDefinitionConverters
     /// Converts a MongoDB <see cref="WebhookDefinition"/> to a Kernel <see cref="Concepts.Observation.Reactors.ReactorDefinition"/>.
     /// </summary>
     /// <param name="definition">The MongoDB reactor definition.</param>
-    /// <param name="encryption">The encryption service for secrets.</param>
     /// <returns>The Kernel reactor definition.</returns>
-    public static Concepts.Observation.Webhooks.WebhookDefinition ToKernel(this WebhookDefinition definition, IWebhookSecretEncryption encryption) =>
+    public static Concepts.Observation.Webhooks.WebhookDefinition ToKernel(this WebhookDefinition definition) =>
         new(
             definition.Id,
             definition.Owner,
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
-            definition.Target.ToKernel(encryption),
+            definition.Target.ToKernel(),
             definition.IsReplayable);
 
-    static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target, IWebhookSecretEncryption encryption)
+    static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
         WebhookAuthorization authorization;
 
         if (target.BasicAuthorization is not null)
         {
-            var decryptedPassword = encryption.Decrypt(target.BasicAuthorization.Password);
-            authorization = new Concepts.Security.BasicAuthorization(target.BasicAuthorization.Username, decryptedPassword);
+            authorization = new Concepts.Security.BasicAuthorization(target.BasicAuthorization.Username, target.BasicAuthorization.Password);
         }
         else if (target.BearerTokenAuthorization is not null)
         {
-            var decryptedToken = encryption.Decrypt(target.BearerTokenAuthorization.Token);
-            authorization = new Concepts.Security.BearerTokenAuthorization(decryptedToken);
+            authorization = new Concepts.Security.BearerTokenAuthorization(target.BearerTokenAuthorization.Token);
         }
         else if (target.OAuthAuthorization is not null)
         {
-            var decryptedClientSecret = encryption.Decrypt(target.OAuthAuthorization.ClientSecret);
             authorization = new Concepts.Security.OAuthAuthorization(
                 target.OAuthAuthorization.Authority,
                 target.OAuthAuthorization.ClientId,
-                decryptedClientSecret);
+                target.OAuthAuthorization.ClientSecret);
         }
         else
         {
@@ -84,7 +79,7 @@ public static class WebhookDefinitionConverters
             target.Headers.AsReadOnly());
     }
 
-    static WebhookTarget ToMongoDB(this Concepts.Observation.Webhooks.WebhookTarget target, IWebhookSecretEncryption encryption)
+    static WebhookTarget ToMongoDB(this Concepts.Observation.Webhooks.WebhookTarget target)
     {
         var mongoTarget = new WebhookTarget
         {
@@ -93,20 +88,20 @@ public static class WebhookDefinitionConverters
         };
 
         target.Authorization.Switch(
-            basic => mongoTarget.BasicAuthorization = new MongoDB.Security.BasicAuthorization
+            basic => mongoTarget.BasicAuthorization = new Security.BasicAuthorization
             {
                 Username = basic.Username,
-                Password = encryption.Encrypt(basic.Password)
+                Password = basic.Password
             },
-            bearer => mongoTarget.BearerTokenAuthorization = new MongoDB.Security.BearerTokenAuthorization
+            bearer => mongoTarget.BearerTokenAuthorization = new Security.BearerTokenAuthorization
             {
-                Token = encryption.Encrypt(bearer.Token)
+                Token = bearer.Token
             },
-            oauth => mongoTarget.OAuthAuthorization = new MongoDB.Security.OAuthAuthorization
+            oauth => mongoTarget.OAuthAuthorization = new Security.OAuthAuthorization
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = encryption.Encrypt(oauth.ClientSecret)
+                ClientSecret = oauth.ClientSecret
             },
             none => { });
 

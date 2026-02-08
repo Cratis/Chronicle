@@ -58,9 +58,6 @@ public static class ServiceCollectionExtensions
         }
 #endif
 
-        // Register webhook secret encryption service (depends on Data Protection)
-        services.AddSingleton<Grains.Observation.Webhooks.IWebhookSecretEncryption, Storage.MongoDB.Observation.Webhooks.WebhookSecretEncryption>();
-
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
             {
