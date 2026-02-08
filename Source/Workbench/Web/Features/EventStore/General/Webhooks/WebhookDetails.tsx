@@ -3,11 +3,11 @@
 
 import { IDetailsComponentProps } from 'Components';
 import { WebhookDefinition } from 'Api/Webhooks';
+import { getAuthorizationTypeString } from './getAuthorizationTypeString';
 import strings from 'Strings';
 
 export const WebhookDetails = (props: IDetailsComponentProps<WebhookDefinition>) => {
-    const authType = props.item.authorizationType?.toLowerCase() || 'none';
-    const authTypeName = strings.eventStore.general.webhooks.authTypes[authType as keyof typeof strings.eventStore.general.webhooks.authTypes] || props.item.authorizationType || 'None';
+    const authTypeName = getAuthorizationTypeString(props.item.authorizationType);
 
     return (
         <div className="webhook-details p-4" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

@@ -4,7 +4,6 @@
 import { Column } from 'primereact/column';
 import strings from 'Strings';
 import { GetWebhooks, RemoveWebHook, type WebhookDefinition } from 'Api/Webhooks';
-import { AuthorizationType } from 'Api/Security';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -13,21 +12,7 @@ import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { useState } from 'react';
 import { WebhookDetails } from './WebhookDetails';
-
-const renderAuthorizationType = (webhook: WebhookDefinition) => {
-    switch (webhook.authorizationType) {
-        case AuthorizationType.none:
-            return strings.eventStore.general.webhooks.authTypes.none;
-        case AuthorizationType.basic:
-            return strings.eventStore.general.webhooks.authTypes.basic;
-        case AuthorizationType.bearer:
-            return strings.eventStore.general.webhooks.authTypes.bearer;
-        case AuthorizationType.OAuth:
-            return strings.eventStore.general.webhooks.authTypes.oauth;
-        default:
-            return strings.eventStore.general.webhooks.authTypes.none;
-    }
-};
+import { getAuthorizationTypeString } from './getAuthorizationTypeString';
 
 const renderBoolean = (value: boolean) => {
     return value ? 'Yes' : 'No';
@@ -105,7 +90,7 @@ export const Webhooks = () => {
                         field='authorizationType'
                         style={{ width: '150px' }}
                         header={strings.eventStore.general.webhooks.columns.authorization}
-                        body={renderAuthorizationType} />
+                        body={(webhook) => getAuthorizationTypeString(webhook.authorizationType)} />
                     <Column
                         field='isActive'
                         style={{ width: '80px' }}
