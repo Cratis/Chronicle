@@ -17,9 +17,11 @@ namespace Cratis.Chronicle.Grains.Security;
 [Singleton]
 public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncryption
 {
+#if DEVELOPMENT
     const string DefaultCertificateFolder = "certificates";
     const string DefaultCertificateFileName = "encryption-cert.pfx";
     const string DefaultCertificatePassword = "chronicle-auto-generated";
+#endif
 
     readonly ChronicleOptions _options = chronicleOptions.Value;
 
