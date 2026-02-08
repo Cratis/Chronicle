@@ -49,7 +49,7 @@ public class ReducerHandler(
     public Type ReadModelType => invoker.ReadModelType;
 
     /// <inheritdoc/>
-    public ReadModelName ReadModelName => invoker.ReadModelName;
+    public ReadModelContainerName ContainerName => invoker.ContainerName;
 
     /// <inheritdoc/>
     public bool IsActive { get; } = isActive;

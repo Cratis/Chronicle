@@ -68,7 +68,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
 
         return new ReadModelDefinition(
             new ReadModelIdentifier(name),
-            new ReadModelName(name),
+            new ReadModelContainerName(name),
             new ReadModelDisplayName(name),
             ReadModelOwner.Client,
             ReadModelSource.Code,

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Sinks;
-using Humanizer;
 using NJsonSchema;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
@@ -37,7 +36,6 @@ public class ReadModelTypeCommands : ControllerBase
         [FromRoute] string eventStore,
         [FromBody] CreateReadModel command)
     {
-        var identifier = Guid.NewGuid().ToString();
         var schema = new JsonSchema
         {
             Type = JsonObjectType.Object
@@ -52,11 +50,11 @@ public class ReadModelTypeCommands : ControllerBase
             {
                 Type = new()
                 {
-                    Identifier = identifier,
+                    Identifier = command.Identifier,
                     Generation = 1,
                 },
-                Name = command.Name.Pluralize(),
-                DisplayName = command.Name,
+                ContainerName = command.ContainerName,
+                DisplayName = command.DisplayName,
                 Sink = new()
                 {
                     TypeId = WellKnownSinkTypes.MongoDB.Value,
@@ -88,7 +86,7 @@ public class ReadModelTypeCommands : ControllerBase
                     Identifier = command.Identifier,
                     Generation = command.Generation
                 },
-                Name = command.Name,
+                ContainerName = command.ContainerName,
                 Schema = command.Schema,
                 Indexes = command.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i }).ToList()
             }

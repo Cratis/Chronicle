@@ -15,6 +15,6 @@ public class ReplayContextClassMap : IBsonClassMapFor<ReplayContext>
     public void Configure(BsonClassMap<ReplayContext> classMap)
     {
         classMap.AutoMap();
-        classMap.MapIdProperty(_ => _.ReadModelName);
+        classMap.MapIdProperty(_ => _.ContainerName);
     }
 }

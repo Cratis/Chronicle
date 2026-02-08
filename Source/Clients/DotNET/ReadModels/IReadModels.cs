@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
@@ -38,6 +40,14 @@ public interface IReadModels
     /// <param name="sessionId">Optional <see cref="ReadModelSessionId"/> to get for a specific session.</param>
     /// <returns>The read model instance.</returns>
     Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null);
+
+    /// <summary>
+    /// Get all instances of a read model by applying all events.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventCount">Optional maximum number of events to process. Defaults to <see cref="EventCount.Unlimited"/>.</param>
+    /// <returns>Collection of read model instances.</returns>
+    Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null);
 
     /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.

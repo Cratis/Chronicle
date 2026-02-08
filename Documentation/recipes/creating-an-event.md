@@ -26,7 +26,7 @@ You can also create event types using classes and properties. However, since eve
 to considered immutable, `record` gives you that out of the box without having to resort
 to either `init` properties or private properties with a constructor that sets them.
 
-> Note: Notice the use of [concepts](../../Fundamentals/csharp/concepts.md) for the value types
+> Note: Notice the use of concepts for the value types
 > on the events.
 
 All events are automatically discovered at runtime and registered in the Cratis Schema Store.

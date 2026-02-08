@@ -7,8 +7,8 @@
 In this quickstart, you will create a simple solution that covers the most important aspects of getting started with Chronicle.
 The sample will focus on a straightforward and well-understood domain: a library.
 
-You can find the complete working sample [here](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Console).
-which also leverages common things from [here](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
+You can find the complete working sample [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Console).
+which also leverages common things from [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
 
 [!INCLUDE [docker](./docker.md)]
 

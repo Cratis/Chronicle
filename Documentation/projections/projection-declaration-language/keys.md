@@ -6,11 +6,11 @@ Keys identify individual projection instances. They determine which read model i
 
 Specify which property from the event identifies the instance:
 
-```
+```pdl
 from UserRegistered key userId
   Name = name
   Email = email
-```
+```pdl
 
 The `userId` from the event becomes the key for the `UserReadModel` instance.
 
@@ -18,51 +18,51 @@ The `userId` from the event becomes the key for the `UserReadModel` instance.
 
 Keys can be specified inline on the `from` statement:
 
-```
+```pdl
 from OrderPlaced key orderId
   Total = total
   Status = "Pending"
-```
+```pdl
 
 ## Multiple Events with Keys
 
 When using multiple events in one `from` statement, each can have its own key:
 
-```
+```pdl
 from EventA key idA, EventB key idB, EventC
   automap
-```
+```pdl
 
 ## Block Key Syntax
 
 For more complex scenarios, use block syntax:
 
-```
+```pdl
 from OrderPlaced
   key orderId
   Total = total
-```
+```pdl
 
 ## Composite Keys
 
 Use composite keys when multiple properties together identify an instance:
 
-```
+```pdl
 from OrderCreated
   key OrderKey
     CustomerId = customerId
     OrderNumber = orderNumber
   Total = total
-```
+```pdl
 
 ### Composite Key Structure
 
-```
+```pdl
 key {TypeName}
   {Property} = {expression}
   {Property} = {expression}
   ...
-```
+```pdl
 
 The `{TypeName}` must match a complex type defined in your read model schema.
 
@@ -70,7 +70,7 @@ The `{TypeName}` must match a complex type defined in your read model schema.
 
 You can include event context and causation values in composite keys:
 
-```
+```pdl
 from LineItemAdded
   key LineItemKey
     OrderId = orderId
@@ -79,34 +79,34 @@ from LineItemAdded
     CreatedBy = $causedBy.subject
   Product = productName
   Quantity = quantity
-```
+```pdl
 
 ## Default Key Behavior
 
 If no key is specified, the event source ID is used as the key:
 
-```
+```pdl
 from UserRegistered
   Name = name
-```
+```pdl
 
 Equivalent to:
 
-```
+```pdl
 from UserRegistered key $eventSourceId
   Name = name
-```
+```pdl
 
 ## Key in Children
 
 Children must always specify an identifier:
 
-```
+```pdl
 children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role
-```
+```pdl
 
 The `id userId` specifies the child identifier property, while `key userId` specifies which event property to use.
 
@@ -121,31 +121,31 @@ Keys can be:
 
 ### Simple Key
 
-```
+```pdl
 from ProductCreated key productId
   Name = name
   Price = price
-```
+```pdl
 
 ### Event Source as Key
 
-```
+```pdl
 from AccountCreated key $eventSourceId
   AccountNumber = accountNumber
   Balance = 0.0
-```
+```pdl
 
 ### Nested Property as Key
 
-```
+```pdl
 from OrderPlaced key order.id
   Total = order.total
   CustomerId = customerId
-```
+```pdl
 
 ### Composite Key Example
 
-```
+```pdl
 projection OrderLine => OrderLineReadModel
   from LineItemAdded
     key OrderLineKey {
@@ -155,11 +155,11 @@ projection OrderLine => OrderLineReadModel
     Quantity = quantity
     UnitPrice = unitPrice
     LineTotal = total
-```
+```pdl
 
 ### Composite Key with Multiple Properties
 
-```
+```pdl
 from ReservationMade
   key ReservationKey {
     HotelId = hotelId
@@ -168,18 +168,18 @@ from ReservationMade
   }
   GuestName = guestName
   Nights = nights
-```
+```pdl
 
 ### Children with Keys
 
-```
+```pdl
 children orderLines identified by lineNumber
   from LineItemAdded key lineNumber
     parent orderId
     Product = productName
     Quantity = quantity
     Price = price
-```
+```pdl
 
 ## When to Use Each Approach
 

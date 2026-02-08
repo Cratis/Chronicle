@@ -16,12 +16,14 @@ export const AddReadModelDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext();
     const [createReadModel] = CreateReadModel.use();
-    const savedDataRef = useRef<{ name: string; schema: JsonSchema } | null>(null);
+    const savedDataRef = useRef<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
-    const handleSave = async (name: string, schema: JsonSchema) => {
-        if (name && params.eventStore) {
+    const handleSave = async (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
+        if (containerName && params.eventStore) {
             createReadModel.eventStore = params.eventStore;
-            createReadModel.name = name;
+            createReadModel.identifier = identifier;
+            createReadModel.displayName = displayName;
+            createReadModel.containerName = containerName;
             createReadModel.schema = JSON.stringify(schema);
             const result = await createReadModel.execute();
             if (result.isSuccess) {
@@ -30,13 +32,20 @@ export const AddReadModelDialog = () => {
         }
     };
 
-    const handleChanged = (name: string, schema: JsonSchema) => {
-        const trimmedName = name.trim();
-        if (!trimmedName) {
+    const handleChanged = (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
+        const trimmedDisplayName = displayName.trim();
+        const trimmedIdentifier = identifier.trim();
+        const trimmedContainerName = containerName.trim();
+        if (!trimmedDisplayName) {
             savedDataRef.current = null;
             return;
         }
-        savedDataRef.current = { name: trimmedName, schema };
+        savedDataRef.current = {
+            displayName: trimmedDisplayName,
+            identifier: trimmedIdentifier,
+            containerName: trimmedContainerName,
+            schema
+        };
     };
 
     const customButtons = (
@@ -44,8 +53,8 @@ export const AddReadModelDialog = () => {
             <Button
                 label={strings.general.buttons.ok}
                 icon="pi pi-check"
-                onClick={() => savedDataRef.current && handleSave(savedDataRef.current.name, savedDataRef.current.schema)}
-                disabled={!savedDataRef.current?.name}
+                onClick={() => savedDataRef.current && handleSave(savedDataRef.current.displayName, savedDataRef.current.identifier, savedDataRef.current.containerName, savedDataRef.current.schema)}
+                disabled={!savedDataRef.current?.displayName || !savedDataRef.current?.identifier || !savedDataRef.current?.containerName}
                 autoFocus
             />
             <Button

@@ -4,14 +4,14 @@ Children define nested collections within a projection. Each child represents a 
 
 ## Basic Syntax
 
-```
+```pdl
 children {CollectionName} identified by {Identifier}
   {child blocks}
-```
+```pdl
 
 ## Simple Example
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     Name = name
@@ -21,7 +21,7 @@ projection Group => GroupReadModel
       parent groupId
       Name = userName
       Role = role
-```
+```pdl
 
 This creates a `members` collection where each member is identified by `userId`.
 
@@ -29,22 +29,22 @@ This creates a `members` collection where each member is identified by `userId`.
 
 The `identified by` specifies how to identify individual children:
 
-```
+```pdl
 children orders identified by orderId
 children members identified by userId
 children items identified by itemNumber
-```
+```pdl
 
 ## Parent Key
 
 Use `parent` to specify the relationship to the parent projection:
 
-```
+```pdl
 children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Name = userName
-```
+```pdl
 
 The `parent groupId` links the child to the correct parent instance.
 
@@ -52,19 +52,19 @@ The `parent groupId` links the child to the correct parent instance.
 
 Apply AutoMap to children:
 
-```
+```pdl
 children members identified by userId
   automap
 
   from UserAddedToGroup
     Role = role
-```
+```pdl
 
 ## Multiple Events
 
 Children can have multiple event types:
 
-```
+```pdl
 children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
@@ -74,13 +74,13 @@ children members identified by userId
   from UserRoleChanged key userId
     parent groupId
     Role = role
-```
+```pdl
 
 ## Every Block in Children
 
 Apply mappings to all events within a children collection using the `every` block:
 
-```
+```pdl
 children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
@@ -89,7 +89,7 @@ children members identified by userId
   every
     Name = userName
     UpdatedAt = $eventContext.occurred
-```
+```pdl
 
 The `every` block within children works similarly to the top-level every block but applies only to events within that specific children collection. It's useful for mappings that should apply to all events affecting child items.
 
@@ -99,7 +99,7 @@ The `every` block within children works similarly to the top-level every block b
 
 Children can have joins:
 
-```
+```pdl
 children members id userId
   from UserAddedToGroup key userId
     parent groupId
@@ -110,13 +110,13 @@ children members id userId
     events UserCreated, UserUpdated
     Name = name
     Email = email
-```
+```pdl
 
 ## Removal in Children
 
 Remove children when specific events occur:
 
-```
+```pdl
 children members id userId
   from UserAddedToGroup key userId
     parent groupId
@@ -124,7 +124,7 @@ children members id userId
 
   remove with UserRemovedFromGroup key userId
     parent groupId
-```
+```pdl
 
 See [Removal](removal.md) for more details.
 
@@ -132,7 +132,7 @@ See [Removal](removal.md) for more details.
 
 Children can contain their own children:
 
-```
+```pdl
 children departments id deptId
   from DepartmentCreated key deptId
     parent companyId
@@ -142,13 +142,13 @@ children departments id deptId
     from TeamCreated key teamId
       parent deptId
       Name = name
-```
+```pdl
 
 ## Examples
 
 ### Group Membership
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     Name = name
@@ -167,11 +167,11 @@ projection Group => GroupReadModel
 
     remove with UserRemovedFromGroup key userId
       parent groupId
-```
+```pdl
 
 ### Order with Line Items
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -193,11 +193,11 @@ projection Order => OrderReadModel
 
     remove with LineItemRemoved key lineNumber
       parent orderId
-```
+```pdl
 
 ### Project with Tasks
 
-```
+```pdl
 projection Project => ProjectReadModel
   from ProjectCreated
     Name = name
@@ -226,11 +226,11 @@ projection Project => ProjectReadModel
     join User on AssignedTo
       events UserCreated
       AssigneeName = name
-```
+```pdl
 
 ### Invoice with Payments
 
-```
+```pdl
 projection Invoice => InvoiceReadModel
   from InvoiceIssued
     InvoiceNumber = number
@@ -247,11 +247,11 @@ projection Invoice => InvoiceReadModel
 
   from PaymentReceived
     subtract Balance by amount
-```
+```pdl
 
 ### Blog Post with Comments
 
-```
+```pdl
 projection BlogPost => BlogPostReadModel
   from PostPublished
     Title = title
@@ -281,11 +281,11 @@ projection BlogPost => BlogPostReadModel
     join User on AuthorId
       events UserRegistered
       AuthorName = name
-```
+```pdl
 
 ### Multi-Level Nesting
 
-```
+```pdl
 projection Company => CompanyReadModel
   from CompanyCreated
     Name = name
@@ -305,13 +305,13 @@ projection Company => CompanyReadModel
           parent teamId
           Name = name
           Role = role
-```
+```pdl
 
 ## Parent Key Expressions
 
 The parent key can use various expressions:
 
-```
+```pdl
 children items id itemId
   from ItemAdded key itemId
     parent orderId                        # Event property
@@ -319,13 +319,13 @@ children items id itemId
     parent $eventContext.eventSourceId    # Event source ID
     # or
     parent order.id                       # Nested property
-```
+```pdl
 
 ## AutoMap with Children
 
 AutoMap at the children level applies to all child events:
 
-```
+```pdl
 children members id userId
   automap
 
@@ -336,7 +336,7 @@ children members id userId
   from UserUpdated key userId
     parent groupId
     # Updates are auto-mapped
-```
+```pdl
 
 ## Collection Property
 
@@ -355,7 +355,7 @@ public class GroupMember
     public string Name { get; set; }
     public string Role { get; set; }
 }
-```
+```pdl
 
 ## Best Practices
 
@@ -371,7 +371,7 @@ public class GroupMember
 
 ### Add/Update/Remove
 
-```
+```pdl
 children items id itemId
   from ItemAdded key itemId
     parent parentId
@@ -383,11 +383,11 @@ children items id itemId
 
   remove with ItemRemoved key itemId
     parent parentId
-```
+```pdl
 
 ### Enrichment with Joins
 
-```
+```pdl
 children members id userId
   from MemberAdded key userId
     parent groupId
@@ -397,18 +397,18 @@ children members id userId
     events UserCreated, UserUpdated
     Name = name
     Email = email
-```
+```pdl
 
 ### Versioning
 
-```
+```pdl
 children versions id versionNumber
   from VersionCreated key versionNumber
     parent documentId
     Content = content
     CreatedAt = $eventContext.occurred
     CreatedBy = authorId
-```
+```pdl
 
 ## See Also
 

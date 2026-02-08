@@ -6,7 +6,9 @@ import type { JsonSchema } from '../JsonSchema';
 import type { ReadModelInfo } from './index';
 
 export interface DraftReadModelInfo {
-    name: string;
+    identifier: string;
+    displayName: string;
+    containerName: string;
     schema: JsonSchema;
 }
 
@@ -27,6 +29,7 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
     // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
         this.readModels = schemas.map(schema => ({
+            identifier: schema.title || schema.name || '',
             displayName: schema.title || schema.name || '',
             schema
         }));
@@ -67,13 +70,13 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
 
         // Handle "not found" errors - offer to create
         for (const diagnostic of notFoundDiagnostics) {
-            const match = diagnostic.message.match(/Read model ['"](\w+)['"]/);
+            const match = diagnostic.message.match(/Read model ['"]([\w.]+)['"]/);
             if (match && match[1]) {
                 const readModelName = match[1];
 
                 // Check if this read model already exists as a persisted read model
                 const existsAsPersisted = this.readModels.some(
-                    rm => rm.displayName === readModelName
+                    rm => rm.identifier === readModelName || rm.displayName === readModelName
                 );
 
                 if (!existsAsPersisted && this.onCreateReadModel) {
@@ -95,11 +98,11 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
 
         // Handle draft read model info markers - offer to edit
         for (const diagnostic of draftDiagnostics) {
-            const match = diagnostic.message.match(/Read model ['"](\w+)['"]/);
+            const match = diagnostic.message.match(/Read model ['"]([\w.]+)['"]/);
             if (match && match[1]) {
                 const readModelName = match[1];
 
-                if (this.draftReadModel && this.draftReadModel.name === readModelName && this.onEditReadModel) {
+                if (this.draftReadModel && this.isDraftReadModel(readModelName) && this.onEditReadModel) {
                     actions.push({
                         title: `Edit read model '${readModelName}'`,
                         diagnostics: [diagnostic],
@@ -120,5 +123,9 @@ export class ProjectionDefinitionLanguageCodeActionProvider {
             actions,
             dispose: () => { /* No cleanup needed */ }
         };
+    }
+
+    private isDraftReadModel(readModelToken: string): boolean {
+        return !!this.draftReadModel && (this.draftReadModel.identifier === readModelToken || this.draftReadModel.displayName === readModelToken);
     }
 }

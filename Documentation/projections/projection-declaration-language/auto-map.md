@@ -8,11 +8,11 @@ AutoMap automatically copies properties with matching names from the event to th
 
 By default, all property mappings automatically copy matching properties:
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     IsActive = true
-```
+```pdl
 
 This auto-maps all matching properties from `UserRegistered`, then applies the explicit `IsActive` mapping.
 
@@ -24,14 +24,14 @@ Use `no automap` to disable automatic property mapping when needed.
 
 Disable AutoMap for the entire projection:
 
-```
+```pdl
 projection User => UserReadModel
   no automap
 
   from UserRegistered
     Name = name
     Email = email
-```
+```pdl
 
 All properties must be mapped explicitly.
 
@@ -39,7 +39,7 @@ All properties must be mapped explicitly.
 
 Disable AutoMap for a specific event:
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     no automap
@@ -49,41 +49,41 @@ projection User => UserReadModel
   from UserUpdated
     # AutoMap still enabled here
     UpdatedAt = $eventContext.occurred
-```
+```pdl
 
 ### Join-Level Disable
 
 Disable AutoMap within join blocks:
 
-```
+```pdl
 join Group on GroupId
   events GroupCreated, GroupRenamed
   no automap
   Name = name
-```
+```pdl
 
 ### Children-Level Disable
 
 Disable AutoMap for children collections:
 
-```
+```pdl
 children members id userId
   no automap
 
   from UserAddedToGroup
     UserId = userId
     Role = role
-```
+```pdl
 
 ## Combining with Explicit Mappings
 
 AutoMap runs first, then explicit mappings override or add properties:
 
-```
+```pdl
 from UserRegistered
   IsActive = true
   CreatedAt = $eventContext.occurred
-```
+```pdl
 
 If the event has `Name` and `Email` properties, they're auto-mapped. Then `IsActive` and `CreatedAt` are set explicitly.
 
@@ -97,7 +97,7 @@ AutoMap matches properties when:
 Example event:
 ```csharp
 public record UserRegistered(string Name, string Email, int Age);
-```
+```pdl
 
 Example read model:
 ```csharp
@@ -108,7 +108,7 @@ public class UserReadModel
     public int Age { get; set; }
     public bool IsActive { get; set; }
 }
-```
+```pdl
 
 With default AutoMap, `Name`, `Email`, and `Age` are automatically copied. `IsActive` must be set explicitly.
 
@@ -125,16 +125,16 @@ With default AutoMap, `Name`, `Email`, and `Age` are automatically copied. `IsAc
 
 ### Default AutoMap
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     # Name, Price, Description auto-mapped if they exist
     CreatedAt = $eventContext.occurred
-```
+```pdl
 
 ### Disable AutoMap Entirely
 
-```
+```pdl
 projection Order => OrderReadModel
   no automap
 
@@ -143,11 +143,11 @@ projection Order => OrderReadModel
     CustomerId = customerId
     Total = total
     Status = "Pending"
-```
+```pdl
 
 ### Mixed Approach
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     # AutoMap enabled (default)
@@ -158,11 +158,11 @@ projection User => UserReadModel
     # Must map everything explicitly
     Name = fullName
     Email = emailAddress
-```
+```pdl
 
 ### Projection-Level Disable with Event-Level Override
 
-```
+```pdl
 projection User => UserReadModel
   no automap
 
@@ -174,11 +174,11 @@ projection User => UserReadModel
     # Still disabled - no automap is inherited
     IsActive = false
     DeactivatedAt = $eventContext.occurred
-```
+```pdl
 
 ### Join with Disabled AutoMap
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     # AutoMap enabled
@@ -187,11 +187,11 @@ projection Order => OrderReadModel
     events CustomerCreated, CustomerUpdated
     no automap
     CustomerName = name
-```
+```pdl
 
 ### Children with Selective Disable
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     # AutoMap enabled
@@ -202,7 +202,7 @@ projection Group => GroupReadModel
     from UserAddedToGroup
       UserId = userId
       Status = "Active"
-```
+```pdl
 
 ## When to Disable AutoMap
 

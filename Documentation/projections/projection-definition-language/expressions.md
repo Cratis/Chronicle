@@ -8,33 +8,33 @@ Expressions define values in the Projection Declaration Language. They can refer
 
 Access properties from the event using dot notation:
 
-```
+```pdl
 name
 email
 address.city
 contactInfo.email
 order.customer.name
-```
+```pdl
 
 **Examples:**
 
-```
+```pdl
 from UserRegistered
   Name = name
   Email = contactInfo.email
   City = address.city
-```
+```pdl
 
 ### Event Context
 
 Access event metadata using `$eventContext.{property}`:
 
-```
+```pdl
 $eventContext.occurred
 $eventContext.sequenceNumber
 $eventContext.correlationId
 $eventContext.eventSourceId
-```
+```pdl
 
 **Available Properties:**
 - `occurred` - When the event occurred (timestamp)
@@ -44,12 +44,12 @@ $eventContext.eventSourceId
 
 **Examples:**
 
-```
+```pdl
 from OrderPlaced
   PlacedAt = $eventContext.occurred
   Sequence = $eventContext.sequenceNumber
   Correlation = $eventContext.correlationId
-```
+```pdl
 
 See [Event Context](event-context.md) for more details.
 
@@ -57,29 +57,29 @@ See [Event Context](event-context.md) for more details.
 
 Quick access to the event source identifier:
 
-```
+```pdl
 $eventSourceId
-```
+```pdl
 
 This is equivalent to `$eventContext.eventSourceId`.
 
 **Example:**
 
-```
+```pdl
 from UserAssignedToGroup
   GroupId = $eventSourceId
   UserId = userId
-```
+```pdl
 
 ### Identity (Caused By)
 
 Access the identity that caused the event using `$causedBy`:
 
-```
+```pdl
 $causedBy.subject
 $causedBy.name
 $causedBy.userName
-```
+```pdl
 
 **Available Properties:**
 - `subject` - The identifier of the identity (unique ID)
@@ -88,7 +88,7 @@ $causedBy.userName
 
 **Examples:**
 
-```
+```pdl
 from OrderPlaced
   CreatedBySubject = $causedBy.subject
   CreatedByName = $causedBy.name
@@ -97,55 +97,55 @@ from OrderPlaced
 from DocumentUpdated
   UpdatedBy = `${$causedBy.name} (${$causedBy.userName})`
   UpdatedById = $causedBy.subject
-```
+```pdl
 
 ### Literals
 
 Direct values of various types:
 
 **Boolean:**
-```
+```pdl
 IsActive = true
 IsDeleted = false
-```
+```pdl
 
 **String:**
-```
+```pdl
 Status = "Pending"
 Category = "Electronics"
-```
+```pdl
 
 **Number:**
-```
+```pdl
 Count = 0
 Price = 99.99
 Tax = 0.08
-```
+```pdl
 
 **Null:**
-```
+```pdl
 OptionalField = null
-```
+```pdl
 
 **Examples:**
 
-```
+```pdl
 from AccountCreated
   Balance = 0.0
   IsActive = true
   Status = "New"
   Notes = null
-```
+```pdl
 
 ### String Templates
 
 Create formatted strings with embedded expressions:
 
-```
+```pdl
 `${expression}`
 `${firstName} ${lastName}`
 `Order: ${orderNumber}`
-```
+```pdl
 
 **Syntax:**
 - Wrap in backticks: `` ` ``
@@ -154,7 +154,7 @@ Create formatted strings with embedded expressions:
 
 **Examples:**
 
-```
+```pdl
 from PersonRegistered
   FullName = `${firstName} ${lastName}`
   DisplayInfo = `${name} (${email})`
@@ -162,7 +162,7 @@ from PersonRegistered
 from OrderPlaced
   Reference = `ORD-${orderNumber}`
   Summary = `Order ${orderNumber} for ${customerName}`
-```
+```pdl
 
 ## Expression Context
 
@@ -172,32 +172,32 @@ Expressions are evaluated in different contexts:
 
 When mapping from events, expressions reference event properties:
 
-```
+```pdl
 from UserCreated
   Name = name           # References event.name
   Email = email         # References event.email
-```
+```pdl
 
 ### Event Context
 
 Special `$eventContext` provides metadata:
 
-```
+```pdl
 from UserCreated
   CreatedAt = $eventContext.occurred
   CreatedBy = $eventContext.eventSourceId
-```
+```pdl
 
 ### Mixed Context
 
 Combine event data with event context:
 
-```
+```pdl
 from OrderPlaced
   OrderNumber = orderNumber                    # Event data
   PlacedAt = $eventContext.occurred           # Event context
   Reference = `${orderNumber}-${$eventContext.sequenceNumber}`  # Both
-```
+```pdl
 
 ## Expression Compilation
 
@@ -226,120 +226,120 @@ public class UserReadModel
     public bool IsActive { get; set; }      // Requires boolean
     public DateTime CreatedAt { get; set; } // Requires timestamp
 }
-```
+```pdl
 
 **Valid:**
-```
+```pdl
 Name = name                              # string
 LoginCount = 0                          # number
 IsActive = true                         # boolean
 CreatedAt = $eventContext.occurred      # timestamp
-```
+```pdl
 
 **Invalid:**
-```
+```pdl
 Name = 123                              # number to string (invalid)
 LoginCount = "five"                     # string to number (invalid)
 IsActive = "yes"                        # string to boolean (invalid)
-```
+```pdl
 
 ## Nested Property Access
 
 Access deeply nested properties:
 
-```
+```pdl
 from OrderPlaced
   CustomerEmail = order.customer.contactInfo.email
   ShippingCity = order.shipping.address.city
   BillingStreet = billing.address.line1
-```
+```pdl
 
 ## Expressions in Different Contexts
 
 ### Property Assignments
 
-```
+```pdl
 Property = expression
-```
+```pdl
 
 Examples:
-```
+```pdl
 Name = name
 Total = order.total
 CreatedAt = $eventContext.occurred
 DisplayName = `${firstName} ${lastName}`
-```
+```pdl
 
 ### Keys
 
-```
+```pdl
 key expression
-```
+```pdl
 
 Examples:
-```
+```pdl
 from UserCreated key userId
 from OrderPlaced key $eventSourceId
 from LineItem key order.id
-```
+```pdl
 
 ### Composite Keys
 
-```
+```pdl
 key Type {
   Property = expression
   ...
 }
-```
+```pdl
 
 Examples:
-```
+```pdl
 key OrderLineKey {
   OrderId = orderId
   LineNumber = lineNumber
   Sequence = $eventContext.sequenceNumber
 }
-```
+```pdl
 
 ### Arithmetic Operations
 
-```
+```pdl
 add Property by expression
 subtract Property by expression
-```
+```pdl
 
 Examples:
-```
+```pdl
 add Balance by amount
 subtract Stock by quantity
 add Total by lineItem.total
-```
+```pdl
 
 ### Parent Keys
 
-```
+```pdl
 parent expression
-```
+```pdl
 
 Examples:
-```
+```pdl
 parent groupId
 parent $eventContext.eventSourceId
 parent order.customerId
-```
+```pdl
 
 ### Child Identifiers
 
-```
+```pdl
 id expression
-```
+```pdl
 
 Examples:
-```
+```pdl
 children members identified by userId
 children items identified by lineNumber
 children versions identified by $eventContext.sequenceNumber
-```
+```pdl
 
 ## Best Practices
 
@@ -355,38 +355,38 @@ children versions identified by $eventContext.sequenceNumber
 
 ### Audit Fields
 
-```
+```pdl
 CreatedAt = $eventContext.occurred
 CreatedBy = $eventContext.eventSourceId
 LastUpdated = $eventContext.occurred
 Version = $eventContext.sequenceNumber
-```
+```pdl
 
 ### Display Values
 
-```
+```pdl
 FullName = `${firstName} ${lastName}`
 Address = `${street}, ${city}, ${state} ${zipCode}`
 Summary = `${product} x ${quantity} @ ${price}`
-```
+```pdl
 
 ### Nested Access
 
-```
+```pdl
 Email = contact.email
 Phone = contact.phoneNumbers.primary
 City = addresses.shipping.city
-```
+```pdl
 
 ### Default Values
 
-```
+```pdl
 Status = "Pending"
 IsActive = true
 Count = 0
 Balance = 0.0
 Notes = null
-```
+```pdl
 
 ## See Also
 

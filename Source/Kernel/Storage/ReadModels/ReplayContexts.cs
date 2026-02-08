@@ -16,12 +16,12 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     readonly ConcurrentDictionary<ReadModelIdentifier, ReplayContext> _contexts = new();
 
     /// <inheritdoc/>
-    public async Task<ReplayContext> Establish(ReadModelType type, ReadModelName readModelName)
+    public async Task<ReplayContext> Establish(ReadModelType type, ReadModelContainerName containerName)
     {
         var replayStarted = DateTimeOffset.UtcNow;
-        var rewoundCollectionsPrefix = $"{readModelName}-";
-        var revertModelName = $"{rewoundCollectionsPrefix}{replayStarted:yyyyMMddHHmmss}";
-        var context = new ReplayContext(type, readModelName, revertModelName, replayStarted);
+        var rewoundCollectionsPrefix = $"{containerName}-";
+        var revertContainerName = $"{rewoundCollectionsPrefix}{replayStarted:yyyyMMddHHmmss}";
+        var context = new ReplayContext(type, containerName, revertContainerName, replayStarted);
         _contexts[type.Identifier] = context;
         await storage.Save(context);
         return context;

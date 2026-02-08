@@ -16,7 +16,6 @@ flowchart TD
     XUnit.Integration --> DotNET.InProcess
     DotNET.InProcess --> AspNetCore
     AspNetCore --> DotNET
-    Orleans.XUnit --> Orleans
     Orleans --> DotNET
     XUnit --> DotNET
     DotNET --> Connections
@@ -74,10 +73,6 @@ It provides test setup for both in-process and out-of-process scenarios.
 
 The `Orleans` project enables deeper integration with Microsoft Orleans, allowing you to leverage Orleans features alongside Chronicle.
 For example, it provides an `AggregateRoot` implementation as a Grain, turning aggregates into actors.
-
-## Orleans.XUnit
-
-Building on the Orleans project, `Orleans.XUnit` offers test utilities for writing tests when using Orleans-based Chronicle features.
 
 ## API
 

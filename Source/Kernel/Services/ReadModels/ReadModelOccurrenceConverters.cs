@@ -20,14 +20,14 @@ internal static class ReadModelOccurrenceConverters
         return new Contracts.ReadModels.ReadModelOccurrence
         {
             ObserverId = occurrence.ObserverId.Value,
-            Occurred = occurrence.Occurred,
+            Occurred = occurrence.Occurred!,
             Type = new Contracts.ReadModels.ReadModelType
             {
                 Identifier = occurrence.Type.Identifier,
                 Generation = occurrence.Type.Generation.Value
             },
-            ReadModel = occurrence.ReadModel.Value,
-            RevertModel = occurrence.RevertModel.Value
+            ContainerName = occurrence.ContainerName.Value,
+            RevertContainerName = occurrence.RevertContainerName.Value
         };
     }
 }

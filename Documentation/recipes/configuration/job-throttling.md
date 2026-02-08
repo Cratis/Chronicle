@@ -16,12 +16,14 @@ The maximum number of parallel job steps can be configured using the `MaxParalle
     }
   }
 }
+
 ```
 
 Alternatively, you can use environment variables:
 
 ```bash
 export Cratis__Chronicle__Jobs__MaxParallelSteps=4
+
 ```
 
 ## Default Behavior
@@ -47,28 +49,39 @@ This ensures that the job system never uses more than the configured number of C
 ## Use Cases
 
 **High-throughput systems**: Limit parallel steps to leave CPU resources for other operations:
+
+
 ```json
 {
   "Jobs": {
     "MaxParallelSteps": 2
   }
 }
+
 ```
 
+
+
 **Dedicated job processing**: Use more CPU cores for job processing:
+
 ```json
 {
   "Jobs": {
     "MaxParallelSteps": 16
   }
+
+
 }
+
 ```
 
 **Testing environments**: Reduce resource usage:
+
 ```json
 {
   "Jobs": {
     "MaxParallelSteps": 1
   }
 }
+
 ```

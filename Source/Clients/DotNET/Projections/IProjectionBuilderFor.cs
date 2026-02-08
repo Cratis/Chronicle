@@ -19,11 +19,11 @@ public interface IProjectionBuilderFor<TReadModel> : IProjectionBuilder<TReadMod
     IProjectionBuilderFor<TReadModel> FromEventSequence(EventSequenceId eventSequenceId);
 
     /// <summary>
-    /// Names the model - typically used by storage as name of storage unit (collection, table etc.)
+    /// Names the model container - typically used by storage as name of storage unit (collection, table, etc.).
     /// </summary>
-    /// <param name="readModelName">Name of the read model.</param>
+    /// <param name="containerName">Container name of the read model.</param>
     /// <returns>Builder continuation.</returns>
-    IProjectionBuilderFor<TReadModel> ReadModelName(string readModelName);
+    IProjectionBuilderFor<TReadModel> ContainerName(string containerName);
 
     /// <summary>
     /// Set the projection to not be rewindable - its a moving forward only projection.

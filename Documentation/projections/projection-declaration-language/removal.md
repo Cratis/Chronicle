@@ -6,20 +6,20 @@ Removal allows you to delete projection instances when specific events occur. Ch
 
 Remove a projection instance when a specific event occurs:
 
-```
+```pdl
 remove with {EventType}
-```
+```pdl
 
 ### Basic Example
 
-```
+```pdl
 projection User => UserReadModel
   from UserCreated
     Name = name
     Email = email
 
   remove with UserDeleted
-```
+```pdl
 
 When a `UserDeleted` event occurs, the entire `UserReadModel` instance is removed.
 
@@ -27,19 +27,19 @@ When a `UserDeleted` event occurs, the entire `UserReadModel` instance is remove
 
 Specify which property from the event identifies the instance to remove:
 
-```
+```pdl
 projection User => UserReadModel
   from UserCreated key userId
     Name = name
 
   remove with UserDeleted key userId
-```
+```pdl
 
 ### In Children
 
 Remove individual children:
 
-```
+```pdl
 children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
@@ -47,7 +47,7 @@ children members identified by userId
 
   remove with UserRemovedFromGroup key userId
     parent groupId
-```
+```pdl
 
 The `parent` key ensures the correct child is removed from the correct parent.
 
@@ -55,13 +55,13 @@ The `parent` key ensures the correct child is removed from the correct parent.
 
 Remove a projection instance when a joined event occurs:
 
-```
+```pdl
 remove via join on {EventType}
-```
+```pdl
 
 ### Basic Example
 
-```
+```pdl
 projection UserProfile => UserProfileReadModel
   from ProfileCreated
     UserId = userId
@@ -71,21 +71,21 @@ projection UserProfile => UserProfileReadModel
     Name = name
 
   remove via join on UserDeleted
-```
+```pdl
 
 When a `UserDeleted` event occurs, any `UserProfileReadModel` instances with matching `UserId` are removed.
 
 ### With Key
 
-```
+```pdl
 remove via join on UserDeleted key userId
-```
+```pdl
 
 ### In Children
 
 Remove children when a joined event occurs:
 
-```
+```pdl
 children groups identified by groupId
   from UserAddedToGroup
     parent userId
@@ -96,7 +96,7 @@ children groups identified by groupId
     Name = name
 
   remove via join on GroupDeleted
-```
+```pdl
 
 When a `GroupDeleted` event occurs, the child group is removed from the user's groups collection.
 
@@ -104,7 +104,7 @@ When a `GroupDeleted` event occurs, the child group is removed from the user's g
 
 ### User Account Deletion
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     Name = name
@@ -116,11 +116,11 @@ projection User => UserReadModel
     UpdatedAt = $eventContext.occurred
 
   remove with UserDeleted
-```
+```pdl
 
 ### Group with Member Removal
 
-```
+```pdl
 projection Group => GroupReadModel
   from GroupCreated
     Name = name
@@ -137,11 +137,11 @@ projection Group => GroupReadModel
 
     remove with UserRemovedFromGroup key userId
       parent groupId
-```
+```pdl
 
 ### Product with Category Removal
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     Name = name
@@ -152,13 +152,13 @@ projection Product => ProductReadModel
     CategoryName = name
 
   remove via join on CategoryDeleted
-```
+```pdl
 
 When the category is deleted, all products in that category are removed.
 
 ### Order Line Item Removal
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -183,11 +183,11 @@ projection Order => OrderReadModel
 
   from LineItemRemoved
     subtract Total by total
-```
+```pdl
 
 ### User Profile with Account Deletion
 
-```
+```pdl
 projection UserProfile => UserProfileReadModel
   from ProfileCreated
     UserId = userId
@@ -204,11 +204,11 @@ projection UserProfile => UserProfileReadModel
     Email = email
 
   remove via join on UserAccountDeleted
-```
+```pdl
 
 ### Subscription with Plan Removal
 
-```
+```pdl
 projection Subscription => SubscriptionReadModel
   from SubscriptionCreated
     UserId = userId
@@ -223,13 +223,13 @@ projection Subscription => SubscriptionReadModel
   remove with SubscriptionCancelled
 
   remove via join on PlanDiscontinued
-```
+```pdl
 
 Both `SubscriptionCancelled` and `PlanDiscontinued` will remove the subscription.
 
 ### Task with Project Deletion
 
-```
+```pdl
 projection Task => TaskReadModel
   from TaskCreated
     Title = title
@@ -245,13 +245,13 @@ projection Task => TaskReadModel
     AssigneeName = name
 
   remove via join on ProjectDeleted
-```
+```pdl
 
 When the project is deleted, all associated tasks are removed.
 
 ### Multi-Level Removal
 
-```
+```pdl
 projection Department => DepartmentReadModel
   from DepartmentCreated
     Name = name
@@ -272,7 +272,7 @@ projection Department => DepartmentReadModel
   remove with DepartmentDisbanded
 
   remove via join on CompanyDissolved
-```
+```pdl
 
 Employees can be removed individually, the department can be disbanded, or everything is removed if the company is dissolved.
 
@@ -280,10 +280,10 @@ Employees can be removed individually, the department can be disbanded, or every
 
 When removing children, the parent key ensures the correct instance:
 
-```
+```pdl
 remove with ChildRemoved key childId
   parent parentId
-```
+```pdl
 
 This removes the child with `childId` from the parent identified by `parentId`.
 
@@ -299,7 +299,7 @@ Removal finds instances to delete by matching keys:
 
 A projection can have multiple removal conditions:
 
-```
+```pdl
 projection Document => DocumentReadModel
   from DocumentCreated
     Title = title
@@ -311,7 +311,7 @@ projection Document => DocumentReadModel
 
   remove with DocumentDeleted
   remove via join on UserAccountClosed
-```
+```pdl
 
 The document is removed if either it's deleted or the owner's account is closed.
 
@@ -330,7 +330,7 @@ The document is removed if either it's deleted or the owner's account is closed.
 
 Instead of removing, mark as deleted:
 
-```
+```pdl
 projection User => UserReadModel
   from UserCreated
     Name = name
@@ -339,13 +339,13 @@ projection User => UserReadModel
   from UserDeleted
     IsDeleted = true
     DeletedAt = $eventContext.occurred
-```
+```pdl
 
 ### Cascade Delete
 
 Remove related items when parent is removed:
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     CustomerId = customerId
@@ -362,13 +362,13 @@ projection Order => OrderReadModel
     remove via join on ProductDiscontinued
 
   remove via join on CustomerAccountClosed
-```
+```pdl
 
 ### Conditional Removal
 
 Use multiple specific events:
 
-```
+```pdl
 projection Subscription => SubscriptionReadModel
   from SubscriptionCreated
     Status = "Active"
@@ -376,7 +376,7 @@ projection Subscription => SubscriptionReadModel
   remove with SubscriptionCancelled
   remove with PaymentFailed
   remove with TrialExpired
-```
+```pdl
 
 ## Differences Between Remove With and Remove Via Join
 

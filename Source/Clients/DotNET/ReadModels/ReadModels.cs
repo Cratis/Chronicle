@@ -71,7 +71,7 @@ public class ReadModels(
                     Identifier = readModel.ReadModelType.GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                Name = namingPolicy.GetReadModelName(readModel.ReadModelType),
+                ContainerName = namingPolicy.GetReadModelName(readModel.ReadModelType),
                 DisplayName = readModel.ReadModelType.Name,
                 Sink = new()
                 {
@@ -127,7 +127,7 @@ public class ReadModels(
                     Identifier = typeof(TReadModel).GetReadModelIdentifier(),
                     Generation = ReadModelGeneration.First,
                 },
-                Name = namingPolicy.GetReadModelName(typeof(TReadModel)),
+                ContainerName = namingPolicy.GetReadModelName(typeof(TReadModel)),
                 DisplayName = typeof(TReadModel).Name,
                 Sink = new()
                 {
@@ -180,6 +180,34 @@ public class ReadModels(
         var response = await _chronicleServicesAccessor.Services.ReadModels.GetInstanceByKey(request);
         var instance = JsonSerializer.Deserialize(response.ReadModel, readModelType, jsonSerializerOptions);
         return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null)
+    {
+        var readModelType = typeof(TReadModel);
+
+        // Validate that the read model is known by projections (immediate projections only)
+        if (!projections.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        var readModelIdentifier = readModelType.GetReadModelIdentifier();
+        var eventCountValue = eventCount ?? EventCount.Unlimited;
+
+        var request = new GetAllInstancesRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ReadModelIdentifier = readModelIdentifier,
+            EventSequenceId = EventSequenceId.Log,
+            EventCount = eventCountValue.Value
+        };
+
+        var response = await _chronicleServicesAccessor.Services.ReadModels.GetAllInstances(request);
+
+        return response.Instances.Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
     }
 
     /// <inheritdoc/>

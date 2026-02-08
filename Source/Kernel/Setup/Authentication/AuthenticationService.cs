@@ -89,24 +89,13 @@ internal sealed class AuthenticationService(
 
         // Hash the secret to match how other application secrets are stored
         var hashedSecret = _passwordHasher.HashPassword(null!, defaultClientSecret);
+        var applicationId = Guid.NewGuid().ToString();
+        var @event = new Grains.Security.ApplicationAdded(
+            defaultClientId,
+            hashedSecret);
 
-        var application = new Application
-        {
-            Id = Guid.NewGuid().ToString(),
-            ClientId = defaultClientId,
-            ClientSecret = hashedSecret,
-            Type = "confidential",
-            ConsentType = "implicit",
-            Permissions =
-            [
-                "ept:token",
-                "gt:client_credentials",
-                "gt:password",
-                "gt:refresh_token"
-            ]
-        };
-
-        await applicationStorage.Create(application);
+        var eventSequence = grainFactory.GetEventLog();
+        await eventSequence.Append(applicationId, @event);
 
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }

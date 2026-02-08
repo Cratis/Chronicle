@@ -47,6 +47,18 @@ public static class ChronicleConnectionStringBuilderExtensions
     }
 
     /// <summary>
+    /// Sets the username and password for client credentials authentication.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    public static ChronicleConnectionStringBuilder WithDevelopmentCredentials(this ChronicleConnectionStringBuilder builder)
+    {
+        builder.Username = ChronicleConnectionString.DevelopmentClient;
+        builder.Password = ChronicleConnectionString.DevelopmentClientSecret;
+        return builder;
+    }
+
+    /// <summary>
     /// Sets the API key for API key authentication.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>

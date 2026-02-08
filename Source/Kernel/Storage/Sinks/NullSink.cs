@@ -61,6 +61,6 @@ public class NullSink : ISink
     public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<ReadModelInstances> GetInstances(ReadModelName? occurrence = null, int skip = 0, int take = 50) =>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
         Task.FromResult(new ReadModelInstances([], 0));
 }

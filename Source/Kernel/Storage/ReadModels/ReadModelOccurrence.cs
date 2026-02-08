@@ -12,11 +12,11 @@ namespace Cratis.Chronicle.Storage.ReadModels;
 /// <param name="ObserverId">The <see cref="ObserverId"/> for the observer that owned the occurrence.</param>
 /// <param name="Occurred"><see cref="DateTimeOffset"/> for when it occurred.</param>
 /// <param name="Type">The <see cref="ReadModelType"/> of the read model.</param>
-/// <param name="ReadModel">Name of the read model.</param>
-/// <param name="RevertModel">Name of the revert read model.</param>
+/// <param name="ContainerName">Container name of the read model (collection, table, etc.).</param>
+/// <param name="RevertContainerName">Container name of the revert read model (collection, table, etc.).</param>
 public record ReadModelOccurrence(
     ObserverId ObserverId,
     DateTimeOffset Occurred,
     ReadModelType Type,
-    ReadModelName ReadModel,
-    ReadModelName RevertModel);
+    ReadModelContainerName ContainerName,
+    ReadModelContainerName RevertContainerName);

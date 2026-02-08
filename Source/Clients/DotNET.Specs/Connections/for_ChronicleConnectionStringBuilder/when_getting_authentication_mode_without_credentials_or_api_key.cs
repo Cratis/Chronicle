@@ -3,14 +3,14 @@
 
 namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilder;
 
-public class when_getting_authentication_mode_with_no_credentials : Specification
+public class when_getting_authentication_mode_without_credentials_or_api_key : Specification
 {
     ChronicleConnectionStringBuilder _builder;
-    AuthenticationMode _mode;
+    Exception _exception;
 
     void Establish() => _builder = new ChronicleConnectionStringBuilder();
 
-    void Because() => _mode = _builder.AuthenticationMode;
+    void Because() => _exception = Catch.Exception(() => _ = _builder.AuthenticationMode);
 
-    [Fact] void should_be_none() => _mode.ShouldEqual(AuthenticationMode.None);
+    [Fact] void should_throw_missing_authentication() => _exception.ShouldBeOfExactType<MissingAuthentication>();
 }

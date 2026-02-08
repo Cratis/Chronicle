@@ -4,14 +4,14 @@ The `every` directive applies mappings to every event that affects the projectio
 
 ## Basic Syntax
 
-```
+```pdl
 every
   {mappings}
-```
+```pdl
 
 ## Simple Example
 
-```
+```pdl
 projection User => UserReadModel
   every
     LastUpdated = $eventContext.occurred
@@ -23,7 +23,7 @@ projection User => UserReadModel
 
   from UserEmailChanged
     Email = email
-```
+```pdl
 
 Both `UserRegistered` and `UserEmailChanged` events will set `LastUpdated` and `UpdatedBy`.
 
@@ -31,22 +31,22 @@ Both `UserRegistered` and `UserEmailChanged` events will set `LastUpdated` and `
 
 Apply AutoMap to all events:
 
-```
+```pdl
 projection Product => ProductReadModel
   every
     automap
     LastModified = $eventContext.occurred
-```
+```pdl
 
 ## Exclude Children
 
 By default, `every` applies to events in child collections. To exclude them:
 
-```
+```pdl
 every
   LastUpdated = $eventContext.occurred
   exclude children
-```
+```pdl
 
 This ensures child events don't update the parent's `LastUpdated` field.
 
@@ -56,38 +56,38 @@ This ensures child events don't update the parent's `LastUpdated` field.
 
 Track when the projection was last modified:
 
-```
+```pdl
 every
   LastModified = $eventContext.occurred
   LastSequenceNumber = $eventContext.sequenceNumber
   LastCorrelationId = $eventContext.correlationId
-```
+```pdl
 
 ### Event Source Tracking
 
 Store the event source that last modified the projection:
 
-```
+```pdl
 every
   LastModifiedBy = $eventContext.eventSourceId
   LastModifiedAt = $eventContext.occurred
-```
+```pdl
 
 ### Version Tracking
 
 Track the latest event sequence:
 
-```
+```pdl
 every
   Version = $eventContext.sequenceNumber
   UpdatedAt = $eventContext.occurred
-```
+```pdl
 
 ## Examples
 
 ### User Profile with Audit
 
-```
+```pdl
 projection User => UserReadModel
   every
     LastUpdated = $eventContext.occurred
@@ -104,11 +104,11 @@ projection User => UserReadModel
 
   from UserNameChanged
     Name = name
-```
+```pdl
 
 ### Product with Global AutoMap
 
-```
+```pdl
 projection Product => ProductReadModel
   every
     automap
@@ -119,11 +119,11 @@ projection Product => ProductReadModel
 
   from ProductDeactivated
     IsActive = false
-```
+```pdl
 
 ### Document Versioning
 
-```
+```pdl
 projection Document => DocumentReadModel
   every
     CurrentVersion = $eventContext.sequenceNumber
@@ -140,11 +140,11 @@ projection Document => DocumentReadModel
 
   from DocumentRenamed
     Title = title
-```
+```pdl
 
 ### Order with Tracking
 
-```
+```pdl
 projection Order => OrderReadModel
   every
     LastEventTime = $eventContext.occurred
@@ -168,32 +168,32 @@ projection Order => OrderReadModel
     from ItemAdded
       ProductId = productId
       Quantity = quantity
-```
+```pdl
 
 ## Scope and Application
 
 ### Parent Level Only (with exclude children)
 
-```
+```pdl
 every
   LastUpdated = $eventContext.occurred
   exclude children
-```
+```pdl
 
 Parent events update `LastUpdated`, child events do not.
 
 ### Including Children (default)
 
-```
+```pdl
 every
   LastUpdated = $eventContext.occurred
-```
+```pdl
 
 Both parent and child events update `LastUpdated`.
 
 ### With Multiple Children
 
-```
+```pdl
 projection Group => GroupReadModel
   every
     LastActivity = $eventContext.occurred
@@ -209,7 +209,7 @@ projection Group => GroupReadModel
   children posts id postId
     from PostCreated
       Title = title
-```
+```pdl
 
 Group-level events update `LastActivity`, but member and post events do not.
 

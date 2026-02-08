@@ -6,33 +6,33 @@ Arithmetic operations allow you to add or subtract values from numeric propertie
 
 The `add` operation increases a property by a specified amount:
 
-```
+```pdl
 add {Property} by {expression}
-```
+```pdl
 
 ### Example
 
-```
+```pdl
 from PaymentReceived
   add Balance by amount
   LastPayment = $eventContext.occurred
-```
+```pdl
 
 ## Subtract
 
 The `subtract` operation decreases a property by a specified amount:
 
-```
+```pdl
 subtract {Property} by {expression}
-```
+```pdl
 
 ### Example
 
-```
+```pdl
 from WithdrawalMade
   subtract Balance by amount
   LastWithdrawal = $eventContext.occurred
-```
+```pdl
 
 ## Expression Values
 
@@ -45,18 +45,18 @@ The expression after `by` can be:
 
 Combine multiple operations in one event:
 
-```
+```pdl
 from OrderPlaced
   add TotalRevenue by total
   add OrderCount by 1
   increment TotalOrders
-```
+```pdl
 
 ## Examples
 
 ### Account Balance
 
-```
+```pdl
 projection Account => AccountReadModel
   from AccountOpened
     AccountNumber = accountNumber
@@ -72,11 +72,11 @@ projection Account => AccountReadModel
 
   from InterestApplied
     add Balance by interestAmount
-```
+```pdl
 
 ### Loyalty Points
 
-```
+```pdl
 projection Customer => CustomerReadModel
   from CustomerRegistered
     Name = name
@@ -88,11 +88,11 @@ projection Customer => CustomerReadModel
   from PointsRedeemed
     subtract Points by pointsUsed
     LastRedemption = $eventContext.occurred
-```
+```pdl
 
 ### Inventory with Variable Quantities
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     Name = name
@@ -107,11 +107,11 @@ projection Product => ProductReadModel
 
   from StockAdjusted
     add StockLevel by adjustmentAmount
-```
+```pdl
 
 ### Budget Tracking
 
-```
+```pdl
 projection Budget => BudgetReadModel
   from BudgetCreated
     Category = category
@@ -125,11 +125,11 @@ projection Budget => BudgetReadModel
   from BudgetIncreased
     add AllocatedAmount by additionalAmount
     add RemainingAmount by additionalAmount
-```
+```pdl
 
 ### Order Totals
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -148,11 +148,11 @@ projection Order => OrderReadModel
   from DiscountApplied
     subtract Subtotal by discountAmount
     subtract Total by discountAmount
-```
+```pdl
 
 ### Gaming Score
 
-```
+```pdl
 projection PlayerScore => PlayerScoreReadModel
   from PlayerJoined
     PlayerName = name
@@ -168,29 +168,29 @@ projection PlayerScore => PlayerScoreReadModel
   from BonusAwarded
     add Score by bonusPoints
     add BonusTotal by bonusPoints
-```
+```pdl
 
 ## Nested Properties
 
 You can use nested properties from events:
 
-```
+```pdl
 from TransactionProcessed
   add Balance by transaction.amount
   add TotalTransactions by 1
-```
+```pdl
 
 ## With Counters
 
 Combine arithmetic with counters for comprehensive tracking:
 
-```
+```pdl
 from SaleCompleted
   add TotalRevenue by saleAmount
   add TaxCollected by taxAmount
   increment SalesCount
   count CompletedTransactions
-```
+```pdl
 
 ## Property Requirements
 

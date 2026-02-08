@@ -27,7 +27,7 @@ public class with_type_mismatch_in_assignment : for_LanguageService.given.a_lang
         readModelSchema.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
         _readModelDefinition = new ReadModelDefinition(
             new ReadModelIdentifier("TestModel"),
-            new ReadModelName("TestModel"),
+            new ReadModelContainerName("TestModel"),
             new ReadModelDisplayName("TestModel"),
             ReadModelOwner.Client,
             ReadModelSource.Code,

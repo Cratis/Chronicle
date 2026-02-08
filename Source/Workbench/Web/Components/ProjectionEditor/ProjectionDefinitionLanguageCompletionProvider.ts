@@ -30,6 +30,7 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
     // Keep for backwards compatibility
     setReadModelSchemas(schemas: JsonSchema[]): void {
         this.readModels = schemas.map(schema => ({
+            identifier: this.getSchemaName(schema) || '',
             displayName: this.getSchemaName(schema) || '',
             schema
         }));
@@ -188,12 +189,14 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
             const partialReadModel = arrowMatch[1] || '';
             this.readModels.forEach((readModel) => {
                 if (!partialReadModel || readModel.displayName.toLowerCase().startsWith(partialReadModel.toLowerCase())) {
+                    const label = `${readModel.displayName} (${readModel.identifier})`;
                     suggestions.push({
-                        label: readModel.displayName,
+                        label,
                         kind: 6, // Class
                         insertText: readModel.displayName,
-                        documentation: `Read model: ${readModel.displayName}`,
-                        detail: this.getSchemaDescription(readModel.schema),
+                        filterText: `${readModel.displayName} ${readModel.identifier}`,
+                        documentation: `Read model: ${readModel.displayName} (${readModel.identifier})`,
+                        detail: readModel.identifier,
                         range: this.getRangeForWord(context),
                     });
                 }
@@ -206,12 +209,14 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
             const afterProjection = trimmed.substring('projection '.length);
             this.readModels.forEach((readModel) => {
                 if (!afterProjection || readModel.displayName.toLowerCase().startsWith(afterProjection.toLowerCase())) {
+                    const label = `${readModel.displayName} (${readModel.identifier})`;
                     suggestions.push({
-                        label: readModel.displayName,
+                        label,
                         kind: 6, // Class
                         insertText: `${readModel.displayName} => ${readModel.displayName}`,
-                        documentation: `Read model: ${readModel.displayName}`,
-                        detail: this.getSchemaDescription(readModel.schema),
+                        filterText: `${readModel.displayName} ${readModel.identifier}`,
+                        documentation: `Read model: ${readModel.displayName} (${readModel.identifier})`,
+                        detail: readModel.identifier,
                         range: this.getRangeForWord(context),
                     });
                 }
@@ -601,12 +606,16 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
 
     private getActiveReadModelSchema(model: editor.ITextModel): JsonSchema | undefined {
         const firstLine = model.getLineContent(1).trim();
-        const match = firstLine.match(/^projection\s+\w+\s*=>\s*(\w+)/);
+        const match = firstLine.match(/^projection\s+[\w.]+\s*=>\s*([\w.]+)/);
         if (!match) return undefined;
 
         const readModelName = match[1];
-        const readModel = this.readModels.find((rm) => rm.displayName === readModelName);
+        const readModel = this.resolveReadModelInfo(readModelName);
         return readModel?.schema;
+    }
+
+    private resolveReadModelInfo(readModelToken: string): ReadModelInfo | null {
+        return this.readModels.find(rm => rm.identifier === readModelToken || rm.displayName === readModelToken) || null;
     }
 
     private getSchemaName(schema: JsonSchema): string | undefined {

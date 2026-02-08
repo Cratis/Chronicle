@@ -21,8 +21,8 @@ public static class ReadModelOccurrenceConverters
             occurrence.ObserverId,
             occurrence.Occurred,
             new(readModel, occurrence.Generation),
-            occurrence.ReadModel,
-            occurrence.RevertReadModel);
+            occurrence.ContainerName,
+            occurrence.RevertContainerName);
 
     /// <summary>
     /// Converts a kernel read model occurrence to a MongoDB read model occurrence.
@@ -34,6 +34,6 @@ public static class ReadModelOccurrenceConverters
             occurrence.ObserverId,
             occurrence.Occurred,
             occurrence.Type.Generation,
-            occurrence.ReadModel,
-            occurrence.RevertModel);
+            occurrence.ContainerName,
+            occurrence.RevertContainerName);
 }

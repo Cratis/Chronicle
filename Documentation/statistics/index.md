@@ -4,7 +4,7 @@ This section contains build statistics for the Chronicle project, tracking key m
 
 ## Test Coverage
 
-View the interactive [test coverage dashboard](index.html) to see coverage trends across all projects.
+The interactive test coverage dashboard shows coverage trends across all projects (view the `index.html` file in this directory).
 
 The coverage statistics are collected during each publish and show:
 - Overall coverage percentage per project

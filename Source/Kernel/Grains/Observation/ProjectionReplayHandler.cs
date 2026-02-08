@@ -33,7 +33,7 @@ public class ProjectionReplayHandler(
         async projection =>
         {
             var replayContexts = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts;
-            return await replayContexts.Establish(new(projection.ReadModel.Identifier, projection.ReadModel.LatestGeneration), projection.ReadModel.Name);
+            return await replayContexts.Establish(new(projection.ReadModel.Identifier, projection.ReadModel.LatestGeneration), projection.ReadModel.ContainerName);
         },
         (pipeline, _, context) => pipeline.BeginReplay(context));
 

@@ -16,10 +16,10 @@ public class ProjectionWithDeclaration
     public string Identifier { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the read model the projection projects to.
+    /// Gets or sets the container name of the read model the projection projects to (collection, table, etc.).
     /// </summary>
     [ProtoMember(2)]
-    public string ReadModel { get; set; } = string.Empty;
+    public string ContainerName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the declaration representation of the projection.

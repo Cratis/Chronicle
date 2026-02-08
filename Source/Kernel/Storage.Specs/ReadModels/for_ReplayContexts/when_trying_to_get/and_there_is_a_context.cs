@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.ReadModels.for_ReplayContexts.when_trying_to_
 public class and_there_is_a_context : Specification
 {
     ReadModelType _readModelType = new("SomeModelId", ReadModelGeneration.First);
-    ReadModelName _readModel = "SomeModel";
+    ReadModelContainerName _readModel = "SomeModel";
     ReplayContexts _contexts;
     IReplayContextsStorage _storage;
     ReplayContext _context;

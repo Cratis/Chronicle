@@ -198,7 +198,7 @@ If authentication fails after configuration:
 
 In production, Chronicle will fail to start if no encryption certificate is configured:
 
-```
+```bash
 InvalidOperationException: An encryption certificate is required in production for Data Protection key security.
 Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword'
 in your configuration.

@@ -39,6 +39,19 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
+    /// <remarks>
+    /// This initializes the client with the development connection string
+    /// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
+    /// client credentials.
+    /// </remarks>
+    public ChronicleClient()
+        : this(ChronicleConnectionString.Development)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
+    /// </summary>
     /// <param name="connectionString">Connection string to use.</param>
     public ChronicleClient(string connectionString)
         : this(new ChronicleConnectionString(connectionString))
@@ -48,9 +61,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleConnectionString"/> to connect with.</param>
-    public ChronicleClient(ChronicleConnectionString url)
-        : this(ChronicleOptions.FromConnectionString(url))
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    public ChronicleClient(ChronicleConnectionString connectionString)
+        : this(ChronicleOptions.FromConnectionString(connectionString))
     {
     }
 

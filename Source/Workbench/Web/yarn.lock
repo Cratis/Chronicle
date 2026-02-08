@@ -1451,6 +1451,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/pluralize@npm:0.0.33":
+  version: 0.0.33
+  resolution: "@types/pluralize@npm:0.0.33"
+  checksum: 10/282d42dc0187e5e0912f9f36ee0f5615bfd273a08d40afe5bf5881cb28daf1977abe10564543032aa0f42352ebba739ff3d86bf5562ac4691c6d1761fcc7cf39
+  languageName: node
+  linkType: hard
+
 "@types/react-dom@npm:19.2.3":
   version: 19.2.3
   resolution: "@types/react-dom@npm:19.2.3"
@@ -5203,6 +5210,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pluralize@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "pluralize@npm:8.0.0"
+  checksum: 10/17877fdfdb7ddb3639ce257ad73a7c51a30a966091e40f56ea9f2f545b5727ce548d4928f8cb3ce38e7dc0c5150407d318af6a4ed0ea5265d378473b4c2c61ec
+  languageName: node
+  linkType: hard
+
 "possible-typed-array-names@npm:^1.0.0":
   version: 1.1.0
   resolution: "possible-typed-array-names@npm:1.1.0"
@@ -6893,6 +6907,7 @@ __metadata:
     "@types/chai-as-promised": "npm:8.0.2"
     "@types/mocha": "npm:10.0.10"
     "@types/node": "npm:25.0.10"
+    "@types/pluralize": "npm:0.0.33"
     "@types/react": "npm:19.2.10"
     "@types/react-dom": "npm:19.2.3"
     "@types/sinon": "npm:21.0.0"
@@ -6920,6 +6935,7 @@ __metadata:
     hash-files: "npm:1.1.1"
     mocha: "npm:11.7.5"
     monaco-editor: "npm:^0.55.1"
+    pluralize: "npm:^8.0.0"
     primeicons: "npm:^7.0.0"
     primereact: "npm:^10.9.7"
     react: "npm:19.2.4"

@@ -82,6 +82,15 @@ public interface IReadModels
     Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get all instances of a read model by processing events without pagination.
+    /// </summary>
+    /// <param name="request">The <see cref="GetAllInstancesRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns><see cref="GetAllInstancesResponse"/> containing all read model instances.</returns>
+    [Operation]
+    Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default);
+
+    /// <summary>
     /// Watch for changes to a read model.
     /// </summary>
     /// <param name="request">The <see cref="WatchRequest"/> with all the details about the request.</param>

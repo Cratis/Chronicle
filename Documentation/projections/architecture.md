@@ -36,6 +36,7 @@ graph TB
     style ModelBound fill:#fff4e1
     style Declarative fill:#e8f5e9
     style Definition fill:#f3e5f5
+
 ```
 
 ### 1. Projection Declaration Language
@@ -44,11 +45,15 @@ The Projection Declaration Language provides a concise, indentation-based syntax
 Typically available from the tooling like Workbench.
 
 **Example:**
-```
+
+
+```pdl
 projection MyModel
     from MyEvent
         set name = $.eventProperty
         set count = $count + 1
+
+
 ```
 
 **Benefits:**
@@ -65,9 +70,12 @@ projection MyModel
 
 ### 2. Model-Bound Projections
 
+
+
 Model-bound projections use C# attributes on your read model classes, keeping the projection logic close to the data structure.
 
 **Example:**
+
 ```csharp
 [Projection("MyModel")]
 public record MyModel
@@ -80,6 +88,7 @@ public record MyModel
     [Count]
     public int Count { get; init; }
 }
+
 ```
 
 **Benefits:**
@@ -94,11 +103,14 @@ public record MyModel
 - Read model and projection logic should be together
 - Refactoring tools are important
 
+
+
 ### 3. Declarative Projections
 
 Declarative projections use a fluent C# API to define projections programmatically with maximum flexibility.
 
 **Example:**
+
 ```csharp
 public class MyModelProjection : IProjectionDefinition
 {
@@ -110,6 +122,7 @@ public class MyModelProjection : IProjectionDefinition
             .Count(m => m.Count);
     }
 }
+
 ```
 
 **Benefits:**
@@ -168,6 +181,7 @@ graph LR
     style MonacoEditor fill:#e1f5ff
     style Definition fill:#f3e5f5
     style Projector fill:#ffebee
+
 ```
 
 ### Frontend Layer
@@ -248,6 +262,7 @@ sequenceDiagram
     Engine->>Engine: Execute Projection
     Engine->>Storage: Update Read Model
     Storage->>User: Query Results
+
 ```
 
 ## Choosing an Approach
