@@ -83,7 +83,10 @@ internal sealed class Projections(
         if (request.DraftReadModel is not null)
         {
             draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
-            allReadModels = allReadModels.Append(draftDefinition).ToList();
+            allReadModels = allReadModels
+                .Where(_ => _.Identifier != draftDefinition.Identifier)
+                .Append(draftDefinition)
+                .ToList();
         }
 
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();

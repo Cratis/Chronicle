@@ -104,8 +104,8 @@ export const Projections = () => {
     const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDeclarationSyntaxError[]>([]);
 
     const [projections, refreshProjections] = AllProjectionsWithDeclarations.use({ eventStore: params.eventStore! });
-    const [previewProjection] = PreviewProjection.use();
-    const [saveProjection] = SaveProjection.use();
+    const [previewProjection, setPreviewProjectionValues, clearPreviewProjectionValues] = PreviewProjection.use();
+    const [saveProjection, setSaveProjectionValues, clearSaveProjectionValues] = SaveProjection.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
     const [showConfirmation] = useConfirmationDialog();
 
@@ -324,12 +324,13 @@ export const Projections = () => {
                                     icon: <faIcons.FaFloppyDisk className='mr-2' />,
                                     disabled: !!saveDisabledReason,
                                     command: saveDisabledReason ? undefined : async () => {
-                                        saveProjection.eventStore = params.eventStore!;
-                                        saveProjection.namespace = params.namespace!;
-                                        saveProjection.declaration = toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel);
-                                        if (draftReadModel) {
-                                            saveProjection.draftReadModel = draftReadModel;
-                                        }
+                                        clearSaveProjectionValues();
+                                        setSaveProjectionValues({
+                                            eventStore: params.eventStore!,
+                                            namespace: params.namespace!,
+                                            declaration: toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
+                                            draftReadModel: draftReadModel ?? undefined
+                                        });
                                         const result = await saveProjection.execute();
                                         const errors = result.response ?? [];
                                         if (result.isSuccess && errors.length === 0) {
@@ -339,6 +340,8 @@ export const Projections = () => {
                                             }
                                             setSyntaxErrors([]);
                                             setDraftReadModel(null); // Clear draft after successful save
+                                            clearPreviewProjectionValues();
+                                            clearSaveProjectionValues();
                                             setOriginalDeclarationValue(declarationValue); // Reset original after successful save
                                         } else {
                                             // Display server-side validation errors in the editor
@@ -362,12 +365,13 @@ export const Projections = () => {
                                     icon: <faIcons.FaEye className='mr-2' />,
                                     disabled: !!previewDisabledReason,
                                     command: previewDisabledReason ? undefined : async () => {
-                                        previewProjection.eventStore = params.eventStore!;
-                                        previewProjection.namespace = params.namespace!;
-                                        previewProjection.declaration = toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel);
-                                        if (draftReadModel) {
-                                            previewProjection.draftReadModel = draftReadModel;
-                                        }
+                                        clearPreviewProjectionValues();
+                                        setPreviewProjectionValues({
+                                            eventStore: params.eventStore!,
+                                            namespace: params.namespace!,
+                                            declaration: toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
+                                            draftReadModel: draftReadModel ?? undefined
+                                        });
                                         const result = await previewProjection.execute();
 
                                         const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
