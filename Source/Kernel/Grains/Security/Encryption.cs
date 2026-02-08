@@ -84,6 +84,7 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
 #endif
     }
 
+#if DEVELOPMENT
     X509Certificate2 LoadOrGenerateDevelopmentCertificate()
     {
         var certificateFolder = Path.Combine(Directory.GetCurrentDirectory(), DefaultCertificateFolder);
@@ -122,4 +123,5 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
 
         return X509CertificateLoader.LoadPkcs12FromFile(certificatePath, DefaultCertificatePassword);
     }
+#endif
 }
