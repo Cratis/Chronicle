@@ -101,15 +101,16 @@ export class ProjectionDefinitionLanguageValidator {
         if (this.readModels.length > 0) {
             const readModelExists = this.resolveReadModelIdentifier(readModelName) !== null;
             const isDraftReadModel = this.isDraftReadModel(readModelName);
+            const readModelStartColumn = this.getReadModelStartColumn(firstLine, readModelName);
 
             if (!readModelExists && !isDraftReadModel) {
                 const lineNumber = firstNonEmptyLineIndex + 1;
-                const col = firstLine.indexOf(readModelName) + 1;
+                const col = readModelStartColumn;
                 markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
             } else if (isDraftReadModel) {
                 // Show info marker for draft read models - they exist but haven't been saved yet
                 const lineNumber = firstNonEmptyLineIndex + 1;
-                const col = firstLine.indexOf(readModelName) + 1;
+                const col = readModelStartColumn;
                 markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
             }
         }
@@ -317,6 +318,15 @@ export class ProjectionDefinitionLanguageValidator {
 
     private resolveReadModelInfo(readModelToken: string): ReadModelInfo | null {
         return this.readModels.find(rm => rm.identifier === readModelToken || rm.displayName === readModelToken) || null;
+    }
+
+    private getReadModelStartColumn(firstLine: string, readModelName: string): number {
+        const prefixMatch = firstLine.match(/^\s*projection\s+[\w.]+\s*=>\s*/);
+        if (!prefixMatch) {
+            const fallbackIndex = firstLine.lastIndexOf(readModelName);
+            return (fallbackIndex >= 0 ? fallbackIndex : 0) + 1;
+        }
+        return prefixMatch[0].length + 1;
     }
 
     private resolveReadModelIdentifier(readModelToken: string): string | null {
