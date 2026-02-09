@@ -20,7 +20,6 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const { closeDialog } = useDialogContext();
     const [addWebhook] = AddWebHook.use();
 
     const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
@@ -65,48 +64,43 @@ export const AddWebhookDialog = () => {
                     eventSequence.trim() !== '' &&
                     selectedEventTypes.length > 0;
 
-    const handleSave = async () => {
-        if (name && url && eventSequence && params.eventStore) {
-            setValidationErrors([]);
-
-            addWebhook.eventStore = params.eventStore;
-            addWebhook.name = name;
-            addWebhook.url = url;
-            addWebhook.eventSequenceId = eventSequence;
-            addWebhook.eventTypes = selectedEventTypes;
-            addWebhook.authorizationType = authType;
-            addWebhook.basicUsername = basicUsername;
-            addWebhook.basicPassword = basicPassword;
-            addWebhook.bearerToken = bearerToken;
-            addWebhook.OAuthAuthority = oauthAuthority;
-            addWebhook.OAuthClientId = oauthClientId;
-            addWebhook.OAuthClientSecret = oauthClientSecret;
-            addWebhook.isActive = isActive;
-            addWebhook.isReplayable = isReplayable;
-            addWebhook.eventTypeKeyExpressions = {};
-            addWebhook.headers = {};
-
-            const validationResult = await addWebhook.validate();
-            if (!validationResult.isValid) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const errors = Object.values((validationResult as any).errors || {}).flat() as string[];
-                setValidationErrors(errors);
-                return;
-            }
-
-            const result = await addWebhook.execute();
-            if (result.isSuccess) {
-                closeDialog(DialogResult.Ok);
-            }
-        }
-    };
-
-    const handleClose = (result: DialogResult) => {
+    const handleClose = async (result: DialogResult) => {
         if (result === DialogResult.Ok) {
-            handleSave();
-        } else {
-            closeDialog(result);
+            if (name && url && eventSequence && params.eventStore) {
+                setValidationErrors([]);
+
+                addWebhook.eventStore = params.eventStore;
+                addWebhook.name = name;
+                addWebhook.url = url;
+                addWebhook.eventSequenceId = eventSequence;
+                addWebhook.eventTypes = selectedEventTypes;
+                addWebhook.authorizationType = authType;
+                addWebhook.basicUsername = basicUsername;
+                addWebhook.basicPassword = basicPassword;
+                addWebhook.bearerToken = bearerToken;
+                addWebhook.OAuthAuthority = oauthAuthority;
+                addWebhook.OAuthClientId = oauthClientId;
+                addWebhook.OAuthClientSecret = oauthClientSecret;
+                addWebhook.isActive = isActive;
+                addWebhook.isReplayable = isReplayable;
+                addWebhook.headers = {};
+
+                const validationResult = await addWebhook.validate();
+                if (!validationResult.isValid) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const errors = Object.values((validationResult as any).errors || {}).flat() as string[];
+                    setValidationErrors(errors);
+                    return false;
+                }
+
+                const executeResult = await addWebhook.execute();
+                if (!executeResult.isSuccess) {
+                    return false;
+                }
+            }
         }
+
+        return true;
     };
 
     return (

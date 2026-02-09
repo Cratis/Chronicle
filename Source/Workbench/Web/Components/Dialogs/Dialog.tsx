@@ -6,7 +6,7 @@ import { Button } from 'primereact/button';
 import { DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { ReactNode } from 'react';
 
-export type CloseDialog = (result: DialogResult) => void;
+export type CloseDialog = (result: DialogResult) => boolean | void | Promise<boolean>;
 
 export interface DialogProps {
     title: string;
@@ -27,31 +27,36 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
         </div>
     );
 
+    const handleClose = async (result: DialogResult) => {
+        const shouldClose = await onClose(result);
+        return shouldClose !== false;
+    };
+
     const okFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
+            <Button label="Ok" icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
         </>
     );
 
     const okCancelFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
-            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.Cancelled)} />
+            <Button label="Ok" icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
+            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.Cancelled)} />
         </>
     );
 
     const yesNoFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
-            <Button label="No" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.No)} />
+            <Button label="Yes" icon="pi pi-check" onClick={() => handleClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
+            <Button label="No" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.No)} />
         </>
     );
 
     const yesNoCancelFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
-            <Button label="No" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.No)} />
-            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.Cancelled)} />
+            <Button label="Yes" icon="pi pi-check" onClick={() => handleClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
+            <Button label="No" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.No)} />
+            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.Cancelled)} />
         </>
     );
 
@@ -87,7 +92,7 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
             header={headerElement}
             modal
             footer={footer}
-            onHide={() => onClose(DialogResult.Cancelled)}
+            onHide={() => handleClose(DialogResult.Cancelled)}
             visible={visible}
             style={{ width }}
             resizable={resizable}>
