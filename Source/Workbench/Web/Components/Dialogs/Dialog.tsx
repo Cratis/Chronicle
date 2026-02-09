@@ -6,7 +6,7 @@ import { Button } from 'primereact/button';
 import { DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { ReactNode } from 'react';
 
-export type CloseDialog = (result: DialogResult) => boolean | void | Promise<boolean>;
+export type CloseDialog = (result: DialogResult) => void;
 
 export interface DialogProps {
     title: string;
@@ -27,9 +27,8 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
         </div>
     );
 
-    const handleClose = async (result: DialogResult) => {
-        const shouldClose = await onClose(result);
-        return shouldClose !== false;
+    const handleClose = (result: DialogResult) => {
+        onClose(result);
     };
 
     const okFooter = (
@@ -92,10 +91,12 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
             header={headerElement}
             modal
             footer={footer}
-            onHide={() => handleClose(DialogResult.Cancelled)}
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onHide={typeof buttons === 'number' ? () => handleClose(DialogResult.Cancelled) : () => {}}
             visible={visible}
             style={{ width }}
-            resizable={resizable}>
+            resizable={resizable}
+            closable={typeof buttons === 'number'}>
             {children}
         </PrimeDialog>
     );

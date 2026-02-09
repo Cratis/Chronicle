@@ -1,13 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
 import { AuthorizationType } from 'Api/Security';
 import { Dialog } from 'Components/Dialogs';
+import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
@@ -19,6 +20,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export const AddWebhookDialog = () => {
+    const { closeDialog } = useDialogContext();
     const params = useParams<EventStoreAndNamespaceParams>();
     const [addWebhook] = AddWebHook.use();
 
@@ -64,50 +66,87 @@ export const AddWebhookDialog = () => {
                     eventSequence.trim() !== '' &&
                     selectedEventTypes.length > 0;
 
-    const handleClose = async (result: DialogResult) => {
-        if (result === DialogResult.Ok) {
-            if (name && url && eventSequence && params.eventStore) {
-                setValidationErrors([]);
+    const extractErrors = (result: { isValid: boolean; validationResults: { message: string }[]; hasExceptions: boolean; exceptionMessages: string[]; isAuthorized: boolean; authorizationFailureReason: string }) => {
+        const errors: string[] = [];
 
-                addWebhook.eventStore = params.eventStore;
-                addWebhook.name = name;
-                addWebhook.url = url;
-                addWebhook.eventSequenceId = eventSequence;
-                addWebhook.eventTypes = selectedEventTypes;
-                addWebhook.authorizationType = authType;
-                addWebhook.basicUsername = basicUsername;
-                addWebhook.basicPassword = basicPassword;
-                addWebhook.bearerToken = bearerToken;
-                addWebhook.OAuthAuthority = oauthAuthority;
-                addWebhook.OAuthClientId = oauthClientId;
-                addWebhook.OAuthClientSecret = oauthClientSecret;
-                addWebhook.isActive = isActive;
-                addWebhook.isReplayable = isReplayable;
-                addWebhook.headers = {};
-
-                const validationResult = await addWebhook.validate();
-                if (!validationResult.isValid) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const errors = Object.values((validationResult as any).errors || {}).flat() as string[];
-                    setValidationErrors(errors);
-                    return false;
-                }
-
-                const executeResult = await addWebhook.execute();
-                if (!executeResult.isSuccess) {
-                    return false;
-                }
-            }
+        if (!result.isValid) {
+            errors.push(...result.validationResults.map(vr => vr.message));
         }
 
-        return true;
+        if (result.hasExceptions) {
+            errors.push(...result.exceptionMessages);
+        }
+
+        if (!result.isAuthorized && result.authorizationFailureReason) {
+            errors.push(result.authorizationFailureReason);
+        }
+
+        if (errors.length === 0) {
+            errors.push('An unexpected error occurred while adding the webhook.');
+        }
+
+        return errors;
     };
+
+    const handleSave = async () => {
+        if (name && url && eventSequence && params.eventStore) {
+            setValidationErrors([]);
+
+            addWebhook.eventStore = params.eventStore;
+            addWebhook.name = name;
+            addWebhook.url = url;
+            addWebhook.eventSequenceId = eventSequence;
+            addWebhook.eventTypes = selectedEventTypes;
+            addWebhook.authorizationType = authType;
+            addWebhook.basicUsername = basicUsername;
+            addWebhook.basicPassword = basicPassword;
+            addWebhook.bearerToken = bearerToken;
+            addWebhook.OAuthAuthority = oauthAuthority;
+            addWebhook.OAuthClientId = oauthClientId;
+            addWebhook.OAuthClientSecret = oauthClientSecret;
+            addWebhook.isActive = isActive;
+            addWebhook.isReplayable = isReplayable;
+            addWebhook.headers = {};
+
+            const validationResult = await addWebhook.validate();
+            if (!validationResult.isSuccess) {
+                setValidationErrors(extractErrors(validationResult));
+                return;
+            }
+
+            const executeResult = await addWebhook.execute();
+            if (executeResult.isSuccess) {
+                closeDialog(DialogResult.Ok);
+            } else {
+                setValidationErrors(extractErrors(executeResult));
+            }
+        }
+    };
+
+    const customButtons = (
+        <>
+            <Button
+                label={strings.general.buttons.ok}
+                icon="pi pi-check"
+                onClick={handleSave}
+                disabled={!isValid}
+                autoFocus
+            />
+            <Button
+                label={strings.general.buttons.cancel}
+                icon="pi pi-times"
+                onClick={() => closeDialog(DialogResult.Cancelled)}
+                outlined
+            />
+        </>
+    );
 
     return (
         <Dialog
             title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
-            onClose={handleClose}
-            buttons={DialogButtons.OkCancel}
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onClose={() => { }}
+            buttons={customButtons}
             width="600px"
             resizable={true}
             isValid={isValid}>
