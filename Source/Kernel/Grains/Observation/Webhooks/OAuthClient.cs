@@ -4,6 +4,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
@@ -12,8 +13,9 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// Represents an implementation of <see cref="IOAuthClient"/>.
 /// </summary>
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
+/// <param name="encryption">The <see cref="IEncryption"/>.</param>
 [Singleton]
-public class OAuthClient(IHttpClientFactory httpClientFactory) : IOAuthClient
+public class OAuthClient(IHttpClientFactory httpClientFactory, IEncryption encryption) : IOAuthClient
 {
     /// <inheritdoc/>
     public async Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization)
@@ -25,7 +27,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory) : IOAuthClient
         {
             ["grant_type"] = "client_credentials",
             ["client_id"] = authorization.ClientId.Value,
-            ["client_secret"] = authorization.ClientSecret.Value
+            ["client_secret"] = encryption.Decrypt(authorization.ClientSecret)
         };
 
         using var content = new FormUrlEncodedContent(request);
