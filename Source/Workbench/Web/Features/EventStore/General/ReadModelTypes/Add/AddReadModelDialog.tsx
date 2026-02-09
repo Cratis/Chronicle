@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult } from '@cratis/arc.react/dialogs';
 import { CreateReadModel } from 'Api/ReadModelTypes';
 import { Dialog } from 'Components/Dialogs';
 import { Button } from 'primereact/button';
@@ -14,7 +14,6 @@ import { useRef } from 'react';
 
 export const AddReadModelDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const { closeDialog } = useDialogContext();
     const [createReadModel] = CreateReadModel.use();
     const savedDataRef = useRef<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
@@ -26,10 +25,9 @@ export const AddReadModelDialog = () => {
             createReadModel.containerName = containerName;
             createReadModel.schema = JSON.stringify(schema);
             const result = await createReadModel.execute();
-            if (result.isSuccess) {
-                closeDialog(DialogResult.Ok);
-            }
+            return result.isSuccess;
         }
+        return false;
     };
 
     const handleChanged = (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
@@ -48,29 +46,23 @@ export const AddReadModelDialog = () => {
         };
     };
 
-    const customButtons = (
-        <>
-            <Button
-                label={strings.general.buttons.ok}
-                icon="pi pi-check"
-                onClick={() => savedDataRef.current && handleSave(savedDataRef.current.displayName, savedDataRef.current.identifier, savedDataRef.current.containerName, savedDataRef.current.schema)}
-                disabled={!savedDataRef.current?.displayName || !savedDataRef.current?.identifier || !savedDataRef.current?.containerName}
-                autoFocus
-            />
-            <Button
-                label={strings.general.buttons.cancel}
-                icon="pi pi-times"
-                onClick={() => closeDialog(DialogResult.Cancelled)}
-                outlined
-            />
-        </>
-    );
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok) {
+            return true;
+        }
+
+        if (savedDataRef.current) {
+            return await handleSave(savedDataRef.current.displayName, savedDataRef.current.identifier, savedDataRef.current.containerName, savedDataRef.current.schema);
+        }
+
+        return false;
+    };
 
     return (
         <Dialog
             title={strings.eventStore.general.readModels.dialogs.addReadModel.title}
-            onClose={closeDialog}
-            buttons={customButtons}
+            onClose={handleClose}
+            isValid={!!savedDataRef.current?.displayName && !!savedDataRef.current?.identifier && !!savedDataRef.current?.containerName}
             width="800px"
             resizable={true}>
             <ReadModelTypeEditor onChanged={handleChanged} />

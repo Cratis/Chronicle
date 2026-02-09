@@ -3,10 +3,10 @@
 
 import { Dialog as PrimeDialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
-import { DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { DialogResult, DialogButtons, useDialogContext } from '@cratis/arc.react/dialogs';
 import { ReactNode } from 'react';
 
-export type CloseDialog = (result: DialogResult) => void;
+export type CloseDialog = (result: DialogResult) => boolean | void | Promise<boolean> | Promise<void>;
 
 export interface DialogProps {
     title: string;
@@ -20,6 +20,7 @@ export interface DialogProps {
 }
 
 export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false, isValid }: DialogProps) => {
+    const { closeDialog } = useDialogContext();
     const isDialogValid = isValid !== false;
     const headerElement = (
         <div className="inline-flex align-items-center justify-content-center gap-2">
@@ -27,8 +28,11 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
         </div>
     );
 
-    const handleClose = (result: DialogResult) => {
-        onClose(result);
+    const handleClose = async (result: DialogResult) => {
+        const closeResult = await onClose(result);
+        if (closeResult !== false) {
+            closeDialog(result);
+        }
     };
 
     const okFooter = (

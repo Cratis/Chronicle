@@ -28,45 +28,31 @@ export const ChangePasswordDialog = () => {
         setConfirmPassword(newPassword);
     };
 
-    const handleOk = async () => {
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok) {
+            return true;
+        }
+
         if (password !== confirmPassword) {
-            return;
+            return false;
         }
 
         if (password && request.userId) {
             changePassword.userId = request.userId;
             changePassword.password = password;
             changePassword.confirmedPassword = confirmPassword;
-            const result = await changePassword.execute();
-            if (result.isSuccess) {
-                closeDialog(DialogResult.Ok);
-            }
+            const executeResult = await changePassword.execute();
+            return executeResult.isSuccess;
         }
-    };
 
-    const customButtons = (
-        <>
-            <Button
-                label={strings.general.buttons.save}
-                icon="pi pi-check"
-                onClick={handleOk}
-                disabled={!password || !confirmPassword || password !== confirmPassword}
-                autoFocus
-            />
-            <Button
-                label={strings.general.buttons.cancel}
-                icon="pi pi-times"
-                onClick={() => closeDialog(DialogResult.Cancelled)}
-                outlined
-            />
-        </>
-    );
+        return false;
+    };
 
     return (
         <Dialog
             title={strings.eventStore.system.users.dialogs.changePassword.title}
-            onClose={closeDialog}
-            buttons={customButtons}
+            onClose={handleClose}
+            isValid={password.trim() !== '' && confirmPassword.trim() !== '' && password === confirmPassword}
             width="30vw">
             <div className="flex flex-column gap-3">
                 <div className="p-inputgroup">

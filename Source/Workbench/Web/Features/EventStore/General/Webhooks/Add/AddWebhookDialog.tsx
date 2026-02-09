@@ -1,14 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult } from '@cratis/arc.react/dialogs';
 import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
 import { AuthorizationType } from 'Api/Security';
 import { Dialog } from 'Components/Dialogs';
-import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
@@ -20,7 +19,6 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export const AddWebhookDialog = () => {
-    const { closeDialog } = useDialogContext();
     const params = useParams<EventStoreAndNamespaceParams>();
     const [addWebhook] = AddWebHook.use();
 
@@ -88,7 +86,11 @@ export const AddWebhookDialog = () => {
         return errors;
     };
 
-    const handleSave = async () => {
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok) {
+            return true;
+        }
+
         if (name && url && eventSequence && params.eventStore) {
             setValidationErrors([]);
 
@@ -111,42 +113,25 @@ export const AddWebhookDialog = () => {
             const validationResult = await addWebhook.validate();
             if (!validationResult.isSuccess) {
                 setValidationErrors(extractErrors(validationResult));
-                return;
+                return false;
             }
 
             const executeResult = await addWebhook.execute();
             if (executeResult.isSuccess) {
-                closeDialog(DialogResult.Ok);
+                return true;
             } else {
                 setValidationErrors(extractErrors(executeResult));
+                return false;
             }
         }
-    };
 
-    const customButtons = (
-        <>
-            <Button
-                label={strings.general.buttons.ok}
-                icon="pi pi-check"
-                onClick={handleSave}
-                disabled={!isValid}
-                autoFocus
-            />
-            <Button
-                label={strings.general.buttons.cancel}
-                icon="pi pi-times"
-                onClick={() => closeDialog(DialogResult.Cancelled)}
-                outlined
-            />
-        </>
-    );
+        return false;
+    };
 
     return (
         <Dialog
             title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            onClose={() => { }}
-            buttons={customButtons}
+            onClose={handleClose}
             width="600px"
             resizable={true}
             isValid={isValid}>
