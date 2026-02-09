@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -31,19 +32,37 @@ public class an_oauth_client : Specification
             expires_in = expiresIn,
             token_type = "Bearer"
         };
-        _messageHandler.Response = new HttpResponseMessage(HttpStatusCode.OK)
+        _messageHandler.EnqueueResponse(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(tokenResponse)
+        });
+    }
+
+    protected void SetupSuccessfulDiscoveryResponse(string tokenEndpoint)
+    {
+        var discoveryResponse = new
+        {
+            token_endpoint = tokenEndpoint
         };
+        _messageHandler.EnqueueResponse(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(discoveryResponse)
+        });
     }
 
     protected class FakeHttpMessageHandler : HttpMessageHandler
     {
+        readonly Queue<HttpResponseMessage> _responses = new();
+
         public HttpResponseMessage Response { get; set; } = new(HttpStatusCode.OK);
+        public List<HttpRequestMessage> Requests { get; } = [];
+
+        public void EnqueueResponse(HttpResponseMessage response) => _responses.Enqueue(response);
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Response);
+            Requests.Add(request);
+            return Task.FromResult(_responses.Count > 0 ? _responses.Dequeue() : Response);
         }
     }
 }

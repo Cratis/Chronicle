@@ -35,11 +35,6 @@ public class AddWebhook
     public IEnumerable<Events.EventType> EventTypes { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the event types and their key expressions.
-    /// </summary>
-    public IDictionary<string, string> EventTypeKeyExpressions { get; set; } = new Dictionary<string, string>();
-
-    /// <summary>
     /// Gets or sets the authorization type (None, Basic, Bearer, OAuth).
     /// </summary>
     public Security.AuthorizationType AuthorizationType { get; set; } = Security.AuthorizationType.None;

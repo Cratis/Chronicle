@@ -4,7 +4,6 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Grains.Security;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
@@ -13,25 +12,31 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// Represents an implementation of <see cref="IOAuthClient"/>.
 /// </summary>
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
-/// <param name="encryption">The <see cref="IEncryption"/>.</param>
 [Singleton]
-public class OAuthClient(IHttpClientFactory httpClientFactory, IEncryption encryption) : IOAuthClient
+public class OAuthClient(IHttpClientFactory httpClientFactory) : IOAuthClient
 {
     /// <inheritdoc/>
     public async Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization)
     {
         using var httpClient = httpClientFactory.CreateClient();
-        var tokenEndpoint = $"{authorization.Authority.Value.TrimEnd('/')}/connect/token";
+        var authority = authorization.Authority.Value.TrimEnd('/');
+        var discoveryEndpoint = $"{authority}/.well-known/openid-configuration";
+
+        var configuration = await httpClient.GetFromJsonAsync<OpenIdConfiguration>(discoveryEndpoint);
+        if (configuration is null || string.IsNullOrWhiteSpace(configuration.TokenEndpoint))
+        {
+            return AccessTokenInfo.Empty;
+        }
 
         var request = new Dictionary<string, string>
         {
             ["grant_type"] = "client_credentials",
             ["client_id"] = authorization.ClientId.Value,
-            ["client_secret"] = encryption.Decrypt(authorization.ClientSecret)
+            ["client_secret"] = authorization.ClientSecret.Value
         };
 
         using var content = new FormUrlEncodedContent(request);
-        var response = await httpClient.PostAsync(tokenEndpoint, content);
+        var response = await httpClient.PostAsync(configuration.TokenEndpoint, content);
         response.EnsureSuccessStatusCode();
 
         var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
@@ -43,6 +48,9 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IEncryption encry
         var expiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
         return new AccessTokenInfo(tokenResponse.AccessToken, expiresAt);
     }
+
+    record OpenIdConfiguration(
+        [property: JsonPropertyName("token_endpoint")] string? TokenEndpoint);
 
     record TokenResponse(
         [property: JsonPropertyName("access_token")] string AccessToken,

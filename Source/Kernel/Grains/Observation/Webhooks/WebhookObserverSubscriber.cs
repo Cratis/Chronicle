@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Grains.Security;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Orleans.Providers;
@@ -19,11 +20,13 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// </remarks>
 /// <param name="webhookMediator">The <see cref="IWebhookMediator"/>.</param>
 /// <param name="oAuthClient">The <see cref="IOAuthClient"/>.</param>
+/// <param name="encryption">The <see cref="IEncryption"/>.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class WebhookObserverSubscriber(
     IWebhookMediator webhookMediator,
     IOAuthClient oAuthClient,
+    IEncryption encryption,
     ILogger<WebhookObserverSubscriber> logger) : Grain<WebhookDefinition>, IWebhookObserverSubscriber, INotifyWebhookDefinitionsChanged
 {
     ObserverKey _key = ObserverKey.NotSet;
@@ -78,7 +81,12 @@ public class WebhookObserverSubscriber(
                 bearer => Task.FromResult(AccessTokenInfo.Empty),
                 async oAuth =>
                 {
-                    var tokenInfo = await oAuthClient.AcquireToken(oAuth);
+                    var decryptedOAuth = oAuth with
+                    {
+                        ClientSecret = encryption.Decrypt(oAuth.ClientSecret)
+                    };
+
+                    var tokenInfo = await oAuthClient.AcquireToken(decryptedOAuth);
                     SetGrainLifetime(tokenInfo);
                     return tokenInfo;
                 },
