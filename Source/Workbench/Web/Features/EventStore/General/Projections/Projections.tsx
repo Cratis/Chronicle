@@ -438,6 +438,7 @@ export const Projections = () => {
                                 theme="vs-dark"
                                 eventStore={params.eventStore}
                                 namespace={params.namespace}
+                                draftReadModel={draftReadModel}
                                 normalizeDeclarationForRequests={(declaration) =>
                                     toIdentifierDeclaration(declaration, readModels.data, draftReadModel)}
                             />
