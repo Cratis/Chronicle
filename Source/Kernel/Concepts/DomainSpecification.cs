@@ -15,6 +15,12 @@ public record DomainSpecification(string Value) : ConceptAs<string>(Value)
     public static readonly DomainSpecification NotSet = new(string.Empty);
 
     /// <summary>
+    /// Implicitly converts from <see cref="string"/> to <see cref="DomainSpecification"/>.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    public static implicit operator DomainSpecification(string value) => new(value);
+
+    /// <summary>
     /// Implicitly converts from <see cref="DomainSpecification"/> to <see cref="string"/>.
     /// </summary>
     /// <param name="specification">The specification to convert.</param>
