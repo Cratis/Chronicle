@@ -52,6 +52,14 @@ public class Storage(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasEventStore(EventStoreName eventStore)
+    {
+        var collection = GetCollection();
+        var count = await collection.CountDocumentsAsync(_ => _.Name == eventStore);
+        return count > 0;
+    }
+
+    /// <inheritdoc/>
     public ISubject<IEnumerable<EventStoreName>> ObserveEventStores()
     {
         var collection = GetCollection();

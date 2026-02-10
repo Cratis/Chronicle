@@ -23,6 +23,13 @@ public interface IStorage
     Task<IEnumerable<EventStoreName>> GetEventStores();
 
     /// <summary>
+    /// Checks if an event store exists.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to check.</param>
+    /// <returns>True if the event store exists, false otherwise.</returns>
+    Task<bool> HasEventStore(EventStoreName eventStore);
+
+    /// <summary>
     /// Observes all the <see cref="EventStoreName">event stores</see> available.
     /// </summary>
     /// <returns>Collection of <see cref="EventStoreName"/>.</returns>
