@@ -9,12 +9,12 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { type JsonSchema } from 'Components/JsonSchema';
-import { useRef } from 'react';
+import { useState } from 'react';
 
 export const AddReadModelDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [createReadModel] = CreateReadModel.use();
-    const savedDataRef = useRef<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
+    const [validationState, setValidationState] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
     const handleSave = async (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
         if (containerName && params.eventStore) {
@@ -33,16 +33,16 @@ export const AddReadModelDialog = () => {
         const trimmedDisplayName = displayName.trim();
         const trimmedIdentifier = identifier.trim();
         const trimmedContainerName = containerName.trim();
-        if (!trimmedDisplayName) {
-            savedDataRef.current = null;
+        if (!trimmedDisplayName || !trimmedIdentifier || !trimmedContainerName) {
+            setValidationState(null);
             return;
         }
-        savedDataRef.current = {
+        setValidationState({
             displayName: trimmedDisplayName,
             identifier: trimmedIdentifier,
             containerName: trimmedContainerName,
             schema
-        };
+        });
     };
 
     const handleClose = async (result: DialogResult) => {
@@ -50,8 +50,8 @@ export const AddReadModelDialog = () => {
             return true;
         }
 
-        if (savedDataRef.current) {
-            return await handleSave(savedDataRef.current.displayName, savedDataRef.current.identifier, savedDataRef.current.containerName, savedDataRef.current.schema);
+        if (validationState) {
+            return await handleSave(validationState.displayName, validationState.identifier, validationState.containerName, validationState.schema);
         }
 
         return false;
@@ -61,7 +61,7 @@ export const AddReadModelDialog = () => {
         <Dialog
             title={strings.eventStore.general.readModels.dialogs.addReadModel.title}
             onClose={handleClose}
-            isValid={!!savedDataRef.current?.displayName && !!savedDataRef.current?.identifier && !!savedDataRef.current?.containerName}
+            isValid={!!validationState}
             width="800px"
             resizable={true}>
             <ReadModelTypeEditor onChanged={handleChanged} />

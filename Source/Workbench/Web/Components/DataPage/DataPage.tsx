@@ -87,7 +87,7 @@ export const Columns = ({ children }: ColumnProps) => {
 
 export interface IDetailsComponentProps<TDataType> {
     item: TDataType;
-
+    onRefresh?: () => void;
 }
 
 interface IDataPageContext extends DataPageProps<any, any, any> {
@@ -135,6 +135,11 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
      * The key to use for the data
      */
     dataKey?: string | undefined;
+
+    /**
+     * Callback for when data should be refreshed
+     */
+    onRefresh?(): void;
 
     /**
      * The current selection.
@@ -191,7 +196,7 @@ const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDat
                         </Allotment.Pane>
                         {props.detailsComponent && selectedItem &&
                             <Allotment.Pane preferredSize="450px">
-                                <props.detailsComponent item={selectedItem} />
+                                <props.detailsComponent item={selectedItem} onRefresh={props.onRefresh} />
                             </Allotment.Pane>
                         }
                     </Allotment>

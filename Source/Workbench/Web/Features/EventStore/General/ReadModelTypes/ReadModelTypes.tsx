@@ -11,7 +11,7 @@ import { AddReadModelDialog } from './Add/AddReadModelDialog';
 import { DataPage, MenuItem } from 'Components';
 import { ReadModelDetails } from './ReadModelDetails';
 import * as faIcons from 'react-icons/fa6';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
@@ -41,6 +41,10 @@ export const ReadModelTypes = () => {
     const [AddReadModelWrapper, showAddReadModel] = useDialog(AddReadModelDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const handleRefresh = useCallback(() => {
+        setRefreshTrigger(prev => prev + 1);
+    }, []);
 
     const filters: DataTableFilterMeta = {
         owner: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -84,7 +88,7 @@ export const ReadModelTypes = () => {
     const handleAddReadModel = async () => {
         const [result] = await showAddReadModel();
         if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+            handleRefresh();
         }
     };
 
@@ -99,6 +103,7 @@ export const ReadModelTypes = () => {
                 emptyMessage={strings.eventStore.general.readModels.empty}
                 defaultFilters={filters}
                 clientFiltering
+                onRefresh={handleRefresh}
                 detailsComponent={ReadModelDetails}>
 
                 <DataPage.MenuItems>
