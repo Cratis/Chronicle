@@ -633,6 +633,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@eslint/js@npm:10.0.1":
+  version: 10.0.1
+  resolution: "@eslint/js@npm:10.0.1"
+  peerDependencies:
+    eslint: ^10.0.0
+  peerDependenciesMeta:
+    eslint:
+      optional: true
+  checksum: 10/27ff77b8f0aab350b2f7a69d974eabb816bb9f4cab986b1538782269d6bfdc29e351803fa7a62c22c0b786341324f1a28b86bc83956ddfa189aa6bead1a87758
+  languageName: node
+  linkType: hard
+
 "@eslint/object-schema@npm:^3.0.1":
   version: 3.0.1
   resolution: "@eslint/object-schema@npm:3.0.1"
@@ -6917,6 +6929,7 @@ __metadata:
     "@cratis/arc.vite": "npm:^19.0.3"
     "@cratis/components": "npm:^0.1.18"
     "@eslint/eslintrc": "npm:3.3.3"
+    "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"
     "@tailwindcss/postcss": "npm:4.1.18"
     "@tailwindcss/vite": "npm:4.1.18"
