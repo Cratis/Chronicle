@@ -82,9 +82,6 @@ const rules = {
     },
 };
 
-const reactCompat = compat.extends('plugin:react/recommended');
-const reactPlugin = reactCompat[0].plugins.react;
-
 const defaultConfig = [
     {
         ignores: [
@@ -107,8 +104,8 @@ const defaultConfig = [
 
         plugins: {
             '@typescript-eslint': typescriptEslint,
-            react: reactPlugin,
-            header,
+            react: reactlint,
+            '@tony.ganchev': header,
             'no-null': noNull
         },
 
@@ -124,7 +121,7 @@ const defaultConfig = [
 
         settings: {
             react: {
-                version: 'detect',
+                version: '19.2',
             },
         },
     },
