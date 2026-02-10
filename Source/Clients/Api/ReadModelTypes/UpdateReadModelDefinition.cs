@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.Api.ReadModelTypes;
 /// <param name="Generation">Generation of the read model.</param>
 /// <param name="Schema">JSON schema for the read model.</param>
 /// <param name="Indexes">Collection of property paths for indexes.</param>
-public record UpdateReadModelDefinition(string Identifier, string ContainerName, ulong Generation, string Schema, IEnumerable<string> Indexes);
+public record UpdateReadModelDefinition(string Identifier, string ContainerName, uint Generation, string Schema, IEnumerable<string> Indexes);
