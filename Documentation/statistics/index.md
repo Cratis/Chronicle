@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 -->
 # Test Coverage Statistics
 
 This section contains test coverage statistics for the Chronicle project, tracking key metrics over time.
