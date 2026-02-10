@@ -117,4 +117,9 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for data protection keys.
     /// </summary>
     public const string DataProtectionKeys = "data-protection-keys";
+
+    /// <summary>
+    /// The name of the storage provider used for settings.
+    /// </summary>
+    public const string Settings = "settings";
 }
