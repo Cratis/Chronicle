@@ -168,7 +168,7 @@ A document contains one or more projections:
 
 ```ebnf
 Document = { Projection } ;
-```pdl
+```
 
 ### Projection
 
@@ -182,7 +182,7 @@ Projection = "projection", Ident, "=>", TypeRef, NL,
 ```pdl
 
 **Example:**
-```pdl
+```
 projection User => UserReadModel
   from UserCreated
     Name = name
@@ -198,7 +198,7 @@ Projection-level directives:
 ProjDirective = "no", "automap", NL
               | KeyDecl
               | CompositeKeyDecl ;
-```pdl
+```
 
 ### Blocks
 
@@ -224,7 +224,7 @@ EveryBlock = "every", NL,
                { MappingLine },
                [ "exclude", "children", NL ],
              DEDENT ;
-```pdl
+```
 
 ### From Event Block
 
@@ -257,7 +257,7 @@ WithEventBlock = "with", TypeRef, NL,
                  [ INDENT,
                      { MappingLine },
                    DEDENT ] ;
-```pdl
+```
 
 **Note:** AutoMap for join blocks is controlled at the projection or children level, not within individual with blocks.
 
@@ -299,7 +299,7 @@ RemoveWithBlock = "remove", "with", TypeRef, [ KeyInline ], NL,
                     DEDENT ] ;
 
 RemoveWithJoinBlock = "remove", "via", "join", "on", TypeRef, [ KeyInline ], NL ;
-```pdl
+```
 
 ### Key Declarations
 
@@ -335,7 +335,7 @@ DecLine = "decrement", Ident, NL ;
 CountLine = "count", Ident, NL ;
 AddLine = "add", Ident, "by", Expr, NL ;
 SubLine = "subtract", Ident, "by", Expr, NL ;
-```pdl
+```
 
 ### Expressions
 
@@ -370,7 +370,7 @@ The grammar uses indentation to define structure:
 4. **Block Structure**: Each block's content must be indented from its declaration
 
 **Example:**
-```pdl
+```
 projection User => UserReadModel    # Level 0
   from UserCreated                  # Level 1 (INDENT)
     Name = name                     # Level 2 (INDENT)
@@ -404,7 +404,7 @@ While not enforced by the grammar, these conventions improve readability:
 
 This example demonstrates how various grammar rules combine:
 
-```pdl
+```
 projection Order => OrderReadModel
   every
     LastUpdated = $eventContext.occurred

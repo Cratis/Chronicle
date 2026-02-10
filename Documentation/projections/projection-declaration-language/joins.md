@@ -10,7 +10,7 @@ join {Name} on {Property}
     {mappings}
   with {EventType}
     {mappings}
-```pdl
+```
 
 ## Simple Example
 
@@ -27,7 +27,7 @@ projection Order => OrderReadModel
     with CustomerUpdated
       CustomerName = name
       CustomerEmail = email
-```pdl
+```
 
 When a `CustomerCreated` or `CustomerUpdated` event occurs with a matching `CustomerId`, the projection updates with customer information.
 
@@ -41,7 +41,7 @@ join Group on GroupId
     automap
   with GroupRenamed
     automap
-```pdl
+```
 
 ## Multiple Mappings
 
@@ -59,7 +59,7 @@ join Product on ProductId
     ProductDescription = description
     ProductPrice = price
     LastProductUpdate = $eventContext.occurred
-```pdl
+```
 
 ## Multiple Events
 
@@ -74,7 +74,7 @@ join Customer on CustomerId
     CustomerName = name
   with CustomerVerified
     IsVerified = verified
-```pdl
+```
 
 ## Join with From Events
 
@@ -96,7 +96,7 @@ projection Order => OrderReadModel
       CustomerName = name
     with CustomerUpdated
       CustomerName = name
-```pdl
+```
 
 ## Multiple Joins
 
@@ -117,7 +117,7 @@ projection Order => OrderReadModel
     with ProductCreated
       ProductName = name
       ProductPrice = price
-```pdl
+```
 
 ## Joins in Children
 
@@ -140,7 +140,7 @@ projection Group => GroupReadModel
       with UserUpdated
         UserName = name
         UserEmail = email
-```pdl
+```
 
 ## Examples
 
@@ -156,7 +156,7 @@ projection Order => OrderReadModel
 
 ### Product with Category Information
 
-```pdl
+```
 projection Product => ProductReadModel
   from ProductCreated
     ProductId = productId
@@ -174,7 +174,7 @@ projection Product => ProductReadModel
 
 ### User Profile with Organization
 
-```pdl
+```
 projection UserProfile => UserProfileReadModel
   from ProfileCreated
     UserId = userId
@@ -196,7 +196,7 @@ projection UserProfile => UserProfileReadModel
 
 ### Task with Assignee Details
 
-```pdl
+```
 projection Task => TaskReadModel
   from TaskCreated
     Title = title
@@ -218,7 +218,7 @@ projection Task => TaskReadModel
 
 ### Reservation with Room and Guest
 
-```pdl
+```
 projection Reservation => ReservationReadModel
   from ReservationMade
     ReservationNumber = number
@@ -250,7 +250,7 @@ projection Reservation => ReservationReadModel
 
 ### Children with Join
 
-```pdl
+```
 projection Project => ProjectReadModel
   from ProjectCreated
     Name = name
@@ -300,7 +300,7 @@ projection Project => ProjectReadModel
 
 Join with reference data like categories, types, or statuses:
 
-```pdl
+```
 join Status on StatusId
   with StatusCreated
     StatusName = name
@@ -314,7 +314,7 @@ join Status on StatusId
 
 Enrich with user details:
 
-```pdl
+```
 join User on UserId
   with UserRegistered
     UserName = name
@@ -328,7 +328,7 @@ join User on UserId
 
 Join within children for nested enrichment:
 
-```pdl
+```
 children items identified by itemId
   from ItemAdded
     ProductId = productId

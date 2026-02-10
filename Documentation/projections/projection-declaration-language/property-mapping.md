@@ -10,7 +10,7 @@ Map an event property to a read model property:
 from UserRegistered
   Name = name
   Email = email
-```pdl
+```
 
 This maps the `name` and `email` properties from the `UserRegistered` event to the corresponding properties on the read model.
 
@@ -23,7 +23,7 @@ from UserRegistered
   Email = contactInfo.email
   Phone = contactInfo.phone
   City = address.city
-```pdl
+```
 
 ## Literal Values
 
@@ -36,7 +36,7 @@ from UserRegistered
   Status = "Pending"
   Priority = 5
   CreatedAt = null
-```pdl
+```
 
 Supported literal types:
 - **Boolean**: `true`, `false`
@@ -52,7 +52,7 @@ Create formatted strings using template literals:
 from PersonRegistered
   FullName = `${firstName} ${lastName}`
   DisplayInfo = `${name} (${email})`
-```pdl
+```
 
 Template syntax:
 - Wrap in backticks: `` `template` ``
@@ -67,7 +67,7 @@ The special identifier `$eventSourceId` provides the event source ID:
 from UserAssignedToGroup
   GroupId = $eventContext.eventSourceId
   UserId = $eventSourceId
-```pdl
+```
 
 ## Event Context
 
@@ -79,7 +79,7 @@ from UserRegistered
   CreatedAt = $eventContext.occurred
   SequenceNumber = $eventContext.sequenceNumber
   CorrelationId = $eventContext.correlationId
-```pdl
+```
 
 See [Event Context](event-context.md) for all available properties.
 
@@ -95,7 +95,7 @@ from OrderPlaced
   Status = "New"
   PlacedAt = $eventContext.occurred
   TaxRate = 0.08
-```pdl
+```
 
 ## Property Types
 
@@ -108,7 +108,7 @@ from ProductCreated
   IsAvailable = true       # boolean
   Stock = 0                # integer
   Category = null          # nullable
-```pdl
+```
 
 ## Examples
 
@@ -121,7 +121,7 @@ from UserProfileUpdated
   Email = email
   Bio = bio
   UpdatedAt = $eventContext.occurred
-```pdl
+```
 
 ### Order with Calculated Fields
 
@@ -135,7 +135,7 @@ from OrderPlaced
   Status = "Pending"
   Reference = `ORD-${orderNumber}`
   PlacedAt = $eventContext.occurred
-```pdl
+```
 
 ### Nested Data
 
@@ -148,7 +148,7 @@ from CompanyRegistered
   City = address.city
   State = address.state
   ZipCode = address.zipCode
-```pdl
+```
 
 ### With Literals and Context
 
@@ -160,7 +160,7 @@ from AccountCreated
   AccountType = "Standard"
   OpenedAt = $eventContext.occurred
   OpenedBy = $eventContext.eventSourceId
-```pdl
+```
 
 ## Best Practices
 

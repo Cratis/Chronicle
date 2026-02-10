@@ -8,7 +8,7 @@ The `count` operation increments a property by 1 each time an event occurs:
 
 ```pdl
 count {Property}
-```pdl
+```
 
 ### Example
 
@@ -16,7 +16,7 @@ count {Property}
 from PageViewed
   count ViewCount
   LastViewedAt = $eventContext.occurred
-```pdl
+```
 
 Each `PageViewed` event increases `ViewCount` by 1.
 
@@ -26,7 +26,7 @@ The `increment` operation increases a property by 1:
 
 ```pdl
 increment {Property}
-```pdl
+```
 
 ### Example
 
@@ -34,7 +34,7 @@ increment {Property}
 from UserLoggedIn
   increment LoginCount
   LastLogin = $eventContext.occurred
-```pdl
+```
 
 ## Decrement
 
@@ -42,7 +42,7 @@ The `decrement` operation decreases a property by 1:
 
 ```pdl
 decrement {Property}
-```pdl
+```
 
 ### Example
 
@@ -50,7 +50,7 @@ decrement {Property}
 from ItemConsumed
   decrement RemainingStock
   LastConsumed = $eventContext.occurred
-```pdl
+```
 
 ## Difference Between Count and Increment
 
@@ -70,7 +70,7 @@ from OrderPlaced
   increment TotalOrders
   count OrderCount
   add TotalRevenue by total
-```pdl
+```
 
 ## Examples
 
@@ -88,7 +88,7 @@ projection User => UserReadModel
 
   from UserProfileViewed
     increment ProfileViewCount
-```pdl
+```
 
 ### Inventory Management
 
@@ -108,7 +108,7 @@ projection Product => ProductReadModel
   from ItemReturned
     increment StockLevel
     decrement SalesCount
-```pdl
+```
 
 ### Blog Post Engagement
 
@@ -129,7 +129,7 @@ projection BlogPost => BlogPostReadModel
 
   from CommentAdded
     count CommentCount
-```pdl
+```
 
 ### Account Balance (Alternative to Arithmetic)
 
@@ -146,7 +146,7 @@ projection Account => AccountReadModel
   from WithdrawalMade
     increment TransactionCount
     subtract Balance by amount
-```pdl
+```
 
 ### Forum User Reputation
 
@@ -166,7 +166,7 @@ projection ForumUser => ForumUserReadModel
 
   from DownvoteReceived
     decrement Reputation
-```pdl
+```
 
 ### Task Completion Tracking
 
@@ -184,7 +184,7 @@ projection Project => ProjectReadModel
 
   from TaskAdded
     increment RemainingTasks
-```pdl
+```
 
 ## Property Requirements
 

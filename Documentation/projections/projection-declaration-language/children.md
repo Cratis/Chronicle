@@ -7,7 +7,7 @@ Children define nested collections within a projection. Each child represents a 
 ```pdl
 children {CollectionName} identified by {Identifier}
   {child blocks}
-```pdl
+```
 
 ## Simple Example
 
@@ -21,7 +21,7 @@ projection Group => GroupReadModel
       parent groupId
       Name = userName
       Role = role
-```pdl
+```
 
 This creates a `members` collection where each member is identified by `userId`.
 
@@ -33,7 +33,7 @@ The `identified by` specifies how to identify individual children:
 children orders identified by orderId
 children members identified by userId
 children items identified by itemNumber
-```pdl
+```
 
 ## Parent Key
 
@@ -44,7 +44,7 @@ children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Name = userName
-```pdl
+```
 
 The `parent groupId` links the child to the correct parent instance.
 
@@ -58,7 +58,7 @@ children members identified by userId
 
   from UserAddedToGroup
     Role = role
-```pdl
+```
 
 ## Multiple Events
 
@@ -74,7 +74,7 @@ children members identified by userId
   from UserRoleChanged key userId
     parent groupId
     Role = role
-```pdl
+```
 
 ## Every Block in Children
 
@@ -89,7 +89,7 @@ children members identified by userId
   every
     Name = userName
     UpdatedAt = $eventContext.occurred
-```pdl
+```
 
 The `every` block within children works similarly to the top-level every block but applies only to events within that specific children collection. It's useful for mappings that should apply to all events affecting child items.
 
@@ -110,7 +110,7 @@ children members id userId
     events UserCreated, UserUpdated
     Name = name
     Email = email
-```pdl
+```
 
 ## Removal in Children
 
@@ -124,7 +124,7 @@ children members id userId
 
   remove with UserRemovedFromGroup key userId
     parent groupId
-```pdl
+```
 
 See [Removal](removal.md) for more details.
 
@@ -142,7 +142,7 @@ children departments id deptId
     from TeamCreated key teamId
       parent deptId
       Name = name
-```pdl
+```
 
 ## Examples
 
@@ -167,7 +167,7 @@ projection Group => GroupReadModel
 
     remove with UserRemovedFromGroup key userId
       parent groupId
-```pdl
+```
 
 ### Order with Line Items
 
@@ -193,7 +193,7 @@ projection Order => OrderReadModel
 
     remove with LineItemRemoved key lineNumber
       parent orderId
-```pdl
+```
 
 ### Project with Tasks
 
@@ -226,7 +226,7 @@ projection Project => ProjectReadModel
     join User on AssignedTo
       events UserCreated
       AssigneeName = name
-```pdl
+```
 
 ### Invoice with Payments
 
@@ -247,7 +247,7 @@ projection Invoice => InvoiceReadModel
 
   from PaymentReceived
     subtract Balance by amount
-```pdl
+```
 
 ### Blog Post with Comments
 
@@ -281,7 +281,7 @@ projection BlogPost => BlogPostReadModel
     join User on AuthorId
       events UserRegistered
       AuthorName = name
-```pdl
+```
 
 ### Multi-Level Nesting
 
@@ -305,7 +305,7 @@ projection Company => CompanyReadModel
           parent teamId
           Name = name
           Role = role
-```pdl
+```
 
 ## Parent Key Expressions
 
@@ -319,7 +319,7 @@ children items id itemId
     parent $eventContext.eventSourceId    # Event source ID
     # or
     parent order.id                       # Nested property
-```pdl
+```
 
 ## AutoMap with Children
 
@@ -336,7 +336,7 @@ children members id userId
   from UserUpdated key userId
     parent groupId
     # Updates are auto-mapped
-```pdl
+```
 
 ## Collection Property
 
@@ -371,7 +371,7 @@ public class GroupMember
 
 ### Add/Update/Remove
 
-```pdl
+```
 children items id itemId
   from ItemAdded key itemId
     parent parentId
@@ -387,7 +387,7 @@ children items id itemId
 
 ### Enrichment with Joins
 
-```pdl
+```
 children members id userId
   from MemberAdded key userId
     parent groupId
@@ -401,7 +401,7 @@ children members id userId
 
 ### Versioning
 
-```pdl
+```
 children versions id versionNumber
   from VersionCreated key versionNumber
     parent documentId
