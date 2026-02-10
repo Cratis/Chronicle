@@ -144,7 +144,7 @@ children items identified by itemId
                 <a href="https://www.cratis.io/docs/Chronicle/projections" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block', marginBottom: '5px' }}>
                     Documentation
                 </a>
-                <a href="https://www.cratis.io/docs/Chronicle/projections/projection-definition-language" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block' }}>
+                <a href="https://www.cratis.io/docs/Chronicle/projections/projection-declaration-language" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#4ec9b0', display: 'block' }}>
                     PDL Reference
                 </a>
             </div>
