@@ -215,7 +215,7 @@ public class EventSequence(
     public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = default,
-        IEnumerable<EventType>? eventTypes = default)
+        IEnumerable<EventType>? filterEventTypes = default)
     {
         var result = await _servicesAccessor.Services.EventSequences.GetEventsFromEventSequenceNumber(new()
         {
@@ -224,16 +224,16 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = sequenceNumber,
             EventSourceId = eventSourceId?.Value ?? default,
-            EventTypes = eventTypes?.ToContract() ?? []
+            EventTypes = filterEventTypes?.ToContract() ?? []
         });
 
-        return result.Events.ToClient(jsonSerializerOptions);
+        return result.Events.ToClient(eventTypes, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
         EventSourceId eventSourceId,
-        IEnumerable<EventType> eventTypes,
+        IEnumerable<EventType> filterEventTypes,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default)
@@ -247,10 +247,10 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             EventSourceType = eventSourceType ?? EventSourceType.Default,
             EventSourceId = eventSourceId,
-            EventTypes = eventTypes.ToContract()
+            EventTypes = filterEventTypes.ToContract()
         });
 
-        return result.Events.ToClient(jsonSerializerOptions);
+        return result.Events.ToClient(eventTypes, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -262,7 +262,7 @@ public class EventSequence(
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? eventTypes = default)
+        IEnumerable<EventType>? filterEventTypes = default)
     {
         var request = new GetTailSequenceNumberRequest
         {
@@ -273,7 +273,7 @@ public class EventSequence(
             EventSourceType = eventSourceType?.Value ?? default,
             EventStreamType = eventStreamType?.Value ?? default,
             EventStreamId = eventStreamId?.Value ?? default,
-            EventTypes = eventTypes?.ToContract() ?? []
+            EventTypes = filterEventTypes?.ToContract() ?? []
         };
         var sequenceNumber = await _servicesAccessor.Services.EventSequences.GetTailSequenceNumber(request);
         return sequenceNumber.SequenceNumber;

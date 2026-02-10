@@ -163,6 +163,7 @@ public class EventStore : IEventStore
             namingPolicy,
             projections,
             Reducers,
+            EventTypes,
             schemaGenerator,
             jsonSerializerOptions,
             readModelsWatcherManager,

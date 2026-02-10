@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -17,6 +18,7 @@ public class all_dependencies : Specification
     protected INamingPolicy _namingPolicy;
     protected IProjections _projections;
     protected IReducers _reducers;
+    protected IEventTypes _eventTypes;
     protected IEnumerable<IHaveReadModel> _additionalReadModels;
     protected IJsonSchemaGenerator _schemaGenerator;
     protected IChronicleServicesAccessor _servicesAccessor;
@@ -35,6 +37,7 @@ public class all_dependencies : Specification
         _namingPolicy = new DefaultNamingPolicy();
         _projections = Substitute.For<IProjections>();
         _reducers = Substitute.For<IReducers>();
+        _eventTypes = Substitute.For<IEventTypes>();
         _additionalReadModels = [];
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         _readModelWatcherManager = Substitute.For<IReadModelWatcherManager>();
@@ -53,6 +56,7 @@ public class all_dependencies : Specification
             _namingPolicy,
             _projections,
             _reducers,
+            _eventTypes,
             _schemaGenerator,
             _jsonSerializerOptions,
             _readModelWatcherManager,

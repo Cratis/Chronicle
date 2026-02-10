@@ -259,7 +259,7 @@ public class Reducers : IReducers
         foreach (var snapshot in response.Snapshots)
         {
             var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, _jsonSerializerOptions)!;
-            var events = snapshot.Events.ToClient(_jsonSerializerOptions);
+            var events = snapshot.Events.ToClient(_eventTypes, _jsonSerializerOptions);
 
             snapshots.Add(new ReadModelSnapshot<TReadModel>(
                 readModel,
