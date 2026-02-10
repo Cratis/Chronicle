@@ -24,7 +24,7 @@ Use `no automap` to disable automatic property mapping when needed.
 
 Disable AutoMap for the entire projection:
 
-```
+```pdl
 projection User => UserReadModel
   no automap
 
@@ -55,7 +55,7 @@ projection User => UserReadModel
 
 Disable AutoMap within join blocks:
 
-```
+```pdl
 join Group on GroupId
   events GroupCreated, GroupRenamed
   no automap
@@ -79,7 +79,7 @@ children members id userId
 
 AutoMap runs first, then explicit mappings override or add properties:
 
-```
+```pdl
 from UserRegistered
   IsActive = true
   CreatedAt = $eventContext.occurred

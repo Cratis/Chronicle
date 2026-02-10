@@ -33,7 +33,7 @@ projection {Name} => {ReadModelType}
 
 Example:
 
-```
+```pdl
 projection User => UserReadModel
   from UserRegistered
     Name = name

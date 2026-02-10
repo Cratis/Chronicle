@@ -355,7 +355,7 @@ public class GroupMember
     public string Name { get; set; }
     public string Role { get; set; }
 }
-```pdl
+```
 
 ## Best Practices
 
@@ -371,7 +371,7 @@ public class GroupMember
 
 ### Add/Update/Remove
 
-```
+```pdl
 children items id itemId
   from ItemAdded key itemId
     parent parentId
@@ -383,11 +383,11 @@ children items id itemId
 
   remove with ItemRemoved key itemId
     parent parentId
-```pdl
+```
 
 ### Enrichment with Joins
 
-```
+```pdl
 children members id userId
   from MemberAdded key userId
     parent groupId
@@ -401,14 +401,14 @@ children members id userId
 
 ### Versioning
 
-```
+```pdl
 children versions id versionNumber
   from VersionCreated key versionNumber
     parent documentId
     Content = content
     CreatedAt = $eventContext.occurred
     CreatedBy = authorId
-```pdl
+```
 
 ## See Also
 

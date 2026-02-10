@@ -208,7 +208,7 @@ public class UserReadModel
     public int LoginCount { get; set; } = 0;  // Initialize to 0
     public int ProfileViews { get; set; } = 0;
 }
-```pdl
+```
 
 ## Best Practices
 

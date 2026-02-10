@@ -179,14 +179,15 @@ Projection = "projection", Ident, "=>", TypeRef, NL,
              INDENT,
                { ProjDirective | Block },
              DEDENT ;
-```pdl
+```
 
 **Example:**
-```
+
+```pdl
 projection User => UserReadModel
   from UserCreated
     Name = name
-```pdl
+```
 
 **Note:** AutoMap is enabled by default. Use `no automap` to disable it.
 
@@ -211,7 +212,7 @@ Block = EveryBlock
       | ChildrenBlock
       | RemoveWithBlock
       | RemoveWithJoinBlock ;
-```pdl
+```
 
 ### Every Block
 
@@ -284,7 +285,7 @@ ChildEveryBlock = "every", NL,
                     [ "no", "automap", NL ],
                     { MappingLine },
                   DEDENT ;
-```pdl
+```
 
 **Note:** `ChildEveryBlock` applies mappings to all events within the children collection. Unlike the top-level `EveryBlock`, it does not support the `exclude children` directive as it operates within a children context.
 
@@ -315,7 +316,7 @@ CompositeKeyDecl = "key", TypeRef, "{", NL,
                    "}", NL ;
 
 KeyPart = Ident, "=", Expr ;
-```pdl
+```
 
 ### Mapping Lines
 
@@ -358,7 +359,7 @@ Literal = BoolLiteral
         | StringLiteral
         | NumberLiteral
         | NullLiteral ;
-```pdl
+```
 
 ## Indentation Rules
 
@@ -370,7 +371,7 @@ The grammar uses indentation to define structure:
 4. **Block Structure**: Each block's content must be indented from its declaration
 
 **Example:**
-```
+```pdl
 projection User => UserReadModel    # Level 0
   from UserCreated                  # Level 1 (INDENT)
     Name = name                     # Level 2 (INDENT)
@@ -404,7 +405,7 @@ While not enforced by the grammar, these conventions improve readability:
 
 This example demonstrates how various grammar rules combine:
 
-```
+```pdl
 projection Order => OrderReadModel
   every
     LastUpdated = $eventContext.occurred
@@ -438,7 +439,7 @@ projection Order => OrderReadModel
       parent orderId
 
   remove with OrderCancelled
-```pdl
+```
 
 This projection uses:
 - Projection declaration

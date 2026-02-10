@@ -12,7 +12,7 @@ add {Property} by {expression}
 
 ### Example
 
-```
+```pdl
 from PaymentReceived
   add Balance by amount
   LastPayment = $eventContext.occurred
@@ -28,7 +28,7 @@ subtract {Property} by {expression}
 
 ### Example
 
-```
+```pdl
 from WithdrawalMade
   subtract Balance by amount
   LastWithdrawal = $eventContext.occurred
@@ -56,7 +56,7 @@ from OrderPlaced
 
 ### Account Balance
 
-```
+```pdl
 projection Account => AccountReadModel
   from AccountOpened
     AccountNumber = accountNumber
@@ -92,7 +92,7 @@ projection Customer => CustomerReadModel
 
 ### Inventory with Variable Quantities
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     Name = name
@@ -129,7 +129,7 @@ projection Budget => BudgetReadModel
 
 ### Order Totals
 
-```
+```pdl
 projection Order => OrderReadModel
   from OrderPlaced
     OrderNumber = orderNumber
@@ -174,7 +174,7 @@ projection PlayerScore => PlayerScoreReadModel
 
 You can use nested properties from events:
 
-```
+```pdl
 from TransactionProcessed
   add Balance by transaction.amount
   add TotalTransactions by 1

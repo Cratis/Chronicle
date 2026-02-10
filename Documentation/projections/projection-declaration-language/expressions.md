@@ -110,12 +110,14 @@ IsDeleted = false
 ```
 
 **String:**
+
 ```pdl
 Status = "Pending"
 Category = "Electronics"
 ```
 
 **Number:**
+
 ```pdl
 Count = 0
 Price = 99.99
@@ -123,6 +125,7 @@ Tax = 0.08
 ```
 
 **Null:**
+
 ```pdl
 OptionalField = null
 ```
@@ -226,120 +229,126 @@ public class UserReadModel
     public bool IsActive { get; set; }      // Requires boolean
     public DateTime CreatedAt { get; set; } // Requires timestamp
 }
-```pdl
+```
 
 **Valid:**
-```
+
+```pdl
 Name = name                              # string
 LoginCount = 0                          # number
 IsActive = true                         # boolean
 CreatedAt = $eventContext.occurred      # timestamp
-```pdl
+```
 
 **Invalid:**
-```
+
+```pdl
 Name = 123                              # number to string (invalid)
 LoginCount = "five"                     # string to number (invalid)
 IsActive = "yes"                        # string to boolean (invalid)
-```pdl
+```
 
 ## Nested Property Access
 
 Access deeply nested properties:
 
-```
+```pdl
 from OrderPlaced
   CustomerEmail = order.customer.contactInfo.email
   ShippingCity = order.shipping.address.city
   BillingStreet = billing.address.line1
-```pdl
+```
 
 ## Expressions in Different Contexts
 
 ### Property Assignments
 
-```
-Property = expression
 ```pdl
+Property = expression
+```
 
 Examples:
-```
+
+```pdl
 Name = name
 Total = order.total
 CreatedAt = $eventContext.occurred
 DisplayName = `${firstName} ${lastName}`
-```pdl
+```
 
 ### Keys
 
-```
-key expression
 ```pdl
+key expression
+```
 
 Examples:
-```
+
+```pdl
 from UserCreated key userId
 from OrderPlaced key $eventSourceId
 from LineItem key order.id
-```pdl
+```
 
 ### Composite Keys
 
-```
+```pdl
 key Type {
   Property = expression
   ...
 }
-```pdl
+```
 
 Examples:
-```
+
+```pdl
 key OrderLineKey {
   OrderId = orderId
   LineNumber = lineNumber
   Sequence = $eventContext.sequenceNumber
 }
-```pdl
+```
 
 ### Arithmetic Operations
 
-```
+```pdl
 add Property by expression
 subtract Property by expression
-```pdl
+```
 
 Examples:
-```
+```pdl
 add Balance by amount
 subtract Stock by quantity
 add Total by lineItem.total
-```pdl
+```
 
 ### Parent Keys
 
-```
-parent expression
 ```pdl
+parent expression
+```
 
 Examples:
-```
+
+```pdl
 parent groupId
 parent $eventContext.eventSourceId
 parent order.customerId
-```pdl
+```
 
 ### Child Identifiers
 
-```
-id expression
 ```pdl
+id expression
+```
 
 Examples:
-```
+```pdl
 children members identified by userId
 children items identified by lineNumber
 children versions identified by $eventContext.sequenceNumber
-```pdl
+```
 
 ## Best Practices
 
@@ -355,38 +364,38 @@ children versions identified by $eventContext.sequenceNumber
 
 ### Audit Fields
 
-```
+```pdl
 CreatedAt = $eventContext.occurred
 CreatedBy = $eventContext.eventSourceId
 LastUpdated = $eventContext.occurred
 Version = $eventContext.sequenceNumber
-```pdl
+```
 
 ### Display Values
 
-```
+```pdl
 FullName = `${firstName} ${lastName}`
 Address = `${street}, ${city}, ${state} ${zipCode}`
 Summary = `${product} x ${quantity} @ ${price}`
-```pdl
+```
 
 ### Nested Access
 
-```
+```pdl
 Email = contact.email
 Phone = contact.phoneNumbers.primary
 City = addresses.shipping.city
-```pdl
+```
 
 ### Default Values
 
-```
+```pdl
 Status = "Pending"
 IsActive = true
 Count = 0
 Balance = 0.0
 Notes = null
-```pdl
+```
 
 ## See Also
 

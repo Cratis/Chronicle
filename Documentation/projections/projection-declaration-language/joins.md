@@ -156,7 +156,7 @@ projection Order => OrderReadModel
 
 ### Product with Category Information
 
-```
+```pdl
 projection Product => ProductReadModel
   from ProductCreated
     ProductId = productId
@@ -170,11 +170,11 @@ projection Product => ProductReadModel
     with CategoryRenamed
       CategoryName = name
       CategoryDescription = description
-```pdl
+```
 
 ### User Profile with Organization
 
-```
+```pdl
 projection UserProfile => UserProfileReadModel
   from ProfileCreated
     UserId = userId
@@ -192,11 +192,11 @@ projection UserProfile => UserProfileReadModel
     with OrganizationRenamed
       OrganizationName = name
       OrganizationType = type
-```pdl
+```
 
 ### Task with Assignee Details
 
-```
+```pdl
 projection Task => TaskReadModel
   from TaskCreated
     Title = title
@@ -214,11 +214,11 @@ projection Task => TaskReadModel
     with UserUpdated
       AssigneeName = name
       AssigneeEmail = email
-```pdl
+```
 
 ### Reservation with Room and Guest
 
-```
+```pdl
 projection Reservation => ReservationReadModel
   from ReservationMade
     ReservationNumber = number
@@ -250,7 +250,7 @@ projection Reservation => ReservationReadModel
 
 ### Children with Join
 
-```
+```pdl
 projection Project => ProjectReadModel
   from ProjectCreated
     Name = name
@@ -270,7 +270,7 @@ projection Project => ProjectReadModel
         AssigneeName = name
       with UserUpdated
         AssigneeName = name
-```pdl
+```
 
 ## How Joins Work
 
@@ -300,7 +300,7 @@ projection Project => ProjectReadModel
 
 Join with reference data like categories, types, or statuses:
 
-```
+```pdl
 join Status on StatusId
   with StatusCreated
     StatusName = name
@@ -308,13 +308,13 @@ join Status on StatusId
   with StatusUpdated
     StatusName = name
     StatusColor = color
-```pdl
+```
 
 ### User Information
 
 Enrich with user details:
 
-```
+```pdl
 join User on UserId
   with UserRegistered
     UserName = name
@@ -322,13 +322,13 @@ join User on UserId
   with UserProfileUpdated
     UserName = name
     UserAvatar = avatarUrl
-```pdl
+```
 
 ### Nested Relationships
 
 Join within children for nested enrichment:
 
-```
+```pdl
 children items identified by itemId
   from ItemAdded
     ProductId = productId
