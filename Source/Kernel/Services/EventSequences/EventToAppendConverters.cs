@@ -26,7 +26,7 @@ internal static class EventToAppendConverters
             eventToAppend.EventStreamType,
             eventToAppend.EventStreamId,
             eventToAppend.EventType.ToChronicle(),
-            eventToAppend.Tags.Select(t => new Tag(t)).ToArray(),
+            eventToAppend.Tags.Select(t => (Tag)t).ToArray(),
             JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, jsonSerializerOptions)!.AsObject());
 
     /// <summary>
