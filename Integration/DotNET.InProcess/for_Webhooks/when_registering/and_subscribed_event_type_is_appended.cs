@@ -15,10 +15,9 @@ public class and_subscribed_event_type_is_appended(context context) : Given<cont
     {
         public readonly WebhookId WebhookId = "some-webhook";
 
-        public Task Establish()
+        public async Task Establish()
         {
-            return Register(
-                (WebhookId, TargetUrl, builder => builder.WithEventType<SomeEvent>()));
+            await Register((WebhookId, TargetUrl, builder => builder.WithEventType<SomeEvent>()));
         }
 
         public async Task Because()
