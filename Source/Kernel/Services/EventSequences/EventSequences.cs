@@ -44,7 +44,7 @@ internal sealed class EventSequences(
             request.CorrelationId,
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle(),
-            request.Tags.Select(t => (Tag)t).ToArray(),
+            request.Tags.Select(t => new Concepts.Events.Tag(t)).ToArray(),
             request.ConcurrencyScope.ToChronicle());
 
         return result.ToContract();
