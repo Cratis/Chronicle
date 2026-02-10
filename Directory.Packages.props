@@ -42,7 +42,7 @@
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.0.0" />
