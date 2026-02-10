@@ -143,8 +143,31 @@ public class Reactors : IReactors
     public IReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
-        ThrowIfUnknownReactorId(reactorHandler, id);
-        return reactorHandler!;
+        if (reactorHandler is not null)
+        {
+            return reactorHandler;
+        }
+
+        var request = new HasReactorRequest
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ReactorId = id.Value
+        };
+        var response = _servicesAccessor.Services.Reactors.HasReactor(request).GetAwaiter().GetResult();
+        if (!response.Exists)
+        {
+            ThrowIfUnknownReactorId(null, id);
+        }
+
+        return new ReactorHandler(
+            _eventStore,
+            id,
+            typeof(object),
+            new(response.EventSequenceId!),
+            new NullReactorInvoker(),
+            _causationManager,
+            _identityProvider);
     }
 
     /// <inheritdoc/>
