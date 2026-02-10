@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// Represents an event store.
 /// </summary>
 /// <param name="Name">Name of event store.</param>
-public record EventStore(EventStoreName Name);
+/// <param name="DomainSpecification">Optional domain specification describing the purpose and context.</param>
+public record EventStore(EventStoreName Name, DomainSpecification? DomainSpecification = null);

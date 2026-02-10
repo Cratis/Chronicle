@@ -31,4 +31,12 @@ public interface IEventStores
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task Ensure(EnsureEventStore command);
+
+    /// <summary>
+    /// Set the domain specification for an event store.
+    /// </summary>
+    /// <param name="command">The domain specification command.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task SetDomainSpecification(SetEventStoreDomainSpecification command);
 }

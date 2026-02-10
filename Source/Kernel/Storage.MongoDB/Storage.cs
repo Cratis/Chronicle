@@ -92,6 +92,16 @@ public class Storage(
         return _eventStores[eventStore] = eventStoreStorage;
     }
 
+    /// <inheritdoc/>
+    public async Task SetDomainSpecification(EventStoreName eventStore, DomainSpecification specification)
+    {
+        ThrowIfEventStoreNameIsInvalid(eventStore);
+
+        var collection = GetCollection();
+        var update = Builders<EventStore>.Update.Set(es => es.DomainSpecification, specification);
+        await collection.UpdateOneAsync(_ => _.Name == eventStore, update);
+    }
+
     void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
     {
         if (string.IsNullOrWhiteSpace(eventStore.Value))

@@ -34,4 +34,12 @@ public interface IStorage
     /// <param name="eventStore"><see cref="EventStoreName"/> to get.</param>
     /// <returns>The <see cref="IEventStoreStorage"/> instance.</returns>
     IEventStoreStorage GetEventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Set the domain specification for an event store.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to set the domain specification for.</param>
+    /// <param name="specification">The <see cref="DomainSpecification"/> to set.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetDomainSpecification(EventStoreName eventStore, DomainSpecification specification);
 }
