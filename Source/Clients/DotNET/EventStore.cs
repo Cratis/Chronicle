@@ -250,6 +250,9 @@ public class EventStore : IEventStore
     {
         _logger.RegisterAllArtifacts();
 
+        // Ensure the event store is registered in the system before registering artifacts
+        await _servicesAccessor.Services.EventStores.Ensure(new EnsureEventStore { Name = Name.Value });
+
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
             EventTypes.Register(),
