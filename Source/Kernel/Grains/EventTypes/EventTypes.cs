@@ -57,39 +57,36 @@ public class EventTypes : IEventTypes
     public Type GetClrTypeFor(EventTypeId eventTypeId) => _typeByEventTypeId[eventTypeId];
 
     /// <inheritdoc/>
-    public async Task DiscoverAndRegister()
+    public async Task DiscoverAndRegister(EventStoreName eventStore)
     {
         var eventTypes = _types.All
             .Where(t => t.IsEventType())
             .ToArray();
-        var eventStores = await _storage.GetEventStores();
-        foreach (var eventStore in eventStores)
+
+        var isSystemEventStore = eventStore == EventStoreName.System;
+        _logger.DiscoveringAndRegistering(eventStore, eventTypes.Length);
+
+        foreach (var eventType in eventTypes)
         {
-            var isSystemEventStore = eventStore == EventStoreName.System;
-            _logger.DiscoveringAndRegistering(eventStore, eventTypes.Length);
+            var isForAllEventStores = eventType.IsForAllEventStores();
 
-            foreach (var eventType in eventTypes)
+            // Skip event types for the System event store that are for all event stores
+            if (isSystemEventStore && isForAllEventStores)
             {
-                var isForAllEventStores = eventType.IsForAllEventStores();
-
-                // Skip event types for the System event store that are for all event stores
-                if (isSystemEventStore && isForAllEventStores)
-                {
-                    continue;
-                }
-
-                // Skip system-only event types for non-System event stores
-                if (!isSystemEventStore && !isForAllEventStores)
-                {
-                    continue;
-                }
-
-                var schema = _jsonSchemaGenerator.Generate(eventType);
-                ForceSchemaToBeCamelCase(schema);
-                _schemaByType[eventType] = schema;
-                _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
-                await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema, EventTypeOwner.Server, EventTypeSource.Code);
+                continue;
             }
+
+            // Skip system-only event types for non-System event stores
+            if (!isSystemEventStore && !isForAllEventStores)
+            {
+                continue;
+            }
+
+            var schema = _jsonSchemaGenerator.Generate(eventType);
+            ForceSchemaToBeCamelCase(schema);
+            _schemaByType[eventType] = schema;
+            _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
+            await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema, EventTypeOwner.Server, EventTypeSource.Code);
         }
     }
 
