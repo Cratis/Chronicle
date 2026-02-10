@@ -104,6 +104,7 @@ from DocumentUpdated
 Direct values of various types:
 
 **Boolean:**
+
 ```pdl
 IsActive = true
 IsDeleted = false
@@ -317,6 +318,7 @@ subtract Property by expression
 ```
 
 Examples:
+
 ```pdl
 add Balance by amount
 subtract Stock by quantity
@@ -344,6 +346,7 @@ id expression
 ```
 
 Examples:
+
 ```pdl
 children members identified by userId
 children items identified by lineNumber

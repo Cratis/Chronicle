@@ -371,13 +371,14 @@ The grammar uses indentation to define structure:
 4. **Block Structure**: Each block's content must be indented from its declaration
 
 **Example:**
+
 ```pdl
 projection User => UserReadModel    # Level 0
   from UserCreated                  # Level 1 (INDENT)
     Name = name                     # Level 2 (INDENT)
     Email = email                   # Level 2
                                     # (DEDENT, DEDENT)
-```pdl
+```
 
 ## Validation Rules
 
