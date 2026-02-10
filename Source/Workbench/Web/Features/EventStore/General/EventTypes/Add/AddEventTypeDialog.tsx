@@ -3,7 +3,6 @@
 
 import { DialogResult } from '@cratis/arc.react/dialogs';
 import { CreateEventType } from 'Api/Events';
-import { Button } from 'primereact/button';
 import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';

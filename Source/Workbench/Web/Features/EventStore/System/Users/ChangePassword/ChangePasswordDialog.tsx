@@ -16,7 +16,7 @@ export interface ChangePasswordDialogProps {
 }
 
 export const ChangePasswordDialog = () => {
-    const { request, closeDialog } = useDialogContext<ChangePasswordDialogProps>();
+    const { request } = useDialogContext<ChangePasswordDialogProps>();
     const [password, setPassword] = useState(generatePassword());
     const [confirmPassword, setConfirmPassword] = useState(generatePassword());
     const [showPassword, setShowPassword] = useState(false);
