@@ -9,8 +9,8 @@ public class with_valid_credentials : given.an_oauth_client
 {
     const string ExpectedAccessToken = "test-access-token";
     const int ExpiresInSeconds = 3600;
-    static readonly Uri DiscoveryEndpoint = new("https://authority.com/.well-known/openid-configuration");
-    static readonly Uri TokenEndpoint = new("https://authority.com/oauth/token");
+    static readonly Uri _discoveryEndpoint = new("https://authority.com/.well-known/openid-configuration");
+    static readonly Uri _tokenEndpoint = new("https://authority.com/oauth/token");
 
     OAuthAuthorization _authorization;
     AccessTokenInfo _result;
@@ -22,7 +22,7 @@ public class with_valid_credentials : given.an_oauth_client
             new ClientId("client-id"),
             new ClientSecret("client-secret"));
 
-        SetupSuccessfulDiscoveryResponse(TokenEndpoint.ToString());
+        SetupSuccessfulDiscoveryResponse(_tokenEndpoint.ToString());
         SetupSuccessfulTokenResponse(ExpectedAccessToken, ExpiresInSeconds);
     }
 
@@ -31,6 +31,6 @@ public class with_valid_credentials : given.an_oauth_client
     [Fact] void should_return_access_token() => _result.AccessToken.ShouldEqual(ExpectedAccessToken);
     [Fact] void should_not_be_expired() => _result.IsExpired.ShouldBeFalse();
     [Fact] void should_have_expiration_in_future() => _result.ExpiresAt.ShouldBeGreaterThan(DateTimeOffset.UtcNow);
-    [Fact] void should_request_well_known_configuration() => _messageHandler.Requests[0].RequestUri.ShouldEqual(DiscoveryEndpoint);
-    [Fact] void should_request_token_endpoint_from_configuration() => _messageHandler.Requests[1].RequestUri.ShouldEqual(TokenEndpoint);
+    [Fact] void should_request_well_known_configuration() => _messageHandler.Requests[0].RequestUri.ShouldEqual(_discoveryEndpoint);
+    [Fact] void should_request_token_endpoint_from_configuration() => _messageHandler.Requests[1].RequestUri.ShouldEqual(_tokenEndpoint);
 }
