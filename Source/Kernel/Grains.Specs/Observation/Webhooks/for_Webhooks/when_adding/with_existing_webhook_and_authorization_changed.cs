@@ -23,10 +23,10 @@ public class with_existing_webhook_and_authorization_changed : given.a_webhooks_
 
         var existingDefinition = new WebhookDefinition(
             "test-webhook",
-            "test-owner",
+            WebhookOwner.Client,
             "event-sequence-id",
             [],
-            new WebhookTarget(new Uri("https://example.com/webhook"), [], WebhookAuthorization.NoAuthorization),
+            new WebhookTarget(new WebhookTargetUrl("https://example.com/webhook"), WebhookAuthorization.None, new Dictionary<string, string>()),
             false,
             true);
 
