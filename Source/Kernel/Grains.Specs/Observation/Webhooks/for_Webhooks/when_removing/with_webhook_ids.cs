@@ -25,7 +25,7 @@ public class with_webhook_ids : given.a_webhooks_service_grain
         };
     }
 
-    async Task Because() => await _webhooks.Remove(_request);
+    async Task Because() => await _webhooksService.Remove(_request);
 
     [Fact] void should_append_webhook_removed_event_for_each_webhook() =>
         _eventSequence.Received(2).Append(

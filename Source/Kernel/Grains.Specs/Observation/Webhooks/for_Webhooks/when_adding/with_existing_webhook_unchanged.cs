@@ -10,7 +10,7 @@ using ContractWebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhook
 
 namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.when_adding;
 
-public class with_new_webhook : given.a_webhooks_service_grain
+public class with_existing_webhook_unchanged : given.a_webhooks_service_grain
 {
     IEventSequence _eventSequence;
     IWebhooks _webhooksGrain;
@@ -21,12 +21,21 @@ public class with_new_webhook : given.a_webhooks_service_grain
         _eventSequence = Substitute.For<IEventSequence>();
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventSequence);
 
+        var existingDefinition = new WebhookDefinition(
+            "test-webhook",
+            "test-owner",
+            "event-sequence-id",
+            [],
+            new WebhookTarget(new Uri("https://example.com/webhook"), [], WebhookAuthorization.NoAuthorization),
+            false,
+            true);
+
         _webhooksGrain = Substitute.For<IWebhooks>();
-        _webhooksGrain.GetWebhookDefinitions().Returns([]);
+        _webhooksGrain.GetWebhookDefinitions().Returns([existingDefinition]);
         _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(_webhooksGrain);
 
         _webhookDefinitionComparer.Compare(Arg.Any<WebhookKey>(), Arg.Any<WebhookDefinition>(), Arg.Any<WebhookDefinition>())
-            .Returns(new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.New, null));
+            .Returns(new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Same, null));
 
         _request = new Contracts.Observation.Webhooks.AddWebhooks
         {
@@ -44,10 +53,10 @@ public class with_new_webhook : given.a_webhooks_service_grain
 
     async Task Because() => await _webhooksService.Add(_request);
 
-    [Fact] void should_append_webhook_added_event() =>
-        _eventSequence.Received(1).Append(
-            Arg.Is<EventSourceId>(id => id.Value == "test-webhook"),
-            Arg.Any<WebhookAdded>(),
+    [Fact] void should_not_append_any_events() =>
+        _eventSequence.DidNotReceive().Append(
+            Arg.Any<EventSourceId>(),
+            Arg.Any<object>(),
             Arg.Any<CorrelationId>(),
             Arg.Any<IEnumerable<Causation>>(),
             Arg.Any<Identity>(),

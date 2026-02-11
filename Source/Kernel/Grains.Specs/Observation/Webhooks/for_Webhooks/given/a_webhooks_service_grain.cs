@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.given;
 
 public class a_webhooks_service_grain : Specification
 {
-    internal Services.Observation.Webhooks.Webhooks _webhooks;
+    internal Services.Observation.Webhooks.Webhooks _webhooksService;
     protected IGrainFactory _grainFactory;
     protected IStorage _storage;
     protected IWebhookDefinitionComparer _webhookDefinitionComparer;
@@ -22,6 +22,6 @@ public class a_webhooks_service_grain : Specification
         _webhookDefinitionComparer = Substitute.For<IWebhookDefinitionComparer>();
         _encryption = Substitute.For<IEncryption>();
         _oauthClient = Substitute.For<IOAuthClient>();
-        _webhooks = new Services.Observation.Webhooks.Webhooks(_grainFactory, _storage, _webhookDefinitionComparer, _encryption, _oauthClient);
+        _webhooksService = new Services.Observation.Webhooks.Webhooks(_grainFactory, _storage, _webhookDefinitionComparer, _encryption, _oauthClient);
     }
 }

@@ -22,7 +22,7 @@ public class with_webhook_ids : given.a_webhooks_service_grain
         };
     }
 
-    async Task Because() => await _webhooks.Remove(_request);
+    async Task Because() => await _webhooksService.Remove(_request);
 
     [Fact] void should_get_webhooks_manager_for_event_store() =>
         _grainFactory.Received(1).GetGrain<IWebhooks>(_request.EventStore);
