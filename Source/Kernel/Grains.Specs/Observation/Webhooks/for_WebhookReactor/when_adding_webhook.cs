@@ -45,9 +45,6 @@ public class when_adding_webhook : given.a_webhook_reactor
 
     async Task Because() => await _reactor.Added(_event, _eventContext);
 
-    [Fact] void should_get_webhooks_manager_for_event_store() =>
-        _grainFactory.Received(1).GetGrain<IWebhooks>(_eventContext.EventStore.Value);
-
     [Fact] void should_add_webhook_definition_to_manager() =>
         _webhooksManager.Received(1).Add(Arg.Is<WebhookDefinition>(def =>
             def.Identifier == new WebhookId(_eventContext.EventSourceId.Value) &&

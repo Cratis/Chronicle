@@ -34,6 +34,8 @@ public class with_existing_webhook_and_authorization_changed : given.a_webhooks_
         _webhooksGrain.GetWebhookDefinitions().Returns([existingDefinition]);
         _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(_webhooksGrain);
 
+        _encryption.Encrypt(Arg.Any<string>()).Returns(callInfo => $"encrypted-{callInfo.Arg<string>()}");
+
         var changedProperties = new WebhookDefinitionChangedProperties(
             EventTypesChanged: false,
             TargetUrlChanged: false,
@@ -55,7 +57,17 @@ public class with_existing_webhook_and_authorization_changed : given.a_webhooks_
                 new ContractWebhookDefinition
                 {
                     Identifier = "test-webhook",
-                    IsActive = true
+                    IsActive = true,
+                    Target = new Contracts.Observation.Webhooks.WebhookTarget
+                    {
+                        Url = "https://example.com/webhook",
+                        Headers = new Dictionary<string, string>(),
+                        Authorization = new(new Contracts.Security.BasicAuthorization
+                        {
+                            Username = "test-user",
+                            Password = "test-password"
+                        })
+                    }
                 }
             ]
         };
@@ -63,10 +75,10 @@ public class with_existing_webhook_and_authorization_changed : given.a_webhooks_
 
     async Task Because() => await _webhooksService.Add(_request);
 
-    [Fact] void should_append_authorization_event() =>
+    [Fact] void should_append_basic_authorization_event() =>
         _eventSequence.Received(1).Append(
             Arg.Is<EventSourceId>(id => id.Value == "test-webhook"),
-            Arg.Any<object>(),
+            Arg.Is<BasicAuthorizationSetForWebhook>(auth => auth.Username.Value == "test-user" && auth.Password.Value == "encrypted-test-password"),
             Arg.Any<CorrelationId>(),
             Arg.Any<IEnumerable<Causation>>(),
             Arg.Any<Identity>(),
@@ -75,3 +87,4 @@ public class with_existing_webhook_and_authorization_changed : given.a_webhooks_
             Arg.Any<EventStreamType>(),
             Arg.Any<EventStreamId>());
 }
+
