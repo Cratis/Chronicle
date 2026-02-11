@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Grains.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -36,5 +38,20 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage) 
         _ = storage.GetEventStore(command.Name);
         var namespaces = grainFactory.GetGrain<Grains.Namespaces.INamespaces>(command.Name);
         await namespaces.EnsureDefault();
+
+        if (!string.IsNullOrWhiteSpace(command.Description))
+        {
+            var @event = new Grains.Events.EventStoreDomainSpecified(command.Name, new DomainSpecification(command.Description));
+            var eventLog = grainFactory.GetEventLog();
+            await eventLog.Append(command.Name, @event);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task SetDomainSpecification(SetEventStoreDomainSpecification command)
+    {
+        var @event = new Grains.Events.EventStoreDomainSpecified(command.EventStore, new DomainSpecification(command.Specification));
+        var eventLog = grainFactory.GetEventLog();
+        await eventLog.Append(command.EventStore, @event);
     }
 }

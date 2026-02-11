@@ -29,5 +29,5 @@ public class EventStoreCommands : ControllerBase
     /// <returns>Awaitable task.</returns>
     [HttpPost("add")]
     public Task AddEventStore([FromBody] AddEventStore command) =>
-        _eventStores.Ensure(new() { Name = command.Name });
+        _eventStores.Ensure(new() { Name = command.Name, Description = command.Description });
 }

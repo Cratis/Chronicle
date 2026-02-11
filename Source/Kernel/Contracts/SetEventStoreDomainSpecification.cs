@@ -4,20 +4,20 @@
 namespace Cratis.Chronicle.Contracts;
 
 /// <summary>
-/// Represents the request for ensuring an event store exists.
+/// Represents the command for setting the domain specification of an event store.
 /// </summary>
 [ProtoContract]
-public record EnsureEventStore
+public record SetEventStoreDomainSpecification
 {
     /// <summary>
-    /// The event store to ensure namespaces for.
+    /// Gets or sets the event store name.
     /// </summary>
     [ProtoMember(1)]
-    public string Name { get; set; }
+    public string EventStore { get; set; }
 
     /// <summary>
-    /// Optional domain specification describing the purpose and context of the event store.
+    /// Gets or sets the domain specification.
     /// </summary>
     [ProtoMember(2)]
-    public string? Description { get; set; }
+    public string Specification { get; set; }
 }
