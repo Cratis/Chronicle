@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 /// <summary>
 /// Defines a system that is responsible for supervises webhooks in the system.
 /// </summary>
-public interface IWebhooksManager : IGrainWithStringKey
+public interface IWebhooks : IGrainWithStringKey
 {
     /// <summary>
     /// Ensure the existence of the webhook manager.

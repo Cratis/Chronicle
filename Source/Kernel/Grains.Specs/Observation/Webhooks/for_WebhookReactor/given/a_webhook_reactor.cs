@@ -10,14 +10,14 @@ public class a_webhook_reactor : Specification
     protected WebhookReactor _reactor;
     protected IGrainFactory _grainFactory;
     protected ILogger<WebhookReactor> _logger;
-    protected IWebhooksManager _webhooksManager;
+    protected IWebhooks _webhooksManager;
 
     void Establish()
     {
         _grainFactory = Substitute.For<IGrainFactory>();
         _logger = Substitute.For<ILogger<WebhookReactor>>();
-        _webhooksManager = Substitute.For<IWebhooksManager>();
-        _grainFactory.GetGrain<IWebhooksManager>(Arg.Any<string>()).Returns(_webhooksManager);
+        _webhooksManager = Substitute.For<IWebhooks>();
+        _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(_webhooksManager);
         _reactor = new WebhookReactor(_grainFactory, _logger);
     }
 }

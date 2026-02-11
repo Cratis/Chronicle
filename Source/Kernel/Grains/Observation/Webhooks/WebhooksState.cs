@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Observation.Webhooks;
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 
 /// <summary>
-/// Represents the state of the <see cref="WebhooksManager"/>.
+/// Represents the state of the <see cref="Webhooks"/>.
 /// </summary>
-public class WebhooksManagerState
+public class WebhooksState
 {
     /// <summary>
     /// Gets or sets the webhook definitions.

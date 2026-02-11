@@ -60,7 +60,7 @@ internal sealed class ChronicleServerStartupTask(
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await projectionsManager.Ensure();
 
-            var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventStore);
+            var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
             await webhooksManager.Ensure();
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();

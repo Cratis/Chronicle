@@ -13,15 +13,15 @@ using Orleans.Providers;
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 
 /// <summary>
-/// Represents an implementation of <see cref="IWebhooksManager"/>.
+/// Represents an implementation of <see cref="IWebhooks"/>.
 /// </summary>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.WebhooksManager)]
-public class WebhooksManager(
+public class Webhooks(
     ILocalSiloDetails localSiloDetails,
-    ILogger<WebhooksManager> logger) : Grain<WebhooksManagerState>, IWebhooksManager, IOnBroadcastChannelSubscribed, IRemindable
+    ILogger<Webhooks> logger) : Grain<WebhooksState>, IWebhooks, IOnBroadcastChannelSubscribed, IRemindable
 {
     const string SubscriptionReminderPrefix = "webhook-subscribe:";
     static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);

@@ -11,12 +11,13 @@ using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
+using ContractIWebhooks = Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks;
 using WebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
 
 namespace Cratis.Chronicle.Services.Observation.Webhooks;
 
 /// <summary>
-/// Represents an implementation of <see cref="IWebhooks"/>.
+/// Represents an implementation of <see cref="ContractIWebhooks"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for getting webhook definitions.</param>
@@ -28,13 +29,13 @@ internal sealed class Webhooks(
     IStorage storage,
     IWebhookDefinitionComparer webhookDefinitionComparer,
     IEncryption encryption,
-    IOAuthClient oauthClient) : IWebhooks
+    IOAuthClient oauthClient) : ContractIWebhooks
 {
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(request.EventStore);
+        var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooks>(request.EventStore);
 
         foreach (var webhook in request.Webhooks)
         {

@@ -41,7 +41,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
             @event.IsReplayable,
             @event.IsActive);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.Add(definition);
 
         logger.WebhookAdded(eventContext.EventSourceId, webhookId);
@@ -58,7 +58,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         logger.SettingBasicAuthorizationForWebhook(webhookId);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetAuthorization(webhookId, new BasicAuthorization(@event.Username, @event.Password));
     }
 
@@ -73,7 +73,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         logger.SettingBearerTokenAuthorizationForWebhook(webhookId);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetAuthorization(webhookId, new BearerTokenAuthorization(@event.Token));
     }
 
@@ -88,7 +88,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         logger.SettingOAuthAuthorizationForWebhook(webhookId);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetAuthorization(webhookId, new OAuthAuthorization(@event.Authority, @event.ClientId, @event.ClientSecret));
     }
 
@@ -103,7 +103,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         logger.SettingEventTypesForWebhook(webhookId);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetEventTypes(webhookId, @event.EventTypes);
     }
 
@@ -118,7 +118,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         logger.SettingTargetUrlForWebhook(webhookId);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetTargetUrl(webhookId, @event.TargetUrl);
     }
 
@@ -133,7 +133,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
         logger.SettingTargetHeadersForWebhook(webhookId);
 
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetTargetHeaders(webhookId, @event.TargetHeaders);
     }
 
@@ -148,7 +148,7 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         logger.RemovingWebhook(eventContext.EventSourceId);
 
         var webhookId = new WebhookId(eventContext.EventSourceId.Value);
-        var webhooksManager = grainFactory.GetGrain<IWebhooksManager>(eventContext.EventStore.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.Remove(webhookId);
 
         logger.WebhookRemoved(eventContext.EventSourceId);

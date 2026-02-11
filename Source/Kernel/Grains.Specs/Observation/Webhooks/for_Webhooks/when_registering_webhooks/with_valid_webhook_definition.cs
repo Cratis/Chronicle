@@ -8,13 +8,13 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks.for_Webhooks.when_registe
 
 public class with_valid_webhook_definition : given.a_webhooks_service_grain
 {
-    IWebhooksManager _grainManager;
+    IWebhooks _grainManager;
     Contracts.Observation.Webhooks.AddWebhooks _request;
 
     void Establish()
     {
-        _grainManager = Substitute.For<IWebhooksManager>();
-        _grainFactory.GetGrain<IWebhooksManager>(Arg.Any<string>()).Returns(_grainManager);
+        _grainManager = Substitute.For<IWebhooks>();
+        _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(_grainManager);
 
         _request = new Contracts.Observation.Webhooks.AddWebhooks
         {
@@ -33,7 +33,7 @@ public class with_valid_webhook_definition : given.a_webhooks_service_grain
     async Task Because() => await _webhooks.Add(_request);
 
     [Fact] void should_get_webhooks_manager_for_event_store() =>
-        _grainFactory.Received(1).GetGrain<IWebhooksManager>(_request.EventStore);
+        _grainFactory.Received(1).GetGrain<IWebhooks>(_request.EventStore);
 
     [Fact] void should_add_webhook_to_manager() =>
         _grainManager.Received().Add(Arg.Any<DomainWebhookDefinition>());

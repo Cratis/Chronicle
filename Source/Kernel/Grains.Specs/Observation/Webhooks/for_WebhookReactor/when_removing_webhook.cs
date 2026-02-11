@@ -32,7 +32,7 @@ public class when_removing_webhook : given.a_webhook_reactor
     async Task Because() => await _reactor.Removed(_event, _eventContext);
 
     [Fact] void should_get_webhooks_manager_for_event_store() =>
-        _grainFactory.Received(1).GetGrain<IWebhooksManager>(_eventContext.EventStore.Value);
+        _grainFactory.Received(1).GetGrain<IWebhooks>(_eventContext.EventStore.Value);
 
     [Fact] void should_remove_webhook_from_manager() =>
         _webhooksManager.Received(1).Remove(Arg.Is<WebhookId>(id => id.Value == _webhookId.Value));

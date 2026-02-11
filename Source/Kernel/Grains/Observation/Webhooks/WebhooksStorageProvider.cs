@@ -7,10 +7,10 @@ using Orleans.Storage;
 namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 
 /// <summary>
-/// Represents an implementation of <see cref="IGrainStorage"/> for handling webhooks manager state storage.
+/// Represents an implementation of <see cref="IGrainStorage"/> for handling webhooks state storage.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class WebhooksManagerStorageProvider(IStorage storage) : IGrainStorage
+public class WebhooksStorageProvider(IStorage storage) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -18,7 +18,7 @@ public class WebhooksManagerStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var actualGrainState = (grainState as IGrainState<WebhooksManagerState>)!;
+        var actualGrainState = (grainState as IGrainState<WebhooksState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
         actualGrainState.State.Webhooks = await eventStore.Webhooks.GetAll();
     }
