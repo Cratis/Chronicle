@@ -38,13 +38,12 @@ internal sealed class Projections(
     IServiceProvider serviceProvider) : IProjections
 {
     /// <inheritdoc/>
-    public Task Register(RegisterRequest request, CallContext context = default)
+    public async Task Register(RegisterRequest request, CallContext context = default)
     {
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var projections = request.Projections.Select(_ => _.ToChronicle((Concepts.Projections.ProjectionOwner)(int)request.Owner)).ToArray();
 
-        _ = Task.Run(() => projectionsManager.Register(projections));
-        return Task.CompletedTask;
+        await projectionsManager.Register(projections);
     }
 
     /// <inheritdoc/>
