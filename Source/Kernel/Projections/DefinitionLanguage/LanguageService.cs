@@ -80,5 +80,5 @@ public class LanguageService(
 
     /// <inheritdoc/>
     public string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
-        modelBoundCodeGenerator.Generate(definition, readModelDefinition);
+        modelBoundCodeGenerator.Generate(definition, readModelDefinition).ToFullString();
 }
