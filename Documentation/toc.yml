@@ -12,6 +12,8 @@
   href: read-models/toc.yml
 - name: Projections
   href: projections/toc.yml
+- name: Reactors
+  href: reactors/toc.yml
 - name: Reducers
   href: reducers/toc.yml
 - name: Hosting
