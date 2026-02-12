@@ -59,29 +59,7 @@ public class AddEventTypeAttributeCodeFixProvider : CodeFixProvider
             return;
         }
 
-        ITypeSymbol? typeSymbol = null;
-
-        // Try different node types to find the type symbol
-        if (node is IdentifierNameSyntax identifierName)
-        {
-            var symbolInfo = semanticModel.GetSymbolInfo(identifierName);
-            if (symbolInfo.Symbol is ITypeSymbol type)
-            {
-                typeSymbol = type;
-            }
-            else if (symbolInfo.Symbol is IParameterSymbol parameter)
-            {
-                typeSymbol = parameter.Type;
-            }
-        }
-        else if (node is ParameterSyntax parameterSyntax)
-        {
-            var paramSymbol = semanticModel.GetDeclaredSymbol(parameterSyntax);
-            if (paramSymbol != null)
-            {
-                typeSymbol = paramSymbol.Type;
-            }
-        }
+        var typeSymbol = GetTypeSymbol(node, semanticModel);
 
         if (typeSymbol == null)
         {
@@ -156,5 +134,72 @@ public class AddEventTypeAttributeCodeFixProvider : CodeFixProvider
 
         var newDocument = document.WithSyntaxRoot(newRoot);
         return newDocument.Project.Solution;
+    }
+
+    /// <summary>
+    /// Resolve the event type symbol from a diagnostic node.
+    /// </summary>
+    /// <param name="node">The syntax node from the diagnostic span.</param>
+    /// <param name="semanticModel">The semantic model for symbol lookup.</param>
+    /// <returns>The resolved event type symbol if found.</returns>
+    static ITypeSymbol? GetTypeSymbol(SyntaxNode node, SemanticModel semanticModel)
+    {
+        // Try different node types to find the target type symbol for the diagnostic.
+        return node switch
+        {
+            IdentifierNameSyntax identifierName => GetTypeSymbolFromIdentifier(semanticModel, identifierName),
+            ParameterSyntax parameterSyntax => semanticModel.GetDeclaredSymbol(parameterSyntax)?.Type,
+            ObjectCreationExpressionSyntax objectCreation => semanticModel.GetTypeInfo(objectCreation).Type,
+            ArgumentSyntax argument => semanticModel.GetTypeInfo(argument.Expression).Type,
+            TypeSyntax typeSyntax => semanticModel.GetTypeInfo(typeSyntax).Type,
+            AttributeSyntax attribute => GetTypeSymbolFromAttribute(semanticModel, attribute),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Resolve a type symbol from an identifier or parameter reference.
+    /// </summary>
+    /// <param name="semanticModel">The semantic model for symbol lookup.</param>
+    /// <param name="identifierName">The identifier name to resolve.</param>
+    /// <returns>The resolved type symbol if found.</returns>
+    static ITypeSymbol? GetTypeSymbolFromIdentifier(SemanticModel semanticModel, IdentifierNameSyntax identifierName)
+    {
+        var symbolInfo = semanticModel.GetSymbolInfo(identifierName);
+        if (symbolInfo.Symbol is ITypeSymbol type)
+        {
+            return type;
+        }
+
+        if (symbolInfo.Symbol is IParameterSymbol parameter)
+        {
+            return parameter.Type;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolve the generic event type argument from a model-bound attribute.
+    /// </summary>
+    /// <param name="semanticModel">The semantic model for symbol lookup.</param>
+    /// <param name="attribute">The attribute syntax node.</param>
+    /// <returns>The resolved event type symbol if found.</returns>
+    static ITypeSymbol? GetTypeSymbolFromAttribute(SemanticModel semanticModel, AttributeSyntax attribute)
+    {
+        var name = attribute.Name;
+        var genericName = name switch
+        {
+            GenericNameSyntax generic => generic,
+            QualifiedNameSyntax qualified when qualified.Right is GenericNameSyntax generic => generic,
+            _ => null
+        };
+
+        if (genericName == null || genericName.TypeArgumentList.Arguments.Count == 0)
+        {
+            return null;
+        }
+
+        return semanticModel.GetTypeInfo(genericName.TypeArgumentList.Arguments[0]).Type;
     }
 }

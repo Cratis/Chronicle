@@ -65,7 +65,8 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            var attributeName = attribute.AttributeClass.ConstructedFrom.ToDisplayString();
+            var constructedFrom = attribute.AttributeClass.ConstructedFrom;
+            var attributeName = $"{constructedFrom.ContainingNamespace.ToDisplayString()}.{constructedFrom.MetadataName}";
             if (!ModelBoundProjectionAttributeNames.Contains(attributeName))
             {
                 continue;
