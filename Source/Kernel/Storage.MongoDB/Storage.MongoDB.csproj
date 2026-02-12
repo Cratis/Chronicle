@@ -19,6 +19,7 @@
       <PackageReference Include="Cratis.Arc" />
       <PackageReference Include="Cratis.Arc.Core" />
       <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+    <PackageReference Include="Microsoft.Extensions.Resilience" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />

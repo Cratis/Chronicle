@@ -91,5 +91,6 @@
       <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
     </ItemGroup>
 </Project>

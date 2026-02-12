@@ -27,6 +27,7 @@
       <PackageReference Include="Cratis.Metrics.Roslyn" />
       <PackageReference Include="Cratis.Arc" />
       <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+    <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
       <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
       <PackageReference Include="Microsoft.Orleans.Sdk" />
       <PackageReference Include="Microsoft.Orleans.Reminders" />

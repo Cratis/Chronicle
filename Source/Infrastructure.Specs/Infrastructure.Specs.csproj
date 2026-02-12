@@ -14,5 +14,6 @@
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
     </ItemGroup>
 </Project>
