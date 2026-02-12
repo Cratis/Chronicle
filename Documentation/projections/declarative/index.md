@@ -1,6 +1,58 @@
-# Projections
+# Declarative Projections
 
-Declarative Projections in Cratis allow you to create read models from events stored in the event log. They provide different levels of complexity from simple auto-mapping to sophisticated hierarchical models with joins.
+Declarative projections let you define read models with a fluent, code-first projection builder. They are ideal when you need explicit mapping, joins, or hierarchical projections that go beyond simple attribute mapping.
+
+## Overview
+
+Declarative projections implement `IProjectionFor<TReadModel>` and use an `IProjectionBuilderFor<TReadModel>` to define how events map to read model properties. The builder gives you control over mapping, relationships, and event context while keeping the projection definition separate from the read model type.
+
+## Basic Example
+
+```csharp
+using Cratis.Chronicle.Projections;
+
+[EventType]
+public record UserRegistered(string Name, string Email, DateTimeOffset RegisteredAt);
+
+public record UserProfile(string Name, string Email, DateTimeOffset RegisteredAt);
+
+public class UserProfileProjection : IProjectionFor<UserProfile>
+{
+  public void Define(IProjectionBuilderFor<UserProfile> builder) => builder
+    .From<UserRegistered>();
+}
+```
+
+Auto-mapping is enabled by default at the top level, so matching properties are mapped automatically. When you need explicit mappings, you can use `.Set()`, `.Add()`, `.Subtract()`, and other builder operations.
+
+## Discovery
+
+Projection types are discovered by implementing `IProjectionFor<TReadModel>`. Event types used in projection definitions must be marked with `[EventType]`.
+
+## Key Features
+
+- **Auto mapping by default** with the option to turn it off or override per event
+- **Explicit property mappings** for custom transformations
+- **Hierarchies** with child collections and nested projections
+- **Joins** across streams for richer read models
+- **FromEvery** for applying mappings to all events
+- **Event context** access for timestamps, sequence numbers, and IDs
+- **Event sequence selection** for sourcing from non-default sequences
+- **Passive and not rewindable projections** for specialized observation behavior
+
+## When to Use
+
+Use declarative projections when:
+
+- You need control over mapping logic and transformations
+- You need relationships or hierarchical read models
+- You want to share a projection definition across multiple read models
+
+Use model-bound projections when:
+
+- The mapping is straightforward and attribute-based
+- You want to keep projection metadata close to the read model
+- You prefer concise, declarative attributes over fluent definitions
 
 ## Projection recipes
 
