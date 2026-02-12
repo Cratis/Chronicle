@@ -33,7 +33,7 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
             return plainText;
         }
 
-        var certificate = LoadCertificate();
+        using var certificate = LoadCertificate();
         using var rsa = certificate.GetRSAPublicKey();
         if (rsa is not null)
         {
@@ -53,7 +53,7 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
             return encryptedText;
         }
 
-        var certificate = LoadCertificate();
+        using var certificate = LoadCertificate();
         using var rsa = certificate.GetRSAPrivateKey();
         if (rsa is not null)
         {
@@ -72,9 +72,15 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
         // If a certificate is configured and exists, use it
         if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
         {
+#if NET8_0
+            return new X509Certificate2(
+                encryptionCert.CertificatePath,
+                encryptionCert.CertificatePassword);
+#else
             return X509CertificateLoader.LoadPkcs12FromFile(
                 encryptionCert.CertificatePath,
                 encryptionCert.CertificatePassword);
+#endif
         }
 
 #if DEVELOPMENT
@@ -95,7 +101,11 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
         // If the certificate already exists, load it
         if (File.Exists(certificatePath))
         {
+#if NET8_0
+            return new X509Certificate2(certificatePath, DefaultCertificatePassword);
+#else
             return X509CertificateLoader.LoadPkcs12FromFile(certificatePath, DefaultCertificatePassword);
+#endif
         }
 
         // Generate a new self-signed certificate for development
@@ -123,7 +133,11 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
         var pfxData = certificate.Export(X509ContentType.Pfx, DefaultCertificatePassword);
         File.WriteAllBytes(certificatePath, pfxData);
 
+#if NET8_0
+        return new X509Certificate2(certificatePath, DefaultCertificatePassword);
+#else
         return X509CertificateLoader.LoadPkcs12FromFile(certificatePath, DefaultCertificatePassword);
+#endif
     }
 #endif
 }
