@@ -40,6 +40,54 @@ public class ModelBoundCodeGenerator
             .NormalizeWhitespace();
     }
 
+    static string GetEventPropertyName(string expression)
+    {
+        if (expression == WellKnownExpressions.EventSourceId) return "Id";
+        return expression;
+    }
+
+    static string GetCSharpType(JsonSchemaProperty propertySchema)
+    {
+        return propertySchema.Type switch
+        {
+            JsonObjectType.String => "string",
+            JsonObjectType.Integer => "int",
+            JsonObjectType.Number => "decimal",
+            JsonObjectType.Boolean => "bool",
+            _ => "object"
+        };
+    }
+
+    static string NormalizeExpression(string expression)
+    {
+        if (expression.StartsWith("+=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
+        }
+
+        if (expression.StartsWith("-=", StringComparison.Ordinal))
+        {
+            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
+        }
+
+        if (expression.Equals("increment", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Increment;
+        }
+
+        if (expression.Equals("decrement", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Decrement;
+        }
+
+        if (expression.Equals("count", StringComparison.Ordinal))
+        {
+            return WellKnownExpressions.Count;
+        }
+
+        return expression;
+    }
+
     RecordDeclarationSyntax CreateRecordDeclaration(
         string readModelName,
         JsonSchema schema,
@@ -256,54 +304,6 @@ public class ModelBoundCodeGenerator
                         IdentifierName(eventTypeName))));
 
         return Attribute(attribute);
-    }
-
-    static string GetEventPropertyName(string expression)
-    {
-        if (expression == WellKnownExpressions.EventSourceId) return "Id";
-        return expression;
-    }
-
-    static string GetCSharpType(JsonSchemaProperty propertySchema)
-    {
-        return propertySchema.Type switch
-        {
-            JsonObjectType.String => "string",
-            JsonObjectType.Integer => "int",
-            JsonObjectType.Number => "decimal",
-            JsonObjectType.Boolean => "bool",
-            _ => "object"
-        };
-    }
-
-    static string NormalizeExpression(string expression)
-    {
-        if (expression.StartsWith("+=", StringComparison.Ordinal))
-        {
-            return $"{WellKnownExpressions.Add}({expression[2..].Trim()})";
-        }
-
-        if (expression.StartsWith("-=", StringComparison.Ordinal))
-        {
-            return $"{WellKnownExpressions.Subtract}({expression[2..].Trim()})";
-        }
-
-        if (expression.Equals("increment", StringComparison.Ordinal))
-        {
-            return WellKnownExpressions.Increment;
-        }
-
-        if (expression.Equals("decrement", StringComparison.Ordinal))
-        {
-            return WellKnownExpressions.Decrement;
-        }
-
-        if (expression.Equals("count", StringComparison.Ordinal))
-        {
-            return WellKnownExpressions.Count;
-        }
-
-        return expression;
     }
 
     sealed class PropertyInfo
