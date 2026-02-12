@@ -23,7 +23,7 @@ public class when_saving_and_reading_job(context context) : Given<context>(conte
             {
                 Id = JobId,
                 Details = "Test Job",
-                Type = typeof(IntegrationJobRequest),
+                Type = typeof(IntegrationJob),
                 Status = JobStatus.Running,
                 Created = DateTimeOffset.UtcNow,
                 StatusChanges =
