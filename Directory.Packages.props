@@ -37,7 +37,7 @@
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.3" />
     <!-- Orleans -->
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.0.1" />
