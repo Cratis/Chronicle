@@ -203,9 +203,14 @@ public class ModelBoundCodeGenerator
             attributes.Add(CreateSimpleAttribute("Count", countFrom));
         }
 
+        // SetFrom is only needed when the event property name differs from the model property name
+        // When they match, AutoMap handles it through the class-level [FromEvent<>] attribute
         foreach (var setFrom in propInfo.SetFroms)
         {
-            attributes.Add(CreateMappingAttribute("SetFrom", setFrom.EventTypeName, setFrom.EventPropertyName, propName));
+            if (setFrom.EventPropertyName != propName)
+            {
+                attributes.Add(CreateMappingAttribute("SetFrom", setFrom.EventTypeName, setFrom.EventPropertyName, propName));
+            }
         }
 
         return attributes;
