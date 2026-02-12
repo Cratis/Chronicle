@@ -102,9 +102,9 @@ public class Storage(
 
     void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
     {
-        if (string.IsNullOrWhiteSpace(eventStore.Value))
+        if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
         {
-            throw new InvalidEventStoreName(eventStore, "EventStoreName cannot be empty or whitespace.");
+            throw new InvalidEventStoreName(eventStore!, "EventStoreName cannot be null, empty or whitespace.");
         }
 
         if (eventStore == EventStoreName.NotSet)

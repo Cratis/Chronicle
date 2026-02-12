@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage;
 /// </summary>
 /// <param name="eventStoreName">The invalid event store name.</param>
 /// <param name="reason">The reason why the name is invalid.</param>
-public class InvalidEventStoreName(EventStoreName eventStoreName, string reason) : Exception($"Invalid event store name '{eventStoreName.Value}': {reason}")
+public class InvalidEventStoreName(EventStoreName eventStoreName, string reason) : Exception($"Invalid event store name '{eventStoreName?.Value ?? "<null>"}': {reason}")
 {
     /// <summary>
     /// Gets the invalid event store name.
