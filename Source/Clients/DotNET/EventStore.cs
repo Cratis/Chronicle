@@ -163,6 +163,7 @@ public class EventStore : IEventStore
             namingPolicy,
             projections,
             Reducers,
+            EventTypes,
             schemaGenerator,
             jsonSerializerOptions,
             readModelsWatcherManager,
@@ -248,6 +249,9 @@ public class EventStore : IEventStore
     public async Task RegisterAll()
     {
         _logger.RegisterAllArtifacts();
+
+        // Ensure the event store is registered in the system before registering artifacts
+        await _servicesAccessor.Services.EventStores.Ensure(new EnsureEventStore { Name = Name.Value });
 
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(

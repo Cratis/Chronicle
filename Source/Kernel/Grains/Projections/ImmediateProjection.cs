@@ -80,6 +80,11 @@ public class ImmediateProjection(
 
         try
         {
+            if (State.ReadModel is null)
+            {
+                throw new ProjectionDefinitionNotSet(new ProjectionKey(_projectionKey!.ProjectionId, _projectionKey.EventStore));
+            }
+
             var readModelKey = new ReadModelGrainKey(State.ReadModel, _projectionKey.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             _readModelDefinition = await readModel.GetDefinition();

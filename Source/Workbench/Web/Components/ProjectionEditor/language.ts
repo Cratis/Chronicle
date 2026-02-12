@@ -3,7 +3,7 @@
 
 import type { languages } from 'monaco-editor';
 
-export const languageId = 'projection-definition-language';
+export const languageId = 'projection-declaration-language';
 
 // Keywords for the Chronicle Projection Declaration Language
 const KEYWORDS = [
@@ -89,7 +89,7 @@ export const configuration: languages.LanguageConfiguration = {
 
 export const monarchLanguage: languages.IMonarchLanguage = {
     defaultToken: '',
-    tokenPostfix: '.chronicle-projection-definition-language',
+    tokenPostfix: '.chronicle-projection-declaration-language',
 
     keywords: KEYWORDS,
     builtins: BUILTINS,

@@ -137,6 +137,11 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
+        if (State.ReadModel is null)
+        {
+            return;
+        }
+
         var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
         var eventStoreStorage = storage.GetEventStore(_key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();

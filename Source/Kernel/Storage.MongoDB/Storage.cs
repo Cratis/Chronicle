@@ -52,6 +52,14 @@ public class Storage(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> HasEventStore(EventStoreName eventStore)
+    {
+        var collection = GetCollection();
+        var count = await collection.CountDocumentsAsync(_ => _.Name == eventStore);
+        return count > 0;
+    }
+
+    /// <inheritdoc/>
     public ISubject<IEnumerable<EventStoreName>> ObserveEventStores()
     {
         var collection = GetCollection();
@@ -94,9 +102,9 @@ public class Storage(
 
     void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
     {
-        if (string.IsNullOrWhiteSpace(eventStore.Value))
+        if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
         {
-            throw new InvalidEventStoreName(eventStore, "EventStoreName cannot be empty or whitespace.");
+            throw new InvalidEventStoreName(eventStore!, "EventStoreName cannot be null, empty or whitespace.");
         }
 
         if (eventStore == EventStoreName.NotSet)

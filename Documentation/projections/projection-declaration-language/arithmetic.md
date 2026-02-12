@@ -8,7 +8,7 @@ The `add` operation increases a property by a specified amount:
 
 ```pdl
 add {Property} by {expression}
-```pdl
+```
 
 ### Example
 
@@ -16,7 +16,7 @@ add {Property} by {expression}
 from PaymentReceived
   add Balance by amount
   LastPayment = $eventContext.occurred
-```pdl
+```
 
 ## Subtract
 
@@ -24,7 +24,7 @@ The `subtract` operation decreases a property by a specified amount:
 
 ```pdl
 subtract {Property} by {expression}
-```pdl
+```
 
 ### Example
 
@@ -32,7 +32,7 @@ subtract {Property} by {expression}
 from WithdrawalMade
   subtract Balance by amount
   LastWithdrawal = $eventContext.occurred
-```pdl
+```
 
 ## Expression Values
 
@@ -50,7 +50,7 @@ from OrderPlaced
   add TotalRevenue by total
   add OrderCount by 1
   increment TotalOrders
-```pdl
+```
 
 ## Examples
 
@@ -72,7 +72,7 @@ projection Account => AccountReadModel
 
   from InterestApplied
     add Balance by interestAmount
-```pdl
+```
 
 ### Loyalty Points
 
@@ -88,7 +88,7 @@ projection Customer => CustomerReadModel
   from PointsRedeemed
     subtract Points by pointsUsed
     LastRedemption = $eventContext.occurred
-```pdl
+```
 
 ### Inventory with Variable Quantities
 
@@ -107,7 +107,7 @@ projection Product => ProductReadModel
 
   from StockAdjusted
     add StockLevel by adjustmentAmount
-```pdl
+```
 
 ### Budget Tracking
 
@@ -125,7 +125,7 @@ projection Budget => BudgetReadModel
   from BudgetIncreased
     add AllocatedAmount by additionalAmount
     add RemainingAmount by additionalAmount
-```pdl
+```
 
 ### Order Totals
 
@@ -148,7 +148,7 @@ projection Order => OrderReadModel
   from DiscountApplied
     subtract Subtotal by discountAmount
     subtract Total by discountAmount
-```pdl
+```
 
 ### Gaming Score
 
@@ -168,7 +168,7 @@ projection PlayerScore => PlayerScoreReadModel
   from BonusAwarded
     add Score by bonusPoints
     add BonusTotal by bonusPoints
-```pdl
+```
 
 ## Nested Properties
 
@@ -178,7 +178,7 @@ You can use nested properties from events:
 from TransactionProcessed
   add Balance by transaction.amount
   add TotalTransactions by 1
-```pdl
+```
 
 ## With Counters
 
@@ -190,7 +190,7 @@ from SaleCompleted
   add TaxCollected by taxAmount
   increment SalesCount
   count CompletedTransactions
-```pdl
+```
 
 ## Property Requirements
 

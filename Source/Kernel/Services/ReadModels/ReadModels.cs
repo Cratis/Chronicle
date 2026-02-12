@@ -12,6 +12,7 @@ using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
+using NJsonSchema;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
@@ -55,8 +56,31 @@ internal sealed class ReadModels(
     public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
     {
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-        var readModelDefinition = request.ReadModel.ToChronicle(ReadModelOwner.None, ReadModelSource.User);
-        await readModelsManager.UpdateDefinition(readModelDefinition);
+        var existingDefinitions = await readModelsManager.GetDefinitions();
+        var existingDefinition = existingDefinitions.FirstOrDefault(d => d.Identifier == request.ReadModel.Type.Identifier) ??
+            throw new InvalidOperationException($"Read model with identifier '{request.ReadModel.Type.Identifier}' not found.");
+
+        var schema = await JsonSchema.FromJsonAsync(request.ReadModel.Schema);
+        var indexes = request.ReadModel.Indexes
+            .Select(i => new Concepts.ReadModels.IndexDefinition(i.PropertyPath))
+            .ToArray();
+
+        var updatedDefinition = new Concepts.ReadModels.ReadModelDefinition(
+            existingDefinition.Identifier,
+            request.ReadModel.ContainerName,
+            existingDefinition.DisplayName,
+            existingDefinition.Owner,
+            existingDefinition.Source,
+            existingDefinition.ObserverType,
+            existingDefinition.ObserverIdentifier,
+            existingDefinition.Sink,
+            new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
+            {
+                { (Concepts.ReadModels.ReadModelGeneration)request.ReadModel.Type.Generation, schema }
+            },
+            indexes);
+
+        await readModelsManager.UpdateDefinition(updatedDefinition);
     }
 
     /// <inheritdoc/>

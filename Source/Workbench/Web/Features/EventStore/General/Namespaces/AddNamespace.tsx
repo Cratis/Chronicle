@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import { Button } from 'primereact/button';
 import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
@@ -23,20 +22,13 @@ export const AddNamespace = () => {
     const [name, setName] = useState('');
     const { closeDialog } = useDialogContext<AddNamespaceRequest, AddNamespaceResponse>();
 
-    const customButtons = (
-        <>
-            <Button
-                label={strings.general.buttons.ok}
-                icon="pi pi-check"
-                onClick={() => closeDialog(DialogResult.Ok, AddNamespaceResponse.Ok(name))}
-                disabled={!name.trim()}
-                autoFocus />
-            <Button label={strings.general.buttons.cancel} icon="pi pi-times" className="p-button-text" onClick={() => closeDialog(DialogResult.Cancelled, AddNamespaceResponse.Canceled)} />
-        </>
-    );
+    const handleClose = (result: DialogResult) => {
+        closeDialog(result, result === DialogResult.Ok ? AddNamespaceResponse.Ok(name) : AddNamespaceResponse.Canceled);
+        return true;
+    };
 
     return (
-        <Dialog title={strings.eventStore.general.namespaces.dialogs.addNamespace.title} onClose={(result) => closeDialog(result, result === DialogResult.Ok ? AddNamespaceResponse.Ok(name) : AddNamespaceResponse.Canceled)} buttons={customButtons} width="20vw">
+        <Dialog title={strings.eventStore.general.namespaces.dialogs.addNamespace.title} onClose={handleClose} isValid={name.trim() !== ''} width="20vw">
             <div className="card flex flex-column md:flex-row gap-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">

@@ -118,14 +118,14 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task<IList<Contracts.Security.User>> GetAll()
+    public async Task<IList<User>> GetAll()
     {
         var users = await storage.System.Users.GetAll();
         return users.Select(ToContract).ToList();
     }
 
     /// <inheritdoc/>
-    public IObservable<IList<Contracts.Security.User>> ObserveAll(CallContext context = default) =>
+    public IObservable<IList<User>> ObserveAll(CallContext context = default) =>
         storage.System.Users
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
@@ -144,7 +144,7 @@ internal sealed class Users(
         };
     }
 
-    static Contracts.Security.User ToContract(Storage.Security.User user) => new()
+    static User ToContract(Storage.Security.User user) => new()
     {
         Id = user.Id,
         Username = user.Username,

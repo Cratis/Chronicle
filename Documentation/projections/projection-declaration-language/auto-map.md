@@ -12,7 +12,7 @@ By default, all property mappings automatically copy matching properties:
 projection User => UserReadModel
   from UserRegistered
     IsActive = true
-```pdl
+```
 
 This auto-maps all matching properties from `UserRegistered`, then applies the explicit `IsActive` mapping.
 
@@ -31,7 +31,7 @@ projection User => UserReadModel
   from UserRegistered
     Name = name
     Email = email
-```pdl
+```
 
 All properties must be mapped explicitly.
 
@@ -49,7 +49,7 @@ projection User => UserReadModel
   from UserUpdated
     # AutoMap still enabled here
     UpdatedAt = $eventContext.occurred
-```pdl
+```
 
 ### Join-Level Disable
 
@@ -60,7 +60,7 @@ join Group on GroupId
   events GroupCreated, GroupRenamed
   no automap
   Name = name
-```pdl
+```
 
 ### Children-Level Disable
 
@@ -73,7 +73,7 @@ children members id userId
   from UserAddedToGroup
     UserId = userId
     Role = role
-```pdl
+```
 
 ## Combining with Explicit Mappings
 
@@ -83,7 +83,7 @@ AutoMap runs first, then explicit mappings override or add properties:
 from UserRegistered
   IsActive = true
   CreatedAt = $eventContext.occurred
-```pdl
+```
 
 If the event has `Name` and `Email` properties, they're auto-mapped. Then `IsActive` and `CreatedAt` are set explicitly.
 
@@ -95,11 +95,13 @@ AutoMap matches properties when:
 - Types are compatible
 
 Example event:
+
 ```csharp
 public record UserRegistered(string Name, string Email, int Age);
-```pdl
+```
 
 Example read model:
+
 ```csharp
 public class UserReadModel
 {
@@ -108,7 +110,7 @@ public class UserReadModel
     public int Age { get; set; }
     public bool IsActive { get; set; }
 }
-```pdl
+```
 
 With default AutoMap, `Name`, `Email`, and `Age` are automatically copied. `IsActive` must be set explicitly.
 
@@ -130,7 +132,7 @@ projection Product => ProductReadModel
   from ProductCreated
     # Name, Price, Description auto-mapped if they exist
     CreatedAt = $eventContext.occurred
-```pdl
+```
 
 ### Disable AutoMap Entirely
 
@@ -143,7 +145,7 @@ projection Order => OrderReadModel
     CustomerId = customerId
     Total = total
     Status = "Pending"
-```pdl
+```
 
 ### Mixed Approach
 
@@ -158,7 +160,7 @@ projection User => UserReadModel
     # Must map everything explicitly
     Name = fullName
     Email = emailAddress
-```pdl
+```
 
 ### Projection-Level Disable with Event-Level Override
 
@@ -174,7 +176,7 @@ projection User => UserReadModel
     # Still disabled - no automap is inherited
     IsActive = false
     DeactivatedAt = $eventContext.occurred
-```pdl
+```
 
 ### Join with Disabled AutoMap
 
@@ -187,7 +189,7 @@ projection Order => OrderReadModel
     events CustomerCreated, CustomerUpdated
     no automap
     CustomerName = name
-```pdl
+```
 
 ### Children with Selective Disable
 
@@ -202,7 +204,7 @@ projection Group => GroupReadModel
     from UserAddedToGroup
       UserId = userId
       Status = "Active"
-```pdl
+```
 
 ## When to Disable AutoMap
 

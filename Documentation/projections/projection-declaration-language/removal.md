@@ -8,7 +8,7 @@ Remove a projection instance when a specific event occurs:
 
 ```pdl
 remove with {EventType}
-```pdl
+```
 
 ### Basic Example
 
@@ -19,7 +19,7 @@ projection User => UserReadModel
     Email = email
 
   remove with UserDeleted
-```pdl
+```
 
 When a `UserDeleted` event occurs, the entire `UserReadModel` instance is removed.
 
@@ -33,7 +33,7 @@ projection User => UserReadModel
     Name = name
 
   remove with UserDeleted key userId
-```pdl
+```
 
 ### In Children
 
@@ -47,7 +47,7 @@ children members identified by userId
 
   remove with UserRemovedFromGroup key userId
     parent groupId
-```pdl
+```
 
 The `parent` key ensures the correct child is removed from the correct parent.
 
@@ -57,7 +57,7 @@ Remove a projection instance when a joined event occurs:
 
 ```pdl
 remove via join on {EventType}
-```pdl
+```
 
 ### Basic Example
 
@@ -71,7 +71,7 @@ projection UserProfile => UserProfileReadModel
     Name = name
 
   remove via join on UserDeleted
-```pdl
+```
 
 When a `UserDeleted` event occurs, any `UserProfileReadModel` instances with matching `UserId` are removed.
 
@@ -79,7 +79,7 @@ When a `UserDeleted` event occurs, any `UserProfileReadModel` instances with mat
 
 ```pdl
 remove via join on UserDeleted key userId
-```pdl
+```
 
 ### In Children
 
@@ -96,7 +96,7 @@ children groups identified by groupId
     Name = name
 
   remove via join on GroupDeleted
-```pdl
+```
 
 When a `GroupDeleted` event occurs, the child group is removed from the user's groups collection.
 
@@ -116,7 +116,7 @@ projection User => UserReadModel
     UpdatedAt = $eventContext.occurred
 
   remove with UserDeleted
-```pdl
+```
 
 ### Group with Member Removal
 
@@ -137,7 +137,7 @@ projection Group => GroupReadModel
 
     remove with UserRemovedFromGroup key userId
       parent groupId
-```pdl
+```
 
 ### Product with Category Removal
 
@@ -152,7 +152,7 @@ projection Product => ProductReadModel
     CategoryName = name
 
   remove via join on CategoryDeleted
-```pdl
+```
 
 When the category is deleted, all products in that category are removed.
 
@@ -183,7 +183,7 @@ projection Order => OrderReadModel
 
   from LineItemRemoved
     subtract Total by total
-```pdl
+```
 
 ### User Profile with Account Deletion
 
@@ -204,7 +204,7 @@ projection UserProfile => UserProfileReadModel
     Email = email
 
   remove via join on UserAccountDeleted
-```pdl
+```
 
 ### Subscription with Plan Removal
 
@@ -223,7 +223,7 @@ projection Subscription => SubscriptionReadModel
   remove with SubscriptionCancelled
 
   remove via join on PlanDiscontinued
-```pdl
+```
 
 Both `SubscriptionCancelled` and `PlanDiscontinued` will remove the subscription.
 
@@ -245,7 +245,7 @@ projection Task => TaskReadModel
     AssigneeName = name
 
   remove via join on ProjectDeleted
-```pdl
+```
 
 When the project is deleted, all associated tasks are removed.
 
@@ -272,7 +272,7 @@ projection Department => DepartmentReadModel
   remove with DepartmentDisbanded
 
   remove via join on CompanyDissolved
-```pdl
+```
 
 Employees can be removed individually, the department can be disbanded, or everything is removed if the company is dissolved.
 
@@ -283,7 +283,7 @@ When removing children, the parent key ensures the correct instance:
 ```pdl
 remove with ChildRemoved key childId
   parent parentId
-```pdl
+```
 
 This removes the child with `childId` from the parent identified by `parentId`.
 
@@ -311,7 +311,7 @@ projection Document => DocumentReadModel
 
   remove with DocumentDeleted
   remove via join on UserAccountClosed
-```pdl
+```
 
 The document is removed if either it's deleted or the owner's account is closed.
 
@@ -339,7 +339,7 @@ projection User => UserReadModel
   from UserDeleted
     IsDeleted = true
     DeletedAt = $eventContext.occurred
-```pdl
+```
 
 ### Cascade Delete
 
@@ -362,7 +362,7 @@ projection Order => OrderReadModel
     remove via join on ProductDiscontinued
 
   remove via join on CustomerAccountClosed
-```pdl
+```
 
 ### Conditional Removal
 
@@ -376,7 +376,7 @@ projection Subscription => SubscriptionReadModel
   remove with SubscriptionCancelled
   remove with PaymentFailed
   remove with TrialExpired
-```pdl
+```
 
 ## Differences Between Remove With and Remove Via Join
 

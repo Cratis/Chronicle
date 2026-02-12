@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Storage;
+using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.CodeAnalysis;
 
@@ -18,17 +19,20 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 /// <param name="localSiloDetails">The local silo details.</param>
 /// <param name="storage">The <see cref="IStorage"/> to use for working with underlying storage.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use for creating reactor grains.</param>
+[Singleton]
 public class Reactors(
     ITypes types,
     ILocalSiloDetails localSiloDetails,
     IStorage storage,
     IGrainFactory grainFactory) : IReactors
 {
+    readonly IEnumerable<Type> _reactorTypes = types.FindMultiple<IReactor>().Where(t => t != typeof(Reactor)).ToArray();
+
     /// <inheritdoc/>
     public async Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
     {
         var subscribeMethod = GetType().GetMethod(nameof(Subscribe), BindingFlags.Instance | BindingFlags.NonPublic)!;
-        foreach (var reactor in types.FindMultiple<IReactor>().Where(t => t != typeof(Reactor)))
+        foreach (var reactor in _reactorTypes)
         {
             await (subscribeMethod
                 .MakeGenericMethod(reactor)

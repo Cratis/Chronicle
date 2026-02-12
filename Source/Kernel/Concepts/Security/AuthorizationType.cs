@@ -6,18 +6,25 @@ namespace Cratis.Chronicle.Concepts.Security;
 /// <summary>
 /// Represents an authorization type.
 /// </summary>
-/// <param name="Value">The underlying value.</param>
-public record AuthorizationType(string Value) : ConceptAs<string>(Value)
+public enum AuthorizationType
 {
     /// <summary>
-    /// Represents an unset <see cref="AuthorizationType"/>.
+    /// No authorization.
     /// </summary>
-    public static readonly AuthorizationType NotSet = new(string.Empty);
+    None = 0,
 
     /// <summary>
-    /// Implicitly converts from <see cref="string"/> to <see cref="AuthorizationType"/>.
+    /// Basic authentication.
     /// </summary>
-    /// <param name="value">The <see cref="string"/> to convert.</param>
-    /// <returns>The converted <see cref="AuthorizationType"/>.</returns>
-    public static implicit operator AuthorizationType(string value) => new(value);
+    Basic = 1,
+
+    /// <summary>
+    /// Bearer token authentication.
+    /// </summary>
+    Bearer = 2,
+
+    /// <summary>
+    /// OAuth authentication.
+    /// </summary>
+    OAuth = 3
 }

@@ -28,6 +28,7 @@ public interface IEventTypes
     /// <summary>
     /// Discovers and registers the event types for the kernel.
     /// </summary>
+    /// <param name="eventStore">The event store to discover and register event types for.</param>
     /// <returns>Awaitable task.</returns>
-    Task DiscoverAndRegister();
+    Task DiscoverAndRegister(Concepts.EventStoreName eventStore);
 }

@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { Dropdown } from 'primereact/dropdown';
-import { OverlayPanel } from 'primereact/overlaypanel';
 import { Allotment } from 'allotment';
 import { Page, ReadModelInstances } from 'Components';
 import { AllReadModelDefinitions, ReadModelDefinition } from 'Api/ReadModelTypes';
@@ -34,7 +33,6 @@ const ReadModelsContent = () => {
     const params = useReadModelsParams();
     const navigate = useNavigate();
     const [allReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
-    const filterPanelRef = useRef<OverlayPanel>(null);
 
     const [selectedReadModel, setSelectedReadModel] = useState<ReadModelDefinition | null>(null);
     const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
@@ -74,10 +72,6 @@ const ReadModelsContent = () => {
 
     const handleOccurrenceChange = useCallback((occurrence: string | null) => {
         setSelectedOccurrence(occurrence);
-
-        if (occurrence) {
-            filterPanelRef.current?.hide();
-        }
     }, []);
 
     const occurrenceOptions = useMemo(() => {
@@ -165,12 +159,29 @@ const ReadModelsContent = () => {
         <Page title={strings.eventStore.namespaces.readModels.title}>
             <div className="px-4 py-4">
                 <Menubar
+                    start={(
+                        <div className="flex items-center gap-3">
+                            <Dropdown
+                                id="readModel"
+                                value={selectedReadModel}
+                                options={allReadModels.data || []}
+                                onChange={(e) => handleReadModelChange(e.value)}
+                                optionLabel="containerName"
+                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
+                                className="w-16rem"
+                            />
+                            <Dropdown
+                                id="occurrence"
+                                value={selectedOccurrence}
+                                options={occurrenceOptions}
+                                onChange={(e) => handleOccurrenceChange(e.value)}
+                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
+                                className="w-16rem"
+                                disabled={!selectedReadModel}
+                            />
+                        </div>
+                    )}
                     model={[
-                        {
-                            label: strings.eventStore.namespaces.readModels.actions.filter,
-                            icon: <faIcons.FaFilter className='mr-2' />,
-                            command: (e) => filterPanelRef.current?.toggle(e.originalEvent)
-                        },
                         {
                             label: strings.eventStore.namespaces.readModels.actions.query,
                             icon: <faIcons.FaArrowsRotate className='mr-2' />,
@@ -187,34 +198,6 @@ const ReadModelsContent = () => {
                         }
                     ]}
                 />
-                <OverlayPanel ref={filterPanelRef}>
-                    <div className="flex flex-column gap-3">
-                        <div>
-                            <label htmlFor="readModel" className="block mb-2 font-semibold">{strings.eventStore.namespaces.readModels.labels.readModel}</label>
-                            <Dropdown
-                                id="readModel"
-                                value={selectedReadModel}
-                                options={allReadModels.data || []}
-                                onChange={(e) => handleReadModelChange(e.value)}
-                                optionLabel="containerName"
-                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
-                                className="w-full"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="occurrence" className="block mb-2 font-semibold">{strings.eventStore.namespaces.readModels.labels.occurrence}</label>
-                            <Dropdown
-                                id="occurrence"
-                                value={selectedOccurrence}
-                                options={occurrenceOptions}
-                                onChange={(e) => handleOccurrenceChange(e.value)}
-                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
-                                className="w-full"
-                                disabled={!selectedReadModel}
-                            />
-                        </div>
-                    </div>
-                </OverlayPanel>
             </div>
 
             <div className="h-full" style={{ height: '100%' }}>

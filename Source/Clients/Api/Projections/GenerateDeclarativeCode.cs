@@ -11,8 +11,9 @@ namespace Cratis.Chronicle.Api.Projections;
 /// <param name="EventStore">The event store the projection targets.</param>
 /// <param name="Namespace">The namespace the projection targets.</param>
 /// <param name="Declaration">The projection declaration language representation of the projection.</param>
+/// <param name="DraftReadModel">Optional draft read model definition to use for code generation.</param>
 [Command]
-public record GenerateDeclarativeCode(string EventStore, string Namespace, string Declaration)
+public record GenerateDeclarativeCode(string EventStore, string Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
 {
     /// <summary>
     /// Handles the generate declarative code request.
@@ -25,7 +26,16 @@ public record GenerateDeclarativeCode(string EventStore, string Namespace, strin
         {
             EventStore = EventStore,
             Namespace = Namespace,
-            Declaration = Declaration
+            Declaration = Declaration,
+            DraftReadModel = DraftReadModel is not null
+                ? new DraftReadModelDefinition
+                {
+                    ContainerName = DraftReadModel.ContainerName,
+                    Schema = DraftReadModel.Schema,
+                    Identifier = DraftReadModel.Identifier,
+                    DisplayName = DraftReadModel.DisplayName
+                }
+                : null
         };
 
         var result = await projections.GenerateDeclarativeCode(request);

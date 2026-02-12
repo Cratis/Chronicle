@@ -3,6 +3,9 @@
     <ItemGroup>
         <PackageVersion Update="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" />
         <PackageVersion Update="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.12" />
+        <PackageVersion Update="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="9.0.13" />
+        <PackageVersion Update="Microsoft.AspNetCore.DataProtection" Version="9.0.13" />
+        <PackageVersion Update="System.Text.Json" Version="9.0.13" />
         <PackageVersion Update="Microsoft.Extensions.DependencyInjection" Version="9.0.11" />
         <PackageVersion Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.11" />
         <PackageVersion Update="Microsoft.Extensions.DependencyModel" Version="9.0.11" />

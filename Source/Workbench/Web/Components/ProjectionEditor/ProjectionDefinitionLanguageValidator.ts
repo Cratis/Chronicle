@@ -98,21 +98,19 @@ export class ProjectionDefinitionLanguageValidator {
         const [, , readModelName] = projectionMatch;
 
         // Validate read model exists in schemas or is a draft
-        if (this.readModels.length > 0) {
-            const readModelExists = this.resolveReadModelIdentifier(readModelName) !== null;
-            const isDraftReadModel = this.isDraftReadModel(readModelName);
-            const readModelStartColumn = this.getReadModelStartColumn(firstLine, readModelName);
+        const readModelExists = this.resolveReadModelIdentifier(readModelName) !== null;
+        const isDraftReadModel = this.isDraftReadModel(readModelName);
+        const readModelStartColumn = this.getReadModelStartColumn(firstLine, readModelName);
 
-            if (!readModelExists && !isDraftReadModel) {
-                const lineNumber = firstNonEmptyLineIndex + 1;
-                const col = readModelStartColumn;
-                markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
-            } else if (isDraftReadModel) {
-                // Show info marker for draft read models - they exist but haven't been saved yet
-                const lineNumber = firstNonEmptyLineIndex + 1;
-                const col = readModelStartColumn;
-                markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
-            }
+        if (!readModelExists && !isDraftReadModel) {
+            const lineNumber = firstNonEmptyLineIndex + 1;
+            const col = readModelStartColumn;
+            markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
+        } else if (isDraftReadModel) {
+            // Show info marker for draft read models - they exist but haven't been saved yet
+            const lineNumber = firstNonEmptyLineIndex + 1;
+            const col = readModelStartColumn;
+            markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
         }
 
         // Get the active read model schema for property validation (check draft first)

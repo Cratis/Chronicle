@@ -17,7 +17,7 @@
   -webkit-text-size-adjust: 100%;
 
   --topbar-height: 4rem;
-  --sidebar-width: 280px;
+  --sidebar-width: 200px;
   --sidebar-closed-width: calc(4.5rem + 2px);
   --footer-height: 0px;
   --focus-border: var(--primary-color);

@@ -38,13 +38,12 @@ internal sealed class Projections(
     IServiceProvider serviceProvider) : IProjections
 {
     /// <inheritdoc/>
-    public Task Register(RegisterRequest request, CallContext context = default)
+    public async Task Register(RegisterRequest request, CallContext context = default)
     {
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var projections = request.Projections.Select(_ => _.ToChronicle((Concepts.Projections.ProjectionOwner)(int)request.Owner)).ToArray();
 
-        _ = Task.Run(() => projectionsManager.Register(projections));
-        return Task.CompletedTask;
+        await projectionsManager.Register(projections);
     }
 
     /// <inheritdoc/>
@@ -80,7 +79,7 @@ internal sealed class Projections(
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
         // If a draft read model is provided, create a temporary read model definition for preview
-        Concepts.ReadModels.ReadModelDefinition? draftDefinition = null;
+        ReadModelDefinition? draftDefinition = null;
         if (request.DraftReadModel is not null)
         {
             draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
@@ -175,7 +174,7 @@ internal sealed class Projections(
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
         // If a draft read model is provided, include a temporary definition for compilation
-        Concepts.ReadModels.ReadModelDefinition? draftDefinition = null;
+        ReadModelDefinition? draftDefinition = null;
         if (request.DraftReadModel is not null)
         {
             draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
@@ -259,6 +258,18 @@ internal sealed class Projections(
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+
+        // If a draft read model is provided, create a temporary read model definition for code generation
+        ReadModelDefinition? draftDefinition = null;
+        if (request.DraftReadModel is not null)
+        {
+            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
+            allReadModels = allReadModels
+                .Where(_ => _.Identifier != draftDefinition.Identifier)
+                .Append(draftDefinition)
+                .ToList();
+        }
+
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
@@ -298,6 +309,18 @@ internal sealed class Projections(
     {
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
+
+        // If a draft read model is provided, create a temporary read model definition for code generation
+        ReadModelDefinition? draftDefinition = null;
+        if (request.DraftReadModel is not null)
+        {
+            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
+            allReadModels = allReadModels
+                .Where(_ => _.Identifier != draftDefinition.Identifier)
+                .Append(draftDefinition)
+                .ToList();
+        }
+
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
 
         var compileResult = languageService.Compile(
@@ -332,7 +355,7 @@ internal sealed class Projections(
             errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
     }
 
-    static Concepts.ReadModels.ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
+    static ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
     {
         var identifier = string.IsNullOrWhiteSpace(draft.Identifier)
             ? $"draft-{Guid.NewGuid()}"
@@ -364,12 +387,12 @@ internal sealed class Projections(
             schema.Title = displayName;
         }
 
-        var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
+        var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
         {
             { Concepts.ReadModels.ReadModelGeneration.First, schema }
         };
 
-        return new Concepts.ReadModels.ReadModelDefinition(
+        return new ReadModelDefinition(
             identifier,
             draft.ContainerName,
             displayName,

@@ -149,6 +149,49 @@
                     "user": "User"
                 }
             },
+            "webhooks": {
+                "title": "Webhooks",
+                "empty": "No webhooks found",
+                "actions": {
+                    "add": "Add",
+                    "remove": "Remove"
+                },
+                "columns": {
+                    "name": "Name",
+                    "url": "URL",
+                    "authorization": "Authorization",
+                    "active": "Active",
+                    "replayable": "Replayable"
+                },
+                "dialogs": {
+                    "addWebhook": {
+                        "title": "Add Webhook",
+                        "name": "Name",
+                        "url": "Webhook URL",
+                        "eventSequence": "Event Sequence",
+                        "eventTypes": "Event Types",
+                        "authType": "Authorization Type",
+                        "basicUsername": "Username",
+                        "basicPassword": "Password",
+                        "bearerToken": "Bearer Token",
+                        "oauthAuthority": "OAuth Authority URL",
+                        "oauthClientId": "Client ID",
+                        "oauthClientSecret": "Client Secret",
+                        "isActive": "Active",
+                        "isReplayable": "Replayable"
+                    },
+                    "removeWebhook": {
+                        "title": "Remove Webhook",
+                        "message": "Are you sure you want to remove the webhook '{name}'?"
+                    }
+                },
+                "authTypes": {
+                    "none": "None",
+                    "basic": "Basic",
+                    "bearer": "Bearer Token",
+                    "oauth": "OAuth (Client Credentials)"
+                }
+            },
             "projections": {
                 "title": "Projections",
                 "empty": "No projections",

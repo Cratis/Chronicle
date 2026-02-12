@@ -22,10 +22,4 @@ public class Authentication
     /// Gets the default admin username.
     /// </summary>
     public string DefaultAdminUsername { get; init; } = "admin";
-
-    /// <summary>
-    /// Gets the encryption certificate configuration for Data Protection keys.
-    /// When not configured, keys are auto-generated and stored in the database.
-    /// </summary>
-    public EncryptionCertificate EncryptionCertificate { get; init; } = new();
 }

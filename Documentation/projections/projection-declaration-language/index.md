@@ -29,7 +29,7 @@ Every projection definition starts with a projection declaration and contains on
 ```pdl
 projection {Name} => {ReadModelType}
   {directives and blocks}
-```pdl
+```
 
 Example:
 
@@ -39,7 +39,7 @@ projection User => UserReadModel
     Name = name
     Email = email
     IsActive = true
-```pdl
+```
 
 ## Key Features
 
@@ -98,7 +98,7 @@ projection Group => GroupReadModel
       parent groupId
 
   remove with GroupDeleted
-```pdl
+```
 
 This projection:
 - Creates a group from `GroupCreated` events

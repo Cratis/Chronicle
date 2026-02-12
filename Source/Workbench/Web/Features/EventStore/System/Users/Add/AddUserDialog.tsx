@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult } from '@cratis/arc.react/dialogs';
 import { AddUser } from 'Api/Security';
 import { Button } from 'primereact/button';
 import { Dialog } from 'Components/Dialogs';
@@ -17,49 +17,34 @@ export const AddUserDialog = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const { closeDialog } = useDialogContext();
     const [addUser] = AddUser.use();
 
     const handleGeneratePassword = () => {
         setPassword(generatePassword());
     };
 
-    const handleOk = async () => {
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok) {
+            return true;
+        }
+
         if (username && password) {
             addUser.userId = userId;
             addUser.username = username;
             addUser.email = email || '';
             addUser.password = password;
-            const result = await addUser.execute();
-            if (result.isSuccess) {
-                closeDialog(DialogResult.Ok);
-            }
+            const executeResult = await addUser.execute();
+            return executeResult.isSuccess;
         }
-    };
 
-    const customButtons = (
-        <>
-            <Button
-                label={strings.general.buttons.ok}
-                icon="pi pi-check"
-                onClick={handleOk}
-                disabled={!username || !password}
-                autoFocus
-            />
-            <Button
-                label={strings.general.buttons.cancel}
-                icon="pi pi-times"
-                onClick={() => closeDialog(DialogResult.Cancelled)}
-                outlined
-            />
-        </>
-    );
+        return false;
+    };
 
     return (
         <Dialog
             title={strings.eventStore.system.users.dialogs.addUser.title}
-            onClose={closeDialog}
-            buttons={customButtons}
+            onClose={handleClose}
+            isValid={username.trim() !== '' && password.trim() !== ''}
             resizable={false}>
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">

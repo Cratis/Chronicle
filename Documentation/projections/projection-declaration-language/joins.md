@@ -10,7 +10,7 @@ join {Name} on {Property}
     {mappings}
   with {EventType}
     {mappings}
-```pdl
+```
 
 ## Simple Example
 
@@ -27,7 +27,7 @@ projection Order => OrderReadModel
     with CustomerUpdated
       CustomerName = name
       CustomerEmail = email
-```pdl
+```
 
 When a `CustomerCreated` or `CustomerUpdated` event occurs with a matching `CustomerId`, the projection updates with customer information.
 
@@ -41,7 +41,7 @@ join Group on GroupId
     automap
   with GroupRenamed
     automap
-```pdl
+```
 
 ## Multiple Mappings
 
@@ -59,7 +59,7 @@ join Product on ProductId
     ProductDescription = description
     ProductPrice = price
     LastProductUpdate = $eventContext.occurred
-```pdl
+```
 
 ## Multiple Events
 
@@ -74,7 +74,7 @@ join Customer on CustomerId
     CustomerName = name
   with CustomerVerified
     IsVerified = verified
-```pdl
+```
 
 ## Join with From Events
 
@@ -96,7 +96,7 @@ projection Order => OrderReadModel
       CustomerName = name
     with CustomerUpdated
       CustomerName = name
-```pdl
+```
 
 ## Multiple Joins
 
@@ -117,7 +117,7 @@ projection Order => OrderReadModel
     with ProductCreated
       ProductName = name
       ProductPrice = price
-```pdl
+```
 
 ## Joins in Children
 
@@ -140,7 +140,7 @@ projection Group => GroupReadModel
       with UserUpdated
         UserName = name
         UserEmail = email
-```pdl
+```
 
 ## Examples
 
@@ -170,7 +170,7 @@ projection Product => ProductReadModel
     with CategoryRenamed
       CategoryName = name
       CategoryDescription = description
-```pdl
+```
 
 ### User Profile with Organization
 
@@ -192,7 +192,7 @@ projection UserProfile => UserProfileReadModel
     with OrganizationRenamed
       OrganizationName = name
       OrganizationType = type
-```pdl
+```
 
 ### Task with Assignee Details
 
@@ -214,7 +214,7 @@ projection Task => TaskReadModel
     with UserUpdated
       AssigneeName = name
       AssigneeEmail = email
-```pdl
+```
 
 ### Reservation with Room and Guest
 
@@ -270,7 +270,7 @@ projection Project => ProjectReadModel
         AssigneeName = name
       with UserUpdated
         AssigneeName = name
-```pdl
+```
 
 ## How Joins Work
 
@@ -308,7 +308,7 @@ join Status on StatusId
   with StatusUpdated
     StatusName = name
     StatusColor = color
-```pdl
+```
 
 ### User Information
 
@@ -322,7 +322,7 @@ join User on UserId
   with UserProfileUpdated
     UserName = name
     UserAvatar = avatarUrl
-```pdl
+```
 
 ### Nested Relationships
 

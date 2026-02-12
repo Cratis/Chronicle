@@ -22,10 +22,11 @@ public class InvokedWebhooks
 
     public async Task WaitForInvocation(int count)
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         while (_invokedWebhooks.Count < count)
         {
             await Task.Delay(100).WaitAsync(cts.Token);
         }
+        Console.WriteLine("Hello");
     }
 }

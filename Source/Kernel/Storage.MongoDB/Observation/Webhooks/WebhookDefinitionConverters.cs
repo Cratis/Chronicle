@@ -6,6 +6,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Grains.Observation.Webhooks;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
@@ -87,16 +88,16 @@ public static class WebhookDefinitionConverters
         };
 
         target.Authorization.Switch(
-            basic => mongoTarget.BasicAuthorization = new MongoDB.Security.BasicAuthorization
+            basic => mongoTarget.BasicAuthorization = new Security.BasicAuthorization
             {
                 Username = basic.Username,
                 Password = basic.Password
             },
-            bearer => mongoTarget.BearerTokenAuthorization = new MongoDB.Security.BearerTokenAuthorization
+            bearer => mongoTarget.BearerTokenAuthorization = new Security.BearerTokenAuthorization
             {
                 Token = bearer.Token
             },
-            oauth => mongoTarget.OAuthAuthorization = new MongoDB.Security.OAuthAuthorization
+            oauth => mongoTarget.OAuthAuthorization = new Security.OAuthAuthorization
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,

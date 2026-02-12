@@ -16,14 +16,14 @@ public class when_saving_and_reading_job(context context) : Given<context>(conte
         public JobState OriginalState = default!;
         public JobState RetrievedState = default!;
 
-        async Task Establish()
+        void Establish()
         {
             JobId = JobId.New();
             OriginalState = new JobState
             {
                 Id = JobId,
                 Details = "Test Job",
-                Type = typeof(IntegrationJobRequest),
+                Type = typeof(IntegrationJob),
                 Status = JobStatus.Running,
                 Created = DateTimeOffset.UtcNow,
                 StatusChanges =

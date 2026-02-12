@@ -4,8 +4,6 @@
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.Repositories;
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
@@ -35,32 +33,8 @@ public static class OpenIddictServiceCollectionExtensions
         services.AddSingleton<IScopeStorage, ScopeStorage>();
         services.AddSingleton<ITokenStorage, TokenStorage>();
 
-        // Configure Data Protection with grain-based key storage for multi-instance support
-        services.AddSingleton<IXmlRepository, GrainBasedXmlRepository>();
-        var dataProtectionBuilder = services.AddDataProtection()
-            .SetApplicationName("Chronicle");
-
-        // Configure key encryption with certificate
-        // In production, this certificate is required for secure key storage
-        // In development, it is optional for convenience
-        var encryptionCert = chronicleOptions.Authentication.EncryptionCertificate;
-        if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
-        {
-            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-                encryptionCert.CertificatePath,
-                encryptionCert.CertificatePassword);
-            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-        }
-#if !DEVELOPMENT
-        else
-        {
-            throw new InvalidOperationException(
-                "An encryption certificate is required in production for Data Protection key security. " +
-                "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
-                "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
-        }
-#endif
-
+        // Note: Data Protection is configured in AddChronicleAuthentication
+        // and will be reused here for OpenIddict
         services.AddOpenIddict()
             .AddCore(options =>
             {
@@ -88,11 +62,11 @@ public static class OpenIddictServiceCollectionExtensions
                 // If a certificate is configured, use it for encryption and signing
                 // In development without a certificate, use ephemeral keys for convenience
                 // In production, a certificate is required
-                var encryptionCertificate = chronicleOptions.Authentication.EncryptionCertificate;
+                var encryptionCertificate = chronicleOptions.EncryptionCertificate;
                 if (encryptionCertificate.IsConfigured && File.Exists(encryptionCertificate.CertificatePath))
                 {
                     var cert = X509CertificateLoader.LoadPkcs12FromFile(
-                        encryptionCertificate.CertificatePath!,
+                        encryptionCertificate.CertificatePath,
                         encryptionCertificate.CertificatePassword);
                     options.AddEncryptionCertificate(cert)
                            .AddSigningCertificate(cert);
@@ -108,7 +82,7 @@ public static class OpenIddictServiceCollectionExtensions
                 {
                     throw new InvalidOperationException(
                         "An encryption certificate is required in production for OpenIddict key security. " +
-                        "Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword' " +
+                        "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
                         "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
                 }
 #endif

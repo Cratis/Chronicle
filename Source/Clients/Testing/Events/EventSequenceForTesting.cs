@@ -62,7 +62,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     /// <inheritdoc/>
     public Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
         EventSourceId eventSourceId,
-        IEnumerable<EventType> eventTypes,
+        IEnumerable<EventType> filterEventTypes,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default) => Task.FromResult<IImmutableList<AppendedEvent>>(_events.ToImmutableList());
@@ -71,11 +71,11 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = default,
-        IEnumerable<EventType>? eventTypes = default) =>
+        IEnumerable<EventType>? filterEventTypes = default) =>
         Task.FromResult<IImmutableList<AppendedEvent>>(_events.Where(_ =>
             _.Context.SequenceNumber >= sequenceNumber
             && (eventSourceId is null || _.Context.EventSourceId == eventSourceId)
-            && eventTypes?.Contains(_.Context.EventType) != false).ToImmutableList());
+            && filterEventTypes?.Contains(_.Context.EventType) != false).ToImmutableList());
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(EventSequenceNumber.First);
@@ -86,7 +86,7 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? eventTypes = default) => Task.FromResult(EventSequenceNumber.First);
+        IEnumerable<EventType>? filterEventTypes = default) => Task.FromResult(EventSequenceNumber.First);
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => Task.FromResult(EventSequenceNumber.First);

@@ -1,12 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Validation.AspNetCore;
 
@@ -23,11 +26,37 @@ public static class ServiceCollectionExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="chronicleOptions">The Chronicle options.</param>
     /// <returns>The service collection for chaining.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if an encryption certificate is not configured in production.</exception>
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IUserStore<User>, UserStore>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+
+        // Configure Data Protection (required for webhook secret encryption)
+        // This is set up here to ensure it's available even when OpenIddict is disabled
+        services.AddSingleton<IXmlRepository, GrainBasedXmlRepository>();
+        var dataProtectionBuilder = services.AddDataProtection()
+            .SetApplicationName("Chronicle");
+
+        // Configure key encryption with certificate if available
+        var encryptionCert = chronicleOptions.EncryptionCertificate;
+        if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
+        {
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+                encryptionCert.CertificatePath,
+                encryptionCert.CertificatePassword);
+            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+        }
+#if !DEVELOPMENT
+        else
+        {
+            throw new InvalidOperationException(
+                "An encryption certificate is required in production for Data Protection key security. " +
+                "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
+                "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
+        }
+#endif
 
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>

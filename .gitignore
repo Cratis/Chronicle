@@ -300,3 +300,6 @@ coverage-reports/
 
 vite.*.js
 vite*.map
+
+# Auto-generated development certificates (should not be committed)
+certificates/

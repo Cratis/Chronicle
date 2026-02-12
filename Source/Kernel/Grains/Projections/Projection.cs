@@ -374,6 +374,12 @@ public class Projection(
         if (!_projectionsByNamespace.TryGetValue(eventStoreNamespace, out var projection))
         {
             var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
+
+            if (State.ReadModel is null)
+            {
+                throw new ProjectionDefinitionNotSet(key);
+            }
+
             var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             var readModelDefinition = await readModel.GetDefinition();

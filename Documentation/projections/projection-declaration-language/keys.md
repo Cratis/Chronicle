@@ -10,7 +10,7 @@ Specify which property from the event identifies the instance:
 from UserRegistered key userId
   Name = name
   Email = email
-```pdl
+```
 
 The `userId` from the event becomes the key for the `UserReadModel` instance.
 
@@ -22,7 +22,7 @@ Keys can be specified inline on the `from` statement:
 from OrderPlaced key orderId
   Total = total
   Status = "Pending"
-```pdl
+```
 
 ## Multiple Events with Keys
 
@@ -31,7 +31,7 @@ When using multiple events in one `from` statement, each can have its own key:
 ```pdl
 from EventA key idA, EventB key idB, EventC
   automap
-```pdl
+```
 
 ## Block Key Syntax
 
@@ -41,7 +41,7 @@ For more complex scenarios, use block syntax:
 from OrderPlaced
   key orderId
   Total = total
-```pdl
+```
 
 ## Composite Keys
 
@@ -53,7 +53,7 @@ from OrderCreated
     CustomerId = customerId
     OrderNumber = orderNumber
   Total = total
-```pdl
+```
 
 ### Composite Key Structure
 
@@ -62,7 +62,7 @@ key {TypeName}
   {Property} = {expression}
   {Property} = {expression}
   ...
-```pdl
+```
 
 The `{TypeName}` must match a complex type defined in your read model schema.
 
@@ -79,7 +79,7 @@ from LineItemAdded
     CreatedBy = $causedBy.subject
   Product = productName
   Quantity = quantity
-```pdl
+```
 
 ## Default Key Behavior
 
@@ -88,14 +88,14 @@ If no key is specified, the event source ID is used as the key:
 ```pdl
 from UserRegistered
   Name = name
-```pdl
+```
 
 Equivalent to:
 
 ```pdl
 from UserRegistered key $eventSourceId
   Name = name
-```pdl
+```
 
 ## Key in Children
 
@@ -106,7 +106,7 @@ children members identified by userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role
-```pdl
+```
 
 The `id userId` specifies the child identifier property, while `key userId` specifies which event property to use.
 
@@ -125,7 +125,7 @@ Keys can be:
 from ProductCreated key productId
   Name = name
   Price = price
-```pdl
+```
 
 ### Event Source as Key
 
@@ -133,7 +133,7 @@ from ProductCreated key productId
 from AccountCreated key $eventSourceId
   AccountNumber = accountNumber
   Balance = 0.0
-```pdl
+```
 
 ### Nested Property as Key
 
@@ -141,7 +141,7 @@ from AccountCreated key $eventSourceId
 from OrderPlaced key order.id
   Total = order.total
   CustomerId = customerId
-```pdl
+```
 
 ### Composite Key Example
 
@@ -155,7 +155,7 @@ projection OrderLine => OrderLineReadModel
     Quantity = quantity
     UnitPrice = unitPrice
     LineTotal = total
-```pdl
+```
 
 ### Composite Key with Multiple Properties
 
@@ -168,7 +168,7 @@ from ReservationMade
   }
   GuestName = guestName
   Nights = nights
-```pdl
+```
 
 ### Children with Keys
 
@@ -179,7 +179,7 @@ children orderLines identified by lineNumber
     Product = productName
     Quantity = quantity
     Price = price
-```pdl
+```
 
 ## When to Use Each Approach
 

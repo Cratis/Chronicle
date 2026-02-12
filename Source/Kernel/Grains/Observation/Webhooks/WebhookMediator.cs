@@ -20,11 +20,11 @@ namespace Cratis.Chronicle.Grains.Observation.Webhooks;
 public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory, JsonSerializerOptions jsonSerializerOptions) : IWebhookMediator
 {
     /// <inheritdoc/>
-    public async Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, TimeSpan? timeout = null)
+    public async Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null)
     {
         try
         {
-            var httpClient = webhookHttpClientFactory.Create(webhookTarget);
+            var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
             await httpClient.PostAsJsonAsync(
                 string.Empty,
                 new EventsToObserve(partition.ToString(), events.ToArray()),

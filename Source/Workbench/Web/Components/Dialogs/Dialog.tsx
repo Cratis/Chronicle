@@ -3,10 +3,10 @@
 
 import { Dialog as PrimeDialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
-import { DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { DialogResult, DialogButtons, useDialogContext } from '@cratis/arc.react/dialogs';
 import { ReactNode } from 'react';
 
-export type CloseDialog = (result: DialogResult) => void;
+export type CloseDialog = (result: DialogResult) => boolean | void | Promise<boolean> | Promise<void>;
 
 export interface DialogProps {
     title: string;
@@ -16,40 +16,50 @@ export interface DialogProps {
     children: ReactNode;
     width?: string;
     resizable?: boolean;
+    isValid?: boolean;
 }
 
-export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false }: DialogProps) => {
+export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false, isValid }: DialogProps) => {
+    const { closeDialog } = useDialogContext();
+    const isDialogValid = isValid !== false;
     const headerElement = (
         <div className="inline-flex align-items-center justify-content-center gap-2">
             <span className="font-bold white-space-nowrap">{title}</span>
         </div>
     );
 
+    const handleClose = async (result: DialogResult) => {
+        const closeResult = await onClose(result);
+        if (closeResult !== false) {
+            closeDialog(result);
+        }
+    };
+
     const okFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} autoFocus />
+            <Button label="Ok" icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
         </>
     );
 
     const okCancelFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => onClose(DialogResult.Ok)} autoFocus />
-            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.Cancelled)} />
+            <Button label="Ok" icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
+            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.Cancelled)} />
         </>
     );
 
     const yesNoFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} autoFocus />
-            <Button label="No" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.No)} />
+            <Button label="Yes" icon="pi pi-check" onClick={() => handleClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
+            <Button label="No" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.No)} />
         </>
     );
 
     const yesNoCancelFooter = (
         <>
-            <Button label="Yes" icon="pi pi-check" onClick={() => onClose(DialogResult.Yes)} autoFocus />
-            <Button label="No" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.No)} />
-            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => onClose(DialogResult.Cancelled)} />
+            <Button label="Yes" icon="pi pi-check" onClick={() => handleClose(DialogResult.Yes)} disabled={!isDialogValid} autoFocus />
+            <Button label="No" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.No)} />
+            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.Cancelled)} />
         </>
     );
 
@@ -85,10 +95,12 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
             header={headerElement}
             modal
             footer={footer}
-            onHide={() => onClose(DialogResult.Cancelled)}
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onHide={typeof buttons === 'number' ? () => handleClose(DialogResult.Cancelled) : () => {}}
             visible={visible}
             style={{ width }}
-            resizable={resizable}>
+            resizable={resizable}
+            closable={typeof buttons === 'number'}>
             {children}
         </PrimeDialog>
     );

@@ -19,5 +19,5 @@ public class ReadModelType
     /// Gets or sets the generation of the read model type.
     /// </summary>
     [ProtoMember(2)]
-    public ulong Generation { get; set; }
+    public uint Generation { get; set; }
 }

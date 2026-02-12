@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="projections">Projections to get read models from.</param>
 /// <param name="reducers">Reducers to get read models from.</param>
+/// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
 /// <param name="readModelWatcherManager"><see cref="IReadModelWatcherManager"/> for managing watchers.</param>
@@ -33,6 +34,7 @@ public class ReadModels(
     INamingPolicy namingPolicy,
     IProjections projections,
     IReducers reducers,
+    IEventTypes eventTypes,
     IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
     IReadModelWatcherManager readModelWatcherManager,
@@ -233,7 +235,7 @@ public class ReadModels(
             foreach (var snapshot in response.Snapshots)
             {
                 var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
-                var events = snapshot.Events.ToClient(jsonSerializerOptions);
+                var events = snapshot.Events.ToClient(eventTypes, jsonSerializerOptions);
 
                 snapshots.Add(new ReadModelSnapshot<TReadModel>(
                     readModel,
@@ -274,7 +276,7 @@ public class ReadModels(
             foreach (var snapshot in response.Snapshots)
             {
                 var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
-                var events = snapshot.Events.ToClient(jsonSerializerOptions);
+                var events = snapshot.Events.ToClient(eventTypes, jsonSerializerOptions);
 
                 snapshots.Add(new ReadModelSnapshot<TReadModel>(
                     readModel,

@@ -13,7 +13,7 @@ import {
     disposeProjectionDefinitionLanguage,
 } from './index';
 import { JsonSchema } from 'Components/JsonSchema';
-import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode } from 'Api/Projections';
+import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Api/Projections';
 import { AllEventSequences } from 'Api/EventSequences';
 import { Button } from 'primereact/button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
@@ -33,6 +33,7 @@ export interface ProjectionEditorProps {
     theme?: string;
     eventStore?: string;
     namespace?: string;
+    draftReadModel?: DraftReadModel | null;
     normalizeDeclarationForRequests?: (declaration: string) => string;
 }
 
@@ -48,6 +49,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     theme = 'vs-dark',
     eventStore,
     namespace,
+    draftReadModel,
     normalizeDeclarationForRequests,
 }) => {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -67,11 +69,17 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             generateDeclarativeCode.eventStore = eventStore;
             generateDeclarativeCode.namespace = namespace;
             generateDeclarativeCode.declaration = declaration;
+            if (draftReadModel) {
+                generateDeclarativeCode.draftReadModel = draftReadModel;
+            }
             const declarativeResult = await generateDeclarativeCode.execute();
 
             generateModelBoundCode.eventStore = eventStore;
             generateModelBoundCode.namespace = namespace;
             generateModelBoundCode.declaration = declaration;
+            if (draftReadModel) {
+                generateModelBoundCode.draftReadModel = draftReadModel;
+            }
             const modelBoundResult = await generateModelBoundCode.execute();
 
             const declCode = declarativeResult.response?.code || '// Unable to generate code';

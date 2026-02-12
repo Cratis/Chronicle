@@ -6,6 +6,7 @@ using Cratis.Chronicle.Grains.EventTypes;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Grains.Observation.Webhooks;
 using Cratis.Chronicle.Grains.Projections;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
@@ -43,11 +44,13 @@ internal sealed class ChronicleServerStartupTask(
     {
         await grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault();
 
-        await eventTypes.DiscoverAndRegister();
+        // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
+        await reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default);
 
         var allEventStores = await storage.GetEventStores();
         foreach (var eventStore in allEventStores)
         {
+            await eventTypes.DiscoverAndRegister(eventStore);
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await namespaces.EnsureDefault();
 
@@ -56,6 +59,9 @@ internal sealed class ChronicleServerStartupTask(
 
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await projectionsManager.Ensure();
+
+            var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
+            await webhooksManager.Ensure();
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
             await projectionsServiceClient.Register(eventStore, projectionDefinitions);

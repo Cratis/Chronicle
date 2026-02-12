@@ -26,7 +26,10 @@ export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefiniti
         updateReadModelDefinition.generation = props.item.generation;
         updateReadModelDefinition.schema = JSON.stringify(schema, null, 2);
         updateReadModelDefinition.indexes = Array.from(props.item.indexes);
-        await updateReadModelDefinition.execute();
+        const result = await updateReadModelDefinition.execute();
+        if (result.isSuccess && props.onRefresh) {
+            setTimeout(() => props.onRefresh!(), 200);
+        }
     };
 
     const handleSchemaChange = (newSchema: JsonSchema) => {

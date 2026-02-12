@@ -15,7 +15,6 @@ public class a_webhook_definitions_storage : Specification
     {
         _eventStoreDatabase = Substitute.For<IEventStoreDatabase>();
         _collection = Substitute.For<IMongoCollection<WebhookDefinition>>();
-
         _eventStoreDatabase.GetCollection<WebhookDefinition>(Arg.Any<string>()).Returns(_collection);
         _storage = new WebhookDefinitionsStorage(_eventStoreDatabase);
     }

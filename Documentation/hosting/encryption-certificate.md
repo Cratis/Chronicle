@@ -16,11 +16,9 @@ Add the encryption certificate configuration to your `chronicle.json`:
 
 ```json
 {
-    "authentication": {
-        "encryptionCertificate": {
-            "certificatePath": "/path/to/encryption-cert.pfx",
-            "certificatePassword": "your-certificate-password"
-        }
+    "encryptionCertificate": {
+        "certificatePath": "/path/to/encryption-cert.pfx",
+        "certificatePassword": "your-certificate-password"
     }
 }
 ```
@@ -31,10 +29,10 @@ Configure using environment variables (recommended for containerized deployments
 
 ```bash
 # Path to the PFX certificate file
-Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
+Cratis__Chronicle__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
 
 # Certificate password
-Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePassword=your-certificate-password
+Cratis__Chronicle__EncryptionCertificate__CertificatePassword=your-certificate-password
 ```
 
 ### Configuration Properties
@@ -89,8 +87,8 @@ services:
       - ./certs/encryption-cert.pfx:/app/certs/encryption-cert.pfx:ro
     environment:
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePassword=YourSecurePassword123
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePassword=YourSecurePassword123
 ```
 
 ### Using Same Certificate for TLS and Encryption
@@ -108,8 +106,8 @@ services:
       - Cratis__Chronicle__Tls__CertificatePath=/app/certs/chronicle.pfx
       - Cratis__Chronicle__Tls__CertificatePassword=YourPassword
       # Data Protection key encryption (same certificate)
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePath=/app/certs/chronicle.pfx
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePassword=YourPassword
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePath=/app/certs/chronicle.pfx
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePassword=YourPassword
 ```
 
 ## Multi-Instance Deployments
@@ -121,16 +119,16 @@ services:
   chronicle-1:
     image: cratis/chronicle:latest
     environment:
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePassword=SharedPassword
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePassword=SharedPassword
     volumes:
       - ./certs/encryption-cert.pfx:/app/certs/encryption-cert.pfx:ro
 
   chronicle-2:
     image: cratis/chronicle:latest
     environment:
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
-      - Cratis__Chronicle__Authentication__EncryptionCertificate__CertificatePassword=SharedPassword
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePath=/app/certs/encryption-cert.pfx
+      - Cratis__Chronicle__EncryptionCertificate__CertificatePassword=SharedPassword
     volumes:
       - ./certs/encryption-cert.pfx:/app/certs/encryption-cert.pfx:ro
 ```
@@ -138,6 +136,22 @@ services:
 ## Development Mode
 
 In development mode (when Chronicle is built with the `DEVELOPMENT` configuration), the encryption certificate is **optional**. This allows for easier local development without certificate management overhead.
+
+### Auto-Generated Certificates (Development Only)
+
+When no encryption certificate is configured **and Chronicle is compiled with DEVELOPMENT mode**, Chronicle will automatically generate a self-signed certificate for development purposes. This certificate is:
+
+- **Location**: Stored in a `certificates` folder in the current working directory
+- **Filename**: `encryption-cert.pfx`
+- **Password**: `chronicle-auto-generated` (auto-assigned)
+- **Validity**: 10 years from generation
+- **Reuse**: If the certificate already exists, Chronicle will use it instead of generating a new one
+
+This feature is designed to simplify local development and testing. The certificate is automatically created on first use and persisted for subsequent runs, ensuring encrypted data remains accessible across restarts.
+
+> **Important**: In **production builds** (without the DEVELOPMENT directive), Chronicle will throw an `EncryptionCertificateNotConfigured` exception if no certificate is configured. Auto-generation only occurs in development mode.
+
+### Running Without Configuration
 
 To run without a certificate in development:
 
@@ -150,6 +164,8 @@ docker run -d \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://localhost:27017 \
   cratis/chronicle:latest-development
 ```
+
+> **Warning**: Auto-generated certificates should **never** be used in production environments. They are not cryptographically secure for production use and are intended only for development convenience. Production deployments **must** configure a proper encryption certificate.
 
 ## Security Best Practices
 
@@ -184,7 +200,7 @@ In production, Chronicle will fail to start if no encryption certificate is conf
 
 ```bash
 InvalidOperationException: An encryption certificate is required in production for Data Protection key security.
-Configure 'Authentication:EncryptionCertificate:CertificatePath' and 'Authentication:EncryptionCertificate:CertificatePassword'
+Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword'
 in your configuration.
 ```
 

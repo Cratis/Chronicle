@@ -15,9 +15,6 @@ namespace Cratis.Chronicle.Services.Security;
 /// <summary>
 /// Represents an implementation of <see cref="IApplications"/>.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="Applications"/> class.
-/// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with applications.</param>
 internal sealed class Applications(IGrainFactory grainFactory, IStorage storage) : IApplications

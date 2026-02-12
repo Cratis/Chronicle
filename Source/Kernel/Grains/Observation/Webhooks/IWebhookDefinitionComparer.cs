@@ -16,6 +16,6 @@ public interface IWebhookDefinitionComparer
     /// <param name="webhookKey">The <see cref="WebhookKey"/>.</param>
     /// <param name="first">The first <see cref="WebhookDefinition"/>.</param>
     /// <param name="second">The second <see cref="WebhookDefinition"/>.</param>
-    /// <returns>The <see cref="WebhookDefinitionCompareResult"/>.</returns>
-    Task<WebhookDefinitionCompareResult> Compare(WebhookKey webhookKey, WebhookDefinition first, WebhookDefinition second);
+    /// <returns>The <see cref="WebhookDefinitionComparisonResult"/>.</returns>
+    Task<WebhookDefinitionComparisonResult> Compare(WebhookKey webhookKey, WebhookDefinition first, WebhookDefinition second);
 }

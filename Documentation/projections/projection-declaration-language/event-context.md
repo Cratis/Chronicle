@@ -8,7 +8,7 @@ Access event context properties using the `$eventContext.` prefix:
 
 ```pdl
 $eventContext.{property}
-```pdl
+```
 
 ## Available Properties
 
@@ -20,7 +20,7 @@ The timestamp when the event occurred:
 from UserRegistered
   Name = name
   CreatedAt = $eventContext.occurred
-```pdl
+```
 
 ### sequenceNumber
 
@@ -29,7 +29,7 @@ The sequence number of the event in its stream:
 ```pdl
 from EventProcessed
   LastSequenceNumber = $eventContext.sequenceNumber
-```pdl
+```
 
 ### correlationId
 
@@ -39,7 +39,7 @@ The correlation ID associated with the event:
 from OrderPlaced
   OrderId = orderId
   CorrelationId = $eventContext.correlationId
-```pdl
+```
 
 ### eventSourceId
 
@@ -50,7 +50,7 @@ from UserAssignedToGroup
   GroupId = $eventContext.eventSourceId
   # or
   GroupId = $eventSourceId
-```pdl
+```
 
 ## Event Source ID Shorthand
 
@@ -59,7 +59,7 @@ The `$eventSourceId` is a shorthand for `$eventContext.eventSourceId`:
 ```pdl
 from UserCreated key $eventSourceId
   Name = name
-```pdl
+```
 
 ## Common Patterns
 
@@ -75,7 +75,7 @@ from RecordCreated
 from RecordUpdated
   Name = name
   UpdatedAt = $eventContext.occurred
-```pdl
+```
 
 ### Correlation Tracking
 
@@ -86,7 +86,7 @@ from OrderPlaced
   OrderNumber = orderNumber
   CorrelationId = $eventContext.correlationId
   PlacedAt = $eventContext.occurred
-```pdl
+```
 
 ### Sequence Tracking
 
@@ -97,7 +97,7 @@ from StateChanged
   CurrentState = state
   SequenceNumber = $eventContext.sequenceNumber
   ChangedAt = $eventContext.occurred
-```pdl
+```
 
 ### Parent-Child Relationships
 
@@ -109,7 +109,7 @@ children members id userId
     parent $eventContext.eventSourceId
     Role = role
     AddedAt = $eventContext.occurred
-```pdl
+```
 
 ## In Composite Keys
 
@@ -123,7 +123,7 @@ from EventProcessed
     CorrelationId = $eventContext.correlationId
   }
   ProcessedAt = $eventContext.occurred
-```pdl
+```
 
 ## In Templates
 
@@ -133,7 +133,7 @@ Event context works in string templates:
 from OrderShipped
   TrackingInfo = `Shipped at ${$eventContext.occurred}`
   Reference = `${orderNumber}-${$eventContext.sequenceNumber}`
-```pdl
+```
 
 ## Examples
 
@@ -150,7 +150,7 @@ projection UserActivity => UserActivityReadModel
     LastAction = actionType
     LastActionTime = $eventContext.occurred
     LastCorrelation = $eventContext.correlationId
-```pdl
+```
 
 ### Versioned Document
 
@@ -166,7 +166,7 @@ projection Document => DocumentReadModel
     Content = content
     Version = $eventContext.sequenceNumber
     UpdatedAt = $eventContext.occurred
-```pdl
+```
 
 ### Group Membership with Audit
 
@@ -184,7 +184,7 @@ projection Group => GroupReadModel
       Role = role
       AddedAt = $eventContext.occurred
       AddedSequence = $eventContext.sequenceNumber
-```pdl
+```
 
 ### Order Processing
 
@@ -201,7 +201,7 @@ projection Order => OrderReadModel
     ShippedAt = $eventContext.occurred
     ShipmentSequence = $eventContext.sequenceNumber
     Status = "Shipped"
-```pdl
+```
 
 ## Best Practices
 

@@ -7,7 +7,7 @@ The `from` directive defines a rule that triggers when a specific event occurs. 
 ```pdl
 from {EventType}
   {mappings and operations}
-```pdl
+```
 
 ## Simple Example
 
@@ -17,7 +17,7 @@ projection User => UserReadModel
     Name = name
     Email = email
     IsActive = true
-```pdl
+```
 
 When a `UserRegistered` event occurs, it creates or updates a `UserReadModel` instance with the specified properties.
 
@@ -29,7 +29,7 @@ You can define multiple events on the same line separated by commas when they sh
 projection TransportRoute => TransportRouteReadModel
   automap
   from HubRouteAdded key id, WarehouseRouteAdded key id
-```pdl
+```
 
 This is equivalent to:
 
@@ -38,7 +38,7 @@ projection TransportRoute => TransportRouteReadModel
   automap
   from HubRouteAdded key id
   from WarehouseRouteAdded key id
-```pdl
+```
 
 Each event can have its own inline key specification:
 
@@ -46,7 +46,7 @@ Each event can have its own inline key specification:
 from EventA key idA, EventB key idB, EventC
   automap
   Property = value
-```pdl
+```
 
 ## With Keys
 
@@ -56,7 +56,7 @@ Specify which property identifies the projection instance:
 from UserAssignedToGroup key userId
   GroupId = $eventContext.eventSourceId
   AssignedAt = $eventContext.occurred
-```pdl
+```
 
 See [Keys](keys.md) for more details on key handling.
 
@@ -67,7 +67,7 @@ Automatically map matching properties:
 ```pdl
 from UserRegistered automap
   IsActive = true
-```pdl
+```
 
 AutoMap copies properties with matching names from the event to the read model, then applies any explicit mappings.
 
@@ -91,7 +91,7 @@ projection User => UserReadModel
   from UserDeactivated
     IsActive = false
     DeactivatedAt = $eventContext.occurred
-```pdl
+```
 
 ## With Parent Key
 
@@ -102,7 +102,7 @@ children members id userId
   from UserAddedToGroup key userId
     parent groupId
     Role = role
-```pdl
+```
 
 ## Operations
 
@@ -124,7 +124,7 @@ from UserLoggedIn
   LastLogin = $eventContext.occurred
   LastSequenceNumber = $eventContext.sequenceNumber
   count LoginCount
-```pdl
+```
 
 See [Event Context](event-context.md) for available properties.
 
@@ -137,7 +137,7 @@ from UserCreated
   Name = name          # Indented
   Email = email        # Indented
   IsActive = true      # Indented
-```pdl
+```
 
 ## Examples
 
@@ -148,7 +148,7 @@ from OrderPlaced
   CustomerId = customerId
   Total = total
   Status = "Pending"
-```pdl
+```
 
 ### Using Templates
 
@@ -156,7 +156,7 @@ from OrderPlaced
 from PersonRegistered
   FullName = `${firstName} ${lastName}`
   Email = email
-```pdl
+```
 
 ### Counter Operations
 
@@ -164,7 +164,7 @@ from PersonRegistered
 from PageViewed
   count ViewCount
   LastViewedAt = $eventContext.occurred
-```pdl
+```
 
 ### Arithmetic Operations
 
@@ -172,7 +172,7 @@ from PageViewed
 from PaymentReceived
   add Balance by amount
   LastPaymentDate = $eventContext.occurred
-```pdl
+```
 
 ### Complex Example
 
@@ -184,4 +184,4 @@ from OrderPlaced key orderId
   Status = "Pending"
   PlacedAt = $eventContext.occurred
   increment TotalOrders
-```pdl
+```

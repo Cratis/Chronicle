@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult } from '@cratis/arc.react/dialogs';
 import { AddApplication } from 'Api/Security';
 import { Button } from 'primereact/button';
 import { Dialog } from 'Components/Dialogs';
@@ -15,48 +15,33 @@ export const AddApplicationDialog = () => {
     const [clientId, setClientId] = useState('');
     const [clientSecret, setClientSecret] = useState('');
     const [showSecret, setShowSecret] = useState(false);
-    const { closeDialog } = useDialogContext();
     const [addApplication] = AddApplication.use();
 
     const handleGenerateSecret = () => {
         setClientSecret(generatePassword(32));
     };
 
-    const handleOk = async () => {
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok) {
+            return true;
+        }
+
         if (clientId && clientSecret) {
             addApplication.id = id;
             addApplication.clientId = clientId;
             addApplication.clientSecret = clientSecret;
-            const result = await addApplication.execute();
-            if (result.isSuccess) {
-                closeDialog(DialogResult.Ok);
-            }
+            const executeResult = await addApplication.execute();
+            return executeResult.isSuccess;
         }
-    };
 
-    const customButtons = (
-        <>
-            <Button
-                label={strings.general.buttons.ok}
-                icon="pi pi-check"
-                onClick={handleOk}
-                disabled={!clientId || !clientSecret}
-                autoFocus
-            />
-            <Button
-                label={strings.general.buttons.cancel}
-                icon="pi pi-times"
-                onClick={() => closeDialog(DialogResult.Cancelled)}
-                outlined
-            />
-        </>
-    );
+        return false;
+    };
 
     return (
         <Dialog
             title={strings.eventStore.system.applications.dialogs.addApplication.title}
-            onClose={closeDialog}
-            buttons={customButtons}>
+            onClose={handleClose}
+            isValid={clientId.trim() !== '' && clientSecret.trim() !== ''}>
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="p-inputgroup flex-1">
                     <span className="p-inputgroup-addon">

@@ -6,10 +6,11 @@ import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from 'Components/JsonSchema';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
-import { ReadModelCreation } from 'Components/ReadModelCreation';
+import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { Menubar } from 'primereact/menubar';
 import { Tooltip } from 'primereact/tooltip';
 import { Dialog } from 'primereact/dialog';
+import { Button } from 'primereact/button';
 import { useState, useEffect, useMemo } from 'react';
 import type { MenuItem } from 'primereact/menuitem';
 import { useParams } from 'react-router-dom';
@@ -95,6 +96,7 @@ export const Projections = () => {
     const [pageSize, setPageSize] = useState(50);
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
     const [draftReadModel, setDraftReadModel] = useState<DraftReadModel | null>(null);
+    const [pendingReadModel, setPendingReadModel] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
@@ -152,16 +154,14 @@ export const Projections = () => {
         }
         if (readModelFromDeclaration && !selectedProjection) {
             const existingProjection = projections.data?.find(p =>
-                p.containerName === readModelFromDeclaration.containerName ||
-                p.containerName === readModelTokenFromDeclaration ||
-                readModelFromDeclaration.identifier.endsWith(`.${p.containerName}`)
+                p.containerName === readModelFromDeclaration.containerName
             );
             if (existingProjection) {
                 return strings.eventStore.general.projections.saveDisabledReasons.projectionAlreadyExists;
             }
         }
         return null;
-    }, [declarationValue, hasValidationErrors, readModelFromDeclaration, selectedProjection, projections.data, readModelTokenFromDeclaration, draftReadModel, selectedReadModel]);
+    }, [declarationValue, hasUnsavedChanges, hasValidationErrors, readModelFromDeclaration, selectedProjection, projections.data, draftReadModel, selectedReadModel]);
 
     const previewDisabledReason = useMemo(() => {
         if (!declarationValue.trim()) {
@@ -226,25 +226,45 @@ export const Projections = () => {
             setDeclarationValue(displayDeclaration);
             setOriginalDeclarationValue(displayDeclaration);
         }
-    }, [selectedProjection, readModels.data]);
+    }, [selectedProjection, readModels.data, draftReadModel, declarationValue]);
 
-    const handleSaveReadModel = async (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
-        // Save as draft read model - don't create on server yet
+    const handleReadModelChanged = (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
+        const trimmedDisplayName = displayName.trim();
+        const trimmedIdentifier = identifier.trim();
+        const trimmedContainerName = containerName.trim();
+        if (!trimmedDisplayName) {
+            setPendingReadModel(null);
+            return;
+        }
+        setPendingReadModel({
+            displayName: trimmedDisplayName,
+            identifier: trimmedIdentifier,
+            containerName: trimmedContainerName,
+            schema
+        });
+    };
+
+    const handleSaveReadModel = () => {
+        if (!pendingReadModel) {
+            return;
+        }
         const draft = new DraftReadModel();
-        draft.displayName = displayName;
-        draft.identifier = identifier;
-        draft.containerName = containerName;
-        draft.schema = JSON.stringify(schema);
+        draft.displayName = pendingReadModel.displayName;
+        draft.identifier = pendingReadModel.identifier;
+        draft.containerName = pendingReadModel.containerName;
+        draft.schema = JSON.stringify(pendingReadModel.schema);
         setDraftReadModel(draft);
         setIsCreateReadModelDialogOpen(false);
         setNewReadModelDisplayName('');
         setInitialReadModelSchema(undefined);
+        setPendingReadModel(null);
     };
 
     const handleCancelReadModel = () => {
         setIsCreateReadModelDialogOpen(false);
         setNewReadModelDisplayName('');
         setInitialReadModelSchema(undefined);
+        setPendingReadModel(null);
     };
 
     const draftForDialog = draftReadModel &&
@@ -418,6 +438,7 @@ export const Projections = () => {
                                 theme="vs-dark"
                                 eventStore={params.eventStore}
                                 namespace={params.namespace}
+                                draftReadModel={draftReadModel}
                                 normalizeDeclarationForRequests={(declaration) =>
                                     toIdentifierDeclaration(declaration, readModels.data, draftReadModel)}
                             />
@@ -446,14 +467,30 @@ export const Projections = () => {
                 style={{ width: '800px', height: '80vh' }}
                 modal
                 resizable={true}
+                footer={(
+                    <>
+                        <Button
+                            label={strings.general.buttons.ok}
+                            icon="pi pi-check"
+                            onClick={handleSaveReadModel}
+                            disabled={!pendingReadModel?.displayName || !pendingReadModel?.identifier || !pendingReadModel?.containerName}
+                            autoFocus
+                        />
+                        <Button
+                            label={strings.general.buttons.cancel}
+                            icon="pi pi-times"
+                            onClick={handleCancelReadModel}
+                            outlined
+                        />
+                    </>
+                )}
                 onHide={handleCancelReadModel}>
-                <ReadModelCreation
+                <ReadModelTypeEditor
                     initialDisplayName={newReadModelDisplayName}
                     initialIdentifier={draftForDialog?.identifier || newReadModelDisplayName}
                     initialContainerName={draftForDialog?.containerName || ''}
                     initialSchema={initialReadModelSchema}
-                    onSave={handleSaveReadModel}
-                    onCancel={handleCancelReadModel}
+                    onChanged={handleReadModelChanged}
                 />
             </Dialog>
 
