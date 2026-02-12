@@ -38,7 +38,7 @@ public class with_simple_from_block : given.a_declarative_code_generator
         _definition = CreateProjectionDefinition("PersonProjection", _readModelDefinition.Identifier, from: from);
     }
 
-    void Because() => _result = _generator.Generate(_definition, _readModelDefinition);
+    void Because() => _result = _generator.Generate(_definition, _readModelDefinition).ToFullString();
 
     [Fact] void should_generate_code() => _result.ShouldNotBeNull();
 

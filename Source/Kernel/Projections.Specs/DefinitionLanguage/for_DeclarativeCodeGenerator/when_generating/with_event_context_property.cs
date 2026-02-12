@@ -38,7 +38,7 @@ public class with_event_context_property : given.a_declarative_code_generator
         _definition = CreateProjectionDefinition("ProductProjection", _readModelDefinition.Identifier, from: from);
     }
 
-    void Because() => _result = _generator.Generate(_definition, _readModelDefinition);
+    void Because() => _result = _generator.Generate(_definition, _readModelDefinition).ToFullString();
 
     [Fact] void should_generate_code() => _result.ShouldNotBeNull();
 

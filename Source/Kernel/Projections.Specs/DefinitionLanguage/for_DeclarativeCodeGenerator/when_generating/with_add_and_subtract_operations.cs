@@ -46,7 +46,7 @@ public class with_add_and_subtract_operations : given.a_declarative_code_generat
         _definition = CreateProjectionDefinition("AccountProjection", _readModelDefinition.Identifier, from: from);
     }
 
-    void Because() => _result = _generator.Generate(_definition, _readModelDefinition);
+    void Because() => _result = _generator.Generate(_definition, _readModelDefinition).ToFullString();
 
     [Fact] void should_generate_code() => _result.ShouldNotBeNull();
 

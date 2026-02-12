@@ -56,7 +56,7 @@ public class with_increment_decrement_and_count_operations : given.a_declarative
         _definition = CreateProjectionDefinition("UserStatisticsProjection", _readModelDefinition.Identifier, from: from);
     }
 
-    void Because() => _result = _generator.Generate(_definition, _readModelDefinition);
+    void Because() => _result = _generator.Generate(_definition, _readModelDefinition).ToFullString();
 
     [Fact] void should_generate_code() => _result.ShouldNotBeNull();
 

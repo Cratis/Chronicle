@@ -61,7 +61,7 @@ public class with_removed_with_block : given.a_declarative_code_generator
             new Dictionary<EventType, RemovedWithJoinDefinition>());
     }
 
-    void Because() => _result = _generator.Generate(_definition, _readModelDefinition);
+    void Because() => _result = _generator.Generate(_definition, _readModelDefinition).ToFullString();
 
     [Fact] void should_generate_code() => _result.ShouldNotBeNull();
 

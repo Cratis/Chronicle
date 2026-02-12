@@ -51,7 +51,7 @@ public class with_join_block : given.a_declarative_code_generator
         _definition = CreateProjectionDefinition("OrderSummaryProjection", _readModelDefinition.Identifier, from: from, join: join);
     }
 
-    void Because() => _result = _generator.Generate(_definition, _readModelDefinition);
+    void Because() => _result = _generator.Generate(_definition, _readModelDefinition).ToFullString();
 
     [Fact] void should_generate_code() => _result.ShouldNotBeNull();
 
