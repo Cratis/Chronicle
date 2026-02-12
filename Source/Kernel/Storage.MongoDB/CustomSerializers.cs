@@ -1,29 +1,30 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.DependencyInjection;
 using Cratis.Reflection;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
-/// Represents an <see cref="IHostedService"/> that registers our custom bson serializers.
+/// Represents an implementation of <see cref="ICustomSerializers"/> that registers custom BSON serializers.
 /// </summary>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="types">The <see cref="ITypes"/>.</param>
-public class CustomSerializersRegistrationService(IServiceProvider serviceProvider, ITypes types) : IStartupTask
+[Singleton]
+public class CustomSerializers(IServiceProvider serviceProvider, ITypes types) : ICustomSerializers
 {
     static bool _isRegistered;
 
     /// <inheritdoc/>
-    public Task Execute(CancellationToken cancellationToken)
+    public void Register()
     {
         if (_isRegistered)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         foreach (var type in types.FindMultiple<IBsonSerializationProvider>().Where(IsEligibleForAutoRegistration))
@@ -41,7 +42,6 @@ public class CustomSerializersRegistrationService(IServiceProvider serviceProvid
             BsonSerializer.TryRegisterSerializer(serializer.ValueType, serializer);
         }
         _isRegistered = true;
-        return Task.CompletedTask;
     }
 
     static bool IsEligibleForAutoRegistration(Type type) => type.Assembly.FullName!.Contains("Cratis.Chronicle") &&

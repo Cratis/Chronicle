@@ -49,7 +49,7 @@ public class JobStateSerializer(IJobTypes jobTypes) : SerializerBase<JobState>
         context.Writer.WriteEndDocument();
     }
 
-    /// <inheritdoc />
+     /// <inheritdoc />
     public override JobState Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
         var actualType = args.NominalType ?? typeof(JobState);
