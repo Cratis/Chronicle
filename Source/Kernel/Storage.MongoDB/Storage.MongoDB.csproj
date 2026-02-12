@@ -18,6 +18,7 @@
     <ItemGroup>
       <PackageReference Include="Cratis.Arc" />
       <PackageReference Include="Cratis.Arc.Core" />
+    <PackageReference Include="Cratis.Metrics.Roslyn" />
       <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Configuration/Configuration.csproj" />
