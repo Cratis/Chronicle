@@ -500,7 +500,7 @@ public class EventSequence(
         {
             var (compliantEventAsExpandoObject, eventSchema) = await MakeEventCompliant(eventSourceId, eventType, content);
             var schemaValidationResult = ValidateAgainstSchema(eventType, content, eventSchema, correlationId);
-            if ((await schemaValidationResult).TryGetError(out var schemaError))
+            if (schemaValidationResult.TryGetError(out var schemaError))
             {
                 return schemaError;
             }
@@ -566,7 +566,7 @@ public class EventSequence(
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
     }
 
-    Task<Result<bool, AppendResult>> ValidateAgainstSchema(
+    Result<bool, AppendResult> ValidateAgainstSchema(
         EventType eventType,
         JsonObject content,
         EventTypeSchema eventSchema,
@@ -575,7 +575,7 @@ public class EventSequence(
         var validationErrors = eventSchema.Schema.Validate(content.ToJsonString());
         if (validationErrors.Count == 0)
         {
-            return Task.FromResult<Result<bool, AppendResult>>(true);
+            return true;
         }
 
         var violations = validationErrors.Select(error =>
@@ -595,7 +595,7 @@ public class EventSequence(
                 details);
         }).ToList();
 
-        return Task.FromResult<Result<bool, AppendResult>>(AppendResult.Failed(correlationId, violations));
+        return AppendResult.Failed(correlationId, violations);
     }
 
     async Task HandleFailedAppendResult(
