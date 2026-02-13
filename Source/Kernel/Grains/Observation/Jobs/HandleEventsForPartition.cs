@@ -23,13 +23,15 @@ namespace Cratis.Chronicle.Grains.Observation.Jobs;
 /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
 /// </remarks>
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
+/// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
+    IJobStepThrottle throttle,
     IStorage storage,
-    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, logger), IHandleEventsForPartition
+    ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
@@ -185,13 +187,19 @@ public class HandleEventsForPartition(
                             failed = true;
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
-                            lastEventSequenceNumberAttempted = eventObserverResult.HandledAnyEvents
-                                ? handledEvents.First(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation).Context.SequenceNumber
-                                : handledEvents[0].Context.SequenceNumber;
                             if (eventObserverResult.HandledAnyEvents)
                             {
+                                var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
+                                lastEventSequenceNumberAttempted = failedEvent is not null
+                                    ? failedEvent.Context.SequenceNumber
+                                    : eventObserverResult.LastSuccessfulObservation.Next();
+
                                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                            }
+                            else
+                            {
+                                lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                             }
 
                             logger.FailedHandlingEvents(currentState.Partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);

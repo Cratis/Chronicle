@@ -35,4 +35,9 @@ public class ReactorDefinition
     /// Gets or sets a value indicating whether the reactor is replayable.
     /// </summary>
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the tags the reactor belongs to.
+    /// </summary>
+    public IEnumerable<string> Tags { get; set; } = [];
 }

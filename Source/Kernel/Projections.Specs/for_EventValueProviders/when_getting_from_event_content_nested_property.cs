@@ -34,7 +34,9 @@ public class when_getting_from_event_content_nested_property : Specification
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                [],
+                EventHash.NotSet),
             content);
         _valueProvider = EventValueProviders.EventContent("Nested.SourceString");
     }

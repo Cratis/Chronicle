@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.EventTypes.Kernel;
-using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Grains.EventSequences;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
@@ -15,51 +13,40 @@ namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 public class Reactor : IReactor
 {
     Dictionary<string, MethodInfo> _eventMethodsByEventType = new();
-    Dictionary<string, Type> _eventTypeByEventType = new();
-    IEventTypes _eventTypes = default!;
-    IExpandoObjectConverter _expandoObjectConverter = default!;
-    JsonSerializerOptions _jsonSerializerOptions = JsonSerializerOptions.Default;
+    IEventSerializer _eventSerializer = default!;
 
     /// <inheritdoc/>
-    public void Initialize(
-        IEventTypes eventTypes,
-        IExpandoObjectConverter expandoObjectConverter,
-        JsonSerializerOptions jsonSerializerOptions)
+    public void Initialize(IEventSerializer eventSerializer)
     {
-        _eventTypes = eventTypes;
-        _expandoObjectConverter = expandoObjectConverter;
-        _jsonSerializerOptions = jsonSerializerOptions;
+        _eventSerializer = eventSerializer;
 
         var eventMethods = GetType().GetEventMethods();
         _eventMethodsByEventType = eventMethods.ToDictionary(
             method => method.GetEventType().Name,
             method => method);
-
-        _eventTypeByEventType = eventMethods.ToDictionary(
-            method => method.GetEventType().Name,
-            method => method.GetParameters()[0].ParameterType);
     }
 
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events)
     {
+        var lastSuccessfullyHandledSequenceNumber = EventSequenceNumber.Unavailable;
+
         foreach (var @event in events)
         {
             if (_eventMethodsByEventType.TryGetValue(@event.Context.EventType.Id, out var method))
             {
                 try
                 {
-                    var eventType = _eventTypeByEventType[@event.Context.EventType.Id];
-                    var contentAsJson = _expandoObjectConverter.ToJsonObject(@event.Content, _eventTypes.GetJsonSchema(eventType));
-                    var content = contentAsJson.Deserialize(eventType, _jsonSerializerOptions);
+                    var content = _eventSerializer.Deserialize(@event);
                     var task = (method.Invoke(this, [content, @event.Context]) as Task)!;
                     await task;
+                    lastSuccessfullyHandledSequenceNumber = @event.Context.SequenceNumber;
                 }
                 catch (Exception exception)
                 {
                     return new(
                         ObserverSubscriberState.Failed,
-                        @event.Context.SequenceNumber,
+                        lastSuccessfullyHandledSequenceNumber,
                         exception.GetAllMessages(),
                         exception.StackTrace ?? string.Empty);
                 }

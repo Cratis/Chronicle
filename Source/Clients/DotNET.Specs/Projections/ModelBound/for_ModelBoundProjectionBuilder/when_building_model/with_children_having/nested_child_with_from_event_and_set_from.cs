@@ -25,18 +25,21 @@ public class nested_child_with_from_event_and_set_from : given.a_model_bound_pro
 
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
 
-    [Fact] void should_have_children_for_warehouses()
+    [Fact]
+    void should_have_children_for_warehouses()
     {
         _result.Children.Keys.ShouldContain(nameof(SupplyChain.Warehouses));
     }
 
-    [Fact] void should_have_nested_children_for_routes()
+    [Fact]
+    void should_have_nested_children_for_routes()
     {
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
         warehouseChildren.Children.Keys.ShouldContain(nameof(Warehouse.Routes));
     }
 
-    [Fact] void should_have_from_definition_for_route_added_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_route_added_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RouteAddedToWarehouse)).ToContract();
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
@@ -44,7 +47,8 @@ public class nested_child_with_from_event_and_set_from : given.a_model_bound_pro
         routeChildren.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_have_from_definition_for_route_details_updated_in_nested_children()
+    [Fact]
+    void should_have_from_definition_for_route_details_updated_in_nested_children()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RouteDetailsUpdated)).ToContract();
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
@@ -52,7 +56,8 @@ public class nested_child_with_from_event_and_set_from : given.a_model_bound_pro
         routeChildren.From.Keys.ShouldContain(et => et.IsEqual(eventType));
     }
 
-    [Fact] void should_map_distance_from_route_details_updated()
+    [Fact]
+    void should_map_distance_from_route_details_updated()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RouteDetailsUpdated)).ToContract();
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
@@ -62,13 +67,24 @@ public class nested_child_with_from_event_and_set_from : given.a_model_bound_pro
         fromDef.Properties[nameof(Route.Distance)].ShouldEqual(nameof(RouteDetailsUpdated.TotalDistance));
     }
 
-    [Fact] void should_map_name_from_route_details_updated()
+    [Fact]
+    void should_not_map_name_from_route_details_updated()
     {
         var eventType = event_types.GetEventTypeFor(typeof(RouteDetailsUpdated)).ToContract();
         var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
         var routeChildren = warehouseChildren.Children[nameof(Warehouse.Routes)];
         var fromDef = routeChildren.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(Route.Name));
+
+        // Auto-mapped properties should not be in client-side Properties
+        fromDef.Properties.Keys.ShouldNotContain(nameof(Route.Name));
+    }
+
+    [Fact]
+    void should_have_auto_map_enabled_on_nested_children()
+    {
+        var warehouseChildren = _result.Children[nameof(SupplyChain.Warehouses)];
+        var routeChildren = warehouseChildren.Children[nameof(Warehouse.Routes)];
+        routeChildren.AutoMap.ShouldEqual(Contracts.Projections.AutoMap.Enabled);
     }
 }
 

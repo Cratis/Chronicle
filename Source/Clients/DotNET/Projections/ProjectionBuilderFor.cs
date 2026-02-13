@@ -6,7 +6,6 @@ using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
@@ -18,6 +17,7 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IProjectionBuilderFor<TReadModel>>, IProjectionBuilderFor<TReadModel>
 {
     readonly ProjectionId _identifier;
+    readonly Type _projectionType;
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     bool _isRewindable = true;
     bool _isActive = true;
@@ -26,17 +26,20 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TReadModel}"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier for the projection.</param>
+    /// <param name="projectionType">The type of the projection.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionBuilderFor(
         ProjectionId identifier,
+        Type projectionType,
         INamingPolicy namingPolicy,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
-        : base(namingPolicy, eventTypes, jsonSerializerOptions, false)
+        : base(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Enabled)
     {
         _identifier = identifier;
+        _projectionType = projectionType;
         _readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
     }
 
@@ -48,9 +51,9 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TReadModel> ReadModelName(string readModelName)
+    public IProjectionBuilderFor<TReadModel> ContainerName(string containerName)
     {
-        _readModelIdentifier = readModelName;
+        _readModelIdentifier = containerName;
         return this;
     }
 
@@ -86,10 +89,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
-            Sink = new()
-            {
-                ConfigurationId = Guid.Empty,
-                TypeId = WellKnownSinkTypes.MongoDB
-            }
+            Tags = _projectionType.GetTags().ToArray(),
+            AutoMap = (Contracts.Projections.AutoMap)_autoMap
         };
 }

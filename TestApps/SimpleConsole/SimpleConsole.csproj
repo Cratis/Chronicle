@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
+    <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+  </ItemGroup>
+</Project>

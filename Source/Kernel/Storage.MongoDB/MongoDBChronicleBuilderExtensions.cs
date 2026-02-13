@@ -33,7 +33,6 @@ public static class MongoDBChronicleBuilderExtensions
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle)
     {
-        builder.SiloBuilder.AddStartupTask<CustomSerializersRegistrationService>(ServiceLifecycleStage.First);
         builder.SiloBuilder
             .UseMongoDBClient(server)
 

@@ -3,11 +3,22 @@
 Defining an event is straightforward. You can use either a C# `class` or a `record` type.
 We recommend using a `record` type because records are immutable, which aligns with the nature of an [event](../concepts/event.md).
 
-To define an event type, simply add the `[EventType]` attribute to the new type. This attribute allows the discovery system to automatically detect all event types. You can read more about event types [here](../concepts/event-type.md).
+To define an event type, simply add the `[EventType]` attribute to the new type. This attribute allows the discovery system to automatically detect all event types. You can read more about event types [see documentation](../concepts/event-type.md).
 
 Below is a set of events we will use for our library sample.
 
-{{snippet:Quickstart-Events}}
+```csharp
+[EventType]
+public record UserOnboarded(string Name, string Email);
+
+[EventType]
+public record BookAddedToInventory(string Title, string Author, string ISBN);
+
+[EventType]
+public record BookBorrowed(Guid UserId);
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Events.cs#L9-L16)
 
 ## Appending events
 
@@ -27,11 +38,21 @@ In this example, we will use the method for appending a single event.
 
 The following code appends a couple of `UserOnboarded` events to indicate that users have been onboarded to the system.
 
-{{snippet:Quickstart-DemoData-Users}}
+```csharp
+        await eventLog.Append(Guid.NewGuid(), new UserOnboarded("Jane Doe", "jane@interwebs.net"));
+        await eventLog.Append(Guid.NewGuid(), new UserOnboarded("John Doe", "john@interwebs.net"));
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/DemoData.cs#L13-L14)
 
 Next, we want to append a couple of events to represent books being added to our inventory:
 
-{{snippet:Quickstart-DemoData-Books}}
+```csharp
+        await eventLog.Append(Guid.NewGuid(), new BookAddedToInventory("Metaprogramming in C#: Automate your .NET development and simplify overcomplicated code", "Einar Ingebrigtsen", "978-1837635429"));
+        await eventLog.Append(Guid.NewGuid(), new BookAddedToInventory("Understanding Eventsourcing: Planning and Implementing scalable Systems with Eventmodeling and Eventsourcing", "Martin Dilger", "979-8300933043"));
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/DemoData.cs#L18-L19)
 
 Notice that the first parameter for the `Append` method is the [event source identifier](../concepts/event-source.md).
 This identifier uniquely represents the object we're working on, similar to a **primary key** in a database.
@@ -42,7 +63,7 @@ which is included in the Chronicle development image. Open your browser and navi
 
 Then, go to the **Quickstart** event store and select **Sequences**. You should now be able to see the events:
 
-![](workbench.png)
+![Chronicle Workbench showing events](workbench.png)
 
 ## Creating read state
 
@@ -63,11 +84,33 @@ It is ideal for *if-this-then-that* scenarios but can also be used for data crea
 
 Let's start by defining a read model that will be used in the reducer.
 
-{{snippet:Quickstart-User}}
+```csharp
+public record User(Guid Id, string Name, string Email)
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/User.cs#L7-L7)
 
 The following code reacts to the `UserOnboarded` event and then creates a new `User` and inserts into a MongoDB database.
 
-{{snippet:Quickstart-UsersReactor}}
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reactors;
+using MongoDB.Driver;
+
+namespace Quickstart;
+
+public class UsersReactor : IReactor
+{
+    public async Task Onboarded(UserOnboarded @event, EventContext context)
+    {
+        var user = new User(Guid.Parse(context.EventSourceId), @event.Name, @event.Email);
+        var collection = Globals.Database.GetCollection<User>("users");
+        await collection.InsertOneAsync(user);
+    }
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Console/UsersReactor.cs#L5-L19)
 
 > Note: The code leverages a `Globals` object that is found as part of the full sample and is configured with the
 > MongoDB database to use.
@@ -86,7 +129,7 @@ Task <MethodName>(EventType @event, EventContext context);
 
 Opening your database client, you should be able to see the users:
 
-![](./mongodb-users.png)
+![MongoDB showing users collection](./mongodb-users.png)
 
 ### Reducer
 
@@ -95,12 +138,29 @@ It functions similarly to a **Reactor** but abstracts away the database manageme
 
 Let's begin by defining a read model that will be used in the reducer.
 
-{{snippet:Quickstart-Book}}
+```csharp
+public record Book(Guid Id, string Title, string Author, string ISBN)
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Book.cs#L7-L7)
 
 For the read model we will need code that produces the correct state.
 The following code reacts to `BookAddedToInventory` and produces the new state that should be persisted.
 
-{{snippet:Quickstart-BooksReducer}}
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reducers;
+
+namespace Quickstart.Common;
+
+public class BooksReducer : IReducerFor<Book>
+{
+    public Task<Book> Added(BookAddedToInventory @event, Book? initialState, EventContext context) =>
+         Task.FromResult(new Book(Guid.Parse(@context.EventSourceId), @event.Title, @event.Author, @event.ISBN));
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/BooksReducer.cs#L5-L14)
 
 The method `Added` is not defined by the `IReducerFor<>` interface. The `IReducerFor<>` interface serves as a marker interface for discovery purposes.
 It requires a generic argument specifying the type of the read model. Chronicle uses this type to gather information about properties and types for the underlying database.
@@ -120,7 +180,7 @@ Task<ReadModel> <MethodName>(EventType @event, ReadModel? initialState, EventCon
 
 Opening your database client, you should be able to see the books:
 
-![](./mongodb-books.png)
+![MongoDB showing books collection](./mongodb-books.png)
 
 ### Projections
 
@@ -131,12 +191,37 @@ and one-to-one. When your goal is to produce state, projections will often be su
 
 Let's start by defining a read model that will be used in the projection.
 
-{{snippet:Quickstart-BorrowedBook}}
+```csharp
+public record BorrowedBook(Guid Id, Guid UserId, string Title, string User, DateTimeOffset Borrowed, DateTimeOffset Returned)
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/BorrowedBook.cs#L7-L7)
 
 The projection declares operations to do in a fluent manner, effectively mapping out the events it is interested in and
 telling the projection engine what to do with them.
 
-{{snippet:Quickstart-BorrowedBooksProjection}}
+```csharp
+using Cratis.Chronicle.Projections;
+
+namespace Quickstart.Common;
+
+public class BorrowedBooksProjection : IProjectionFor<BorrowedBook>
+{
+    public void Define(IProjectionBuilderFor<BorrowedBook> builder) => builder
+        .From<BookBorrowed>(from => from
+            .Set(m => m.UserId).To(e => e.UserId)
+            .Set(m => m.Borrowed).ToEventContextProperty(c => c.Occurred))
+        .Join<BookAddedToInventory>(bookBuilder => bookBuilder
+            .On(m => m.Id)
+            .Set(m => m.Title).To(e => e.Title))
+        .Join<UserOnboarded>(userBuilder => userBuilder
+            .On(m => m.UserId)
+            .Set(m => m.User).To(e => e.Name))
+        .RemovedWith<BookReturned>();
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/BorrowedBooksProjection.cs#L5-L22)
 
 With this projection, we specify that from the `BookBorrowed` event, we are interested in storing which user borrowed the book and the time it was borrowed.
 The time is derived from the `Occurred` property of the `EventContext`. For display purposes, we want to show the name of the book and the name of the user
@@ -157,4 +242,4 @@ eventLog.Append("92ac7c15-d04b-4d2b-b5b6-641ab681afe7", new BookBorrowed(Guid.Pa
 
 Running this and opening your database client, you should be able to see the borrowed books:
 
-![](./mongodb-borrowed-books.png)
+![MongoDB showing borrowed books collection](./mongodb-borrowed-books.png)

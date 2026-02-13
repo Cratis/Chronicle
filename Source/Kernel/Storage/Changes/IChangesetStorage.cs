@@ -15,23 +15,23 @@ namespace Cratis.Chronicle.Storage.Changes;
 public interface IChangesetStorage
 {
     /// <summary>
-    /// Begin replay of a specific <see cref="ReadModelName"/>.
+    /// Begin replay of a specific <see cref="ReadModelContainerName"/>.
     /// </summary>
-    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelContainerName"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task BeginReplay(ReadModelName readModel);
+    Task BeginReplay(ReadModelContainerName readModel);
 
     /// <summary>
-    /// Begin replay of a specific <see cref="ReadModelName"/>.
+    /// Begin replay of a specific <see cref="ReadModelContainerName"/>.
     /// </summary>
-    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelContainerName"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task EndReplay(ReadModelName readModel);
+    Task EndReplay(ReadModelContainerName readModel);
 
     /// <summary>
     /// Save changesets associated with a specific <see cref="CorrelationId"/>.
     /// </summary>
-    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelContainerName"/>.</param>
     /// <param name="readModelKey">The <see cref="Key"/>.</param>
     /// <param name="eventType">The <see cref="EventType"/> that was at the root.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/>.</param>
@@ -39,7 +39,7 @@ public interface IChangesetStorage
     /// <param name="changeset">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(
-        ReadModelName readModel,
+        ReadModelContainerName readModel,
         Key readModelKey,
         EventType eventType,
         EventSequenceNumber sequenceNumber,

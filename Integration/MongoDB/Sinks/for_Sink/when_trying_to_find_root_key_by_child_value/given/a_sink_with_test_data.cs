@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Bson;
@@ -11,7 +12,7 @@ using NSubstitute;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value.given;
 
-public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specification(fixture)
+public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integration.given.a_mongo_client(fixture)
 {
     protected Sink _sink;
     protected IMongoDatabase _database;
@@ -20,8 +21,7 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
 
     void Establish()
     {
-        var client = new MongoClient($"mongodb://localhost:{ChronicleInProcessFixture.MongoDBPort}");
-        _database = client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
+        _database = _client.GetDatabase($"chronicle_sink_specs_{Guid.NewGuid():N}");
         const string collectionName = "test_read_model";
         _collection = _database.GetCollection<BsonDocument>(collectionName);
 
@@ -77,7 +77,12 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
         _readModelDefinition = new ReadModelDefinition(
             "test-read-model",
             "TestReadModel",
+            "TestReadModel",
             ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
                 { ReadModelGeneration.First, schema }
@@ -110,9 +115,10 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Specific
     class TestCollections(IMongoDatabase database, string collectionName) : ISinkCollections
     {
         public IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(collectionName);
-        public Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;
-        public Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;
-        public Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context) => Task.CompletedTask;
+        public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
+        public Task BeginReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
+        public Task ResumeReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
+        public Task EndReplay(Storage.ReadModels.ReplayContext context) => Task.CompletedTask;
         public Task PrepareInitialRun() => Task.CompletedTask;
     }
 }

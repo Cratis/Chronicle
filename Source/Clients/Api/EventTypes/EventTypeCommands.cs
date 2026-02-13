@@ -2,6 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
+using NJsonSchema;
+using ContractsEventType = Cratis.Chronicle.Contracts.Events.EventType;
+using ContractsEventTypeRegistration = Cratis.Chronicle.Contracts.Events.EventTypeRegistration;
+using IEventTypesService = Cratis.Chronicle.Contracts.Events.IEventTypes;
 
 namespace Cratis.Chronicle.Api.Events;
 
@@ -11,13 +15,13 @@ namespace Cratis.Chronicle.Api.Events;
 [Route("/api/event-store/{eventStore}/types")]
 public class EventTypeCommands : Controller
 {
-    readonly IEventTypes _eventTypes;
+    readonly IEventTypesService _eventTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypeCommands"/> class.
     /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> service for actual registration.</param>
-    internal EventTypeCommands(IEventTypes eventTypes)
+    /// <param name="eventTypes"><see cref="IEventTypesService"/> service for actual registration.</param>
+    internal EventTypeCommands(IEventTypesService eventTypes)
     {
         _eventTypes = eventTypes;
     }
@@ -37,4 +41,37 @@ public class EventTypeCommands : Controller
                 EventStore = eventStore,
                 Types = payload.Types.ToContract().ToList()
             });
+
+    /// <summary>
+    /// Create a new event type.
+    /// </summary>
+    /// <param name="eventStore">Event store to create for.</param>
+    /// <param name="command">Command for creating the event type.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("create")]
+    public async Task CreateEventType(
+        [FromRoute] string eventStore,
+        [FromBody] EventTypes.CreateEventType command)
+    {
+        var schema = new JsonSchema
+        {
+            Type = JsonObjectType.Object,
+        };
+
+        await _eventTypes.RegisterSingle(new RegisterSingleEventTypeRequest
+        {
+            EventStore = eventStore,
+            Type = new ContractsEventTypeRegistration
+            {
+                Type = new ContractsEventType
+                {
+                    Id = command.Name,
+                    Generation = 1
+                },
+                Owner = (Contracts.Events.EventTypeOwner)(int)EventTypeOwner.Client,
+                Source = (Contracts.Events.EventTypeSource)(int)EventTypeSource.User,
+                Schema = schema.ToJson()
+            }
+        });
+    }
 }

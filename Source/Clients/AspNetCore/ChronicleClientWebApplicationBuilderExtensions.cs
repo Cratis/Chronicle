@@ -42,9 +42,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths));
 
         builder.Services
-            .AddRules()
             .AddUnitOfWork()
-            .AddAggregates()
             .AddCompliance()
             .AddCausation()
             .AddCratisChronicleClient();

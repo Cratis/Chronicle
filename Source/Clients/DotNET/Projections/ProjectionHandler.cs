@@ -14,13 +14,13 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventStore">The event store to use.</param>
 /// <param name="projectionId">The identifier of the projection.</param>
 /// <param name="readModelType">The type of the read model.</param>
-/// <param name="readModelName">The name of the read model.</param>
+/// <param name="containerName">The container name of the read model (collection, table, etc.).</param>
 /// <param name="eventSequenceId">The event sequence identifier.</param>
 public class ProjectionHandler(
     IEventStore eventStore,
     ProjectionId projectionId,
     Type readModelType,
-    ReadModelName readModelName,
+    ReadModelContainerName containerName,
     EventSequenceId eventSequenceId) : IProjectionHandler
 {
     /// <inheritdoc/>
@@ -30,7 +30,7 @@ public class ProjectionHandler(
     public Type ReadModelType => readModelType;
 
     /// <inheritdoc/>
-    public ReadModelName ReadModelName => readModelName;
+    public ReadModelContainerName ContainerName => containerName;
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> GetFailedPartitions() =>
