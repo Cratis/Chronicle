@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
-using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
+using Cratis.Chronicle.Integration.Specifications.Projections.Events;
+using Cratis.Chronicle.Integration.Specifications.Projections.ProjectionTypes;
+using Cratis.Chronicle.Integration.Specifications.Projections.ReadModels;
 using Cratis.Chronicle.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_watcher.context;
 

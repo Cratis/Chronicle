@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
-using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
+using Cratis.Chronicle.Integration.Specifications.Projections.Events;
+using Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event.and_event_joined_has_happened_first.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event;
