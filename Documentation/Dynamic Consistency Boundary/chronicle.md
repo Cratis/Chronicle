@@ -45,5 +45,5 @@ If you prefer an aggregate root style, Chronicle supports it through Cratis.Arc.
 
 ## Related resources
 
-- https://github.com/bwaidelich/dcb-example-courses
+- [https://github.com/bwaidelich/dcb-example-courses](https://github.com/bwaidelich/dcb-example-courses)
 

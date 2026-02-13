@@ -30,6 +30,6 @@ A fixed aggregate boundary often forces unrelated data into a single consistency
 
 ## References
 
-- https://dcb.events
-- https://www.eventsourcing.dev/best-practices/dynamic-consistency-boundaries
+- [https://dcb.events](https://dcb.events)
+- [https://www.eventsourcing.dev/best-practices/dynamic-consistency-boundaries](https://www.eventsourcing.dev/best-practices/dynamic-consistency-boundaries)
 
