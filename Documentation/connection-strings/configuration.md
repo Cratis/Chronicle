@@ -53,5 +53,5 @@ export CHRONICLE__URL="chronicle://clientId:clientSecret@server.example.com:3500
 ## Related topics
 
 - [DotNET client usage](dotnet-client.md)
-- [TLS configuration](../tls-configuration.md)
+- [TLS configuration](../configuration/tls.md)
 

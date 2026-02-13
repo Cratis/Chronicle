@@ -2,6 +2,8 @@
   href: index.md
 - name: Appending
   href: appending.md
+- name: Appending with tags
+  href: appending-with-tags.md
 - name: Appending many
   href: appending-many.md
 - name: Getting events

@@ -316,5 +316,5 @@ public async Task ValidateDataIntegrity()
 - [Getting Snapshots](getting-snapshots.md) - Retrieve historical state snapshots
 - [Watching Read Models](watching-read-models.md) - Real-time notifications for read model changes
 - [Projections](../projections/index.md) - Learn more about defining projections
-- [Reducers](../recipes/reducers.md) - Learn more about defining reducers
+- [Reducers](../reducers/index.md) - Learn more about defining reducers
 - [Events - Getting state](../events/getting-state.md) - Capture sequence position for point-in-time reads

@@ -35,5 +35,5 @@ You cannot combine client credentials and API key authentication in the same con
 
 TLS is enabled by default. You can disable it for local development using `disableTls=true`, but production deployments should always use TLS.
 
-See [TLS configuration](../tls-configuration.md) for certificate setup.
+See [TLS configuration](../hosting/configuration/tls.md) for certificate setup.
 

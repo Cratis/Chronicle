@@ -43,5 +43,4 @@ public class EmailNotificationsReactor : IReactor
 - [Getting Started](getting-started.md)
 - [Event Processing](event-processing.md)
 - [Tagging Reactors](../concepts/tagging-reactors.md)
-- [Reacting to Events in the Event Log](../recipes/reacting-events-in-event-log.md)
 

@@ -1,10 +1,10 @@
-# gRPC Message Size Configuration
+# gRPC Message Size
 
-When working with large event batches or queries that return many events, you may encounter gRPC message size limits. Chronicle provides configuration options to adjust the maximum send and receive message sizes.
+Large event batches or queries that return many events can exceed gRPC message limits. Chronicle provides configuration options to adjust the maximum send and receive message sizes.
 
 ## Default Settings
 
-By default, Chronicle sets both `MaxReceiveMessageSize` and `MaxSendMessageSize` to **100 MB** (104,857,600 bytes). This is significantly higher than the default gRPC limit of 4 MB, making it suitable for most scenarios involving large event collections.
+By default, Chronicle sets both `MaxReceiveMessageSize` and `MaxSendMessageSize` to 100 MB (104,857,600 bytes). This is higher than the gRPC default of 4 MB and is suitable for most scenarios involving large event collections.
 
 ## Configuring Message Sizes
 
@@ -23,7 +23,7 @@ var client = new ChronicleClient(options);
 
 ## Configuration via appsettings.json
 
-For ASP.NET Core applications, you can configure message sizes in your `appsettings.json`:
+For ASP.NET Core applications, configure message sizes in `appsettings.json`:
 
 ```json
 {
@@ -52,18 +52,18 @@ If you encounter an error like:
 Status(StatusCode="ResourceExhausted", Detail="Received message exceeds the maximum configured message size.")
 ```
 
-This indicates that the response from the server exceeds the `MaxReceiveMessageSize`. You should increase this value to accommodate larger responses.
+This indicates that the response from the server exceeds `MaxReceiveMessageSize`. Increase this value to accommodate larger responses.
 
 ## Recommendations
 
 - **Default (100 MB)**: Suitable for most applications with moderate event batch sizes
 - **200+ MB**: Consider for applications that frequently query large event ranges or work with many events
-- **Performance Considerations**: Larger message sizes consume more memory. Balance your needs with available resources
-- **Server Configuration**: Ensure the Chronicle Kernel server is also configured to handle the message sizes you need
+- **Performance considerations**: Larger message sizes consume more memory. Balance your needs with available resources
+- **Server configuration**: Ensure the Chronicle Server is also configured to handle the message sizes you need
 
 ## Null Values
 
-Setting either property to `null` will use the gRPC default (4 MB), which is generally **not recommended** for Chronicle applications:
+Setting either property to `null` will use the gRPC default (4 MB), which is generally not recommended for Chronicle applications:
 
 ```csharp
 var options = new ChronicleOptions
@@ -72,3 +72,4 @@ var options = new ChronicleOptions
     MaxSendMessageSize = null     // Uses gRPC default of 4 MB - not recommended
 };
 ```
+

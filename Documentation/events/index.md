@@ -30,6 +30,7 @@ public class EmployeesController(IEventLog eventLog)
 Use these topics to append, read, and manage events:
 
 - [Appending](appending.md)
+- [Appending with tags](appending-with-tags.md)
 - [Appending many](appending-many.md)
 - [Getting events](getting-events.md)
 - [Getting state](getting-state.md)

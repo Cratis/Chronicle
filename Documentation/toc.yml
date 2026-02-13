@@ -10,6 +10,8 @@
   href: events/toc.yml
 - name: Event Seeding
   href: event-seeding/toc.yml
+- name: Configuration
+  href: configuration/toc.yml
 - name: Connection Strings
   href: connection-strings/toc.yml
 - name: Namespaces
@@ -28,8 +30,6 @@
   href: code-analysis/toc.yml
 - name: Hosting
   href: hosting/toc.yml
-- name: Recipes
-  href: recipes/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Statistics

@@ -210,5 +210,5 @@ Ensure you have configured the certificate path and password as described above.
 
 - [Local Certificates](local-certificates.md) - TLS certificate setup for development
 - [Production Hosting](production.md) - Production deployment requirements
-- [Configuration](configuration.md) - Complete configuration reference
+- [Configuration](configuration/index.md) - Complete configuration reference
 

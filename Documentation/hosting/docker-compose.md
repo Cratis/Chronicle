@@ -1,13 +1,10 @@
 # Running with Docker Compose
 
-Using the development image of Chronicle is very convenient for getting started quickly.
-Sometimes you want more control over the running environment and have MongoDB as its own
-thing and possible other services, for collecting logging and other telemetry
-both from Chronicle and your own app running on top.
+Using the development image of Chronicle is convenient for getting started quickly. For more control over the runtime environment, you can run Chronicle with MongoDB and other services such as telemetry collectors.
 
-The following configures a `docker-compose-yml` with Chronicle and [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview).
+The following configures a `docker-compose.yml` with Chronicle and [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview).
 
-```csharp
+```yaml
 services:
   chronicle:
     image: cratis/chronicle:latest-development
@@ -34,5 +31,5 @@ services:
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/docker-compose.yml#L2-L23)
 
-With this setup you will have Chronicle running alongside [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview),
-which will provide you with a dashboard for Open Telemetry.
+With this setup, Chronicle runs alongside Microsoft Aspire, which provides a dashboard for OpenTelemetry.
+

@@ -44,6 +44,8 @@ If the claim is not found or the user is not authenticated, the default namespac
 
 Implement a resolver when your namespace comes from a custom context, such as a tenant provider or a request-scoped service.
 
+If your application uses Arc Tenancy, you can resolve the namespace from its tenant context. See [Arc Tenancy](xref:Arc.Tenancy).
+
 ```csharp
 public class TenantNamespaceResolver : IEventStoreNamespaceResolver
 {

@@ -258,4 +258,4 @@ var account = (Account)await _eventStore.ReadModels.GetInstanceById(typeof(Accou
 - [Getting Snapshots](getting-snapshots.md) - Learn how to retrieve historical state snapshots
 - [Watching Read Models](watching-read-models.md) - Real-time notifications for read model changes
 - [Projections](../projections/index.md) - Learn more about defining projections
-- [Reducers](../recipes/reducers.md) - Learn more about defining reducers
+- [Reducers](../reducers/index.md) - Learn more about defining reducers

@@ -88,7 +88,7 @@ Explore Chronicle's comprehensive documentation organized by topic:
 | **[Clients](./clients/toc.yml)** | .NET client SDK documentation and application model guidance |
 | **[Projections](./projections/index.md)** | How to create read models from events using projections |
 | **[Hosting](./hosting/toc.yml)** | Deployment options including production and development environments |
-| **[Recipes](./recipes/toc.yml)** | Practical examples and common patterns for Chronicle usage |
+| **[Configuration](./configuration/toc.yml)** | Client and server configuration guidance |
 | **[Contributing](./contributing/toc.yml)** | Guidelines for contributing to Chronicle development |
 
 ---

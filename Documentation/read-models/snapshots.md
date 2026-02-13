@@ -327,5 +327,5 @@ Console.WriteLine($"Latest change at: {latestChange.Occurred}");
 
 - [Getting Instances](getting-instances.md) - Learn how to retrieve current read model state
 - [Projections](../projections/index.md) - Learn more about defining projections
-- [Reducers](../recipes/reducers.md) - Learn more about defining reducers
+- [Reducers](../reducers/index.md) - Learn more about defining reducers
 - [Event Metadata and Tags](../concepts/event-metadata-tags.md) - Understanding correlation IDs and event metadata

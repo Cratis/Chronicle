@@ -2,6 +2,8 @@
 
 The ASP.NET Core client provides namespace resolution designed for multi-tenant web applications. It integrates with HTTP context and offers built-in resolvers for common request patterns.
 
+If your multi-tenant setup is based on Arc Tenancy, you can map the current tenant to a namespace. See [Arc Tenancy](xref:Arc.Tenancy).
+
 ## Built-in resolvers
 
 ### HTTP header resolution (default)
