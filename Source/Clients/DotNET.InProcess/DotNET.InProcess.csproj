@@ -61,19 +61,7 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
-        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Grains/Grains.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Grains.Interfaces/Grains.Interfaces.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Projections/Projections.csproj">
+        <ProjectReference Include="../../Kernel/Core/Core.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
