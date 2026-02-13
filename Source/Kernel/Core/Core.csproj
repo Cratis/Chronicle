@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Core</AssemblyName>
+        <RootNamespace>Cratis.Chronicle</RootNamespace>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
+        <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReadmeFile Include="NJsonSchema" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Metrics.Roslyn" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="System.Reactive" />
+    </ItemGroup>
+</Project>
