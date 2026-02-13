@@ -4,8 +4,6 @@
   href: architecture.md
 - name: Eventual Consistency
   href: eventual-consistency.md
-- name: Watching Projections
-  href: watching-projections.md
 - name: Categorizing Projections
   href: categorizing-projections.md
 - name: Projection Declaration Language
