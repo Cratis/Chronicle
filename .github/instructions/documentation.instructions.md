@@ -47,3 +47,4 @@ applyTo: "Documentation/**/*.md"
 - Never include code from the repository to explain public APIs - these might change and become outdated.
 - Always write documentation from the perspective of an end user of the public APIs and features of the project.
 - We prefer `record` types for data structures such as events, commands, and read models in code examples within the documentation.
+- Run verify-markdown.sh script in the Documentation folder after writing documentation to ensure that all links are valid and that the markdown is well-formed.
