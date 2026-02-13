@@ -20,8 +20,8 @@ using Cratis.Chronicle.Events;
 
 public class EmployeesController(IEventLog eventLog)
 {
-	public Task RegisterEmployee(string firstName, string lastName) =>
-		eventLog.Append(Guid.NewGuid(), new EmployeeRegistered(firstName, lastName));
+    public Task RegisterEmployee(string firstName, string lastName) =>
+        eventLog.Append(Guid.NewGuid(), new EmployeeRegistered(firstName, lastName));
 }
 ```
 

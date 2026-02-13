@@ -12,8 +12,6 @@
   href: namespaces/toc.yml
 - name: Constraints
   href: constraints/toc.yml
-- name: Clients
-  href: clients/toc.yml
 - name: Read Models
   href: read-models/toc.yml
 - name: Projections
