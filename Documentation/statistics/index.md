@@ -32,11 +32,18 @@ This section contains test coverage statistics for the Chronicle project, tracki
     justify-content: center;
     align-items: center;
     width: 100%;
+    min-height: 360px;
   }
   .coverage-chart {
     max-width: 1200px;
     width: 100%;
     margin: 20px 0;
+    height: 360px;
+  }
+  .chart-message {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 4px;
   }
   .project-toggles {
     display: flex;
@@ -127,6 +134,7 @@ This section contains test coverage statistics for the Chronicle project, tracki
 
     <div class="coverage-graphs">
       <canvas id="coverage-chart" class="coverage-chart"></canvas>
+      <div id="chart-message" class="chart-message" role="status" aria-live="polite"></div>
     </div>
   </div>
 
@@ -137,256 +145,6 @@ This section contains test coverage statistics for the Chronicle project, tracki
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="coverage-data.js"></script>
-<script>
-  'use strict';
-  (function() {
-    const projectColors = [
-      '#178600', // .NET green
-      '#3298dc', // Blue
-      '#f1e05a', // Yellow
-      '#f34b7d', // Pink
-      '#a270ba', // Purple
-      '#dea584', // Tan
-      '#00add8', // Cyan
-      '#ff6b6b', // Red
-      '#4ecdc4', // Teal
-      '#95e1d3', // Mint
-    ];
-
-    let chart = null;
-    let chartData = null;
-    let activeProjects = new Set();
-
-    function init() {
-      const data = window.COVERAGE_DATA;
-
-      // Render header
-      const lastUpdate = data.lastUpdate ? new Date(data.lastUpdate).toString() : 'No data yet';
-      document.getElementById('last-update').textContent = lastUpdate;
-      const repoLink = document.getElementById('repository-link');
-      repoLink.href = data.repoUrl;
-      repoLink.textContent = data.repoUrl;
-
-      // Render footer
-      document.getElementById('dl-button').onclick = () => {
-        const dataUrl = 'data:application/json,' + JSON.stringify(data, null, 2);
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = 'coverage_data.json';
-        a.click();
-      };
-
-      return data;
-    }
-
-    function prepareCoverageData(data) {
-      if (!data.entries || Object.keys(data.entries).length === 0) {
-        return { projects: [], dates: [], coverageByProject: {} };
-      }
-
-      const allDates = new Set();
-      const projects = Object.keys(data.entries);
-      const coverageByProject = {};
-
-      // Collect all unique dates and organize data by project
-      projects.forEach(project => {
-        const entries = data.entries[project] || [];
-        coverageByProject[project] = {};
-
-        entries.forEach(entry => {
-          const date = new Date(entry.date).toLocaleDateString();
-          allDates.add(date);
-          coverageByProject[project][date] = entry.lineCoverage;
-        });
-      });
-
-      const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
-
-      return {
-        projects,
-        dates: sortedDates,
-        coverageByProject
-      };
-    }
-
-    function renderSummaryStats(chartData) {
-      const summaryContainer = document.getElementById('summary-stats');
-      summaryContainer.innerHTML = '';
-
-      if (chartData.projects.length === 0) {
-        summaryContainer.innerHTML = '<p>No coverage data available yet.</p>';
-        return;
-      }
-
-      // Calculate overall coverage (average of latest values)
-      let totalCoverage = 0;
-      let projectCount = 0;
-
-      chartData.projects.forEach(project => {
-        const dates = chartData.dates;
-        if (dates.length > 0) {
-          const latestDate = dates[dates.length - 1];
-          const coverage = chartData.coverageByProject[project][latestDate];
-          if (coverage !== undefined) {
-            totalCoverage += coverage;
-            projectCount++;
-          }
-        }
-      });
-
-      const avgCoverage = projectCount > 0 ? (totalCoverage / projectCount).toFixed(1) : 0;
-
-      // Create stat cards
-      const stats = [
-        { label: 'Average Coverage', value: avgCoverage + '%' },
-        { label: 'Projects Tracked', value: chartData.projects.length },
-        { label: 'Data Points', value: chartData.dates.length }
-      ];
-
-      stats.forEach(stat => {
-        const card = document.createElement('div');
-        card.className = 'stat-card';
-        card.innerHTML = `
-          <div class="stat-value">${stat.value}</div>
-          <div class="stat-label">${stat.label}</div>
-        `;
-        summaryContainer.appendChild(card);
-      });
-    }
-
-    function renderProjectToggles(chartData) {
-      const toggleContainer = document.getElementById('project-toggles');
-      toggleContainer.innerHTML = '';
-
-      if (chartData.projects.length === 0) {
-        return;
-      }
-
-      // Initialize all projects as active
-      chartData.projects.forEach(project => activeProjects.add(project));
-
-      chartData.projects.forEach((project, index) => {
-        const button = document.createElement('button');
-        button.className = 'toggle-button';
-        button.textContent = project;
-        button.style.borderColor = projectColors[index % projectColors.length];
-
-        button.onclick = () => {
-          if (activeProjects.has(project)) {
-            activeProjects.delete(project);
-            button.classList.add('inactive');
-          } else {
-            activeProjects.add(project);
-            button.classList.remove('inactive');
-          }
-          updateChart();
-        };
-
-        toggleContainer.appendChild(button);
-      });
-    }
-
-    function createChart(chartData) {
-      const canvas = document.getElementById('coverage-chart');
-      const ctx = canvas.getContext('2d');
-
-      if (chartData.projects.length === 0) {
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('No coverage data available yet', canvas.width / 2, canvas.height / 2);
-        return;
-      }
-
-      const datasets = chartData.projects.map((project, index) => ({
-        label: project,
-        data: chartData.dates.map(date => chartData.coverageByProject[project][date] || null),
-        borderColor: projectColors[index % projectColors.length],
-        backgroundColor: projectColors[index % projectColors.length] + '40',
-        tension: 0.1,
-        hidden: false
-      }));
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: chartData.dates,
-          datasets: datasets
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            title: {
-              display: true,
-              text: 'Test Coverage Over Time'
-            },
-            legend: {
-              display: true,
-              position: 'bottom'
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) {
-                    label += ': ';
-                  }
-                  if (context.parsed.y !== null) {
-                    label += context.parsed.y.toFixed(1) + '%';
-                  }
-                  return label;
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              title: {
-                display: true,
-                text: 'Coverage (%)'
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Date'
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function updateChart() {
-      if (!chart) return;
-
-      chart.data.datasets.forEach((dataset, index) => {
-        const project = chartData.projects[index];
-        dataset.hidden = !activeProjects.has(project);
-      });
-
-      chart.update();
-    }
-
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        const data = init();
-        chartData = prepareCoverageData(data);
-        renderSummaryStats(chartData);
-        renderProjectToggles(chartData);
-        createChart(chartData);
-      });
-    } else {
-      const data = init();
-      chartData = prepareCoverageData(data);
-      renderSummaryStats(chartData);
-      renderProjectToggles(chartData);
-      createChart(chartData);
-    }
-  })();
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" defer></script>
+<script src="coverage-data.js" defer></script>
+<script src="coverage-page.js" defer></script>
