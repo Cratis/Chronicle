@@ -104,6 +104,9 @@ internal static partial class JobsManagerLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Failed to get jobs for cleanup")]
     internal static partial void FailedToGetJobsForCleanup(this ILogger<JobsManager> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to get step count for job {JobId}")]
+    internal static partial void FailedToGetStepCountForJob(this ILogger<JobsManager> logger, JobId jobId, Exception error);
 }
 
 internal static class JobsManagerScopes

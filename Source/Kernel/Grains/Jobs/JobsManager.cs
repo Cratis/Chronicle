@@ -213,7 +213,11 @@ public class JobsManager(
             var stepCountResult = await _jobStepStorage!.CountForJob(job.Id);
             var hasSteps = await stepCountResult.Match(
                 count => Task.FromResult(count > 0),
-                _ => Task.FromResult(true));
+                error =>
+                {
+                    logger.FailedToGetStepCountForJob(job.Id, error);
+                    return Task.FromResult(false);
+                });
 
             if (!hasSteps)
             {
@@ -224,7 +228,7 @@ public class JobsManager(
         if (deadJobs.Count > 0)
         {
             logger.FoundDeadJobs(deadJobs.Count);
-            var deleteTasks = deadJobs.Select(job => Delete(job.Id));
+            var deleteTasks = deadJobs.Select(job => Delete(job.Id)).ToList();
             await Task.WhenAll(deleteTasks);
         }
         else
