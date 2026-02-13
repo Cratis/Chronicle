@@ -13,11 +13,11 @@ public class GetSeedDataRequest
     /// Gets or sets the event store name.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace (optional, used for namespace-specific requests).
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }

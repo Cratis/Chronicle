@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Contracts.Seeding;
 
 namespace Cratis.Chronicle.Api.Seeding;
@@ -16,7 +15,7 @@ namespace Cratis.Chronicle.Api.Seeding;
 /// <param name="Content">The JSON content of the event.</param>
 /// <param name="IsGlobal">Whether this seed data is global (applies to all namespaces).</param>
 [Command]
-public record AddSeedentry(
+public record AddSeedEntry(
     string EventStore,
     string Namespace,
     string EventSourceId,

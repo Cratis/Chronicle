@@ -12,6 +12,6 @@ public class SeedDataResponse
     /// <summary>
     /// Gets or sets the collection of seeding entries.
     /// </summary>
-    [ProtoMember(1)]
-    public IList<SeedingEntry> Entries { get; set; }
+    [ProtoMember(1, IsRequired = true)]
+    public IList<SeedingEntry> Entries { get; set; } = [];
 }
