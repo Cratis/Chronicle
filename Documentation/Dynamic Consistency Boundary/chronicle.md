@@ -29,6 +29,23 @@ Constraints are the primary way to express decision correctness. They are evalua
 
 If you prefer an aggregate root style, Chronicle supports it through Cratis.Arc. See [aggregate roots support](xref:Arc.Chronicle.AggregateRoots).
 
+## Arc command validation flow
+
+When using Arc, command validation runs before decision evaluation. See [Arc validation](xref:Arc.Chronicle.Validation) for details.
+
+```mermaid
+flowchart LR
+    A[Client command] --> B[Arc command validation]
+    B --> C[Read models]
+    C --> D[Decide and build constraints]
+    D --> E[Append events]
+    E --> F[Event store]
+    E --> G[Projections]
+    G --> C
+    D --> H[Concurrency scopes]
+    H --> E
+```
+
 ## Practical flow
 
 1. Read the projections needed to decide.

@@ -1,3 +1,6 @@
+---
+uid: Chronicle.ReadModels
+---
 # Read Models
 
 Read models in Chronicle represent the current state of your application derived from events stored in the event log. They provide a denormalized, queryable view of your data optimized for reading, making them essential for building responsive applications.
