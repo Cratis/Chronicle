@@ -107,6 +107,9 @@ internal static partial class JobsManagerLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Failed to get step count for job {JobId}")]
     internal static partial void FailedToGetStepCountForJob(this ILogger<JobsManager> logger, JobId jobId, Exception error);
+
+    [LoggerMessage(LogLevel.Information, "Skipping job {JobId} due to step count retrieval error")]
+    internal static partial void SkippingJobDueToStepCountError(this ILogger<JobsManager> logger, JobId jobId);
 }
 
 internal static class JobsManagerScopes

@@ -60,6 +60,13 @@ public class JobsManager(
     }
 
     /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _cleanupTimer?.Dispose();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task<Result<JobId, StartJobError>> Start<TJob, TRequest>(TRequest request)
         where TJob : IJob<TRequest>
         where TRequest : class, IJobRequest
@@ -211,15 +218,16 @@ public class JobsManager(
         foreach (var job in preparingJobs.Where(j => j.Created < cutoffTime))
         {
             var stepCountResult = await _jobStepStorage!.CountForJob(job.Id);
-            var hasSteps = await stepCountResult.Match(
-                count => Task.FromResult(count > 0),
+            var shouldDelete = await stepCountResult.Match(
+                count => Task.FromResult(count == 0),
                 error =>
                 {
                     logger.FailedToGetStepCountForJob(job.Id, error);
+                    logger.SkippingJobDueToStepCountError(job.Id);
                     return Task.FromResult(false);
                 });
 
-            if (!hasSteps)
+            if (shouldDelete)
             {
                 deadJobs.Add(job);
             }
