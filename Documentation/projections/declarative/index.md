@@ -73,6 +73,16 @@ Use model-bound projections when:
 | [FromEventSequence](from-event-sequence.md) | Sourcing events from specific event sequences |
 | [NotRewindable](not-rewindable.md) | Forward-only projections that cannot be replayed |
 
+## Reading Your Declarative Projections
+
+Once you've defined a declarative projection, you can retrieve and observe the resulting read models using the `IReadModels` API:
+
+- [Getting a Single Instance](../../read-models/getting-single-instance.md) - Retrieve a specific instance by key with strong consistency
+- [Getting a Collection of Instances](../../read-models/getting-collection-instances.md) - Retrieve all instances for reporting and analysis
+- [Getting Snapshots](../../read-models/getting-snapshots.md) - Retrieve historical state snapshots grouped by correlation ID
+- [Watching Read Models](../../read-models/watching-read-models.md) - Observe real-time changes as events are applied
+
+
 ## Key concepts
 
 ### Auto-mapping vs explicit mapping

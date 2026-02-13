@@ -46,4 +46,12 @@ public class AccountBalanceReducer : IReducerFor<AccountBalance>
 - [Getting Started](getting-started.md) - Learn how to create your first reducer
 - [Passive Reducers](passive-reducers.md) - Control when reducers actively observe events
 - [Event Processing](event-processing.md) - Understand how reducers process events
-- [Snapshots](../read-models/snapshots.md) - Retrieve read model state at specific points in time
+
+## Reading Your Reducer-Based Read Models
+
+Once you've defined a reducer, you can retrieve and observe the resulting read models using the `IReadModels` API:
+
+- [Getting a Single Instance](../read-models/getting-single-instance.md) - Retrieve a specific instance by key with strong consistency
+- [Getting a Collection of Instances](../read-models/getting-collection-instances.md) - Retrieve all instances for reporting and analysis
+- [Getting Snapshots](../read-models/getting-snapshots.md) - Retrieve historical state snapshots grouped by correlation ID
+- [Watching Read Models](../read-models/watching-read-models.md) - Observe real-time changes as events are applied

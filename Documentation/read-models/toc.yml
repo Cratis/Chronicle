@@ -1,4 +1,10 @@
 - name: Overview
   href: index.md
-- name: Getting Instances
-  href: getting-instances.md
+- name: Getting a Single Instance
+  href: getting-single-instance.md
+- name: Getting a Collection of Instances
+  href: getting-collection-instances.md
+- name: Getting Snapshots
+  href: getting-snapshots.md
+- name: Watching Read Models
+  href: watching-read-models.md

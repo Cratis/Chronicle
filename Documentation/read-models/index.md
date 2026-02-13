@@ -118,5 +118,7 @@ The API provides full type safety through generic methods, ensuring compile-time
 
 ## Next Steps
 
-- [Getting Instances](getting-instances.md) - Learn how to retrieve read model instances
-- [Snapshots](snapshots.md) - Understand how to retrieve historical snapshots of read model state
+- [Getting a Single Instance](getting-single-instance.md) - Learn how to retrieve a specific read model instance
+- [Getting a Collection of Instances](getting-collection-instances.md) - Learn how to retrieve all instances of a read model
+- [Getting Snapshots](getting-snapshots.md) - Understand how to retrieve historical snapshots of read model state
+- [Watching Read Models](watching-read-models.md) - Learn how to observe real-time changes to read models

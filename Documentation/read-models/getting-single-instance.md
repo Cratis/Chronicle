@@ -1,4 +1,4 @@
-# Getting Instances
+# Getting a Single Instance
 
 The `IReadModels` API provides a straightforward way to retrieve the current state of a read model by replaying events from the event log. This ensures you always get strongly consistent data reflecting the exact current state.
 
@@ -254,7 +254,8 @@ var account = (Account)await _eventStore.ReadModels.GetInstanceById(typeof(Accou
 
 ## Related Topics
 
+- [Getting a Collection of Instances](getting-collection-instances.md) - Learn how to retrieve all instances of a read model
 - [Getting Snapshots](getting-snapshots.md) - Learn how to retrieve historical state snapshots
+- [Watching Read Models](watching-read-models.md) - Real-time notifications for read model changes
 - [Projections](../projections/index.md) - Learn more about defining projections
 - [Reducers](../recipes/reducers.md) - Learn more about defining reducers
-- [Watching Projections](../projections/watching-projections.md) - Real-time notifications for read model changes
