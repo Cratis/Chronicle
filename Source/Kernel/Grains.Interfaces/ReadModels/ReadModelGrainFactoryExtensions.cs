@@ -21,6 +21,17 @@ public static class ReadModelGrainFactoryExtensions
         grainFactory.GetGrain<IReadModelsManager>(eventStoreName);
 
     /// <summary>
+    /// Get the read models replay manager for the specified event store.
+    /// </summary>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="eventStoreName">The name of the event store.</param>
+    /// <param name="namespace">The namespace of the event store.</param>
+    /// <param name="readModelIdentifier">The identifier of the read model.</param>
+    /// <returns>An instance of <see cref="IReadModelReplayManager"/>.</returns>
+    public static IReadModelReplayManager GetReadModelReplayManager(this IGrainFactory grainFactory, EventStoreName eventStoreName, EventStoreNamespaceName @namespace, ReadModelIdentifier readModelIdentifier) =>
+        grainFactory.GetGrain<IReadModelReplayManager>(new ReadModelReplayManagerGrainKey(eventStoreName, @namespace, readModelIdentifier));
+
+    /// <summary>
     /// Get a specific read model by its name and event store.
     /// </summary>
     /// <param name="grainFactory">The grain factory.</param>

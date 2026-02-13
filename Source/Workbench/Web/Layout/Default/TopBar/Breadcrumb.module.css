@@ -1,0 +1,61 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.breadcrumb {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.home {
+    color: var(--highlight-text-color);
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    font-size: 1.25rem;
+}
+
+.home:hover {
+    opacity: 0.8;
+}
+
+.eventStoreContainer {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.eventStore {
+    color: var(--highlight-text-color);
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.eventStore:hover {
+    opacity: 0.8;
+}
+
+.caret {
+    color: var(--highlight-text-color);
+    cursor: pointer;
+    transition: opacity 0.2s;
+    font-size: 1.2rem;
+}
+
+.caret:hover {
+    opacity: 0.8;
+}
+
+.separator {
+    color: var(--highlight-text-color);
+    margin: 0 0.25rem;
+}
+
+.pageTitle {
+    color: var(--highlight-text-color);
+}

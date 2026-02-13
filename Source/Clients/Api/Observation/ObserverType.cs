@@ -26,5 +26,10 @@ public enum ObserverType
     /// <summary>
     /// Reducer type of observer.
     /// </summary>
-    Reducer = 3
+    Reducer = 3,
+
+    /// <summary>
+    /// External type of observer.
+    /// </summary>
+    External = 4,
 }

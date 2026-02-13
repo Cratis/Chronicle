@@ -10,4 +10,11 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// </summary>
 /// <param name="Properties">Properties and expressions for each property.</param>
 /// <param name="IncludeChildren">Include event types from child projections.</param>
-public record FromEveryDefinition(IDictionary<PropertyPath, string> Properties, bool IncludeChildren);
+public record FromEveryDefinition(IDictionary<PropertyPath, string> Properties, bool IncludeChildren)
+{
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public AutoMap AutoMap { get; set; } = AutoMap.Inherit;
+}
+

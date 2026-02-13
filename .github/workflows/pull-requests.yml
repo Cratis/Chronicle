@@ -63,6 +63,7 @@ jobs:
           dotnet publish -c Debug -o out/x64
           cp -r out/x64 out/arm64
 
+
   workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -110,6 +111,43 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           yarn build
 
+  kernel-development:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: kernel-dev-output
+        with:
+          path: ./Source/Kernel/Server/out/development
+          key: ${{ env.KERNEL_CACHE }}-development
+
+      - name: Build development variant (DEVELOPMENT symbol)
+        working-directory: ./Source/Kernel/Server
+        run: |
+          dotnet publish -c Debug -p:DefineConstants=DEVELOPMENT -o out/development/x64
+          cp -r out/development/x64 out/development/arm64
+
+
+
+      - name: Upload development outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-development-out
+          path: ./Source/Kernel/Server/out/development
+
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -135,6 +173,8 @@ jobs:
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
+
+
 
       - name: Build root
         run: dotnet build --configuration Debug
@@ -171,7 +211,7 @@ jobs:
   publish-docker:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [workbench, kernel, release]
+    needs: [workbench, kernel, kernel-development, release]
 
     steps:
       - name: Checkout code
@@ -193,6 +233,21 @@ jobs:
         uses: docker/setup-qemu-action@master
         with:
           platforms: all
+
+      - name: Download development outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: kernel-development-out
+          path: Source/Kernel/Server/out/development
+
+      - name: Prepare development output for Docker
+        run: |
+          echo "Preparing development output"
+          rm -rf Source/Kernel/Server/out || true
+          mkdir -p Source/Kernel/Server/out
+          if [ -d Source/Kernel/Server/out/development/x64 ]; then
+            cp -r Source/Kernel/Server/out/development/x64/* Source/Kernel/Server/out/ || true
+          fi
 
       - name: Set up Docker Buildx
         id: buildx

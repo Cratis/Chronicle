@@ -1,0 +1,12 @@
+root = false
+
+[*.cs]
+# Suppress analyzer warnings for Roslyn analyzer projects
+dotnet_diagnostic.RS1038.severity = none
+dotnet_diagnostic.RS2008.severity = none
+dotnet_diagnostic.IDE1006.severity = none
+dotnet_diagnostic.IDE0303.severity = none
+dotnet_diagnostic.IDE0060.severity = none
+dotnet_diagnostic.RCS1246.severity = none
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.IDE0019.severity = none

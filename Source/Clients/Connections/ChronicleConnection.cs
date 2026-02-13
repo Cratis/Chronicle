@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Events;
@@ -13,9 +15,11 @@ using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
+using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Execution;
 using Cratis.Tasks;
@@ -33,7 +37,7 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
 {
-    readonly ChronicleUrl _url;
+    readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
     readonly int? _maxSendMessageSize;
@@ -41,6 +45,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
+    readonly ILoggerFactory _loggerFactory;
+    readonly string? _certificatePath;
+    readonly string? _certificatePassword;
+    readonly ITokenProvider _tokenProvider;
+    readonly bool _disableTls;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -51,29 +60,41 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to connect with.</param>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to connect with.</param>
     /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
     /// <param name="maxReceiveMessageSize">Maximum receive message size in bytes.</param>
     /// <param name="maxSendMessageSize">Maximum send message size in bytes.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
-    /// <param name="logger">Logger for logging.</param>
+    /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
+    /// <param name="disableTls">Whether to disable TLS for the connection.</param>
+    /// <param name="certificatePath">Optional path to the certificate file.</param>
+    /// <param name="certificatePassword">Optional password for the certificate file.</param>
+    /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
-        ChronicleUrl url,
+        ChronicleConnectionString connectionString,
         int connectTimeout,
         int? maxReceiveMessageSize,
         int? maxSendMessageSize,
         IConnectionLifecycle connectionLifecycle,
         ITaskFactory tasks,
         ICorrelationIdAccessor correlationIdAccessor,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken,
         ILogger<ChronicleConnection> logger,
-        CancellationToken cancellationToken)
+        bool disableTls,
+        string? certificatePath = null,
+        string? certificatePassword = null,
+        ITokenProvider? tokenProvider = null)
     {
-        GrpcClientFactory.AllowUnencryptedHttp2 = true;
-        _url = url;
+        _disableTls = disableTls;
+        GrpcClientFactory.AllowUnencryptedHttp2 = _disableTls;
+        _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
         _maxSendMessageSize = maxSendMessageSize;
@@ -82,6 +103,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
         _logger = logger;
+        _loggerFactory = loggerFactory;
+        _certificatePath = certificatePath;
+        _certificatePassword = certificatePassword;
+        _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
 
         _cancellationToken.Register(() =>
         {
@@ -91,6 +116,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             _channel?.Dispose();
         });
     }
+#pragma warning restore CA1068 // CancellationToken parameters must come last
 #pragma warning restore CS8618
 
     /// <inheritdoc/>
@@ -111,6 +137,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
+        if (_tokenProvider is IDisposable disposableTokenProvider)
+        {
+            disposableTokenProvider.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -121,13 +151,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        _logger.Connecting(_url);
+        _logger.Connecting(_connectionString);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
 
         _channel = CreateGrpcChannel();
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
-        var callInvoker = _channel.Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
+        var callInvoker = _channel
+            .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
+            .Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
         _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -154,9 +186,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IReactors>(clientFactory),
                 callInvoker.CreateGrpcService<IReducers>(clientFactory),
                 callInvoker.CreateGrpcService<IProjections>(clientFactory),
+                callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
                 callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
                 callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
+                callInvoker.CreateGrpcService<IUsers>(clientFactory),
+                callInvoker.CreateGrpcService<IApplications>(clientFactory),
                 callInvoker.CreateGrpcService<IServer>(clientFactory));
 
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));
@@ -183,43 +218,84 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     GrpcChannel CreateGrpcChannel()
     {
-        var httpHandler = new SocketsHttpHandler
+        X509Certificate2? certificate = null;
+        try
         {
-            // ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
-            EnableMultipleHttp2Connections = true
-        };
-
-        var address = $"http://{_url.ServerAddress.Host}:{_url.ServerAddress.Port}";
-
-        return GrpcChannel.ForAddress(
-            address,
-            new GrpcChannelOptions
+#pragma warning disable CA2000 // Certificate ownership is transferred to httpHandler.SslOptions.ClientCertificates
+            certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
+            var httpHandler = new SocketsHttpHandler
             {
-                HttpHandler = httpHandler,
-                MaxReceiveMessageSize = _maxReceiveMessageSize,
-                MaxSendMessageSize = _maxSendMessageSize,
-                ServiceConfig = new ServiceConfig
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                EnableMultipleHttp2Connections = true
+            };
+
+            if (!_disableTls && certificate is not null)
+            {
+                httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
+                _logger.UsingClientCertificate(_certificatePath!);
+            }
+#pragma warning restore CA2000
+
+            if (!_disableTls)
+            {
+                var certHashString = certificate?.GetCertHashString();
+                httpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
                 {
-                    MethodConfigs =
+                    if (sslPolicyErrors == SslPolicyErrors.None)
                     {
-                        new MethodConfig
+                        return true;
+                    }
+
+                    if (cert is not null && certHashString is not null)
+                    {
+                        return cert.GetCertHashString() == certHashString;
+                    }
+
+                    // For development: accept localhost certificates with name mismatches
+                    return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+                };
+            }
+
+            var scheme = _disableTls ? "http" : "https";
+            var address = $"{scheme}://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
+
+            var channel = GrpcChannel.ForAddress(
+                address,
+                new GrpcChannelOptions
+                {
+                    HttpHandler = httpHandler,
+                    MaxReceiveMessageSize = _maxReceiveMessageSize,
+                    MaxSendMessageSize = _maxSendMessageSize,
+                    ServiceConfig = new ServiceConfig
+                    {
+                        MethodConfigs =
                         {
-                            Names = { MethodName.Default },
-                            RetryPolicy = new RetryPolicy
+                            new MethodConfig
                             {
-                                MaxAttempts = 5,
-                                InitialBackoff = TimeSpan.FromSeconds(1),
-                                MaxBackoff = TimeSpan.FromSeconds(10),
-                                BackoffMultiplier = 1.5,
-                                RetryableStatusCodes = { StatusCode.Unavailable }
+                                Names = { MethodName.Default },
+                                RetryPolicy = new RetryPolicy
+                                {
+                                    MaxAttempts = 5,
+                                    InitialBackoff = TimeSpan.FromSeconds(1),
+                                    MaxBackoff = TimeSpan.FromSeconds(10),
+                                    BackoffMultiplier = 1.5,
+                                    RetryableStatusCodes = { StatusCode.Unavailable }
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+
+            _logger.ChannelCreated(address);
+            return channel;
+        }
+        catch
+        {
+            certificate?.Dispose();
+            throw;
+        }
     }
 
     void HandleConnection(ConnectionKeepAlive keepAlive)

@@ -41,6 +41,10 @@ public class ProjectionDefinitionStorageProvider(IStorage storage) : IGrainStora
     {
         var actualGrainState = (grainState as IGrainState<ProjectionDefinition>)!;
         var projectionKey = ProjectionKey.Parse(grainId.Key.ToString()!);
+        if (projectionKey.ProjectionId.IsPreview)
+        {
+            return;
+        }
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         await eventStore.Projections.Save(actualGrainState.State);
     }

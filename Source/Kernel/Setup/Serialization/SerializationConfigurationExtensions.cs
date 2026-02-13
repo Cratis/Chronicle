@@ -22,6 +22,29 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// </summary>
 public static class SerializationConfigurationExtensions
 {
+    static readonly IEnumerable<JsonConverter> _converters = [
+        new EnumConverterFactory(),
+        new EnumerableConceptAsJsonConverterFactory(),
+        new ConceptAsJsonConverterFactory(),
+        new DateOnlyJsonConverter(),
+        new TimeOnlyJsonConverter(),
+        new TypeJsonConverter(),
+        new UriJsonConverter(),
+        new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+        new KeyJsonConverter(),
+        new PropertyPathJsonConverter(),
+        new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
+        new PropertyExpressionDictionaryConverter(),
+        new FromDefinitionsConverter(),
+        new JoinDefinitionsConverter(),
+        new RemovedWithDefinitionsConverter(),
+        new RemovedWithJoinDefinitionsConverter(),
+        new JobStateConverter(),
+        new JsonSchemaConverter(),
+        new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>(),
+        new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>()
+    ];
+
     /// <summary>
     /// Configure serialization for Orleans.
     /// </summary>
@@ -47,8 +70,23 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<AppendedEventSerializer>()
                 .AddCompleteSerializer<OneOfSerializer>()
                 .AddCompleteSerializer<ConcurrencyScopesSerializer>()
-                .AddCompleteSerializer<ExpandoObjectSerializer>();
+                .AddCompleteSerializer<ExpandoObjectSerializer>()
+                .AddLinqCollectionCopier();
         });
+        return services;
+    }
+
+    /// <summary>
+    /// Adds a copier for LINQ internal collection types.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddLinqCollectionCopier(this IServiceCollection services)
+    {
+        services.AddSingleton<LinqCollectionCopier>();
+        services.AddSingleton<IGeneralizedCopier, LinqCollectionCopier>();
+        services.AddSingleton<ITypeFilter, LinqCollectionCopier>();
+
         return services;
     }
 
@@ -73,37 +111,38 @@ public static class SerializationConfigurationExtensions
     {
         var options = new JsonSerializerOptions
         {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            Converters =
-            {
-                new EnumConverterFactory(),
-                new EnumerableConceptAsJsonConverterFactory(),
-                new ConceptAsJsonConverterFactory(),
-                new DateOnlyJsonConverter(),
-                new TimeOnlyJsonConverter(),
-                new TypeJsonConverter(),
-                new UriJsonConverter(),
-                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
-                new KeyJsonConverter(),
-                new PropertyPathJsonConverter(),
-                new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
-                new PropertyExpressionDictionaryConverter(),
-                new FromDefinitionsConverter(),
-                new JoinDefinitionsConverter(),
-                new RemovedWithDefinitionsConverter(),
-                new RemovedWithJoinDefinitionsConverter(),
-                new JobStateConverter(),
-                new JsonSchemaConverter(),
-                new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriptionJsonConverter, ObserverSubscription>(),
-                new TypeWithObjectPropertiesJsonConverterFactory<ObserverSubscriberContextJsonConverter, ObserverSubscriberContext>()
-            }
         };
+        ApplyConverters(options);
         services.AddSingleton(options);
         services.AddConceptSerializer();
         services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(
-            _ => _ == typeof(JsonObject) || _ == typeof(JsonSchema) || (_.Namespace?.StartsWith("Cratis") ?? false),
+            type =>
+            {
+                // Check if type inherits from OneOfBase - if so, exclude it from JSON serialization
+                var current = type;
+                while (current != typeof(object) && current is not null)
+                {
+                    if (current.IsGenericType && current.GetGenericTypeDefinition().Name.Contains("OneOfBase"))
+                    {
+                        return false;
+                    }
+                    current = current.BaseType!;
+                }
+
+                return type == typeof(JsonObject) || type == typeof(JsonSchema) || (type.Namespace?.StartsWith("Cratis") ?? false);
+            },
             options));
+    }
+
+    static void ApplyConverters(JsonSerializerOptions options)
+    {
+        foreach (var converter in _converters)
+        {
+            options.Converters.Add(converter);
+        }
     }
 }

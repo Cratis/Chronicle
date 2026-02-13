@@ -26,6 +26,8 @@ const observerType = (observer: ObserverInformation) => {
             return strings.eventStore.namespaces.observers.types.projection;
         case ObserverType.reducer:
             return strings.eventStore.namespaces.observers.types.reducer;
+        case ObserverType.external:
+            return strings.eventStore.namespaces.observers.types.external;
     }
     return strings.eventStore.namespaces.observers.types.unknown;
 };

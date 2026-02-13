@@ -18,6 +18,11 @@ public interface IReactorHandler
     ReactorId Id { get; }
 
     /// <summary>
+    /// Gets the type of the reactor.
+    /// </summary>
+    Type ReactorType { get; }
+
+    /// <summary>
     /// Gets the event log for the Reactor.
     /// </summary>
     EventSequenceId EventSequenceId { get; }

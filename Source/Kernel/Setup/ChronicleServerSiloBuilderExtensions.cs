@@ -6,13 +6,16 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Grains;
+using Cratis.Chronicle.Grains.EventTypes;
 using Cratis.Chronicle.Grains.Jobs;
 using Cratis.Chronicle.Grains.Observation.Placement;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
+using Cratis.Chronicle.Grains.Observation.Webhooks;
+using Cratis.Chronicle.Grains.Security;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
 using Cratis.Chronicle.Services.Observation;
@@ -41,10 +44,13 @@ public static class ChronicleServerSiloBuilderExtensions
     {
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
+        builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
+        builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder
@@ -60,8 +66,11 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddStreaming()
             .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
+            .AddWebhookObserverHttpClient()
             .ConfigureSerialization();
 
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Applications);
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
         builder.Services.AddChronicleMeters();
@@ -84,22 +93,31 @@ public static class ChronicleServerSiloBuilderExtensions
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
+            var projections = new Cratis.Chronicle.Services.Projections.Projections(grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp);
             return new Cratis.Chronicle.Contracts.Services(
-                new Cratis.Chronicle.Services.EventStores(grainFactory, storage),
+                new Cratis.Chronicle.Services.EventStores(grainFactory, storage, sp.GetRequiredService<IEventTypes>()),
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
                 new EventSequences(grainFactory, storage, jsonSerializerOptions),
-                new EventTypes(storage),
+                new Cratis.Chronicle.Services.Events.EventTypes(storage),
                 new Constraints(grainFactory),
                 new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
                 new FailedPartitions(storage),
-                new Cratis.Chronicle.Services.Observation.Reactors.Reactors(grainFactory, sp.GetRequiredService<IReactorMediator>(), jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
+                new Cratis.Chronicle.Services.Observation.Reactors.Reactors(
+                    grainFactory,
+                    sp.GetRequiredService<IReactorMediator>(),
+                    sp.GetRequiredService<IStorage>(),
+                    jsonSerializerOptions,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
-                new Cratis.Chronicle.Services.Projections.Projections(clusterClient, grainFactory, expandoObjectConverter, sp, jsonSerializerOptions),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory),
+                projections,
+                new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<IEncryption>(), sp.GetRequiredService<IOAuthClient>()),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
+                new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
+                new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
                 new Cratis.Chronicle.Services.Host.Server(clusterClient));
         });
 
