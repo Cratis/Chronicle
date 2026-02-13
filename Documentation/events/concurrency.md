@@ -1,3 +1,6 @@
+---
+uid: Chronicle.ConcurrencyScope
+---
 # Concurrency
 
 Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on event metadata tags.
